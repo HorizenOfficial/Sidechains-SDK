@@ -6,7 +6,6 @@ import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
-import com.horizen.certificatesubmitter.keys.CertifiersKeys.getMerkleRootOfPublicKeys
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofType, SchnorrKeysSignaturesListBytes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams

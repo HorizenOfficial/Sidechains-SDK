@@ -52,23 +52,27 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                             List<byte[]> customParameters) {
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
-        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFields = prepareCustomFieldElements(customParameters);
+        List<FieldElement> customFields;
+        FieldElement messageToSign;
+        byte[] messageAsBytes;
+        try (FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId)) {
+            customFields = prepareCustomFieldElements(customParameters);
 
-        WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
-                FieldElement.deserialize(sidechainId),
-                epochNumber,
-                CommonCircuit.getBackwardTransfers(bt),
-                endCumulativeScTxCommTreeRootFe,
-                ftMinAmount,
-                btrFee,
-                customFields
-        );
-        FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.createMsgToSign(withdrawalCertificate);
-        byte[] messageAsBytes = messageToSign.serializeFieldElement();
+            WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
+                    FieldElement.deserialize(sidechainId),
+                    epochNumber,
+                    CommonCircuit.getBackwardTransfers(bt),
+                    endCumulativeScTxCommTreeRootFe,
+                    ftMinAmount,
+                    btrFee,
+                    customFields
+            );
+            messageToSign = NaiveThresholdSignatureWKeyRotation.createMsgToSign(withdrawalCertificate);
+            messageAsBytes = messageToSign.serializeFieldElement();
 
-        endCumulativeScTxCommTreeRootFe.freeFieldElement();
-        sidechainIdFe.freeFieldElement();
+            endCumulativeScTxCommTreeRootFe.freeFieldElement();
+            sidechainIdFe.freeFieldElement();
+        }
         customFields.forEach(FieldElement::freeFieldElement);
         messageToSign.freeFieldElement();
 
@@ -145,31 +149,35 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                byte[] genesisConstantBytes,
                                int sidechainCreationVersionNumber) {
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
-        FieldElement constantFe = FieldElement.deserialize(constant);
-        FieldElement sidechainIdFIeldElement = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
-        FieldElement genesisConstant = FieldElement.deserialize(genesisConstantBytes);
+        List<FieldElement> customFieldsElements;
+        FieldElement genesisConstant;
+        boolean verificationResult;
+        try (FieldElement constantFe = FieldElement.deserialize(constant)) {
+            FieldElement sidechainIdFIeldElement = FieldElement.deserialize(sidechainId);
+            customFieldsElements = prepareCustomFieldElements(customFields);
+            genesisConstant = FieldElement.deserialize(genesisConstantBytes);
 
-        WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
-                sidechainIdFIeldElement,
-                epochNumber,
-                CommonCircuit.getBackwardTransfers(bt),
-                quality,
-                endCumulativeScTxCommTreeRootFe,
-                ftMinAmount,
-                btrFee,
-                customFieldsElements
-        );
+            WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
+                    sidechainIdFIeldElement,
+                    epochNumber,
+                    CommonCircuit.getBackwardTransfers(bt),
+                    quality,
+                    endCumulativeScTxCommTreeRootFe,
+                    ftMinAmount,
+                    btrFee,
+                    customFieldsElements
+            );
 
-        Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
-                .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.Value(sidechainCreationVersionNumber)));
+            Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
+                    .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.Value(sidechainCreationVersionNumber)));
 
 
-        boolean verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(withdrawalCertificate, previousCertificateOption, genesisConstant, proof, verificationKeyPath);
+            verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(withdrawalCertificate, previousCertificateOption, genesisConstant, proof, verificationKeyPath);
 
-        endCumulativeScTxCommTreeRootFe.freeFieldElement();
-        sidechainIdFIeldElement.freeFieldElement();
-        constantFe.freeFieldElement();
+            endCumulativeScTxCommTreeRootFe.freeFieldElement();
+            sidechainIdFIeldElement.freeFieldElement();
+            constantFe.freeFieldElement();
+        }
         customFieldsElements.forEach(FieldElement::freeFieldElement);
         genesisConstant.freeFieldElement();
         return verificationResult;
@@ -195,11 +203,21 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 
-    public byte[] getKeysRootHash() {
-        SchnorrKeysSignaturesList schnorrKeysSignaturesList = new SchnorrKeysSignaturesList();
+    public byte[] generateKeysRootHash(List<byte[]> publicSignersKeysList, List<byte[]> publicMastersKeysList) {
         FieldElement fieldElement;
         try {
-            fieldElement = schnorrKeysSignaturesList.getUpdatedKeysRootHash(schnorrKeysSignaturesList.getSigningKeys().length);
+            try (SchnorrKeysSignaturesList schnorrKeysSignaturesList = new SchnorrKeysSignaturesList(
+                    publicSignersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
+                    publicMastersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
+                    publicSignersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
+                    publicMastersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
+                    new ArrayList<>(),
+                    new ArrayList<>(),
+                    new ArrayList<>(),
+                    new ArrayList<>()
+            )) {
+                fieldElement = schnorrKeysSignaturesList.getUpdatedKeysRootHash(schnorrKeysSignaturesList.getSigningKeys().length);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

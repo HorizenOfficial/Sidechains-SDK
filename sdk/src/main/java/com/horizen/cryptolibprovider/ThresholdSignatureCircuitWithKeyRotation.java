@@ -54,4 +54,6 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
     List<byte[]> getCertificateCustomFields(List<byte[]> customFields);
 
     boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum);
+
+    byte[] generateKeysRootHash(List<byte[]> publicSignersKeysList, List<byte[]> publicMastersKeysList);
 }
