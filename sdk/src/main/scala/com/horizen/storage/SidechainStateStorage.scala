@@ -49,8 +49,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
-  private[horizen] def getActualCertifierStorageKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("keys".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
+  private[horizen] def getActualCertifierStorageKey(withdrawalEpoch: Int): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("keys".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
@@ -291,7 +291,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
       case (keyRotationProofs: Seq[KeyRotationProof], Some(actualKeys: CertifiersKeys)) if keyRotationProofs.nonEmpty =>
         keyRotationProofs.foreach(keyRotationProof => {
-          updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
+          updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch),
             new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
 
           keyRotationProof match {
@@ -301,7 +301,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
               actualKeys.masterKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
           }
         })
-        updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
+        updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch),
           new ByteArrayWrapper(CertifiersKeysSerializer.toBytes(actualKeys))))
       case _ => identity()
     }
