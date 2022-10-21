@@ -159,7 +159,7 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
 
     @Override
     public byte[] customDataMessageToSign() {
-        return Ints.toByteArray(this.keyRotationProof.index());
+        return this.keyRotationProof.bytes();
     }
 
     public Signature25519 getProof() {
