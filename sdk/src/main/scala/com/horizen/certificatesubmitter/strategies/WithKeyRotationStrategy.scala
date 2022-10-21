@@ -19,54 +19,54 @@ import scala.util.Try
 
 class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
 
-  override def generateProof(dataForProofGeneration: CertificateData): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  override def generateProof(certificateData: CertificateData): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
     val (_: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
-      dataForProofGeneration.schnorrKeyPairs.map {
+      certificateData.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
       }.unzip
 
-    log.info(s"Start generating proof with parameters: dataForProofGeneration = $dataForProofGeneration, " +
+    log.info(s"Start generating proof with parameters: certificateData = $certificateData, " +
       s"signersThreshold = ${
         params.signersThreshold
       }. " +
       s"It can take a while.")
 
-    val dataForProofGenerationWithKeyRotation = dataForProofGeneration.asInstanceOf[CertificateDataWithKeyRotation]
+    val certificateDataWithKeyRotation = certificateData.asInstanceOf[CertificateDataWithKeyRotation]
 
     val schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
-      dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList,
-      dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList,
-      dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList,
-      dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList,
-      dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures,
-      dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysMkSignatures,
-      dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysSkSignatures,
-      dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysMkSignatures
+      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList,
+      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList,
+      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList,
+      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList,
+      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures,
+      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysMkSignatures,
+      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysSkSignatures,
+      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysMkSignatures
     )
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
     CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.createProof(
-      dataForProofGeneration.withdrawalRequests.asJava,
-      dataForProofGeneration.sidechainId,
-      dataForProofGeneration.referencedEpochNumber,
-      dataForProofGeneration.endEpochCumCommTreeHash,
-      dataForProofGeneration.btrFee,
-      dataForProofGeneration.ftMinAmount,
-      scala.collection.JavaConverters.seqAsJavaList(dataForProofGeneration.getCustomFields),
+      certificateData.withdrawalRequests.asJava,
+      certificateData.sidechainId,
+      certificateData.referencedEpochNumber,
+      certificateData.endEpochCumCommTreeHash,
+      certificateData.btrFee,
+      certificateData.ftMinAmount,
+      scala.collection.JavaConverters.seqAsJavaList(certificateData.getCustomFields),
       signaturesBytes.asJava,
       schnorrKeysSignaturesListBytes,
       params.signersThreshold,
-      Optional.of(dataForProofGenerationWithKeyRotation.previousCertificateOption),
+      Optional.of(certificateDataWithKeyRotation.previousCertificateOption),
       sidechainCreationVersion.id,
-      dataForProofGenerationWithKeyRotation.genesisKeysRootHash,
+      certificateDataWithKeyRotation.genesisKeysRootHash,
       provingFileAbsolutePath,
       true,
       true,
     )
   }
 
-  override def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithKeyRotation = {
+  override def buildcertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithKeyRotation = {
     val history = sidechainNodeView.history
     val state: SidechainState = sidechainNodeView.state
 
@@ -127,7 +127,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       updatedMasterKeysMkSignatures
     )
 
-    DataForProofGenerationWithKeyRotation(
+    CertificateDataWithKeyRotation(
       status.referencedEpoch,
       sidechainId,
       withdrawalRequests,

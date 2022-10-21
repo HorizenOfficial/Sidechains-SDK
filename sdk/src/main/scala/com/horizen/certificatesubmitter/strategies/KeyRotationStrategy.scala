@@ -21,10 +21,10 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
 
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
-  def generateProof(dataForProofGeneration: CertificateData): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
+  def generateProof(certificateData: CertificateData): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
-  def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): CertificateData
+  def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateData
 
   def getMessageToSign(view: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
 
