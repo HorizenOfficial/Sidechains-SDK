@@ -66,7 +66,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     )
   }
 
-  override def buildcertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithKeyRotation = {
+  override def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithKeyRotation = {
     val history = sidechainNodeView.history
     val state: SidechainState = sidechainNodeView.state
 
@@ -76,8 +76,6 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
-
-    val customFields: Array[Byte] = getActualKeysMerkleRoot(status.referencedEpoch, state)
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
@@ -154,7 +152,12 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
 
-    val customFields: Array[Byte] = getActualKeysMerkleRoot(referencedWithdrawalEpochNumber, state)
+    val customFields: Array[Byte] = state.certifiersKeys(referencedWithdrawalEpochNumber) match {
+      case Some(keys) => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .generateKeysRootHash(scala.collection.JavaConverters.seqAsJavaList(keys.signingKeys),
+          scala.collection.JavaConverters.seqAsJavaList(keys.masterKeys))
+      case None => Array[Byte]()
+    }
 
     CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
