@@ -1,6 +1,6 @@
 package com.horizen.certificatesubmitter.strategies
 
-import com.horizen.SidechainSettings
+import com.horizen.{SidechainSettings, SidechainState}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateData
@@ -110,5 +110,19 @@ class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkPar
       ftMinAmount,
       Optional.ofNullable(utxoMerkleTreeRoot.orNull)
     )
+  }
+
+  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Option[Array[Byte]] = {
+    if (params.isCSWEnabled) {
+      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
+        case x: Some[Array[Byte]] => x
+        case None =>
+          log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
+          throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
+      }
+    }
+    else {
+      Option.empty[Array[Byte]]
+    }
   }
 }

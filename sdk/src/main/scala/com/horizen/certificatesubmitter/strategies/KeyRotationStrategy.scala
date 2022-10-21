@@ -36,21 +36,6 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
     ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
   }
 
-
-  protected def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Option[Array[Byte]] = {
-    if (params.isCSWEnabled) {
-      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
-        case x: Some[Array[Byte]] => x
-        case None =>
-          log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
-          throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
-      }
-    }
-    else {
-      Option.empty[Array[Byte]]
-    }
-  }
-
   protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
     val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
     headerInfo.cumulativeCommTreeHash
