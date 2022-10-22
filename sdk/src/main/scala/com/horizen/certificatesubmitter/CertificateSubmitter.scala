@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-import com.horizen.certificatesubmitter.dataproof.CertificateData
+import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
 import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithKeyRotationStrategy, WithoutKeyRotationStrategy}
 import com.horizen.cryptolibprovider.utils.{FieldElementUtils, TypeOfCircuit}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
@@ -543,7 +543,7 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
-    val keyRotationStrategy = if (params.typeOfCircuit == TypeOfCircuit.NaiveThresholdSignatureCircuit) {
+    val keyRotationStrategy = if (params.typeOfCircuit == 0) {
       new WithoutKeyRotationStrategy(settings, params)
     } else {
       new WithKeyRotationStrategy(settings, params)
