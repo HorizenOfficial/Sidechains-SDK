@@ -1,7 +1,5 @@
 package com.horizen
 
-import com.horizen.cryptolibprovider.utils.TypeOfCircuit
-import com.horizen.cryptolibprovider.utils.TypeOfCircuit.Int
 import sparkz.core.settings.SparkzSettings
 
 import scala.concurrent.duration.FiniteDuration
