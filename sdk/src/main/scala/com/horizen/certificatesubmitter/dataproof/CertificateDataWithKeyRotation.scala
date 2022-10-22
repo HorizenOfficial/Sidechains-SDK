@@ -8,6 +8,8 @@ import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.BytesUtils
 
+import scala.collection.JavaConverters
+
 
 case class CertificateDataWithKeyRotation(override val referencedEpochNumber: Int,
                                           override val sidechainId: Array[Byte],
@@ -23,7 +25,10 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
   extends CertificateData(referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
-    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getUpdatedKeysRootHash(utxoMerkleTreeRoot.asJava).toSeq
+    JavaConverters.asScalaIteratorConverter(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+      .getCertificateCustomFields(scala.collection.JavaConverters.seqAsJavaList(
+        schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList ++
+        schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList)).listIterator()).asScala.toSeq
   }
   override def toString: String = {
     "DataForProofGeneration(" +
@@ -33,7 +38,7 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
       s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
       s"btrFee = $btrFee, " +
       s"ftMinAmount = $ftMinAmount, " +
-      s"customFields = ${customFields.map(BytesUtils.toHexString)}, " +
+      s"customFields = ${getCustomFields.map(BytesUtils.toHexString)}, " +
       s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})" +
       s"signers public keys = ${schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
       s"masters public keys = ${schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
