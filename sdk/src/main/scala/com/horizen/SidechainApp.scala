@@ -31,6 +31,7 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.websocket.client._
+import com.horizen.websocket.server.WebSocketServerRef
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
 import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry

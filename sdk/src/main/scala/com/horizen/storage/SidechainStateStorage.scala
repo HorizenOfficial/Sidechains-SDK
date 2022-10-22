@@ -293,7 +293,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
 
     keyRotationProofs.foreach(keyRotationProof => {
-      updateList.add(new JPair(getKeyRotationProofKey(withdrawalEpochInfo.epoch),
+      updateList.add(new JPair(getKeyRotationProofKey(withdrawalEpochInfo.epoch, keyRotationProof.index, keyRotationProof.keyType.id),
         new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
     })
 

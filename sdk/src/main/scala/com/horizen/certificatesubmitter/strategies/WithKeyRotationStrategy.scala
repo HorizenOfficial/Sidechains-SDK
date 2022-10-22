@@ -54,7 +54,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       signaturesBytes.asJava,
       schnorrKeysSignaturesListBytes,
       params.signersThreshold,
-      Optional.of(certificateData.previousCertificateOption),
+      certificateData.previousCertificateOption.asJava,
       sidechainCreationVersion.id,
       certificateData.genesisKeysRootHash,
       provingFileAbsolutePath,
@@ -135,7 +135,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       schnorrKeysSignaturesListBytes,
       previousCertificateOption,
       CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
-        scala.collection.JavaConverters.seqAsJavaList(params.signersPublicKeys), scala.collection.JavaConverters.seqAsJavaList(params.mastersPublicKeys))
+        scala.collection.JavaConverters.seqAsJavaList(params.signersPublicKeys.map(sp => sp.bytes())),
+        scala.collection.JavaConverters.seqAsJavaList(params.mastersPublicKeys.map(sp => sp.bytes())))
     )
   }
 
@@ -153,8 +154,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
     val customFields: Array[Byte] = state.certifiersKeys(referencedWithdrawalEpochNumber) match {
       case Some(keys) => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-        .generateKeysRootHash(scala.collection.JavaConverters.seqAsJavaList(keys.signingKeys),
-          scala.collection.JavaConverters.seqAsJavaList(keys.masterKeys))
+        .generateKeysRootHash(scala.collection.JavaConverters.seqAsJavaList(keys.signingKeys.map(sp => sp.bytes())),
+          scala.collection.JavaConverters.seqAsJavaList(keys.masterKeys.map(sp => sp.bytes())))
       case None => Array[Byte]()
     }
 
