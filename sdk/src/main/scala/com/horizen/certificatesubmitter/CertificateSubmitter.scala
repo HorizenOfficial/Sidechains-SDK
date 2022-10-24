@@ -40,7 +40,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
                                                  sidechainNodeViewHolderRef: ActorRef,
                                                  params: NetworkParams,
                                                  mainchainChannel: MainchainNodeChannel,
-                                                 keyRotationStrategy: KeyRotationStrategy)
+                                                 keyRotationStrategy: KeyRotationStrategy[T])
                                                 (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._

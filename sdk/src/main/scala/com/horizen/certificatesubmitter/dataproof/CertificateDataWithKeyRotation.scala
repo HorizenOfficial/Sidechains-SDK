@@ -33,7 +33,7 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
   override def toString: String = {
     "DataForProofGeneration(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +
-      s"sidechainId = $sidechainId, " +
+      s"sidechainId = ${sidechainId.mkString("Array(", ", ", ")")}, " +
       s"withdrawalRequests = {${withdrawalRequests.mkString(",")}}, " +
       s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
       s"btrFee = $btrFee, " +
