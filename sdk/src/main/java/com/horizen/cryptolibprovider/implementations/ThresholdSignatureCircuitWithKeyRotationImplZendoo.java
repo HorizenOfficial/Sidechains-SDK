@@ -161,7 +161,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
             );
 
             Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
-                    .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.Value(sidechainCreationVersionNumber)));
+                    .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.apply(sidechainCreationVersionNumber)));
 
 
             verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(withdrawalCertificate, previousCertificateOption, genesisConstant, proof, verificationKeyPath);
