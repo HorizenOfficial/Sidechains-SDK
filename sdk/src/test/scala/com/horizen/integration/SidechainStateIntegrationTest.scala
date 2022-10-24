@@ -1,7 +1,5 @@
 package com.horizen.integration
 
-import java.io.{File => JFile}
-import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.data.{BoxData, ForgerBoxData, ZenBoxData}
 import com.horizen.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
@@ -16,7 +14,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
-import com.horizen.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainTypes, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
+import com.horizen._
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
@@ -24,6 +22,8 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.{bytesToId, bytesToVersion}
 
+import java.io.{File => JFile}
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 

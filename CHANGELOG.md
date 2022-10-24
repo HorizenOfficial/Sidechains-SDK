@@ -1,3 +1,10 @@
+**0.4.3**
+1. Blocks network propagation fixed: allow to send blocks greater than 1 Mb.
+
+**0.4.2**
+1. Explorer synchronization issue solved: history.chainAfter method was optimized.
+2. Certificate commitment tree calculation issue solved: fixed an inconsistency between SC and MC implementations.
+
 **0.4.1**
 1. CCTP: other sidechains with version 2+ are supported.
 2. API authentication behavior updated: can be disabled now.

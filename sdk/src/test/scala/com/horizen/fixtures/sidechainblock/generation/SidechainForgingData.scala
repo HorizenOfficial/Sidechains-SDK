@@ -1,10 +1,10 @@
 package com.horizen.fixtures.sidechainblock.generation
 
 import java.util.Random
-
 import com.horizen.box.ForgerBox
 import com.horizen.box.data.ForgerBoxData
 import com.horizen.consensus._
+import com.horizen.fork.ForkManager
 import com.horizen.proof.VrfProof
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
@@ -15,17 +15,18 @@ case class SidechainForgingData(key: PrivateKey25519, forgingStakeInfo: ForgingS
   /**
    * @return VrfProof in case if can be forger
    */
-  def canBeForger(vrfMessage: VrfMessage, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(VrfProof, VrfOutput)] = {
+  def canBeForger(vrfMessage: VrfMessage, totalStake: Long, additionalCheck: Boolean => Boolean, nextEpochNumber: ConsensusEpochNumber): Option[(VrfProof, VrfOutput)] = {
     val vrfProofAndHash = vrfSecret.prove(vrfMessage)
     val vrfProof = vrfProofAndHash.getKey
     val vrfOutput = vrfProofAndHash.getValue
 
     val checker = (stakeCheck _).tupled.andThen(additionalCheck)
-    Some((vrfProof, vrfOutput)).filter{case (vrfProof, vrfOutput) => checker(vrfOutput, totalStake)}
+    Some((vrfProof, vrfOutput)).filter{case (vrfProof, vrfOutput) => checker(vrfOutput, totalStake, nextEpochNumber)}
   }
 
-  private def stakeCheck(vrfOutput: VrfOutput, totalStake: Long): Boolean = {
-    vrfProofCheckAgainstStake(vrfOutput, forgingStakeInfo.stakeAmount, totalStake)
+  private def stakeCheck(vrfOutput: VrfOutput, totalStake: Long, nextEpochNumber: ConsensusEpochNumber): Boolean = {
+    val applied = ForkManager.getSidechainConsensusEpochFork(nextEpochNumber).stakePercentageForkApplied
+    vrfProofCheckAgainstStake(vrfOutput, forgingStakeInfo.stakeAmount, totalStake, stakePercentageFork = applied)
   }
 
   val forgerId: Array[Byte] = forgingStakeInfo.hash

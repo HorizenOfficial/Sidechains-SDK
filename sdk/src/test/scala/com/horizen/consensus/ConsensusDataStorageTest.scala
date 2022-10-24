@@ -1,8 +1,9 @@
 package com.horizen.consensus
 
+import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.utils._
-import org.junit.Test
+import org.junit.{Before, Test}
 import scorex.util._
 import org.junit.Assert._
 
@@ -11,8 +12,23 @@ import scala.util.Random
 
 class ConsensusDataStorageTest {
 
+  @Before
+  def init(): Unit = {
+    val forkManagerUtil = new ForkManagerUtil()
+    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+  }
+
   @Test
-  def simpleTest(): Unit = {
+  def simpleTestBeforeFork(): Unit = {
+    simpleTest(0)
+  }
+
+  @Test
+  def simpleTestAfterFork(): Unit = {
+    simpleTest(new SimpleForkConfigurator().getSidechainFork1().regtestEpochNumber + 1)
+  }
+
+  def simpleTest(epochNumber: Int): Unit = {
     val rnd = new Random(23)
 
     val storage = new ConsensusDataStorage(new InMemoryStorageAdapter())
@@ -34,7 +50,7 @@ class ConsensusDataStorageTest {
 
     val nonceData: Map[ConsensusEpochId, NonceConsensusEpochInfo] = (1 to 100).map{ _ =>
       val id = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes)))
-      val nonceBytes:Array[Byte] = new Array[Byte](consensusNonceLength)
+      val nonceBytes:Array[Byte] = new Array[Byte](ForkManager.getSidechainConsensusEpochFork(epochNumber).nonceLength)
       rnd.nextBytes(nonceBytes)
       val nonceInfo =
         NonceConsensusEpochInfo(byteArrayToConsensusNonce(nonceBytes))

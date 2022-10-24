@@ -317,10 +317,18 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                   Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
               }
             }
-          } match {
-            case Success(transaction) => validateAndSendTransaction(transaction)
-            case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
-          }
+        } match {
+          case Success(transaction) =>
+            if (body.automaticSend.getOrElse(true)) {
+              validateAndSendTransaction(transaction)
+            } else {
+              if (body.format.getOrElse(false))
+                ApiResponseUtil.toResponse(TransactionDTO(transaction))
+              else
+                ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
+            }
+          case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
+        }
       }
     }
   }
@@ -765,6 +773,8 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
+                                                automaticSend: Option[Boolean],
+                                                format: Option[Boolean],
                                                 @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")

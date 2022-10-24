@@ -62,7 +62,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>sparkz-core_2.12</artifactId>
-      <version>2.0.0-RC8</version>
+      <version>2.0.0-RC9</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -365,6 +365,7 @@
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields</include>
           <!-- generated on regtest on 15.03.2022 using MC sc_getscgenesisinfo.py -->
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields_mixed_sc_versions</include>
+          <include>new_mc_blocks/mc_block_with_certificate_with_non_zero_sc_fee</include>
           <include>backward_transfer_certificate_empty</include>
           <include>backward_transfer_certificate_non_empty</include>
           <include>log4j2-test.xml</include>

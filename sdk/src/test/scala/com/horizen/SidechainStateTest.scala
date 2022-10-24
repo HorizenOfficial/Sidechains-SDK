@@ -1,30 +1,31 @@
 package com.horizen
 
-import java.util.{Optional => JOptional, ArrayList => JArrayList, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box._
+import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.forge.ForgerList
+import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
 import com.horizen.transaction.{BoxTransaction, OpenStakeTransaction, RegularTransaction}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
 import org.junit._
+import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import sparkz.core.{bytesToId, bytesToVersion}
 import scorex.util.ModifierId
+import sparkz.core.{bytesToId, bytesToVersion}
 
+import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -41,6 +42,7 @@ class SidechainStateTest
 {
 
   val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
+  Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 0))
   val mockedStateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
   val mockedStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = mock[SidechainStateUtxoMerkleTreeProvider]
   val mockedApplicationState: ApplicationState = mock[ApplicationState]
@@ -54,15 +56,18 @@ class SidechainStateTest
 
   val params = MainNetParams()
 
-  val simpleForkConfigurator = new SimpleForkConfigurator
-  val forkManagerUtil = new ForkManagerUtil()
-  forkManagerUtil.initializeForkManager(simpleForkConfigurator, "regtest")
+  @Before
+  def init(): Unit = {
+    val forkManagerUtil = new ForkManagerUtil()
+    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+  }
 
-  def getRegularTransaction(regularOutputsCount: Int,
-                            forgerOutputsCount: Int,
-                            withdrawalOutputsCount: Int,
-                            boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)],
-                            maxInputs: Int): RegularTransaction = {
+  def buildRegularTransaction(regularOutputsCount: Int,
+                              forgerOutputsCount: Int,
+                              withdrawalOutputsCount: Int,
+                              boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)],
+                              maxInputs: Int,
+                              invalidCoinBoxValue: Boolean = false): RegularTransaction = {
     val outputsCount = regularOutputsCount + forgerOutputsCount + withdrawalOutputsCount
 
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
@@ -83,7 +88,7 @@ class SidechainStateTest
     var totalTo = 0L
 
     for(s <- getPrivateKey25519List(regularOutputsCount).asScala) {
-      val value = maxTo / outputsCount
+      val value = if (invalidCoinBoxValue) 30 else maxTo / outputsCount
       to.add(new ZenBoxData(s.publicImage(), value))
       totalTo += value
     }
@@ -121,7 +126,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0, 0, Seq(), 5)
+    transactionList += buildRegularTransaction(1, 0, 0, Seq(), 5)
 
     // Mock get and update methods of StateStorage
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -140,7 +145,7 @@ class SidechainStateTest
 
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
-        getRegularTransaction(0,1,0,Seq(),1)
+        buildRegularTransaction(0,1,0,Seq(),1)
           .newBoxes().get(0).asInstanceOf[ForgerBox]
       )
     )
@@ -233,12 +238,13 @@ class SidechainStateTest
     Mockito.when(mutualityMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(mutualityMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(mutualityMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
+    Mockito.when(mutualityMockedBlock.timestamp).thenReturn(86401)
 
     val secret = getPrivateKey25519List(1).get(0)
     val boxAndSecret = Seq((getZenBox(secret.publicImage(), 1, Random.nextInt(100)), secret))
     Mockito.when(mutualityMockedBlock.transactions)
       .thenReturn(transactionList.toList ++ transactionList)
-      .thenReturn(List(getRegularTransaction(1, 0, 0, boxAndSecret, 1), getRegularTransaction(1, 0, 0, boxAndSecret, 1)))
+      .thenReturn(List(buildRegularTransaction(1, 0, 0, boxAndSecret, 1), buildRegularTransaction(1, 0, 0, boxAndSecret, 1)))
 
     val sameTransactionsCheckTry = sidechainState.validate(mutualityMockedBlock)
     assertTrue(s"Block validation must be failed with message. But result is - $sameTransactionsCheckTry",
@@ -259,7 +265,7 @@ class SidechainStateTest
     val boxAndSecret2: Seq[(ZenBox,PrivateKey25519)] = Seq((boxList.last.asInstanceOf[ZenBox], secretList.last))
 
     Mockito.when(doubleSpendTransactionMockedBlock.transactions)
-      .thenReturn(List(getRegularTransaction(0, 0, 0, boxAndSecret2 ++ boxAndSecret2, 1)))
+      .thenReturn(List(buildRegularTransaction(0, 0, 0, boxAndSecret2 ++ boxAndSecret2, 1)))
 
     val doubleSpendInTransaction = sidechainState.validate(doubleSpendTransactionMockedBlock)
     assertTrue(s"Block validation must be failed with message. But result is - $doubleSpendInTransaction",
@@ -285,7 +291,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(2, 2, 0, Seq(), 2)
+    transactionList += buildRegularTransaction(2, 2, 0, Seq(), 2)
     val forgerBoxes = transactionList.head.newBoxes().asScala
       .view
       .filter(_.isInstanceOf[ForgerBox])
@@ -361,7 +367,7 @@ class SidechainStateTest
 
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
-        getRegularTransaction(0,1,0,Seq(),1)
+        buildRegularTransaction(0,1,0,Seq(),1)
           .newBoxes().get(0).asInstanceOf[ForgerBox]
       )
     )
@@ -610,7 +616,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 1, 0, Seq(), 5)
+    transactionList += buildRegularTransaction(1, 1, 0, Seq(), 5)
     val stakeTransaction = transactionList.head
     val allowedBlockSignProposition = stakeTransaction.newBoxes().get(1).blockSignProposition()
     val allowedVrfPublicKey = stakeTransaction.newBoxes().get(1).vrfPubKey()
@@ -629,7 +635,7 @@ class SidechainStateTest
 
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
-        getRegularTransaction(0,1,0,Seq(),1)
+        buildRegularTransaction(0,1,0,Seq(),1)
           .newBoxes().get(0).asInstanceOf[ForgerBox]
       )
     )
@@ -716,7 +722,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 1, 0, Seq(), 5)
+    transactionList += buildRegularTransaction(1, 1, 0, Seq(), 5)
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -866,8 +872,8 @@ class SidechainStateTest
     boxList ++= getZenBoxList(secretList.asJava).asScala.toList
     stateVersion.clear()
     stateVersion += getVersion
-    val belowTresholdTransaction = getRegularTransaction(1, 0, 98, Seq(), 10)
-    val tresholdTransaction = getRegularTransaction(1, 0, 99, Seq(), 10)
+    val belowTresholdTransaction = buildRegularTransaction(1, 0, 98, Seq(), 10)
+    val tresholdTransaction = buildRegularTransaction(1, 0, 99, Seq(), 10)
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -881,7 +887,7 @@ class SidechainStateTest
 
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
-        getRegularTransaction(0,1,0,Seq(),1)
+        buildRegularTransaction(0,1,0,Seq(),1)
           .newBoxes().get(0).asInstanceOf[ForgerBox]
       )
     )
@@ -919,7 +925,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0, 1, Seq(), 10)
+    transactionList += buildRegularTransaction(1, 0, 1, Seq(), 10)
 
     // Max Withdrawal Boxes per epoch = 100
     // Withdrawal epoch length = 10
@@ -946,7 +952,7 @@ class SidechainStateTest
 
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
-        getRegularTransaction(0,1,0,Seq(),1)
+        buildRegularTransaction(0,1,0,Seq(),1)
           .newBoxes().get(0).asInstanceOf[ForgerBox]
       )
     )
@@ -991,7 +997,7 @@ class SidechainStateTest
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData))
 
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0, 10, Seq(), 10)
+    transactionList += buildRegularTransaction(1, 0, 10, Seq(), 10)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -1007,7 +1013,7 @@ class SidechainStateTest
 
     //Test validate block with no empty WB slots accumulated, 1 new mainchain block reference and a transaction with 20 WBs
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0, 20, Seq(), 10)
+    transactionList += buildRegularTransaction(1, 0, 20, Seq(), 10)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -1025,8 +1031,8 @@ class SidechainStateTest
     //Test validate block with no empty WB slots accumulated, 1 new mainchain block reference and 1 transaction with 10 WBs and 1 transaction with 5 WBs
     transactionList.clear()
 
-    transactionList += getRegularTransaction(1, 0, 10, Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)), 1)
-    transactionList += getRegularTransaction(1, 0, 5, Seq((boxList.last.asInstanceOf[ZenBox], secretList.last)), 1)
+    transactionList += buildRegularTransaction(1, 0, 10, Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)), 1)
+    transactionList += buildRegularTransaction(1, 0, 5, Seq((boxList.last.asInstanceOf[ZenBox], secretList.last)), 1)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -1082,8 +1088,8 @@ class SidechainStateTest
     //Test validate block with 1 empty WB slots accumulated, 1 new mainchain block reference, 5 already mined WBS and 2 transaction with 10 WBs
     transactionList.clear()
 
-    transactionList += getRegularTransaction(1, 0, 10, Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)), 1)
-    transactionList += getRegularTransaction(1, 0, 10, Seq((boxList.last.asInstanceOf[ZenBox], secretList.last)), 1)
+    transactionList += buildRegularTransaction(1, 0, 10, Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)), 1)
+    transactionList += buildRegularTransaction(1, 0, 10, Seq((boxList.last.asInstanceOf[ZenBox], secretList.last)), 1)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -1103,7 +1109,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.consensusSlotsInEpoch).thenReturn(86400)
 
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0, 100, Seq(), 100)
+    transactionList += buildRegularTransaction(1, 0, 100, Seq(), 100)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -1116,5 +1122,37 @@ class SidechainStateTest
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
       validateTry.isSuccess)
+  }
+  @Test
+  def testCoinBoxFeeBeforeAndAfterFork(): Unit = {
+    secretList.clear()
+    secretList ++= getPrivateKey25519List(5).asScala
+    boxList.clear()
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    val tx = buildRegularTransaction(1, 1, 0, Seq(), 5)
+    val tx2 = buildRegularTransaction(1, 1, 0, Seq(), 5, invalidCoinBoxValue = true)
+
+    Mockito.when(mockedStateStorage.getBox(any()))
+      .thenAnswer(answer => {
+        val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
+        boxList.find(_.id().sameElements(boxId))
+      })
+    val sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
+      params, bytesToVersion(getVersion.data()), mockedApplicationState)
+
+    val consensusEpochNumberFork = 10
+
+    val tryValidate = sidechainState.validate(tx)
+    assertTrue(tryValidate.isSuccess)
+    val tryValidate2 = sidechainState.validate(tx2)
+    assertTrue(tryValidate2.isSuccess)
+
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ consensusEpochNumberFork))
+
+    val tryValidateAfterFork = sidechainState.validate(tx)
+    assertTrue(tryValidateAfterFork.isSuccess)
+    val tryValidateAfterFork2 = sidechainState.validate(tx2)
+    assertEquals(s"Transaction [${tx2.id()}] is semantically invalid: Coin box value [30] is below the threshold[54].",
+      tryValidateAfterFork2.failed.get.getMessage)
   }
 }

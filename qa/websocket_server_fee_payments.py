@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
@@ -56,7 +57,7 @@ class SCWsServerFeePayments(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def run_test(self):
-        print("SC ws server fee payments test is starting...")
+        logging.info("SC ws server fee payments test is starting...")
 
         epoch_mc_blocks_left = self.withdrawal_epoch_length - 1
 
@@ -98,7 +99,7 @@ class SCWsServerFeePayments(SidechainTestFramework):
         ###########################################################
         #       Check new tip event for fee payments info         #
         ###########################################################
-        print("######## Check new tip event for fee payments info test ########")
+        logging.info("######## Check new tip event for fee payments info test ########")
 
         # Generate MC blocks to reach the end of the withdrawal epoch
         mc_node.generate(epoch_mc_blocks_left)
@@ -137,7 +138,7 @@ class SCWsServerFeePayments(SidechainTestFramework):
         ###########################################################
         #               Get single block request test             #
         ###########################################################
-        print("######## Get single block request test ########")
+        logging.info("######## Get single block request test ########")
 
         # Send get single block request with block hash of the last block of the WE
         response = json.loads(ws.sendMessage(ws_connection,
@@ -181,7 +182,7 @@ class SCWsServerFeePayments(SidechainTestFramework):
         ###########################################################
         #       Check new tip event without payments info         #
         ###########################################################
-        print("######## Check new tip event without payments info test ########")
+        logging.info("######## Check new tip event without payments info test ########")
 
         # Generate 1 SC block that should not cause to any fee payments
         self.blocks.append(generate_next_blocks(sc_node, "", 1)[0])

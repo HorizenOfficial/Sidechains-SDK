@@ -85,7 +85,7 @@ class ElementsChainTest extends JUnitSuite {
     assertTrue("Empty ChainStorage expected not to find modifier for inconsistent height", chainStorage.dataByHeight(1).isEmpty)
     assertTrue("Empty ChainStorage expected not to find modifier id for inconsistent height", chainStorage.idByHeight(0).isEmpty)
     assertTrue("Empty ChainStorage expected not to find modifier id for inconsistent height", chainStorage.idByHeight(1).isEmpty)
-    assertTrue("Empty ChainStorage expected to return empty chain from nonexistent modifier", chainStorage.chainAfter(id).isEmpty)
+    assertTrue("Empty ChainStorage expected to return empty chain from nonexistent modifier", chainStorage.chainAfter(id, None).isEmpty)
     assertEquals("No parent shall be found for empty chain", None, chainStorage.parentOf(id))
   }
 
@@ -116,24 +116,31 @@ class ElementsChainTest extends JUnitSuite {
     checkAddNewBestBlockIsSuccessfully(chainStorage, id1, data1)
     checkStorageElementIsPresent(chainStorage, id1, data1, 1)
     checkBestElementIs(chainStorage, id1, data1, 1)
-    assertEquals("Chain from shall be equal", Seq(id1), chainStorage.chainAfter(id1))
+    assertEquals("Chain from shall be equal", Seq(id1), chainStorage.chainAfter(id1, None))
     assertEquals("Id shall be found for height 0", None, chainStorage.idByHeight(0))
 
     val (id2, data2) = dataGenerator.getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id2, data2)
     checkStorageElementIsPresent(chainStorage, id2, data2, 2)
     checkBestElementIs(chainStorage, id2, data2, 2)
-    assertEquals("Chain from shall be equal", Seq(id1, id2), chainStorage.chainAfter(id1))
+    assertEquals("Chain from shall be equal", Seq(id1, id2), chainStorage.chainAfter(id1, None))
 
     val (id3, data3) = dataGenerator.getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id3, data3)
-    assertEquals("Chain from shall be equal", Seq(id2, id3), chainStorage.chainAfter(id2))
+    assertEquals("Chain from shall be equal", Seq(id2, id3), chainStorage.chainAfter(id2, None))
 
     val (id4, data4) = dataGenerator.getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id4, data4)
     checkStorageElementIsPresent(chainStorage, id4, data4, 4)
     checkBestElementIs(chainStorage, id4, data4, 4)
-    assertEquals("Chain from shall be equal", Seq(id4), chainStorage.chainAfter(id4))
+    assertEquals("Chain from shall be equal", Seq(id4), chainStorage.chainAfter(id4, None))
+
+    //Test with only one block requested
+    assertEquals("Chain from shall be equal", Seq(id2), chainStorage.chainAfter(id2, Some(1)))
+    //Test by asking all the blocks
+    assertEquals("Chain from shall be equal", Seq(id3, id4), chainStorage.chainAfter(id3, Some(2)))
+    //Test by asking more than the maximum blocks
+    assertEquals("Chain from shall be equal", Seq(id3, id4), chainStorage.chainAfter(id3, Some(4)))
 
     val (newId4, newData4) = dataGenerator.setParentId(3).getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, newId4, newData4)
@@ -141,7 +148,7 @@ class ElementsChainTest extends JUnitSuite {
     checkBestElementIsNot(chainStorage, id4, data4)
     checkStorageElementIsPresent(chainStorage, newId4, newData4, 4)
     checkBestElementIs(chainStorage, newId4, newData4, 4)
-    assertEquals("Chain from shall be equal", Seq(), chainStorage.chainAfter(id4))
+    assertEquals("Chain from shall be equal", Seq(), chainStorage.chainAfter(id4, None))
     assertEquals("Searching by predicate had been failed", Some(data3), chainStorage.getLastDataByPredicate(data => data.getParentId == data3.getParentId))
     assertEquals("Searching by predicate had been failed", Some(data2), chainStorage.getLastDataByPredicateTillHeight(2)(data => data.getParentId == data2.getParentId))
 
