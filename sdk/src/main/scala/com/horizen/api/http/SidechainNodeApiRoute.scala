@@ -8,8 +8,9 @@ import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorBadCircuit, ErrorInvalidHost, ErrorRetrieveCertificateSigners, ErrorStopNodeAlreadyInProgress}
 import com.horizen.api.http.SidechainNodeRestSchema._
+import com.horizen.api.http.SidechainTransactionRestScheme.{ReqSpendForgingStake, TransactionForgerOutput, TransactionInput, TransactionOutput}
 import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation, TypeOfCircuit}
-import com.horizen.certificatesubmitter.keys.{ActualKeys, KeyRotationProof}
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.params.NetworkParams
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.secret.SchnorrSecret
@@ -206,7 +207,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     try {
       withView { sidechainNodeView =>
         val currentEpoch = sidechainNodeView.state.getWithdrawalEpochInfo.epoch
-        sidechainNodeView.state.actualKeys(currentEpoch) match {
+        sidechainNodeView.state.certifiersKeys(currentEpoch) match {
           case Some(actualKeys) =>
             ApiResponseUtil.toResponse(RespGetCertificateSigners(actualKeys))
           case None =>
@@ -220,14 +221,14 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   def getKeyRotationProofs: Route = (post & path("getKeyRotationProofs")) {
     try {
-      withView { sidechainNodeView =>
-        circuiType match {
-          case NaiveThresholdSignatureCircuit =>
-            ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation proofs!", JOptional.empty()))
-          case NaiveThresholdSignatureCircuitWithKeyRotation =>
-            val currentEpoch = sidechainNodeView.state.getWithdrawalEpochInfo.epoch
-            val keyRotationProofs = sidechainNodeView.state.keyRotationProofs(currentEpoch)
-            ApiResponseUtil.toResponse(RespGetKeyRotationProof(keyRotationProofs))
+      entity(as[ReqKeyRotationProof]) { body =>
+        withView { sidechainNodeView =>
+          circuiType match {
+            case NaiveThresholdSignatureCircuit =>
+              ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation proofs!", JOptional.empty()))
+            case NaiveThresholdSignatureCircuitWithKeyRotation =>
+              ApiResponseUtil.toResponse(RespGetKeyRotationProof(sidechainNodeView.state.keyRotationProof(body.withdrawalEpoch, body.indexOfSigner, body.keyType)))
+          }
         }
       }
     } catch {
@@ -291,10 +292,19 @@ object SidechainNodeRestSchema {
   private[api] case class RespSignMessage(signedMessage: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGetCertificateSigners(actualKeys: ActualKeys) extends SuccessResponse
+  private[api] case class ReqKeyRotationProof(withdrawalEpoch: Int,
+                                               indexOfSigner: Int,
+                                               keyType: Int) {
+    require(withdrawalEpoch >= 0, "Withdrawal epoch is negative")
+    require(indexOfSigner >= 0, "Signer index is negative")
+    require(keyType >= 0, "Key type is negative")
+  }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGetKeyRotationProof(keyRotationProofs: Seq[KeyRotationProof]) extends SuccessResponse
+  private[api] case class RespGetCertificateSigners(actualKeys: CertifiersKeys) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGetKeyRotationProof(keyRotationProofs: Option[KeyRotationProof]) extends SuccessResponse
 }
 
 object SidechainNodeErrorResponse {

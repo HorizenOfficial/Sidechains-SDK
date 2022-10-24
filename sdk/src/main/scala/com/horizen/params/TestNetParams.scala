@@ -1,6 +1,7 @@
 package com.horizen.params
 
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
+
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions

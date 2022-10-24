@@ -111,7 +111,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
         case _ => (schnorrMastersPublicKeysBytesList(indexOfSigner), null, null)
       }
     }).unzip3
-    
+
 
     val schnorrKeysSignaturesListBytes =  SchnorrKeysSignaturesListBytes(
       schnorrSignersPublicKeysBytesList,

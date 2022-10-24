@@ -4,7 +4,6 @@ import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, Si
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.TimeToEpochUtils

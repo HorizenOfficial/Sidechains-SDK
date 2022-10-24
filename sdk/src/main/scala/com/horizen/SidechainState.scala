@@ -5,18 +5,20 @@ import com.horizen.backup.BoxIterator
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
+import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofType.KeyRotationProofType
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
-import com.horizen.params.NetworkParams
+import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.transaction.{MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
+import com.horizen.transaction.{KeyRotationTransaction, MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
@@ -26,7 +28,7 @@ import sparkz.core.transaction.state._
 import java.io.File
 import java.math.{BigDecimal, MathContext}
 import java.util
-import java.util.{ArrayList => JArrayList, Optional => JOptional}
+import java.util.{ArrayList => JArrayList, Optional => JOptional, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -45,6 +47,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with NodeState
     with ScorexLogging
     with UtxoMerkleTreeView
+    with NetworkParamsUtils
 {
 
   // TODO Every time when we finish the epoch we retrieve state of previous epoch + allKeyRotations, and update storage
@@ -208,6 +211,25 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       })
     }
+
+    var keyTypeMap = new JHashMap[KeyRotationProofType, Seq[Int]]()
+    mod.transactions.foreach(tx => {
+      if (tx.isInstanceOf[KeyRotationTransaction]) {
+        val keyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
+        val keyType = keyRotationTransaction.getKeyRotationProof.keyType
+        val keyIndex = keyRotationTransaction.getKeyRotationProof.index
+        if (keyTypeMap.containsKey(keyType)) {
+          if (keyTypeMap.get(keyType).contains(keyIndex))
+            throw new IllegalArgumentException(s"Block ${mod.id} contains multiple KeyRotationTransactions pointing to the same key")
+          else {
+            val currentValue: Seq[Int] = keyTypeMap.get(keyType)
+            keyTypeMap.put(keyType, currentValue :+ keyIndex)
+          }
+        } else {
+          keyTypeMap.put(keyType, Seq(keyIndex))
+        }
+      }
+    })
 
     if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
       checkWithdrawalBoxesAllowed(mod)
@@ -429,7 +451,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
           mod.topQualityCertificateOpt,
           mod.feeInfo,
-          getRestrictForgerIndexToUpdate(mod.sidechainTransactions)
+          getRestrictForgerIndexToUpdate(mod.sidechainTransactions),
+          getKeyRotationProofsToAdd(mod.sidechainTransactions)
         )
       })
     }
@@ -447,6 +470,23 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }).toArray
   }
 
+  //Take the list of transactions inside a block and returns the key rotation proofs
+  def getKeyRotationProofsToAdd(txs:  Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Seq[KeyRotationProof] = {
+    params.typeOfCircuit match {
+      case NaiveThresholdSignatureCircuit =>
+        Seq[KeyRotationProof]()
+      case NaiveThresholdSignatureCircuitWithKeyRotation =>
+        txs.flatMap(tx =>{
+          if (tx.isInstanceOf[KeyRotationTransaction]) {
+            val keyRotationTransaction: KeyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
+            Some(keyRotationTransaction.getKeyRotationProof)
+          } else {
+            None
+          }
+        })
+    }
+  }
+
   // apply global changes and delegate SDK unknown part to Sidechain.applyChanges(...)
   // 1) get boxes ids to remove, and boxes to append from "changes"
   // 2) call applicationState.applyChanges(changes):
@@ -459,7 +499,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                    consensusEpoch: ConsensusEpochNumber,
                    topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
                    blockFeeInfo: BlockFeeInfo,
-                   forgerListIndexes: Array[Int]
+                   forgerListIndexes: Array[Int],
+                   keyRotationProofsToAdd: Seq[KeyRotationProof],
                   ): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     var boxesToAppend = changes.toAppend.map(_.box)
@@ -475,11 +516,20 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val scHasCeased: Boolean = hasReachedCertificateSubmissionWindowEnd &&
       topQualityCertificateOpt.orElse(stateStorage.getTopQualityCertificate(withdrawalEpochInfo.epoch - 1)).isEmpty
 
+    var actualCertificateSigners: Option[CertifiersKeys] = Option.empty
+
+    //Check if this is the genesis block
+    if (isGenesisBlock(versionToId(newVersion))) {
+      actualCertificateSigners = Option.apply(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
+    }
+
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)
     if(isWithdrawalEpochFinished) {
       // Calculate and append fee payment boxes to the boxesToAppend
       // Note: that current block fee info is still not in the state storage, so consider it during result calculation.
       boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some(blockFeeInfo)).map(_.asInstanceOf[SidechainTypes#SCB])
+
+      //TODO: update the actualCertificateSigners
     }
 
     boxesToAppend.foreach(box => {
@@ -507,7 +557,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased, forgerListIndexes, params.allowedForgersList.size).get,
+            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased, forgerListIndexes, params.allowedForgersList.size, keyRotationProofsToAdd, actualCertificateSigners).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           updatedUtxoMerkleTreeProvider,
           params,

@@ -10,10 +10,6 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.certificatesubmitter.keys._
-import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.consensus._
-import com.horizen.forge.{ForgerList, ForgerListSerializer}
-import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.ScorexLogging
 import java.util.{ArrayList => JArrayList}

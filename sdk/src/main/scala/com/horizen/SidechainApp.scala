@@ -114,8 +114,8 @@ class SidechainApp @Inject()
   val typeOfCircuit = sidechainSettings.withdrawalEpochCertificateSettings.typeOfCircuit
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
-  if (typeOfCircuit.equals(TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation))
-    sidechainTransactionsCompanion.customTransactionSerializers.put(KeyRotationTransactionId.id(), KeyRotationTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
+  //if (typeOfCircuit.equals(TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation))
+  //  sidechainTransactionsCompanion.customTransactionSerializers.put(KeyRotationTransactionId.id(), KeyRotationTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
@@ -129,15 +129,15 @@ class SidechainApp @Inject()
   val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
     .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
-  var masterPublicKeys: Seq[SchnorrProposition] = Seq()
+  var mastersPublicKeys: Seq[SchnorrProposition] = Seq()
 
   val calculatedSysDataConstant: Array[Byte] = typeOfCircuit match {
     case NaiveThresholdSignatureCircuit =>
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
     case NaiveThresholdSignatureCircuitWithKeyRotation =>
-      masterPublicKeys = sidechainSettings.withdrawalEpochCertificateSettings.masterPublicKeys
+      mastersPublicKeys = sidechainSettings.withdrawalEpochCertificateSettings.masterPublicKeys
         .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
-      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, masterPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, mastersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
   }
   log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
@@ -162,6 +162,8 @@ class SidechainApp @Inject()
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      typeOfCircuit = typeOfCircuit,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -185,6 +187,8 @@ class SidechainApp @Inject()
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      typeOfCircuit = typeOfCircuit,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -208,6 +212,8 @@ class SidechainApp @Inject()
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      typeOfCircuit = typeOfCircuit,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,

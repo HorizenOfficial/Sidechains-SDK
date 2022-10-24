@@ -537,8 +537,15 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               val wallet = sidechainNodeView.getNodeWallet
               val fee = body.fee.getOrElse(0L)
 
+              val memoryPool = sidechainNodeView.getNodeMemoryPool
+              val boxIdsToExclude: JArrayList[Array[scala.Byte]] = new JArrayList()
+              for(transaction <- memoryPool.getTransactions().asScala)
+                for(id <- transaction.boxIdsToOpen().asScala) {
+                  boxIdsToExclude.add(id.data)
+                }
+
               //Collect input box
-              wallet.allBoxes().asScala.find(box => box.isInstanceOf[ZenBox] && box.value() >= fee) match {
+              wallet.allBoxes().asScala.find(box => box.isInstanceOf[ZenBox] && box.value() >= fee && !boxIdsToExclude.contains(box.id())) match {
                 case Some(inputBox) =>
                   val keyRotationTransaction = KeyRotationTransaction.create(
                     new JPair[ZenBox, PrivateKey25519](inputBox.asInstanceOf[ZenBox], wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get()),
