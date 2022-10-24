@@ -7,9 +7,9 @@ import com.horizen.certnative.*;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystemType;
-import com.horizen.schnorrnative.SchnorrKeysSignaturesList;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
+import com.horizen.schnorrnative.ValidatorKeysUpdatesList;
 import com.horizen.utils.Pair;
 import scala.Enumeration;
 import scala.Option;
@@ -137,7 +137,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         Optional<WithdrawalCertificate> previousCertificateOption = OptionConverters.toJava(previousEpochCertificateOption)
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c, sidechainCreationVersion));
 
-        SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
+        ValidatorKeysUpdatesList keysSignaturesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
         SchnorrPublicKey[] signingPublicKeys = keysSignaturesList.getSigningKeys();
 
         List<BackwardTransfer> backwardTransfers =
@@ -225,7 +225,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         List<SchnorrPublicKey> masterPublicKeys = masterPublicKeysList.stream().map(key -> SchnorrPublicKey.deserialize(key)).
                 collect(Collectors.toList());
 
-        SchnorrKeysSignaturesList schnorrKeysSignaturesList = new SchnorrKeysSignaturesList(
+        ValidatorKeysUpdatesList schnorrKeysSignaturesList = new ValidatorKeysUpdatesList(
                 signerPublicKeys,
                 masterPublicKeys,
                 new ArrayList<>(),

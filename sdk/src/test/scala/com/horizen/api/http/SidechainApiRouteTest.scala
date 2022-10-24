@@ -341,7 +341,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   val params = MainNetParams(sidechainId = utilMocks.sidechainIdArray)
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
-    sidechainTransactionsCompanion, params).route
+    sidechainTransactionsCompanion, params, TypeOfCircuit.NaiveThresholdSignatureCircuit).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
   val mockedSidechainApp: SidechainApp = mock[SidechainApp]
 

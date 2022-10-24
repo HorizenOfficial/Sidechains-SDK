@@ -8,6 +8,7 @@ import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
+import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.customconfig.CustomAkkaConfiguration
@@ -142,7 +143,7 @@ trait SidechainNodeViewHolderFixture
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
     SidechainTransactionApiRoute(sidechainSettings.sparkzSettings.restApi, nodeViewHolderRef,
-      sidechainTransactionActorRef, sidechainTransactionsCompanion, params)
+      sidechainTransactionActorRef, sidechainTransactionsCompanion, params, TypeOfCircuit.NaiveThresholdSignatureCircuit)
   }
 
 }
