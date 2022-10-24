@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import time
-
+import logging
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -43,10 +43,10 @@ def printStoragesVersion(node, storages_list):
     for name in storages_list:
         # get the last version of the storage
         json_params = {"storage":name, "numberOfVersionToRetrieve": 5}
-        print(node.dataDir)
+        logging.info(node.dataDir)
         ret = launch_db_tool(node.dataDir, CUSTOM_STORAGE_NAMES, "versionsList", json_params)
         version = ret['versionsList']
-        print("{} --> {}".format(name, version))
+        logging.info("{} --> {}".format(name, version))
 
 
 def checkStoragesVersion(node, storages_list, expectedVersion):
@@ -55,7 +55,6 @@ def checkStoragesVersion(node, storages_list, expectedVersion):
         json_params = {"storage": name}
         ret = launch_db_tool(node.dataDir, CUSTOM_STORAGE_NAMES, "lastVersionID", json_params)
         version = ret['version']
-        #print("{} --> {}".format(name, version))
         # check we got the expected version
         assert_equal(version, expectedVersion)
 
@@ -69,9 +68,8 @@ def rollbackStorages(node, storages_list, numberOfVersionsToRollback):
         # get the target version to rollback to
         rollbackVersion = versionsList[-1]
         json_params = {"storage": name, "versionToRollback": rollbackVersion}
-        print("...Rollbacking storage \"{}\" to version {}".format(name, rollbackVersion))
+        logging.info("...Rollbacking storage \"{}\" to version {}".format(name, rollbackVersion))
         ret = launch_db_tool(node.dataDir, CUSTOM_STORAGE_NAMES, "rollback", json_params)
-        #print("{} --> {}".format(name, rollbackVersion))
         # check that we did it correctly
         assert_equal(ret["versionCurrent"], rollbackVersion)
 
@@ -149,9 +147,9 @@ class StorageRecoveryWithReindexTest(SidechainTestFramework):
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
 
-        print("# Generate 1 more address in sc_node1")
+        logging.info("Generate 1 more address in sc_node1")
         sc_address_2 = http_wallet_createPrivateKey25519(sc_node1, self.API_KEY_NODE1)
-        print("# Send some coins to the new address")
+        logging.info("Send some coins to the new address")
         sendCoinsToAddress(sc_node1, sc_address_2, 1000, 0, self.API_KEY_NODE1)
 
         self.sc_sync_all()
@@ -159,30 +157,30 @@ class StorageRecoveryWithReindexTest(SidechainTestFramework):
         self.sc_sync_all()
 
         firstSendToNode2Height = http_block_best_height(sc_node1)
-        print(firstSendToNode2Height)
+        logging.info(firstSendToNode2Height)
 
-        print("# Node2 balance should be 0 at this point")
+        logging.info("Node2 balance should be 0 at this point")
         balance_node2 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
         assert_equal(balance_node2, 0)
 
-        print("# Import the key to node2")
+        logging.info("Import the key to node2")
         sc_secret_2 = http_wallet_exportSecret(sc_node1, sc_address_2, self.API_KEY_NODE1)
         http_wallet_importSecret(sc_node2, sc_secret_2, self.API_KEY_NODE2)
-        print("# Check node2 now has the new address")
+        logging.info("Check node2 now has the new address")
         pkeys_node2 = http_wallet_allPublicKeys(sc_node2, self.API_KEY_NODE2)
         assert_true(self.findAddress(pkeys_node2, sc_address_2))
 
         #Part one
 
-        print("# Start the reindex on node 2 (only first 2 steps)")
+        logging.info("Start the reindex on node 2 (only first 2 steps)")
         http_debug_reindex_step(sc_node2, self.API_KEY_NODE2)
         http_debug_reindex_step(sc_node2, self.API_KEY_NODE2)
 
-        print("# Check node 2 is on reindex status")
+        logging.info("Check node 2 is on reindex status")
         reindexStatus_node2 = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStatus_node2, 'ongoing')
 
-        print("Stopping SC2")
+        logging.info("Stopping SC2")
         stop_sc_node(sc_node2, 1)
         time.sleep(5)
 
@@ -202,21 +200,21 @@ class StorageRecoveryWithReindexTest(SidechainTestFramework):
             reindexStatus = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStatus, 'inactive')
 
-        print("# Node2 balance should be changed  now")
+        logging.info("Node2 balance should be changed  now")
         balance_node2 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
         assert_equal(balance_node2, 1000)
 
         #Part two
 
-        print("# Start the reindex on node 2 (only first 2 steps)")
+        logging.info("Start the reindex on node 2 (only first 2 steps)")
         http_debug_reindex_step(sc_node2, self.API_KEY_NODE2)
         http_debug_reindex_step(sc_node2, self.API_KEY_NODE2)
 
-        print("# Check node 2 is on reindex status")
+        logging.info("Check node 2 is on reindex status")
         reindexStatus_node2 = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStatus_node2, 'ongoing')
 
-        print("Stopping SC2")
+        logging.info("Stopping SC2")
         stop_sc_node(sc_node2, 1)
         time.sleep(5)
 
@@ -236,7 +234,7 @@ class StorageRecoveryWithReindexTest(SidechainTestFramework):
             reindexStatus = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStatus, 'inactive')
 
-        print("# Node2 balance should be changed  now")
+        logging.info("Node2 balance should be changed  now")
         balance_node2 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
         assert_equal(balance_node2, 1000)
 

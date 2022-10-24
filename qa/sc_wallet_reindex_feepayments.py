@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import time
+import logging
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -101,7 +102,7 @@ class SidechainWalletReindexFeePayments(SidechainTestFramework):
         assert_true(len(api_fee_payments) == 1)
         assert_true(fee_received == api_fee_payments[0]['value'])
 
-        print("# Start reindex on node  and wait till it is completed")
+        logging.info("Start reindex on node  and wait till it is completed")
         reindexStarted = http_wallet_reindex(sc_node)
         assert_equal(reindexStarted, True)
         reindexStatus = http_wallet_reindex_status(sc_node)
@@ -109,7 +110,7 @@ class SidechainWalletReindexFeePayments(SidechainTestFramework):
             time.sleep(1)
             reindexStatus = http_wallet_reindex_status(sc_node)
 
-        print("# Check balance is unchanged (fee payments have been correctly taken into consideration again")
+        logging.info("Check balance is unchanged (fee payments have been correctly taken into consideration again")
         assert_true(http_wallet_balance(sc_node) == updatedBalance)
 
 

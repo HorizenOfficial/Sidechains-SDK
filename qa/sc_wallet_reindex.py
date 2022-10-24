@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import time
+import logging
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_false, assert_true, initialize_chain_clean, start_nodes, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, connect_sc_nodes, check_wallet_coins_balance
@@ -105,9 +106,9 @@ class SidechainWalletReindexTest(SidechainTestFramework):
 
         #Part one - "normal"  reindex flow
 
-        print("# Generate 1 more address in sc_node1")
+        logging.info("Generate 1 more address in sc_node1")
         sc_address_2 = http_wallet_createPrivateKey25519(sc_node1, self.API_KEY_NODE1)
-        print("# Send some coins to the new address")
+        logging.info("Send some coins to the new address")
         sendCoinsToAddress(sc_node1, sc_address_2, 1000, 0, self.API_KEY_NODE1)
 
         self.sc_sync_all()
@@ -115,20 +116,20 @@ class SidechainWalletReindexTest(SidechainTestFramework):
         self.sc_sync_all()
 
         firstSendToNode2Height = http_block_best_height(sc_node1)
-        print(firstSendToNode2Height)
+        logging.info(firstSendToNode2Height)
 
-        print("# Node2 balance should be 0 at this point")
+        logging.info("Node2 balance should be 0 at this point")
         balance_node2 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
         assert_equal(balance_node2, 0)
 
-        print("# Import the key to node2")
+        logging.info("Import the key to node2")
         sc_secret_2 = http_wallet_exportSecret(sc_node1, sc_address_2, self.API_KEY_NODE1)
         http_wallet_importSecret(sc_node2, sc_secret_2, self.API_KEY_NODE2)
-        print("# Check node2 now has the new address")
+        logging.info("Check node2 now has the new address")
         pkeys_node2 = http_wallet_allPublicKeys(sc_node2, self.API_KEY_NODE2)
         assert_true(self.findAddress(pkeys_node2, sc_address_2))
 
-        print("# Start reindex on node 2 and wait till it is completed")
+        logging.info("Start reindex on node 2 and wait till it is completed")
         reindexStarted = http_wallet_reindex(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStarted, True)
         reindexStatus = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
@@ -140,7 +141,7 @@ class SidechainWalletReindexTest(SidechainTestFramework):
 
         assert_equal(reindexStatus, 'inactive')
 
-        print("# Node2 balance should be changed now")
+        logging.info("Node2 balance should be changed now")
         balance_node2 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
         assert_equal(balance_node2, 1000)
 
@@ -152,27 +153,27 @@ class SidechainWalletReindexTest(SidechainTestFramework):
 
         blockBest1 = http_block_best(sc_node1)
 
-        print("# Start the reindex on node 2 (only first step)")
+        logging.info("Start the reindex on node 2 (only first step)")
         http_debug_reindex_step(sc_node2, self.API_KEY_NODE2)
 
-        print("# Check node 2 is on reindex status")
+        logging.info("Check node 2 is on reindex status")
         reindexStatus_node2 = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStatus_node2, 'ongoing')
 
-        print("# Call some 'read only' endpoints to check they are still working")
+        logging.info("Call some 'read only' endpoints to check they are still working")
         assert_equal(http_block_best(sc_node2), blockBest1)
         assert_equal(http_block_findById(sc_node2, blockBest1['id'])['block']['id'], blockBest1['id'])
 
-        print("# Get balance on node2 is 0 since we just restarted the reindex")
+        logging.info("Get balance on node2 is 0 since we just restarted the reindex")
         balance_node3 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
         assert_equal(balance_node3, 0)
 
-        print("# Push a tx on the mempool from node1")
+        logging.info("Push a tx on the mempool from node1")
         sendCoinsToAddress(sc_node1, sc_address_2, 1000, 0, self.API_KEY_NODE1)
 
         time.sleep(3)
 
-        print("# The tx should be present only on the node1 mempool")
+        logging.info("The tx should be present only on the node1 mempool")
         node1MempoolTx = allTransactions(sc_node1, False)
         assert_equal(len(node1MempoolTx['transactionIds']), 1)
         node2MempoolTx = allTransactions(sc_node2, False)
@@ -187,10 +188,10 @@ class SidechainWalletReindexTest(SidechainTestFramework):
 
         assert_equal(http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2), 'ongoing')
 
-        print("# At this step we should detected the send")
+        logging.info("At this step we should detected the send")
         assert_equal(http_wallet_balance(sc_node2, self.API_KEY_NODE2), 1000)
 
-        print("# Pushing a tx from node2 generates an error during reindex")
+        logging.info("Pushing a tx from node2 generates an error during reindex")
         expectedTx = ''
         expectedTxMessage = ''
         try:
@@ -204,16 +205,16 @@ class SidechainWalletReindexTest(SidechainTestFramework):
         assert_equal(expectedTx, 'GenericTransactionError')
         assert_equal(expectedTxMessage, 'Node reindex in progress - unable to send transaction')
 
-        print("# Generate a  block on node 1")
+        logging.info("Generate a  block on node 1")
         generate_next_blocks(sc_node1, "first node", 1)
         time.sleep(5)
         newHeightNode1 = http_block_best_height(sc_node1)
         newHeightNode2 = http_block_best_height(sc_node2)
 
-        print("# Node 2 should not apply the new block while reindexing")
+        logging.info("Node 2 should not apply the new block while reindexing")
         assert_true(newHeightNode1 == (newHeightNode2 + 1))
 
-        print("# Complete the reindex")
+        logging.info("Complete the reindex")
         reindexStatus_node2 = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
         maxTries = 60 #maximum time of 1 minute more or less to complete the reindex
         while (reindexStatus_node2 == 'ongoing' or maxTries < 0):
@@ -223,14 +224,14 @@ class SidechainWalletReindexTest(SidechainTestFramework):
             reindexStatus_node2 = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStatus_node2, 'inactive')
 
-        print(" Now we should now be able to post tx also on node2")
+        logging.info("Now we should now be able to post tx also on node2")
         sendCoinsToAddress(sc_node2, sc_address_1, 500, 0, self.API_KEY_NODE2)
 
         self.sc_sync_all()
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
 
-        print("# Node 2 should have the block applied now")
+        logging.info("Node 2 should have the block applied now")
         newHeightNode1Id = http_block_best(sc_node1)['id']
         newHeightNode2Id = http_block_best(sc_node2)['id']
         assert_true(newHeightNode1Id == newHeightNode2Id)
