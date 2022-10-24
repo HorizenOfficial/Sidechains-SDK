@@ -8,6 +8,7 @@ import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
+import com.horizen.transaction.incompatibilitychecker.DefaultTransactionIncompatibilityChecker;
 import com.horizen.utils.Pair;
 import org.junit.Test;
 

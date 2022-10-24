@@ -4,6 +4,9 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.box.ZenBox;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.transaction.incompatibilitychecker.MempoolIncompatibleTransactionIncompatibilityChecker;
+import com.horizen.transaction.incompatibilitychecker.TransactionIncompatibilityChecker;
+import com.horizen.transaction.serializers.FeePaymentsTransactionSerializer;
 import scala.Array;
 import sparkz.core.serialization.SparkzSerializer;
 

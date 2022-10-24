@@ -10,6 +10,9 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.Secret;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.transaction.incompatibilitychecker.OpenStakeTransactionIncompatibilityChecker;
+import com.horizen.transaction.incompatibilitychecker.TransactionIncompatibilityChecker;
+import com.horizen.transaction.serializers.OpenStakeTransactionSerializer;
 import com.horizen.utils.Pair;
 import scala.Array;
 
@@ -120,6 +123,10 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
     @Override
     public byte version() {
         return version;
+    }
+
+    public Signature25519 getProof(){
+        return proof;
     }
 
     @Override

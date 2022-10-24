@@ -4,7 +4,7 @@ import com.horizen.box.ZenBox
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.transaction.FeePaymentsTransaction
-import com.horizen.transaction.FeePaymentsTransactionSerializer
+import com.horizen.transaction.serializers.FeePaymentsTransactionSerializer
 import scala.collection.JavaConverters._
 
 

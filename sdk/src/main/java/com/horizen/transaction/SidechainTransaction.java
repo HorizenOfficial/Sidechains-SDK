@@ -33,7 +33,7 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Box<
                 newBoxesPropositionsStream.write(proposition.bytes(), 0, proposition.bytes().length);
             }
 
-            _hashWithoutNonce = Blake2b256.hash(
+            _hashWithoutNonce = (byte[]) Blake2b256.hash(
                     Bytes.concat(
                             unlockersStream.toByteArray(),
                             newBoxesPropositionsStream.toByteArray(),

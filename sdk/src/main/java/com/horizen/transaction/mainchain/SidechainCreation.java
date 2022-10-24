@@ -14,9 +14,9 @@ import scorex.crypto.hash.Blake2b256;
 import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
-    private MainchainTxSidechainCreationCrosschainOutput output;
-    private byte[] containingTxHash;
-    private int index;
+    private final MainchainTxSidechainCreationCrosschainOutput output;
+    private final byte[] containingTxHash;
+    private final int index;
 
     public SidechainCreation(MainchainTxSidechainCreationCrosschainOutput output, byte[] containingTxHash, int index) {
         this.output = output;

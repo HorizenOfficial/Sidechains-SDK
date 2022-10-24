@@ -3,7 +3,7 @@ package com.horizen.consensus
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
 import com.horizen.params.{NetworkParams, NetworkParamsUtils, TestNetParams}
 import com.horizen.proof.VrfProof
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}
@@ -135,8 +135,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
   @Before
   def init(): Unit = {
-    val forkManagerUtil = new ForkManagerUtil()
-    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManager.init(new SimpleForkConfigurator(), "regtest")
   }
 
   @Test

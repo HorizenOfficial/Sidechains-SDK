@@ -1,6 +1,6 @@
 package com.horizen.csw
 
-import com.horizen.cryptolibprovider.CswCircuitImplZendoo
+import com.horizen.cryptolibprovider.implementations.CswCircuitImplZendoo
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.utils.BytesUtils
 import org.bouncycastle.math.ec.rfc8032.Ed25519

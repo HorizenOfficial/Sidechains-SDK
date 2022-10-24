@@ -1,7 +1,7 @@
 package com.horizen.block
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.fixtures.SecretFixture
 import com.horizen.librustsidechains.{Constants, FieldElement}
 import com.horizen.merkletreenative.MerklePath

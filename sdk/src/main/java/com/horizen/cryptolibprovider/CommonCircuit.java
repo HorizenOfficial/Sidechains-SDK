@@ -1,14 +1,26 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.block.WithdrawalEpochCertificate;
+import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.certnative.BackwardTransfer;
+import com.horizen.certnative.WithdrawalCertificate;
+import com.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo;
+import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
+import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.BytesUtils;
+import scala.Enumeration;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-public class CommonCircuit {
+public class  CommonCircuit {
     private static final int maxSegmentSize = (1 << 18);
 
     // Keys total max size values are the same as in MC
@@ -34,5 +46,34 @@ public class CommonCircuit {
         } catch (IOException e) {
             return "";
         }
+    }
+
+    public static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
+        return new BackwardTransfer(box.proposition().bytes(), box.value());
+    }
+
+    public static WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+        return new WithdrawalCertificate(
+                FieldElement.deserialize(cert.sidechainId()),
+                cert.epochNumber(),
+                scala.collection.JavaConverters.seqAsJavaList(cert.backwardTransferOutputs()).stream().map(bto -> new BackwardTransfer(bto.pubKeyHash(), bto.amount())).collect(Collectors.toList()),
+                cert.quality(),
+                FieldElement.deserialize(cert.endCumulativeScTxCommitmentTreeRoot()),
+                cert.ftMinAmount(),
+                cert.btrFee(),
+                Arrays.stream(cert.customFieldsOpt(sidechainCreationVersion).get()).map(FieldElement::deserialize).collect(Collectors.toList())
+        );
+    }
+
+    public static List<SchnorrSignature> getSignatures(List<Optional<byte[]>> schnorrSignatureBytesList){
+        return schnorrSignatureBytesList
+                .stream()
+                .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(new SchnorrSignature()))
+                .collect(Collectors.toList());
+    }
+
+    public static List<BackwardTransfer> getBackwardTransfers(List<WithdrawalRequestBox> withdrawalRequestBoxes){
+        return withdrawalRequestBoxes.stream()
+                .map(CommonCircuit::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
     }
 }

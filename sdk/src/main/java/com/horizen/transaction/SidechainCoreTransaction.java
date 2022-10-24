@@ -5,6 +5,7 @@ import com.horizen.box.data.*;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.transaction.serializers.SidechainCoreTransactionSerializer;
 import scala.Array;
 
 import static com.horizen.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
@@ -75,13 +76,25 @@ public final class SidechainCoreTransaction
     }
 
     @Override
-    protected List<BoxData<Proposition, Box<Proposition>>> getOutputData(){
+    public List<BoxData<Proposition, Box<Proposition>>> getOutputData(){
         return outputsData;
     }
 
     @Override
     public long fee() {
         return fee;
+    }
+
+    public List<Proof<Proposition>> getProofs(){
+        return proofs;
+    }
+
+    public List<byte[]> getInputsIds() {
+        return inputsIds;
+    }
+
+    public List<BoxData<Proposition, Box<Proposition>>> getOutputsData(){
+        return outputsData;
     }
 
     @Override

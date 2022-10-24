@@ -160,7 +160,6 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
 
     nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ originalTransaction.id -> transactionBytes))), Some(peer)))
     viewHolderProbe.expectMsgType[TransactionsFromRemote[RegularTransaction]]
-    networkControllerProbe.expectNoMessage()
 
     nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ originalTransaction.id -> transferData))), Some(peer)))
     viewHolderProbe.expectMsgType[TransactionsFromRemote[RegularTransaction]]
@@ -193,7 +192,6 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
 
     nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlock.ModifierTypeId, Map(deserializedBlock.id -> blockBytes))), Some(peer)))
     viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
-    networkControllerProbe.expectNoMessage()
 
     nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlock.ModifierTypeId, Map(deserializedBlock.id -> transferData))), Some(peer)))
     viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]

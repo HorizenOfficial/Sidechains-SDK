@@ -10,6 +10,8 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.transaction.incompatibilitychecker.DefaultTransactionIncompatibilityChecker;
+import com.horizen.transaction.incompatibilitychecker.TransactionIncompatibilityChecker;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import scorex.crypto.hash.Blake2b256;
@@ -85,7 +87,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
             proofsStream.write(proofBytes, 0, proofBytes.length);
         }
 
-        return BytesUtils.toHexString(Blake2b256.hash(Bytes.concat(
+        return BytesUtils.toHexString((byte[]) Blake2b256.hash(Bytes.concat(
                 messageToSign(),
                 proofsStream.toByteArray(),
                 customFieldsData()
