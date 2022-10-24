@@ -22,6 +22,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 
+import java.io.File
 import java.util
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
@@ -51,6 +52,8 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
+  private var provingFileAbsolutePath: String = _
+
   private[certificatesubmitter] var submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled
   private[certificatesubmitter] var certificateSigningEnabled: Boolean = settings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
 
@@ -74,6 +77,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
     super.postRestart(reason)
     log.error("CertificateSubmitter was restarted because of: ", reason)
     // Switch to the working cycle, otherwise Submitter will stuck on initialization phase.
+    loadProvingFilePath()
     context.become(workingCycle)
   }
 
@@ -136,8 +140,24 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
       throw new IllegalStateException("Incorrect configuration for backward transfer, expected SysDataConstant " +
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
+
+    loadProvingFilePath()
   }
 
+  private def loadProvingFilePath(): Unit = {
+    if (params.certProvingKeyFilePath.isEmpty) {
+      throw new IllegalStateException(s"Proving key file name is not set")
+    }
+
+    val provingFile: File = new File(params.certProvingKeyFilePath)
+    if (!provingFile.canRead) {
+      throw new IllegalStateException(s"Proving key file at path ${provingFile.getAbsolutePath} is not exist or can't be read")
+    }
+    else {
+      provingFileAbsolutePath = provingFile.getAbsolutePath
+      log.debug(s"Found proving key file at location: $provingFileAbsolutePath")
+    }
+  }
   private def getSidechainCreationTransaction(history: SidechainHistory): SidechainCreation = {
     val mainchainReference: MainchainBlockReference = history
       .getMainchainBlockReferenceByHash(params.genesisMainchainBlockHash).asScala
@@ -383,7 +403,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
               override def run(): Unit = {
                 var proofWithQuality: com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
                 try {
-                  proofWithQuality = keyRotationStrategy.generateProof(dataForProofGeneration)
+                  proofWithQuality = keyRotationStrategy.generateProof(dataForProofGeneration, provingFileAbsolutePath)
                 } catch {
                   case e: Exception =>
                     log.error("Proof creation failed.", e)

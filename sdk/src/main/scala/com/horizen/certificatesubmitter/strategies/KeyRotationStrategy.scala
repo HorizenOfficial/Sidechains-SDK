@@ -21,7 +21,7 @@ abstract class KeyRotationStrategy[T <: CertificateData](settings: SidechainSett
 
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
-  def generateProof(certificateData: T): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
+  def generateProof(certificateData: T, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
   def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): T
@@ -61,20 +61,5 @@ abstract class KeyRotationStrategy[T <: CertificateData](settings: SidechainSett
     }")
 
     history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
-  }
-
-  val provingFileAbsolutePath: String = {
-    if (params.certProvingKeyFilePath.isEmpty) {
-      throw new IllegalStateException(s"Proving key file name is not set")
-    }
-
-    val provingFile: File = new File(params.certProvingKeyFilePath)
-    if (!provingFile.canRead) {
-      throw new IllegalStateException(s"Proving key file at path ${provingFile.getAbsolutePath} is not exist or can't be read")
-      ""
-    } else {
-      log.debug(s"Found proving key file at location: ${provingFile.getAbsolutePath}")
-      provingFile.getAbsolutePath
-    }
   }
 }

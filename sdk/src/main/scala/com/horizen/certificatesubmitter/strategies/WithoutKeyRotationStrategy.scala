@@ -13,7 +13,7 @@ import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
 
 class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy[CertificateDataWithoutKeyRotation](settings, params) {
-  override def generateProof(certificateData: CertificateDataWithoutKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       certificateData.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
