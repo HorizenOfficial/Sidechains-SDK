@@ -1,6 +1,6 @@
 package com.horizen.certificatesubmitter.keys
 
-import com.horizen.schnorrnative.{SchnorrKeysSignaturesList, SchnorrPublicKey, SchnorrSignature}
+import com.horizen.schnorrnative.{SchnorrPublicKey, SchnorrSignature, ValidatorKeysUpdatesList}
 
 import java.util
 
@@ -16,8 +16,8 @@ case class SchnorrKeysSignaturesListBytes(
                                     )
 
 object SchnorrKeysSignaturesListBytes{
-  def getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes: SchnorrKeysSignaturesListBytes): SchnorrKeysSignaturesList = {
-    new SchnorrKeysSignaturesList(
+  def getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes: SchnorrKeysSignaturesListBytes): ValidatorKeysUpdatesList = {
+    new ValidatorKeysUpdatesList(
       byteArrayToKeysList(schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList),
       byteArrayToKeysList(schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList),
       byteArrayToKeysList(schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList),

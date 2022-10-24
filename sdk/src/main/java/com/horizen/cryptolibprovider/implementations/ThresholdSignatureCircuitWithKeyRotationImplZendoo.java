@@ -11,9 +11,9 @@ import com.horizen.cryptolibprovider.CommonCircuit;
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystemType;
-import com.horizen.schnorrnative.SchnorrKeysSignaturesList;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
+import com.horizen.schnorrnative.ValidatorKeysUpdatesList;
 import com.horizen.utils.Pair;
 
 import java.util.*;
@@ -99,8 +99,8 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
                 .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.apply(sidechainCreationVersionNumber)));
 
-        SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
-        SchnorrPublicKey[] signingPublicKeys = keysSignaturesList.getSigningKeys();
+        ValidatorKeysUpdatesList validatorKeysUpdatesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
+        SchnorrPublicKey[] signingPublicKeys = validatorKeysUpdatesList.getSigningKeys();
 
         WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
                 sidechainIdFieldElement,
@@ -111,14 +111,14 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 btrFee,
                 customFieldsElements
         );
-        CreateProofResult proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(keysSignaturesList,
+        CreateProofResult proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(validatorKeysUpdatesList,
                 withdrawalCertificate, previousCertificateOption, signatures,
                 signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
                 provingKeyPath, false, zk, true, true);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFieldElement.freeFieldElement();
-        Arrays.stream(keysSignaturesList.getSigningKeys()).forEach(SchnorrPublicKey::freePublicKey);
+        Arrays.stream(validatorKeysUpdatesList.getSigningKeys()).forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
         customFieldsElements.forEach(FieldElement::freeFieldElement);
 
@@ -206,7 +206,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     public byte[] generateKeysRootHash(List<byte[]> publicSignersKeysList, List<byte[]> publicMastersKeysList) {
         FieldElement fieldElement;
         try {
-            try (SchnorrKeysSignaturesList schnorrKeysSignaturesList = new SchnorrKeysSignaturesList(
+            try (ValidatorKeysUpdatesList validatorKeysUpdatesList = new ValidatorKeysUpdatesList(
                     publicSignersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
                     publicMastersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
                     publicSignersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
@@ -216,7 +216,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                     new ArrayList<>(),
                     new ArrayList<>()
             )) {
-                fieldElement = schnorrKeysSignaturesList.getUpdatedKeysRootHash(schnorrKeysSignaturesList.getSigningKeys().length);
+                fieldElement = validatorKeysUpdatesList.getUpdatedKeysRootHash(validatorKeysUpdatesList.getSigningKeys().length);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
