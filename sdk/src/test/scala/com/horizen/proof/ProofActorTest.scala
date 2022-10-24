@@ -23,6 +23,7 @@ import org.junit.{Before, Ignore, Test}
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.Random
 
 case object ProofMessage
@@ -45,7 +46,7 @@ class ProofActorReceiver
     }
     catch {
       case e: Exception =>
-        assertEquals(e.toString(), true, false)
+        assertEquals(e.toString, true, false)
     }
 
     SchnorrSecretKey.deserialize(bytes)
@@ -61,13 +62,12 @@ class ProofActorReceiver
                                     merkelTreeRoot: Array[Byte]
                                    )
 
-  override def receive = {
-    case ProofMessage => {
+  override def receive: Receive = {
+    case ProofMessage =>
       sender ! tryGenerateProof
-    }
   }
 
-  protected def tryGenerateProof = {
+  protected def tryGenerateProof: Boolean = {
     val params = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
     val dataForProofGeneration: DataForProofGeneration = buildDataForProofGeneration(params)
     val proofWithQuality = generateProof(dataForProofGeneration)
@@ -99,7 +99,7 @@ class ProofActorReceiver
 
     val wb: Seq[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42))
 
-    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(wb.asJava, sidechainId, epochNumber, endCummulativeTransactionCommTreeHash, 0, 0, Seq(merkelTreeRoot))
+    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(wb.asJava, sidechainId, epochNumber, endCummulativeTransactionCommTreeHash, 0, 0, Optional.of(merkelTreeRoot))
     val emptySigs = List.fill[Optional[Array[Byte]]](7 - threshold)(Optional.empty[Array[Byte]]())
 
     val signatures: util.List[Optional[Array[Byte]]] = (keyPairs
@@ -113,7 +113,7 @@ class ProofActorReceiver
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(dataForProofGeneration.withdrawalRequests.asJava, dataForProofGeneration.sidechainId, dataForProofGeneration.processedEpochNumber, dataForProofGeneration.endCumulativeEpochBlockHash, 0, 0, Seq(dataForProofGeneration.merkelTreeRoot), dataForProofGeneration.signatures, dataForProofGeneration.publicKeysBytes, dataForProofGeneration.threshold, ProofActorReceiver.provingKeyPath, true, true)
+    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(dataForProofGeneration.withdrawalRequests.asJava, dataForProofGeneration.sidechainId, dataForProofGeneration.processedEpochNumber, dataForProofGeneration.endCumulativeEpochBlockHash, 0, 0, Optional.of(dataForProofGeneration.merkelTreeRoot), dataForProofGeneration.signatures, dataForProofGeneration.publicKeysBytes, dataForProofGeneration.threshold, ProofActorReceiver.provingKeyPath, true, true)
   }
 }
 
@@ -151,7 +151,7 @@ class ProofActorTest {
     for (i <- 1 to 15) {
       println("Proof generation # " + i)
 
-      implicit val timeout = Timeout(600 seconds) // needed for `?` below
+      implicit val timeout: Timeout = Timeout(600 seconds) // needed for `?` below
 
       val result = Await.result(receiverInst ? ProofMessage, timeout.duration).asInstanceOf[Boolean]
 
