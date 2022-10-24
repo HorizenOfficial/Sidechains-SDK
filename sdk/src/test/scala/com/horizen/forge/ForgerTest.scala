@@ -12,7 +12,7 @@ import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
-import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, LocallyGeneratedModifier}
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 
@@ -45,6 +45,7 @@ class ForgerTest extends JUnitSuite with Matchers {
     val (forger, viewHolder) = prepareTestData(params, timeProvider)
 
     forger ! StartForging
+    viewHolder.expectMsgType[GetNodeViewChanges] //first right away
     viewHolder.expectMsgType[LocallyGeneratedModifier[SidechainBlock]] //first right away
     viewHolder.expectNoMessage(900.millis) //then ~1s pause
     viewHolder.expectMsgType[LocallyGeneratedModifier[SidechainBlock]](1100.millis) //next in a second

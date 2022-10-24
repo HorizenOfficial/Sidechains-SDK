@@ -124,13 +124,12 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     modifiers.flatMap { case (id, bytes) =>
       val reader: VLQReader = new VLQByteBufferReader(ByteBuffer.wrap(bytes))
 
-      if (reader.remaining != 0) {
-        penalizeMisbehavingPeer(remote)
-        log.warn(s"Received additional bytes after block. Declared id ${encoder.encodeId(id)} from ${remote.toString}")
-      }
-
       serializer.parseTry(reader) match {
         case Success(mod) if id == mod.id =>
+          if (reader.remaining != 0) {
+            penalizeMisbehavingPeer(remote)
+            log.warn(s"Received additional bytes after block. Declared id ${encoder.encodeId(id)} from ${remote.toString}")
+          }
           Some(mod)
         case _ =>
           // Penalize peer and do nothing - it will be switched to correct state on CheckDelivery
