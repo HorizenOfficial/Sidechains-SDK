@@ -97,7 +97,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
 
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
-                .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.Value(sidechainCreationVersionNumber)));
+                .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.apply(sidechainCreationVersionNumber)));
 
         SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
         SchnorrPublicKey[] signingPublicKeys = keysSignaturesList.getSigningKeys();
