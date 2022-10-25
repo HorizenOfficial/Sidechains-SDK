@@ -10,9 +10,7 @@ import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.NaiveThresholdSignatureCircuit
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation
+import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
