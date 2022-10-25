@@ -37,6 +37,9 @@ case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               certificateFee: String = "0.0001"
                                              )
 
+case class RemoteKeysManagerSettings(enabled: Boolean,
+                                     address: String)
+
 case class ForgerSettings(automaticForging: Boolean = false,
                           restrictForgers: Boolean = false,
                           allowedForgersList: Seq[ForgerKeysData] = Seq())
@@ -59,6 +62,7 @@ case class SidechainSettings(
                               genesisData: GenesisDataSettings,
                               websocket: WebSocketSettings,
                               withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,
+                              remoteKeysManagerSettings: RemoteKeysManagerSettings,
                               mempool: MempoolSettings,
                               wallet: WalletSettings,
                               forger: ForgerSettings,

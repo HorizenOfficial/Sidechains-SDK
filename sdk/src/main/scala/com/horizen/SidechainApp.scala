@@ -11,6 +11,7 @@ import akka.stream.ActorMaterializer
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen.api.http._
+import com.horizen.api.http.client.SecureEnclaveApiClientRef
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
@@ -358,8 +359,11 @@ class SidechainApp @Inject()
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
+  // Init Secure Enclave Api Client
+  val secureEnclaveApiClientRef: ActorRef = SecureEnclaveApiClientRef(sidechainSettings.remoteKeysManagerSettings)
+
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClientRef, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init CSW manager
