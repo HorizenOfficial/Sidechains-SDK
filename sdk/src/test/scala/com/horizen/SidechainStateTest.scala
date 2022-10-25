@@ -8,7 +8,7 @@ import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.forge.ForgerList
-import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
+import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
@@ -60,7 +60,8 @@ class SidechainStateTest
 
   @Before
   def init(): Unit = {
-    ForkManager.init(new SimpleForkConfigurator(), "regtest")
+    val forkManagerUtil = new ForkManagerUtil()
+    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
 
   def buildRegularTransaction(regularOutputsCount: Int,

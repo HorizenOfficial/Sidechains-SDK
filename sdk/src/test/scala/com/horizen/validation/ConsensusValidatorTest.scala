@@ -5,7 +5,7 @@ import com.horizen.block.SidechainBlock
 import com.horizen.consensus.{FullConsensusEpochInfo, HistoryConsensusChecker}
 import com.horizen.fixtures.VrfGenerator
 import com.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
-import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.TestNetParams
 import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
@@ -19,8 +19,8 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
   val rnd = new Random(20)
   val maximumAvailableShift = 2
 
-  ForkManager.reset()
-  ForkManager.init(new SimpleForkConfigurator(), "regtest")
+  val forkManagerUtil = new ForkManagerUtil()
+  forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
 
   private def createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots: Int, slotLengthInSeconds: Int, totalBlocksCount: Int, blocksInHistoryCount: Int):
   (SidechainHistory, mutable.Buffer[SidechainBlocksGenerator], mutable.Buffer[SidechainBlock]) = {
