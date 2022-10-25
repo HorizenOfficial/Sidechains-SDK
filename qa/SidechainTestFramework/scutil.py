@@ -32,6 +32,9 @@ LEVEL_ALL = "all"
 # timeout in secs for rest api
 DEFAULT_REST_API_TIMEOUT = 5
 
+# max P2P message size for a Modifier
+DEFAULT_MAX_PACKET_SIZE = 5242980
+
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -143,7 +146,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
                                           "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.5.0-SNAPSHOT.jar",
-                                storagesPath, command_name, json_param], stdout=subprocess.PIPE)
+                                storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
         jsone_node = json.loads(db_tool_output)
@@ -175,9 +178,9 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 """
 
 
-def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind, virtual_withdrawal_epoch_length=0):
     jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
-                      "regtestBlockTimestampRewind": block_timestamp_rewind}
+                      "regtestBlockTimestampRewind": block_timestamp_rewind, "virtualWithdrawalEpochLength": virtual_withdrawal_epoch_length}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
 
@@ -399,6 +402,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'POW_DATA': bootstrap_info.pow_data,
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
+        'NON_CEASING': ("true" if bootstrap_info.is_non_ceasing else "false"),
         'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
         'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.initial_cumulative_comm_tree_hash,
         'WEBSOCKET_ADDRESS': websocket_config.address,
@@ -419,6 +423,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
+        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -476,7 +481,8 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "CSW_PROVING_KEY_PATH": csw_keys_paths.proving_key_path,
         "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path,
         "RESTRICT_FORGERS": "false",
-        "ALLOWED_FORGERS_LIST": []
+        "ALLOWED_FORGERS_LIST": [],
+        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE
     }
 
     configsData.append({
@@ -833,6 +839,7 @@ network: {
 
 
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
+                              is_non_ceasing=False,
                               block_timestamp_rewind=DefaultBlockTimestampRewind):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     logging.info(options)
@@ -849,6 +856,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
 
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
                                                block_timestamp_rewind,
+                                               is_non_ceasing,
                                                cert_keys_paths,
                                                csw_keys_paths)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
@@ -862,6 +870,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
+                                                            sc_nodes_bootstrap_info.is_non_ceasing,
                                                             cert_keys_paths,
                                                             csw_keys_paths)
     for i in range(total_number_of_sidechain_nodes):
@@ -905,11 +914,13 @@ Parameters:
 """
 
 
-def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, is_non_ceasing, cert_keys_paths, csw_keys_paths):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
+    withdrawal_epoch_length = 0 if is_non_ceasing else sc_creation_info.withdrawal_epoch_length
+    virtual_withdrawal_epoch_length = sc_creation_info.withdrawal_epoch_length if is_non_ceasing else 0
     certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys,
                                                              sc_creation_info.cert_sig_threshold, cert_keys_paths,
                                                              sc_creation_info.csw_enabled)
@@ -920,7 +931,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
 
     genesis_info = initialize_new_sidechain_in_mainchain(
         sc_creation_info.mc_node,
-        sc_creation_info.withdrawal_epoch_length,
+        withdrawal_epoch_length,
         genesis_account.publicKey,
         sc_creation_info.forward_amount,
         vrf_key.publicKey,
@@ -931,14 +942,16 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         sc_creation_info.sc_creation_version,
         sc_creation_info.csw_enabled)
 
+
+
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
-                                         block_timestamp_rewind)
+                                         block_timestamp_rewind, virtual_withdrawal_epoch_length)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
+                           genesis_data["initialCumulativeCommTreeHash"], is_non_ceasing, cert_keys_paths, csw_keys_paths)
 
 
 def calculateApiKeyHash(auth_api_key):
@@ -966,8 +979,8 @@ def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
     initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
 
 
-def generate_forging_request(epoch, slot):
-    return json.dumps({"epochNumber": epoch, "slotNumber": slot})
+def generate_forging_request(epoch, slot, forced_tx):
+    return json.dumps({"epochNumber": epoch, "slotNumber": slot, "transactionsBytes": forced_tx})
 
 
 def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=False):
@@ -980,7 +993,7 @@ def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=
     return next_epoch, next_slot
 
 
-def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True):
+def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True, forced_tx=None):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
     best_slot = forging_info["bestSlotNumber"]
@@ -988,7 +1001,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
 
     next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, force_switch_to_next_epoch)
 
-    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
     # "while" will break if whole epoch no generated block, due changed error code
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
@@ -997,7 +1010,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
-        forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+        forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
     assert_true("result" in forge_result, "Error during block generation for SC {0}".format(node_name))
     block_id = forge_result["result"]["blockId"]

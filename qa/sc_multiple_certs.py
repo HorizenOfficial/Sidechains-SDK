@@ -59,8 +59,7 @@ class SCMultipleCerts(SidechainTestFramework):
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           # extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0'], [ '-agentlib']] * self.number_of_mc_nodes)
-                           extra_args = [['-agentlib'], []])
+                            extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -82,7 +81,7 @@ class SCMultipleCerts(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, extra_args=[['-agentlib'], []])
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def run_test(self):
         mc_node = self.nodes[0]

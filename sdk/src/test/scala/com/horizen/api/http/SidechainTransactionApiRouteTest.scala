@@ -403,7 +403,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withHeaders(apiTokenHeader)
         .withEntity(
           //"{\"outputs\": [{\"publicKey\": \"sadasdasfsdfsdfsdf\",\"value\": 12}],\"fee\": 30}"
-          SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput, None))
+          SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput, None, None, None))
         ) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

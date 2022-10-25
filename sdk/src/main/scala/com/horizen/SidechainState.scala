@@ -7,31 +7,28 @@ import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.{MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import sparkz.core._
-import sparkz.core.transaction.state._
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import sparkz.core._
+import sparkz.core.transaction.state._
 
 import java.io.File
 import java.math.{BigDecimal, MathContext}
 import java.util
-import java.util.{Optional => JOptional}
-import com.horizen.box.data.ZenBoxData
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.forge.ForgerList
-
+import java.util.{ArrayList => JArrayList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
-import java.util.{ArrayList => JArrayList}
 
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
@@ -131,9 +128,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     if(hasCeased) {
       throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
     }
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
 
     validateBlockTransactionsMutuality(mod)
-    mod.transactions.foreach(tx => validate(tx).get)
+    mod.transactions.foreach(tx => validate(tx, consensusEpochNumber).get)
 
     val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
     val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
@@ -198,8 +196,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
     }
 
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+
     //Check that we don't have multiple openStake transactions with the same forgerIndex
-    if (openStakeTransactionEnabled) {
+    if (openStakeTransactionEnabled(Some(consensusEpochNumber))) {
       val forgerListIndexes = new JArrayList[Int]()
       mod.transactions.foreach(tx => {
         if (tx.isInstanceOf[OpenStakeTransaction]) {
@@ -211,7 +211,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       })
     }
 
-    if (ForkManager.getSidechainConsensusEpochFork(TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)).backwardTransferLimitEnabled())
+    if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
       checkWithdrawalBoxesAllowed(mod)
   }
 
@@ -237,8 +237,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
             (params.maxWBsAllowed * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
   }
 
-  def openStakeTransactionEnabled: Boolean = {
-    stateStorage.getConsensusEpochNumber match {
+  def openStakeTransactionEnabled(consensusEpochNumber: Option[ConsensusEpochNumber]): Boolean = {
+    consensusEpochNumber match {
       case Some(consensusEpochNumber) =>
         ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).openStakeTransactionEnabled()
       case None =>
@@ -294,6 +294,27 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
+  def validateWithFork(tx: SidechainTypes#SCBT, consensusEpochNumber: ConsensusEpochNumber): Try[Unit] = Try {
+    val newBoxes = tx.newBoxes().asScala
+    val newCoinBoxes = newBoxes
+      .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
+
+    val coinBoxMinAmount = ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).coinBoxMinAmount
+      newCoinBoxes.foreach { coinBox =>
+        if (coinBox.value() < coinBoxMinAmount)
+          throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
+            s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
+      }
+
+  }
+
+  override def validate(tx: SidechainTypes#SCBT): Try[Unit] = {
+    stateStorage.getConsensusEpochNumber match {
+      case Some(consensusEpochNumber) => validate(tx, consensusEpochNumber)
+      case None => throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
+    }
+  }
+
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
   // Note 2: BT and FT is not included into memory pool and have another check rule.
   // TO DO: (almost the same as in NodeViewHolder)
@@ -301,17 +322,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   // 2) check if for each B, that is instance of CoinBox interface, that total sum is equal to new CoinBox'es sum minus tx.fee
   // 3) if it's a Sidechain custom Transaction (not known) -> emit applicationState.validate(tx)
   // TO DO: put validateAgainstModifier logic inside validate(mod)
-  override def validate(tx: SidechainTypes#SCBT): Try[Unit] = Try {
+  private def validate(tx: SidechainTypes#SCBT, consensusEpochNumber: ConsensusEpochNumber): Try[Unit] = Try {
     semanticValidity(tx).get
 
     var closedCoinsBoxesAmount : Long = 0L
     var newCoinsBoxesAmount : Long = 0L
-    val isNonCeased: Boolean = params.isNonCeasing
 
     if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
 
       if (tx.isInstanceOf[OpenStakeTransaction]) {
-        if (!openStakeTransactionEnabled)
+        if (!openStakeTransactionEnabled(Some(consensusEpochNumber)))
           throw new Exception("OpenStakeTransaction is still not allowed in this consensus epoch!")
         if (isForgingOpen())
           throw new Exception("OpenStakeTransactions are not allowed because the forger operation has already been opened!")
@@ -354,6 +374,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       }
 
+      validateWithFork(tx, consensusEpochNumber).get
+
       val newBoxes = tx.newBoxes().asScala
 
       newCoinsBoxesAmount = newBoxes
@@ -380,6 +402,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     applicationState.validate(this, tx)
   }
+
+
 
   //Check if the majority of the allowed forgers opened the stake to everyone
   def isForgingOpen(): Boolean = {

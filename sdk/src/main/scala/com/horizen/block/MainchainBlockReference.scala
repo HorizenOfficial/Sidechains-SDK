@@ -185,14 +185,18 @@ object MainchainBlockReference extends ScorexLogging {
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
           sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))
+
         // Certificates for a given sidechain are ordered by quality: from lowest to highest.
         // So get the last sidechain related certificate if present
+        // For non-ceasing sidechain select all related certificates.
+        val topQualityCertificates: Seq[WithdrawalEpochCertificate] = if (params.isNonCeasing) certificates.filter(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
+                                                          else certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data)).toList
 
-        val topQualityCertificate: Seq[WithdrawalEpochCertificate] = certificates.reverse.filter(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
+
         // Get lower quality cert leaves if present.
         // TODO Remove from non-ceasing version
         val certLeaves = commitmentTree.getCertLeaves(sidechainId.data)
-        val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
+        val lowerCertificateLeaves: Seq[Array[Byte]] = if(params.isNonCeasing || certLeaves.isEmpty) Seq() else certLeaves.init
 
         val data: MainchainBlockReferenceData =
           if (scIds.contains(sidechainId)) {
@@ -202,7 +206,7 @@ object MainchainBlockReference extends ScorexLogging {
               scExistenceProof,
               None,
               lowerCertificateLeaves,
-              topQualityCertificate)
+              topQualityCertificates)
           } else {
             val scAbsenceProof = commitmentTree.getAbsenceProof(sidechainId.data);
             MainchainBlockReferenceData(header.hash,

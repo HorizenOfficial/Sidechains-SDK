@@ -513,7 +513,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         if (json.has("virtualWithdrawalEpochLength") && json.get("virtualWithdrawalEpochLength").isInt()) {
             virtualWithdrawalEpochLength = json.get("virtualWithdrawalEpochLength").asInt();
 
-            if (virtualWithdrawalEpochLength <= 100) {
+            // TODO return 100 value
+            if (virtualWithdrawalEpochLength < 10) {
+                // TODO Set for Regtest 10, other 100
                 printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' is less than 100.");
                 return;
             }

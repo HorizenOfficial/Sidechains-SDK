@@ -14,7 +14,7 @@ import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
-import com.horizen.certificatesubmitter.CertificateSubmitterRef
+import com.horizen.certificatesubmitter.{CertificateSubmitterRef, NonCeasingCertificateSubmitterRef}
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
@@ -162,7 +162,7 @@ class SidechainApp @Inject()
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.nonCeasing
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
 
     case "testnet" => TestNetParams(
@@ -186,7 +186,7 @@ class SidechainApp @Inject()
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.nonCeasing
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
 
     case "mainnet" => MainNetParams(
@@ -210,10 +210,12 @@ class SidechainApp @Inject()
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.nonCeasing
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }
+
+  //TODO Check epochLengthfor nonCeasingSidechains
 
   // Configure Horizen address json serializer specifying proper network type.
   JsonHorizenPublicKeyHashSerializer.setNetworkType(params)
@@ -362,7 +364,8 @@ class SidechainApp @Inject()
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = if (params.isNonCeasing) NonCeasingCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+                                          else CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init CSW manager
@@ -385,7 +388,7 @@ class SidechainApp @Inject()
   val boxIterator = backupStorage.getBoxIterator
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),

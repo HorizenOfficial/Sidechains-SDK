@@ -160,10 +160,12 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
- def getLastTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
-    var certificateOpt:Option[ByteArrayWrapper] = storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala
-    while(certificateOpt.isEmpty) {
-      certificateOpt = storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala
+  def getLastTopQualityCertificate(currentWithrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    var withdrawalEpoch = currentWithrawalEpoch
+    var certificateOpt:Option[ByteArrayWrapper] = storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala
+    while(certificateOpt.isEmpty && withdrawalEpoch > 0) {
+      certificateOpt = storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala
+      withdrawalEpoch = withdrawalEpoch -1;
     }
     certificateOpt match {
       case Some(baw) =>
@@ -240,6 +242,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     require(withdrawalRequestAppendSeq != null, "Seq of WithdrawalRequests to append must be NOT NULL. Use empty Seq instead.")
     require(!withdrawalRequestAppendSeq.contains(null), "WithdrawalRequest to append must be NOT NULL.")
     require(blockFeeInfo != null, "BlockFeeInfo must be NOT NULL.")
+    require(topQualityCertificates.map(c => c.epochNumber).distinct.length == topQualityCertificates.length, "TopQualityCertificates must be from different epochs.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()

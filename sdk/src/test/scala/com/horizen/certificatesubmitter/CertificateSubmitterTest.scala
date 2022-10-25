@@ -18,12 +18,21 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.Cert
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.fixtures.FieldElementFixture
+import com.horizen.fork.{ForkConfigurator, ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.params.{CommonParams, NetworkParams, RegTestParams}
+import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
+import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, ZenCoinsUtils}
+import com.horizen.websocket.client._
 import org.junit.Assert._
-import org.junit.{Assert, Test}
-import org.mockito.{ArgumentMatchers, Mockito}
+import org.junit.{Assert, Before, Test}
+import org.mockito.ArgumentMatchers
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{reset, when}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView
@@ -44,22 +53,30 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   implicit lazy val actorSystem: ActorSystem = ActorSystem("submitter-actor-test")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   implicit val timeout: Timeout = 100 milliseconds
+  private var consensusEpochAtWhichForkIsApplied: Int = _
 
+  @Before
+  def init(): Unit = {
+    val forkConfigurator = new SimpleForkConfigurator()
+    consensusEpochAtWhichForkIsApplied = forkConfigurator.getSidechainFork1().regtestEpochNumber
+    val forkManagerUtil = new ForkManagerUtil()
+    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+  }
 
   private def getMockedSettings(timeoutDuration: FiniteDuration, submitterIsEnabled: Boolean, signerIsEnabled: Boolean): SidechainSettings = {
     val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
-    Mockito.when(mockedRESTSettings.timeout).thenReturn(timeoutDuration)
+    when(mockedRESTSettings.timeout).thenReturn(timeoutDuration)
 
     val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
-    Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
+    when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
       val mockedSparkzSettings: SparkzSettings = mock[SparkzSettings]
-      Mockito.when(mockedSparkzSettings.restApi).thenAnswer(_ => mockedRESTSettings)
+      when(mockedSparkzSettings.restApi).thenAnswer(_ => mockedRESTSettings)
       mockedSparkzSettings
     })
-    Mockito.when(mockedSidechainSettings.withdrawalEpochCertificateSettings).thenAnswer(_ => {
+    when(mockedSidechainSettings.withdrawalEpochCertificateSettings).thenAnswer(_ => {
       val mockedWithdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings = mock[WithdrawalEpochCertificateSettings]
-      Mockito.when(mockedWithdrawalEpochCertificateSettings.submitterIsEnabled).thenReturn(submitterIsEnabled)
-      Mockito.when(mockedWithdrawalEpochCertificateSettings.certificateSigningIsEnabled).thenReturn(signerIsEnabled)
+      when(mockedWithdrawalEpochCertificateSettings.submitterIsEnabled).thenReturn(submitterIsEnabled)
+      when(mockedWithdrawalEpochCertificateSettings.certificateSigningIsEnabled).thenReturn(signerIsEnabled)
       mockedWithdrawalEpochCertificateSettings
     })
     mockedSidechainSettings
@@ -67,10 +84,10 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   def mockedMcBlockWithScCreation(genSysConstantOpt: Option[Array[Byte]]): MainchainBlockReference = {
     val mockedOutput = mock[MainchainTxSidechainCreationCrosschainOutput]
-    Mockito.when(mockedOutput.constantOpt).thenAnswer(_ => genSysConstantOpt)
+    when(mockedOutput.constantOpt).thenAnswer(_ => genSysConstantOpt)
 
     val mockedRefData: MainchainBlockReferenceData = mock[MainchainBlockReferenceData]
-    Mockito.when(mockedRefData.sidechainRelatedAggregatedTransaction).thenAnswer(_ => {
+    when(mockedRefData.sidechainRelatedAggregatedTransaction).thenAnswer(_ => {
       val outputs: ListBuffer[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = ListBuffer()
       outputs.append(new SidechainCreation(mockedOutput, new Array[Byte](32), 0))
       Some(new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))
@@ -114,7 +131,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          Mockito.when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
+          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
             .thenAnswer(_ => Some(mockedMcBlockWithScCreation(expectedSysDataConstantOpt)).asJava)
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }
@@ -152,7 +169,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          Mockito.when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
+          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
             .thenAnswer(_ => Some(mockedMcBlockWithScCreation(expectedSysDataConstantOpt)).asJava)
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }
@@ -191,7 +208,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          Mockito.when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
+          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
             .thenAnswer(_ => Some(mockedMcBlockWithScCreation(expectedSysDataConstantOpt)).asJava)
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }
@@ -230,7 +247,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          Mockito.when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
+          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
             .thenAnswer(_ => Some(mockedMcBlockWithScCreation(expectedSysDataConstantOpt)).asJava)
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }
@@ -360,6 +377,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedMainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
     val history: SidechainHistory = mock[SidechainHistory]
+    val storage: SidechainHistoryStorage = mock[SidechainHistoryStorage]
     val state: SidechainState = mock[SidechainState]
     val wallet: SidechainWallet = mock[SidechainWallet]
 
@@ -394,9 +412,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val epochNumber = 10
     val referencedEpochNumber = epochNumber - 1
     val epochInfoOutsideWindow = WithdrawalEpochInfo(epochNumber, lastEpochIndex = params.withdrawalEpochLength)
-    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
+    when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
       val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-      Mockito.when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoOutsideWindow)
+      when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoOutsideWindow)
       blockInfo
     })
 
@@ -409,35 +427,43 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     // Test 2: block inside the epoch first time with 1 Sig out of 2
     val epochInfoInsideWindow = WithdrawalEpochInfo(epochNumber, lastEpochIndex = 0)
-    Mockito.reset(state)
-    Mockito.when(state.withdrawalRequests(ArgumentMatchers.any[Int])).thenAnswer(answer => {
+    reset(state)
+    when(state.withdrawalRequests(ArgumentMatchers.any[Int])).thenAnswer(answer => {
       assertEquals("Invalid referenced epoch number retrieved for state.withdrawalRequests.", referencedEpochNumber, answer.getArgument(0).asInstanceOf[Int])
       Seq()
     })
-    Mockito.when(state.utxoMerkleTreeRoot(ArgumentMatchers.any[Int])).thenAnswer(answer => {
+    when(state.utxoMerkleTreeRoot(ArgumentMatchers.any[Int])).thenAnswer(answer => {
       assertEquals("Invalid referenced epoch number retrieved for state.withdrawalRequests.", referencedEpochNumber, answer.getArgument(0).asInstanceOf[Int])
      Some(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
     })
 
-    Mockito.reset(history)
-    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
+    reset(history)
+    when(history.storage).thenAnswer { _ =>
+      val blockInfoMock = mock[SidechainBlockInfo]
+      when(storage.blockInfoById(any())).thenReturn(blockInfoMock)
+      when(blockInfoMock.timestamp).thenReturn(params.sidechainGenesisBlockTimestamp * 2)
+      storage
+    }
+    when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
       val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-      Mockito.when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoInsideWindow)
+      when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoInsideWindow)
+      when(blockInfo.timestamp).thenAnswer(_ => epochInfoInsideWindow)
       blockInfo
     })
-    Mockito.when(history.getMainchainBlockReferenceInfoByMainchainBlockHeight(ArgumentMatchers.any[Int])).thenAnswer(_ => {
+    when(history.getMainchainBlockReferenceInfoByMainchainBlockHeight(ArgumentMatchers.any[Int])).thenAnswer(_ => {
       val randomArray: Array[Byte] = new Array[Byte](CommonParams.mainchainBlockHashLength)
       val info: MainchainBlockReferenceInfo = new MainchainBlockReferenceInfo(randomArray, randomArray, 0, randomArray, randomArray)
       Some(info).asJava
     })
-    Mockito.when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => {
+    when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => {
       val info: MainchainHeaderInfo = mock[MainchainHeaderInfo]
-      Mockito.when(info.cumulativeCommTreeHash).thenReturn(new Array[Byte](32))
+      when(info.cumulativeCommTreeHash).thenReturn(new Array[Byte](32))
+      when(info.sidechainBlockId).thenReturn(ModifierId @@ "some_block_id")
       Some(info)
     })
 
     var walletSecrets = schnorrSecrets.take(1)
-    Mockito.when(wallet.secret(ArgumentMatchers.any[Proposition])).thenAnswer(answer => {
+    when(wallet.secret(ArgumentMatchers.any[Proposition])).thenAnswer(answer => {
       val pubKey = answer.getArgument(0).asInstanceOf[SchnorrProposition]
       walletSecrets.find(s => s.owns(pubKey))
     })
@@ -507,7 +533,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     submitter.signaturesStatus = None
 
     val mcTopCertQuality: Long = 3
-    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+    when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       // Cert with mcTopCertQuality presents in the MC
       TopQualityCertificates(
         Some(MempoolTopQualityCertificateInfo("", referencedEpochNumber, mcTopCertQuality, 0.0)),
@@ -581,7 +607,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // No better cert quality found
     submitter.signaturesStatus = None
 
-    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+    when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       // No certs in MC
       TopQualityCertificates(None, None)
     })
@@ -607,7 +633,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     // 8.1 Get quality failed with the MC server internal error -> we expect to continue the flow, so to schedule the generation
     submitter.signaturesStatus = None
-    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+    when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       throw new WebsocketErrorResponseException("ERROR")
     })
 
@@ -628,8 +654,8 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     // 8.2 Get quality failed with the MC server inconsistent error message -> we expect to continue the flow, so to schedule the generation
     submitter.signaturesStatus = None
-    Mockito.reset(mockedMainchainChannel)
-    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+    reset(mockedMainchainChannel)
+    when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       throw new WebsocketInvalidErrorMessageException("Inconsistent error message")
     })
 
@@ -650,8 +676,8 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     // 8.3 Get quality failed with any other error (connection/network error, for example) -> no cert generation expected
     submitter.signaturesStatus = None
-    Mockito.reset(mockedMainchainChannel)
-    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+    reset(mockedMainchainChannel)
+    when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       throw new RuntimeException("other exception")
     })
 
@@ -669,10 +695,10 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
 
     // Test 9: block outside the epoch when the cert submission is scheduled
-    Mockito.reset(history)
-    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
+    reset(history)
+    when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
       val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-      Mockito.when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoOutsideWindow)
+      when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoOutsideWindow)
       blockInfo
     })
 
@@ -683,6 +709,22 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
     certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
     assertFalse("Actor expected not submitting at the moment.", certState)
+  }
+
+  @Test
+  def getFtMinAmount(): Unit = {
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
+    val dustThreshold = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
+    val submitter: CertificateSubmitter = TestActorRef(Props(
+        new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[NetworkParams], mock[MainchainNodeChannel])
+    )).underlyingActor
+
+    assertEquals("Before the fork, ftMinAmount should be 0",
+      0, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied - 1))
+    assertEquals(s"After the fork, ftMinAmount should be equal to dust threshold [$dustThreshold]",
+      dustThreshold, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied))
+    assertEquals(s"After the fork, ftMinAmount should be equal to dust threshold [$dustThreshold]",
+      dustThreshold, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied + 1))
   }
 
   @Test
@@ -886,7 +928,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
         val signature = secret.sign(messageToSign)
         submitter.signaturesStatus.get.knownSigs.append(CertificateSignatureInfo(index, signature))
     }
-    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+    when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       // In-chain Cert in the MC
       TopQualityCertificates(
         None,

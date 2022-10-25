@@ -36,10 +36,12 @@ Test:
           and then to MC/SC blocks.
         - verify epoch 1 certificate, verify backward transfers list    
 """
-class SCBackwardTransfer(SidechainTestFramework):
+class SCBackwardTransferNonCeaing(SidechainTestFramework):
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
+
+    #TODO multiple_cert test for nonCeasing Sidechain
 
     def setup_nodes(self):
         num_nodes = 1
@@ -59,11 +61,13 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
                                                         cert_max_keys=cert_max_keys,
-                                                        cert_sig_threshold=cert_sig_threshold), sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
+                                                        cert_sig_threshold=cert_sig_threshold,
+                                                        sc_creation_version=2), sc_node_configuration,)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, True)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir)
+        return start_sc_nodes(1, self.options.tmpdir, extra_args=['-agentlib'])
+        # return start_sc_nodes(1, self.options.tmpdir)
 
     def run_test(self):
         time.sleep(0.1)
@@ -311,5 +315,4 @@ class SCBackwardTransfer(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    // TODO add nonCeasing=false argument for sharing tests
-    SCBackwardTransfer().main()
+    SCBackwardTransferNonCeaing().main()
