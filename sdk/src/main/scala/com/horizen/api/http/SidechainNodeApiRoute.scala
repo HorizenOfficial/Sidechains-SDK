@@ -8,11 +8,11 @@ import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorBadCircuit, ErrorInvalidHost, ErrorRetrieveCertificateSigners, ErrorStopNodeAlreadyInProgress}
 import com.horizen.api.http.SidechainNodeRestSchema._
-import com.horizen.api.http.SidechainTransactionRestScheme.{ReqSpendForgingStake, TransactionForgerOutput, TransactionInput, TransactionOutput}
 import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation, TypeOfCircuit}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.params.NetworkParams
-import com.horizen.schnorrnative.SchnorrSecretKey
+import com.horizen.poseidonnative.PoseidonHash
+import com.horizen.schnorrnative.{SchnorrSecretKey}
 import com.horizen.secret.SchnorrSecret
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils

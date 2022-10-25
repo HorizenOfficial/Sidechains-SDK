@@ -6,7 +6,7 @@ import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.certificatesubmitter.keys.KeyRotationProofType.KeyRotationProofType
+import com.horizen.certificatesubmitter.keys.KeyRotationProofType.{KeyRotationProofType, SigningKeyRotationProofType, MasterKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
@@ -28,7 +28,7 @@ import sparkz.core.transaction.state._
 import java.io.File
 import java.math.{BigDecimal, MathContext}
 import java.util
-import java.util.{ArrayList => JArrayList, Optional => JOptional, HashMap => JHashMap}
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -379,6 +379,25 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           case None =>
             throw new Exception("Input box not found!")
         }
+      }
+
+      if (tx.isInstanceOf[KeyRotationTransaction]) {
+        val keyRotationTransaction: KeyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
+        val keyRotationProof = keyRotationTransaction.getKeyRotationProof
+        val newKey = keyRotationProof.newValueOfKey
+        val oldCertifiersKeys = certifiersKeys(getWithdrawalEpochInfo.epoch).get
+
+        //Verify that the key index is in a valid range
+        if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)
+          throw new Exception("Key index in KeyRotationTransaction is out of range!")
+
+        //Verify the signature using the old signing key
+        if (!keyRotationProof.signingKeySignature.isValid(oldCertifiersKeys.signingKeys(keyRotationProof.index), newKey.pubKeyBytes()))
+          throw new Exception("Signing key signature in KeyRotationTransaction is not valid!")
+
+        //Verify the signature using the old master key
+        if (!keyRotationProof.masterKeySignature.isValid(oldCertifiersKeys.masterKeys(keyRotationProof.index), newKey.pubKeyBytes()))
+          throw new Exception("Master key signature in KeyRotationTransaction is not valid!")
       }
 
       for (u <- tx.unlockers().asScala) {

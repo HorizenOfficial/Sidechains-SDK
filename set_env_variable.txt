@@ -1,0 +1,4 @@
+export BITCOINCLI=/home/marco/zen/src/zen-cli
+export BITCOIND=/home/marco/zen/src/zend
+export SIDECHAIN_SDK=/home/marco/SDK_key_rotation/Sidechains-SDK
+export APP_MAIN="com.horizen.examples.SimpleApp"
