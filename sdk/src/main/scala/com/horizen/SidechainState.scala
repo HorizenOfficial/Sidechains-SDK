@@ -6,10 +6,10 @@ import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.certificatesubmitter.keys.KeyRotationProofType.{KeyRotationProofType, SigningKeyRotationProofType, MasterKeyRotationProofType}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofType.{KeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, SchnorrFunctionsImplZendoo}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
@@ -387,16 +387,19 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         val newKey = keyRotationProof.newValueOfKey
         val oldCertifiersKeys = certifiersKeys(getWithdrawalEpochInfo.epoch).get
 
+        //TODO: need to change when the new function for hashing the schnorr pub key will be available in the crypto lib
+        val messageToSign = new SchnorrFunctionsImplZendoo().publicKeyToFieldElement(newKey.pubKeyBytes()).serializeFieldElement()
+
         //Verify that the key index is in a valid range
         if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)
           throw new Exception("Key index in KeyRotationTransaction is out of range!")
 
         //Verify the signature using the old signing key
-        if (!keyRotationProof.signingKeySignature.isValid(oldCertifiersKeys.signingKeys(keyRotationProof.index), newKey.pubKeyBytes()))
+        if (!keyRotationProof.signingKeySignature.isValid(oldCertifiersKeys.signingKeys(keyRotationProof.index), messageToSign))
           throw new Exception("Signing key signature in KeyRotationTransaction is not valid!")
 
         //Verify the signature using the old master key
-        if (!keyRotationProof.masterKeySignature.isValid(oldCertifiersKeys.masterKeys(keyRotationProof.index), newKey.pubKeyBytes()))
+        if (!keyRotationProof.masterKeySignature.isValid(oldCertifiersKeys.masterKeys(keyRotationProof.index), messageToSign))
           throw new Exception("Master key signature in KeyRotationTransaction is not valid!")
       }
 

@@ -10,9 +10,10 @@ import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorBadCircuit, ErrorIn
 import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation, TypeOfCircuit}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.cryptolibprovider.SchnorrFunctionsImplZendoo
 import com.horizen.params.NetworkParams
 import com.horizen.poseidonnative.PoseidonHash
-import com.horizen.schnorrnative.{SchnorrSecretKey}
+import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.secret.SchnorrSecret
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
@@ -188,11 +189,12 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
         val secretKey = SchnorrSecretKey.deserialize(BytesUtils.fromHexString(body.key))
         val publickKey = secretKey.getPublicKey
         val schnorrSecret = new SchnorrSecret(secretKey.serializeSecretKey(), publickKey.serializePublicKey())
+        val messageToSignFE = new SchnorrFunctionsImplZendoo().publicKeyToFieldElement(BytesUtils.fromHexString(body.messageToSign))
         ApiResponseUtil.toResponse(
           RespSignMessage(
             BytesUtils.toHexString(
               schnorrSecret.sign(
-                BytesUtils.fromHexString(body.messageToSign)
+                messageToSignFE.serializeFieldElement()
               ).bytes()
             )
           )
