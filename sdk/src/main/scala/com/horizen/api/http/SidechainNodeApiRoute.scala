@@ -8,11 +8,9 @@ import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorBadCircuit, ErrorInvalidHost, ErrorRetrieveCertificateSigners, ErrorStopNodeAlreadyInProgress}
 import com.horizen.api.http.SidechainNodeRestSchema._
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation, TypeOfCircuit}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.cryptolibprovider.SchnorrFunctionsImplZendoo
+import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import com.horizen.params.NetworkParams
-import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.secret.SchnorrSecret
 import com.horizen.serialization.Views
@@ -23,6 +21,8 @@ import sparkz.core.network.peer.PeerInfo
 import sparkz.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 
 import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}
@@ -33,7 +33,7 @@ import scala.util.{Failure, Success, Try}
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp, params: NetworkParams, circuiType: TypeOfCircuit)
+                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp, params: NetworkParams, circuitType: Int)
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("node") {
@@ -225,7 +225,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     try {
       entity(as[ReqKeyRotationProof]) { body =>
         withView { sidechainNodeView =>
-          circuiType match {
+          TypeOfCircuit(circuitType) match {
             case NaiveThresholdSignatureCircuit =>
               ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation proofs!", JOptional.empty()))
             case NaiveThresholdSignatureCircuitWithKeyRotation =>

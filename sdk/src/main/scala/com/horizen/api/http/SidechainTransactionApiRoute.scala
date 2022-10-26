@@ -15,20 +15,18 @@ import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box.{Box, ForgerBox, ZenBox}
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation, TypeOfCircuit}
-import com.horizen.certificatesubmitter.keys.KeyRotationProofType
-import com.horizen.certificatesubmitter.keys.KeyRotationProofType.KeyRotationProofType
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Proof, SchnorrSignatureSerializer}
 import com.horizen.proposition._
-import com.horizen.schnorrnative.SchnorrSignature
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction._
 import sparkz.core.settings.RESTApiSettings
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -42,7 +40,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainTransactionActorRef: ActorRef,
                                         companion: SidechainTransactionsCompanion,
                                         params: NetworkParams,
-                                        circuiType: TypeOfCircuit)
+                                        circuitType: Int)
                                        (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute with SidechainTypes {
 
@@ -529,7 +527,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   def createKeyRotationTransaction: Route = (post & path("createKeyRotationTransaction")) {
     withAuth {
       entity(as[ReqCreateKeyRotationTransaction]) { body =>
-        circuiType match {
+        TypeOfCircuit(circuitType) match {
           case NaiveThresholdSignatureCircuit =>
             ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
           case NaiveThresholdSignatureCircuitWithKeyRotation =>
@@ -556,6 +554,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                     SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newValueOfKey)),
                     SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.signingKeySignature)),
                     SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.masterKeySignature)),
+                    SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature)),
                   )
                   if (body.automaticSend.getOrElse(true)) {
                     validateAndSendTransaction(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
@@ -855,13 +854,15 @@ object SidechainTransactionRestScheme {
                                                           newValueOfKey: String,
                                                           signingKeySignature: String,
                                                           masterKeySignature: String,
+                                                          newKeySignature: String,
                                                           format: Option[Boolean],
                                                           automaticSend: Option[Boolean],
                                                  @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(keyIndex >= 0, "Key index negative")
-    require(newValueOfKey.nonEmpty, "newValueOfKey index negative")
-    require(signingKeySignature.nonEmpty, "newValueOfKey index negative")
-    require(masterKeySignature.nonEmpty, "newValueOfKey index negative")
+    require(newValueOfKey.nonEmpty, "newValueOfKey is empty")
+    require(signingKeySignature.nonEmpty, "signingKeySignature is empty")
+    require(masterKeySignature.nonEmpty, "masterKeySignature is empty")
+    require(newKeySignature.nonEmpty, "newKeySignature is empty")
   }
 }
 

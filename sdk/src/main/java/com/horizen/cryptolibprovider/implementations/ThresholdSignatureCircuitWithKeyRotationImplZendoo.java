@@ -177,10 +177,32 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
 
     @Override
-    public byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold) {
+    public byte[] generateSysDataConstant(List<byte[]> signerPublicKeysList, List<byte[]> masterPublicKeysList, long threshold) {
+
+        List<SchnorrPublicKey> signerPublicKeys = signerPublicKeysList.stream().map(key -> SchnorrPublicKey.deserialize(key)).
+                collect(Collectors.toList());
+        List<SchnorrPublicKey> masterPublicKeys = masterPublicKeysList.stream().map(key -> SchnorrPublicKey.deserialize(key)).
+                collect(Collectors.toList());
+
+        ValidatorKeysUpdatesList schnorrKeysSignaturesList = new ValidatorKeysUpdatesList(
+                signerPublicKeys,
+                masterPublicKeys,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>()
+        );
 
         // Note: sc-cryptolib return constant in LittleEndian
-        FieldElement sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(FieldElement.deserialize(genesisKeysRootHash), threshold);
+        FieldElement sysDataConstant;
+        try {
+            sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(schnorrKeysSignaturesList.getKeysRootHash(signerPublicKeys.size()), threshold);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Fail to get the Constant");
+        }
+
         byte[] sysDataConstantBytes = sysDataConstant.serializeFieldElement();
 
         sysDataConstant.freeFieldElement();

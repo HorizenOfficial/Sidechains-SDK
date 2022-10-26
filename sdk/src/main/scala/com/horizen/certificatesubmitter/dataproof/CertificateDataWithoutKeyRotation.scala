@@ -35,4 +35,3 @@ case class CertificateDataWithoutKeyRotation(override val referencedEpochNumber:
       s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
   }
 }
-

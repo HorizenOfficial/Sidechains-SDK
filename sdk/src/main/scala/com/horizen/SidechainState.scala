@@ -5,11 +5,11 @@ import com.horizen.backup.BoxIterator
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.certificatesubmitter.keys.KeyRotationProofType.{KeyRotationProofType}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofType.KeyRotationProofType
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, SchnorrFunctionsImplZendoo}
+import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
@@ -24,6 +24,8 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core._
 import sparkz.core.transaction.state._
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 
 import java.io.File
 import java.math.{BigDecimal, MathContext}
@@ -494,7 +496,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   //Take the list of transactions inside a block and returns the key rotation proofs
   def getKeyRotationProofsToAdd(txs:  Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Seq[KeyRotationProof] = {
-    params.typeOfCircuit match {
+    TypeOfCircuit(params.typeOfCircuit) match {
       case NaiveThresholdSignatureCircuit =>
         Seq[KeyRotationProof]()
       case NaiveThresholdSignatureCircuitWithKeyRotation =>

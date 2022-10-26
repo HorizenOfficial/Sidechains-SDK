@@ -11,8 +11,7 @@ import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateD
 import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithKeyRotationStrategy, WithoutKeyRotationStrategy}
 import com.horizen.cryptolibprovider.utils.{FieldElementUtils, TypeOfCircuit}
 import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
-import com.horizen.certificatesubmitter.submitters.{ThresholdSigCircuitSubmitter, ThresholdSigCircuitSubmitterWithKeyRotation}
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -25,6 +24,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 
+import java.io.File
 import java.util
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
@@ -53,6 +53,8 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
+
+  private var provingFileAbsolutePath: String = _
 
   private[certificatesubmitter] var submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled
   private[certificatesubmitter] var certificateSigningEnabled: Boolean = settings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled

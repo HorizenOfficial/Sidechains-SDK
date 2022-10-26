@@ -10,9 +10,11 @@ import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
-import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
+import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.csw.CswManagerRef
 import com.horizen.customconfig.CustomAkkaConfiguration
@@ -109,7 +111,7 @@ class SidechainApp @Inject()
     new GetCertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size),
     new CertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size)
   )
-  val typeOfCircuit = sidechainSettings.withdrawalEpochCertificateSettings.typeOfCircuit
+  val typeOfCircuit = sidechainSettings.withdrawalEpochCertificateSettings.typeOfCircuitNumber
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
   //if (typeOfCircuit.equals(TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation))
@@ -129,7 +131,7 @@ class SidechainApp @Inject()
 
   var mastersPublicKeys: Seq[SchnorrProposition] = Seq()
 
-  val calculatedSysDataConstant: Array[Byte] = typeOfCircuit match {
+  val calculatedSysDataConstant: Array[Byte] = TypeOfCircuit(typeOfCircuit) match {
     case NaiveThresholdSignatureCircuit =>
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
     case NaiveThresholdSignatureCircuitWithKeyRotation =>
@@ -240,7 +242,7 @@ class SidechainApp @Inject()
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
     val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
-    val result: Boolean = typeOfCircuit match {
+    val result: Boolean = TypeOfCircuit(typeOfCircuit) match {
       case NaiveThresholdSignatureCircuit =>
         CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)
       case NaiveThresholdSignatureCircuitWithKeyRotation =>
