@@ -324,7 +324,8 @@ class SidechainStateTest
       ArgumentMatchers.any[Array[Int]],
       ArgumentMatchers.any[Int],
       ArgumentMatchers.any[Seq[KeyRotationProof]],
-      ArgumentMatchers.any[Option[CertifiersKeys]]))
+      ArgumentMatchers.any[Option[CertifiersKeys]],
+      ArgumentMatchers.any[Boolean]))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)

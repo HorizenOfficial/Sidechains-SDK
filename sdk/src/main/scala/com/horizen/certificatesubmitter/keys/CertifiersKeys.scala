@@ -1,9 +1,12 @@
 package com.horizen.certificatesubmitter.keys
 
+import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.serialization.Views
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
+@JsonView(Array(classOf[Views.Default]))
 case class CertifiersKeys(signingKeys: Vector[SchnorrProposition], masterKeys: Vector[SchnorrProposition]) extends BytesSerializable {
   override type M = CertifiersKeys
 

@@ -10,8 +10,10 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.certificatesubmitter.keys._
+import com.horizen.params.NetworkParamsUtils
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.util.ScorexLogging
+import scorex.util.{ScorexLogging, bytesToId}
+
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -249,7 +251,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              forgerListIndexes: Array[Int],
              forgerListSize: Int,
              keyRotationProofs: Seq[KeyRotationProof] = Seq.empty[KeyRotationProof],
-             certifiersKeysOption: Option[CertifiersKeys] = None): Try[SidechainStateStorage] = Try {
+             certifiersKeysOption: Option[CertifiersKeys] = None,
+             isGenesisBlock: Boolean = false): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -287,8 +290,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     certifiersKeysOption match {
       case Some(actualKeys: CertifiersKeys) =>
-        updateList.add(new JPair(getCertifierKey(withdrawalEpochInfo.epoch),
-          new ByteArrayWrapper(CertifiersKeysSerializer.toBytes(actualKeys))))
+        if (isGenesisBlock) {
+          updateList.add(new JPair(getCertifierKey(withdrawalEpochInfo.epoch),
+            new ByteArrayWrapper(CertifiersKeysSerializer.toBytes(actualKeys))))
+        }
+        else {
+          updateList.add(new JPair(getCertifierKey(withdrawalEpochInfo.epoch + 1),
+            new ByteArrayWrapper(CertifiersKeysSerializer.toBytes(actualKeys))))
+        }
+
       case _ => identity()
     }
 

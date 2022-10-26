@@ -5,7 +5,7 @@ import com.horizen.backup.BoxIterator
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
-import com.horizen.certificatesubmitter.keys.KeyRotationProofType.KeyRotationProofType
+import com.horizen.certificatesubmitter.keys.KeyRotationProofType.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
@@ -14,7 +14,7 @@ import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -555,7 +555,35 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       // Note: that current block fee info is still not in the state storage, so consider it during result calculation.
       boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some(blockFeeInfo)).map(_.asInstanceOf[SidechainTypes#SCB])
 
-      //TODO: update the actualCertificateSigners
+      if (TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation.id == params.typeOfCircuit) {
+        val currentEpoch = getWithdrawalEpochInfo.epoch
+        actualCertificateSigners = certifiersKeys(currentEpoch) match {
+          case Some(certifiersKeys: CertifiersKeys) =>
+
+            val signerKeys = new JArrayList[SchnorrProposition]()
+            val masterKeys = new JArrayList[SchnorrProposition]()
+            for (i <- 0 to certifiersKeys.signingKeys.size) {
+              keyRotationProof(currentEpoch, i, SigningKeyRotationProofType.id) match {
+                case Some(keyRotationProof: KeyRotationProof) =>
+                  signerKeys.add(keyRotationProof.newValueOfKey)
+                case None =>
+                  signerKeys.add(certifiersKeys.signingKeys(i))
+              }
+              keyRotationProof(currentEpoch, i, MasterKeyRotationProofType.id) match {
+                case Some(keyRotationProof: KeyRotationProof) =>
+                  masterKeys.add(keyRotationProof.newValueOfKey)
+                case None =>
+                  masterKeys.add(certifiersKeys.masterKeys(i))
+              }
+            }
+            Option.apply(CertifiersKeys(signerKeys.asScala.toVector, masterKeys.asScala.toVector))
+
+          case None =>
+            log.error("Not found certifiers key for the current epoch!")
+            Option.empty
+        }
+      }
+
     }
 
     boxesToAppend.foreach(box => {
@@ -583,7 +611,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased, forgerListIndexes, params.allowedForgersList.size, keyRotationProofsToAdd, actualCertificateSigners).get,
+            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt,
+            scHasCeased, forgerListIndexes, params.allowedForgersList.size, keyRotationProofsToAdd, actualCertificateSigners, isGenesisBlock(versionToId(newVersion))).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           updatedUtxoMerkleTreeProvider,
           params,
