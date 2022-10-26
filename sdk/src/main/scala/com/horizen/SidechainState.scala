@@ -401,6 +401,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         //Verify the signature using the old master key
         if (!keyRotationProof.masterKeySignature.isValid(oldCertifiersKeys.masterKeys(keyRotationProof.index), messageToSign))
           throw new Exception("Master key signature in KeyRotationTransaction is not valid!")
+
+        //Verify the signature using the new key
+        if (!keyRotationTransaction.getNewKeySignature.isValid(keyRotationProof.newValueOfKey, messageToSign))
+          throw new Exception("New key signature in KeyRotationTransaction is not valid!")
       }
 
       for (u <- tx.unlockers().asScala) {

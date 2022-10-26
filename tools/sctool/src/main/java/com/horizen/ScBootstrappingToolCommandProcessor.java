@@ -575,7 +575,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
+            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), 0);
 
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;

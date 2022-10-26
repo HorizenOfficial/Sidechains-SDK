@@ -113,9 +113,7 @@ class SidechainApp @Inject()
   )
   val typeOfCircuit = sidechainSettings.withdrawalEpochCertificateSettings.typeOfCircuitNumber
 
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
-  //if (typeOfCircuit.equals(TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation))
-  //  sidechainTransactionsCompanion.customTransactionSerializers.put(KeyRotationTransactionId.id(), KeyRotationTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
+  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, typeOfCircuit)
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
