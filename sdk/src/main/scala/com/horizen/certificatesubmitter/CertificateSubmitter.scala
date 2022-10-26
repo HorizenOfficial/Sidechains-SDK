@@ -7,11 +7,9 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
+import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithKeyRotationStrategy, WithoutKeyRotationStrategy}
-import com.horizen.cryptolibprovider.utils.{FieldElementUtils, TypeOfCircuit}
-import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -79,7 +77,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
     super.postRestart(reason)
     log.error("CertificateSubmitter was restarted because of: ", reason)
     // Switch to the working cycle, otherwise Submitter will stuck on initialization phase.
-//    loadProvingFilePath()
+    loadProvingFilePath()
     context.become(workingCycle)
   }
 
@@ -143,7 +141,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
 
-// TODO    loadProvingFilePath()
+    loadProvingFilePath()
   }
 
   private def loadProvingFilePath(): Unit = {

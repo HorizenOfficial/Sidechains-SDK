@@ -9,9 +9,6 @@ import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import sparkz.core.settings.{SparkzSettings, SettingsReaders}
 import com.typesafe.scalalogging.LazyLogging
-import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import net.ceedubs.ficus.readers.EnumerationReader._
 
 import scala.compat.java8.OptionConverters.toScala
 

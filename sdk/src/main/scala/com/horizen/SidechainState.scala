@@ -52,8 +52,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with NetworkParamsUtils
 {
 
-  // TODO Every time when we finish the epoch we retrieve state of previous epoch + allKeyRotations, and update storage
-  // then call SidechainStateStorage.update()
 
   override type NVCT = SidechainState
 
@@ -214,7 +212,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       })
     }
 
-    var keyTypeMap = new JHashMap[KeyRotationProofType, Seq[Int]]()
+    val keyTypeMap = new JHashMap[KeyRotationProofType, Seq[Int]]()
     mod.transactions.foreach(tx => {
       if (tx.isInstanceOf[KeyRotationTransaction]) {
         val keyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
