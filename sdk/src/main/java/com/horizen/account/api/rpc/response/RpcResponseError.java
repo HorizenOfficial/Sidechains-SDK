@@ -9,7 +9,7 @@ import java.util.Optional;
 public class RpcResponseError extends RpcResponse implements ErrorResponse {
     protected final RpcError error;
 
-    public RpcResponseError(String id, RpcError error) {
+    public RpcResponseError(long id, RpcError error) {
         super(id);
         this.error = error;
     }

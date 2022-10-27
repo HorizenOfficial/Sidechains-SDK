@@ -3,11 +3,11 @@ package com.horizen.account.api.rpc.request;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * {"id":"1648039192785","jsonrpc":"2.0","method":"eth_chainId","params":[]}
+ * {"id":1648039192785,"jsonrpc":"2.0","method":"eth_chainId","params":[]}
  */
 public class RpcRequest {
     private String jsonrpc;
-    private String id;
+    private long id;
     private String method;
     private JsonNode params;
 
@@ -15,7 +15,7 @@ public class RpcRequest {
 
     public RpcRequest(JsonNode json) {
         this.jsonrpc = json.get("jsonrpc").asText();
-        this.id = json.get("id").asText();
+        this.id = json.get("id").asLong();
         this.method = json.get("method").asText();
         this.params = json.get("params");
     }
@@ -28,11 +28,11 @@ public class RpcRequest {
         this.jsonrpc = jsonrpc;
     }
 
-    public String getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(long id) {
         this.id = id;
     }
 

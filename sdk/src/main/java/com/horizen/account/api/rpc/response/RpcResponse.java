@@ -7,9 +7,9 @@ import com.horizen.serialization.Views;
 @JsonView(Views.Default.class)
 public abstract class RpcResponse implements ApiResponse {
     protected final String jsonrpc;
-    protected final String id;
+    protected final long id;
 
-    public RpcResponse(String id) {
+    public RpcResponse(long id) {
         this.jsonrpc = "2.0";
         this.id = id;
     }
@@ -18,7 +18,7 @@ public abstract class RpcResponse implements ApiResponse {
         return jsonrpc;
     }
 
-    public String getId() {
+    public long getId() {
         return id;
     }
 }

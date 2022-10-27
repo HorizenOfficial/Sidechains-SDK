@@ -6,7 +6,7 @@ import com.horizen.api.http.SuccessResponse;
 public class RpcResponseSuccess extends RpcResponse implements SuccessResponse {
     protected final Object result;
 
-    public RpcResponseSuccess(String id, Object result) {
+    public RpcResponseSuccess(long id, Object result) {
         super(id);
         this.result = result;
     }
