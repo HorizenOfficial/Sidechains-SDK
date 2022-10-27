@@ -69,12 +69,23 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
   }
 
   override def receive: Receive = {
-    onSidechainApplicationStart orElse
+    testLog orElse
+      onSidechainApplicationStart orElse
       tryToSendGetCertificateSignatures orElse
       processDataFromPeer orElse
       broadcastSignature orElse
       reportStrangeInput
   }
+
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("CertificateSignaturesManager", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
+  }
+
 
   def processDataFromPeer: Receive = {
     case Message(spec, Left(msgBytes), Some(source)) => parseAndHandle(spec, msgBytes, source)

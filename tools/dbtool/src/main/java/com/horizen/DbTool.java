@@ -33,7 +33,7 @@ public class DbTool {
         // - default levels: all in the file and just errors on console
         System.setProperty("logFileLevel", "all");
         System.setProperty("logConsoleLevel", "error");
-
+        System.setProperty("logAkkaMessagesLevel", "error");
         Logger log = LogManager.getLogger(com.horizen.DbTool.class);
 
         // read database folder path from input arguments

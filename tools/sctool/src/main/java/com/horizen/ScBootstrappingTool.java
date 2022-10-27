@@ -20,6 +20,7 @@ public class ScBootstrappingTool {
         // - default levels: all in the file and just errors on console
         System.setProperty("logFileLevel", "all");
         System.setProperty("logConsoleLevel", "error");
+        System.setProperty("logAkkaMessagesLevel", "error");
 
         Logger logger = LogManager.getLogger(com.horizen.ScBootstrappingTool.class);
 

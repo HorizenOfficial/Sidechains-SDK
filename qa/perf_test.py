@@ -257,7 +257,8 @@ class PerformanceTest(SidechainTestFramework):
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     max_connections=max_connections,
                     block_rate=self.block_rate,
-                    latency_settings=latency_configurations[index]
+                    latency_settings=latency_configurations[index],
+                    log_akka_messages=self.sc_node_data[index]['log_akka_messages'] if 'log_akka_messages'  in self.sc_node_data[index] else "ERROR"
                 )
             )
         return node_configuration

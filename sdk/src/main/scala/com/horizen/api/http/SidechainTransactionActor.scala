@@ -48,10 +48,18 @@ class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolde
   }
 
   override def receive: Receive = {
-    broadcastTransaction orElse
+    testLog orElse broadcastTransaction orElse
     sidechainNodeViewHolderEvents orElse {
       case message: Any => log.error("SidechainTransactionActor received strange message: " + message)
     }
+  }
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("SidechainTransactionActor", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 }
 

@@ -62,6 +62,9 @@
           "tx_creator": {
             "type": "boolean"
           },
+          "log_akka_messages": {
+            "type": "string"
+          },
           "latency_settings": {
             "type": "object",
             "properties": {

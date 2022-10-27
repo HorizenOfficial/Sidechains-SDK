@@ -73,6 +73,7 @@ class Forger(settings: SidechainSettings,
   }
 
   override def receive: Receive = {
+    testLog orElse 
     checkForger orElse
     processStartForgingMessage orElse
     processStopForgingMessage orElse
@@ -80,6 +81,15 @@ class Forger(settings: SidechainSettings,
     processGetForgeInfo orElse {
       case message: Any => log.error(s"Forger received strange message: ${message} from ${sender().path.name}")
     }
+  }
+
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("Forger", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 
   protected def checkForger: Receive = {
