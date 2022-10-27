@@ -230,10 +230,10 @@ class PerformanceTest(SidechainTestFramework):
 
     def get_machine_credentials(self):
         machine_credentials = []
-        machines = self.perf_data["machines"]
-
-        if machines is None:
-            raise "No machine data present in the config"
+        try:
+            machines = self.perf_data["machine_credentials"]
+        except Exception:
+            raise "Unable to retrieve machine data from the config"
 
         for machine in machines:
             machine_credentials.append({
@@ -355,10 +355,15 @@ class PerformanceTest(SidechainTestFramework):
                                                                  machines)
 
     def sc_setup_nodes(self):
+        # TODO Refactor to allow deploying node to single machine without multiprocessing
         if self.perf_data["use_multiprocessing"]:
             node_data = self.get_node_data()
+            machine_credentials = None
+            if self.multi_machine:
+                machine_credentials = self.get_machine_credentials()
+
             return start_sc_nodes_with_multiprocessing(node_data, self.options.tmpdir,
-                                                       machine_credentials=self.get_machine_credentials())
+                                                       machine_credentials=machine_credentials)
         else:
             return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
 

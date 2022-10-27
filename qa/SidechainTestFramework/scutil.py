@@ -697,7 +697,7 @@ def log_available_processors(machine_credentials, num_nodes):
     else:
         machine_processor_count.append(multiprocessing.Pool()._processes)
 
-    for index, processors in machine_processor_count:
+    for index, processors in enumerate(machine_processor_count):
         processors_available = processors / 2
         logging.info(f"Machine{index} Available processors (2 threads each): {processors_available}")
         logging.info(f"Number of Nodes: {num_nodes}")
@@ -791,6 +791,7 @@ def wait_sidechainclients():
 def get_sc_node_pids():
     return [process.pid for process in sidechainclient_processes.values()]
 
+
 # TODO: Check node_num value is correct for port number  for multi machine
 def connect_sc_nodes(from_connection, node_num, wait_for=25, machine_credentials=None):
     """
@@ -801,9 +802,12 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25, machine_credentials
         ip = machine_credentials.ip_address
     else:
         ip = "127.0.0.1"
-    j = {"host": {ip}, "port": str(sc_p2p_port(node_num))}
+
+    j = {"host": ip, \
+         "port": str(sc_p2p_port(node_num))}
     ip_port = f"{ip}:" + str(sc_p2p_port(node_num))
-    logging.info("Connecting to '" + ip_port + "'")
+    print(f"Connecting to '{ip_port}'")
+    logging.info(f"Connecting to '{ip_port}'")
     from_connection.node_connect(json.dumps(j))
     start = time.time()
     while True:
@@ -813,6 +817,7 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25, machine_credentials
                i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
+
 
 # TODO: Multi machine
 def disconnect_sc_nodes(from_connection, node_num, machine_credentials):
