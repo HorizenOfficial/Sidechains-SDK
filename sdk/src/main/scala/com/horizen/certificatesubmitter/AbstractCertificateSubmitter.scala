@@ -384,7 +384,8 @@ abstract class AbstractCertificateSubmitter (settings: SidechainSettings,
       BytesUtils.toHexString(mcBlockHash)
     }")
 
-    val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
+    val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(
+      throw new IllegalStateException("Missed MC Cumulative Hash"))
 
     headerInfo.cumulativeCommTreeHash
   }

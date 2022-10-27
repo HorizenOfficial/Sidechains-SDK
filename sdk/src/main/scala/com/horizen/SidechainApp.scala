@@ -215,7 +215,16 @@ class SidechainApp @Inject()
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
-  //TODO Check epochLengthfor nonCeasingSidechains
+  if (params.isNonCeasing) {
+    val minVirtualEpochLength = sidechainSettings.genesisData.mcNetwork match {
+      case "regtest" => 10
+      case "testnet" => 100
+      case "mainnet" => 100
+    }
+
+    if (params.withdrawalEpochLength < minVirtualEpochLength)
+      throw new IllegalArgumentException("Virtual withdrawal epoch length is too short.")
+  }
 
   // Configure Horizen address json serializer specifying proper network type.
   JsonHorizenPublicKeyHashSerializer.setNetworkType(params)

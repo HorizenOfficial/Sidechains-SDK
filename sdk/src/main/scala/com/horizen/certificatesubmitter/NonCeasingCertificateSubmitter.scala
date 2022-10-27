@@ -97,21 +97,24 @@ class NonCeasingCertificateSubmitter(settings: SidechainSettings,
   // Note: We can't rely on `State.getWithdrawalEpochInfo`, because it shows the tip info,
   // but the older block may being applied at the moment.
   private[certificatesubmitter] def getSubmissionWindowStatus(block: SidechainBlock): Try[SubmissionWindowStatus] = Try {
-    val nonCeasingSubmissionDelay = 10 // TBD length
+    val nonCeasingSubmissionDelay = 1 // TBD length
 
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
       val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
       val lastCertificateOpt = sidechainNodeView.state.lastTopQualityCertificate(withdrawalEpochInfo.epoch)
+
       if (lastCertificateOpt.isEmpty) {
-        if (withdrawalEpochInfo.epoch >= 0 && withdrawalEpochInfo.lastEpochIndex >= nonCeasingSubmissionDelay) {
+        // In case there are no certificates yet, open submission window after 1st block of 1st epoch
+        if ((withdrawalEpochInfo.epoch == 1 && withdrawalEpochInfo.lastEpochIndex >= nonCeasingSubmissionDelay)
+             || (withdrawalEpochInfo.epoch > 1)) {
           SubmissionWindowStatus(withdrawalEpochInfo, true)
         } else {
           SubmissionWindowStatus(withdrawalEpochInfo, false)
         }
       } else {
-        if (lastCertificateOpt.get.epochNumber < withdrawalEpochInfo.epoch) {
+        if (lastCertificateOpt.get.epochNumber + 2 < withdrawalEpochInfo.epoch) {
           SubmissionWindowStatus(withdrawalEpochInfo, true)
-        } else if (lastCertificateOpt.get.epochNumber == withdrawalEpochInfo.epoch && withdrawalEpochInfo.lastEpochIndex > nonCeasingSubmissionDelay) {
+        } else if (lastCertificateOpt.get.epochNumber + 2 == withdrawalEpochInfo.epoch && withdrawalEpochInfo.lastEpochIndex >= nonCeasingSubmissionDelay) {
           SubmissionWindowStatus(withdrawalEpochInfo, true)
         } else {
           SubmissionWindowStatus(withdrawalEpochInfo, false)

@@ -839,8 +839,8 @@ network: {
 
 
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
-                              is_non_ceasing=False,
-                              block_timestamp_rewind=DefaultBlockTimestampRewind):
+                              block_timestamp_rewind=DefaultBlockTimestampRewind,
+                              is_non_ceasing=False,):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     logging.info(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
