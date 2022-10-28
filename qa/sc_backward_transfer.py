@@ -36,15 +36,17 @@ Test:
           and then to MC/SC blocks.
         - verify epoch 1 certificate, verify backward transfers list    
 """
-class SCBackwardTransfer(SidechainTestFramework):
 
+
+class SCBackwardTransfer(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
 
     def setup_nodes(self):
         num_nodes = 1
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
-        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws',  '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
+        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws', '-logtimemicros=1',
+                                                                        '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
         # After bug spotted in 0.3.4 we test certificate generation with max keys number > 8
@@ -56,10 +58,13 @@ class SCBackwardTransfer(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             submitter_private_keys_indexes=list(range(cert_max_keys))  # SC node owns all schnorr private keys.
         )
+        certificate_type_number = 0
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
                                                         cert_max_keys=cert_max_keys,
-                                                        cert_sig_threshold=cert_sig_threshold), sc_node_configuration)
+                                                        cert_sig_threshold=cert_sig_threshold),
+                                         sc_node_configuration,
+                                         certificate_type_number)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
@@ -84,8 +89,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
         check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, "ForgerBox", 1,
-                                 self.sc_nodes_bootstrap_info.genesis_account_balance)
-
+                          self.sc_nodes_bootstrap_info.genesis_account_balance)
 
         # create FT to SC to withdraw later
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -116,7 +120,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        logging.info("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info(
+            "End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         scblock_id2 = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
 
@@ -136,7 +141,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Check that certificate generation skipped because mempool have certificate with same quality
         generate_next_blocks(sc_node, "first node", 1)[0]
         time.sleep(2)
-        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"],
+                     "Expected certificate generation will be skipped.")
 
         # Get Certificate for Withdrawal epoch 0 and verify it
         we0_certHash = mc_node.getrawmempool()[0]
@@ -144,7 +150,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         we0_cert = mc_node.getrawtransaction(we0_certHash, 1)
         we0_cert_hex = mc_node.getrawtransaction(we0_certHash)
         logging.info("Withdrawal epoch 0 certificate hex = " + we0_cert_hex)
-        assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_cert["cert"]["scid"], "Sidechain Id in certificate is wrong.")
+        assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_cert["cert"]["scid"],
+                     "Sidechain Id in certificate is wrong.")
         assert_equal(0, we0_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
         assert_equal(we0_end_epoch_cum_sc_tx_comm_tree_root, we0_cert["cert"]["endEpochCumScTxCommTreeRoot"],
                      "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
@@ -154,9 +161,12 @@ class SCBackwardTransfer(SidechainTestFramework):
         we1_2_mcblock_hash = mc_node.generate(1)[0]
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate expected to be removed from MC node mempool.")
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction.")
-        assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 1 Certificate.")
-        assert_equal(we0_certHash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0], "MC block expected to contain certificate.")
-        logging.info("MC block with withdrawal certificate for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
+        assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]),
+                     "MC block expected to contain 1 Certificate.")
+        assert_equal(we0_certHash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0],
+                     "MC block expected to contain certificate.")
+        logging.info("MC block with withdrawal certificate for epoch 0 = {0}\n".format(
+            str(mc_node.getblock(we1_2_mcblock_hash, False))))
 
         # Generate SC block and verify that certificate is synced back
         scblock_id4 = generate_next_blocks(sc_node, "first node", 1)[0]
@@ -164,7 +174,8 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Check that certificate generation skipped because chain have certificate with same quality
         time.sleep(2)
-        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"],
+                     "Expected certificate generation will be skipped.")
 
         # Verify Certificate for epoch 0 on SC side
         mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
@@ -175,19 +186,20 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(0, we0_sc_cert["epochNumber"], "Sidechain epoch number in certificate is wrong.")
         assert_equal(we0_end_epoch_cum_sc_tx_comm_tree_root, we0_sc_cert["endCumulativeScTxCommitmentTreeRoot"],
                      "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
-        assert_equal(0, len(we0_sc_cert["backwardTransferOutputs"]), "Backward transfer amount in certificate is wrong.")
+        assert_equal(0, len(we0_sc_cert["backwardTransferOutputs"]),
+                     "Backward transfer amount in certificate is wrong.")
         assert_equal(we0_certHash, we0_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
         # Try to withdraw coins from SC to MC: 2 withdrawals with the same amount
         mc_address1 = mc_node.getnewaddress()
         logging.info("First BT MC public key address is {}".format(mc_address1))
         bt_amount1 = ft_amount - 3
-        sc_bt_amount1 = bt_amount1 * 100000000 # in Satoshi
+        sc_bt_amount1 = bt_amount1 * 100000000  # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "mainchainAddress": mc_address1,
-                                 "value": sc_bt_amount1 }
-                              ]
-                             }
+            {"mainchainAddress": mc_address1,
+             "value": sc_bt_amount1}
+        ]
+        }
         withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
         if "result" not in withdrawCoinsJson:
             fail("Withdraw coins failed: " + json.dumps(withdrawCoinsJson))
@@ -202,10 +214,10 @@ class SCBackwardTransfer(SidechainTestFramework):
         bt_amount2 = ft_amount - bt_amount1
         sc_bt_amount2 = bt_amount2 * 100000000  # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "mainchainAddress": mc_address2,
-                                 "value": sc_bt_amount2 }
-                              ]
-                             }
+            {"mainchainAddress": mc_address2,
+             "value": sc_bt_amount2}
+        ]
+        }
 
         withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
         if "result" not in withdrawCoinsJson:
@@ -223,7 +235,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         logging.info("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
         we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
-        logging.info("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info(
+            "End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
         we1_end_scblock_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, we1_end_scblock_id, sc_node)
 
@@ -243,7 +256,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Check that certificate generation skipped because mempool have certificate with same quality
         generate_next_blocks(sc_node, "first node", 1)[0]
         time.sleep(2)
-        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"],
+                     "Expected certificate generation will be skipped.")
 
         # Get Certificate for Withdrawal epoch 1 and verify it
         we1_certHash = mc_node.getrawmempool()[0]
@@ -256,8 +270,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(1, we1_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
         assert_equal(we1_end_epoch_cum_sc_tx_comm_tree_root, we1_cert["cert"]["endEpochCumScTxCommTreeRoot"],
                      "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
-        assert_equal(bt_amount1 + bt_amount2, we1_cert["cert"]["totalAmount"], "Sidechain total amount in certificate is wrong.")
-
+        assert_equal(bt_amount1 + bt_amount2, we1_cert["cert"]["totalAmount"],
+                     "Sidechain total amount in certificate is wrong.")
 
         # Generate MC block and verify that certificate is present
         we2_2_mcblock_hash = mc_node.generate(1)[0]
@@ -285,7 +299,8 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Check that certificate generation skipped because chain have certificate with same quality
         time.sleep(2)
-        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"],
+                     "Expected certificate generation will be skipped.")
 
         # Verify Certificate for epoch 1 on SC side
         mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]

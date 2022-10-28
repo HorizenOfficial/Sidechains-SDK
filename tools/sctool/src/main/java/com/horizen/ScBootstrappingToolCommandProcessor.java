@@ -295,6 +295,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
         boolean isCSWEnabled = json.get("isCSWEnabled").asBoolean();
 
+        if (!json.has("typeOfCircuit") || !json.get("typeOfCircuit").isBoolean()) {
+            printGenerateCertProofInfoUsageMsg("wrong typeOfCircuit value. Boolean value expected.");
+            return;
+        }
+        boolean typeOfCircuit = json.get("typeOfCircuit").asBoolean();
+
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
         // Generate all keys only if verification key doesn't exist.
@@ -322,7 +328,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        List<byte[]> publicKeysBytes = publicKeys.stream().map(pk -> BytesUtils.fromHexString(pk)).collect(Collectors.toList());
+        List<byte[]> publicKeysBytes = publicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
         String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.sigProofThresholdCircuitFunctions().generateSysDataConstant(publicKeysBytes, threshold));
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);

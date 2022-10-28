@@ -158,7 +158,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
 
 
 """
-Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
+Generate a genesis info by calling ScBootstrappingTool with command "genesisinfo"
 Parameters:
  - genesis_info: genesis info provided by a mainchain node
  - genesis_secret: private key 25519 secret to sign SC block
@@ -267,22 +267,27 @@ Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
 
 
-def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths, is_csw_enabled):
+def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths,
+                                    is_csw_enabled, type_of_circuit):
     signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
 
     signer_secrets = []
     signer_public_keys = []
+    master_public_keys = []
     for i in range(len(signer_keys)):
         keys = signer_keys[i]
         signer_secrets.append(keys.secret)
         signer_public_keys.append(keys.publicKey)
+        master_public_keys.append(keys.publicKey)
 
     json_parameters = {
         "signersPublicKeys": signer_public_keys,
+        "masterPublicKeys": master_public_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
-        "isCSWEnabled": is_csw_enabled
+        "isCSWEnabled": is_csw_enabled,
+        "typeOfCircuit": type_of_circuit
     }
     output = launch_bootstrap_tool("generateCertProofInfo", json_parameters)
 
@@ -291,7 +296,7 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
     gen_sys_constant = output["genSysConstant"]
 
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
-                                                  signer_public_keys)
+                                                  signer_public_keys, master_public_keys)
     return certificate_proof_info
 
 
@@ -379,6 +384,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
     genesis_secrets += sc_node_config.initial_private_keys
+    genesis_secrets += sc_node_config.initial_master_private_keys
 
     config = tmpConfig % {
         'NODE_NUMBER': n,
@@ -411,9 +417,10 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
-        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.signing_public_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
-        "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.master_public_keys),
+        "MAX_PKS": len(bootstrap_info.certificate_proof_info.signing_public_keys),
         "CERT_PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
         "CERT_VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
         "AUTOMATIC_FEE_COMPUTATION": ("true" if sc_node_config.automatic_fee_computation else "false"),
@@ -422,7 +429,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
-        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE
+        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE,
+        "TYPE_OF_CIRCUIT_NUMBER": bootstrap_info.type_of_circuit
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -851,11 +859,13 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
     else:
         csw_keys_paths = None
+    circuit_type_number = 0
 
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
                                                block_timestamp_rewind,
                                                cert_keys_paths,
-                                               csw_keys_paths)
+                                               csw_keys_paths,
+                                               circuit_type_number)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,
@@ -910,14 +920,15 @@ Parameters:
 """
 
 
-def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths, circuit_type_number):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
+    print(circuit_type_number)
     certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys,
                                                              sc_creation_info.cert_sig_threshold, cert_keys_paths,
-                                                             sc_creation_info.csw_enabled)
+                                                             sc_creation_info.csw_enabled, circuit_type_number)
     if csw_keys_paths is None:
         csw_verification_key = ""
     else:

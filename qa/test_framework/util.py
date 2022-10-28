@@ -28,6 +28,7 @@ from test_framework.authproxy import AuthServiceProxy
 certificate_field_config_csw_enabled = [255, 255]
 
 certificate_field_config_csw_disabled = []
+certificate_with_key_rotation_field_config = [255]
 
 COIN = 100000000 # 1 zen in zatoshis
 
@@ -494,7 +495,7 @@ Output: an array of two information:
 """
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
                                           vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
-                                          sc_creation_version, is_csw_enabled):
+                                          sc_creation_version, is_csw_enabled, type_of_circuit):
     number_of_blocks_to_enable_sc_logic = 479
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
@@ -502,11 +503,23 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         logging.info("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
+    if sc_creation_version <= 1:
+        assert type_of_circuit == 0
+    else:
+        assert type_of_circuit == 1
+
+    if type_of_circuit == 1:
+        assert is_csw_enabled is False
+
     custom_creation_data = vrf_public_key
 
-    fe_certificate_field_configs = certificate_field_config_csw_disabled
-    if is_csw_enabled:
-        fe_certificate_field_configs = certificate_field_config_csw_enabled
+    if type_of_circuit == 0:
+        fe_certificate_field_configs = certificate_field_config_csw_disabled
+
+        if is_csw_enabled:
+            fe_certificate_field_configs = certificate_field_config_csw_enabled
+    else:
+        fe_certificate_field_configs = certificate_with_key_rotation_field_config
 
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
     ft_min_amount = 0
