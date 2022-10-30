@@ -22,7 +22,7 @@ SCCreationInfo: {
     "cert_max_keys": defines the max number of Certificate proofs generation participants
     "cert_sig_threshold": the minimum set of the participants required for a valid proof creation
     "csw_enabled": true if the Ceased Sidechain Withdrawal should be enabled on the sidechain
-    "circuit_type_number" is the type of circuit for certificate submitter (0 - without, 1 - with key rotation)
+    "type_of_circuit_number" is the type of circuit for certificate submitter (0 - without, 1 - with key rotation)
 }
 """
 
@@ -33,7 +33,7 @@ class SCCreationInfo(object):
     # because of too complex circuit from MC perspective.
     def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
                  btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1,
-                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False, circuit_type_number=0):
+                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False, type_of_circuit_number=0):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
@@ -42,7 +42,7 @@ class SCCreationInfo(object):
         self.cert_max_keys = cert_max_keys
         self.cert_sig_threshold = cert_sig_threshold
         self.csw_enabled = csw_enabled
-        self.circuit_type_number = circuit_type_number
+        self.type_of_circuit_number = type_of_circuit_number
 
 
 """
@@ -114,7 +114,8 @@ class SCNodeConfiguration(object):
                  mempool_min_fee_rate=0,
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
-                 initial_private_keys=[]):
+                 initial_signing_private_keys=[],
+                 initial_master_private_keys=[]):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -129,7 +130,8 @@ class SCNodeConfiguration(object):
         self.max_fee = max_fee
         self.mempool_max_size = mempool_max_size
         self.mempool_min_fee_rate = mempool_min_fee_rate
-        self.initial_private_keys = initial_private_keys
+        self.initial_signing_private_keys = initial_signing_private_keys
+        self.initial_master_private_keys = initial_master_private_keys
 
 
 """
@@ -267,7 +269,8 @@ class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
                  sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account,
-                 certificate_proof_info, initial_cumulative_comm_tree_hash, cert_keys_paths, csw_keys_paths):
+                 certificate_proof_info, initial_cumulative_comm_tree_hash, cert_keys_paths, csw_keys_paths,
+                 type_of_circuit_number):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -281,6 +284,7 @@ class SCBootstrapInfo(object):
         self.initial_cumulative_comm_tree_hash = initial_cumulative_comm_tree_hash
         self.cert_keys_paths = cert_keys_paths
         self.csw_keys_paths = csw_keys_paths
+        self.type_of_circuit_number = type_of_circuit_number
 
 
 class ProofKeysPaths(object):

@@ -295,11 +295,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
         boolean isCSWEnabled = json.get("isCSWEnabled").asBoolean();
 
-        if (!json.has("typeOfCircuit") || !json.get("typeOfCircuit").isBoolean()) {
-            printGenerateCertProofInfoUsageMsg("wrong typeOfCircuit value. Boolean value expected.");
+        if (!json.has("typeOfCircuitNumber") || !json.get("typeOfCircuitNumber").isInt()) {
+            printGenerateCertProofInfoUsageMsg("wrong typeOfCircuitNumber value. Integer value expected.");
             return;
         }
-        boolean typeOfCircuit = json.get("typeOfCircuit").asBoolean();
+        boolean typeOfCircuitNumber = json.get("typeOfCircuitNumber").asBoolean();
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 

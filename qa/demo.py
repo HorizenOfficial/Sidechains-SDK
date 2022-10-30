@@ -88,9 +88,9 @@ class Demo(SidechainTestFramework):
 
         cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
 
-        circuit_type_number = 0  # 0 - without, 1 - with key rotation
+        type_of_circuit_number = 0  # 0 - without, 1 - with key rotation
         certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths, True,
-                                                                 circuit_type_number)
+                                                                 type_of_circuit_number)
 
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
         csw_vr_key = generate_csw_proof_info(withdrawal_epoch_length, csw_keys_paths)
