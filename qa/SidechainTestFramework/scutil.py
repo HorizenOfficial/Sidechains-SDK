@@ -281,8 +281,8 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
         public_master_keys.append(keys.publicKey)
 
     json_parameters = {
-        "publicSigningKeys": public_signing_keys,
-        "publicMasterKeys": public_master_keys,
+        "signersPublicKeys": public_signing_keys,
+        "mastersPublicKeys": public_master_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
