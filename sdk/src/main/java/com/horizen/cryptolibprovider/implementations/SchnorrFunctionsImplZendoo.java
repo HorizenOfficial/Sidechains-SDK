@@ -82,9 +82,4 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
         return Constants.SCHNORR_SIGNATURE_LENGTH();
     }
 
-    @Override
-    public FieldElement publicKeyToFieldElement(byte[] publicKey) {
-        byte[] newPubKey = Arrays.copyOfRange(publicKey, 0, 12);
-        return FieldElementUtils.messageToFieldElement(newPubKey);
-    }
 }

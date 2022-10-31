@@ -26,6 +26,7 @@ import sparkz.core._
 import sparkz.core.transaction.state._
 import com.horizen.cryptolibprovider.utils.TypeOfCircuit
 import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.schnorrnative.SchnorrPublicKey
 
 import java.io.File
 import java.math.{BigDecimal, MathContext}
@@ -387,11 +388,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
         val keyRotationTransaction: KeyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
         val keyRotationProof = keyRotationTransaction.getKeyRotationProof
-        val newKey = keyRotationProof.newValueOfKey
+        val newKey = SchnorrPublicKey.deserialize(keyRotationProof.newValueOfKey.pubKeyBytes())
         val oldCertifiersKeys = certifiersKeys(getWithdrawalEpochInfo.epoch).get
 
-        //TODO: need to change when the new function for hashing the schnorr pub key will be available in the crypto lib
-        val messageToSign = new SchnorrFunctionsImplZendoo().publicKeyToFieldElement(newKey.pubKeyBytes()).serializeFieldElement()
+        val messageToSign = newKey.getHash.serializeFieldElement()
 
         //Verify that the key index is in a valid range
         if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)

@@ -9,9 +9,8 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorBadCircuit, ErrorInvalidHost, ErrorRetrieveCertificateSigners, ErrorStopNodeAlreadyInProgress}
 import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import com.horizen.params.NetworkParams
-import com.horizen.schnorrnative.SchnorrSecretKey
+import com.horizen.schnorrnative.{SchnorrPublicKey, SchnorrSecretKey}
 import com.horizen.secret.SchnorrSecret
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
@@ -38,7 +37,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   override val route: Route = pathPrefix("node") {
 
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ signMessage ~ getCertificateSigners ~ getKeyRotationProofs
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ signSchnorrPublicKey ~ getCertificateSigners ~ getKeyRotationProofs
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -183,18 +182,18 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
-  def signMessage: Route = (post & path("signMessage")) {
-    entity(as[ReqSignMessage]) { body =>
+  def signSchnorrPublicKey: Route = (post & path("signSchnorrPublicKey")) {
+    entity(as[ReqSignSchnorrPublicKey]) { body =>
       try {
         val secretKey = SchnorrSecretKey.deserialize(BytesUtils.fromHexString(body.key))
         val publickKey = secretKey.getPublicKey
         val schnorrSecret = new SchnorrSecret(secretKey.serializeSecretKey(), publickKey.serializePublicKey())
-        val messageToSignFE = new SchnorrFunctionsImplZendoo().publicKeyToFieldElement(BytesUtils.fromHexString(body.messageToSign))
+        val publicKeyToSign = SchnorrPublicKey.deserialize(BytesUtils.fromHexString(body.messageToSign))
         ApiResponseUtil.toResponse(
           RespSignMessage(
             BytesUtils.toHexString(
               schnorrSecret.sign(
-                messageToSignFE.serializeFieldElement()
+                publicKeyToSign.getHash.serializeFieldElement()
               ).bytes()
             )
           )
@@ -285,7 +284,7 @@ object SidechainNodeRestSchema {
   private[api] case class RespGetSidechainId(sidechainId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSignMessage(messageToSign: String, key: String) {
+  private[api] case class ReqSignSchnorrPublicKey(messageToSign: String, key: String) {
     require(messageToSign != null && messageToSign.length > 0, "Null messageToSign")
     require(key != null && key.length > 0, "Null key")
   }

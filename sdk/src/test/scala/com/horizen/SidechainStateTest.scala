@@ -12,7 +12,7 @@ import com.horizen.forge.ForgerList
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, SchnorrProposition, VrfPublicKey}
-import com.horizen.schnorrnative.SchnorrSecretKey
+import com.horizen.schnorrnative.{SchnorrPublicKey, SchnorrSecretKey}
 import com.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
@@ -121,7 +121,7 @@ class SidechainStateTest
 
   def getKeyRotationTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), typeOfKey: KeyRotationProofType.KeyRotationProofType, keyIndex: Int, newKeySecret: SchnorrSecret, oldSigningKeySecret: SchnorrSecret, oldMasterKeySecret: SchnorrSecret, wrongNewKey: Boolean = false): KeyRotationTransaction = {
     val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
-    val messageToSign = new SchnorrFunctionsImplZendoo().publicKeyToFieldElement(newKeySecret.publicImage().pubKeyBytes()).serializeFieldElement()
+    val messageToSign = SchnorrPublicKey.deserialize(newKeySecret.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
     val oldSigningKeySignature = oldSigningKeySecret.sign(messageToSign)
     val newMasterKeySignature = oldMasterKeySecret.sign(messageToSign)
     val newKeySignature = wrongNewKey match {

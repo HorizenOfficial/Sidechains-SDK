@@ -25,6 +25,4 @@ public interface SchnorrFunctions {
 
     int schnorrSignatureLength();
 
-    //TODO: this is a temporary function used for the development. It MUST be replaced with the real one in the cryptolib.
-    FieldElement publicKeyToFieldElement(byte[] publicKey);
 }
