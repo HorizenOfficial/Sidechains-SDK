@@ -52,18 +52,25 @@ testScripts=(
     'mc_sc_forging_delegation.py'
     'mc_sc_forging_fee_payments.py'
     'mc_sc_nodes_alive.py'
-    'sc_backward_transfer.py'
+    'sc_backward_transfer.py type_of_circuit_number=0'
+    'sc_backward_transfer.py type_of_circuit_number=1'
     'sc_blockid_for_backup.py'
     'sc_bootstrap.py'
-    'sc_bt_limit.py'
-    'sc_bt_limit_across_fork.py'
-    'sc_bwt_minimum_value.py'
+    'sc_bt_limit.py type_of_circuit_number=0'
+    'sc_bt_limit.py type_of_circuit_number=1'
+    'sc_bt_limit_across_fork.py type_of_circuit_number=0'
+    'sc_bt_limit_across_fork.py type_of_circuit_number=1'
+    'sc_bwt_minimum_value.py type_of_circuit_number=0'
+    'sc_bwt_minimum_value.py type_of_circuit_number=1'
     'sc_ceased.py'
     'sc_cert_fee_conf.py'
     'sc_cert_no_coin_record.py'
-    'sc_cert_submission_decentralization.py'
-    'sc_cert_submitter_after_sync_1.py'
-    'sc_cert_submitter_after_sync_2.py'
+    'sc_cert_submission_decentralization.py type_of_circuit_number=0'
+    'sc_cert_submission_decentralization.py type_of_circuit_number=1'
+    'sc_cert_submitter_after_sync_1.py type_of_circuit_number=0'
+    'sc_cert_submitter_after_sync_1.py type_of_circuit_number=1'
+    'sc_cert_submitter_after_sync_2.py type_of_circuit_number=0'
+    'sc_cert_submitter_after_sync_2.py type_of_circuit_number=1'
     'sc_closed_forger.py'
     'sc_csw_ceased_at_epoch_1.py'
     'sc_csw_ceased_at_epoch_1_with_large_epoch_length.py'
@@ -79,7 +86,8 @@ testScripts=(
     'sc_mempool_max_fee.py'
     'sc_mempool_max_size.py'
     'sc_mempool_min_fee_rate.py'
-    'sc_multiple_certs.py'
+    'sc_multiple_certs.py type_of_circuit_number=0'
+    'sc_multiple_certs.py type_of_circuit_number=1'
     'sc_node_api_test.py'
     'sc_node_response_along_sync.py'
     'sc_nodes_initialize.py'
@@ -175,7 +183,7 @@ function runTestScript
 
 for (( i = 0; i < ${#testScripts[@]}; i++ )); do
   if checkFileExists "${testScripts[$i]}"; then
-        if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1" = "${testScripts[$i]}" ] || [ "$1.py" = "${testScripts[$i]}" ]; then
+        if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1 $2" = "${testScripts[$i]}" ] || [ "$1.py $2" = "${testScripts[$i]}" ]; then
         echo "Running $((i +1)) Of ${#testScripts[@]} Tests" | tee /dev/fd/3
         runTestScript \
               "${testScripts[$i]}" \
