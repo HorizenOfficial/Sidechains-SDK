@@ -33,8 +33,15 @@ COIN = 100000000 # 1 zen in zatoshis
 
 def p2p_port(n):
     return 11000 + n + os.getpid()%999
-def rpc_port(n):
-    return 12000 + n + os.getpid()%999
+
+
+def rpc_port(n, randomize=True):
+    if randomize:
+        return 12000 + n + os.getpid() % 999
+    else:
+        return 12000 + n
+
+
 def websocket_port_by_mc_node_index(n):
     return 13000 + n + os.getpid()%999
 
@@ -179,10 +186,8 @@ def _rpchost_to_args(rpchost):
 
     rpcconnect = match.group(1)
     rpcport = match.group(2)
-
     if rpcconnect.startswith('['): # remove IPv6 [...] wrapping
         rpcconnect = rpcconnect[1:-1]
-
     rv = ['-rpcconnect=' + rpcconnect]
     if rpcport:
         rv += ['-rpcport=' + rpcport]
@@ -192,6 +197,7 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     """
     Start a bitcoind and return RPC connection to it
     """
+
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
         binary = os.getenv("BITCOIND", "zend")
@@ -203,22 +209,27 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open(os.devnull, "w+")
     if os.getenv("PYTHON_DEBUG", ""):
-        logging.debug("start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount")
-    subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir] +
+        logging.debug("start_node: bitcoind started, calling zen-cli -rpcwait getblockcount")
+
+    subprocess.check_call([os.getenv("BITCOINCLI", "zen-cli"), "-datadir="+datadir] +
                           _rpchost_to_args(rpchost)  +
                           ["-rpcwait", "getblockcount"], stdout=devnull)
+
     if os.getenv("PYTHON_DEBUG", ""):
         logging.debug("start_node: calling bitcoin-cli -rpcwait getblockcount returned")
     devnull.close()
     url = "http://rt:rt@%s:%d" % (rpchost or '127.0.0.1', rpc_port(i))
+    print("url:" + url)
     if timewait is not None:
         proxy = AuthServiceProxy(url, timeout=timewait)
     else:
         proxy = AuthServiceProxy(url)
     proxy.url = url # store URL on proxy for info
+    print(f"Proxy URL: {proxy.url}")
     return proxy
 
-def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
+
+def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, rpcbind_address=None):
     """
     Start multiple bitcoinds, return RPC connections to them
     """

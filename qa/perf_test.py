@@ -159,7 +159,7 @@ class NodeData(object):
         self.machine = machine
 
 
-class MachineCredentials(object):
+class MachineCredentials:
     def __init__(self, ip_address, port, base_directory, ssh_username, ssh_password):
         self.ip_address = ip_address
         self.port = port
@@ -236,13 +236,13 @@ class PerformanceTest(SidechainTestFramework):
             raise "Unable to retrieve machine data from the config"
 
         for machine in machines:
-            machine_credentials.append({
+            machine_credentials.append(
                 MachineCredentials(machine["ip_address"],
                                    machine["port"],
                                    machine["base_directory"],
-                                   machine["ssh_username"])
-            })
-
+                                   machine["ssh_username"],
+                                   machine["ssh_password"])
+            )
         return machine_credentials
 
     def get_node_data(self):
@@ -306,18 +306,20 @@ class PerformanceTest(SidechainTestFramework):
                 max_connections = 1
 
             if self.multi_machine:
+                mc_hostname = urllib.request.urlopen('https://ident.me').read().decode('utf8')
                 host_machine = self.sc_node_data[index]["machine"]
                 try:
                     machine_credentials = machines[host_machine]
                 except Exception:
                     raise "Unable to retrieve machine credentials for node"
             else:
+                mc_hostname = mc_node.hostname
                 machine_credentials = None
 
             node_configuration.append(
                 SCNodeConfiguration(
                     mc_connection_info=MCConnectionInfo(
-                        address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                        address="ws://{0}:{1}".format(mc_hostname, websocket_port_by_mc_node_index(0))),
                     max_connections=max_connections,
                     block_rate=self.block_rate,
                     latency_settings=latency_configurations[index],
@@ -329,9 +331,7 @@ class PerformanceTest(SidechainTestFramework):
     def setup_nodes(self):
         # Start 1 MC node (on local machine)
         if self.multi_machine:
-            external_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-            print(f"EXTERNAL IP IS: {external_ip}")
-            return start_nodes(1, self.options.tmpdir, rpchost=external_ip)
+            return start_nodes(1, self.options.tmpdir)
         else:
             return start_nodes(1, self.options.tmpdir)
 

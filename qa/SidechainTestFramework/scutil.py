@@ -339,19 +339,23 @@ def generate_csw_proof_info(withdrawal_epoch_len, keys_paths):
 
 
 def connect_ssh_client(machine_credentials):
+    print(f"IP ADDRESS: {machine_credentials.ip_address}")
     ssh_client = paramiko.SSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh_client.connect(machine_credentials.ip_address, machine_credentials.port, machine_credentials.username,
-                       machine_credentials.password)
+    try:
+        ssh_client.connect(hostname=machine_credentials.ip_address, username=machine_credentials.ssh_username,
+                           password=machine_credentials.ssh_password)
+    except Exception as e:
+        raise Exception(f"Unable to connect to machine {e}")
     return ssh_client
 
 
 def disconnect_ssh_client(ssh_client):
     try:
         ssh_client.close()
-    except:
-        raise "Unable to close SSH Client"
+    except Exception as e:
+        raise Exception(f"Unable to close SSH Client {e}")
 
 
 def copy_files_to_machine(ssh_client, machine_credentials):
@@ -363,11 +367,21 @@ def copy_files_to_machine(ssh_client, machine_credentials):
     create_directory_on_machine(ssh_client, machine_jar_path)
     create_directory_on_machine(ssh_client, machine_lib_path)
 
+    sftp = paramiko.SFTPClient.from_transport(ssh_client.get_transport())
+    directory_to_copy = f"{examples_dir}/simpleapp/target/lib/"
+    outbound_files = sftp.listdir(directory_to_copy)
+
     # TODO: Does resources_dir and template.conf need to be copied?
     # resources_dir = get_resources_dir()
     with SCPClient(ssh_client.get_transport()) as scp:
+        print("Copying JAR file to machine")
         scp.put(f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar", machine_jar_path)
-        scp.put(f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp", machine_lib_path)
+        print("JAR file copied to machine successfully")
+        print("Copying lib files to machine")
+        for file in outbound_files:
+            print(f"Copying {file}...")
+            scp.put(directory_to_copy + file, machine_lib_path)
+        print("lib directory files copied successfully")
 
 
 def copy_node_conf_to_machine(ssh_client, machine_credentials, conf, data_directory):
@@ -385,9 +399,22 @@ def create_directory_on_machine(ssh_client, remote_path):
         sftp.chdir(remote_path)
     except IOError:
         # Create remote_path
-        sftp.mkdir(remote_path)
-        sftp.chdir(remote_path)
+        mk_each_dir(sftp, remote_path)
+
+    sftp.chdir(remote_path)
     sftp.close()
+
+
+def mk_each_dir(sftp, remote_path):
+    current_dir = '/'
+    for directory in remote_path.split('/'):
+        if directory:
+            current_dir += directory + '/'
+            print(f"Creating new directory {current_dir} on machine")
+            try:
+                sftp.mkdir(current_dir)
+            except:
+                pass # fail silently if remote directory already exists
 
 
 def start_sc_node_on_machine(ssh_client, bash_cmd):
@@ -408,7 +435,7 @@ Parameters:
 
 
 def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
-                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
+                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, ssh_client=None):
     if sc_node_config.machine_credentials is not None:
         api_address = sc_node_config.machine_credentials.ip_address
     else:
@@ -504,7 +531,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 
     # If we're doing multi machine testing copy the config file to the relevant machine
     if sc_node_config.machine_credentials is not None:
-        copy_node_conf_to_machine(sc_node_config.machine_credentials, filename, datadir)
+        copy_node_conf_to_machine(ssh_client, sc_node_config.machine_credentials, filename, datadir)
 
     return configsData
 
@@ -1061,20 +1088,28 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             cert_keys_paths,
                                                             csw_keys_paths)
     # Copy necessary files to another machine
+    ssh_client = None
     if machines is not None:
-        for index, machine in enumerate(machines):
+        # TODO: This currently only works with 2 machines e.g. 1 localhost and 1 ssh.
+        for index, machine_credentials in enumerate(machines):
             # First machine (0) is the test framework host machine and does not need files copied
+            print(f"Machine{index}")
+            print(f"IP: {machine_credentials.ip_address}")
             if index > 0:
-                copy_files_to_machine(machine)
+                ssh_client = connect_ssh_client(machine_credentials)
+                copy_files_to_machine(ssh_client, machine_credentials)
 
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, log_info,
-                                     options.restapitimeout)
+                                     options.restapitimeout, ssh_client)
         else:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info,
-                                     options.restapitimeout)
+                                     options.restapitimeout, ssh_client)
+    if ssh_client is not None:
+        disconnect_ssh_client(ssh_client)
+
     return sc_nodes_bootstrap_info
 
 
@@ -1165,8 +1200,8 @@ Parameters:
 
 
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
-                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
+                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, ssh_client=None):
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout, ssh_client)
 
 
 def generate_forging_request(epoch, slot):
