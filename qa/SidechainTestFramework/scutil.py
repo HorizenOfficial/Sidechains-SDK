@@ -130,7 +130,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
         jsone_node = json.loads(sc_bootstrap_output)
         return jsone_node
     except ValueError:
-        logging.error("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
+        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
                      .format(command_name, json_param, sc_bootstrap_output.decode()))
         raise Exception("Bootstrap tool error occurred")
 
@@ -286,10 +286,10 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
-        "isCSWEnabled": is_csw_enabled,
-        "typeOfCircuitNumber": type_of_circuit_number
+        "isCSWEnabled": is_csw_enabled
     }
-    output = launch_bootstrap_tool("generateCertProofInfo", json_parameters)
+    output = launch_bootstrap_tool("generateCertProofInfo", json_parameters) if type_of_circuit_number == 0 else \
+        launch_bootstrap_tool("generateCertWithKeyRotationProofInfo", json_parameters)
 
     threshold = output["threshold"]
     verification_key = output["verificationKey"]
