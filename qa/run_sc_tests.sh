@@ -183,7 +183,7 @@ function runTestScript
 
 for (( i = 0; i < ${#testScripts[@]}; i++ )); do
   if checkFileExists "${testScripts[$i]}"; then
-        if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1 $2" = "${testScripts[$i]}" ] || [ "$1.py $2" = "${testScripts[$i]}" ]; then
+        if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1" = "${testScripts[$i]}" ] || [ "$1.py" = "${testScripts[$i]}" ]; then
         echo "Running $((i +1)) Of ${#testScripts[@]} Tests" | tee /dev/fd/3
         runTestScript \
               "${testScripts[$i]}" \
