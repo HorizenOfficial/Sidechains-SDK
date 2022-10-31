@@ -213,24 +213,26 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       })
     }
 
-    val keyTypeMap = new JHashMap[KeyRotationProofType, Seq[Int]]()
-    mod.transactions.foreach(tx => {
-      if (tx.isInstanceOf[KeyRotationTransaction]) {
-        val keyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
-        val keyType = keyRotationTransaction.getKeyRotationProof.keyType
-        val keyIndex = keyRotationTransaction.getKeyRotationProof.index
-        if (keyTypeMap.containsKey(keyType)) {
-          if (keyTypeMap.get(keyType).contains(keyIndex))
-            throw new IllegalArgumentException(s"Block ${mod.id} contains multiple KeyRotationTransactions pointing to the same key")
-          else {
-            val currentValue: Seq[Int] = keyTypeMap.get(keyType)
-            keyTypeMap.put(keyType, currentValue :+ keyIndex)
+    if (TypeOfCircuit(params.typeOfCircuit).equals(NaiveThresholdSignatureCircuitWithKeyRotation)) {
+      val keyTypeMap = new JHashMap[KeyRotationProofType, Seq[Int]]()
+      mod.transactions.foreach(tx => {
+        if (tx.isInstanceOf[KeyRotationTransaction]) {
+          val keyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
+          val keyType = keyRotationTransaction.getKeyRotationProof.keyType
+          val keyIndex = keyRotationTransaction.getKeyRotationProof.index
+          if (keyTypeMap.containsKey(keyType)) {
+            if (keyTypeMap.get(keyType).contains(keyIndex))
+              throw new IllegalArgumentException(s"Block ${mod.id} contains multiple KeyRotationTransactions pointing to the same key")
+            else {
+              val currentValue: Seq[Int] = keyTypeMap.get(keyType)
+              keyTypeMap.put(keyType, currentValue :+ keyIndex)
+            }
+          } else {
+            keyTypeMap.put(keyType, Seq(keyIndex))
           }
-        } else {
-          keyTypeMap.put(keyType, Seq(keyIndex))
         }
-      }
-    })
+      })
+    }
 
     if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
       checkWithdrawalBoxesAllowed(mod)
