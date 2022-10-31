@@ -34,6 +34,7 @@ class SidechainApiMockConfiguration {
   private var should_history_searchTransactionInBlockchain_return_value = true
   private var should_history_searchTransactionInBlock_return_value = true
   private var should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply = true
+  private var should_nodeViewHolder_GetDataFromCurrentView_reply = true
   private var should_nodeViewHolder_ApplyFunctionOnNodeView_reply = true
   private var should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply = true
   private var should_nodeViewHolder_GetStorageVersions_reply: Boolean = true
@@ -115,6 +116,8 @@ class SidechainApiMockConfiguration {
   def setShould_history_searchTransactionInBlock_return_value(value: Boolean): Unit = should_history_searchTransactionInBlock_return_value = value
 
   def getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(): Boolean = should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply
+
+  def getShould_nodeViewHolder_GetDataFromCurrentView_reply(): Boolean = should_nodeViewHolder_GetDataFromCurrentView_reply
 
   def setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(value: Boolean): Unit = should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply = value
 

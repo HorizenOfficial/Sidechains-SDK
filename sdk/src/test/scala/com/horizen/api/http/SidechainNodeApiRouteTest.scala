@@ -3,10 +3,13 @@ package com.horizen.api.http
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.api.http.SidechainNodeErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.serialization.SerializationUtil
+import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 
+import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 
@@ -219,6 +222,69 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements.asScala.length)
         assertTrue(result.get("sidechainId").isTextual)
         assertEquals(sidechainId, result.get("sidechainId").asText())
+      }
+    }
+
+    "reply at /getKeyRotationProofs" in {
+      //Malformed request
+      Post(basePath + "getKeyRotationProofs").withEntity("maybe_a_json") ~> sidechainNodeApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+
+      //Bad circuit
+      Post(basePath + "getKeyRotationProofs").withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0,0,0)))  ~> sidechainNodeApiRoute ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBadCircuit("The current circuit doesn't support key rotation proofs!", JOptional.empty()).code)
+      }
+
+      //Should answer with a KeyRotationProof
+      Post(basePath + "getKeyRotationProofs") .withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0,0,0))) ~> sidechainNodeApiRouteWithKeyRotation ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements.asScala.length)
+
+        val keyRotationProofJson = result.get("keyRotationProof")
+        assertTrue(keyRotationProofJson.has("keyType"))
+        assertEquals("SigningKeyRotationProofType", keyRotationProofJson.get("keyType").get("value").asText())
+        assertEquals(keyRotationProof.index, keyRotationProofJson.get("index").asInt())
+        assertTrue(keyRotationProofJson.has("newValueOfKey"))
+        assertEquals(BytesUtils.toHexString(keyRotationProof.newValueOfKey.pubKeyBytes()), keyRotationProofJson.get("newValueOfKey").get("publicKey").asText())
+        assertTrue(keyRotationProofJson.has("signingKeySignature"))
+        assertEquals(BytesUtils.toHexString(keyRotationProof.signingKeySignature.bytes()), keyRotationProofJson.get("signingKeySignature").get("signature").asText())
+        assertTrue(keyRotationProofJson.has("masterKeySignature"))
+        assertEquals(BytesUtils.toHexString(keyRotationProof.masterKeySignature.bytes()), keyRotationProofJson.get("masterKeySignature").get("signature").asText())
+      }
+
+  }
+
+    "reply at /getCertificateSigners" in {
+
+      //Should answer with a CertificateKeys
+      Post(basePath + "getCertificateSigners") ~> sidechainNodeApiRouteWithKeyRotation ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements.asScala.length)
+
+        val certifiersKeysJson = result.get("certifiersKeys")
+        assertTrue(certifiersKeysJson.has("signingKeys"))
+        val signingKeys = certifiersKeysJson.get("signingKeys")
+        assertEquals(certifiersKeys.signingKeys.size, signingKeys.size())
+        assertEquals(BytesUtils.toHexString(certifiersKeys.signingKeys(0).pubKeyBytes()), signingKeys.get(0).get("publicKey").asText())
+        assertEquals(BytesUtils.toHexString(certifiersKeys.signingKeys(1).pubKeyBytes()), signingKeys.get(1).get("publicKey").asText())
+
+        assertTrue(certifiersKeysJson.has("masterKeys"))
+        val masterKeys = certifiersKeysJson.get("masterKeys")
+        assertEquals(certifiersKeys.masterKeys.size, masterKeys.size())
+        assertEquals(BytesUtils.toHexString(certifiersKeys.masterKeys(0).pubKeyBytes()), masterKeys.get(0).get("publicKey").asText())
+        assertEquals(BytesUtils.toHexString(certifiersKeys.masterKeys(1).pubKeyBytes()), masterKeys.get(1).get("publicKey").asText())
       }
 
     }

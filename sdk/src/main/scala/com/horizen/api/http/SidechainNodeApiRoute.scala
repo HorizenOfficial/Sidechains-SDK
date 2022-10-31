@@ -210,8 +210,8 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       withView { sidechainNodeView =>
         val currentEpoch = sidechainNodeView.state.getWithdrawalEpochInfo.epoch
         sidechainNodeView.state.certifiersKeys(currentEpoch) match {
-          case Some(actualKeys) =>
-            ApiResponseUtil.toResponse(RespGetCertificateSigners(actualKeys))
+          case Some(certifiersKeys) =>
+            ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys))
           case None =>
             ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Impossible to find certificate signer keys!", JOptional.empty()))
         }
@@ -303,10 +303,10 @@ object SidechainNodeRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGetCertificateSigners(actualKeys: CertifiersKeys) extends SuccessResponse
+  private[api] case class RespGetCertificateSigners(certifiersKeys: CertifiersKeys) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGetKeyRotationProof(keyRotationProofs: Option[KeyRotationProof]) extends SuccessResponse
+  private[api] case class RespGetKeyRotationProof(keyRotationProof: Option[KeyRotationProof]) extends SuccessResponse
 }
 
 object SidechainNodeErrorResponse {

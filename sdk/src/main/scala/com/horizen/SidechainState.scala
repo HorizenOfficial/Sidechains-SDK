@@ -382,6 +382,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
 
       if (tx.isInstanceOf[KeyRotationTransaction]) {
+        if (TypeOfCircuit(params.typeOfCircuit).equals(TypeOfCircuit.NaiveThresholdSignatureCircuit)) {
+          throw new Exception("KeyRotationTransaction is not allowed with this kind of circuit!")
+        }
         val keyRotationTransaction: KeyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
         val keyRotationProof = keyRotationTransaction.getKeyRotationProof
         val newKey = keyRotationProof.newValueOfKey

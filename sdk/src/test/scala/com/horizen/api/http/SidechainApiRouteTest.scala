@@ -43,6 +43,7 @@ import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, bytesToId}
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
@@ -112,6 +113,8 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val listOfStorageVersions = utilMocks.listOfNodeStorageVersion
   val sidechainId = utilMocks.sidechainId
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
+  val keyRotationProof = utilMocks.keyRotationProof
+  val certifiersKeys = utilMocks.certifiersKeys
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
@@ -133,6 +136,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
         case GetDataFromCurrentSidechainNodeView(f) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
             sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+        case GetDataFromCurrentView(f) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentView_reply())
+            sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
         case ApplyFunctionOnNodeView(f) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyFunctionOnNodeView_reply())
             sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
@@ -345,6 +351,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val mockedSidechainApp: SidechainApp = mock[SidechainApp]
 
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params, 0).route
+  val sidechainNodeApiRouteWithKeyRotation: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params, 1).route
 
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
