@@ -130,7 +130,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
         jsone_node = json.loads(sc_bootstrap_output)
         return jsone_node
     except ValueError:
-        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
+        logging.error("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
                      .format(command_name, json_param, sc_bootstrap_output.decode()))
         raise Exception("Bootstrap tool error occurred")
 
@@ -272,17 +272,17 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
     signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
 
     signer_secrets = []
-    signer_public_keys = []
-    master_public_keys = []
+    public_signing_keys = []
+    public_master_keys = []
     for i in range(len(signer_keys)):
         keys = signer_keys[i]
         signer_secrets.append(keys.secret)
-        signer_public_keys.append(keys.publicKey)
-        master_public_keys.append(keys.publicKey)
+        public_signing_keys.append(keys.publicKey)
+        public_master_keys.append(keys.publicKey)
 
     json_parameters = {
-        "signerPublicKeys": signer_public_keys,
-        "masterPublicKeys": master_public_keys,
+        "publicSigningKeys": public_signing_keys,
+        "publicMasterKeys": public_master_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
@@ -296,7 +296,7 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
     gen_sys_constant = output["genSysConstant"]
 
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
-                                                  signer_public_keys, master_public_keys)
+                                                  public_signing_keys, public_master_keys)
     return certificate_proof_info
 
 
@@ -417,10 +417,10 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
-        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.signing_public_keys),
+        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_signing_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
-        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.master_public_keys),
-        "MAX_PKS": len(bootstrap_info.certificate_proof_info.signing_public_keys),
+        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_master_keys),
+        "MAX_PKS": len(bootstrap_info.certificate_proof_info.public_signing_keys),
         "CERT_PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
         "CERT_VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
         "AUTOMATIC_FEE_COMPUTATION": ("true" if sc_node_config.automatic_fee_computation else "false"),

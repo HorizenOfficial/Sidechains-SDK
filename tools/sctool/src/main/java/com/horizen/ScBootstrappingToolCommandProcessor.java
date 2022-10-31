@@ -85,6 +85,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             case "generateCertProofInfo":
                 processGenerateCertProofInfo(command.data());
                 break;
+            case "generateCertWithKeyRotationProofInfo":
+                processGenerateCertWithKeyRotationProofInfo(command.data());
+                break;
             case "generateCswProofInfo":
                 processGenerateCswProofInfo(command.data());
                 break;
@@ -246,19 +249,19 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     }
 
     private void processGenerateCertProofInfo(JsonNode json) {
-        if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
-            printGenerateCertProofInfoUsageMsg("wrong public keys");
+        if (!json.has("publicSigningKeys") || !json.get("publicSigningKeys").isArray()) {
+            printGenerateCertProofInfoUsageMsg("wrong publicSigningKeys");
             return;
         }
 
         List<String> publicKeys = new ArrayList<String>();
 
-        Iterator<JsonNode> pksIterator = json.get("signersPublicKeys").elements();
+        Iterator<JsonNode> pksIterator = json.get("publicSigningKeys").elements();
         while (pksIterator.hasNext()) {
             JsonNode pkNode = pksIterator.next();
 
             if (!pkNode.isTextual()) {
-                printGenerateCertProofInfoUsageMsg("wrong public key format");
+                printGenerateCertProofInfoUsageMsg("wrong publicSigningKeys format");
                 return;
             }
 
@@ -294,13 +297,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
         boolean isCSWEnabled = json.get("isCSWEnabled").asBoolean();
-
-        if (!json.has("typeOfCircuitNumber") || !json.get("typeOfCircuitNumber").isInt()) {
-            printGenerateCertProofInfoUsageMsg("wrong typeOfCircuitNumber value. Integer value expected.");
-            return;
-        }
-        boolean typeOfCircuitNumber = json.get("typeOfCircuitNumber").asBoolean();
-
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
         // Generate all keys only if verification key doesn't exist.
@@ -342,6 +338,130 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         ArrayNode keyArrayNode = resJson.putArray("schnorrPublicKeys");
 
         for (String publicKeyStr : publicKeys) {
+            keyArrayNode.add(publicKeyStr);
+        }
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
+    private void processGenerateCertWithKeyRotationProofInfo(JsonNode json) {
+        if (!json.has("publicSigningKeys") || !json.get("publicSigningKeys").isArray()) {
+            printGenerateCertProofInfoUsageMsg("wrong publicSigningKeys");
+            return;
+        }
+
+        List<String> publicSigningKeys = new ArrayList<String>();
+
+        Iterator<JsonNode> pksIterator = json.get("publicSigningKeys").elements();
+        while (pksIterator.hasNext()) {
+            JsonNode pkNode = pksIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertProofInfoUsageMsg("wrong publicSigningKeys format");
+                return;
+            }
+
+            publicSigningKeys.add(pkNode.asText());
+        }
+
+        if (!json.has("publicMasterKeys") || !json.get("publicMasterKeys").isArray()) {
+            printGenerateCertProofInfoUsageMsg("wrong public keys");
+            return;
+        }
+
+        List<String> publicMasterKeys = new ArrayList<String>();
+
+        Iterator<JsonNode> publicMasterKeysIterator = json.get("publicMasterKeys").elements();
+        while (publicMasterKeysIterator.hasNext()) {
+            JsonNode pkNode = publicMasterKeysIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertProofInfoUsageMsg("wrong publicMasterKeys format");
+                return;
+            }
+
+            publicMasterKeys.add(pkNode.asText());
+        }
+
+        if (!json.has("threshold") || !json.get("threshold").isInt()) {
+            printGenerateCertProofInfoUsageMsg("wrong threshold");
+            return;
+        }
+
+        int threshold = json.get("threshold").asInt();
+
+        if (threshold <= 0 || threshold > publicSigningKeys.size()) {
+            printGenerateCertProofInfoUsageMsg("wrong threshold: " + threshold);
+            return;
+        }
+
+        if (!json.has("provingKeyPath") || !json.get("provingKeyPath").isTextual()) {
+            printGenerateCertProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
+            return;
+        }
+        String provingKeyPath = json.get("provingKeyPath").asText();
+
+        if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
+            printGenerateCertProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            return;
+        }
+        String verificationKeyPath = json.get("verificationKeyPath").asText();
+
+        if (!json.has("isCSWEnabled") || !json.get("isCSWEnabled").isBoolean()) {
+            printGenerateCertProofInfoUsageMsg("wrong isCSWEnabled value. Boolean value expected.");
+            return;
+        }
+        boolean isCSWEnabled = json.get("isCSWEnabled").asBoolean();
+
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+
+        // Generate all keys only if verification key doesn't exist.
+        // Note: we are interested only in verification key raw data.
+        if(!Files.exists(Paths.get(verificationKeyPath))) {
+
+            if (!initDlogKey()) {
+                printer.print("Error occurred during dlog key generation.");
+                return;
+            }
+
+            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW;
+            if (isCSWEnabled){
+                numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW;
+            }
+            if (!CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateCoboundaryMarlinSnarkKeys(publicSigningKeys.size(), provingKeyPath, verificationKeyPath, numOfCustomFields)) {
+                printer.print("Error occurred during snark keys generation.");
+                return;
+            }
+        }
+        // Read verification key from file
+        String verificationKey = CryptoLibProvider.commonCircuitFunctions().getCoboundaryMarlinSnarkVerificationKeyHex(verificationKeyPath);
+        if(verificationKey.isEmpty()) {
+            printer.print("Verification key file is empty or the key is broken.");
+            return;
+        }
+
+        List<byte[]> publicSigningKeysBytes = publicSigningKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
+        List<byte[]> publicMasterKeysBytes = publicMasterKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
+
+        byte[] keysRootHash = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateKeysRootHash(publicSigningKeysBytes, publicMasterKeysBytes);
+
+        String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateSysDataConstant(keysRootHash, threshold));
+
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        ObjectNode resJson = mapper.createObjectNode();
+
+        resJson.put("maxPks", publicSigningKeys.size());
+        resJson.put("threshold", threshold);
+        resJson.put("genSysConstant", genSysConstant);
+        resJson.put("verificationKey", verificationKey);
+
+        ArrayNode keyArrayNode = resJson.putArray("schnorrPublicKeys");
+
+        for (String publicKeyStr : publicSigningKeys) {
+            keyArrayNode.add(publicKeyStr);
+        }
+        for (String publicKeyStr : publicMasterKeys) {
             keyArrayNode.add(publicKeyStr);
         }
 
