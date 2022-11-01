@@ -860,13 +860,11 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
     else:
         csw_keys_paths = None
-    type_of_circuit_number = 0
 
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
                                                block_timestamp_rewind,
                                                cert_keys_paths,
-                                               csw_keys_paths,
-                                               network.sc_nodes_configuration)
+                                               csw_keys_paths)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,
@@ -879,8 +877,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
                                                             cert_keys_paths,
-                                                            csw_keys_paths,
-                                                            type_of_circuit_number)
+                                                            csw_keys_paths)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -922,15 +919,16 @@ Parameters:
 """
 
 
-def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths, type_of_circuit_number):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    print(type_of_circuit_number)
+    print(sc_creation_info.type_of_circuit_number)
     certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys,
                                                              sc_creation_info.cert_sig_threshold, cert_keys_paths,
-                                                             sc_creation_info.csw_enabled, type_of_circuit_number)
+                                                             sc_creation_info.csw_enabled,
+                                                             sc_creation_info.type_of_circuit_number)
     if csw_keys_paths is None:
         csw_verification_key = ""
     else:
@@ -948,7 +946,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         sc_creation_info.btr_data_length,
         sc_creation_info.sc_creation_version,
         sc_creation_info.csw_enabled,
-        type_of_circuit_number)
+        sc_creation_info.type_of_circuit_number)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
                                          block_timestamp_rewind)
@@ -958,7 +956,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
                            genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths,
-                           type_of_circuit_number)
+                           sc_creation_info.type_of_circuit_number)
 
 
 def calculateApiKeyHash(auth_api_key):
