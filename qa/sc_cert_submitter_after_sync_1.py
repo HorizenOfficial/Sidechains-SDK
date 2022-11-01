@@ -27,8 +27,9 @@ Test:
     - Generate a few more MC and SC blocks to reach the end of the withdrawal epoch.
     - Check that certificate was generated. So Submitter and Signer are alive on SC node 2.
 """
-class ScCertSubmitterAfterSync1(SidechainTestFramework):
 
+
+class ScCertSubmitterAfterSync1(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
 
@@ -39,28 +40,28 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1',
+                                        '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            False, True, list([0, 1, 2]),  # certificate submitter is disabled, signing is enabled with 3 schnorr PKs
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            False, True, list([0, 1, 2])  # certificate submitter is disabled, signing is enabled with 3 schnorr PKs
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list([3, 4, 5]),  # certificate submitter is enabled, signing enabled with 3 other schnorr PKs
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            True, True, list([3, 4, 5])  # certificate submitter is enabled, signing is enabled with 3 other schnorr PKs
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
+            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True,
+                           type_of_circuit_number=int(self.options.certcircuittype)),
             sc_node_1_configuration,
             sc_node_2_configuration)
 
         # rewind sc genesis block timestamp for 10 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*10)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)

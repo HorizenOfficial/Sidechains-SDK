@@ -866,7 +866,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                block_timestamp_rewind,
                                                cert_keys_paths,
                                                csw_keys_paths,
-                                               type_of_circuit_number)
+                                               network.sc_nodes_configuration)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,

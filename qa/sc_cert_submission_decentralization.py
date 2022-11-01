@@ -41,8 +41,9 @@ Test:
         - check for the epoch 1 certificate in the MC mempool
         - validate certificate quality, all keys expected to be involved (quality = 7 of 7)
 """
-class SCCertSubmissionDecentralization(SidechainTestFramework):
 
+
+class SCCertSubmissionDecentralization(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sc_nodes = 4
 
@@ -52,7 +53,8 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1',
+                                        '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -61,16 +63,14 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             True,  # Certificate submission is enabled
             True,  # Certificate signing is enabled
             [0, 1],  # owns 2 schnorr PKs for certificate signing
-            1,  # set max connections to prevent node 1 and nodes 3,4 connection
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            1  # set max connections to prevent node 1 and nodes 3,4 connection
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             False,  # Certificate submission is disabled
             True,  # Certificate signing is enabled
             [2, 3],  # owns 2 schnorr PKs for certificate signing
-            2,  # set max connections to prevent node 2 and node 4 connection
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            2  # set max connections to prevent node 2 and node 4 connection
         )
 
         sc_node_3_configuration = SCNodeConfiguration(
@@ -78,8 +78,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             False,  # Certificate submission is disabled
             False,  # Certificate signing is disabled
             [0, 1, 2, 3, 4, 5, 6],  # owns 3 schnorr PKs for certificate signing
-            1,  # set max connections to prevent node 4 and nodes 1,2 connection
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            1  # set max connections to prevent node 4 and nodes 1,2 connection
         )
 
         sc_node_4_configuration = SCNodeConfiguration(
@@ -87,12 +86,12 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             False,  # Certificate submission is disabled
             True,  # Certificate signing is enabled
             [4, 5, 6],  # owns 3 schnorr PKs for certificate signing
-            2,  # set max connections to prevent node 3 and node 1 connection
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            2  # set max connections to prevent node 3 and node 1 connection
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
+            SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
+                           type_of_circuit_number=int(self.options.certcircuittype)),
             sc_node_1_configuration,
             sc_node_2_configuration,
             sc_node_3_configuration,
@@ -124,21 +123,30 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         assert_equal(1, len(sc_connected_peers(sc_node4)), "Sc Node 4 expect to have only 1 connection.")
 
         # Check submitter API:
-        assert_true(sc_node1.submitter_isCertificateSubmitterEnabled()["result"]["enabled"], "Node 1 submitter expected to be enabled.")
-        assert_true(sc_node1.submitter_isCertificateSignerEnabled()["result"]["enabled"], "Node 1 cert signer expected to be enabled.")
-        assert_false(sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"], "Node 2 submitter expected to be disabled.")
-        assert_true(sc_node2.submitter_isCertificateSignerEnabled()["result"]["enabled"], "Node 2 cert signer expected to be enabled.")
-        assert_false(sc_node3.submitter_isCertificateSubmitterEnabled()["result"]["enabled"], "Node 3 submitter expected to be disabled.")
-        assert_false(sc_node3.submitter_isCertificateSignerEnabled()["result"]["enabled"], "Node 3 cert signer expected to be disabled.")
-        assert_false(sc_node4.submitter_isCertificateSubmitterEnabled()["result"]["enabled"], "Node 4 submitter expected to be disabled.")
-        assert_true(sc_node4.submitter_isCertificateSignerEnabled()["result"]["enabled"], "Node 4 cert signer expected to be enabled.")
+        assert_true(sc_node1.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
+                    "Node 1 submitter expected to be enabled.")
+        assert_true(sc_node1.submitter_isCertificateSignerEnabled()["result"]["enabled"],
+                    "Node 1 cert signer expected to be enabled.")
+        assert_false(sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
+                     "Node 2 submitter expected to be disabled.")
+        assert_true(sc_node2.submitter_isCertificateSignerEnabled()["result"]["enabled"],
+                    "Node 2 cert signer expected to be enabled.")
+        assert_false(sc_node3.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
+                     "Node 3 submitter expected to be disabled.")
+        assert_false(sc_node3.submitter_isCertificateSignerEnabled()["result"]["enabled"],
+                     "Node 3 cert signer expected to be disabled.")
+        assert_false(sc_node4.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
+                     "Node 4 submitter expected to be disabled.")
+        assert_true(sc_node4.submitter_isCertificateSignerEnabled()["result"]["enabled"],
+                    "Node 4 cert signer expected to be enabled.")
 
         # Generate 9 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(9)[8]
         logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        logging.info("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info(
+            "End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         scblock_id2 = generate_next_block(sc_node1, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node1)
 
@@ -161,9 +169,12 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         we1_2_mcblock_hash = mc_node.generate(1)[0]
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate expected to be removed from MC node mempool.")
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction.")
-        assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 1 Certificate.")
-        assert_equal(we0_cert_hash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0], "MC block expected to contain certificate.")
-        logging.info("MC block with withdrawal certificate for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
+        assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]),
+                     "MC block expected to contain 1 Certificate.")
+        assert_equal(we0_cert_hash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0],
+                     "MC block expected to contain certificate.")
+        logging.info("MC block with withdrawal certificate for epoch 0 = {0}\n".format(
+            str(mc_node.getblock(we1_2_mcblock_hash, False))))
 
         # Generate SC block and verify that certificate is synced back
         scblock_id4 = generate_next_blocks(sc_node1, "first node", 1)[0]

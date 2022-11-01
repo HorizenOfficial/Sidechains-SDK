@@ -56,13 +56,13 @@ class SCBackwardTransfer(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            submitter_private_keys_indexes=list(range(cert_max_keys)),  # SC node owns all schnorr private keys.
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            submitter_private_keys_indexes=list(range(cert_max_keys))  # SC node owns all schnorr private keys.
         )
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
                                                         cert_max_keys=cert_max_keys,
-                                                        cert_sig_threshold=cert_sig_threshold),
+                                                        cert_sig_threshold=cert_sig_threshold,
+                                                        type_of_circuit_number=int(self.options.certcircuittype)),
                                          sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 

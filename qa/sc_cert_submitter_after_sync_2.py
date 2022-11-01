@@ -29,8 +29,9 @@ Test:
     - Check that certificate was generated. So Submitter and Signer are alive on SC node 2.
     - Sleep for 20 seconds and visually check that there is no continues errors/warnings after sync.
 """
-class ScCertSubmitterAfterSync2(SidechainTestFramework):
 
+
+class ScCertSubmitterAfterSync2(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
 
@@ -41,7 +42,8 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1',
+                                        '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -49,24 +51,23 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             True,  # certificate submitter is enabled
             True,  # certificate signer is enabled
-            list([0, 1, 2, 3, 4]),  # with 5 schnorr PKs, so has enough signatures to start cert generation.
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            list([0, 1, 2, 3, 4])  # with 5 schnorr PKs, so has enough signatures to start cert generation.
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             True,  # certificate submitter is enabled
             True,  # certificate signer is enabled
-            list([4, 5, 6]),  # with 3 schnorr PKs
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            list([4, 5, 6])  # with 3 schnorr PKs
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
+            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True,
+                           type_of_circuit_number=int(self.options.certcircuittype)),
             sc_node_1_configuration,
             sc_node_2_configuration)
 
         # rewind sc genesis block timestamp for 10 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*10)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
@@ -96,7 +97,8 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         while not sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
             time.sleep(1)
 
-        while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
+        while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"][
+            "state"]:
             logging.info("Wait for certificates in the MC mempool...")
             if sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
                 logging.info("sc_node generating certificate now.")

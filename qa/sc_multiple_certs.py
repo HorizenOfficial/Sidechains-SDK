@@ -46,8 +46,9 @@ Test:
         * SC node 2 can't grow SC chain, because it follows wrong cert data.
     - Connect SC nodes again and check that SC node 2 synced to the state of SC Node 1
 """
-class SCMultipleCerts(SidechainTestFramework):
 
+
+class SCMultipleCerts(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
 
@@ -59,28 +60,28 @@ class SCMultipleCerts(SidechainTestFramework):
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1',
+                                        '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list(range(7)),  # certificate submitter is enabled with 7 schnorr PKs
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            True, True, list(range(7))  # certificate submitter is enabled with 7 schnorr PKs
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list(range(6)),  # certificate submitter is enabled with 6 schnorr PKs
-            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
+            True, True, list(range(6))  # certificate submitter is enabled with 6 schnorr PKs
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length),
+            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length,
+                           type_of_circuit_number=int(self.options.certcircuittype)),
             sc_node_1_configuration,
             sc_node_2_configuration)
 
         # rewind sc genesis block timestamp for 5 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 5)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
@@ -166,14 +167,16 @@ class SCMultipleCerts(SidechainTestFramework):
         generate_next_block(sc_node1, "first node")
         time.sleep(2)
 
-        assert_false(sc_node1.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node1.submitter_isCertGenerationActive()["result"]["state"],
+                     "Expected certificate generation will be skipped.")
 
         # Generate MC block with certs
         mc_block_hash_with_certs = mc_node.generate(1)[0]
         mc_block_hash_with_certs_hex = mc_node.getblock(mc_block_hash_with_certs, False)
         logging.info("MC block with 2 Certificates: " + mc_block_hash_with_certs_hex)
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate expected to be removed from MC node mempool.")
-        assert_equal(2, len(mc_node.getblock(mc_block_hash_with_certs)["cert"]), "MC block expected to contain 2 certs.")
+        assert_equal(2, len(mc_node.getblock(mc_block_hash_with_certs)["cert"]),
+                     "MC block expected to contain 2 certs.")
 
         # Generate 1 SC block on both SC nodes. Both nodes should be able to grow chain with 2 Certs
         generate_next_block(sc_node1, "first node")
