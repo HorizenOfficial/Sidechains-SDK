@@ -924,7 +924,6 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    print(sc_creation_info.type_of_circuit_number)
     certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys,
                                                              sc_creation_info.cert_sig_threshold, cert_keys_paths,
                                                              sc_creation_info.csw_enabled,
