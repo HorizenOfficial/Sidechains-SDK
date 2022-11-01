@@ -143,6 +143,8 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="log4j log level for application log file")
         parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
                           help="log4j log level for application console")
+        parser.add_option("--certcircuittype", dest="certcircuittype", default=0, action="store",
+                          help="Type of certificate circuit: 0 without key rotation, 1 with key rotation")
 
         self.add_options(parser)
         self.sc_add_options(parser)
