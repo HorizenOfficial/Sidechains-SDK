@@ -5,7 +5,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, SidechainBlock, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
@@ -21,6 +21,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
+
 import java.io.File
 import java.util
 import java.util.Optional
@@ -55,9 +56,9 @@ class NonCeasingCertificateSubmitter(settings: SidechainSettings,
         case Success(submissionWindowStatus) =>
           if (submissionWindowStatus.isInWindow) {
             signaturesStatus match {
-              case Some(_) => // do nothing
-              case None =>
-                val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
+              case Some(status) if (status.referencedEpoch == submissionWindowStatus.referencedEpochNumber) => // Nothing changes
+              case _ =>
+                val referencedWithdrawalEpochNumber = submissionWindowStatus.referencedEpochNumber
                 getMessageToSign(referencedWithdrawalEpochNumber) match {
                   case Success(messageToSign) =>
                     signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
@@ -99,31 +100,40 @@ class NonCeasingCertificateSubmitter(settings: SidechainSettings,
   private[certificatesubmitter] def getSubmissionWindowStatus(block: SidechainBlock): Try[SubmissionWindowStatus] = Try {
     val nonCeasingSubmissionDelay = 1 // TBD length
 
+    def getLastTopQualityCertificate(sidechainNodeView: View, referencedWithrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+      var withdrawalEpoch = referencedWithrawalEpoch
+      var certificateOpt: Option[WithdrawalEpochCertificate] = sidechainNodeView.state.certificate(withdrawalEpoch)
+
+      while (certificateOpt.isEmpty && withdrawalEpoch > 0) {
+        withdrawalEpoch = withdrawalEpoch - 1
+        certificateOpt = sidechainNodeView.state.certificate(withdrawalEpoch)
+      }
+
+      certificateOpt
+    }
+
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
       val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
-      val lastCertificateOpt = sidechainNodeView.state.lastTopQualityCertificate(withdrawalEpochInfo.epoch)
+      val lastCertificateOpt = getLastTopQualityCertificate(sidechainNodeView, withdrawalEpochInfo.epoch)
+      // TODO Make record to state - lastTopQualityCertificate
+      val referencedEpochNumber = lastCertificateOpt.map(_.epochNumber).getOrElse(-1) + 1 // Withdrawal epoch for which certificate needs to be applied
 
-      if (lastCertificateOpt.isEmpty) {
-        // In case there are no certificates yet, open submission window after 1st block of 1st epoch
-        if ((withdrawalEpochInfo.epoch == 1 && withdrawalEpochInfo.lastEpochIndex >= nonCeasingSubmissionDelay)
-             || (withdrawalEpochInfo.epoch > 1)) {
-          SubmissionWindowStatus(withdrawalEpochInfo, true)
-        } else {
-          SubmissionWindowStatus(withdrawalEpochInfo, false)
-        }
+      if (referencedEpochNumber + 1 < withdrawalEpochInfo.epoch) {
+        // Submission certificate for the epoch before previous
+        SubmissionWindowStatus(referencedEpochNumber, true)
+      } else if (referencedEpochNumber + 1 == withdrawalEpochInfo.epoch && withdrawalEpochInfo.lastEpochIndex >= nonCeasingSubmissionDelay) {
+        // Submission certificate for the previous epoch
+        SubmissionWindowStatus(referencedEpochNumber, true)
       } else {
-        if (lastCertificateOpt.get.epochNumber + 2 < withdrawalEpochInfo.epoch) {
-          SubmissionWindowStatus(withdrawalEpochInfo, true)
-        } else if (lastCertificateOpt.get.epochNumber + 2 == withdrawalEpochInfo.epoch && withdrawalEpochInfo.lastEpochIndex >= nonCeasingSubmissionDelay) {
-          SubmissionWindowStatus(withdrawalEpochInfo, true)
-        } else {
-          SubmissionWindowStatus(withdrawalEpochInfo, false)
-        }
+        // No need to submit certificate
+        SubmissionWindowStatus(referencedEpochNumber, false)
       }
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
+
+
 
   private[certificatesubmitter] def tryToGenerateCertificate: Receive = {
     case TryToGenerateCertificate => Try {

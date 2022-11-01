@@ -472,7 +472,7 @@ object AbstractCertificateSubmitter {
   case object SubmitterIsOutsideSubmissionWindow extends SignatureProcessingStatus
 
   // Data
-  private[certificatesubmitter] case class SubmissionWindowStatus(withdrawalEpochInfo: WithdrawalEpochInfo, isInWindow: Boolean)
+  private[certificatesubmitter] case class SubmissionWindowStatus(referencedEpochNumber: Int, isInWindow: Boolean)
 
   case class SignaturesStatus(referencedEpoch: Int, messageToSign: Array[Byte], knownSigs: ArrayBuffer[CertificateSignatureInfo])
 

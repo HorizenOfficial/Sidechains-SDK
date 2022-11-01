@@ -66,8 +66,7 @@ class SCBackwardTransferNonCeaing(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, is_non_ceasing=True)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir, extra_args=['-agentlib'])
-        # return start_sc_nodes(1, self.options.tmpdir)
+        return start_sc_nodes(1, self.options.tmpdir)
 
     def run_test(self):
         time.sleep(0.1)

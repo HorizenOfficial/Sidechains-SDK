@@ -107,8 +107,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  def lastTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
-    stateStorage.getLastTopQualityCertificate(referencedWithdrawalEpoch)
+  def lastCertificateEpochNumber(): Option[Int] = {
+    stateStorage.getLastCertificateEpochNumber()
   }
 
   def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
@@ -143,8 +143,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
         // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificates.nonEmpty match {
-          case true => Some(mod.topQualityCertificates.head)
+        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.nonEmpty match {
+          case true => Some(mod.topQualityCertificateOpt.get)
           case false => stateStorage.getTopQualityCertificate(certReferencedEpochNumber)
         }
 
@@ -161,7 +161,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
       val topQualityCertificates: Seq[WithdrawalEpochCertificate] = mod.topQualityCertificates
 
-      // TODO Validate certificate with epoch number from the store
       topQualityCertificates.foreach(cert => validateTopQualityCertificate(cert, cert.epochNumber))
     }
 
@@ -429,7 +428,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
-          mod.topQualityCertificates,
+          mod.topQualityCertificateOpt,
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions)
         )
@@ -459,7 +458,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                             newVersion: VersionTag,
                             withdrawalEpochInfo: WithdrawalEpochInfo,
                             consensusEpoch: ConsensusEpochNumber,
-                            topQualityCertificates: Seq[WithdrawalEpochCertificate],
+                            topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
                             blockFeeInfo: BlockFeeInfo,
                             forgerListIndexes: Array[Int]
                   ): Try[SidechainState] = Try {
@@ -475,7 +474,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       withdrawalEpochInfo, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0, 0)), params)
 
     val scHasCeased: Boolean = !params.isNonCeasing && hasReachedCertificateSubmissionWindowEnd &&
-      topQualityCertificates.isEmpty && stateStorage.getTopQualityCertificate(withdrawalEpochInfo.epoch - 1).isEmpty
+      topQualityCertificateOpt.isEmpty && stateStorage.getTopQualityCertificate(withdrawalEpochInfo.epoch - 1).isEmpty
 
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)
     if(isWithdrawalEpochFinished) {
@@ -509,7 +508,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificates, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased, forgerListIndexes, params.allowedForgersList.size).get,
+            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased, forgerListIndexes, params.allowedForgersList.size).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           updatedUtxoMerkleTreeProvider,
           params,

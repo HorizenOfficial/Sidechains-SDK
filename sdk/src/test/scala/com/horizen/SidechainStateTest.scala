@@ -315,7 +315,7 @@ class SidechainStateTest
       ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
       ArgumentMatchers.any[ConsensusEpochNumber](),
-      ArgumentMatchers.any[Seq[WithdrawalEpochCertificate]](),
+      ArgumentMatchers.any[Option[WithdrawalEpochCertificate]](),
       ArgumentMatchers.any[BlockFeeInfo](),
       ArgumentMatchers.any[Option[Array[Byte]]](),
       ArgumentMatchers.any[Boolean](),
@@ -328,7 +328,7 @@ class SidechainStateTest
         val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
         val withdrawalRequestAppendSeq = answer.getArgument[ListBuffer[WithdrawalRequestBox]](4)
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](5)
-        val backwardTransferCertificates = answer.getArgument[Seq[WithdrawalEpochCertificate]](6)
+        val backwardTransferCertificates = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
         val blockFeeInfo = answer.getArgument[BlockFeeInfo](7)
         val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](8)
         val scHasCeased = answer.getArgument[Boolean](9)

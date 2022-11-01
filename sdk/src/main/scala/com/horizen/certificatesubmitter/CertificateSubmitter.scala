@@ -58,7 +58,7 @@ class CertificateSubmitter(settings: SidechainSettings,
             signaturesStatus match {
               case Some(_) => // do nothing
               case None =>
-                val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
+                val referencedWithdrawalEpochNumber = submissionWindowStatus.referencedEpochNumber
                 getMessageToSign(referencedWithdrawalEpochNumber) match {
                   case Success(messageToSign) =>
                     signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
@@ -100,7 +100,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   private[certificatesubmitter] def getSubmissionWindowStatus(block: SidechainBlock): Try[SubmissionWindowStatus] = Try {
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
       val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
-      SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
+      SubmissionWindowStatus(withdrawalEpochInfo.epoch - 1, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]

@@ -51,6 +51,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     Utils.calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
   }
 
+  private[horizen] val getLastCertificateEpochNumberKey = Utils.calculateKey("lastCertificateEpochNumber".getBytes)
+
   private val undefinedBlockFeeInfoCounter: Int = -1
   private[horizen] def getBlockFeeInfoCounterKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
@@ -160,19 +162,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getLastTopQualityCertificate(currentWithrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
-    var withdrawalEpoch = currentWithrawalEpoch
-    var certificateOpt:Option[ByteArrayWrapper] = storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala
-    while(certificateOpt.isEmpty && withdrawalEpoch > 0) {
-      certificateOpt = storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala
-      withdrawalEpoch = withdrawalEpoch -1;
-    }
-    certificateOpt match {
+  def getLastCertificateEpochNumber(): Option[Int] = {
+    storage.get(getLastCertificateEpochNumberKey).asScala match {
       case Some(baw) =>
-        WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
-          case Success(certificate) => Option(certificate)
+        Try {
+          Ints.fromByteArray(baw.data)
+        } match {
+          case Success(epoch) => Some(epoch)
           case Failure(exception) =>
-            log.error("Error while withdrawal epoch certificate information parsing.", exception)
+            log.error("Error while last certificate epoch information parsing.", exception)
             Option.empty
         }
       case _ => Option.empty
@@ -182,7 +180,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   def getUtxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
     storage.get(getUtxoMerkleTreeRootKey(withdrawalEpoch)).asScala.map(_.data)
   }
-
 
   def hasCeased: Boolean = {
     storage.get(ceasingStateKey).isPresent
@@ -228,7 +225,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              consensusEpoch: ConsensusEpochNumber,
-             topQualityCertificates: Seq[WithdrawalEpochCertificate],
+             topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
              blockFeeInfo: BlockFeeInfo,
              utxoMerkleTreeRootOpt: Option[Array[Byte]],
              scHasCeased: Boolean,
@@ -242,7 +239,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     require(withdrawalRequestAppendSeq != null, "Seq of WithdrawalRequests to append must be NOT NULL. Use empty Seq instead.")
     require(!withdrawalRequestAppendSeq.contains(null), "WithdrawalRequest to append must be NOT NULL.")
     require(blockFeeInfo != null, "BlockFeeInfo must be NOT NULL.")
-    require(topQualityCertificates.map(c => c.epochNumber).distinct.length == topQualityCertificates.length, "TopQualityCertificates must be from different epochs.")
+//    require(topQualityCertificates.map(c => c.epochNumber).distinct.length == topQualityCertificates.length, "TopQualityCertificates must be from different epochs.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
@@ -304,7 +301,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
 
     // Store the top quality cert for epoch if present
-    topQualityCertificates.foreach(certificate =>
+    topQualityCertificateOpt.foreach(certificate =>
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     )

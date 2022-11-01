@@ -127,7 +127,7 @@ class SidechainStateIntegrationTest
       Set(),
       Seq[WithdrawalRequestBox](),
       initialConsensusEpoch,
-      Seq(),
+      None,
       initialBlockFeeInfo,
       None,
       scHasCeased = false,
