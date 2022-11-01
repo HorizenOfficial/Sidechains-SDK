@@ -48,7 +48,8 @@ class ScBtLimitAcrossForkTest(SidechainTestFramework):
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             cert_submitter_enabled=True,  # enable submitter
-            cert_signing_enabled=True  # enable signer
+            cert_signing_enabled=True,  # enable signer
+            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, sc_creation_version=SC_CREATION_VERSION_1, csw_enabled=True), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720*120*5).sidechain_id

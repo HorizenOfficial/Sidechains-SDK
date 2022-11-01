@@ -61,14 +61,16 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             True,  # Certificate submission is enabled
             True,  # Certificate signing is enabled
             [0, 1],  # owns 2 schnorr PKs for certificate signing
-            1  # set max connections to prevent node 1 and nodes 3,4 connection
+            1,  # set max connections to prevent node 1 and nodes 3,4 connection
+            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             False,  # Certificate submission is disabled
             True,  # Certificate signing is enabled
             [2, 3],  # owns 2 schnorr PKs for certificate signing
-            2  # set max connections to prevent node 2 and node 4 connection
+            2,  # set max connections to prevent node 2 and node 4 connection
+            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
         )
 
         sc_node_3_configuration = SCNodeConfiguration(
@@ -76,7 +78,8 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             False,  # Certificate submission is disabled
             False,  # Certificate signing is disabled
             [0, 1, 2, 3, 4, 5, 6],  # owns 3 schnorr PKs for certificate signing
-            1  # set max connections to prevent node 4 and nodes 1,2 connection
+            1,  # set max connections to prevent node 4 and nodes 1,2 connection
+            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
         )
 
         sc_node_4_configuration = SCNodeConfiguration(
@@ -84,7 +87,8 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             False,  # Certificate submission is disabled
             True,  # Certificate signing is enabled
             [4, 5, 6],  # owns 3 schnorr PKs for certificate signing
-            2  # set max connections to prevent node 3 and node 1 connection
+            2,  # set max connections to prevent node 3 and node 1 connection
+            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
         )
 
         network = SCNetworkConfiguration(

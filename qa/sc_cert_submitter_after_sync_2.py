@@ -49,13 +49,15 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             True,  # certificate submitter is enabled
             True,  # certificate signer is enabled
-            list([0, 1, 2, 3, 4])  # with 5 schnorr PKs, so has enough signatures to start cert generation.
+            list([0, 1, 2, 3, 4]),  # with 5 schnorr PKs, so has enough signatures to start cert generation.
+            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             True,  # certificate submitter is enabled
             True,  # certificate signer is enabled
-            list([4, 5, 6])  # with 3 schnorr PKs
+            list([4, 5, 6]),  # with 3 schnorr PKs
+            type_of_circuit_number=int(self.options.certcircuittype)  # in run_sc_tests.sh resolved by ${passOn} var
         )
 
         network = SCNetworkConfiguration(
