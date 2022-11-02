@@ -35,7 +35,7 @@ trait NetworkParams {
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
   val signersPublicKeys: Seq[SchnorrProposition]
   val mastersPublicKeys: Seq[SchnorrProposition]
-  val typeOfCircuit: Int
+  val typeOfCircuitNumber: Int
   val signersThreshold: Int
   val certProvingKeyFilePath: String
   val certVerificationKeyFilePath: String

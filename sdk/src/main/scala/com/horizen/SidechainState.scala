@@ -213,7 +213,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       })
     }
 
-    if (TypeOfCircuit(params.typeOfCircuit).equals(NaiveThresholdSignatureCircuitWithKeyRotation)) {
+    if (TypeOfCircuit(params.typeOfCircuitNumber).equals(NaiveThresholdSignatureCircuitWithKeyRotation)) {
       val keyTypeMap = new JHashMap[KeyRotationProofType, Seq[Int]]()
       mod.transactions.foreach(tx => {
         if (tx.isInstanceOf[KeyRotationTransaction]) {
@@ -385,7 +385,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
 
       if (tx.isInstanceOf[KeyRotationTransaction]) {
-        if (TypeOfCircuit(params.typeOfCircuit).equals(TypeOfCircuit.NaiveThresholdSignatureCircuit)) {
+        if (TypeOfCircuit(params.typeOfCircuitNumber).equals(TypeOfCircuit.NaiveThresholdSignatureCircuit)) {
           throw new Exception("KeyRotationTransaction is not allowed with this kind of circuit!")
         }
         val keyRotationTransaction: KeyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
@@ -503,7 +503,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   //Take the list of transactions inside a block and returns the key rotation proofs
   def getKeyRotationProofsToAdd(txs:  Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Seq[KeyRotationProof] = {
-    TypeOfCircuit(params.typeOfCircuit) match {
+    TypeOfCircuit(params.typeOfCircuitNumber) match {
       case NaiveThresholdSignatureCircuit =>
         Seq[KeyRotationProof]()
       case NaiveThresholdSignatureCircuitWithKeyRotation =>
@@ -560,7 +560,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       // Note: that current block fee info is still not in the state storage, so consider it during result calculation.
       boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some(blockFeeInfo)).map(_.asInstanceOf[SidechainTypes#SCB])
 
-      if (TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation.id == params.typeOfCircuit) {
+      if (TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation.id == params.typeOfCircuitNumber) {
         val currentEpoch = getWithdrawalEpochInfo.epoch
         actualCertificateSigners = certifiersKeys(currentEpoch) match {
           case Some(certifiersKeys: CertifiersKeys) =>

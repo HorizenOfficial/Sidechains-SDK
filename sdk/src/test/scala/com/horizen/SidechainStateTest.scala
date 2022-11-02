@@ -1223,7 +1223,7 @@ class SidechainStateTest
 
     // Test key rotation transaction with wrong circuit type
     val mockedParams = mock[MainNetParams]
-    Mockito.when(mockedParams.typeOfCircuit).thenReturn(TypeOfCircuit.NaiveThresholdSignatureCircuit.id)
+    Mockito.when(mockedParams.typeOfCircuitNumber).thenReturn(TypeOfCircuit.NaiveThresholdSignatureCircuit.id)
 
     var sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
@@ -1234,7 +1234,7 @@ class SidechainStateTest
     assertTrue(tryValidate.failed.get.getMessage.equals("KeyRotationTransaction is not allowed with this kind of circuit!"))
 
     // Test key rotation with wrong key index
-    Mockito.when(mockedParams.typeOfCircuit).thenReturn(TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation.id)
+    Mockito.when(mockedParams.typeOfCircuitNumber).thenReturn(TypeOfCircuit.NaiveThresholdSignatureCircuitWithKeyRotation.id)
 
     sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)

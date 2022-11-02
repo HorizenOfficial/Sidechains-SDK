@@ -563,7 +563,7 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
-    val keyRotationStrategy = if (params.typeOfCircuit == 0) {
+    val keyRotationStrategy = if (params.typeOfCircuitNumber == 0) {
       new WithoutKeyRotationStrategy(settings, params)
     } else {
       new WithKeyRotationStrategy(settings, params)

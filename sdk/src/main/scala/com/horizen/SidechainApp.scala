@@ -111,9 +111,9 @@ class SidechainApp @Inject()
     new GetCertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size),
     new CertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size)
   )
-  val typeOfCircuit = sidechainSettings.withdrawalEpochCertificateSettings.typeOfCircuitNumber
+  val typeOfCircuitNumber = sidechainSettings.withdrawalEpochCertificateSettings.typeOfCircuitNumber
 
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, typeOfCircuit)
+  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, typeOfCircuitNumber)
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
@@ -129,7 +129,7 @@ class SidechainApp @Inject()
 
   var mastersPublicKeys: Seq[SchnorrProposition] = Seq()
 
-  val calculatedSysDataConstant: Array[Byte] = TypeOfCircuit(typeOfCircuit) match {
+  val calculatedSysDataConstant: Array[Byte] = TypeOfCircuit(typeOfCircuitNumber) match {
     case NaiveThresholdSignatureCircuit =>
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
     case NaiveThresholdSignatureCircuitWithKeyRotation =>
@@ -161,7 +161,7 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
       mastersPublicKeys = mastersPublicKeys,
-      typeOfCircuit = typeOfCircuit,
+      typeOfCircuitNumber = typeOfCircuitNumber,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -186,7 +186,7 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
       mastersPublicKeys = mastersPublicKeys,
-      typeOfCircuit = typeOfCircuit,
+      typeOfCircuitNumber = typeOfCircuitNumber,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -211,7 +211,7 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
       mastersPublicKeys = mastersPublicKeys,
-      typeOfCircuit = typeOfCircuit,
+      typeOfCircuitNumber = typeOfCircuitNumber,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -240,7 +240,7 @@ class SidechainApp @Inject()
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
     val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
-    val result: Boolean = TypeOfCircuit(typeOfCircuit) match {
+    val result: Boolean = TypeOfCircuit(typeOfCircuitNumber) match {
       case NaiveThresholdSignatureCircuit =>
         CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)
       case NaiveThresholdSignatureCircuitWithKeyRotation =>
@@ -403,8 +403,8 @@ class SidechainApp @Inject()
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, typeOfCircuit),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, typeOfCircuit),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, typeOfCircuitNumber),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, typeOfCircuitNumber),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),

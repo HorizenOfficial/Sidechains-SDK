@@ -186,9 +186,9 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     @Override
     public byte[] generateSysDataConstant(List<byte[]> signerPublicKeysList, List<byte[]> masterPublicKeysList, long threshold) {
 
-        List<SchnorrPublicKey> signerPublicKeys = signerPublicKeysList.stream().map(key -> SchnorrPublicKey.deserialize(key)).
+        List<SchnorrPublicKey> signerPublicKeys = signerPublicKeysList.stream().map(SchnorrPublicKey::deserialize).
                 collect(Collectors.toList());
-        List<SchnorrPublicKey> masterPublicKeys = masterPublicKeysList.stream().map(key -> SchnorrPublicKey.deserialize(key)).
+        List<SchnorrPublicKey> masterPublicKeys = masterPublicKeysList.stream().map(SchnorrPublicKey::deserialize).
                 collect(Collectors.toList());
 
         ValidatorKeysUpdatesList schnorrKeysSignaturesList = new ValidatorKeysUpdatesList(

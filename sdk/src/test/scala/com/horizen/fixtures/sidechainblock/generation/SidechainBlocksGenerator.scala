@@ -528,7 +528,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val consensusSlotsInEpoch: Int = params.consensusSlotsInEpoch
       override val signersPublicKeys: Seq[SchnorrProposition] = params.signersPublicKeys
       override val mastersPublicKeys: Seq[SchnorrProposition] = params.mastersPublicKeys
-      override val typeOfCircuit: Int = params.typeOfCircuit
+      override val typeOfCircuitNumber: Int = params.typeOfCircuitNumber
       override val signersThreshold: Int = params.signersThreshold
       override val certProvingKeyFilePath: String = params.certProvingKeyFilePath
       override val certVerificationKeyFilePath: String = params.certVerificationKeyFilePath
