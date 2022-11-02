@@ -77,6 +77,9 @@ class AccountSidechainApp @Inject()
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
 
+  // It is a fast and dirty workaround to set 12 sec block rate for EvmApp
+  override lazy val consensusSecondsInSlot: Int = 12
+
   require (!isCSWEnabled, "Ceased Sidechain Withdrawal (CSW) should not be enabled in AccountSidechainApp!")
 
   val dataDirAbsolutePath: String = sidechainSettings.sparkzSettings.dataDir.getAbsolutePath
