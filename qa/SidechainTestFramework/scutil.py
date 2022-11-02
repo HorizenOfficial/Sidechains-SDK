@@ -78,6 +78,7 @@ def wait_for_sc_node_initialization(nodes):
     """
     for i in range(len(nodes)):
         rpc_port = sc_rpc_port(i)
+        logging.info(f"Waiting for Node{i} with rpc_port: {rpc_port} to be fully initialized")
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
             while not sock.connect_ex(("127.0.0.1", rpc_port)) == 0:
                 time.sleep(WAIT_CONST)
@@ -347,7 +348,7 @@ def connect_ssh_client(machine_credentials):
         ssh_client.connect(hostname=machine_credentials.ip_address, username=machine_credentials.ssh_username,
                            password=machine_credentials.ssh_password)
     except Exception as e:
-        raise Exception(f"Unable to connect to machine {e}")
+        raise Exception(f"Unable to connect to machine: check ip address, username and password are correct. {e}")
     return ssh_client
 
 
@@ -360,34 +361,56 @@ def disconnect_ssh_client(ssh_client):
 
 def copy_files_to_machine(ssh_client, machine_credentials):
     examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
-
+    jar = "sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar"
     machine_jar_path = f"{machine_credentials.base_directory}/simpleapp/target/"
     machine_lib_path = f"{machine_credentials.base_directory}/simpleapp/target/lib/"
+    machine_src_path = f"{machine_credentials.base_directory}/simpleapp/src/main/java/com/horizen/examples/"
 
     create_directory_on_machine(ssh_client, machine_jar_path)
     create_directory_on_machine(ssh_client, machine_lib_path)
+    create_directory_on_machine(ssh_client, machine_src_path)
 
     sftp = paramiko.SFTPClient.from_transport(ssh_client.get_transport())
-    directory_to_copy = f"{examples_dir}/simpleapp/target/lib/"
-    outbound_files = sftp.listdir(directory_to_copy)
+    lib_directory_to_copy = f"{examples_dir}/simpleapp/target/lib/"
+    lib_outbound_files = sftp.listdir(lib_directory_to_copy)
+    src_directory_to_copy = f"{examples_dir}/simpleapp/src/main/java/com/horizen/examples/"
+    src_outbound_files = sftp.listdir(src_directory_to_copy)
 
     # TODO: Does resources_dir and template.conf need to be copied?
     # resources_dir = get_resources_dir()
     with SCPClient(ssh_client.get_transport()) as scp:
-        print("Copying JAR file to machine")
-        scp.put(f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar", machine_jar_path)
-        print("JAR file copied to machine successfully")
-        print("Copying lib files to machine")
-        for file in outbound_files:
-            print(f"Copying {file}...")
-            scp.put(directory_to_copy + file, machine_lib_path)
-        print("lib directory files copied successfully")
+        try:
+            sftp.stat(f"{machine_jar_path}{jar}")
+            logging.info(f"File '{jar}' already exists, no need to copy.")
+        except IOError:
+            logging.info("Copying JAR file to machine...")
+            scp.put(f"{examples_dir}/simpleapp/target/{jar}", machine_jar_path)
+            logging.info("JAR file copied to machine successfully")
+
+        logging.info("Copying lib files to machine...")
+        for file in lib_outbound_files:
+            try:
+                sftp.stat(f"{machine_lib_path}{file}")
+                logging.info(f"File '{file}' already exists, no need to copy.")
+            except IOError:
+                logging.info(f"Copying {file}...")
+                scp.put(lib_directory_to_copy + file, machine_lib_path)
+        logging.info("Copy lib files completed.")
+
+        logging.info("Copying src files to machine...")
+        for file in src_outbound_files:
+            try:
+                sftp.stat(f"{machine_src_path}{file}")
+                logging.info(f"File '{file}' already exists, no need to copy.")
+            except IOError:
+                logging.info(f"Copying {file}...")
+                scp.put(src_directory_to_copy + file, machine_src_path)
+        logging.info("Copy src files completed.")
 
 
-def copy_node_conf_to_machine(ssh_client, machine_credentials, conf, data_directory):
-    remote_path = machine_credentials.base_directory + data_directory
-    create_directory_on_machine(ssh_client, remote_path)
-
+def copy_node_conf_to_machine(ssh_client, conf, data_directory):
+    create_directory_on_machine(ssh_client, data_directory)
+    print(f"Copying conf file '{conf}' to {data_directory}")
     with SCPClient(ssh_client.get_transport()) as scp:
         scp.put(conf, data_directory)
 
@@ -410,16 +433,26 @@ def mk_each_dir(sftp, remote_path):
     for directory in remote_path.split('/'):
         if directory:
             current_dir += directory + '/'
-            print(f"Creating new directory {current_dir} on machine")
+            logging.info(f"Creating new directory {current_dir} on machine")
             try:
                 sftp.mkdir(current_dir)
-            except:
-                pass # fail silently if remote directory already exists
+            except IOError:
+                # fail silently if remote directory already exists
+                logging.debug(f"Directory {current_dir} already existed and was not created.")
+                pass
 
 
-def start_sc_node_on_machine(ssh_client, bash_cmd):
+def start_sc_node_on_machine(machine_credentials, bash_cmd):
+    ssh_client = connect_ssh_client(machine_credentials)
+    print(f"Running bash_cmd: {bash_cmd}")
+    stdin, stdout, stderr = ssh_client.exec_command(bash_cmd)
+
+    if stdout.channel.recv_exit_status() != 0:
+        raise Exception(f"bash_cmd did not execute successfully on {machine_credentials.ip_address}, node not started.")
+
+    disconnect_ssh_client(ssh_client)
     # TODO: is this return correct?
-    return ssh_client.exec_command(bash_cmd)
+    return stdout
 
 
 """
@@ -531,7 +564,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 
     # If we're doing multi machine testing copy the config file to the relevant machine
     if sc_node_config.machine_credentials is not None:
-        copy_node_conf_to_machine(ssh_client, sc_node_config.machine_credentials, filename, datadir)
+        copy_node_conf_to_machine(ssh_client, filename, datadir)
 
     return configsData
 
@@ -644,16 +677,13 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
                   auth_api_key=None, use_multiprocessing=False, processor=None, machine_credentials=None):
     # Local, single machine processor mapping
     if use_multiprocessing and machine_credentials is None:
-        map_node_to_processor(machine_credentials, i)
+        map_node_to_processor(machine_credentials, processor)
 
     """
     Start a SC node and returns API connection to it
     """
     # Will we have  extra args for SC too ?
-    if machine_credentials is not None:
-        datadir = os.path.join(machine_credentials.base_directory, dirname, "sc_node" + str(i))
-    else:
-        datadir = os.path.join(dirname, "sc_node" + str(i))
+    datadir = os.path.join(dirname, "sc_node" + str(i))
     lib_separator = ":"
 
     if sys.platform.startswith('win'):
@@ -663,7 +693,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         # TODO: can we set binary before calling start_sc_node?
         if machine_credentials is not None:
             binary = f"{machine_credentials.base_directory}/simpleapp/target/" + lib_separator + \
-                     f"{machine_credentials.base_directory}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+                     f"{machine_credentials.base_directory}/simpleapp/target/lib/* home.rushby.nodes.simpleapp.src.main.java.com.horizen.examples.SimpleApp"
         else:
             binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + \
                      f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
@@ -687,8 +717,8 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
 
     if use_multiprocessing and machine_credentials is not None:
         # Assumes 2 processors are used per node
-        processors = get_processors_to_map(i)
-        bashcmd = f'taskset -cpa {str(processors[0])}, {str(processors[1])}' + bashcmd
+        processors = get_processors_to_map(processor)
+        bashcmd = f'/bin/bash -c "source ./.bashrc ; taskset -cpa {str(processors[0])},{str(processors[1])} {bashcmd}"'
 
     if print_output_to_file:
         # TODO: multi-machine with stdout
@@ -717,6 +747,7 @@ def log_available_processors(machine_credentials, num_nodes):
 
     if machine_credentials is not None:
         for machine in machine_credentials:
+
             ssh_client = connect_ssh_client(machine)
             stdin, stdout, stderr = ssh_client.exec_command("nproc --all")
             machine_processor_count.append(int(stdout.read()))
@@ -746,13 +777,14 @@ def start_sc_nodes_with_multiprocessing(node_data, dirname, extra_args=None, rpc
 
     if machine_credentials is not None:
         nodes = []
-        for i in range(machine_credentials):
+        for i in range(len(machine_credentials)):
             node_number = 0
             for index, node in enumerate(node_data):
                 if node.machine == i:
                     nodes.append(start_sc_node(index, dirname, extra_args[index], rpchost, binary=binary[index],
                                                print_output_to_file=print_output_to_file, auth_api_key=auth_api_key,
-                                               use_multiprocessing=True, processor=node_number))
+                                               use_multiprocessing=True, processor=node_number,
+                                               machine_credentials=machine_credentials[i]))
                 node_number += 1
     else:
         nodes = [
@@ -760,6 +792,7 @@ def start_sc_nodes_with_multiprocessing(node_data, dirname, extra_args=None, rpc
                           auth_api_key=auth_api_key, use_multiprocessing=True, processor=i)
             for i in range(num_nodes)]
 
+    print(f"Nodes: {nodes}")
     wait_for_sc_node_initialization(nodes)
 
     return nodes
@@ -1088,9 +1121,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             cert_keys_paths,
                                                             csw_keys_paths)
     # Copy necessary files to another machine
-    ssh_client = None
     if machines is not None:
-        # TODO: This currently only works with 2 machines e.g. 1 localhost and 1 ssh.
         for index, machine_credentials in enumerate(machines):
             # First machine (0) is the test framework host machine and does not need files copied
             print(f"Machine{index}")
@@ -1098,17 +1129,22 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
             if index > 0:
                 ssh_client = connect_ssh_client(machine_credentials)
                 copy_files_to_machine(ssh_client, machine_credentials)
+                disconnect_ssh_client(ssh_client)
 
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
+        ssh_client = None
+        if machines is not None:
+            ssh_client = connect_ssh_client(sc_node_conf.machine_credentials)
+
         if i == 0:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, log_info,
                                      options.restapitimeout, ssh_client)
         else:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info,
                                      options.restapitimeout, ssh_client)
-    if ssh_client is not None:
-        disconnect_ssh_client(ssh_client)
+        if ssh_client is not None:
+            disconnect_ssh_client(ssh_client)
 
     return sc_nodes_bootstrap_info
 

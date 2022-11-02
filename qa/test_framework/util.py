@@ -229,13 +229,13 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     return proxy
 
 
-def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, rpcbind_address=None):
+def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
     """
     Start multiple bitcoinds, return RPC connections to them
     """
-    if extra_args is None: extra_args = [ None for i in range(num_nodes) ]
-    if binary is None: binary = [ None for i in range(num_nodes) ]
-    return [ start_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes) ]
+    if extra_args is None: extra_args = [ None for i in range(num_nodes)]
+    if binary is None: binary = [ None for i in range(num_nodes)]
+    return [ start_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes)]
 
 def log_filename(dirname, n_node, logname):
     return os.path.join(dirname, "node"+str(n_node), "regtest", logname)

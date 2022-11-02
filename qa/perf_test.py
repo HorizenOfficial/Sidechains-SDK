@@ -114,7 +114,7 @@ def send_transactions_per_second(sc_node_index, txs_creator_node, txs_bytes, des
             logging.debug(f"Node{sc_node_index} TIME TO COMPLETE {transactions_per_second} TPS: {completion_time}(s)")
         iteration += 1
 
-
+# TODO: Multi Machine
 def get_cpu_ram_usage(cpu_usage=True, ram_usage=False):
     if cpu_usage:
         per_cpu = psutil.cpu_percent(interval=1, percpu=True)
@@ -128,7 +128,7 @@ def get_cpu_ram_usage(cpu_usage=True, ram_usage=False):
         logging.debug(f"Memory Free: {mem_usage.percent}%")
         logging.debug(f"Used: {mem_usage.used / (1024 ** 3):.2f}GB")
 
-
+# TODO: Multi Machine
 def get_running_process_cpu_ram_usage():
     start_time = time.time()
     running_processes = ""
@@ -152,7 +152,7 @@ def get_running_process_cpu_ram_usage():
     logging.debug(f"TIME TAKEN FOR CPU/RAM STATS: {end_time - start_time}")
 
 
-class NodeData(object):
+class NodeData:
     def __init__(self, forger, tx_creator, machine=None):
         self.forger = forger
         self.tx_creator = tx_creator
@@ -254,14 +254,20 @@ class PerformanceTest(SidechainTestFramework):
 
         for node in nodes:
             if self.multi_machine:
-                try:
-                    node_data.append({
-                        NodeData(node["forger"],
-                                 node["tx_creator"],
-                                 node["machine"])})
-                except Exception:
-                    raise
-        return nodes
+                machine = node["machine"]
+                if machine is None or machine == "":
+                    raise Exception("No Machine set for node, check config.")
+            else:
+                machine = ""
+            try:
+                node_data.append(
+                    NodeData(node["forger"],
+                             node["tx_creator"],
+                             machine))
+            except Exception as e:
+                raise e
+
+        return node_data
 
     def fill_csv(self):
         if not exists(self.CSV_FILE):
@@ -358,6 +364,7 @@ class PerformanceTest(SidechainTestFramework):
         # TODO Refactor to allow deploying node to single machine without multiprocessing
         if self.perf_data["use_multiprocessing"]:
             node_data = self.get_node_data()
+            print(f"Node Data: {node_data}")
             machine_credentials = None
             if self.multi_machine:
                 machine_credentials = self.get_machine_credentials()
