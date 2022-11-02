@@ -25,7 +25,7 @@ import com.horizen.serialization.Views;
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties({"customFieldsHash", "boxTypeId"})
 public interface Box<P extends Proposition>
-    extends scorex.core.transaction.box.Box<P>
+    extends sparkz.core.transaction.box.Box<P>
 {
     @JsonProperty("value")
     @Override

@@ -1,7 +1,7 @@
 package com.horizen.consensus
 
 import com.horizen.utils._
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class StakeConsensusEpochInfo(rootHash: Array[Byte], totalStake: Long) extends BytesSerializable {
@@ -25,10 +25,10 @@ case class StakeConsensusEpochInfo(rootHash: Array[Byte], totalStake: Long) exte
 
   override type M = StakeConsensusEpochInfo
 
-  override def serializer: ScorexSerializer[StakeConsensusEpochInfo] = StakeConsensusEpochInfoSerializer
+  override def serializer: SparkzSerializer[StakeConsensusEpochInfo] = StakeConsensusEpochInfoSerializer
 }
 
-object StakeConsensusEpochInfoSerializer extends ScorexSerializer[StakeConsensusEpochInfo]{
+object StakeConsensusEpochInfoSerializer extends SparkzSerializer[StakeConsensusEpochInfo]{
   override def serialize(obj: StakeConsensusEpochInfo, w: Writer): Unit = {
     w.putBytes(obj.rootHash)
     w.putLong(obj.totalStake)

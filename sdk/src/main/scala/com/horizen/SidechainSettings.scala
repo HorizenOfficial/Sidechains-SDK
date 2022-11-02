@@ -1,6 +1,6 @@
 package com.horizen
 
-import scorex.core.settings.ScorexSettings
+import sparkz.core.settings.SparkzSettings
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -55,7 +55,7 @@ case class LogInfoSettings(logFileName: String = "debug.log",
                            logConsoleLevel: String = "error")
 
 case class SidechainSettings(
-                              scorexSettings: ScorexSettings,
+                              sparkzSettings: SparkzSettings,
                               genesisData: GenesisDataSettings,
                               websocket: WebSocketSettings,
                               withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,

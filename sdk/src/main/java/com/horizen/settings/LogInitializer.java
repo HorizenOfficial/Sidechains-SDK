@@ -28,7 +28,7 @@ public class LogInitializer
         levelSet.add("trace");
         levelSet.add("all");
 
-        String logDir = info.scorexSettings().logDir().toString();
+        String logDir = info.sparkzSettings().logDir().toString();
         if (!logDir.endsWith(File.separator)){
             logDir = logDir + File.separator;
         }

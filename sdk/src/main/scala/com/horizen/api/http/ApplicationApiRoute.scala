@@ -6,8 +6,8 @@ import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.pattern.ask
 import com.horizen.SidechainNodeViewHolder
 import com.horizen.node.SidechainNodeView
-import scorex.core.settings.RESTApiSettings
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.SparkzEncoding
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -15,7 +15,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 case class ApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: ApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)
                               (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute
-  with ScorexEncoding
+  with SparkzEncoding
   with FunctionsApplierOnSidechainNodeView {
 
   override def route: Route = convertRoutes

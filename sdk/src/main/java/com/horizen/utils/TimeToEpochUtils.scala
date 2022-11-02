@@ -2,7 +2,7 @@ package com.horizen.utils
 
 import com.horizen.consensus.{ConsensusAbsoluteSlotNumber, ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber, intToConsensusAbsoluteSlotNumber, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.params.NetworkParams
-import scorex.core.block.Block
+import sparkz.core.block.Block
 
 object TimeToEpochUtils {
   def epochInSeconds(params: NetworkParams): Long = {
@@ -37,6 +37,11 @@ object TimeToEpochUtils {
 
     val totalSlots: Int = (epochNumber - 1) * params.consensusSlotsInEpoch + (slotNumber - 1)
     virtualGenesisBlockTimeStamp(params) + (totalSlots * params.consensusSecondsInSlot)
+  }
+
+  def secondsRemainingInSlot(params: NetworkParams, timestamp: Block.Timestamp): Long = {
+    val secondsElapsedInSlot = (timestamp - virtualGenesisBlockTimeStamp(params)) % params.consensusSecondsInSlot
+    params.consensusSecondsInSlot - secondsElapsedInSlot
   }
 
   private def getEpochIndex(params: NetworkParams, timestamp: Block.Timestamp): Int = {

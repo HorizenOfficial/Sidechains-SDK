@@ -5,7 +5,7 @@ import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import scorex.core.block.Block
+import sparkz.core.block.Block
 import scorex.util.ModifierId
 import scorex.util.bytesToId
 

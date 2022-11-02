@@ -8,7 +8,7 @@ import com.horizen.utils.{BytesUtils, Ed25519}
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.core.utils.ScorexEncoder
+import sparkz.core.utils.SparkzEncoder
 
 class ZenBoxScalaTest
   extends JUnitSuite with BoxFixture
@@ -42,7 +42,7 @@ class ZenBoxScalaTest
     assertEquals("Json must contain only 1 id.",
       1, node.findValues("id").size())
     assertTrue("Id json value must be the same.",
-      box.id().sameElements(ScorexEncoder.default.decode(node.path("id").asText()).get))
+      box.id().sameElements(SparkzEncoder.default.decode(node.path("id").asText()).get))
 
     assertEquals("Json must contain only 1 nonce.",
       1, node.findValues("nonce").size())

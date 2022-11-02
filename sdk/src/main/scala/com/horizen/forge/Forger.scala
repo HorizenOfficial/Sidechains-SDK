@@ -11,9 +11,9 @@ import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, Conse
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
-import scorex.core.NodeViewHolder.ReceivableMessages
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.NodeViewHolder.ReceivableMessages
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,7 +28,7 @@ class Forger(settings: SidechainSettings,
              timeProvider: NetworkTimeProvider,
              val params: NetworkParams) extends Actor with ScorexLogging {
   val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
 
@@ -41,7 +41,10 @@ class Forger(settings: SidechainSettings,
       case Some(_) => log.info("Automatically forging already had been started")
       case None => {
         val newTimer = new Timer()
-        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, 0, consensusMillisecondsInSlot)
+        val currentTime: Long = timeProvider.time() / 1000
+        val delay = TimeToEpochUtils.secondsRemainingInSlot(params, currentTime) * 1000
+        newTimer.schedule(forgingInitiatorTimerTask, 0L)
+        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, consensusMillisecondsInSlot)
         timerOpt = Some(newTimer)
         log.info("Automatically forging had been started")
       }
@@ -107,18 +110,18 @@ class Forger(settings: SidechainSettings,
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()), timeout)
+    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber, forcedTx) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()), timeout, forcedTx)
   }
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = timeProvider.time() / 1000
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot ${epochAndSlot}")
-    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout)
+    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout, Seq())
   }
 
-  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
-    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
+  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout, forcedTx: Iterable[SidechainTypes#SCBT]): Unit = {
+    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout, forcedTx)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
@@ -177,7 +180,7 @@ object Forger extends ScorexLogging {
   object ReceivableMessages {
     case object StartForging
     case object StopForging
-    case class  TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
+    case class  TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, forcedTx: Iterable[SidechainTypes#SCBT])
     case object GetForgingInfo
   }
 }

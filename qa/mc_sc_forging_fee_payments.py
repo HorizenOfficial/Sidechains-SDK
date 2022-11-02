@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -140,7 +141,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:
-            print("Forget stake created: " + json.dumps(makeForgerStakeJsonRes))
+            logging.info("Forget stake created: " + json.dumps(makeForgerStakeJsonRes))
 
         self.sc_sync_all()
 
@@ -173,7 +174,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         if "result" not in jsonRes:
             fail("send coins tx failed: " + json.dumps(jsonRes))
         else:
-            print("send coins tx created: " + json.dumps(jsonRes))
+            logging.info("send coins tx created: " + json.dumps(jsonRes))
 
         # Generate SC block on SC node 2 for the next consensus epoch
         sc_middle_we_block_id = generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)

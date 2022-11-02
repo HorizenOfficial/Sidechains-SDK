@@ -210,15 +210,15 @@ class SidechainMemoryPoolTest
   @Test
   def putWithLimitedPoolSize(): Unit = {
     //build a list of transactions up to 1MB size
-    var totalTxSizeMax = (1024*1024)  //1MB
+    val totalTxSizeMax = (1024*1024)  //1MB
     val list = mutable.MutableList[RegularTransaction]()
     val lowestFeeTx = getRegularRandomTransaction(10, 1)
     val secondLowestFeeTx = getRegularRandomTransaction(20, 1)
     list += lowestFeeTx
     list += secondLowestFeeTx
     var totalTxSize = lowestFeeTx.size() + secondLowestFeeTx.size()
-    while (totalTxSize < totalTxSizeMax) {
-      var newTx = getRegularRandomTransaction(30, 1)
+    while (totalTxSize <= totalTxSizeMax) {
+      val newTx = getRegularRandomTransaction(30, 1)
       list += newTx
       totalTxSize = totalTxSize + newTx.size()
     }
@@ -232,14 +232,32 @@ class SidechainMemoryPoolTest
     assertEquals("Lowest fee transaction must be present ", true, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
 
     //add one more tx, causing the maxPoolSize to be reached and lowest one to be evicted
-    assertEquals("Put tx operation must be success.", true, memoryPool.put(list.apply(list.size - 1)).isSuccess)
+    var aNewTx = getRegularRandomTransaction(30, 1)
+    while (aNewTx.size() > lowestFeeTx.size()) {
+      aNewTx = getRegularRandomTransaction(30, 1)
+    }
+    assertEquals("Put tx operation must be success.", true, memoryPool.put(aNewTx).isSuccess)
     assertEquals("MemoryPool must have correct size ", list.size-1, memoryPool.size)
     assertEquals("Lowest fee transaction must not be present ", false, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
 
     //now the tx with lowest fee is secondLowestFeeTx: we try to add another tx with the same feerate
-    var aNewTx = getRegularRandomTransaction(20, 1)
+    var expectedMempoolSize = list.size - 1
+    //Check if the mempool has space for another tx, in this case fill the mempool before continue
+    if (memoryPool.maxPoolSizeBytes - memoryPool.usedSizeBytes >= secondLowestFeeTx.size()) {
+      var fillingTx = getRegularRandomTransaction(20, 1)
+      while (fillingTx.size() != secondLowestFeeTx.size()) {
+        fillingTx = getRegularRandomTransaction(20, 1)
+      }
+      assertEquals("Put tx operation must be success.", true, memoryPool.put(fillingTx).isSuccess)
+      expectedMempoolSize += 1
+    }
+
+    aNewTx = getRegularRandomTransaction(20, 1)
+    while (aNewTx.size() != secondLowestFeeTx.size()) {
+      aNewTx = getRegularRandomTransaction(20, 1)
+    }
     assertEquals("Put tx operation must be success.", true, memoryPool.put(aNewTx).isSuccess)
-    assertEquals("MemoryPool must have correct size ", list.size-1, memoryPool.size)
+    assertEquals("MemoryPool must have correct size ", expectedMempoolSize, memoryPool.size)
     assertEquals("Old lowest fee transaction must not be present ", false, memoryPool.getTransactionById(secondLowestFeeTx.id()).isPresent)
     assertEquals("New lowest fee transaction must be present ", true, memoryPool.getTransactionById(aNewTx.id()).isPresent)
   }

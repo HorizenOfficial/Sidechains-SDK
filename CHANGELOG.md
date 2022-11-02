@@ -1,3 +1,17 @@
+**0.5.0**
+1. Scorex dependency has been updated from Scorex 2.0.0-RC6 to Sparkz 2.0.0-RC9 (package name has been changed to sparkz).
+2. Bootstrapping tool interface changed: cert proof info was separated from signers key generation.
+3. Fork manager introduced to be able to implement new backward incompatible functionality.
+4. Coin boxes dust check added in the Fork 1.
+5. Forward transfer minimum amount limit defined in the Fork 1.
+6. Numerous consensus improvements introduced in the Fork 1.
+7. OpenStakeTransaction - new core transaction type added to allow the majority of forgers to open staking for everyone. Introduced in the Fork 1.
+8. Backward Transfers limit introduced in the Fork 1. The total limit of 3999 BTs per withdrawal epoch, using the "slots" opening strategy per mainchain block reference. Introduced in the Fork 1.
+9. Forger block generation fixes: no transactions allowed in case of ommers.
+10. Network data checks improved.
+11. Network API: connected peers info updated.
+12. Numerous library dependencies were updated.
+
 **0.4.3**
 1. Blocks network propagation fixed: allow to send blocks greater than 1 Mb.
 

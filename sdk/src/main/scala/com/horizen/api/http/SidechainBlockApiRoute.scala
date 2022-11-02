@@ -4,18 +4,20 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
 import com.horizen.box.ZenBox
 import com.horizen.chain.SidechainBlockInfo
+import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.forge.ForgingInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 
 import java.util.{Optional => JOptional}
@@ -24,7 +26,11 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
+case class SidechainBlockApiRoute(override val settings: RESTApiSettings,
+                                  sidechainNodeViewHolderRef: ActorRef,
+                                  sidechainBlockActorRef: ActorRef,
+                                  companion: SidechainTransactionsCompanion,
+                                  forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
@@ -159,7 +165,11 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
 
   def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
     entity(as[ReqGenerateByEpochAndSlot]){ body =>
-      val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber))
+      val forcedTx: Iterable[SidechainTypes#SCBT] = body.transactionsBytes
+        .map(txBytes => companion.parseBytesTry(BytesUtils.fromHexString(txBytes)))
+        .flatten(maybeTx => maybeTx.map(Seq(_)).getOrElse(None))
+
+      val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber), forcedTx)
       val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
       Await.result(submitResultFuture, timeout.duration) match {
         case Success(id) =>
@@ -222,7 +232,7 @@ object SidechainBlockRestSchema {
   private[api] case class RespFeePayments(feePayments: Seq[ZenBox]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGenerateByEpochAndSlot(epochNumber: Int, slotNumber: Int)
+  private[api] case class ReqGenerateByEpochAndSlot(epochNumber: Int, slotNumber: Int, transactionsBytes: Seq[String] = Seq())
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespFindIdByHeight(blockId: String) extends SuccessResponse

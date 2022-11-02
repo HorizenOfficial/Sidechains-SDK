@@ -1,7 +1,7 @@
 package com.horizen.utils
 
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class BlockFeeInfo(fee: Long,
@@ -9,11 +9,11 @@ case class BlockFeeInfo(fee: Long,
                        ) extends BytesSerializable {
   override type M = BlockFeeInfo
 
-  override def serializer: ScorexSerializer[BlockFeeInfo] = BlockFeeInfoSerializer
+  override def serializer: SparkzSerializer[BlockFeeInfo] = BlockFeeInfoSerializer
 }
 
 
-object BlockFeeInfoSerializer extends ScorexSerializer[BlockFeeInfo] {
+object BlockFeeInfoSerializer extends SparkzSerializer[BlockFeeInfo] {
   override def serialize(obj: BlockFeeInfo, w: Writer): Unit = {
     w.putLong(obj.fee)
     PublicKey25519PropositionSerializer.getSerializer.serialize(obj.forgerRewardKey, w)

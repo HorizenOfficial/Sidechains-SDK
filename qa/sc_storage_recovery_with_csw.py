@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 from datetime import datetime
 
@@ -63,7 +64,7 @@ def checkStoragesVersion(node, storages_list, expectedVersion):
         json_params = {"storage": name}
         ret = launch_db_tool(node.dataDir, CUSTOM_STORAGE_NAMES, "lastVersionID", json_params)
         version = ret['version']
-        #print("{} --> {}".format(name, version))
+        #logging.info("{} --> {}".format(name, version))
         # check we got the expected version
         assert_equal(version, expectedVersion)
 
@@ -77,9 +78,10 @@ def rollbackStorages(node, storages_list, numberOfVersionsToRollback):
         # get the target version to rollback to
         rollbackVersion = versionsList[-1]
         json_params = {"storage": name, "versionToRollback": rollbackVersion}
-        print("...Rollbacking storage \"{}\" to version {}".format(name, rollbackVersion))
+        logging.info("...Rollbacking storage \"{}\" to version {}".format(name, rollbackVersion))
         ret = launch_db_tool(node.dataDir, CUSTOM_STORAGE_NAMES, "rollback", json_params)
-        #print("{} --> {}".format(name, rollbackVersion))
+        #logging.info("{} --> {}".format(name, rollbackVersion))
+
         # check that we did it correctly
         assert_equal(ret["versionCurrent"], rollbackVersion)
 
@@ -118,35 +120,35 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def startAndSyncScNode2(self):
-        print("Starting SC2")
+        logging.info("Starting SC2")
         start_sc_node(1, self.options.tmpdir)
         wait_for_sc_node_initialization(self.sc_nodes)
         time.sleep(2)
 
-        print("Connecting SC2")
+        logging.info("Connecting SC2")
         connect_sc_nodes(self.sc_nodes[0], 1)
 
-        print("Syncing...")
+        logging.info("Syncing...")
         T_0 = datetime.now()
         self.sc_sync_all()
         T_1 = datetime.now()
         u_sec = (T_1 - T_0).microseconds
         sec = (T_1 - T_0).seconds
-        print("...SC2 synced in {}.{} secs".format(sec, u_sec))
+        logging.info("...SC2 synced in {}.{} secs".format(sec, u_sec))
 
     def forgeBlockAndCheckSync(self):
 
         # generate one more block in SC1 because otherwise the sync will not happen, the reason is that SC2
         # has already processed the best block and it would not be re-processed again
         NUM_BLOCKS = 1
-        print("SC1 generates {} block".format(NUM_BLOCKS))
+        logging.info("SC1 generates {} block".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(self.sc_nodes[0], "first node", NUM_BLOCKS))
         time.sleep(2)
 
         self.startAndSyncScNode2()
 
         assert_equal(self.sc_nodes[0].block_best()["result"], self.sc_nodes[1].block_best()["result"])
-        print("Stopping SC2")
+        logging.info("Stopping SC2")
         stop_sc_node(self.sc_nodes[1], 1)
         time.sleep(1)
 
@@ -164,17 +166,17 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         self.blocks = []
         self.sync_all()
 
-        print("Stopping SC2")
+        logging.info("Stopping SC2")
         stop_sc_node(sc_node2, 1)
 
         genesis_sc_block_id = str(sc_node1.block_best()["result"]["block"]["id"])
 
         # Generate SC blocks
         NUM_BLOCKS = 5
-        print("SC1 generates {} blocks...".format(NUM_BLOCKS))
+        logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS))
 
-        print("Test 0 ######")
+        logging.info("Test 0 ######")
         # Check that in stopped node SC2 all storages versioned with blockid (but "walletForgingStake")
         # are consistent with genesis block id
         storages_list = ["wallet", "walletTransaction", "walletCswDataStorage",
@@ -191,55 +193,55 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         self.startAndSyncScNode2()
 
         assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
-        print("Stopping SC2")
+        logging.info("Stopping SC2")
         stop_sc_node(sc_node2, 1)
 
-        print("Test 10 ######")
+        logging.info("Test 10 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test 9 ######")
+        logging.info("Test 9 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         self.forgeBlockAndCheckSync()
 
-        print("Test 8 ######")
+        logging.info("Test 8 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test 7 ######")
+        logging.info("Test 7 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test 6 ######")
+        logging.info("Test 6 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test 5 ######")
+        logging.info("Test 5 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test application wallet misalignment ######")
+        logging.info("Test application wallet misalignment ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["appWallet2", "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test 4 ######")
+        logging.info("Test 4 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["stateForgerBox",
@@ -248,7 +250,7 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test 3 ######")
+        logging.info("Test 3 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["state", "stateForgerBox",
@@ -257,7 +259,7 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test 2 ######")
+        logging.info("Test 2 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox",
@@ -266,7 +268,7 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test app state misalignment ######")
+        logging.info("Test app state misalignment ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         # rollback just one of the two app storages (simple app has app1 and app2 storages)
@@ -277,7 +279,7 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
-        print("Test 1 ######")
+        logging.info("Test 1 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 4)
         storages_list = ["appState1", "appState2",
@@ -290,16 +292,16 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         self.startAndSyncScNode2()
         # reach the end of consensus epoch
         h = len(self.blocks) + 1
-        print("Reaching end of consensus epoch, currently at bloch height {}...".format(h))
+        logging.info("Reaching end of consensus epoch, currently at bloch height {}...".format(h))
         NUM_BLOCKS = 722 - h
-        print("SC1 generates {} blocks...".format(NUM_BLOCKS))
+        logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS, verbose=False))
         self.sc_sync_all()
 
         assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
         stop_sc_node(sc_node2, 1)
 
-        print("Test end consensus epoch ######")
+        logging.info("Test end consensus epoch ######")
         # -----------------------------------------------------------------------------------------
         # Modify history state and wallet storages and verify that we are able to recover also at
         # the edge of consensus epoch switch
@@ -327,7 +329,7 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         self.forgeBlockAndCheckSync()
 
 
-        print("Test negative ######")
+        logging.info("Test negative ######")
         # reproduce an unexpected inconsistency and check we are not able to recover
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 7)
@@ -345,8 +347,8 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
             self.forgeBlockAndCheckSync()
 
         except Exception as e:
-            print("Expected exception caught during negative testing: " + str(e))
-            print("Stopping SC2")
+            logging.info("Expected exception caught during negative testing: " + str(e))
+            logging.info("Stopping SC2")
             stop_sc_node(sc_node2, 1)
 
 

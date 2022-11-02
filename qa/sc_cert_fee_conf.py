@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 from decimal import Decimal
 
@@ -86,10 +87,10 @@ class CertFeeConfiguration(SidechainTestFramework):
 
         # Generate 9 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(9)[8]
-        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         scblock_id2 = generate_next_block(sc_node_1, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node_1)
 
@@ -101,7 +102,7 @@ class CertFeeConfiguration(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node_1.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node_1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
             sc_node_2.block_best()
@@ -109,10 +110,10 @@ class CertFeeConfiguration(SidechainTestFramework):
 
         # Get Certificate for Withdrawal epoch 0 and verify it
         we0_certHash = mc_node.getrawmempool()[0]
-        print("Withdrawal epoch 0 certificate hash = " + we0_certHash)
+        logging.info("Withdrawal epoch 0 certificate hash = " + we0_certHash)
         we0_cert = mc_node.getrawtransaction(we0_certHash, 1)
         we0_cert_hex = mc_node.getrawtransaction(we0_certHash)
-        print("Withdrawal epoch 0 certificate hex = " + we0_cert_hex)
+        logging.info("Withdrawal epoch 0 certificate hex = " + we0_cert_hex)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_cert["cert"]["scid"], "Sidechain Id in certificate is wrong.")
         assert_equal(0, we0_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
         assert_equal(we0_end_epoch_cum_sc_tx_comm_tree_root, we0_cert["cert"]["endEpochCumScTxCommTreeRoot"],
@@ -124,7 +125,7 @@ class CertFeeConfiguration(SidechainTestFramework):
         assert_equal(Decimal(EXPECTED_CERT_FEE), Decimal(cert_fee), "Certificate fee is differ.")
 
         rate = self.get_fee_rate(cert_size, cert_fee)
-        print("cert fee={}, sz={}, feeRate={}".format(cert_fee, cert_size, rate))
+        logging.info("cert fee={}, sz={}, feeRate={}".format(cert_fee, cert_size, rate))
 
         # Generate MC block and verify that certificate is present
         we1_2_mcblock_hash = mc_node.generate(1)[0]
@@ -132,7 +133,7 @@ class CertFeeConfiguration(SidechainTestFramework):
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction.")
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 1 Certificate.")
         assert_equal(we0_certHash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0], "MC block expected to contain certificate.")
-        print("MC block with withdrawal certificate for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
+        logging.info("MC block with withdrawal certificate for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
 
         # Generate SC block and verify that certificate is synced back
         scblock_id4 = generate_next_blocks(sc_node_1, "first node", 1)[0]
@@ -146,10 +147,10 @@ class CertFeeConfiguration(SidechainTestFramework):
 
         # Generate 9 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(8)[7]
-        print("End mc block hash in withdrawal epoch 1 = " + we0_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 1 = " + we0_end_mcblock_hash)
         we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
         we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
         generate_next_blocks(sc_node_1, "first node", 3)[2]
 
         # Generate first mc block of the next epoch
@@ -160,7 +161,7 @@ class CertFeeConfiguration(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node_2.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node_1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
             sc_node_2.block_best()
@@ -168,10 +169,10 @@ class CertFeeConfiguration(SidechainTestFramework):
 
         # Get Certificate for Withdrawal epoch 0 and verify it
         we1_certHash = mc_node.getrawmempool()[0]
-        print("Withdrawal epoch 0 certificate hash = " + we1_certHash)
+        logging.info("Withdrawal epoch 0 certificate hash = " + we1_certHash)
         we1_cert = mc_node.getrawtransaction(we1_certHash, 1)
         we1_cert_hex = mc_node.getrawtransaction(we1_certHash)
-        print("Withdrawal epoch 0 certificate hex = " + we1_cert_hex)
+        logging.info("Withdrawal epoch 0 certificate hex = " + we1_cert_hex)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_cert["cert"]["scid"], "Sidechain Id in certificate is wrong.")
         assert_equal(1, we1_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
         assert_equal(we1_end_epoch_cum_sc_tx_comm_tree_root, we1_cert["cert"]["endEpochCumScTxCommTreeRoot"],
@@ -181,7 +182,7 @@ class CertFeeConfiguration(SidechainTestFramework):
         cert_fee  = mc_node.getrawmempool(True)[we1_certHash]['fee']
         cert_size = mc_node.getrawmempool(True)[we1_certHash]['size']
         rate = self.get_fee_rate(cert_size, cert_fee)
-        print("cert fee={}, sz={}, feeRate={}".format(cert_fee, cert_size, rate))
+        logging.info("cert fee={}, sz={}, feeRate={}".format(cert_fee, cert_size, rate))
         assert_true(self.isclose(CUSTOM_FEE_RATE_ZAT_PER_BYTE, rate))
 
 if __name__ == "__main__":
