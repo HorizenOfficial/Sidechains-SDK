@@ -30,7 +30,7 @@ public class EthereumFeeHistoryView {
         this.oldestBlock = Numeric.encodeQuantity(BigInteger.valueOf(oldestBlock));
         this.baseFeePerGas = Arrays.stream(baseFeePerGas).map(Numeric::encodeQuantity).toArray(String[]::new);
         this.gasUsedRatio = gasUsedRatio;
-        this.reward = Arrays
+        this.reward = reward == null ? null : Arrays
             .stream(reward)
             .map(nested -> Arrays.stream(nested).map(Numeric::encodeQuantity).toArray(String[]::new))
             .toArray(String[][]::new);
