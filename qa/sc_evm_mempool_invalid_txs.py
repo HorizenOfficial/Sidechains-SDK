@@ -10,7 +10,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_block, \
     EVM_APP_BINARY, AccountModelBlockVersion, assert_equal, \
-    assert_true, BLOCK_GAS_LIMIT
+    assert_true, BLOCK_GAS_LIMIT, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 
@@ -63,7 +63,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=720 * 120 * 5,
+                                                                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
                                                                  blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):
