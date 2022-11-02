@@ -32,7 +32,6 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.{NodeViewHolder, bytesToId}
 
 import java.math.BigInteger
-import java.math.BigDecimal
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -110,7 +109,7 @@ class EthService(
       .getStorageBlockById(blockId)
       .map(block => {
         val transactions =
-          block.transactions.filter(_.isInstanceOf[EthereumTransaction]).map(_.asInstanceOf[EthereumTransaction])
+          block.transactions.map(_.asInstanceOf[EthereumTransaction])
         new EthereumBlock(
           Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
           Numeric.prependHexPrefix(blockId),
@@ -557,80 +556,104 @@ class EthService(
 
   @RpcMethod("eth_feeHistory")
   @RpcOptionalParameters(1)
-  def feeHistory(blockCount: Quantity, newestBlock: String, rewardPercentiles: Array[Double]): EthereumFeeHistoryView = {
+  def feeHistory(
+      blockCount: Quantity,
+      newestBlock: String,
+      rewardPercentiles: Array[Double]
+  ): EthereumFeeHistoryView = {
+    val percentiles = sanitizePercentiles(rewardPercentiles)
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, newestBlock) { (stateView, _) =>
-        val genesisHeight = nodeView.history.getBlockHeightById(networkParams.sidechainGenesisBlockId).get()
-        val newestRequestedBlock = getBlockByTag(nodeView, newestBlock)
-        val newestBlockHeight = newestRequestedBlock._2.height
-        val maxRequestableBlocks = newestBlockHeight - genesisHeight + 1
-        var nrOfBlocks: Int = blockCount.toNumber.intValueExact()
+      val genesisHeight = nodeView.history.getBlockHeightById(networkParams.sidechainGenesisBlockId).get()
+      val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, newestBlock)
+      val availableBlocks = requestedBlockInfo.height + 1 - genesisHeight
+      // limit the range of blocks by the number of available blocks and cap at 1024
+      val blocks = blockCount.toNumber.intValueExact().min(availableBlocks).min(1024)
+      // geth comment: returning with no data and no error means there are no retrievable blocks
+      if (blocks < 1) return new EthereumFeeHistoryView()
+      // calculate block number of the "oldest" block in the range
+      val oldestBlock = requestedBlockInfo.height + 1 - blocks
 
-        // if requested 0 blockCount then try to get the last 20 blocks
-        if (nrOfBlocks == 0) nrOfBlocks = 20
-        if (nrOfBlocks > maxRequestableBlocks) nrOfBlocks = maxRequestableBlocks
+      // include the calculated base fee of the next block after the requested range
+      val baseFeePerGas = new Array[BigInteger](blocks + 1)
+      val gasUsedRatio = new Array[Double](blocks)
+      val reward = if (percentiles.nonEmpty) new Array[Array[BigInteger]](blocks) else null
 
-        // include the calculated base fee of the block after the newest block
-        val baseFeePerBlock: Array[String] = new Array[String](nrOfBlocks + 1)
-        val gasUsedRatio = new Array[String](nrOfBlocks)
-        val reward = if (rewardPercentiles != null) new Array[Array[String]](nrOfBlocks) else null
-        var oldestBlock: String = ""
-
-        for (x <- nrOfBlocks until 0 by -1) {
-          val block = getBlockByTag(nodeView, x.toString)
-          val blockHeader = block._1.header
-          if (x == nrOfBlocks) oldestBlock = Numeric.prependHexPrefix(block._1.id)
-          baseFeePerBlock(nrOfBlocks - x) = Numeric.toHexStringWithPrefix(block._1.header.baseFee)
-          gasUsedRatio(nrOfBlocks - x) = (blockHeader.gasUsed.toDouble / blockHeader.gasLimit.toDouble).toString
-          if (reward != null) reward(nrOfBlocks - x) = getRewardsForBlock(block._1, stateView, rewardPercentiles)
+      using(nodeView.state.getView) { stateView =>
+        for (i <- 0 until blocks) {
+          val block = nodeView.history
+            .blockIdByHeight(oldestBlock + i)
+            .map(ModifierId(_))
+            .flatMap(nodeView.history.getStorageBlockById)
+            .get
+          baseFeePerGas(i) = block.header.baseFee
+          gasUsedRatio(i) = block.header.gasUsed.toDouble / block.header.gasLimit.toDouble
+          if (percentiles.nonEmpty) reward(i) = getRewardsForBlock(block, stateView, percentiles)
         }
-        baseFeePerBlock(nrOfBlocks) = Numeric.toHexStringWithPrefix(calculateNextBaseFee(newestRequestedBlock._1))
-
-        new EthereumFeeHistoryView(oldestBlock, reward, baseFeePerBlock, gasUsedRatio)
       }
+      // calculate baseFee for the next block after the requested range
+      baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock)
+
+      new EthereumFeeHistoryView(oldestBlock, baseFeePerGas, gasUsedRatio, reward)
     }
   }
 
-  def getRewardsForBlock(block: AccountBlock, stateView: AccountStateView, percentiles: Array[Double]): Array[String] = {
-    val txs = block.transactions.filter(_.isInstanceOf[EthereumTransaction]).map(_.asInstanceOf[EthereumTransaction])
-    val txReceipts = txs.flatMap(tx => stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id())))
-    val sorter = Array.ofDim[BigInteger](percentiles.length, 2)
+  private def sanitizePercentiles(percentiles: Array[Double]): Array[Double] = {
+    if (percentiles == null || percentiles.isEmpty) return Array.emptyDoubleArray
+    // verify that percentiles are within [0,100]
+    percentiles
+      .find(p => p < 0 || p > 100)
+      .map(p => throw new RpcException(new RpcError(RpcCode.InvalidParams, s"invalid reward percentile: $p", null)))
+    // verify that percentiles are monotonically increasing
+    percentiles
+      .sliding(2)
+      .filter(p => p.head > p.last)
+      .map(p =>
+        throw new RpcException(
+          new RpcError(RpcCode.InvalidParams, s"invalid reward percentile: ${p.head} > ${p.last}", null)
+        )
+      )
+    percentiles
+  }
 
-    for (i <- 0 until txs.size) {
-      sorter(i)(0) = txReceipts(i).gasUsed
-      sorter(i)(1) = getEffectiveGasTip(txs(i), block.header.baseFee)
-    }
+  private def getRewardsForBlock(
+      block: AccountBlock,
+      stateView: AccountStateView,
+      percentiles: Array[Double]
+  ): Array[BigInteger] = {
+    val txs = block.transactions.map(_.asInstanceOf[EthereumTransaction])
+    // return an all zero row if there are no transactions to gather data from
+    if (txs.isEmpty) return percentiles.map(_ => BigInteger.ZERO)
 
-    val rewards = new Array[String](percentiles.length)
+    // collect gas used and reward (effective gas tip) per transaction, sorted ascending by reward
+    case class GasAndReward(gasUsed: Long, reward: BigInteger)
+    val sortedRewards = txs
+      .map(tx =>
+        GasAndReward(
+          stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)).get.gasUsed.longValueExact(),
+          getEffectiveGasTip(tx, block.header.baseFee)
+        )
+      )
+      .sortBy(_.reward)
+      .iterator
 
-    if (txs.length == 0) {
-      for (i <- 0 until rewards.length) {
-        rewards(i) = "0x0"
+    var current = sortedRewards.next()
+    var sumGasUsed = current.gasUsed
+    val rewards = new Array[BigInteger](percentiles.length)
+    for (i <- percentiles.indices) {
+      val thresholdGasUsed = (block.header.gasUsed.toDouble * percentiles(i) / 100).toLong
+      // continue summation as long as the total is below the percentile threshold
+      while (sumGasUsed < thresholdGasUsed && sortedRewards.hasNext) {
+        current = sortedRewards.next()
+        sumGasUsed += current.gasUsed
       }
-      return rewards
-    }
-
-    // sort ascending by effective gas tip
-    sorter.sortBy(_(1))
-
-    for (i <- 0 until rewards.length) {
-      val thresholdGasUsed: BigInteger = BigDecimal.valueOf(block.header.gasUsed.toDouble * percentiles(i) / 100).toBigIntegerExact()
-      val sumGasUsed: BigInteger = txReceipts(0).gasUsed
-      var txIndex: Int = 0
-
-      while (txIndex < txs.size - 1 && sumGasUsed.compareTo(thresholdGasUsed) < 0) {
-        txIndex += 1
-        sumGasUsed.add(txReceipts(txIndex).gasUsed)
-      }
-      rewards(i) = Numeric.toHexStringWithPrefix(sorter(txIndex)(1))
+      rewards(i) = current.reward
     }
     rewards
   }
 
-  def getEffectiveGasTip(tx: EthereumTransaction, baseFee: BigInteger): BigInteger = {
+  private def getEffectiveGasTip(tx: EthereumTransaction, baseFee: BigInteger): BigInteger = {
     if (baseFee == null) tx.getMaxPriorityFeePerGas
     // we do not need to check if MaxFeePerGas is higher than baseFee, because the tx is already included in the block
     else tx.getMaxPriorityFeePerGas.min(tx.getMaxFeePerGas.subtract(baseFee))
   }
-
 }
