@@ -16,9 +16,9 @@ public class EthereumFeeHistoryView {
 
     public EthereumFeeHistoryView() {
         oldestBlock = Numeric.encodeQuantity(BigInteger.ZERO);
-        reward = null;
         baseFeePerGas = null;
         gasUsedRatio = null;
+        reward = null;
     }
 
     public EthereumFeeHistoryView(

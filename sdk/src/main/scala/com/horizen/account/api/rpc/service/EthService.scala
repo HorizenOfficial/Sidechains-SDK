@@ -108,8 +108,7 @@ class EthService(
     nodeView.history
       .getStorageBlockById(blockId)
       .map(block => {
-        val transactions =
-          block.transactions.map(_.asInstanceOf[EthereumTransaction])
+        val transactions = block.transactions.map(_.asInstanceOf[EthereumTransaction])
         new EthereumBlock(
           Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
           Numeric.prependHexPrefix(blockId),
