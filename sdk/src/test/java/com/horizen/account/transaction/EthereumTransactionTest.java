@@ -298,7 +298,7 @@ public class EthereumTransactionTest {
         // Test 4: ethereum transaction object returns version correctly
         assertEquals(2 /*eip1559*/, ethereumTransaction.version());
 
-        assertEquals(ethereumTransaction.getMaxFeePerGas(),ethereumTransaction.getGasPrice());
+        assertEquals(ethereumTransaction.getMaxFeePerGas(), ethereumTransaction.getGasPrice());
 
         // Test 5: ethereum transaction instance returns messageToSign correctly
         EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());
@@ -558,6 +558,15 @@ public class EthereumTransactionTest {
     }
 
 
+    @Test
+    public void ethereumGetChainIdTest() {
+        // from: 0x2623DFF4B37abc95aefD0767C5c4f71DfEecBe63
+        var tx = new EthereumTransaction("0x3b6C3B23dB14E37e19982A5BA1A6fEfc64Cc0Ef1", BigInteger.ZERO, Numeric.toBigInt("0x012a05f200"), Numeric.toBigInt("0x5208"), Numeric.toBigInt("0x016345785d8a0000"), "0x", new Sign.SignatureData(Integer.valueOf(27).byteValue(), BytesUtils.fromHexString("008f37909eecd2aa2eb5cebec6f109fda6b50361a71f5e541e7adc2773ca3327"), BytesUtils.fromHexString("0001dfe6b06aa0107af1ceee45509527d9f2a291d512124537c2d713f0eb64f1")));
+        assertEquals("first element of s byte array should be 0", tx.getS()[0], 0);
+        assertEquals("first element of r byte array should be 0", tx.getR()[0], 0);
 
+        var chainId = tx.getChainId();
+        assertEquals("chain ID should be null", tx.getChainId(), null);
+    }
 
 }
