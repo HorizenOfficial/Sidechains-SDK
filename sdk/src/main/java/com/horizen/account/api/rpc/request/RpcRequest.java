@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class RpcRequest {
     private String jsonrpc;
-    private long id;
+    private RpcId id;
     private String method;
     private JsonNode params;
 
@@ -15,7 +15,7 @@ public class RpcRequest {
 
     public RpcRequest(JsonNode json) {
         this.jsonrpc = json.get("jsonrpc").asText();
-        this.id = json.get("id").asLong();
+        this.id = new RpcId(json.get("id"));
         this.method = json.get("method").asText();
         this.params = json.get("params");
     }
@@ -28,11 +28,11 @@ public class RpcRequest {
         this.jsonrpc = jsonrpc;
     }
 
-    public long getId() {
+    public RpcId getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(RpcId id) {
         this.id = id;
     }
 
@@ -54,6 +54,6 @@ public class RpcRequest {
 
     @Override
     public String toString() {
-        return String.format("RpcRequest{jsonrpc='%s', id='%s', method='%s', params=%s}", jsonrpc, id, method, params);
+        return String.format("RpcRequest{jsonrpc='%s', id='%s', method='%s', params=%s}", jsonrpc, id.toString(), method, params);
     }
 }

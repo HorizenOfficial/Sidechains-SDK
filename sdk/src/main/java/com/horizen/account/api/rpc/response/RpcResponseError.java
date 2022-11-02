@@ -1,6 +1,7 @@
 package com.horizen.account.api.rpc.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.horizen.account.api.rpc.request.RpcId;
 import com.horizen.account.api.rpc.utils.RpcError;
 import com.horizen.api.http.ErrorResponse;
 
@@ -9,7 +10,7 @@ import java.util.Optional;
 public class RpcResponseError extends RpcResponse implements ErrorResponse {
     protected final RpcError error;
 
-    public RpcResponseError(long id, RpcError error) {
+    public RpcResponseError(RpcId id, RpcError error) {
         super(id);
         this.error = error;
     }
