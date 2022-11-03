@@ -37,7 +37,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   override val route: Route = pathPrefix("node") {
 
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ signSchnorrPublicKey ~ getCertificateSigners ~ getKeyRotationProofs
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ signSchnorrPublicKey ~ getCertificateSigners ~ getKeyRotationProof
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -220,7 +220,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
-  def getKeyRotationProofs: Route = (post & path("getKeyRotationProofs")) {
+  def getKeyRotationProof: Route = (post & path("getKeyRotationProof")) {
     try {
       entity(as[ReqKeyRotationProof]) { body =>
         withView { sidechainNodeView =>

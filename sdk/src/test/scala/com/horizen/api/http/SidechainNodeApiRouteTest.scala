@@ -227,19 +227,19 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
 
     "reply at /getKeyRotationProofs" in {
       //Malformed request
-      Post(basePath + "getKeyRotationProofs").withEntity("maybe_a_json") ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "getKeyRotationProof").withEntity("maybe_a_json") ~> sidechainNodeApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
 
       //Bad circuit
-      Post(basePath + "getKeyRotationProofs").withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0,0,0)))  ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "getKeyRotationProof").withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0,0,0)))  ~> sidechainNodeApiRoute ~> check {
         status.intValue shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBadCircuit("The current circuit doesn't support key rotation proofs!", JOptional.empty()).code)
       }
 
       //Should answer with a KeyRotationProof
-      Post(basePath + "getKeyRotationProofs") .withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0,0,0))) ~> sidechainNodeApiRouteWithKeyRotation ~> check {
+      Post(basePath + "getKeyRotationProof") .withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0,0,0))) ~> sidechainNodeApiRouteWithKeyRotation ~> check {
         status.intValue shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
