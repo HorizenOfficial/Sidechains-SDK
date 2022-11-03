@@ -233,12 +233,13 @@ CertificateProofInfo : {
 
 class CertificateProofInfo(object):
 
-    def __init__(self, threshold, genSysConstant, verificationKey, schnorr_secrets=[], public_signing_keys=[],
-                 public_master_keys=[]):
+    def __init__(self, threshold, genSysConstant, verificationKey, schnorr_signers_secrets=[], public_signing_keys=[],
+                 schnorr_masters_secrets=[], public_master_keys=[]):
         self.threshold = threshold
         self.genSysConstant = genSysConstant
         self.verificationKey = verificationKey
-        self.schnorr_secrets = schnorr_secrets
+        self.schnorr_signers_secrets = schnorr_signers_secrets
+        self.schnorr_masters_secrets = schnorr_masters_secrets
         self.public_signing_keys = public_signing_keys
         self.public_master_keys = public_master_keys
 

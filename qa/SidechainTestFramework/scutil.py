@@ -270,19 +270,22 @@ Output: CertificateProofInfo (see sc_bootstrap_info.py).
 def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths,
                                     is_csw_enabled, type_of_circuit_number):
     signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
+    master_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
 
     signer_secrets = []
+    master_secrets = []
     public_signing_keys = []
     public_master_keys = []
     for i in range(len(signer_keys)):
-        keys = signer_keys[i]
-        signer_secrets.append(keys.secret)
-        public_signing_keys.append(keys.publicKey)
-        public_master_keys.append(keys.publicKey)
+        signer_key = signer_keys[i]
+        signer_secrets.append(signer_key.secret)
+        public_signing_keys.append(signer_key.publicKey)
+        master_key = master_keys[i]
+        master_secrets.append(master_key.secret)
+        public_master_keys.append(master_key.publicKey)
 
     json_parameters = {
         "signersPublicKeys": public_signing_keys,
-        "mastersPublicKeys": public_master_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
@@ -296,7 +299,7 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
     gen_sys_constant = output["genSysConstant"]
 
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
-                                                  public_signing_keys, public_master_keys)
+                                                  public_signing_keys, master_secrets, public_master_keys)
     return certificate_proof_info
 
 

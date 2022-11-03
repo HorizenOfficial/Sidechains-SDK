@@ -514,11 +514,14 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     custom_creation_data = vrf_public_key
 
     if type_of_circuit_number == 0:
+        assert sc_creation_version <= 1  # for circuit without key rotation
         fe_certificate_field_configs = certificate_field_config_csw_disabled
 
         if is_csw_enabled:
             fe_certificate_field_configs = certificate_field_config_csw_enabled
-    else:
+    elif type_of_circuit_number == 1:
+        assert sc_creation_version == 2  # version 2 is for key rotation circuit
+        assert is_csw_enabled is False
         fe_certificate_field_configs = certificate_with_key_rotation_field_config
 
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]

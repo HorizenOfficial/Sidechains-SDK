@@ -409,12 +409,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
         String verificationKeyPath = json.get("verificationKeyPath").asText();
 
-        if (!json.has("isCSWEnabled") || !json.get("isCSWEnabled").isBoolean()) {
-            printGenerateCertProofInfoUsageMsg("wrong isCSWEnabled value. Boolean value expected.");
-            return;
-        }
-        boolean isCSWEnabled = json.get("isCSWEnabled").asBoolean();
-
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
         // Generate all keys only if verification key doesn't exist.
@@ -426,10 +420,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
-            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW;
-            if (isCSWEnabled){
-                numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW;
-            }
+            int numOfCustomFields = 1;
             if (!CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateCoboundaryMarlinSnarkKeys(signersPublicKeys.size(), provingKeyPath, verificationKeyPath, numOfCustomFields)) {
                 printer.print("Error occurred during snark keys generation.");
                 return;
@@ -457,13 +448,15 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         resJson.put("genSysConstant", genSysConstant);
         resJson.put("verificationKey", verificationKey);
 
-        ArrayNode keyArrayNode = resJson.putArray("schnorrPublicKeys");
+        ArrayNode signingKeyArrayNode = resJson.putArray("signersPublicKeys");
 
         for (String publicKeyStr : signersPublicKeys) {
-            keyArrayNode.add(publicKeyStr);
+            signingKeyArrayNode.add(publicKeyStr);
         }
+
+        ArrayNode masterKeyArrayNode = resJson.putArray("mastersPublicKeys");
         for (String publicKeyStr : mastersPublicKeys) {
-            keyArrayNode.add(publicKeyStr);
+            signingKeyArrayNode.add(publicKeyStr);
         }
 
         String res = resJson.toString();
