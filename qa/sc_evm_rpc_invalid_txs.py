@@ -12,6 +12,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
     bootstrap_sidechain_nodes, convertZenToWei, generate_next_block, start_sc_nodes,
+    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
 from test_framework.util import forward_transfer_to_sidechain, start_nodes, websocket_port_by_mc_node_index
 
@@ -42,7 +43,7 @@ class SCEvmRPCInvalidTx(SidechainTestFramework):
         )
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(
             self.options, network,
-            block_timestamp_rewind=720 * 120 * 5,
+            block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
             blockversion=AccountModelBlockVersion
         )
 

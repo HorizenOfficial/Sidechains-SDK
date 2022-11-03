@@ -18,7 +18,7 @@ from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
     bootstrap_sidechain_nodes, check_mainchain_block_reference_info, computeForgedTxFee, convertZenToZennies,
     convertZenniesToWei, generate_next_block, generate_next_blocks, is_mainchain_block_included_in_sc_block,
-    start_sc_nodes,
+    start_sc_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
 from test_framework.util import (
     assert_equal, assert_false, fail, forward_transfer_to_sidechain, start_nodes,
@@ -76,7 +76,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
                                          sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=720 * 120 * 5,
+                                                                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
                                                                  blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):

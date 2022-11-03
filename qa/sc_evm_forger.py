@@ -18,6 +18,7 @@ from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, ForgerStakeSmartContractAddress,
     WithdrawalReqSmartContractAddress, bootstrap_sidechain_nodes, computeForgedTxFee, connect_sc_nodes, convertWeiToZen,
     convertZenToWei, convertZenToZennies, convertZenniesToWei, generate_next_block, get_account_balance, start_sc_nodes,
+    SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
@@ -123,7 +124,7 @@ class SCEvmForger(SidechainTestFramework):
             SCCreationInfo(mc_node, self.sc_creation_amount, LARGE_WITHDRAWAL_EPOCH_LENGTH),
             sc_node_1_configuration, sc_node_2_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=720 * 120 * 10,
+                                                                 block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10,
                                                                  blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):

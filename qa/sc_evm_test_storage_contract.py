@@ -12,7 +12,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, websocke
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 
 """
 Check an EVM Storage Smart Contract.
@@ -81,7 +81,7 @@ class SCEvmStorageContract(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=720 * 120 * 5,
+                                                                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
                                                                  blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):

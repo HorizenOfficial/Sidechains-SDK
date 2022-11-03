@@ -15,7 +15,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
     computeForgedTxFee, convertZenToZennies, convertZenniesToWei, generate_next_block, generate_next_blocks,
-    start_sc_nodes,
+    start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain, start_nodes,
@@ -70,7 +70,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
                                          sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=720 * 120 * 50,
+                                                                 block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 50,
                                                                  blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):
