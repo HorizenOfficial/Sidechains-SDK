@@ -26,6 +26,11 @@ import static junit.framework.TestCase.*;
 public class SigningToolTest {
 
     public static final String SCHNORR = "schnorr";
+    public static final String CREATE_SIGNATURE = "createSignature";
+    public static final String VERIFY_SIGNATURE = "verifySignature";
+    public static final String SIGN_MESSAGE = "signMessage";
+    public static final String VALIDATE_MESSAGE = "validateMessage";
+    public static final String PRIV_KEY_TO_PUB_KEY = "privKeyToPubKey";
     private ByteArrayOutputStream byteArrayOutputStream;
     private PrintStream console;
     public static final SidechainSecretsCompanion SECRETS_COMPANION = new SidechainSecretsCompanion(new HashMap<>());
@@ -46,6 +51,7 @@ public class SigningToolTest {
             fail("Unexpected error in tests: " + e.getMessage());
         } finally {
             System.setOut(console);
+            byteArrayOutputStream.reset();
         }
         return null;
     }
@@ -60,87 +66,125 @@ public class SigningToolTest {
     @Test
     public void testSignatureSignVerify() throws JsonProcessingException {
         //Sign
-        String command = "createSignature";
-        String testMessage = "Test message to sign/verify.";
+        String testMessage = "Test signmessage";
         SchnorrSecret secretKey = generateSecret();
         SchnorrProposition publicKey = secretKey.publicImage();
 
         ObjectNode argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("privateKey", BytesUtils.toHexString(SECRETS_COMPANION.toBytes(secretKey)));
         argsJson.put("type", SCHNORR);
         String args = argsJson.toString();
 
-        String result = runTest(new String[]{command, args});
+        String result = runTest(new String[]{CREATE_SIGNATURE, args});
         assertTrue(result != null && result.contains("signature") && !result.contains("error"));
 
         //Verify
-        command = "verifySignature";
         JsonNode signatureJson = new ObjectMapper().readTree(result);
         String signature = signatureJson.get("signature").textValue();
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("type", SCHNORR);
         args = argsJson.toString();
-        result = runTest(new String[]{command, args});
+        result = runTest(new String[]{VERIFY_SIGNATURE, args});
         assertTrue(result != null && result.contains("valid") && result.contains("true"));
 
         //Negative
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", "Wrong Message!");
+        argsJson.put("message", BytesUtils.toHexString("Wrong message".getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("type", SCHNORR);
         args = argsJson.toString();
-        result = runTest(new String[]{command, args});
+        result = runTest(new String[]{VERIFY_SIGNATURE, args});
         assertTrue(result != null && result.contains("valid") && result.contains("false"));
+
+        //Invalid signature
+        argsJson = new ObjectMapper().createObjectNode();
+        argsJson.put("message", testMessage);
+        argsJson.put("signature", signature + "123");
+        argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
+        argsJson.put("type", SCHNORR);
+        args = argsJson.toString();
+        result = runTest(new String[]{VERIFY_SIGNATURE, args});
+        assertTrue(result != null && result.contains("error") && result.contains("Unable to parse signature"));
+
+        //Invalid publicKey
+        argsJson = new ObjectMapper().createObjectNode();
+        argsJson.put("message", testMessage);
+        argsJson.put("signature", signature);
+        argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)) + "123");
+        argsJson.put("type", SCHNORR);
+        args = argsJson.toString();
+        result = runTest(new String[]{VERIFY_SIGNATURE, args});
+        assertTrue(result != null && result.contains("error") && result.contains("Unable to parse publicKey"));
     }
 
     @Test
     public void testMessageSignVerify() throws JsonProcessingException {
         //Sign
-        String command = "signMessage";
         String testMessage = "Message to sign/verify.";
         String prefix = "prefix";
         SchnorrSecret secretKey = generateSecret();
         SchnorrProposition publicKey = secretKey.publicImage();
 
         ObjectNode argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("privateKey", BytesUtils.toHexString(SECRETS_COMPANION.toBytes(secretKey)));
         argsJson.put("prefix", prefix);
         argsJson.put("type", SCHNORR);
         String args = argsJson.toString();
 
-        String result = runTest(new String[]{command, args});
+        String result = runTest(new String[]{SIGN_MESSAGE, args});
         assertTrue(result != null && result.contains("signature") && !result.contains("error"));
 
         //Verify
-        command = "validateMessage";
         JsonNode signatureJson = new ObjectMapper().readTree(result);
         String signature = signatureJson.get("signature").textValue();
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("prefix", prefix);
         argsJson.put("type", SCHNORR);
         args = argsJson.toString();
-        result = runTest(new String[]{command, args});
+        result = runTest(new String[]{VALIDATE_MESSAGE, args});
         assertTrue(result != null && result.contains("valid") && result.contains("true"));
 
         //Negative
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", "Wrong message!");
+        argsJson.put("message", BytesUtils.toHexString("Wrong message".getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("prefix", prefix);
         argsJson.put("type", SCHNORR);
         args = argsJson.toString();
-        result = runTest(new String[]{command, args});
+        result = runTest(new String[]{VALIDATE_MESSAGE, args});
         assertTrue(result != null && result.contains("valid") && result.contains("false"));
+
+        //Invalid signature
+        argsJson = new ObjectMapper().createObjectNode();
+        argsJson.put("message", testMessage);
+        argsJson.put("signature", signature + "123");
+        argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
+        argsJson.put("prefix", prefix);
+        argsJson.put("type", SCHNORR);
+        args = argsJson.toString();
+        result = runTest(new String[]{VALIDATE_MESSAGE, args});
+        assertTrue(result != null && result.contains("error") && result.contains("Unable to parse signature"));
+
+        //Invalid publicKey
+        argsJson = new ObjectMapper().createObjectNode();
+        argsJson.put("message", testMessage);
+        argsJson.put("signature", signature);
+        argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)) + "123");
+        argsJson.put("prefix", prefix);
+        argsJson.put("type", SCHNORR);
+        args = argsJson.toString();
+        result = runTest(new String[]{VALIDATE_MESSAGE, args});
+        assertTrue(result != null && result.contains("error") && result.contains("Unable to parse publicKey"));
     }
 
     private SchnorrSecret generateSecret() {
@@ -152,7 +196,6 @@ public class SigningToolTest {
 
     @Test
     public void testPrivKeyToPubkey() throws IOException {
-        String command = "privKeyToPubKey";
         SchnorrSecret secretKey = generateSecret();
 
         ObjectNode argsJson = new ObjectMapper().createObjectNode();
@@ -160,13 +203,22 @@ public class SigningToolTest {
         argsJson.put("type", SCHNORR);
         String args = argsJson.toString();
 
-        String result = runTest(new String[]{command, args});
+        String result = runTest(new String[]{PRIV_KEY_TO_PUB_KEY, args});
         assertTrue(result != null && result.contains("publicKey") && !result.contains("error"));
 
         JsonNode signatureJson = new ObjectMapper().readTree(result);
         String publicKey = signatureJson.get("publicKey").asText();
 
         assertEquals(BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(secretKey.publicImage())), publicKey);
+
+        //Invalid privateKey
+        argsJson = new ObjectMapper().createObjectNode();
+        argsJson.put("privateKey", BytesUtils.toHexString(SECRETS_COMPANION.toBytes(secretKey)) + "123");
+        argsJson.put("type", SCHNORR);
+        args = argsJson.toString();
+
+        result = runTest(new String[]{PRIV_KEY_TO_PUB_KEY, args});
+        assertTrue(result != null && result.contains("error") && result.contains("Unable to parse privateKey"));
     }
 
 }
