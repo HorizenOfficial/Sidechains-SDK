@@ -15,7 +15,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.EthereumTransactionDecoder
+import com.horizen.account.utils.{AccountPayment, EthereumTransactionDecoder}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
@@ -562,9 +562,14 @@ class EthService(
 
     applyOnAccountView { nodeView =>
       val feePayments =
-        nodeView.history.getFeePaymentsInfo(blockId).get()
+        nodeView.history
+          .getFeePaymentsInfo(blockId)
 
-      feePayments
+      if (feePayments.isEmpty) {
+        throw new RpcException(RpcError.fromCode(RpcCode.ExecutionError, s"no fee payments found for block: $blockId"))
+      }
+
+      feePayments.get()
     }
   }
 }
