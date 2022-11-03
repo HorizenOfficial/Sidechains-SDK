@@ -371,7 +371,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        List<String> mastersPublicKeys = new ArrayList<String>();
+        List<String> mastersPublicKeys = new ArrayList<>();
 
         Iterator<JsonNode> mastersPublicKeysIterator = json.get("mastersPublicKeys").elements();
         while (mastersPublicKeysIterator.hasNext()) {
@@ -384,6 +384,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             mastersPublicKeys.add(pkNode.asText());
         }
+
+        assert mastersPublicKeys.size() == signersPublicKeys.size() : "mastersPublicKeys and signersPublicKeys must have the same size";
 
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
             printGenerateCertProofInfoUsageMsg("wrong threshold");
