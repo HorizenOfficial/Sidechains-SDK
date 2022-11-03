@@ -129,7 +129,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             printCreateSignatureUsageMsg("type is not specified or has invalid format.");
             return;
         }
-        byte[] message = json.get("message").asText().getBytes();
+        byte[] message = BytesUtils.fromHexString(json.get("message").asText());
         String privateKey = json.get("privateKey").asText();
         switch (json.get("type").asText()) {
             case SCHNORR:
@@ -164,7 +164,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             printVerifySignatureUsageMsg("type is not specified or has invalid format.");
             return;
         }
-        byte[] message = json.get("message").asText().getBytes();
+        byte[] message = BytesUtils.fromHexString(json.get("message").asText());
         String signature = json.get("signature").asText();
         String publicKey = json.get("publicKey").asText();
         switch (json.get("type").asText()) {
@@ -201,7 +201,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             return;
         }
         String privateKey = json.get("privateKey").asText();
-        byte[] message = json.get("message").asText().getBytes();
+        byte[] message = BytesUtils.fromHexString(json.get("message").asText());
         byte[] prefix = json.get("prefix").asText().getBytes();
         byte[] prefixMessage = hash(concatenate(prefix, message));
         switch (json.get("type").asText()) {
@@ -240,7 +240,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             printValidateMessageUsageMsg("type is not specified or has invalid format.");
             return;
         }
-        byte[] message = json.get("message").asText().getBytes();
+        byte[] message = BytesUtils.fromHexString(json.get("message").asText());
         String signature = json.get("signature").asText();
         String publicKey = json.get("publicKey").asText();
         byte[] prefix = json.get("prefix").asText().getBytes();

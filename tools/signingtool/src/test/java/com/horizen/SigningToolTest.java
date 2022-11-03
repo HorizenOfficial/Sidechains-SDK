@@ -66,12 +66,12 @@ public class SigningToolTest {
     @Test
     public void testSignatureSignVerify() throws JsonProcessingException {
         //Sign
-        String testMessage = "Test message to sign/verify.";
+        String testMessage = "Test signmessage";
         SchnorrSecret secretKey = generateSecret();
         SchnorrProposition publicKey = secretKey.publicImage();
 
         ObjectNode argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("privateKey", BytesUtils.toHexString(SECRETS_COMPANION.toBytes(secretKey)));
         argsJson.put("type", SCHNORR);
         String args = argsJson.toString();
@@ -83,7 +83,7 @@ public class SigningToolTest {
         JsonNode signatureJson = new ObjectMapper().readTree(result);
         String signature = signatureJson.get("signature").textValue();
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("type", SCHNORR);
@@ -93,7 +93,7 @@ public class SigningToolTest {
 
         //Negative
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", "Wrong Message!");
+        argsJson.put("message", BytesUtils.toHexString("Wrong message".getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("type", SCHNORR);
@@ -131,7 +131,7 @@ public class SigningToolTest {
         SchnorrProposition publicKey = secretKey.publicImage();
 
         ObjectNode argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("privateKey", BytesUtils.toHexString(SECRETS_COMPANION.toBytes(secretKey)));
         argsJson.put("prefix", prefix);
         argsJson.put("type", SCHNORR);
@@ -144,7 +144,7 @@ public class SigningToolTest {
         JsonNode signatureJson = new ObjectMapper().readTree(result);
         String signature = signatureJson.get("signature").textValue();
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("prefix", prefix);
@@ -155,7 +155,7 @@ public class SigningToolTest {
 
         //Negative
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", "Wrong message!");
+        argsJson.put("message", BytesUtils.toHexString("Wrong message".getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("prefix", prefix);
