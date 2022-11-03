@@ -103,7 +103,7 @@ public class SigningToolTest {
 
         //Invalid signature
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("signature", signature + "123");
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("type", SCHNORR);
@@ -113,7 +113,7 @@ public class SigningToolTest {
 
         //Invalid publicKey
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)) + "123");
         argsJson.put("type", SCHNORR);
@@ -166,7 +166,7 @@ public class SigningToolTest {
 
         //Invalid signature
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("signature", signature + "123");
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("prefix", prefix);
@@ -177,7 +177,7 @@ public class SigningToolTest {
 
         //Invalid publicKey
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", testMessage);
+        argsJson.put("message", BytesUtils.toHexString(testMessage.getBytes()));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)) + "123");
         argsJson.put("prefix", prefix);
