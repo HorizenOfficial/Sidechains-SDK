@@ -8,7 +8,7 @@ from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_block, assert_equal
-from qa.SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
+from SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
 
@@ -46,7 +46,8 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list([0, 1, 2])  # certificate submitter is disabled, signing is enabled with 3 schnorr PKs
+            True, True, list([0, 1, 2],), remote_keys_manager_enabled=True
+            # certificate submitter is enabled, signing is enabled with 3 schnorr PKs
         )
 
         network = SCNetworkConfiguration(
