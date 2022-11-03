@@ -654,6 +654,8 @@ class SidechainStateTest
 
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
 
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
+
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
         buildRegularTransaction(0,1,0,Seq(),1)
@@ -752,6 +754,8 @@ class SidechainStateTest
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
       })
+
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -905,6 +909,8 @@ class SidechainStateTest
       })
 
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
+
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
 
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
@@ -1158,6 +1164,9 @@ class SidechainStateTest
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
       })
+
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
+
     val sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       params, bytesToVersion(getVersion.data()), mockedApplicationState)
 

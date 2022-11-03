@@ -331,6 +331,36 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   }
 
+  def validateWithWithdrawalEpoch(tx: SidechainTypes#SCBT, withdrawalEpoch: WithdrawalEpochInfo): Try[Unit] = Try {
+    if (tx.isInstanceOf[KeyRotationTransaction]) {
+      if (TypeOfCircuit(params.typeOfCircuitNumber).equals(TypeOfCircuit.NaiveThresholdSignatureCircuit)) {
+        throw new Exception("KeyRotationTransaction is not allowed with this kind of circuit!")
+      }
+      val keyRotationTransaction: KeyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
+      val keyRotationProof = keyRotationTransaction.getKeyRotationProof
+      val newKey = SchnorrPublicKey.deserialize(keyRotationProof.newValueOfKey.pubKeyBytes())
+      val oldCertifiersKeys = certifiersKeys(withdrawalEpoch.epoch).get
+
+      val messageToSign = newKey.getHash.serializeFieldElement()
+
+      //Verify that the key index is in a valid range
+      if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)
+        throw new Exception("Key index in KeyRotationTransaction is out of range!")
+
+      //Verify the signature using the old signing key
+      if (!keyRotationProof.signingKeySignature.isValid(oldCertifiersKeys.signingKeys(keyRotationProof.index), messageToSign))
+        throw new Exception("Signing key signature in KeyRotationTransaction is not valid!")
+
+      //Verify the signature using the old master key
+      if (!keyRotationProof.masterKeySignature.isValid(oldCertifiersKeys.masterKeys(keyRotationProof.index), messageToSign))
+        throw new Exception("Master key signature in KeyRotationTransaction is not valid!")
+
+      //Verify the signature using the new key
+      if (!keyRotationTransaction.getNewKeySignature.isValid(keyRotationProof.newValueOfKey, messageToSign))
+        throw new Exception("New key signature in KeyRotationTransaction is not valid!")
+    }
+  }
+
   override def validate(tx: SidechainTypes#SCBT): Try[Unit] = {
     stateStorage.getConsensusEpochNumber match {
       case Some(consensusEpochNumber) => validate(tx, consensusEpochNumber)
@@ -384,34 +414,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       }
 
-      if (tx.isInstanceOf[KeyRotationTransaction]) {
-        if (TypeOfCircuit(params.typeOfCircuitNumber).equals(TypeOfCircuit.NaiveThresholdSignatureCircuit)) {
-          throw new Exception("KeyRotationTransaction is not allowed with this kind of circuit!")
-        }
-        val keyRotationTransaction: KeyRotationTransaction = tx.asInstanceOf[KeyRotationTransaction]
-        val keyRotationProof = keyRotationTransaction.getKeyRotationProof
-        val newKey = SchnorrPublicKey.deserialize(keyRotationProof.newValueOfKey.pubKeyBytes())
-        val oldCertifiersKeys = certifiersKeys(getWithdrawalEpochInfo.epoch).get
-
-        val messageToSign = newKey.getHash.serializeFieldElement()
-
-        //Verify that the key index is in a valid range
-        if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)
-          throw new Exception("Key index in KeyRotationTransaction is out of range!")
-
-        //Verify the signature using the old signing key
-        if (!keyRotationProof.signingKeySignature.isValid(oldCertifiersKeys.signingKeys(keyRotationProof.index), messageToSign))
-          throw new Exception("Signing key signature in KeyRotationTransaction is not valid!")
-
-        //Verify the signature using the old master key
-        if (!keyRotationProof.masterKeySignature.isValid(oldCertifiersKeys.masterKeys(keyRotationProof.index), messageToSign))
-          throw new Exception("Master key signature in KeyRotationTransaction is not valid!")
-
-        //Verify the signature using the new key
-        if (!keyRotationTransaction.getNewKeySignature.isValid(keyRotationProof.newValueOfKey, messageToSign))
-          throw new Exception("New key signature in KeyRotationTransaction is not valid!")
-      }
-
       for (u <- tx.unlockers().asScala) {
         closedBox(u.closedBoxId()) match {
           case Some(box) => {
@@ -425,6 +427,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       }
 
+      validateWithWithdrawalEpoch(tx, getWithdrawalEpochInfo).get
       validateWithFork(tx, consensusEpochNumber).get
 
       val newBoxes = tx.newBoxes().asScala

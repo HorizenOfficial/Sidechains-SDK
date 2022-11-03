@@ -324,7 +324,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           else
             nodeView.pool.take(nodeView.pool.size)
         (mempoolTx
-          .filter(nodeView.state.validateWithFork(_, consensusEpochNumber).isSuccess)
+          .filter( tx => {nodeView.state.validateWithFork(tx, consensusEpochNumber).isSuccess && nodeView.state.validateWithWithdrawalEpoch(tx, nodeView.state.getWithdrawalEpochInfo).isSuccess})
           ++ forcedTx)
           .filter(tx => {
             val txSize = tx.bytes.length + 4 // placeholder for Tx length
