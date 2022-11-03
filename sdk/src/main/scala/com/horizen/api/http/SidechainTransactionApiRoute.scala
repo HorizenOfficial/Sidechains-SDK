@@ -4,12 +4,10 @@ import java.lang
 import java.util.{Collections, ArrayList => JArrayList, List => JList}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
@@ -31,7 +29,7 @@ import java.util.{Optional => JOptional}
 import com.horizen.utils.{Pair => JPair}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.control.Breaks._
 import scala.util.{Failure, Success, Try}
@@ -41,32 +39,26 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainTransactionActorRef: ActorRef,
                                         companion: SidechainTransactionsCompanion,
                                         params: NetworkParams)
-                                       (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute[SidechainTypes#SCBT,
-    SidechainBlockHeader,SidechainBlock,SidechainFeePaymentsInfo,NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView]  with SidechainTypes {
+                                       (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends TransactionBaseApiRoute[
+    SidechainTypes#SCBT,
+    SidechainBlockHeader,
+    SidechainBlock,
+    SidechainFeePaymentsInfo,
+    NodeHistory,
+    NodeState,
+    NodeWallet,
+    NodeMemoryPool,
+    SidechainNodeView](sidechainTransactionActorRef, companion)  with SidechainTypes {
 
   override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ createOpenStakeTransaction ~ createOpenStakeTransactionSimplified
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ allActiveForgingStakeInfo ~
+    createOpenStakeTransaction ~ createOpenStakeTransactionSimplified
   }
 
-  /**
-    * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
-    */
-  def allTransactions: Route = (post & path("allTransactions")) {
-    entity(as[ReqAllTransactions]) { body =>
-      withNodeView { sidechainNodeView =>
-        val unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
-        if (body.format.getOrElse(true)) {
-          ApiResponseUtil.toResponse(RespAllTransactions(unconfirmedTxs.asScala.toList))
-        } else {
-          ApiResponseUtil.toResponse(RespAllTransactionIds(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString)))
-        }
-      }
-    }
-  }
 
   /**
     * Follows the same behaviour as the corresponding RPC call in zend: by default it will look for
@@ -154,21 +146,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             // TO-DO Change the errorCode
             ApiResponseUtil.toResponse(ErrorNotFoundTransactionId(error, JOptional.empty()))
         }
-      }
-    }
-  }
-
-  /**
-    * Return a JSON representation of a transaction given its byte serialization.
-    */
-  def decodeTransactionBytes: Route = (post & path("decodeTransactionBytes")) {
-    entity(as[ReqDecodeTransactionBytes]) { body =>
-      companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes)) match {
-        case Success(tx) =>
-          //TO-DO JSON representation of transaction
-          ApiResponseUtil.toResponse(RespDecodeTransactionBytes(tx))
-        case Failure(exp) =>
-          ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, JOptional.of(exp)))
       }
     }
   }
@@ -448,25 +425,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           case Right((transaction, txRepresentation)) => validateAndSendTransaction(transaction, txRepresentation)
         }
       }
-    }
-  }
-
-  //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val defaultTransactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = {
-    transaction => TransactionIdDTO(transaction.id)
-  }
-
-  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT,
-                                         transactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
-    val barrier = Await.result(
-      sidechainTransactionActorRef ? BroadcastTransaction(transaction),
-      settings.timeout).asInstanceOf[Future[Unit]]
-    onComplete(barrier) {
-      case Success(_) =>
-        ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-      case Failure(exp) =>
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp))
-        )
     }
   }
 

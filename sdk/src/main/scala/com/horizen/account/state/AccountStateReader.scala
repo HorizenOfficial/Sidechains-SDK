@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
@@ -13,6 +13,8 @@ trait AccountStateReader {
   def getAccountStateRoot: Array[Byte] // 32 bytes, keccak hash
 
   def getListOfForgerStakes: Seq[AccountForgingStakeInfo]
+  def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo]
+
   def getForgerStakeData(stakeId: String): Option[ForgerStakeData]
 
   def getLogs(txHash: Array[Byte]): Array[EvmLog]

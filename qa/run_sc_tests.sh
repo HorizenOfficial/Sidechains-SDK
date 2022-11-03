@@ -50,6 +50,7 @@ testScripts=(
     'sc_evm_backward_transfer_2.py'
     'sc_evm_bwt_corner_cases.py'
     'sc_evm_forger.py'
+    'sc_evm_forger_delegation.py'
     'sc_evm_closed_forger.py'
     'sc_evm_forging_fee_payments.py'
     'sc_evm_mempool.py'

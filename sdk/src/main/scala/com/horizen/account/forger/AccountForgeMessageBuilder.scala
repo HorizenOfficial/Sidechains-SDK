@@ -18,7 +18,7 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
-import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgingStakeListEmpty, MainchainSynchronizer}
+import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
@@ -377,11 +377,13 @@ class AccountForgeMessageBuilder(
     val forgingStakeInfoTree = MerkleTree.createMerkleTree(forgingStakeInfoSeq.map(info => info.hash).asJava)
     val merkleTreeLeaves = forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
-    // Calculate merkle path for all delegated forgerBoxes
+    // Calculate merkle path for all delegated forger stakes
     val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
       filteredForgingStakeInfoSeq.flatMap(forgingStakeInfo => {
         merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgingStakeInfo.hash)) match {
-          case -1 => None // May occur in case Wallet doesn't contain information about blockSignKey and vrfKey
+          case -1 =>
+            log.warn("ForgingStakeInfo not a leaf in merkle tree: should never happen")
+            None
           case index =>
             Some(ForgingStakeMerklePathInfo(forgingStakeInfo, forgingStakeInfoTree.getMerklePathForLeaf(index)))
         }
