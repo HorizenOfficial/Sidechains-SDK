@@ -8,31 +8,41 @@ from flask import Flask, request, json
 
 
 class SecureEnclaveApiServer(object):
-    app = Flask(__name__)
 
-    @app.route('/signMessage', methods=['POST'])
-    def sign_message(self):
-        content = request.json
-        pk = content['publicKey']
-        index = self.schnorr_public_keys.index(pk)
-        sk = self.schnorr_secrets[index]
-        content.pop('publicKey', None)
-        content['privateKey'] = sk
+    def start(self):
+        @self.app.route('/api/v1/createSignature', methods=['POST'])
+        def sign_message():
+            content = json.loads(request.data)
+            logging.info("SecureEnclaveApiServer /api/v1/createSignature received request " + str(content))
+            pk = content['publicKey']
+            index = self.schnorr_public_keys.index(pk)
+            sk = self.schnorr_secrets[index]
+            content.pop('publicKey', None)
+            content['privateKey'] = sk
 
-        result = launch_signing_tool(content)
-        return result
+            result = launch_signing_tool(content)
+            logging.info("SecureEnclaveApiServer /api/v1/createSignature result " + str(result))
+            return result
+
+        @self.app.route('/api/v1/listKeys', methods=['POST'])
+        def list_keys():
+            logging.info("SecureEnclaveApiServer /api/v1/listKeys received request")
+            keys = []
+            for key in self.schnorr_public_keys:
+                keys.append({"publicKey": key, "type": "schnorr"})
+
+            result = json.dumps({"keys": keys})
+            logging.info("SecureEnclaveApiServer /api/v1/listKeys result" + result)
+            return result
+
+        self.thread = threading.Thread(target=self.app.run(debug=False))
+        self.thread.run()
 
     def __init__(self, schnorr_secrets=[], schnorr_public_keys=[]):
         self.thread = None
+        self.app = Flask(__name__)
         self.schnorr_secrets = schnorr_secrets
         self.schnorr_public_keys = schnorr_public_keys
-
-    def start(self):
-        self.thread = multiprocessing.Process(target=lambda: self.app.run(debug=False))
-        self.thread.start()
-
-    def stop(self):
-        self.thread.terminate()
 
 
 def launch_signing_tool(json_parameters):
@@ -47,6 +57,6 @@ def launch_signing_tool(json_parameters):
         jsone_node = json.loads(db_tool_output)
         return jsone_node
     except ValueError:
-        logging.info("Signing tool error occurred for command= {}\nparams: {}\nError: {}\n"
-                     .format("createSignature", json_param, db_tool_output.decode()))
+        logging.error("Signing tool error occurred for command= {}\nparams: {}\nError: {}\n"
+                      .format("createSignature", json_param, db_tool_output.decode()))
         raise Exception("Signing tool error occurred")

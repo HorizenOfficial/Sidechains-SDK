@@ -1,15 +1,13 @@
 package com.horizen.api.http.client
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.HttpExt
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
-import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.horizen.api.http.client.SecureEnclaveApiClient.SignWithEnclave
-import com.horizen.certificatesubmitter.CertificateSubmitter.CertificateSignatureInfo
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.proof.SchnorrSignatureSerializer
+import com.horizen.proposition.SchnorrPropositionSerializer
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.BytesUtils
 import com.horizen.{RemoteKeysManagerSettings, SidechainTypes}
@@ -32,27 +30,99 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
   implicit val system: ActorSystem = ActorSystem("test-api-client")
   implicit val timeout: Timeout = Timeout(1.second)
+  private val keySerializer: SchnorrPropositionSerializer = SchnorrPropositionSerializer.getSerializer
   private val signatureSerializer: SchnorrSignatureSerializer = SchnorrSignatureSerializer.getSerializer
-
+  private val mapper = new ObjectMapper()
 
   "Secure Enclave Api should " should {
 
-    "return empty future if it is disabled" in {
+    "tell if it is enabled" in {
       val (apiClient, serverMock) = prepareApiClient(false)
-      val key = generateKey().publicImage()
-      val result = Await.result(
-        apiClient ? SignWithEnclave("test".getBytes, (key, 1)), 1.second
-      ).asInstanceOf[Option[CertificateSignatureInfo]]
-
-      assert(result.isEmpty)
+      assert(false.equals(apiClient.isEnabled))
       verifyNoInteractions(serverMock)
+
+      val (apiClientEnabled, mockEnabled) = prepareApiClient()
+      assert(true.equals(apiClientEnabled.isEnabled))
+      verifyNoInteractions(mockEnabled)
     }
 
-    "return empty future in case of error" in {
+
+    "return empty future in case of error for listPublicKeys" in {
+      val (apiClient, serverMock) = prepareApiClient()
+      val response = mapper
+        .createObjectNode()
+        .put("error", "Do Androids Dream of Electric Sheep?")
+        .toString
+
+      when(serverMock.singleRequest(any(),any(),any(),any()))
+        .thenReturn(Future.successful(
+          HttpResponse(status = StatusCodes.OK, entity = response)
+        ))
+
+      val result = Await.result(apiClient.listPublicKeys(), 1.second)
+
+      assert(result.isEmpty)
+      verify(serverMock).singleRequest(any(), any(), any(), any())
+    }
+
+    "return list of keys for listPublicKeys" in {
+      val (apiClient, serverMock) = prepareApiClient()
+      val key1 = generateKey().publicImage()
+      val key2 = generateKey().publicImage()
+      val key3 = generateKey().publicImage()
+      val key1Json = mapper.createObjectNode()
+        .put("publicKey", BytesUtils.toHexString(keySerializer.toBytes(key1)))
+        .put("type", "schnorr")
+      val key2Json = mapper.createObjectNode()
+        .put("publicKey", BytesUtils.toHexString(keySerializer.toBytes(key2)))
+        .put("type", "schnorr")
+      val key3Json = mapper.createObjectNode()
+        .put("publicKey", BytesUtils.toHexString(keySerializer.toBytes(key3)))
+        .put("type", "schnorr")
+
+      val response = mapper
+          .createObjectNode()
+          .set("keys", mapper.createArrayNode().add(key1Json).add(key2Json).add(key3Json))
+          .toString
+
+      when(serverMock.singleRequest(any(),any(),any(),any()))
+        .thenReturn(Future.successful(
+          HttpResponse(status = StatusCodes.OK, entity = response)
+        ))
+
+      val result = Await.result(apiClient.listPublicKeys(), 1.second)
+
+      assert(result.size.equals(3))
+      assert(result(0).equals(key1))
+      assert(result(1).equals(key2))
+      assert(result(2).equals(key3))
+      verify(serverMock).singleRequest(any(), any(), any(), any())
+    }
+
+    "return empty list for listPublicKeys if none" in {
+      val (apiClient, serverMock) = prepareApiClient()
+
+      val response = mapper
+        .createObjectNode()
+        .set("keys", mapper.createArrayNode())
+        .toString
+
+      when(serverMock.singleRequest(any(),any(),any(),any()))
+        .thenReturn(Future.successful(
+          HttpResponse(status = StatusCodes.OK, entity = response)
+        ))
+
+      val result = Await.result(apiClient.listPublicKeys(), 1.second)
+
+      assert(result.isEmpty)
+      verify(serverMock).singleRequest(any(), any(), any(), any())
+    }
+
+    "return empty future in case of error for signWithEnclave" in {
       val (apiClient, serverMock) = prepareApiClient()
       val publicKey = generateKey().publicImage()
       val index = 1
-      val response = new ObjectMapper()
+      val response = mapper
         .createObjectNode()
         .put("error", "Do Androids Dream of Electric Sheep?")
         .toString
@@ -63,8 +133,8 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
         ))
 
       val result = Await.result(
-        apiClient ? SignWithEnclave("test".getBytes, (publicKey, index)), 1.second
-      ).asInstanceOf[Option[CertificateSignatureInfo]]
+        apiClient.signWithEnclave("test".getBytes, (publicKey, index)), 1.second
+      )
 
       assert(result.isEmpty)
       verify(serverMock).singleRequest(any(), any(), any(), any())
@@ -76,7 +146,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
       val privateKey = generateKey()
       val publicKey = privateKey.publicImage()
       val index = 1
-      val response = new ObjectMapper()
+      val response = mapper
         .createObjectNode()
         .put("signature", BytesUtils.toHexString(signatureSerializer.toBytes(privateKey.sign(message))))
         .toString
@@ -87,20 +157,20 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
         ))
 
       val result = Await.result(
-        apiClient ? SignWithEnclave(message, (publicKey, index)), 1.second
-      ).asInstanceOf[Option[CertificateSignatureInfo]]
+        apiClient.signWithEnclave(message, (publicKey, index)), 1.second
+      )
 
       assert(result.isDefined)
       assert(result.get.pubKeyIndex.equals(index))
       assert(result.get.signature.isValid(publicKey, message))
     }
 
-    "process several requests with errors between them" in {
+    "process several requests with errors between them signWithEnclave" in {
       val (apiClient, serverMock) = prepareApiClient()
       val message = "test".getBytes
       val privateKey = generateKey()
       val publicKey = privateKey.publicImage()
-      val response = new ObjectMapper()
+      val response = mapper
         .createObjectNode()
         .put("signature", BytesUtils.toHexString(signatureSerializer.toBytes(privateKey.sign(message))))
         .toString
@@ -117,11 +187,11 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
       val result = Await.result(
         Future.sequence(Seq(
-          apiClient ? SignWithEnclave(message, (publicKey, 1)),
-          apiClient ? SignWithEnclave(message, (publicKey, 2)),
-          apiClient ? SignWithEnclave(message, (publicKey, 3))
+          apiClient.signWithEnclave(message, (publicKey, 1)),
+          apiClient.signWithEnclave(message, (publicKey, 2)),
+          apiClient.signWithEnclave(message, (publicKey, 3))
         )), 1.second
-      ).asInstanceOf[Seq[Option[CertificateSignatureInfo]]]
+      )
         .flatten
 
       assert(result.size.equals(2))
@@ -133,16 +203,16 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
   }
 
-  def prepareApiClient(enabled: Boolean = true): (ActorRef, HttpExt) = {
+  def prepareApiClient(enabled: Boolean = true): (SecureEnclaveApiClient, HttpExt) = {
     val settings: RemoteKeysManagerSettings = mock[RemoteKeysManagerSettings]
     when(settings.enabled).thenReturn(enabled)
-    when(settings.address).thenReturn("http://127.0.0.1:5000/api")
+    when(settings.address).thenReturn("http://127.0.0.1:5000")
 
     val httpServerMock = mock[HttpExt]
 
-    val apiClient = system.actorOf(Props(new SecureEnclaveApiClient(settings) {
+    val apiClient = new SecureEnclaveApiClient(settings) {
       override private[client] val http = httpServerMock
-    }))
+    }
     (apiClient, httpServerMock)
   }
 

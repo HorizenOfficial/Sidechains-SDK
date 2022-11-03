@@ -5,6 +5,7 @@ import akka.pattern.ask
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.horizen._
+import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block._
 import com.horizen.box.Box
 import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
@@ -101,7 +102,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], params, mainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -142,7 +143,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], params, mainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -181,7 +182,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], params, mainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -220,7 +221,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], params, mainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -260,7 +261,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], params, mainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -287,7 +288,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], mock[NetworkParams], mainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -319,7 +320,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], mock[NetworkParams], mainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -386,11 +387,8 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     })
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
-    val secureEnclaveApiClient = TestProbe()
-    secureEnclaveApiClient.setAutoPilot((sender: ActorRef, _: Any) => { sender ! None; TestActor.KeepRunning })
-
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, secureEnclaveApiClient.ref, params, mockedMainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -713,7 +711,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
     val dustThreshold = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
     val submitter: CertificateSubmitter = TestActorRef(Props(
-        new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[ActorRef], mock[NetworkParams], mock[MainchainNodeChannel])
+        new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[SecureEnclaveApiClient], mock[NetworkParams], mock[MainchainNodeChannel])
     )).underlyingActor
 
     assertEquals("Before the fork, ftMinAmount should be 0",
@@ -756,7 +754,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], params, mockedMainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -887,7 +885,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[ActorRef], params, mockedMainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -945,7 +943,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSidechainNodeViewHolder = TestProbe()
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[ActorRef], params, mockedMainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[SecureEnclaveApiClient], params, mockedMainchainChannel)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -987,7 +985,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSidechainNodeViewHolder = TestProbe()
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[ActorRef], params, mockedMainchainChannel)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[SecureEnclaveApiClient], params, mockedMainchainChannel)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 

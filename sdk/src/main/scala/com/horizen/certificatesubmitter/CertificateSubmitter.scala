@@ -5,7 +5,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
-import com.horizen.api.http.client.SecureEnclaveApiClient.SignWithEnclave
+import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
@@ -45,7 +45,7 @@ import scala.util.{Failure, Random, Success, Try}
  */
 class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
-                           secureEnclaveApiClient: ActorRef,
+                           secureEnclaveApiClient: SecureEnclaveApiClient,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
                           (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
@@ -324,20 +324,24 @@ class CertificateSubmitter(settings: SidechainSettings,
     val privateKeysWithIndexes = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersPrivateKeys), timeoutDuration)
       .asInstanceOf[Seq[(SchnorrSecret, Int)]]
 
-    (signaturesFromEnclave(messageToSign, params.signersPublicKeys.zipWithIndex)
+    val locallyPresentKeysIndexes = privateKeysWithIndexes.map(_._2)
+
+    (signaturesFromEnclave(messageToSign, params.signersPublicKeys.zipWithIndex.filterNot(key_index => locallyPresentKeysIndexes.contains(key_index._2)))
       ++ privateKeysWithIndexes.map {
       case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
     })
-      .distinct
   }
 
   def signaturesFromEnclave(messageToSign: Array[Byte], indexedPublicKeys: Seq[(SchnorrProposition, Int)]): Seq[CertificateSignatureInfo] = {
-    Await.result(
-      Future.sequence(
-        indexedPublicKeys.map(publicKey_index => secureEnclaveApiClient ? SignWithEnclave(messageToSign, publicKey_index))
-      ), timeoutDuration
-    ).asInstanceOf[Seq[Option[CertificateSignatureInfo]]]
+    if (!secureEnclaveApiClient.isEnabled) return Seq()
+
+    val signaturesFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
+      .map(managedKeys => indexedPublicKeys.filter(key_index => managedKeys.contains(key_index._1)))
+      .map(_.map(secureEnclaveApiClient.signWithEnclave(messageToSign, _)))
+      .map(Future.sequence(_))
       .flatten
+
+    Await.result(signaturesFromEnclaveFuture, timeoutDuration).flatten
   }
 
   private def locallyGeneratedSignature: Receive = {
@@ -747,17 +751,17 @@ object CertificateSubmitter {
 }
 
 object CertificateSubmitterRef {
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: ActorRef, params: NetworkParams,
+  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props =
     Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
 
-  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: ActorRef, params: NetworkParams,
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
 
-  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: ActorRef, params: NetworkParams,
+  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)

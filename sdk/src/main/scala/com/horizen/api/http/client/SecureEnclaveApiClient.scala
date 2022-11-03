@@ -1,14 +1,13 @@
 package com.horizen.api.http.client
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.Post
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.http.scaladsl.{Http, HttpExt}
-import akka.pattern.pipe
 import com.horizen.RemoteKeysManagerSettings
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.client.SecureEnclaveApiClient.{CreateSignatureRequest, CreateSignatureResponse, SignWithEnclave}
+import com.horizen.api.http.client.SecureEnclaveApiClient.{CreateSignatureRequest, CreateSignatureResponse, ListPublicKeysRequest, ListPublicKeysResponse}
 import com.horizen.certificatesubmitter.CertificateSubmitter.CertificateSignatureInfo
 import com.horizen.proof.SchnorrSignatureSerializer
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
@@ -19,70 +18,97 @@ import scorex.util.ScorexLogging
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit ec: ExecutionContext) extends Actor with ScorexLogging {
+class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit system: ActorSystem, ec: ExecutionContext) extends ScorexLogging {
 
-  implicit val system: ActorSystem = context.system
   private[client] val http: HttpExt = Http(system)
   private val keySerializer: SchnorrPropositionSerializer = SchnorrPropositionSerializer.getSerializer
   private val signatureSerializer: SchnorrSignatureSerializer = SchnorrSignatureSerializer.getSerializer
+  val SCHNORR = "schnorr"
 
-  private def serializePublicKey(publicKey: SchnorrProposition) =
-    BytesUtils.toHexString(keySerializer.toBytes(publicKey))
+  def isEnabled: Boolean = settings.enabled
 
-  override def receive: Receive =
-    if (settings.enabled) enabled else disabled
+  def listPublicKeys(): Future[Seq[SchnorrProposition]] = {
+    http.singleRequest(
+      Post(settings.address + "/api/v1/listKeys")
+        .withEntity(HttpEntity(ListPublicKeysRequest(SCHNORR).asJson.noSpaces))
+    )
+      .flatMap {
+        case response@HttpResponse(StatusCodes.OK, _, _, _) =>
+          Unmarshal(response).to[ListPublicKeysResponse].map {
+            case ListPublicKeysResponse(Some(publicKeys), _) =>
+              publicKeys.map(_.publicKey).map(deserializePublicKey)
+            case ListPublicKeysResponse(None, Some(error)) =>
+              logger.warn(s"Error getting list of keys from secure enclave: [$error]")
+              Seq()
+            case _ => Seq()
+          }
+        case response: HttpResponse =>
+          logger.error(s"Secure Enclave returned non-200 response: ${response.status}, ${response.entity}")
+          Future(Seq())
+      }
+      .recover {
+        case e: Exception =>
+          logger.error(s"Unable to connect to secure enclave: ${e.getMessage}")
+          Seq()
+      }
+  }
 
-  private def buildRequest(message: Array[Byte], publicKey: SchnorrProposition): HttpRequest = {
-    Post(settings.address)
+  def signWithEnclave(message: Array[Byte], publicKey_index: (SchnorrProposition, Int)): Future[Option[CertificateSignatureInfo]] = {
+    http.singleRequest(buildSignMessageRequest(message, publicKey_index._1))
+      .flatMap {
+        case response@HttpResponse(StatusCodes.OK, _, _, _) =>
+          Unmarshal(response).to[CreateSignatureResponse].map {
+            case CreateSignatureResponse(Some(signature), _) =>
+              Some(CertificateSignatureInfo(
+                publicKey_index._2,
+                signatureSerializer.parseBytes(BytesUtils.fromHexString(signature))
+              ))
+            case CreateSignatureResponse(None, Some(error)) =>
+              logger.warn(s"Error creating signature: [$error]")
+              None
+            case _ => None
+          }
+        case response: HttpResponse =>
+          logger.error(s"Secure Enclave returned non-200 response: ${response.status}")
+          Future(None)
+      }
+      .recover {
+        case e: Exception =>
+          logger.error(s"Unable to connect to secure enclave: ${e.getMessage}")
+          None
+      }
+  }
+
+  private def buildSignMessageRequest(message: Array[Byte], publicKey: SchnorrProposition): HttpRequest = {
+    Post(settings.address + "/api/v1/createSignature")
       .withEntity(
         HttpEntity(
-          CreateSignatureRequest(message, serializePublicKey(publicKey), "schnorr").asJson.noSpaces
+          CreateSignatureRequest(BytesUtils.toHexString(message), serializePublicKey(publicKey), SCHNORR).asJson.noSpaces
         )
       )
   }
 
+  private def serializePublicKey(publicKey: SchnorrProposition) =
+    BytesUtils.toHexString(keySerializer.toBytes(publicKey))
 
-  private def enabled: Receive = {
-    case SignWithEnclave(message, publicKey_index) =>
-      http.singleRequest(buildRequest(message, publicKey_index._1))
-        .flatMap {
-          case response@HttpResponse(StatusCodes.OK, _, _, _) =>
-            Unmarshal(response).to[CreateSignatureResponse].map {
-              case CreateSignatureResponse(Some(signature), _) =>
-                Some(CertificateSignatureInfo(publicKey_index._2, signatureSerializer.parseBytes(BytesUtils.fromHexString(signature))))
-              case CreateSignatureResponse(None, Some(error)) =>
-                logger.warn(s"Error from Secure Enclave: [$error]")
-                None
-              case _ => None
-            }
-          case _ => Future(None)
-        }
-        .pipeTo(sender())
-  }
-
-  private def disabled: Receive = {
-    case SignWithEnclave(_, _) => sender() ! None
-  }
+  private def deserializePublicKey(publicKey: String) =
+    keySerializer.parseBytes(BytesUtils.fromHexString(publicKey))
 }
 
 object SecureEnclaveApiClient {
-  case class SignWithEnclave(message: Array[Byte],
-                             publicKey_index: (SchnorrProposition, Int))
 
-  case class CreateSignatureRequest(message: Array[Byte],
+  case class CreateSignatureRequest(message: String,
                                     publicKey: String,
                                     `type`: String)
 
   case class CreateSignatureResponse(signature: Option[String],
                                      error: Option[String])
-}
 
-object SecureEnclaveApiClientRef {
-  def props(settings: RemoteKeysManagerSettings)
-           (implicit ec: ExecutionContext): Props =
-    Props(new SecureEnclaveApiClient(settings))
+  case class ListPublicKeysRequest(`type`: String)
 
-  def apply(settings: RemoteKeysManagerSettings)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings))
+  case class PublicKeyResponse(publicKey: String,
+                               `type`: String)
+
+  case class ListPublicKeysResponse(keys: Option[Seq[PublicKeyResponse]],
+                                    error: Option[String])
 }

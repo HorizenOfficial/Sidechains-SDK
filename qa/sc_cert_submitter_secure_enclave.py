@@ -1,35 +1,36 @@
 #!/usr/bin/env python3
-import logging
+import multiprocessing
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
+from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
+    start_sc_nodes, generate_next_block, assert_equal
 from qa.SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_block, connect_sc_nodes, sync_sc_blocks, assert_equal
-from SidechainTestFramework.sc_forging_util import *
 
 """
 Check Certificate submission behaviour with enabled Secure Enclave.
 
 Configuration:
-    Start 1 MC node and 2 SC nodes (with default websocket configuration) disconnected.
-    SC node 2 is a certificate submitter.
-    SC Nodes altogether have enough keys to produce certificate signatures.
+    Start 1 MC node and 1 SC node.
+    Enable Secure Enclave.
+    SC node manages keys 0,1,2.
+    Secure Enclave manages keys 4,5,6
+    SC Node together with secure enclave has enough keys to produce certificate signatures.
 
 Test:
-    - Connect SC node 2 to SC node 1
-    - Generate a few more MC and SC blocks to reach the end of the withdrawal epoch.
-    - Check that certificate was generated. So Submitter and Signer are alive on SC node 2.
+    - Generate a few MC and SC blocks to reach the end of the withdrawal epoch.
+    - Check that certificate was generated.
 """
 
 
 class ScCertSubmitterSecureEnclave(SidechainTestFramework):
     number_of_mc_nodes = 1
-    number_of_sidechain_nodes = 2
+    number_of_sidechain_nodes = 1
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
@@ -45,17 +46,12 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            False, True, list([0, 1, 2])  # certificate submitter is disabled, signing is enabled with 3 schnorr PKs
-        )
-        sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list([3, 4, 5])  # certificate submitter is enabled, signing is enabled with 3 other schnorr PKs
+            True, True, list([0, 1, 2])  # certificate submitter is disabled, signing is enabled with 3 schnorr PKs
         )
 
         network = SCNetworkConfiguration(
             SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
-            sc_node_1_configuration,
-            sc_node_2_configuration)
+            sc_node_1_configuration)
 
         # rewind sc genesis block timestamp for 10 consensus epochs
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
@@ -66,19 +62,15 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
     def run_test(self):
         mc_node = self.nodes[0]
         sc_node1 = self.sc_nodes[0]
-        sc_node2 = self.sc_nodes[1]
 
-        api_server = SecureEnclaveApiServer(self.sc_nodes_bootstrap_info)
-        api_server.start()
+        api_server = SecureEnclaveApiServer(
+            self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_secrets[4:],
+            self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_public_keys[4:],
+        )
 
-        for i in range(2000):
-            generate_next_block(sc_node1, "first node")
+        api_server_thread = multiprocessing.Process(target=lambda: api_server.start())
+        api_server_thread.start()
 
-        connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
-        logging.info("Starting synchronization...")
-        sync_sc_blocks(self.sc_nodes, 100, True)
-
-        logging.info("Synchronization finished.")
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
         # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
         mc_block_hashes = mc_node.generate(mc_blocks_left_for_we - 1)
@@ -93,20 +85,20 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         mc_node.generate(mc_blocks_left_for_we + 1)
 
         # Generate 2 SC blocks on SC node and start them automatic cert creation.
-        generate_next_block(sc_node1, "second node")  # 1 MC block to reach the end of WE
-        generate_next_block(sc_node1, "second node")  # 1 MC block to trigger Submitter logic
+        generate_next_block(sc_node1, "first node")  # 1 MC block to reach the end of WE
+        generate_next_block(sc_node1, "first node")  # 1 MC block to trigger Submitter logic
         self.sc_sync_all()  # Sync SC nodes
 
         # Wait for Certificates appearance
-        time.sleep(10)
-        while mc_node.getmempoolinfo()["size"] < 1 and sc_node2.submitter_isCertGenerationActive()["result"]["state"]:
+        time.sleep(100)
+        while mc_node.getmempoolinfo()["size"] < 1 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
             logging.info("Wait for certificates in the MC mempool...")
-            if sc_node2.submitter_isCertGenerationActive()["result"]["state"]:
-                logging.info("sc_node2 generating certificate now.")
+            if sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
+                logging.info("sc_node1 generating certificate now.")
             time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
-        logging.info("Node after synchronization was able to sign, collect signatures and emit certificate.")
-        api_server.stop()
+        logging.info("Node with Secure Enclave was able to sign, collect signatures and emit certificate.")
+        api_server_thread.terminate()
 
 
 if __name__ == "__main__":
