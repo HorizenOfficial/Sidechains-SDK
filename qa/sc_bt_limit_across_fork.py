@@ -50,7 +50,11 @@ class ScBtLimitAcrossForkTest(SidechainTestFramework):
             cert_submitter_enabled=True,  # enable submitter
             cert_signing_enabled=True  # enable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, sc_creation_version=SC_CREATION_VERSION_1, csw_enabled=True), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+                                                        sc_creation_version=SC_CREATION_VERSION_1,
+                                                        csw_enabled=True,
+                                                        type_of_circuit_number=int(self.options.certcircuittype)),
+                                         sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720*120*5).sidechain_id
 
     def sc_setup_nodes(self):

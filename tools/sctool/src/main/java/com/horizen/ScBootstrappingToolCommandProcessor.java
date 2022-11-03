@@ -85,6 +85,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             case "generateCertProofInfo":
                 processGenerateCertProofInfo(command.data());
                 break;
+            case "generateCertWithKeyRotationProofInfo":
+                processGenerateCertWithKeyRotationProofInfo(command.data());
+                break;
             case "generateCswProofInfo":
                 processGenerateCswProofInfo(command.data());
                 break;
@@ -247,7 +250,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
     private void processGenerateCertProofInfo(JsonNode json) {
         if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
-            printGenerateCertProofInfoUsageMsg("wrong public keys");
+            printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys");
             return;
         }
 
@@ -258,7 +261,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             JsonNode pkNode = pksIterator.next();
 
             if (!pkNode.isTextual()) {
-                printGenerateCertProofInfoUsageMsg("wrong public key format");
+                printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys format");
                 return;
             }
 
@@ -322,7 +325,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        List<byte[]> publicKeysBytes = publicKeys.stream().map(pk -> BytesUtils.fromHexString(pk)).collect(Collectors.toList());
+        List<byte[]> publicKeysBytes = publicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
         String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.sigProofThresholdCircuitFunctions().generateSysDataConstant(publicKeysBytes, threshold));
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -337,6 +340,125 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         for (String publicKeyStr : publicKeys) {
             keyArrayNode.add(publicKeyStr);
+        }
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
+    private void processGenerateCertWithKeyRotationProofInfo(JsonNode json) {
+        if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
+            printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys");
+            return;
+        }
+
+        List<String> signersPublicKeys = new ArrayList<String>();
+
+        Iterator<JsonNode> pksIterator = json.get("signersPublicKeys").elements();
+        while (pksIterator.hasNext()) {
+            JsonNode pkNode = pksIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys format");
+                return;
+            }
+
+            signersPublicKeys.add(pkNode.asText());
+        }
+
+        if (!json.has("mastersPublicKeys") || !json.get("mastersPublicKeys").isArray()) {
+            printGenerateCertProofInfoUsageMsg("wrong public keys");
+            return;
+        }
+
+        List<String> mastersPublicKeys = new ArrayList<>();
+
+        Iterator<JsonNode> mastersPublicKeysIterator = json.get("mastersPublicKeys").elements();
+        while (mastersPublicKeysIterator.hasNext()) {
+            JsonNode pkNode = mastersPublicKeysIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertProofInfoUsageMsg("wrong mastersPublicKeys format");
+                return;
+            }
+
+            mastersPublicKeys.add(pkNode.asText());
+        }
+
+        assert mastersPublicKeys.size() == signersPublicKeys.size() : "mastersPublicKeys and signersPublicKeys must have the same size";
+
+        if (!json.has("threshold") || !json.get("threshold").isInt()) {
+            printGenerateCertProofInfoUsageMsg("wrong threshold");
+            return;
+        }
+
+        int threshold = json.get("threshold").asInt();
+
+        if (threshold <= 0 || threshold > signersPublicKeys.size()) {
+            printGenerateCertProofInfoUsageMsg("wrong threshold: " + threshold);
+            return;
+        }
+
+        if (!json.has("provingKeyPath") || !json.get("provingKeyPath").isTextual()) {
+            printGenerateCertProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
+            return;
+        }
+        String provingKeyPath = json.get("provingKeyPath").asText();
+
+        if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
+            printGenerateCertProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            return;
+        }
+        String verificationKeyPath = json.get("verificationKeyPath").asText();
+
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+
+        // Generate all keys only if verification key doesn't exist.
+        // Note: we are interested only in verification key raw data.
+        if(!Files.exists(Paths.get(verificationKeyPath))) {
+
+            if (!initDlogKey()) {
+                printer.print("Error occurred during dlog key generation.");
+                return;
+            }
+
+            int numOfCustomFields = 1;
+            if (!CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateCoboundaryMarlinSnarkKeys(signersPublicKeys.size(), provingKeyPath, verificationKeyPath, numOfCustomFields)) {
+                printer.print("Error occurred during snark keys generation.");
+                return;
+            }
+        }
+        // Read verification key from file
+        String verificationKey = CryptoLibProvider.commonCircuitFunctions().getCoboundaryMarlinSnarkVerificationKeyHex(verificationKeyPath);
+        if(verificationKey.isEmpty()) {
+            printer.print("Verification key file is empty or the key is broken.");
+            return;
+        }
+
+        List<byte[]> signersPublicKeysBytes = signersPublicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
+        List<byte[]> mastersPublicKeysBytes = mastersPublicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
+
+        byte[] keysRootHash = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateKeysRootHash(signersPublicKeysBytes, mastersPublicKeysBytes);
+
+        String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateSysDataConstant(keysRootHash, threshold));
+
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        ObjectNode resJson = mapper.createObjectNode();
+
+        resJson.put("maxPks", signersPublicKeys.size());
+        resJson.put("threshold", threshold);
+        resJson.put("genSysConstant", genSysConstant);
+        resJson.put("verificationKey", verificationKey);
+
+        ArrayNode signingKeyArrayNode = resJson.putArray("signersPublicKeys");
+
+        for (String publicKeyStr : signersPublicKeys) {
+            signingKeyArrayNode.add(publicKeyStr);
+        }
+
+        ArrayNode masterKeyArrayNode = resJson.putArray("mastersPublicKeys");
+        for (String publicKeyStr : mastersPublicKeys) {
+            signingKeyArrayNode.add(publicKeyStr);
         }
 
         String res = resJson.toString();
