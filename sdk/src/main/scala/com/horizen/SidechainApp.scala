@@ -224,6 +224,10 @@ class SidechainApp @Inject()
 
     if (params.withdrawalEpochLength < minVirtualEpochLength)
       throw new IllegalArgumentException("Virtual withdrawal epoch length is too short.")
+
+    log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")
+  } else {
+    log.info(s"Sidechain is ceasing, withdrawal epoch length is ${params.withdrawalEpochLength}.")
   }
 
   // Configure Horizen address json serializer specifying proper network type.

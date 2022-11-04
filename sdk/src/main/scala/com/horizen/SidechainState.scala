@@ -136,17 +136,21 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
     val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
-    if(!params.isNonCeasing) {
+    if(params.isNonCeasing) {
+      // For non-ceasing sidechains certificate must be validated just when it has been received.
+      // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
+      // then the whole block is invalid.
+      mod.topQualityCertificates.foreach(cert => validateTopQualityCertificate(cert, cert.epochNumber))
+    } else {
+      // For ceasing sidechains submission window concept is used.
       // If SC block has reached the certificate submission window end -> check the top quality certificate
       // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
       if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
         // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.nonEmpty match {
-          case true => Some(mod.topQualityCertificateOpt.get)
-          case false => stateStorage.getTopQualityCertificate(certReferencedEpochNumber)
-        }
+        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificates.lastOption.orElse(
+          stateStorage.getTopQualityCertificate(certReferencedEpochNumber))
 
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
         topQualityCertificateOpt match {
@@ -157,11 +161,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
               s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
         }
       }
-    } else { // Non-ceasing Sidechain logic
-      // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-      val topQualityCertificates: Seq[WithdrawalEpochCertificate] = mod.topQualityCertificates
-
-      topQualityCertificates.foreach(cert => validateTopQualityCertificate(cert, cert.epochNumber))
     }
 
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
@@ -251,6 +250,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     // Check that the top quality certificate data is relevant to the SC active chain cert data.
     // There is no need to check endEpochBlockHash, epoch number and Snark proof, because SC trusts MC consensus.
     // Currently we need to check only the consistency of backward transfers and utxoMerkleRoot
+    // TODO: for non-ceasing sidechains remove WRBs only when the proper cert has been validated
     val expectedWithdrawalRequests = withdrawalRequests(certReferencedEpochNumber)
 
     // Simple size check
@@ -428,7 +428,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
-          mod.topQualityCertificateOpt,
+          mod.topQualityCertificates.lastOption, // we are interested only in the most recent top quality certificate
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions)
         )
@@ -474,7 +474,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       withdrawalEpochInfo, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0, 0)), params)
 
     val scHasCeased: Boolean = !params.isNonCeasing && hasReachedCertificateSubmissionWindowEnd &&
-      topQualityCertificateOpt.isEmpty && stateStorage.getTopQualityCertificate(withdrawalEpochInfo.epoch - 1).isEmpty
+      topQualityCertificateOpt.orElse(stateStorage.getTopQualityCertificate(withdrawalEpochInfo.epoch - 1)).isEmpty
 
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)
     if(isWithdrawalEpochFinished) {

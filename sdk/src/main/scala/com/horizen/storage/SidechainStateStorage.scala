@@ -239,7 +239,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     require(withdrawalRequestAppendSeq != null, "Seq of WithdrawalRequests to append must be NOT NULL. Use empty Seq instead.")
     require(!withdrawalRequestAppendSeq.contains(null), "WithdrawalRequest to append must be NOT NULL.")
     require(blockFeeInfo != null, "BlockFeeInfo must be NOT NULL.")
-//    require(topQualityCertificates.map(c => c.epochNumber).distinct.length == topQualityCertificates.length, "TopQualityCertificates must be from different epochs.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()

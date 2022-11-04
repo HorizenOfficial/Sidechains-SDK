@@ -77,17 +77,32 @@ case class MainchainBlockReference(
       if (data.absenceProof.isDefined)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
-      // Check top quality certificate custom fields.
+      if(params.isNonCeasing) {
+        // For non-ceasing sidechain all certificates are meaningful.
+        // This check is needed to prevent malicious Forger to hide some certs in a lower quality leaves.
+        if(data.lowerCertificateLeaves.nonEmpty)
+          throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} for non-ceasing " +
+            s"sidechains can't contains lower quality leaves.")
+      } else {
+        // For ceasing sidechains it can be only 1 top quality certificate.
+        // This check is needed to prevent Forger to include unnecessary the full representation of lower quality certificatges.
+        if(data.topQualityCertificates.size > 1) {
+          throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} for ceasing " +
+            s"sidechains can't contains multiple top quality certificates.")
+        }
+      }
+
+      // Check top quality certificates custom fields.
       data.topQualityCertificates.foreach(cert => {
         if (params.scCreationBitVectorCertificateFieldConfigs.size != cert.bitVectorCertificateFields.size) {
           throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
-            s"bitvectors number is inconsistent to Sc Creation info.")
+            s"${BytesUtils.toHexString(cert.hash)} bitvectors number is inconsistent to Sc Creation info.")
         }
         for (i <- cert.bitVectorCertificateFields.indices) {
           // Note: bitVectorSizeBits must be transformed to bytes first. Considering the protocol we are sure that bit size % 8 == 0.
           if (cert.bitVectorCertificateFields(i).tryMerkleRootBytesWithCheck(BytesUtils.getBytesFromBits(params.scCreationBitVectorCertificateFieldConfigs(i).getBitVectorSizeBits)).isFailure)
             throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
-              s"bitvectors data length is invalid.")
+              s"${BytesUtils.toHexString(cert.hash)} bitvectors data length is invalid.")
         }
       })
 
@@ -186,15 +201,20 @@ object MainchainBlockReference extends ScorexLogging {
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
           sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))
 
-        // Certificates for a given sidechain are ordered by quality: from lowest to highest.
-        // So get the last sidechain related certificate if present
-        // For non-ceasing sidechain select all related certificates.
-        val topQualityCertificates: Seq[WithdrawalEpochCertificate] = if (params.isNonCeasing) certificates.filter(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
-                                                          else certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data)).toList
+        val topQualityCertificates: Seq[WithdrawalEpochCertificate] =
+        if (params.isNonCeasing) {
+          // Non ceasing sidechains have only 1 certificate per epoch
+          // So select all related certificates, they should be validated in the state.
+          certificates.filter(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
+        } else { // is ceasing sidechain
+          // Certificates for a given sidechain are ordered by quality: from lowest to highest.
+          // So get the last sidechain related certificate if present
+          // There is no need to get lower quality certificates, only their leaf representation is enough
+          certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data)).toList
+        }
 
 
-        // Get lower quality cert leaves if present.
-        // TODO Remove from non-ceasing version
+        // For non-ceasing sidechains only get lower quality cert leaves if present.
         val certLeaves = commitmentTree.getCertLeaves(sidechainId.data)
         val lowerCertificateLeaves: Seq[Array[Byte]] = if(params.isNonCeasing || certLeaves.isEmpty) Seq() else certLeaves.init
 

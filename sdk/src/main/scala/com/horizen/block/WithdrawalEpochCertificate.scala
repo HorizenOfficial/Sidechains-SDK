@@ -79,6 +79,14 @@ case class WithdrawalEpochCertificate
 }
 
 object WithdrawalEpochCertificate {
+  /** Source: consensus.h of Zen MC code:
+   * The minimum theoretical possible size of a consistent cert.
+   * Large of its part is taken by the proof, which has a the minimum theoretical possible size of ~1086
+   * (was 2850 assuming SegmentSize = 1 << 18)
+   * static const unsigned int MIN_CERT_SIZE = MIN_PROOF_SIZE + 100;
+   */
+  val MIN_CERT_SIZE: Int = 1186
+
   def parse(certificateBytes: Array[Byte], offset: Int) : WithdrawalEpochCertificate = {
 
     var currentOffset: Int = offset

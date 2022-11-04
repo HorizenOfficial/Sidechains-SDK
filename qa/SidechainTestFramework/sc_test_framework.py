@@ -143,6 +143,8 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="log4j log level for application log file")
         parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
                           help="log4j log level for application console")
+        parser.add_option("--nonceasing", dest="nonceasing", default=False, action="store_true",
+                          help="Specify if sidechain is non-ceasing. By default, it is ceasing.")
 
         self.add_options(parser)
         self.sc_add_options(parser)

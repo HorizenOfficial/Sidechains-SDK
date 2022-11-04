@@ -62,8 +62,9 @@ class SCBackwardTransferNonCeaing(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
                                                         cert_max_keys=cert_max_keys,
                                                         cert_sig_threshold=cert_sig_threshold,
-                                                        sc_creation_version=2), sc_node_configuration,)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, is_non_ceasing=True)
+                                                        sc_creation_version=2,
+                                                        is_non_ceasing=True), sc_node_configuration)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)

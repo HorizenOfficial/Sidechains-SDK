@@ -53,6 +53,7 @@ testScripts=(
     'mc_sc_forging_fee_payments.py'
     'mc_sc_nodes_alive.py'
     'sc_backward_transfer.py'
+    'sc_backward_transfer.py --nonceasing'
     'sc_blockid_for_backup.py'
     'sc_bootstrap.py'
     'sc_bt_limit.py'

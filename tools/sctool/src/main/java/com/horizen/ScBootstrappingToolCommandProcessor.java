@@ -436,7 +436,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                       "\t\t\"secret\": <secret hex>, - private key to sign the sc genesis block\n" +
                       "\t\t\"vrfSecret\": <vrf secret hex>, secret vrf key\n" +
                       "\t\t\"info\": <sc genesis info hex> - hex data retrieved from MC RPC call 'getscgenesisinfo'\n" +
-                      "\t\t\"virtualWithdrawalEpochLength\": positive integers - Optional. Should be 10 or higher.\n" +
+                      "\t\t\"virtualWithdrawalEpochLength\": optional field used for non-ceasing sidechain to specify the cert generation frequency.\n" +
                       "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
                       "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
                       "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
@@ -503,18 +503,17 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        boolean isNonCeasing = false;
+        // virtualWithdrawalEpochLength is an optional field that
         int virtualWithdrawalEpochLength = 0;
-        if (json.has("virtualWithdrawalEpochLength") && !json.get("virtualWithdrawalEpochLength").isInt()) {
-            printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' should be integer.");
-            return;
-        }
-
-        if (json.has("virtualWithdrawalEpochLength") && json.get("virtualWithdrawalEpochLength").isInt()) {
+        if (json.has("virtualWithdrawalEpochLength")) {
+            if(!json.get("virtualWithdrawalEpochLength").isInt()) {
+                printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' should be integer.");
+                return;
+            }
             virtualWithdrawalEpochLength = json.get("virtualWithdrawalEpochLength").asInt();
 
             if (virtualWithdrawalEpochLength < 0) {
-                printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' should be positive.");
+                printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' can't be negative.");
                 return;
             }
         }
@@ -646,15 +645,15 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
-            isNonCeasing = (withdrawalEpochLength == 0);
+            boolean isNonCeasing = (withdrawalEpochLength == 0);
 
             if (isNonCeasing && virtualWithdrawalEpochLength == 0) {
-                printGenesisInfoUsageMsg("For nonCeasing Sidechains virtualWithdrawalEpochLength should be specified.");
+                printGenesisInfoUsageMsg("For non-ceasing sidechains virtualWithdrawalEpochLength must be specified.");
                 return;
             }
 
             if (!isNonCeasing && virtualWithdrawalEpochLength != 0) {
-                printGenesisInfoUsageMsg("For ceasing Sidechains virtualWithdrawalEpochLength should not be specified.");
+                printGenesisInfoUsageMsg("For ceasing sidechains virtualWithdrawalEpochLength must not be specified.");
                 return;
             }
 
