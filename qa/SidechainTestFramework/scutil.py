@@ -72,15 +72,20 @@ def wait_for_next_sc_blocks(node, expected_height, wait_for=25):
         time.sleep(WAIT_CONST)
 
 
-def wait_for_sc_node_initialization(nodes):
+def wait_for_sc_node_initialization(nodes, machine_credentials, node_data):
     """
     Wait for SC Nodes to be fully initialized. This is done by pinging a node until its socket will be fully open
     """
     for i in range(len(nodes)):
+        if machine_credentials is not None:
+            ipaddress = machine_credentials[node_data[i].machine].ip_address
+        else:
+            ipaddress = "127.0.0.1"
+
         rpc_port = sc_rpc_port(i)
-        logging.info(f"Waiting for Node{i} with rpc_port: {rpc_port} to be fully initialized")
+        logging.info(f"Waiting for Node{i} with ip_address: {ipaddress} rpc_port: {rpc_port} to be fully initialized")
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-            while not sock.connect_ex(("127.0.0.1", rpc_port)) == 0:
+            while not sock.connect_ex((ipaddress, rpc_port)) == 0:
                 time.sleep(WAIT_CONST)
 
 
@@ -340,7 +345,6 @@ def generate_csw_proof_info(withdrawal_epoch_len, keys_paths):
 
 
 def connect_ssh_client(machine_credentials):
-    print(f"IP ADDRESS: {machine_credentials.ip_address}")
     ssh_client = paramiko.SSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -410,7 +414,7 @@ def copy_files_to_machine(ssh_client, machine_credentials):
 
 def copy_node_conf_to_machine(ssh_client, conf, data_directory):
     create_directory_on_machine(ssh_client, data_directory)
-    print(f"Copying conf file '{conf}' to {data_directory}")
+    logging.info(f"Copying conf file '{conf}' to {data_directory}")
     with SCPClient(ssh_client.get_transport()) as scp:
         scp.put(conf, data_directory)
 
@@ -442,18 +446,31 @@ def mk_each_dir(sftp, remote_path):
                 pass
 
 
-def start_sc_node_on_machine(machine_credentials, bash_cmd):
-    ssh_client = connect_ssh_client(machine_credentials)
-    print(f"Running bash_cmd: {bash_cmd}")
-    stdin, stdout, stderr = ssh_client.exec_command(bash_cmd)
+def start_sc_node_on_machine(machine_credentials, bashcmd, use_multiprocessing, processor, config_name):
+    if machine_credentials is None:
+        raise Exception("Missing machine credentials to start sc_node on machine")
 
-    if stdout.channel.recv_exit_status() != 0:
-        raise Exception(f"bash_cmd did not execute successfully on {machine_credentials.ip_address}, node not started.")
+    bashcmd = f'/bin/bash -c "source ./.bashrc ; {bashcmd}"'
+
+    if use_multiprocessing:
+        # Assumes 2 processors are used per node
+        processors = get_processors_to_map(processor)
+        bashcmd = f'/bin/bash -c "source ./.bashrc ; taskset -ca {processors[0]}-{processors[1]} {bashcmd}"'
+
+    ssh_client = connect_ssh_client(machine_credentials)
+    logging.info(f"Running bashcmd: {bashcmd}")
+    stdin, stdout, stderr = ssh_client.exec_command(bashcmd)
 
     disconnect_ssh_client(ssh_client)
     # TODO: is this return correct?
     return stdout
 
+
+def kill_all_sc_nodes_on_machine(machine_credentials):
+    for machine in machine_credentials:
+        ssh_client = connect_ssh_client(machine)
+        ssh_client.exec_command("pkill -f sidechains-sdk-simpleapp")
+        disconnect_ssh_client(ssh_client)
 
 """
 Create directories for each node and configuration files inside them.
@@ -690,13 +707,14 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
     examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
     if binary is None:
-        # TODO: can we set binary before calling start_sc_node?
         if machine_credentials is not None:
-            binary = f"{machine_credentials.base_directory}/simpleapp/target/" + lib_separator + \
-                     f"{machine_credentials.base_directory}/simpleapp/target/lib/* home.rushby.nodes.simpleapp.src.main.java.com.horizen.examples.SimpleApp"
+            directory = machine_credentials.base_directory
         else:
-            binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + \
-                     f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+            directory = examples_dir
+
+        binary = f"{directory}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + \
+                 f"{directory}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -715,19 +733,13 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     '''
     bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
 
-    if use_multiprocessing and machine_credentials is not None:
-        # Assumes 2 processors are used per node
-        processors = get_processors_to_map(processor)
-        bashcmd = f'/bin/bash -c "source ./.bashrc ; taskset -cpa {str(processors[0])},{str(processors[1])} {bashcmd}"'
-
     if print_output_to_file:
-        # TODO: multi-machine with stdout
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
-            # TODO: How to handle these subprocesses for multi machine
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
     else:
         if machine_credentials is not None:
-            sidechainclient_processes[i] = start_sc_node_on_machine(machine_credentials, bashcmd)
+            sidechainclient_processes[i] = start_sc_node_on_machine(machine_credentials, bashcmd, use_multiprocessing,
+                                                                    processor, f"node{i}.conf")
         else:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
 
@@ -792,8 +804,7 @@ def start_sc_nodes_with_multiprocessing(node_data, dirname, extra_args=None, rpc
                           auth_api_key=auth_api_key, use_multiprocessing=True, processor=i)
             for i in range(num_nodes)]
 
-    print(f"Nodes: {nodes}")
-    wait_for_sc_node_initialization(nodes)
+    wait_for_sc_node_initialization(nodes, machine_credentials, node_data)
 
     return nodes
 

@@ -312,12 +312,15 @@ class PerformanceTest(SidechainTestFramework):
                 max_connections = 1
 
             if self.multi_machine:
-                mc_hostname = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+                try:
+                    mc_hostname = urllib.request.urlopen('https://ident.me', timeout=10).read().decode('utf8')
+                except Exception as e:
+                    raise Exception(f"Unable to access 'https://ident.me' to retrieve public ip address. {e}")
                 host_machine = self.sc_node_data[index]["machine"]
                 try:
                     machine_credentials = machines[host_machine]
-                except Exception:
-                    raise "Unable to retrieve machine credentials for node"
+                except Exception as e:
+                    raise Exception(f"Unable to retrieve machine credentials for node {e}")
             else:
                 mc_hostname = mc_node.hostname
                 machine_credentials = None
