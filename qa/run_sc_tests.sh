@@ -81,6 +81,7 @@ testScripts=(
     'sc_mempool_max_size.py'
     'sc_mempool_min_fee_rate.py'
     'sc_multiple_certs.py'
+    'sc_multiple_certs_no_ceasing.py'
     'sc_node_api_test.py'
     'sc_node_response_along_sync.py'
     'sc_nodes_initialize.py'

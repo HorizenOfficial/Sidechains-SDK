@@ -107,8 +107,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  def lastCertificateEpochNumber(): Option[Int] = {
-    stateStorage.getLastCertificateEpochNumber()
+  def lastCertificateReferencedEpoch(): Option[Int] = {
+    stateStorage.getLastCertificateReferencedEpoch()
   }
 
   def getWithdrawalEpochInfo: WithdrawalEpochInfo = {

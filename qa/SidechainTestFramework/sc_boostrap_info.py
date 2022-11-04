@@ -45,6 +45,10 @@ class SCCreationInfo(object):
         if csw_enabled and is_non_ceasing:
             raise RuntimeError('Cannot enable CSW and Non-ceasing options simultaneously.')
 
+        if sc_creation_version != SC_CREATION_VERSION_2 and is_non_ceasing:
+            raise RuntimeError('Cannot initialize non-ceasing sidechain with version different '
+                               'from ' + SC_CREATION_VERSION_2 + '. Found ' + sc_creation_version)
+
 
 """
 Sidechain websocket configuration to be added inside the configuration file.

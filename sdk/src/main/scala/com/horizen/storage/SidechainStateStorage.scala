@@ -150,6 +150,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     withdrawalRequests
   }
 
+  // Note: For non-ceasing sidechain always `None`, since we don't store the whole certificate.
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
       case Some(baw) =>
@@ -163,7 +164,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getLastCertificateEpochNumber(): Option[Int] = {
+  def getLastCertificateReferencedEpoch(): Option[Int] = {
     storage.get(getLastCertificateEpochNumberKey).asScala match {
       case Some(baw) =>
         Try {
@@ -300,14 +301,23 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
     }
 
-    // Store the top quality cert for epoch if present
-    if (params.isNonCeasing && topQualityCertificateOpt.nonEmpty) {
-      updateList.add(new JPair(getLastCertificateEpochNumberKey, new ByteArrayWrapper(Ints.toByteArray(topQualityCertificateOpt.get.epochNumber))))
+
+    if (params.isNonCeasing) {
+      // For non-ceasing sidechain store referenced epoch number of the top certificate
+      // No need to store the whole cert, since it is never used after.
+      topQualityCertificateOpt.foreach(certificate => {
+        updateList.add(new JPair(getLastCertificateEpochNumberKey,
+          new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
+      })
     } else {
-      topQualityCertificateOpt.foreach(certificate =>
+      // For ceasing sidechain store referenced epoch number and the top quality cert for epoch if present
+      topQualityCertificateOpt.foreach(certificate => {
+        updateList.add(new JPair(getLastCertificateEpochNumberKey,
+         new ByteArrayWrapper(Ints.toByteArray(topQualityCertificateOpt.get.epochNumber))))
+
         updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
           WithdrawalEpochCertificateSerializer.toBytes(certificate)))
-      )
+      })
     }
 
     // Update BlockFeeInfo data

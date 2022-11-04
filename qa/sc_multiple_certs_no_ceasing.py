@@ -5,7 +5,7 @@ import time
 import math
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import fail, assert_false, assert_true, start_nodes, \
@@ -55,12 +55,16 @@ class SCMultipleCertsNoCeasing(SidechainTestFramework):
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, sc_creation_version=2),
+            SCCreationInfo(mc_node,
+                           self.sc_creation_amount,
+                           self.sc_withdrawal_epoch_length,
+                           sc_creation_version=SC_CREATION_VERSION_2,
+                           is_non_ceasing=True),
             sc_node_1_configuration
         )
 
         # rewind sc genesis block timestamp for 5 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5, is_non_ceasing=True)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir
