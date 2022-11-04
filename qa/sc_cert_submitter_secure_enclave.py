@@ -91,13 +91,14 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         self.sc_sync_all()  # Sync SC nodes
 
         # Wait for Certificates appearance
-        time.sleep(100)
+        time.sleep(10)
         while mc_node.getmempoolinfo()["size"] < 1 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
             logging.info("Wait for certificates in the MC mempool...")
             if sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
                 logging.info("sc_node1 generating certificate now.")
             time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
+        assert_equal(6, mc_node.getrawtransaction(mc_node.getrawmempool()[0], 1), "Certificate has wrong quality")
         logging.info("Node with Secure Enclave was able to sign, collect signatures and emit certificate.")
         api_server_thread.terminate()
 

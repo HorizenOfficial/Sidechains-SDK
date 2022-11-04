@@ -38,11 +38,11 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
     "tell if it is enabled" in {
       val (apiClient, serverMock) = prepareApiClient(false)
-      assert(false.equals(apiClient.isEnabled))
+      apiClient.isEnabled shouldBe false
       verifyNoInteractions(serverMock)
 
       val (apiClientEnabled, mockEnabled) = prepareApiClient()
-      assert(true.equals(apiClientEnabled.isEnabled))
+      apiClientEnabled.isEnabled shouldBe true
       verifyNoInteractions(mockEnabled)
     }
 
@@ -61,7 +61,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
       val result = Await.result(apiClient.listPublicKeys(), 1.second)
 
-      assert(result.isEmpty)
+      result shouldBe empty
       verify(serverMock).singleRequest(any(), any(), any(), any())
     }
 
@@ -92,10 +92,8 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
       val result = Await.result(apiClient.listPublicKeys(), 1.second)
 
-      assert(result.size.equals(3))
-      assert(result(0).equals(key1))
-      assert(result(1).equals(key2))
-      assert(result(2).equals(key3))
+      result should have size 2
+      result should equal (Seq(key1, key2, key3))
       verify(serverMock).singleRequest(any(), any(), any(), any())
     }
 
@@ -114,7 +112,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
       val result = Await.result(apiClient.listPublicKeys(), 1.second)
 
-      assert(result.isEmpty)
+      result shouldBe empty
       verify(serverMock).singleRequest(any(), any(), any(), any())
     }
 
@@ -136,7 +134,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
         apiClient.signWithEnclave("test".getBytes, (publicKey, index)), 1.second
       )
 
-      assert(result.isEmpty)
+      result shouldBe empty
       verify(serverMock).singleRequest(any(), any(), any(), any())
     }
 
@@ -160,9 +158,9 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
         apiClient.signWithEnclave(message, (publicKey, index)), 1.second
       )
 
-      assert(result.isDefined)
-      assert(result.get.pubKeyIndex.equals(index))
-      assert(result.get.signature.isValid(publicKey, message))
+      result shouldBe defined
+      result.get.pubKeyIndex shouldBe index
+      result.get.signature.isValid(publicKey, message) shouldBe true
     }
 
     "process several requests with errors between them signWithEnclave" in {
@@ -194,11 +192,11 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
       )
         .flatten
 
-      assert(result.size.equals(2))
-      assert(result.head.pubKeyIndex.equals(1))
-      assert(result.head.signature.isValid(publicKey, message))
-      assert(result.last.pubKeyIndex.equals(3))
-      assert(result.last.signature.isValid(publicKey, message))
+      result should have size 2
+      result.head.pubKeyIndex shouldBe 1
+      result.head.signature.isValid(publicKey, message) shouldBe true
+      result.last.pubKeyIndex shouldBe 3
+      result.last.signature.isValid(publicKey, message) shouldBe true
     }
 
   }

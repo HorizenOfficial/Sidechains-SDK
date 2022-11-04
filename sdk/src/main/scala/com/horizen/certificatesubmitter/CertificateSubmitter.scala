@@ -341,7 +341,8 @@ class CertificateSubmitter(settings: SidechainSettings,
       .map(Future.sequence(_))
       .flatten
 
-    Await.result(signaturesFromEnclaveFuture, timeoutDuration).flatten
+    Try(Await.result(signaturesFromEnclaveFuture, timeoutDuration).flatten)
+      .getOrElse(Seq())
   }
 
   private def locallyGeneratedSignature: Receive = {
