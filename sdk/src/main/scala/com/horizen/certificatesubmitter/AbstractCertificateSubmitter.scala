@@ -14,12 +14,14 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
+import com.horizen.fork.ForkManager
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
+
 import java.io.File
 import java.util
 import java.util.Optional
@@ -197,8 +199,9 @@ abstract class AbstractCertificateSubmitter (settings: SidechainSettings,
   // No MBTRs support, so no sense to specify btrFee different to zero.
   private[certificatesubmitter] def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
 
-  // Every positive value FT is allowed.
-  private[certificatesubmitter] def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
+  private[certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
+    ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
+  }
 
   private[certificatesubmitter] def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
