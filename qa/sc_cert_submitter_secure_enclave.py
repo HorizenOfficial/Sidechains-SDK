@@ -98,7 +98,8 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
                 logging.info("sc_node1 generating certificate now.")
             time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
-        assert_equal(6, mc_node.getrawtransaction(mc_node.getrawmempool()[0], 1), "Certificate has wrong quality")
+        assert_equal(6, mc_node.getrawtransaction(mc_node.getrawmempool()[0], 1)['cert']['quality'],
+                     "Certificate has wrong quality")
         logging.info("Node with Secure Enclave was able to sign, collect signatures and emit certificate.")
         api_server_thread.terminate()
 

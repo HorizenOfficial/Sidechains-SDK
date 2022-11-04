@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import os
 import subprocess
 import threading
@@ -10,6 +9,18 @@ from flask import Flask, request, json
 class SecureEnclaveApiServer(object):
 
     def start(self):
+        # REQUEST
+        # {
+        #     "message": message,
+        #     "publicKey": publicKey,
+        #     "privateKey": privateKey, (optional)
+        #     "type": "string"["schnorr"]
+        # }
+        # RESPONSE
+        # {
+        #     "signature": signature,
+        #     "error": "description" | null
+        # }
         @self.app.route('/api/v1/createSignature', methods=['POST'])
         def sign_message():
             content = json.loads(request.data)
@@ -24,6 +35,20 @@ class SecureEnclaveApiServer(object):
             logging.info("SecureEnclaveApiServer /api/v1/createSignature result " + str(result))
             return result
 
+        # REQUEST
+        # {
+        #     "type": "string"["schnorr"](optional)
+        # }
+        # RESPONSE
+        # {
+        #     "keys": [
+        #         {
+        #             "publicKey": "publicKey",
+        #             "type": "string"["schnorr"]
+        #         }
+        #     ],
+        #     "error": "description" | null
+        # }
         @self.app.route('/api/v1/listKeys', methods=['POST'])
         def list_keys():
             logging.info("SecureEnclaveApiServer /api/v1/listKeys received request")
@@ -38,7 +63,11 @@ class SecureEnclaveApiServer(object):
         self.thread = threading.Thread(target=self.app.run(debug=False))
         self.thread.run()
 
-    def __init__(self, schnorr_secrets=[], schnorr_public_keys=[]):
+    def __init__(self, schnorr_secrets=None, schnorr_public_keys=None):
+        if schnorr_public_keys is None:
+            schnorr_public_keys = []
+        if schnorr_secrets is None:
+            schnorr_secrets = []
         self.thread = None
         self.app = Flask(__name__)
         self.schnorr_secrets = schnorr_secrets
