@@ -1,6 +1,5 @@
 package com.horizen.account.state
 
-import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.ResourceHandle
 import com.horizen.evm.interop.EvmLog
 
@@ -115,8 +114,6 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
   override def getAccountStateRoot: Array[Byte] = view.getAccountStateRoot
 
   override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = view.getListOfForgerStakes
-
-  override def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = view.getOrderedForgingStakesInfoSeq
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = view.getForgerStakeData(stakeId)
 

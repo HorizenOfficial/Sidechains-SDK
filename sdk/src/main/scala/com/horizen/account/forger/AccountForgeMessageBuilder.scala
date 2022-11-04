@@ -382,7 +382,7 @@ class AccountForgeMessageBuilder(
       filteredForgingStakeInfoSeq.flatMap(forgingStakeInfo => {
         merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgingStakeInfo.hash)) match {
           case -1 =>
-            log.warn("ForgingStakeInfo not a leaf in merkle tree: should never happen")
+            log.warn(s"ForgingStakeInfo not a leaf in merkle tree: should never happen: $forgingStakeInfo ")
             None
           case index =>
             Some(ForgingStakeMerklePathInfo(forgingStakeInfo, forgingStakeInfoTree.getMerklePathForLeaf(index)))
