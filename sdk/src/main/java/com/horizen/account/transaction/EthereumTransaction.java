@@ -103,7 +103,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public byte transactionTypeId() {
-        return AccountTransactionsIdsEnum.EthereumTransaction.id();
+        return AccountTransactionsIdsEnum.EthereumTransactionId.id();
     }
 
     @Override

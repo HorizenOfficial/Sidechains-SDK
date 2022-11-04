@@ -160,7 +160,7 @@ public class EthereumTransactionTest {
                 ethereumTransaction.toString());
 
         // Test 5: ethereum transaction object returns transaction type id correctly
-        assertEquals((byte) 2, ethereumTransaction.transactionTypeId());
+        assertEquals((byte) 1, ethereumTransaction.transactionTypeId());
 
         // Test 6: ethereum transaction object returns version correctly
         assertEquals(0/*legacy*/, ethereumTransaction.version());
@@ -293,7 +293,7 @@ public class EthereumTransactionTest {
                 ethereumTransaction.toString());
 
         // Test 3: ethereum transaction object returns transaction type id correctly
-        assertEquals((byte) 2, ethereumTransaction.transactionTypeId());
+        assertEquals((byte) 1, ethereumTransaction.transactionTypeId());
 
         // Test 4: ethereum transaction object returns version correctly
         assertEquals(2 /*eip1559*/, ethereumTransaction.version());
@@ -384,7 +384,7 @@ public class EthereumTransactionTest {
          */
 
         // Test 4: ethereum transaction object returns transaction type id correctly
-        assertEquals((byte) 2, ethereumTransaction.transactionTypeId());
+        assertEquals((byte) 1, ethereumTransaction.transactionTypeId());
 
         // Test 5: ethereum transaction object returns version correctly
         assertEquals(0 /*legacy*/, ethereumTransaction.version());
@@ -466,7 +466,7 @@ public class EthereumTransactionTest {
         }
 
         // Test 4: ethereum transaction object returns transaction type id correctly
-        assertEquals((byte) 2, ethereumTransaction.transactionTypeId());
+        assertEquals((byte) 1, ethereumTransaction.transactionTypeId());
 
         // Test 5: ethereum transaction object returns version correctly
         assertEquals(0 /*legacy*/, ethereumTransaction.version());

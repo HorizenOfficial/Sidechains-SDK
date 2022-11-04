@@ -10,7 +10,7 @@ import scala.util.Try
 case class ChainIdBlockSemanticValidator(params: NetworkParams) extends SemanticBlockValidator[AccountBlock] {
   override def validate(block: AccountBlock): Try[Unit] = Try {
     for (actx <- block.transactions) {
-      if (actx.transactionTypeId == AccountTransactionsIdsEnum.EthereumTransaction.id()) {
+      if (actx.transactionTypeId == AccountTransactionsIdsEnum.EthereumTransactionId.id()) {
         val tx = actx.asInstanceOf[EthereumTransaction];
         if (tx.isSigned) {
           if (tx.isEIP1559)

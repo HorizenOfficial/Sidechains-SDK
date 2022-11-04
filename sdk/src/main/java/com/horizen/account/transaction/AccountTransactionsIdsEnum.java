@@ -1,7 +1,7 @@
 package com.horizen.account.transaction;
 
 public enum AccountTransactionsIdsEnum {
-    EthereumTransaction((byte) 2);
+    EthereumTransactionId((byte) 1);
 
     private final byte id;
 
