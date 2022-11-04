@@ -446,16 +446,16 @@ def mk_each_dir(sftp, remote_path):
                 pass
 
 
-def start_sc_node_on_machine(machine_credentials, bashcmd, use_multiprocessing, processor, config_name):
+def start_sc_node_on_machine(machine_credentials, bashcmd, use_multiprocessing, processor):
     if machine_credentials is None:
         raise Exception("Missing machine credentials to start sc_node on machine")
-
-    bashcmd = f'/bin/bash -c "source ./.bashrc ; {bashcmd}"'
 
     if use_multiprocessing:
         # Assumes 2 processors are used per node
         processors = get_processors_to_map(processor)
         bashcmd = f'/bin/bash -c "source ./.bashrc ; taskset -ca {processors[0]}-{processors[1]} {bashcmd}"'
+    else:
+        bashcmd = f'/bin/bash -c "source ./.bashrc ; {bashcmd}"'
 
     ssh_client = connect_ssh_client(machine_credentials)
     logging.info(f"Running bashcmd: {bashcmd}")
@@ -566,7 +566,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
         "BLOCK_RATE": sc_node_config.block_rate,
-        "LATENCY_SETTINGS": sc_node_config.latency_settings.to_config()
+        "LATENCY_SETTINGS": sc_node_config.latency_settings.to_config(),
+        "DECLARED_ADDRESS": f"{api_address}:{str(apiPort)}" if sc_node_config.machine_credentials is not None else ""
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -739,7 +740,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     else:
         if machine_credentials is not None:
             sidechainclient_processes[i] = start_sc_node_on_machine(machine_credentials, bashcmd, use_multiprocessing,
-                                                                    processor, f"node{i}.conf")
+                                                                    processor)
         else:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
 
