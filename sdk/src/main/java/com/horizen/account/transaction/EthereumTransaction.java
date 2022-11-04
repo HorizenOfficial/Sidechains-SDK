@@ -26,10 +26,12 @@ import java.math.BigInteger;
 import java.security.SignatureException;
 import java.util.Objects;
 
-
-// TODO ensure that the json parameters are fitting for the use case
-@JsonPropertyOrder({"from", "gasPrice", "nonce", "to", "value", "signature"})
-@JsonIgnoreProperties({"transaction", "gasLimit"})
+@JsonPropertyOrder({
+        "id", "from", "to", "value", "nonce", "data",
+        "gasPrice", "gasLimit", "maxFeePerGas", "maxPriorityFeePerGas",
+        "eip1559", "type", "chainId", "signed", "signature"
+})
+@JsonIgnoreProperties({"transaction", "encoder", "modifierTypeId"})
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
 
@@ -119,6 +121,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
+    @JsonProperty("type")
     public byte version() {
         if (transaction.getType() == TransactionType.LEGACY)
             return 0x0;
@@ -256,7 +259,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    @JsonIgnore
     public AddressProposition getFrom() {
         if (this.isSigned())
             return new AddressProposition(Numeric.hexStringToByteArray(getFromAddress()));
@@ -289,7 +291,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return this.transaction.getTo();
     }
 
-    @JsonProperty("from")
+    @JsonIgnore
     public String getFromAddress() {
         if (this.isSigned()) try {
             return ((SignedRawTransaction) this.transaction).getFrom();
@@ -309,7 +311,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return Numeric.hexStringToByteArray(transaction.getData());
     }
 
-    @JsonIgnore
     @Override
     public SignatureSecp256k1 getSignature() {
         if (this.isSigned()) {
@@ -335,15 +336,18 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
 
-    // used in json representation of signature fields. In case of EIP155 tx getV() returns the value carrying the chainId
+    // In case of EIP155 tx getV() returns the value carrying the chainId
+    @JsonIgnore
     public byte[] getV() {
         return (getSignatureData() != null) ? getSignatureData().getV() : null;
     }
 
+    @JsonIgnore
     public byte[] getR() {
         return (getSignatureData() != null) ? getSignatureData().getR() : null;
     }
 
+    @JsonIgnore
     public byte[] getS() {
         return (getSignatureData() != null) ? getSignatureData().getS() : null;
     }
