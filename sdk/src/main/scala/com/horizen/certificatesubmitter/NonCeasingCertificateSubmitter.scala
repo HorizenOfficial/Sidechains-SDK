@@ -114,9 +114,7 @@ class NonCeasingCertificateSubmitter(settings: SidechainSettings,
 
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
       val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
-      val lastCertificateOpt = getLastTopQualityCertificate(sidechainNodeView, withdrawalEpochInfo.epoch)
-      // TODO Make record to state - lastTopQualityCertificate
-      val referencedEpochNumber = lastCertificateOpt.map(_.epochNumber).getOrElse(-1) + 1 // Withdrawal epoch for which certificate needs to be applied
+      val referencedEpochNumber = sidechainNodeView.state.lastCertificateEpochNumber().getOrElse(-1) + 1 // Withdrawal epoch for which certificate needs to be applied
 
       if (referencedEpochNumber + 1 < withdrawalEpochInfo.epoch) {
         // Submission certificate for the epoch before previous
