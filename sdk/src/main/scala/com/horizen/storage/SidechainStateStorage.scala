@@ -3,12 +3,13 @@ package com.horizen.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
-import com.horizen.backup.{BoxIterator}
+import com.horizen.backup.BoxIterator
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
+import com.horizen.params.NetworkParams
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.ScorexLogging
 
@@ -18,7 +19,7 @@ import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util._
 
-class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
+class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion, params: NetworkParams)
   extends ScorexLogging
     with SidechainStorageInfo
     with SidechainTypes
@@ -300,10 +301,14 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
 
     // Store the top quality cert for epoch if present
-    topQualityCertificateOpt.foreach(certificate =>
-      updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
-        WithdrawalEpochCertificateSerializer.toBytes(certificate)))
-    )
+    if (params.isNonCeasing && topQualityCertificateOpt.nonEmpty) {
+      updateList.add(new JPair(getLastCertificateEpochNumberKey, new ByteArrayWrapper(Ints.toByteArray(topQualityCertificateOpt.get.epochNumber))))
+    } else {
+      topQualityCertificateOpt.foreach(certificate =>
+        updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
+          WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+      )
+    }
 
     // Update BlockFeeInfo data
     val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfo.epoch) + 1

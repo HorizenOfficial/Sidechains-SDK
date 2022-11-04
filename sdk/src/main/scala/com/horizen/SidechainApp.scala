@@ -293,7 +293,8 @@ class SidechainApp @Inject()
   protected val sidechainStateStorage = new SidechainStateStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/state")),
     registerStorage(stateStorage),
-    sidechainBoxesCompanion)
+    sidechainBoxesCompanion,
+    params)
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
   protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerStorage(utxoMerkleTreeStorage), params)
 

@@ -8,6 +8,7 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, BytesUtils, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
@@ -51,6 +52,8 @@ class SidechainStateStorageTest
 
   val _temporaryFolder = new TemporaryFolder()
 
+  val params: NetworkParams = MainNetParams()
+
   @Rule  def temporaryFolder = _temporaryFolder
 
   @Before
@@ -86,7 +89,7 @@ class SidechainStateStorageTest
 
   @Test
   def testUpdate(): Unit = {
-    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion, params)
     var tryRes: Try[SidechainStateStorage] = null
     val expectedException = new IllegalArgumentException("on update exception")
 
@@ -159,7 +162,7 @@ class SidechainStateStorageTest
   def testRestoreNonCoinBoxes(): Unit = {
     //Create temporary SidechainStateStorage
     val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
-    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion, params)
 
     //Create temporary BackupStorage
     val backupStorageFile = temporaryFolder.newFolder("backupStorage")
@@ -188,7 +191,7 @@ class SidechainStateStorageTest
   def testRestoreCoinBoxes(): Unit = {
     //Create temporary SidechainStateStorage
     val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
-    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion, params)
 
     //Create temporary BackupStorage
     val backupStorageFile = temporaryFolder.newFolder("backupStorage")
@@ -223,7 +226,7 @@ class SidechainStateStorageTest
     var exceptionThrown = false
 
     try {
-      val stateStorage = new SidechainStateStorage(null, sidechainBoxesCompanion)
+      val stateStorage = new SidechainStateStorage(null, sidechainBoxesCompanion, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }
@@ -233,7 +236,7 @@ class SidechainStateStorageTest
 
     exceptionThrown = false
     try {
-      val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, null)
+      val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, null, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }
@@ -241,7 +244,7 @@ class SidechainStateStorageTest
     assertTrue("SidechainStateStorage constructor. Exception must be thrown if boxesCompation is not specified.",
       exceptionThrown)
 
-    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion, params)
 
     assertTrue("SidechainStorage.rollback. Method must return Failure if NULL version specified.",
       stateStorage.rollback(null).isFailure)
