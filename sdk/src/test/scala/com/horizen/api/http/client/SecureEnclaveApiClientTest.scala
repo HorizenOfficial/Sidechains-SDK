@@ -92,7 +92,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
       val result = Await.result(apiClient.listPublicKeys(), 1.second)
 
-      result should have size 2
+      result should have size 3
       result should equal (Seq(key1, key2, key3))
       verify(serverMock).singleRequest(any(), any(), any(), any())
     }
