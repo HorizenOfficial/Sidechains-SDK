@@ -284,11 +284,14 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       case _ => false
     }
     if (isWithdrawalEpochSwitched) {
-      val wrEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
-      for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
-        removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
+      if(!params.isNonCeasing) {
+        // TODO: delete also for isNonCeasing but in different way
+        val wrEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
+        for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
+          removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
+        }
+        removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
       }
-      removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
 
       val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
       removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))

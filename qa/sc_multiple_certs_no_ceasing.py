@@ -40,7 +40,6 @@ class SCMultipleCertsNoCeasing(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 15
     sc_creation_amount = 100  # Zen
-    sc_node2_bt_amount = 20  # Zen
 
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
@@ -77,7 +76,7 @@ class SCMultipleCertsNoCeasing(SidechainTestFramework):
 
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
         # Send FT to the SC node 2
-        ft_amount = self.sc_creation_amount + self.sc_node2_bt_amount
+        ft_amount = self.sc_creation_amount
         mc_return_address = mc_node.getnewaddress()
         mc_block_hash_with_ft = mc_make_forward_transfer(mc_node, sc_node1, self.sc_nodes_bootstrap_info.sidechain_id,
                                                          ft_amount, mc_return_address)
@@ -85,34 +84,39 @@ class SCMultipleCertsNoCeasing(SidechainTestFramework):
         sc_block_id1 = generate_next_block(sc_node1, "first node")
         check_mcreference_presence(mc_block_hash_with_ft, sc_block_id1, sc_node1)
 
-        # Generate SC block with ForgerStake creation TX
-        generate_next_block(sc_node1, "first node")
-        # Generate SC block on SC node 1 for the next consensus epoch
-        generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
-
         # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
-        mc_block_hashes = mc_node.generate(mc_blocks_left_for_we - 1)
-        mc_blocks_left_for_we -= len(mc_block_hashes)
+        # TODO: 5 full epochs
+        mc_block_hashes = mc_node.generate(4 * self.sc_withdrawal_epoch_length + mc_blocks_left_for_we - 1)
+        #mc_blocks_left_for_we -= len(mc_block_hashes)
 
         # Generate 1 more SC block to sync with MC
-        generate_next_block(sc_node1, "first node")
-        self.sc_sync_all()  # Sync SC nodes
+        #generate_next_block(sc_node1, "first node")
 
         # Generate MC blocks to switch WE epoch
-        logging.info("mc blocks left = " + str(mc_blocks_left_for_we))
+        #logging.info("mc blocks left = " + str(mc_blocks_left_for_we))
         # mc_block_hashes = mc_node.generate(mc_blocks_left_for_we + 1)
-        mc_block_hashes = mc_node.generate(mc_blocks_left_for_we + 15)
+        #mc_block_hashes = mc_node.generate(mc_blocks_left_for_we + 15)
         # mc_block_hashes = mc_node.generate(mc_blocks_left_for_we + self.sc_withdrawal_epoch_length + 1)
 
 
 
         # Generate 2 SC blocks on both SC nodes and start them automatic cert creation.
-        generate_next_block(sc_node1, "first node")  # 1 MC block to reach the end of WE 0
-        sc_block = generate_next_block(sc_node1, "first node")  # 1 MC block to trigger Submitter logic
-        check_mcreferencedata_presence(mc_block_hashes[mc_blocks_left_for_we + 14], sc_block, sc_node1)
+        #generate_next_block(sc_node1, "first node")  # 1 MC block to reach the end of WE 0
+        #sc_block = generate_next_block(sc_node1, "first node")  # 1 MC block to trigger Submitter logic
+        #check_mcreferencedata_presence(mc_block_hashes[mc_blocks_left_for_we + 14], sc_block, sc_node1)
 
-        mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1
-        # time.sleep(16)  # to be sure that SC node 2 will finish cert creation faster considering cert submission delay
+        #mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1
+
+        # TODO: fix inconsistency between mc blocks in sidechain blocks
+        generate_next_block(sc_node1, "first node")
+        generate_next_block(sc_node1, "first node")
+        generate_next_block(sc_node1, "first node")
+        generate_next_block(sc_node1, "first node")
+        generate_next_block(sc_node1, "first node")
+        generate_next_block(sc_node1, "first node")
+        generate_next_block(sc_node1, "first node")
+        generate_next_block(sc_node1, "first node")
+
 
         # Wait for Certificates appearance
         time.sleep(10)
