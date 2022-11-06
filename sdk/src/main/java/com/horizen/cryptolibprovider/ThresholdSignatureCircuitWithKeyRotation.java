@@ -32,7 +32,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    byte[] genesisKeysRootHash,
                                    String provingKeyPath,
                                    boolean checkProvingKey,
-                                   boolean zk);
+                                   boolean zk) throws Exception;
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt,
                         byte[] sidechainId,
@@ -49,11 +49,11 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                         byte[] proof,
                         String verificationKeyPath);
 
-    byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold);
+    byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold) throws Exception;
 
     List<byte[]> getCertificateCustomFields(List<byte[]> customFields);
 
-    boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum);
+    boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) throws Exception;
 
-    byte[] generateKeysRootHash(List<byte[]> publicSignersKeysList, List<byte[]> publicMastersKeysList);
+    byte[] generateKeysRootHash(List<byte[]> publicSignersKeysList, List<byte[]> publicMastersKeysList) throws Exception;
 }

@@ -89,7 +89,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              String provingKeyPath,
              boolean checkProvingKey,
              boolean zk
-            ) {
+            ) throws Exception {
         List<SchnorrSignature> signatures = CommonCircuit.getSignatures(schnorrSignatureBytesList);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
@@ -169,6 +169,8 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
             endCumulativeScTxCommTreeRootFe.freeFieldElement();
             sidechainIdFIeldElement.freeFieldElement();
             constantFe.freeFieldElement();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         customFieldsElements.forEach(FieldElement::freeFieldElement);
         genesisConstant.freeFieldElement();
@@ -177,7 +179,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
 
     @Override
-    public byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold) {
+    public byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold) throws Exception {
 
         // Note: sc-cryptolib return constant in LittleEndian
         FieldElement sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(FieldElement.deserialize(genesisKeysRootHash), threshold);
@@ -197,31 +199,29 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     @Override
-    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) {
+    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) throws Exception {
         return NaiveThresholdSignatureWKeyRotation.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, customFieldsNum,
                 Optional.of(supportedSegmentSize),
                 provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 
-    public byte[] generateKeysRootHash(List<byte[]> publicSignersKeysList, List<byte[]> publicMastersKeysList) {
+    public byte[] generateKeysRootHash(List<byte[]> publicSignersKeysList, List<byte[]> publicMastersKeysList) throws Exception {
         FieldElement fieldElement;
-        try {
-            try (ValidatorKeysUpdatesList validatorKeysUpdatesList = new ValidatorKeysUpdatesList(
-                    publicSignersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
-                    publicMastersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
-                    publicSignersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
-                    publicMastersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
-                    new ArrayList<>(),
-                    new ArrayList<>(),
-                    new ArrayList<>(),
-                    new ArrayList<>()
-            )) {
-                fieldElement = validatorKeysUpdatesList.getUpdatedKeysRootHash(validatorKeysUpdatesList.getSigningKeys().length);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        try (ValidatorKeysUpdatesList validatorKeysUpdatesList = new ValidatorKeysUpdatesList(
+                publicSignersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
+                publicMastersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
+                publicSignersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
+                publicMastersKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList()),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>()
+        )) {
+            validatorKeysUpdatesList.getSigningKeys();
+            fieldElement = validatorKeysUpdatesList.getUpdatedKeysRootHash(validatorKeysUpdatesList.getSigningKeys().length);
         }
-        byte[] b =  fieldElement.serializeFieldElement();
+
+        byte[] b = fieldElement.serializeFieldElement();
         fieldElement.freeFieldElement();
         return b;
     }
