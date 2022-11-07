@@ -585,17 +585,15 @@ class EthService(
       return null
     }
 
+    var feePayments: AccountFeePaymentsInfo = null
+
     applyOnAccountView { nodeView =>
-      val feePayments =
-        nodeView.history
-          .getFeePaymentsInfo(blockId)
-
-      if (feePayments.isEmpty) {
-        throw new RpcException(RpcError.fromCode(RpcCode.ExecutionError, s"no fee payments found for block: $blockId"))
-      }
-
-      feePayments.get()
+      nodeView.history
+        .getFeePaymentsInfo(blockId)
+        .ifPresent(p => feePayments = p)
     }
+
+    feePayments
   }
 
   @RpcMethod("eth_accounts")

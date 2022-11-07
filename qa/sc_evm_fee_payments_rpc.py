@@ -256,7 +256,7 @@ class ScEvmFeePaymentsRpc(SidechainTestFramework):
                 forger_fees[sc_block_fee.node] += 1
 
         forger_data = sc_node_1.rpc_eth_getFeePayments(sc_middle_we_block_id)
-        assert_true("error" in forger_data)
+        assert_equal(forger_data["result"], None)
 
         (forger_data_1, forger_data_2) = sc_node_1.rpc_eth_getFeePayments(sc_last_we_block_id)["result"]["payments"]
 
