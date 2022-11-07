@@ -15,9 +15,9 @@ import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{CswProofStatusSerializer, Views}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochUtils}
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
 import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
@@ -35,7 +35,7 @@ class CswManager(settings: SidechainSettings,
   import com.horizen.csw.CswManager.InternalReceivableMessages.{CswProofFailed, CswProofSuccessfullyGenerated, TryToScheduleProofGeneration}
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   var hasSidechainCeased: Boolean = false
@@ -61,12 +61,12 @@ class CswManager(settings: SidechainSettings,
   }
 
   private def initialization: Receive = {
-    onApplicationStart orElse
+    testLog orElse  onApplicationStart orElse
       reportStrangeInput
   }
 
   private[csw] def workingCycle: Receive = {
-    onChangedState orElse
+    testLog orElse onChangedState orElse
       onGetCeasedStatus orElse
       onGetBoxNullifier orElse
       onGetCswBoxIds orElse
@@ -76,6 +76,16 @@ class CswManager(settings: SidechainSettings,
       processProofGenerationResults orElse
       reportStrangeInput
   }
+
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("CswManager", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
+  }
+
 
   private def reportStrangeInput: Receive = {
     case nonsense =>

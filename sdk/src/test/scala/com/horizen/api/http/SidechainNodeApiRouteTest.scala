@@ -46,25 +46,33 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("peers").isArray)
         assertEquals(3, result.get("peers").elements().asScala.length)
-        val elems: Array[SidechainPeerNode] = peers.map(p => SidechainPeerNode(p._1.toString, p._2.lastSeen, p._2.peerSpec.nodeName, p._2.connectionType.map(_.toString))).toArray
+        val elems: Array[SidechainPeerNode] = peers.map(
+          p => SidechainPeerNode(p._1.toString, None, p._2.lastHandshake, 0, p._2.peerSpec.nodeName, p._2.peerSpec.agentName, p._2.peerSpec.protocolVersion.toString, p._2.connectionType.map(_.toString))
+        ).toArray
         val nodes = result.get("peers").elements().asScala.toArray
 
         val first: JsonNode = nodes(0)
-        assertEquals(first.get("address").textValue(), elems(0).address)
-        assertEquals(first.get("lastSeen").asLong(), elems(0).lastSeen)
+        assertEquals(first.get("remoteAddress").textValue(), elems(0).remoteAddress)
+        assertEquals(first.get("lastHandshake").asLong(), elems(0).lastHandshake)
         assertEquals(first.get("name").textValue(), elems(0).name)
+        assertEquals(first.get("agentName").textValue(), elems(0).agentName)
+        assertEquals(first.get("protocolVersion").textValue(), elems(0).protocolVersion)
         assertEquals(first.get("connectionType").textValue(), elems(0).connectionType.getOrElse(""))
 
         val second: JsonNode = nodes(1)
-        assertEquals(second.get("address").textValue(), elems(1).address)
-        assertEquals(second.get("lastSeen").asLong(), elems(1).lastSeen)
+        assertEquals(second.get("remoteAddress").textValue(), elems(1).remoteAddress)
+        assertEquals(second.get("lastHandshake").asLong(), elems(1).lastHandshake)
         assertEquals(second.get("name").textValue(), elems(1).name)
+        assertEquals(second.get("agentName").textValue(), elems(1).agentName)
+        assertEquals(second.get("protocolVersion").textValue(), elems(1).protocolVersion)
         assertEquals(second.get("connectionType").textValue(), elems(1).connectionType.getOrElse(""))
 
         val third: JsonNode = nodes(2)
-        assertEquals(third.get("address").textValue(), elems(2).address)
-        assertEquals(third.get("lastSeen").asLong(), elems(2).lastSeen)
+        assertEquals(third.get("remoteAddress").textValue(), elems(2).remoteAddress)
+        assertEquals(third.get("lastHandshake").asLong(), elems(2).lastHandshake)
         assertEquals(third.get("name").textValue(), elems(2).name)
+        assertEquals(third.get("agentName").textValue(), elems(2).agentName)
+        assertEquals(third.get("protocolVersion").textValue(), elems(2).protocolVersion)
         assertEquals(third.get("connectionType").textValue(), elems(2).connectionType.getOrElse(""))
       }
       // api error
@@ -87,19 +95,41 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("peers").isArray)
         assertEquals(2, result.get("peers").elements().asScala.length)
-        val elems: Array[SidechainPeerNode] = connectedPeers.map(p => SidechainPeerNode(p.peerSpec.address.map(_.toString).getOrElse(""), p.lastSeen, p.peerSpec.nodeName, p.connectionType.map(_.toString))).toArray
+        val elems: Array[Option[SidechainPeerNode]] = connectedPeers.map {
+          conn =>
+            conn.peerInfo.map {
+              p => SidechainPeerNode(
+                conn.connectionId.remoteAddress.toString,
+                Some(conn.connectionId.localAddress.toString),
+                p.lastHandshake,
+                conn.lastMessage,
+                p.peerSpec.nodeName,
+                p.peerSpec.agentName,
+                p.peerSpec.protocolVersion.toString,
+                p.connectionType.map(_.toString)
+              )
+            }
+        }.toArray
         val nodes = result.get("peers").elements().asScala.toArray
         val first: JsonNode = nodes(0)
-        assertEquals(first.get("address").textValue(), elems(0).address)
-        assertEquals(first.get("lastSeen").asLong(), elems(0).lastSeen)
-        assertEquals(first.get("name").textValue(), elems(0).name)
-        assertEquals(first.get("connectionType").textValue(), elems(0).connectionType.getOrElse(""))
+        assertEquals(first.get("remoteAddress").textValue(), elems(0).get.remoteAddress)
+        assertEquals(first.get("localAddress").textValue(), elems(0).get.localAddress.get)
+        assertEquals(first.get("lastHandshake").asLong(), elems(0).get.lastHandshake)
+        assertEquals(first.get("lastMessage").asLong(), elems(0).get.lastMessage)
+        assertEquals(first.get("name").textValue(), elems(0).get.name)
+        assertEquals(first.get("agentName").textValue(), elems(0).get.agentName)
+        assertEquals(first.get("protocolVersion").textValue(), elems(0).get.protocolVersion)
+        assertEquals(first.get("connectionType").textValue(), elems(0).get.connectionType.getOrElse(""))
 
         val second: JsonNode = nodes(1)
-        assertEquals(second.get("address").textValue(), elems(1).address)
-        assertEquals(second.get("lastSeen").asLong(), elems(1).lastSeen)
-        assertEquals(second.get("name").textValue(), elems(1).name)
-        assertEquals(second.get("connectionType").textValue(), elems(1).connectionType.getOrElse(""))
+        assertEquals(second.get("remoteAddress").textValue(), elems(1).get.remoteAddress)
+        assertEquals(second.get("localAddress").textValue(), elems(1).get.localAddress.get)
+        assertEquals(second.get("lastHandshake").asLong(), elems(1).get.lastHandshake)
+        assertEquals(second.get("lastMessage").asLong(), elems(1).get.lastMessage)
+        assertEquals(second.get("name").textValue(), elems(1).get.name)
+        assertEquals(second.get("agentName").textValue(), elems(1).get.agentName)
+        assertEquals(second.get("protocolVersion").textValue(), elems(1).get.protocolVersion)
+        assertEquals(second.get("connectionType").textValue(), elems(1).get.connectionType.getOrElse(""))
       }
       // api error
       sidechainApiMockConfiguration.setShould_networkController_GetConnectedPeers_reply(false)
@@ -189,7 +219,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements.asScala.length)
         assertTrue(result.get("sidechainId").isTextual)
         assertEquals(sidechainId, result.get("sidechainId").asText())
-     }
+      }
 
     }
 

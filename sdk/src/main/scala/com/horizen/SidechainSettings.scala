@@ -1,6 +1,6 @@
 package com.horizen
 
-import scorex.core.settings.ScorexSettings
+import sparkz.core.settings.SparkzSettings
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -54,10 +54,12 @@ case class CeasedSidechainWithdrawalSettings(cswProvingKeyFilePath: String,
 
 case class LogInfoSettings(logFileName: String = "debug.log",
                            logFileLevel: String = "all",
-                           logConsoleLevel: String = "error")
+                           logConsoleLevel: String = "error",
+                           logAkkaMessagesFileName: String = "akkaMessages.log",
+                           logAkkaMessagesLevel: String = "warn")
 
 case class SidechainSettings(
-                              scorexSettings: ScorexSettings,
+                              sparkzSettings: SparkzSettings,
                               genesisData: GenesisDataSettings,
                               websocket: WebSocketSettings,
                               withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,

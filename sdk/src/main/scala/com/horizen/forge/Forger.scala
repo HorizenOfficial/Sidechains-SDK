@@ -11,9 +11,9 @@ import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, Conse
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
-import scorex.core.NodeViewHolder.ReceivableMessages
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.NodeViewHolder.ReceivableMessages
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,7 +28,7 @@ class Forger(settings: SidechainSettings,
              timeProvider: NetworkTimeProvider,
              val params: NetworkParams) extends Actor with ScorexLogging {
   val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
 
@@ -73,6 +73,7 @@ class Forger(settings: SidechainSettings,
   }
 
   override def receive: Receive = {
+    testLog orElse 
     checkForger orElse
     processStartForgingMessage orElse
     processStopForgingMessage orElse
@@ -80,6 +81,15 @@ class Forger(settings: SidechainSettings,
     processGetForgeInfo orElse {
       case message: Any => log.error(s"Forger received strange message: ${message} from ${sender().path.name}")
     }
+  }
+
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("Forger", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 
   protected def checkForger: Receive = {

@@ -5,16 +5,19 @@ import com.horizen.node.NodeMemoryPool
 import com.horizen.transaction.BoxTransaction
 import com.horizen.utils.MempoolMap
 import com.horizen.utils.tps.TpsUtils
-import scorex.core.transaction.MempoolReader
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.time.LocalDateTime
 import java.util.{Comparator, Optional, List => JList}
-import scala.collection.JavaConverters._
+import java.util.{ArrayList => JArrayList}
+import com.horizen.box.{WithdrawalRequestBox}
+import sparkz.core.transaction.MempoolReader
+
 import scala.util.{Failure, Success, Try}
+import scala.collection.JavaConverters._
 
 class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: MempoolSettings)
-  extends scorex.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
+  extends sparkz.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
   with SidechainTypes
   with NodeMemoryPool
   with ScorexLogging
@@ -59,6 +62,19 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
   def take(sortFunc: (SidechainMemoryPoolEntry, SidechainMemoryPoolEntry) => Boolean,
            limit: Int): Iterable[SidechainTypes#SCBT] = {
     unconfirmed.values.toSeq.sortWith(sortFunc).take(limit).map(tx => tx.getUnconfirmedTx())
+  }
+
+  def takeWithWithdrawalBoxesLimit(allowedWithdrawalBoxes: Int): Iterable[SidechainTypes#SCBT] = {
+    val filteredTxs: JArrayList[SidechainTypes#SCBT] = new JArrayList[SidechainTypes#SCBT]()
+    var newWithdrawalBoxes = 0
+    take(size).foreach( tx => {
+      val txWithdrawalBoxes = tx.newBoxes().asScala.count(box => box.isInstanceOf[WithdrawalRequestBox])
+      if( txWithdrawalBoxes + newWithdrawalBoxes <= allowedWithdrawalBoxes) {
+        newWithdrawalBoxes += txWithdrawalBoxes
+        filteredTxs.add(tx)
+      }
+    })
+    filteredTxs.asScala.toList
   }
 
   override def filter(txs: Seq[SidechainTypes#SCBT]): SidechainMemoryPool = {

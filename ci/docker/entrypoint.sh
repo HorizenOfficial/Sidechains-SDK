@@ -37,6 +37,7 @@ if [ -d /build/libevm ]; then
 fi
 
 # Print information
+echo "" && echo "=== Environment Info ===" && echo ""
 java --version
 echo
 lscpu

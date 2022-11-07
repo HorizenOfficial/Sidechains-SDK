@@ -12,11 +12,11 @@ import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{BlockFeeInfo, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
-import com.horizen.{ScorexEncoding, SidechainTypes}
-import scorex.core.block.Block
-import scorex.core.block.Block.Timestamp
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.{ModifierTypeId, idToBytes}
+import com.horizen.{SparkzEncoding, SidechainTypes}
+import sparkz.core.block.Block
+import sparkz.core.block.Block.Timestamp
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.{ModifierTypeId, idToBytes}
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
@@ -158,8 +158,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
       case Failure(e) => throw e
     }
 
-//    if(sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER)
-//      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id sidechain transactions amount exceeds the limit.")
+    //if(sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER)
+    //  throw new InvalidSidechainBlockDataException(s"SidechainBlock $id sidechain transactions amount exceeds the limit.")
 
     // Check Block size
     val blockSize: Int = bytes.length
@@ -201,12 +201,12 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 }
 
 
-object SidechainBlock extends ScorexEncoding {
+object SidechainBlock extends SparkzEncoding {
   // SC Max block size is enough to include at least 2 MC block ref data full of SC outputs + Top quality cert -> ~2.3MB each
   // Also it is more than enough to process Ommers for very long MC forks (2000+)
   val MAX_BLOCK_SIZE: Int = 5000000
-  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000000
-  val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
+  val MAX_SIDECHAIN_TXS_NUMBER: Int = 100000
+  val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 3.toByte
   val BLOCK_VERSION: Block.Version = 1: Byte
   val BlockIdHexStringLength = 64
 
@@ -331,7 +331,7 @@ object SidechainBlock extends ScorexEncoding {
 
 
 
-class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] with SidechainTypes {
+class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends SparkzSerializer[SidechainBlock] with SidechainTypes {
   private val mcBlocksDataSerializer: ListSerializer[MainchainBlockReferenceData] = new ListSerializer[MainchainBlockReferenceData](
     MainchainBlockReferenceDataSerializer
   )

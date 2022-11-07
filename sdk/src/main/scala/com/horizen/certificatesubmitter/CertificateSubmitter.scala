@@ -17,9 +17,9 @@ import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
 import java.io.File
 import java.util
@@ -50,7 +50,7 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   private var provingFileAbsolutePath: String = _
@@ -91,6 +91,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   override def receive: Receive = reportStrangeInput
+  
 
   private def reportStrangeInput: Receive = {
     case nonsense =>
@@ -98,11 +99,11 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   private[certificatesubmitter] def initialization: Receive = {
-    checkSubmitter orElse reportStrangeInput
+    testLog orElse checkSubmitter orElse reportStrangeInput
   }
 
   private[certificatesubmitter] def workingCycle: Receive = {
-    onCertificateSubmissionEvent orElse
+    testLog orElse onCertificateSubmissionEvent orElse
     newBlockArrived orElse
     locallyGeneratedSignature orElse
     signatureFromRemote orElse
@@ -113,6 +114,15 @@ class CertificateSubmitter(settings: SidechainSettings,
     submitterStatus orElse
     signerStatus orElse
     reportStrangeInput
+  }
+
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("CertificateSubmitter", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 
   protected def checkSubmitter: Receive = {

@@ -1,7 +1,7 @@
 package com.horizen.fixtures
 
 import com.google.common.primitives.Longs
-import scorex.core.bytesToId
+import sparkz.core.bytesToId
 import com.horizen.box._
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
@@ -60,7 +60,7 @@ trait BoxFixture
     val boxList: JList[ZenBox] = new JArrayList[ZenBox]()
 
     for (s <- secretList.asScala)
-      boxList.add(getZenBox(s.publicImage(), 1, Random.nextInt(100)))
+      boxList.add(getZenBox(s.publicImage(), 1, Random.nextInt(10000)))
 
     boxList
   }

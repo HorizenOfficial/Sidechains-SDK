@@ -1,10 +1,10 @@
 package com.horizen.api.http
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import com.horizen.SidechainTypes
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.concurrent.TrieMap
@@ -48,10 +48,18 @@ class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolde
   }
 
   override def receive: Receive = {
-    broadcastTransaction orElse
+    testLog orElse broadcastTransaction orElse
     sidechainNodeViewHolderEvents orElse {
       case message: Any => log.error("SidechainTransactionActor received strange message: " + message)
     }
+  }
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("SidechainTransactionActor", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 }
 

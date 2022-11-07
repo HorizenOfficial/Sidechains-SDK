@@ -2,7 +2,7 @@ package com.horizen.websocket.server
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
@@ -31,9 +31,17 @@ class WebSocketServer(wsPort: Int)
   }
 
   override def receive: Receive = {
-    checkMessage orElse {
+    testLog orElse checkMessage orElse {
       case message: Any => log.error("WebsocketServer received strange message: " + message)
     }
+  }
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("WebSocketServer", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 
   protected def checkMessage: Receive = {

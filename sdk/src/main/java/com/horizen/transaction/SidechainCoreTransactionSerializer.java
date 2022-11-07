@@ -8,7 +8,7 @@ import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
-import scorex.core.NodeViewModifier$;
+import sparkz.core.NodeViewModifier$;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
