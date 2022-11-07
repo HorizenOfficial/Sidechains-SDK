@@ -203,7 +203,7 @@ class CertificateSubmitter(settings: SidechainSettings,
               // Nothing changes -> do nothing
               // Note: applicable only to non-ceasing sidechains
               case Some(status) if status.referencedEpoch == submissionWindowStatus.referencedWithdrawalEpochNumber => // Nothing changes -> do nothing
-              case None =>
+              case _ => // Case None or Some(status) for newer referencedEpoch
                 val referencedWithdrawalEpochNumber = submissionWindowStatus.referencedWithdrawalEpochNumber
                 getMessageToSign(referencedWithdrawalEpochNumber) match {
                   case Success(messageToSign) =>
@@ -686,7 +686,7 @@ object CertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
     val submissionStrategy: CertificateSubmissionStrategy = if (params.isNonCeasing) {
-      new NonCeasingSidechain(params)
+      new NonCeasingSidechain()
     } else {
       new CeasingSidechain(mainchainChannel, params)
     }

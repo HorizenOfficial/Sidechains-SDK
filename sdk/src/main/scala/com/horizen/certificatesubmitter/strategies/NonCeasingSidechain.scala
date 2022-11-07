@@ -1,10 +1,10 @@
 package com.horizen.certificatesubmitter.strategies
-import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.certificatesubmitter.CertificateSubmitter
+import com.horizen.block.SidechainBlock
+import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.params.NetworkParams
 import com.horizen.utils.WithdrawalEpochInfo
 
-class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionStrategy {
+class NonCeasingSidechain() extends CertificateSubmissionStrategy {
   private val nonCeasingSubmissionDelay = 1 // TBD length: at the moment like for ceasing sidechains
 
   override def getStatus(sidechainNodeView: View, block: SidechainBlock): SubmissionWindowStatus = {
@@ -35,5 +35,5 @@ class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionSt
 
   // No need to check quality for non-ceasing case.
   // Only one certificate per epoch is allowed.
-  override def checkQuality(status: CertificateSubmitter.SignaturesStatus): Boolean = true
+  override def checkQuality(status: SignaturesStatus): Boolean = true
 }

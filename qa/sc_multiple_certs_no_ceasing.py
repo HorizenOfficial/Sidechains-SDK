@@ -16,20 +16,17 @@ from SidechainTestFramework.sc_forging_util import *
 
 """
 Check multiple certificates processing:
-1. Inclusion of multiple certificates for given SC in the same MC block
-2. Top quality certificate verification.
-3. Different SC chain top quality certificate processing - chain growing prevention.
+1. TODO
 
 Configuration:
-    Start 1 MC node and 1 SC node (with default websocket configuration).
-    Both SC nodes are forgers and certificate submitters.
-    SC node 1 has all schnorr private keys for cert submission
+    Start 1 MC node and 2 SC nodes (with default websocket configuration).
+    SC Node 1 is the only forger.
+    SC node 1 has 3 schnorr private keys [0, 1, 2] for cert submission. Submitter and signer are disabled.
+    SC node 1 has 3 other schnorr private keys [3, 4, 5] for cert submission. Submitter and signer are enabled.
     SC nodes are connected.
 
 Test:
-    - create and enable forger stakes for the SC node 1.
-    - generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
-    - generate SC blocks to sync with MC node.
+    - TODO
 
 """
 class SCMultipleCertsNoCeasing(SidechainTestFramework):

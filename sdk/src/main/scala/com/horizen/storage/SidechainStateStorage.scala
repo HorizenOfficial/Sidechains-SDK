@@ -284,18 +284,18 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       case _ => false
     }
     if (isWithdrawalEpochSwitched) {
-      if(!params.isNonCeasing) {
-        // TODO: delete also for isNonCeasing but in different way
+      if (!params.isNonCeasing) {
+        // For ceasing sidechain we remove outdatet information in the end of the withdrawal epoch
         val wrEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
         for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
           removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
         }
         removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
-      }
 
-      val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
-      removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
-      removeList.add(getUtxoMerkleTreeRootKey(certEpochNumberToRemove))
+        val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
+        removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
+        removeList.add(getUtxoMerkleTreeRootKey(certEpochNumberToRemove))
+      }
 
       val blockFeeInfoEpochToRemove: Int = withdrawalEpochInfo.epoch - 1
       for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
@@ -306,11 +306,23 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
 
     if (params.isNonCeasing) {
-      // For non-ceasing sidechain store referenced epoch number of the top certificate
-      // No need to store the whole cert, since it is never used after.
       topQualityCertificateOpt.foreach(certificate => {
+        // For non-ceasing sidechain store referenced epoch number of the top certificate
+        // No need to store the whole cert, since it is never used after.
         updateList.add(new JPair(getLastCertificateEpochNumberKey,
           new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
+
+        // For non-ceasing sidechain we remove outdated certificate info when we retrieve the new top quality certificate:
+        // remove outdated withdrawal related records and counters from upt to the current cert data;
+        // Note: SC block may contain multiple Certs, so we need to remove data for all of them.
+        val prevCertReferencedEpoch = getLastCertificateReferencedEpoch().getOrElse(-1)
+        for(outdatedEpochNumber <- prevCertReferencedEpoch + 1 to  certificate.epochNumber) {
+          val wrEpochNumberToRemove: Int = outdatedEpochNumber
+          for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
+            removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
+          }
+          removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
+        }
       })
     } else {
       // For ceasing sidechain store referenced epoch number and the top quality cert for epoch if present
