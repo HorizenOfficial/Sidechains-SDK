@@ -24,10 +24,14 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     @JsonProperty("s")
     private final byte[] s;
 
-    public SignatureSecp256k1(byte[] v, byte[] r, byte[] s) {
-        if (v.length > Secp256k1.SIGNATURE_V_MAXSIZE ||
-                r.length != Secp256k1.SIGNATURE_RS_SIZE ||
-                s.length != Secp256k1.SIGNATURE_RS_SIZE) {
+    public static boolean checkSignatureDataSizes(byte[] v, byte[] r, byte[] s) {
+        return (v.length > 0 && v.length <= Secp256k1.SIGNATURE_V_MAXSIZE) &&
+               (r.length == Secp256k1.SIGNATURE_RS_SIZE) &&
+               (s.length == Secp256k1.SIGNATURE_RS_SIZE);
+    }
+
+    private static void verifySignatureDataSizes(byte[] v, byte[] r, byte[] s) {
+        if  (!checkSignatureDataSizes(v, r, s)) {
             throw new IllegalArgumentException(String.format(
                     "Incorrect signature data: v=%d (expected at most %d); r=%d (expected %d); s=%d (expected %d)",
                     v.length, Secp256k1.SIGNATURE_V_MAXSIZE,
@@ -35,6 +39,11 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
                     s.length, Secp256k1.SIGNATURE_RS_SIZE
             ));
         }
+    }
+
+    public SignatureSecp256k1(byte[] v, byte[] r, byte[] s) {
+        verifySignatureDataSizes(v, r, s);
+
         this.v = v;
         this.r = r;
         this.s = s;

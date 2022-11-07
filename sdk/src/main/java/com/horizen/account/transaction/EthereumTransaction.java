@@ -73,6 +73,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         );
     }
 
+    private static boolean checkSignatureData(SignatureData signature) {
+        return SignatureSecp256k1.checkSignatureDataSizes(
+                signature.getV(), signature.getR(), signature.getS());
+    }
+
     // creates an eip1559 transaction
     public EthereumTransaction(
             long chainId,
@@ -260,7 +265,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public AddressProposition getFrom() {
-        if (this.isSigned())
+        if (this.isSigned() && checkSignatureData(getSignatureData()))
             return new AddressProposition(Numeric.hexStringToByteArray(getFromAddress()));
         return null;
     }
@@ -293,7 +298,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @JsonIgnore
     public String getFromAddress() {
-        if (this.isSigned()) try {
+        if (this.isSigned() && checkSignatureData(getSignatureData())) try {
             return ((SignedRawTransaction) this.transaction).getFrom();
         } catch (SignatureException ignored) {
         }
@@ -313,7 +318,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public SignatureSecp256k1 getSignature() {
-        if (this.isSigned()) {
+        if (this.isSigned() && checkSignatureData(getSignatureData())) {
             SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
             return new SignatureSecp256k1(
                     new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},
@@ -367,7 +372,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                     Numeric.toHexStringWithPrefix(this.getMaxFeePerGas()),
                     Numeric.toHexStringWithPrefix(this.getMaxPriorityFeePerGas()),
-                    isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
+                    (isSigned() && checkSignatureData(getSignatureData())) ? new SignatureSecp256k1(getSignatureData()).toString() : ""
             );
         else return String.format(
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
@@ -380,7 +385,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 this.getToAddress() != null ? this.getToAddress() : "0x",
                 Numeric.toHexStringWithPrefix(this.getValue() != null ? this.getValue() : BigInteger.ZERO),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
-                isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
+                (isSigned() && checkSignatureData(getSignatureData())) ? new SignatureSecp256k1(getSignatureData()).toString() : ""
         );
     }
 
