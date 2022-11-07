@@ -8,6 +8,7 @@ import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignaturesListBytes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
+import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.{SidechainSettings, SidechainState}
 
 import java.util
