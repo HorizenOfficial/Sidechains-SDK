@@ -19,8 +19,8 @@ import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
+import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
+import com.horizen.websocket.client.MainchainNodeChannel
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -581,6 +581,11 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   def submitterStatus: Receive = {
     case EnableSubmitter =>
+      if(!submitterEnabled) {
+        // If previous value was `false` -> try to schedule cert generation
+        // Maybe we have enough signatures at the moment
+        self ! TryToScheduleCertificateGeneration
+      }
       submitterEnabled = true
     case DisableSubmitter =>
       submitterEnabled = false
