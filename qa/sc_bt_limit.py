@@ -4,13 +4,13 @@ import time
 import pprint
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, SC_CREATION_VERSION_1
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block
 from test_framework.util import fail, assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, certificate_field_config_csw_enabled
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, certificate_field_config_csw_enabled, assert_false
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.transaction.withdrawCoins import withdrawMultiCoins
 from httpCalls.block.forgingInfo import http_block_forging_info
@@ -86,7 +86,17 @@ class ScBtLimitTest(SidechainTestFramework):
             cert_submitter_enabled=True,  # enable submitter
             cert_signing_enabled=True  # enable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, sc_creation_version=SC_CREATION_VERSION_1, csw_enabled=True), sc_node_configuration)
+
+        is_non_ceasing = self.options.nonceasing
+        # Non ceasing sidechains must be of sidechain version 2
+        sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
+        csw_enabled = not is_non_ceasing
+
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+                                                        sc_creation_version=sc_creation_version,
+                                                        csw_enabled=csw_enabled,
+                                                        is_non_ceasing=is_non_ceasing), sc_node_configuration)
+
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720*120*5).sidechain_id
 
     def sc_setup_nodes(self):
@@ -101,12 +111,13 @@ class ScBtLimitTest(SidechainTestFramework):
 
         # Check CSW is enabled on SC node
         is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
-        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
+        assert_false((is_csw_enabled and self.options.nonceasing), "Ceased Sidechain Withdrawal and non-ceasing sidechain cannot be enabled together.")
+        assert_true((is_csw_enabled or self.options.nonceasing), "Ceased Sidechain Withdrawal expected to be enabled.")
 
         # ******************** WITHDRAWAL EPOCH 0 START ********************
         print("******************** WITHDRAWAL EPOCH 0 START ********************")
 
-        #Verify we didn't reach the SC fork1 that includes BT limit
+        # Verify we didn't reach the SC fork1 that includes BT limit
         consensusEpochData = http_block_forging_info(sc_node)
         assert_equal(consensusEpochData["bestEpochNumber"], 1)
         

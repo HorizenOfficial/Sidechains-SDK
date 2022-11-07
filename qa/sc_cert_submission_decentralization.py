@@ -4,7 +4,7 @@ import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_2, SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
@@ -87,8 +87,14 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             2  # set max connections to prevent node 3 and node 1 connection
         )
 
+        is_non_ceasing = self.options.nonceasing
+        # Non ceasing sidechains must be of sidechain version 2
+        sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
+
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
+            SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
+                           sc_creation_version=sc_creation_version,
+                           is_non_ceasing=is_non_ceasing),
             sc_node_1_configuration,
             sc_node_2_configuration,
             sc_node_3_configuration,
