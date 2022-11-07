@@ -686,7 +686,7 @@ object CertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
     val submissionStrategy: CertificateSubmissionStrategy = if (params.isNonCeasing) {
-      new NonCeasingSidechain()
+      new NonCeasingSidechain(params)
     } else {
       new CeasingSidechain(mainchainChannel, params)
     }
