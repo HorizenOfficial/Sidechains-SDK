@@ -40,12 +40,9 @@ object WithdrawalEpochUtils {
   }
 
   // Certificate can be sent only when mc block is in a specific position in the Withdrawal epoch
+  // Has sense only for ceasing sidechains.
   def inSubmitCertificateWindow(withdrawalEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
-    val nonCeasingSubmissionDelay = 10 // TBD length
-    params.isNonCeasing match {
-      case true => (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex > nonCeasingSubmissionDelay)
-      case false => (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= certificateSubmissionWindowLength (params) )
-    }
+    (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= certificateSubmissionWindowLength(params))
   }
 
   def certificateSubmissionWindowLength(params: NetworkParams): Int = {
