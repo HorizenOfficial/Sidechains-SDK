@@ -42,7 +42,65 @@ Test:
 """
 
 
-class SCMultiplePendingCertsNoCeasing1(SidechainTestFramework):
+def pass_withdrawal_epoch(mc_node, sc_node, mc_blocks_before_wrs, mc_block_after_wrs, we_number):
+    # Generate first part of the MC blocks
+    mc_tip_hash = mc_node.generate(mc_blocks_before_wrs)[-1]
+
+    # Create Tx with WRs
+    if we_number > 0:
+        withdrawal_request = {"outputs": []}
+        mc_dest_address = mc_node.getnewaddress()
+        sc_bt_amount = 1 * 100000000  # in Satoshi
+        for i in range(0, we_number):
+            withdrawal_request["outputs"].append(
+                {
+                    "mainchainAddress": mc_dest_address,
+                    "value": sc_bt_amount
+                }
+            )
+            sc_bt_amount *= 2  # increase by 2 the coins for the next WR
+
+        withdraw_coins_json = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
+        if "result" not in withdraw_coins_json:
+            fail("Withdraw coins failed: " + json.dumps(withdraw_coins_json))
+        else:
+            logging.info("Coins withdrawn: " + json.dumps(withdraw_coins_json))
+
+        wr_tx_id = withdraw_coins_json["result"]["transactionId"]
+
+    #  Generate SC block with pending MC block refs and Tx with WRs
+    block_id = generate_next_block(sc_node, "first node")
+
+    # Check MC ref data inclusion
+    check_mcreferencedata_presence(mc_tip_hash, block_id, sc_node)
+
+    # Check Tx inclusion
+    expected_txs_number = 1 if we_number > 0 else 0
+    res = sc_node.block_findById(blockId=block_id)
+    sc_txs = res["result"]["block"]["sidechainTransactions"]
+    assert_equal(expected_txs_number, len(sc_txs), "Only 1 Tx with WRs expected")
+    if expected_txs_number != 0:
+        assert_equal(sc_txs[0]["id"], wr_tx_id, "Tx with WRs is not as expected")
+
+    # Generate second part of the MC blocks
+    mc_tip_hash = mc_node.generate(mc_block_after_wrs)[-1]
+
+    #  Generate SC block with pending MC block refs
+    block_id = generate_next_block(sc_node, "first node")
+
+    # Check MC ref data inclusion
+    check_mcreferencedata_presence(mc_tip_hash, block_id, sc_node)
+
+def check_for_certificate(mc_node, sc_submitter_node):
+    time.sleep(10)
+    while (mc_node.getmempoolinfo()["size"] < 1 and
+           sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]):
+        logging.info("Wait for certificates in the MC mempool...")
+        time.sleep(2)
+
+    assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to MC node mempool.")
+
+class SCMultiplePendingCertsNonCeasing(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
 
@@ -92,68 +150,9 @@ class SCMultiplePendingCertsNoCeasing1(SidechainTestFramework):
                               # , extra_args=['-agentlib']
                               )
 
-    def pass_withdrawal_epoch(self, mc_node, sc_node, mc_blocks_before_wrs, mc_block_after_wrs, we_number):
-        # Generate first part of the MC blocks
-        mc_tip_hash = mc_node.generate(mc_blocks_before_wrs)[-1]
-
-        # Create Tx with WRs
-        if we_number > 0:
-            withdrawal_request = {"outputs": []}
-            mc_dest_address = mc_node.getnewaddress()
-            sc_bt_amount = 1 * 100000000  # in Satoshi
-            for i in range(0, we_number):
-                withdrawal_request["outputs"].append(
-                    {
-                        "mainchainAddress": mc_dest_address,
-                        "value": sc_bt_amount
-                    }
-                )
-                sc_bt_amount *= 2  # increase by 2 the coins for the next WR
-
-            withdraw_coins_json = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
-            if "result" not in withdraw_coins_json:
-                fail("Withdraw coins failed: " + json.dumps(withdraw_coins_json))
-            else:
-                logging.info("Coins withdrawn: " + json.dumps(withdraw_coins_json))
-
-            wr_tx_id = withdraw_coins_json["result"]["transactionId"]
-
-        #  Generate SC block with pending MC block refs and Tx with WRs
-        block_id = generate_next_block(sc_node, "first node")
-
-        # Check MC ref data inclusion
-        check_mcreferencedata_presence(mc_tip_hash, block_id, sc_node)
-
-        # Check Tx inclusion
-        expected_txs_number = 1 if we_number > 0 else 0
-        res = sc_node.block_findById(blockId=block_id)
-        sc_txs = res["result"]["block"]["sidechainTransactions"]
-        assert_equal(expected_txs_number, len(sc_txs), "Only 1 Tx with WRs expected")
-        if expected_txs_number != 0:
-            assert_equal(sc_txs[0]["id"], wr_tx_id, "Tx with WRs is not as expected")
-
-        # Generate second part of the MC blocks
-        mc_tip_hash = mc_node.generate(mc_block_after_wrs)[-1]
-
-        #  Generate SC block with pending MC block refs
-        block_id = generate_next_block(sc_node, "first node")
-
-        # Check MC ref data inclusion
-        check_mcreferencedata_presence(mc_tip_hash, block_id, sc_node)
-
-    def check_for_certificate(self, mc_node, sc_submitter_node):
-        time.sleep(10)
-        while (mc_node.getmempoolinfo()["size"] < 1 and
-               sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]):
-            logging.info("Wait for certificates in the MC mempool...")
-            time.sleep(2)
-
-        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to MC node mempool.")
-
     def run_test(self):
         mc_node = self.nodes[0]
         sc_node1 = self.sc_nodes[0]
-        sc_node2 = self.sc_nodes[1]
 
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
 
@@ -176,7 +175,7 @@ class SCMultiplePendingCertsNoCeasing1(SidechainTestFramework):
             mc_blocks_before_wrs = half_epoch - (self.sc_withdrawal_epoch_length - mc_blocks_left_for_we)
             # the second half of WE
             mc_block_after_wrs = half_epoch
-            self.pass_withdrawal_epoch(mc_node, sc_node1, mc_blocks_before_wrs, mc_block_after_wrs, epoch_number)
+            pass_withdrawal_epoch(mc_node, sc_node1, mc_blocks_before_wrs, mc_block_after_wrs, epoch_number)
             mc_blocks_left_for_we = self.sc_withdrawal_epoch_length
 
         # First node expects to generate its signatures
@@ -189,7 +188,7 @@ class SCMultiplePendingCertsNoCeasing1(SidechainTestFramework):
         for epoch_number in range(0, self.total_withdrawal_epochs_number):
             logging.info("Check for certificate for epoch " + str(epoch_number))
             # Check for certificate to be appeared in MC mempool
-            self.check_for_certificate(mc_node, sc_node1)
+            check_for_certificate(mc_node, sc_node1)
 
             mc_node.generate(1)
             mc_blocks_left_for_we -= 1
@@ -202,7 +201,6 @@ class SCMultiplePendingCertsNoCeasing1(SidechainTestFramework):
             generate_next_block(sc_node1, "first node")
             self.sc_sync_all()
 
-
         # Generate MC blocks and SC blocks to finish the WE
         # Check that after all pending cert were published, Nodes are able to keep processing new epochs
         mc_node.generate(mc_blocks_left_for_we)
@@ -213,8 +211,8 @@ class SCMultiplePendingCertsNoCeasing1(SidechainTestFramework):
         generate_next_block(sc_node1, "first node")
 
         # Check for certificate to be appeared in MC mempool
-        self.check_for_certificate(mc_node, sc_node1)
+        check_for_certificate(mc_node, sc_node1)
 
 
 if __name__ == "__main__":
-    SCMultiplePendingCertsNoCeasing1().main()
+    SCMultiplePendingCertsNonCeasing().main()
