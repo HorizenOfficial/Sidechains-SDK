@@ -11,7 +11,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
-// TODO: check the usage of AccountStateReader instance here and in the mempool. Consider the stateReader as an immutable object that may become outdated after the state has been updated.
 class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends ScorexLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
 
@@ -29,62 +28,61 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
     val account = ethTransaction.getFrom
-    if (!nonces.contains(account)) {
-      nonces.put(account, stateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address()))
-    }
-
     if (!contains(ethTransaction.id)) {
 
-      val expectedNonce = nonces(account)
-      if (expectedNonce.equals(ethTransaction.getNonce)) {
-        all.put(ethTransaction.id, ethTransaction)
-        val executableTxsPerAccount =
-          executableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
-        executableTxsPerAccount.put(ethTransaction.getNonce, ethTransaction.id)
-        var nextNonce = expectedNonce.add(BigInteger.ONE)
-        nonExecutableTxs
-          .get(account)
-          .foreach(txs => {
-            while (txs.contains(nextNonce)) {
-              val promotedTxId = txs.remove(nextNonce).get
-              executableTxsPerAccount.put(nextNonce, promotedTxId)
-              nextNonce = nextNonce.add(BigInteger.ONE)
-            }
-            if (txs.isEmpty) {
-              nonExecutableTxs.remove(account)
-            }
-          })
-        nonces.put(account, nextNonce)
-
-      } else if (expectedNonce.compareTo(ethTransaction.getNonce) < 0) {
-        val listOfTxs = nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
-        if (listOfTxs.contains(ethTransaction.getNonce)) {
-          val oldTxId = listOfTxs(ethTransaction.getNonce)
-          val oldTx = all(oldTxId)
-          if (canPayHigherFee(ethTransaction, oldTx)) {
-            log.trace(s"Replacing transaction $oldTx with $ethTransaction")
-            all.remove(oldTxId)
+      val expectedNonce = nonces.getOrElseUpdate(account,
+        stateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address()))
+      expectedNonce.compareTo(ethTransaction.getNonce) match {
+        case 0 =>
+          all.put(ethTransaction.id, ethTransaction)
+          val executableTxsPerAccount =
+            executableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
+          executableTxsPerAccount.put(ethTransaction.getNonce, ethTransaction.id)
+          var nextNonce = expectedNonce.add(BigInteger.ONE)
+          nonExecutableTxs
+            .get(account)
+            .foreach(nonExecTxsPerAccount => {
+              var candidateToPromotionTx = nonExecTxsPerAccount.remove(nextNonce)
+              while (candidateToPromotionTx.isDefined) {
+                val promotedTxId = candidateToPromotionTx.get
+                executableTxsPerAccount.put(nextNonce, promotedTxId)
+                nextNonce = nextNonce.add(BigInteger.ONE)
+                candidateToPromotionTx = nonExecTxsPerAccount.remove(nextNonce)
+              }
+              if (nonExecTxsPerAccount.isEmpty) {
+                nonExecutableTxs.remove(account)
+              }
+            })
+          nonces.put(account, nextNonce)
+        case -1 =>
+          val nonExecTxsPerAccount = nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
+          val existingTxWithSameNonceIdOpt = nonExecTxsPerAccount.get(ethTransaction.getNonce)
+          if (existingTxWithSameNonceIdOpt.isDefined) {
+            val existingTxWithSameNonceId = existingTxWithSameNonceIdOpt.get
+            replaceIfCanPayHigherFee(existingTxWithSameNonceId, ethTransaction, nonExecTxsPerAccount)
+          } else {
             all.put(ethTransaction.id, ethTransaction)
-            listOfTxs.put(ethTransaction.getNonce, ethTransaction.id)
+            nonExecTxsPerAccount.put(ethTransaction.getNonce, ethTransaction.id)
           }
-        } else {
-          all.put(ethTransaction.id, ethTransaction)
-          listOfTxs.put(ethTransaction.getNonce, ethTransaction.id)
-        }
-      } else {
-        val listOfTxs = executableTxs(account)
-        val oldTxId = listOfTxs(ethTransaction.getNonce)
-        val oldTx = all(oldTxId)
-        if (canPayHigherFee(ethTransaction, oldTx)) {
-          log.trace(s"Replacing transaction $oldTx with $ethTransaction")
-          all.remove(oldTxId)
-          all.put(ethTransaction.id, ethTransaction)
-          listOfTxs.put(ethTransaction.getNonce, ethTransaction.id)
-        }
-
+        case 1 =>
+          //This case means there is already an executable tx with the same nonce in the mem pool
+          val executableTxsPerAccount = executableTxs(account)
+          val existingTxWithSameNonceId = executableTxsPerAccount(ethTransaction.getNonce)
+          replaceIfCanPayHigherFee(existingTxWithSameNonceId, ethTransaction, executableTxsPerAccount)
       }
     }
     this
+  }
+
+  def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, listOfTxs: TxIdByNonceMap) = {
+    val existingTxWithSameNonce = all(existingTxId)
+    if (canPayHigherFee(newTx, existingTxWithSameNonce)) {
+      log.trace(s"Replacing transaction $existingTxWithSameNonce with $newTx")
+      all.remove(existingTxId)
+      all.put(newTx.id, newTx)
+      listOfTxs.put(newTx.getNonce, newTx.id)
+    }
+
   }
 
   def remove(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
