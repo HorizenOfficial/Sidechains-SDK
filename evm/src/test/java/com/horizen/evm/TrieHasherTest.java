@@ -13,8 +13,8 @@ public class TrieHasherTest extends LibEvmTestBase {
     }
 
     @Test
-    public void TestTrieHasher() {
-        final var emptyRootHash = bytes("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+    public void trieHasher() {
+        final var emptyRootHash = hashEmpty;
 
         // verify that:
         // - interop works

@@ -22,10 +22,7 @@ public class Hash {
         this.bytes = bytes;
     }
 
-    public static Hash FromBytes(byte[] bytes) {
-        if (bytes == null) {
-            return null;
-        }
+    public static Hash fromBytes(byte[] bytes) {
         return new Hash(bytes);
     }
 
@@ -55,7 +52,7 @@ public class Hash {
     public static class Serializer extends JsonSerializer<Hash> {
         @Override
         public void serialize(Hash hash, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
-            throws IOException {
+                throws IOException {
             jsonGenerator.writeString(hash.toString());
         }
     }
@@ -63,12 +60,12 @@ public class Hash {
     public static class Deserializer extends JsonDeserializer<Hash> {
         @Override
         public Hash deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-            throws IOException {
+                throws IOException {
             var text = jsonParser.getText();
             if (!text.startsWith("0x")) {
                 throw new IOException("hash must be prefixed with 0x");
             }
-            return Hash.FromBytes(Converter.fromHexString(text.substring(2)));
+            return Hash.fromBytes(Converter.fromHexString(text.substring(2)));
         }
     }
 }

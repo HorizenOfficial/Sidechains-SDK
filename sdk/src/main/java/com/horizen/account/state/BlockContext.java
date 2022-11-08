@@ -1,9 +1,8 @@
 package com.horizen.account.state;
 
 import com.horizen.account.block.AccountBlockHeader;
-import com.horizen.evm.interop.EvmContext;
 import com.horizen.evm.interop.EvmResult;
-import com.horizen.evm.interop.TraceParams;
+import com.horizen.evm.interop.TraceOptions;
 
 import java.math.BigInteger;
 
@@ -15,7 +14,7 @@ public class BlockContext {
     public final int blockNumber;
     public final int consensusEpochNumber;
     public final int withdrawalEpochNumber;
-    private TraceParams traceParams;
+    private TraceOptions traceParams;
     private EvmResult evmResult;
 
     public BlockContext(
@@ -53,11 +52,11 @@ public class BlockContext {
         );
     }
 
-    public TraceParams getTraceParams() {
+    public TraceOptions getTraceParams() {
         return this.traceParams;
     }
 
-    public void setTraceParams(TraceParams tracer) {
+    public void setTraceParams(TraceOptions tracer) {
         this.traceParams = tracer;
     }
 

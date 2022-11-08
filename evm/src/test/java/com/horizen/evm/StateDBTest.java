@@ -15,7 +15,7 @@ public class StateDBTest extends LibEvmTestBase {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     @Test
-    public void TestAccountManipulation() throws Exception {
+    public void accountManipulation() throws Exception {
         final var databaseFolder = tempFolder.newFolder("evm-db");
 
         final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5c0b");

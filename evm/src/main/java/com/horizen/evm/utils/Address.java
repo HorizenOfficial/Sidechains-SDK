@@ -30,10 +30,7 @@ public class Address {
         return Converter.toHexString(bytes);
     }
 
-    public static Address FromBytes(byte[] bytes) {
-        if (bytes == null) {
-            return null;
-        }
+    public static Address fromBytes(byte[] bytes) {
         return new Address(bytes);
     }
 
@@ -58,7 +55,7 @@ public class Address {
             if (!text.startsWith("0x")) {
                 throw new IOException("address must be prefixed with 0x");
             }
-            return Address.FromBytes(Converter.fromHexString(text.substring(2)));
+            return Address.fromBytes(Converter.fromHexString(text.substring(2)));
         }
     }
 }

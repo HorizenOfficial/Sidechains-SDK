@@ -18,7 +18,7 @@ import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.TraceParams
+import com.horizen.evm.interop.TraceOptions
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -451,7 +451,7 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
-  def traceBlockByNumber(tag: String, traceParams: TraceParams): DebugTraceBlockView = {
+  def traceBlockByNumber(tag: String, traceParams: TraceOptions): DebugTraceBlockView = {
     applyOnAccountView { nodeView =>
       // get block to trace
       val (block, blockInfo) = getBlockByTag(nodeView, tag)
@@ -459,7 +459,7 @@ class EthService(
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceParams() else traceParams)
+        blockContext.setTraceParams(if (traceParams == null) new TraceOptions() else traceParams)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
@@ -481,7 +481,7 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, traceParams: TraceParams): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: Hash, traceParams: TraceOptions): DebugTraceTransactionView = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -509,7 +509,7 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceParams() else traceParams)
+        blockContext.setTraceParams(if (traceParams == null) new TraceOptions() else traceParams)
 
         // apply requested transaction with tracing enabled
         blockContext.setEvmResult(null)

@@ -14,7 +14,7 @@ public class EvmParams extends HandleParams {
 
     public EvmContext context;
 
-    public TraceParams traceParams;
+    public TraceOptions traceParams;
 
     public EvmParams() {
     }
@@ -28,7 +28,7 @@ public class EvmParams extends HandleParams {
             BigInteger availableGas,
             BigInteger gasPrice,
             EvmContext context,
-            TraceParams traceParams
+            TraceOptions traceParams
     ) {
         super(handle);
         this.from = Address.FromBytes(from);

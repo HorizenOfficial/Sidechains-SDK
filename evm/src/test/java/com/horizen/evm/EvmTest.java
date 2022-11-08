@@ -1,18 +1,17 @@
 package com.horizen.evm;
 
 import com.horizen.evm.interop.EvmResult;
-import com.horizen.evm.interop.TraceParams;
+import com.horizen.evm.interop.TraceOptions;
 import org.junit.Test;
 
 import java.math.BigInteger;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 public class EvmTest extends LibEvmTestBase {
     @Test
-    public void TestEvmApply() throws Exception {
+    public void evmApply() throws Exception {
         final var txHash = bytes("4545454545454545454545454545454545454545454545454545454545454545");
         final var codeHash = bytes("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
         final var addr1 = bytes("1234561234561234561234561234561234561230");
@@ -63,10 +62,9 @@ public class EvmTest extends LibEvmTestBase {
                 assertEquals("should generate 3 log entries", 3, logs.length);
                 Arrays
                         .stream(logs)
-                        .forEach(log -> assertEquals(
-                                hex(log.address.toBytes()),
-                                hex(createResult.contractAddress.toBytes())
-                        ));
+                        .forEach(log ->
+                                assertArrayEquals(log.address.toBytes(), createResult.contractAddress.toBytes())
+                        );
 
                 // call "store" function on the contract to set a value
                 calldata = concat(funcStore, anotherValue);
@@ -74,7 +72,7 @@ public class EvmTest extends LibEvmTestBase {
                 assertEquals("", result.evmError);
 
                 // call "retrieve" on the contract to fetch the value we just set
-                result = Evm.Apply(statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, new TraceParams());
+                result = Evm.Apply(statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, new TraceOptions());
                 assertEquals("", result.evmError);
                 assertEquals(hex(anotherValue), hex(result.returnData));
                 assertNotNull(result.traceLogs);

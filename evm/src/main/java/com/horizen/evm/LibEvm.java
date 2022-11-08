@@ -60,7 +60,13 @@ final class LibEvm {
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
         InteropResult<R> response = json.deserialize(type);
         if (response.isError()) {
-            throw new InvokeException(response.error, method, args);
+            var message = String.format(
+                    "InvokeException{error='%s', method='%s', args=%s}",
+                    response.error,
+                    method,
+                    args == null ? null : args.toNative()
+            );
+            throw new InvokeException(message);
         }
         return response.result;
     }
@@ -210,13 +216,8 @@ final class LibEvm {
             BigInteger gasLimit,
             BigInteger gasPrice,
             EvmContext context,
-            TraceParams traceParams
+            TraceOptions traceParams
     ) {
-        if (context == null) {
-            context = new EvmContext();
-            // TODO: decide what EIPs we are implementing, setting the baseFee to zero currently allows a gas price of zero
-            context.baseFee = BigInteger.ZERO;
-        }
         var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context, traceParams);
         return invoke("EvmApply", params, EvmResult.class);
     }

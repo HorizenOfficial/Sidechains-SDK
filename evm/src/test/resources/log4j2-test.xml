@@ -25,15 +25,8 @@
 
     <Loggers>
 
-        <!-- Specify this if some class need special handling-->
-        <!---Logger name="io.horizen.simpleapp" additivity="false">
-            <AppenderRef ref="debugLog" />
-            <AppenderRef ref="Console"/>
-        </Logger-->
-
         <Root level="all">
-           <AppenderRef ref="errorLog" level="ALL"/>
-           <AppenderRef ref="Console" level="DEBUG"/>
+           <AppenderRef ref="Console" level="ALL"/>
         </Root>
 
     </Loggers>

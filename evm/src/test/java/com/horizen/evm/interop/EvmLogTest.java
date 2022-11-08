@@ -65,22 +65,22 @@ public class EvmLogTest extends LibEvmTestBase {
         EvmLog randomLog = new EvmLog();
         var addressBytes = new byte[Address.LENGTH];
         new Random().nextBytes(addressBytes);
-        randomLog.address = Address.FromBytes(addressBytes);
+        randomLog.address = Address.fromBytes(addressBytes);
         var topics = new Hash[4];
-        topics[0] = Hash.FromBytes(
+        topics[0] = Hash.fromBytes(
             Converter.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"));
-        topics[1] = Hash.FromBytes(
+        topics[1] = Hash.fromBytes(
             Converter.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"));
-        topics[2] = Hash.FromBytes(
+        topics[2] = Hash.fromBytes(
             Converter.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"));
-        topics[3] = Hash.FromBytes(
+        topics[3] = Hash.fromBytes(
             Converter.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"));
 
         randomLog.topics = topics;
         var data = Converter.fromHexString("aabbccddeeff22");
         randomLog.data = data;
 
-        EvmLog randomLog2 = new EvmLog(Address.FromBytes(addressBytes), topics, data);
+        EvmLog randomLog2 = new EvmLog(Address.fromBytes(addressBytes), topics, data);
         assertEquals(randomLog, randomLog2);
         assertEquals(randomLog.hashCode(), randomLog2.hashCode());
     }
