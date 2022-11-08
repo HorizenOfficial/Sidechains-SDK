@@ -34,6 +34,11 @@ import java.util.Objects;
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
 
     private final RawTransaction transaction;
+    private AddressProposition fromAddress = null;
+    private String id = null;
+
+    private final BigInteger txCost;
+
 
     // depends on the transaction
     public EthereumTransaction(
@@ -43,6 +48,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (transaction instanceof SignedRawTransaction)
             Objects.requireNonNull(((SignedRawTransaction) transaction).getSignatureData());
         this.transaction = transaction;
+        this.txCost = super.maxCost();
     }
 
     // creates a legacy transaction
@@ -109,13 +115,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonProperty("id")
     public String id() {
-        byte[] encodedMessage;
-        if (this.isSigned()) {
-            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
-            encodedMessage = TransactionEncoder.encode(this.getTransaction(),
-                    stx.getSignatureData());
-        } else encodedMessage = TransactionEncoder.encode(this.getTransaction());
-        return BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
+        if (id == null){
+            byte[] encodedMessage;
+            if (this.isSigned()) {
+                SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
+                encodedMessage = TransactionEncoder.encode(this.getTransaction(),
+                        stx.getSignatureData());
+            } else encodedMessage = TransactionEncoder.encode(this.getTransaction());
+            id = BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
+        }
+        return id;
     }
 
     @Override
@@ -258,9 +267,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonIgnore
     public AddressProposition getFrom() {
-        if (this.isSigned())
-            return new AddressProposition(Numeric.hexStringToByteArray(getFromAddress()));
-        return null;
+        if (fromAddress == null && this.isSigned()){
+           fromAddress = new AddressProposition(Numeric.hexStringToByteArray(getFromAddress()));
+        }
+        return fromAddress;
     }
 
     @Override
@@ -387,6 +397,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             return ((SignedRawTransaction) this.transaction).getEncodedTransaction(this.getChainId());
         }
         return TransactionEncoder.encode(this.transaction);
+    }
+
+    @Override
+    public BigInteger maxCost() {
+        return txCost;
     }
 
     public Message asMessage(BigInteger baseFee) {

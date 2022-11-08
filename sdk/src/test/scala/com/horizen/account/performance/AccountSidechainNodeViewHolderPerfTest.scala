@@ -71,7 +71,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  @Ignore
+ // @Ignore
   def txModifyTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/txModifyTest.txt", true))
 
@@ -85,7 +85,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
 
-      val numOfTxs = 100000
+      val numOfTxs = 10000
       val numOfTxsPerSpammerAccounts = 100
       val numOfTxsPerNormalAccounts = 5
       val normalSpammerRatio = 20
@@ -182,14 +182,15 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  @Ignore
+ // @Ignore
   def updateMemPoolTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolTest.txt", true))
 
     val cal = Calendar.getInstance()
     try {
+      out.write("\n\n")
       out.write("*********************************************************************\n\n")
-      out.write("*                Updating Memory Pool performance test               \n\n")
+      out.write("*                Updating Memory Pool performance test              *\n\n")
       out.write("*********************************************************************\n\n")
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
@@ -280,6 +281,111 @@ class AccountSidechainNodeViewHolderPerfTest
 
   @Test
   @Ignore
+  def updateMemPoolMultipleBlocksTest(): Unit = {
+    val out = new BufferedWriter(new FileWriter("log/updateMemPoolMultiBlocksTest.txt", true))
+
+    val cal = Calendar.getInstance()
+    try {
+      out.write("*********************************************************************\n\n")
+      out.write("*   Updating Memory Pool with Multiple Blocks performance test       \n\n")
+      out.write("*********************************************************************\n\n")
+
+      out.write(s"Date and time of the test: ${cal.getTime}\n\n")
+
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
+
+      val numOfTxs = 10000
+      val numOfTxsPerSpammerAccounts = 100
+      val numOfTxsPerNormalAccounts = 5
+      val normalSpammerRatio = 20
+      val numOfSpammerAccount = numOfTxs / (numOfTxsPerSpammerAccounts + normalSpammerRatio * numOfTxsPerNormalAccounts)
+      val numOfNormalAccount = normalSpammerRatio * numOfSpammerAccount
+      val numOfTxsInBlock = 1400
+      val numOfBlocks = 3
+
+      out.write(s"Total number of transactions:                    $numOfTxs\n")
+      out.write(s"Number of spammer accounts:                      $numOfSpammerAccount\n")
+      out.write(s"Number of transactions for each spammer account: $numOfTxsPerSpammerAccounts\n")
+      out.write(s"Number of normal accounts:                       $numOfNormalAccount\n")
+      out.write(s"Number of transactions for each normal account:  $numOfTxsPerNormalAccounts\n")
+      out.write(s"Number of transactions for each block:           $numOfTxsInBlock\n")
+      out.write(s"Number of applied blocks:                        $numOfBlocks\n")
+
+      assertTrue(
+        "Invalid test parameters",
+        numOfTxs % (numOfTxsPerSpammerAccounts + normalSpammerRatio * numOfTxsPerNormalAccounts) == 0
+      )
+      assertTrue(
+        "Invalid number of blocks",
+        numOfBlocks * numOfTxsInBlock <= numOfTxs
+      )
+
+      println(s"************** Testing with {numOfBlocks} blocks to apply **************")
+
+      val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
+
+      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
+
+      val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
+      listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
+      assertEquals(numOfTxs, mempool.size)
+
+      val appliedBlock: AccountBlock = mock[AccountBlock]
+      val listOfTxsInBlock =
+        (listOfSpammerTxs.take(numOfSpammerAccount) ++ listOfNormalTxs.take(
+          numOfTxsInBlock - numOfSpammerAccount
+        )).toSeq
+      Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
+      // Update the nonces
+      listOfTxsInBlock.foreach(tx =>
+        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+      )
+
+      println("Starting test")
+      val startTime = System.currentTimeMillis()
+      val newMemPool = nodeViewHolder.updateMemPool(Seq(), Seq(appliedBlock), mempool, state)
+      val updateTime = System.currentTimeMillis() - startTime
+      assertEquals(numOfTxs - numOfTxsInBlock, newMemPool.size)
+      println(s"total time $updateTime ms")
+      out.write(s"\n********************* Testing with one block to apply results *********************\n")
+      out.write(s"Duration of the test:                      $updateTime ms\n")
+
+      println("************** Testing with one rollback block and one to apply **************")
+      mempool = newMemPool
+      val rollBackBlock = appliedBlock
+      // restore the mempool so its size is again numOfTxs
+      val additionalTxs = createTransactions(numOfTxsInBlock, 1)
+      additionalTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
+      assertEquals(numOfTxs, mempool.size)
+
+      // the block to applied will have 1000 txs of the rolledBack block and 400 from the additionalTxs
+      val appliedBlock2: AccountBlock = mock[AccountBlock]
+      val listOfTxsInBlock2 = listOfTxsInBlock.take(1000) ++ additionalTxs.take(400) //TODO
+      Mockito.when(appliedBlock2.transactions).thenReturn(listOfTxsInBlock2.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+      // Update the nonces
+      // First reapplying the txs in the rollBackBlock, then the ones in appliedBlock2
+      listOfTxsInBlock.foreach(tx => mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce))
+      listOfTxsInBlock2.foreach(tx =>
+        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+      )
+      println("Starting test")
+      val startTime2 = System.currentTimeMillis()
+      val newMemPool2 = nodeViewHolder.updateMemPool(Seq(rollBackBlock), Seq(appliedBlock2), mempool, state)
+      val updateTime2 = System.currentTimeMillis() - startTime2
+      assertEquals(numOfTxs, newMemPool2.size)
+      println(s"total time $updateTime2 ms")
+      out.write(s"\n********************* Testing rollback block and one to apply results *********************\n")
+      out.write(s"Duration of the test:                      $updateTime2 ms\n")
+
+    } finally {
+      out.close()
+    }
+  }
+
+
+  @Test
+//  @Ignore
   def takeTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/takeTest.txt", true))
 
@@ -293,7 +399,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
 
-      val numOfTxs = 100000
+      val numOfTxs = 10000
       val numOfTxsPerAccount = 5
       val numOfAccounts = numOfTxs / numOfTxsPerAccount
       assertTrue("Invalid test parameters", numOfTxs % (numOfTxsPerAccount) == 0)
