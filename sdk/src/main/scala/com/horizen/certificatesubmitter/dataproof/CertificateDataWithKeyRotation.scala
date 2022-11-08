@@ -53,10 +53,19 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
       s"masters public keys = ${schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
       s"new signers public keys = ${schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
       s"new masters public keys = ${schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
-      s"updated signers keys signing key signatures = ${schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures.map(BytesUtils.toHexString)}), " +
-      s"updated signers keys master key signatures = ${schnorrKeysSignaturesListBytes.updatedSigningKeysMkSignatures.map(BytesUtils.toHexString)}), " +
-      s"updated master keys signing key signatures = ${schnorrKeysSignaturesListBytes.updatedMasterKeysSkSignatures.map(BytesUtils.toHexString)}), " +
-      s"updated master keys master key signatures = ${schnorrKeysSignaturesListBytes.updatedMasterKeysMkSignatures.map(BytesUtils.toHexString)}), " +
+      s"updated signers keys signing key signatures = ${mapFromOptionalSignature(schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures)}), " +
+      s"updated signers keys master key signatures = ${mapFromOptionalSignature(schnorrKeysSignaturesListBytes.updatedSigningKeysMkSignatures)}), " +
+      s"updated master keys signing key signatures = ${mapFromOptionalSignature(schnorrKeysSignaturesListBytes.updatedMasterKeysSkSignatures)}), " +
+      s"updated master keys master key signatures = ${mapFromOptionalSignature(schnorrKeysSignaturesListBytes.updatedMasterKeysMkSignatures)}), " +
       s"previous certificate = ${previousCertificateOption.getOrElse("").toString})"
+  }
+
+  private def mapFromOptionalSignature(signatures: Seq[Option[Array[Byte]]]): Seq[String] = {
+    signatures.map {
+      case Some(k) =>
+        BytesUtils.toHexString(k)
+      case None =>
+        "None"
+    }
   }
 }
