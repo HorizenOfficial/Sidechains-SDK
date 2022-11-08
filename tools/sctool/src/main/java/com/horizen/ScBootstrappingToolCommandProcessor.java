@@ -63,7 +63,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     }
 
     @Override
-    public void processCommand(String input) throws IOException {
+    public void processCommand(String input) throws Exception {
         Command command = parseCommand(input);
 
         switch(command.name()) {
@@ -346,7 +346,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         printer.print(res);
     }
 
-    private void processGenerateCertWithKeyRotationProofInfo(JsonNode json) {
+    private void processGenerateCertWithKeyRotationProofInfo(JsonNode json) throws Exception {
         if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
             printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys");
             return;

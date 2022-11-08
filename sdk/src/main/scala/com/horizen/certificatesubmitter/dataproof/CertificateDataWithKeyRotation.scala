@@ -4,13 +4,17 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes
 import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.librustsidechains.Library
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
+import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.utils.BytesUtils
 
 import scala.collection.JavaConverters
 
-
+object CertificateDataWithKeyRotation {
+  Library.load()
+}
 case class CertificateDataWithKeyRotation(override val referencedEpochNumber: Int,
                                           override val sidechainId: Array[Byte],
                                           override val withdrawalRequests: Seq[WithdrawalRequestBox],
@@ -25,11 +29,15 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
   extends CertificateData(referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
+    val signersPublicKeys = schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList.map(SchnorrPublicKey.deserialize)
+    val signersPublicKeysBytes = signersPublicKeys.map(_.getHash.serializeFieldElement())
+    val mastersPublicKeys = schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList.map(SchnorrPublicKey.deserialize)
+    val mastersPublicKeysBytes = mastersPublicKeys.map(_.getHash.serializeFieldElement())
     JavaConverters.asScalaIteratorConverter(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getCertificateCustomFields(scala.collection.JavaConverters.seqAsJavaList(
-        schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList ++
-        schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList)).listIterator()).asScala.toSeq
+      .getCertificateCustomFields(scala.collection.JavaConverters.seqAsJavaList(signersPublicKeysBytes ++ mastersPublicKeysBytes)
+      ).listIterator()).asScala.toSeq
   }
+
   override def toString: String = {
     "DataForProofGeneration(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +

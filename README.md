@@ -88,6 +88,10 @@ In order to build and use `SNAPSHOT.jar` package version refer to the following 
 ** Test Sidechains-SDK with unreleased version of zendoo-sc-cryptolib **
 1. git clone https://github.com/HorizenOfficial/zendoo-sc-cryptolib
 2. git checkout -b name_of_needed_branch
-3. cd jni
-4. mvn clean install -Dmaven.test.skip=true
-5. Sidechains-SDK/sdk/pom.xml change version of <artifactId>zendoo-sc-cryptolib to version in line 6 of zendoo-sc-cryptolib/jni/pom.xml
+3. cargo build --release --manifest-path=api/Cargo.toml
+4. cp target/release/libzendoo_sc.so jni/src/main/resources/native/linux64/libzendoo_sc.so
+5. cd jni
+6. mvn clean install -Dmaven.test.skip=true
+7. Go to project Sidechains-SDK
+7. sdk/pom.xml change version of <artifactId>zendoo-sc-cryptolib to version in line 6 of zendoo-sc-cryptolib/jni/pom.xml
+8. mvn clean install -Dmaven.test.skip=true

@@ -111,15 +111,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 btrFee,
                 customFieldsElements
         );
-        CreateProofResult proofAndQuality = null;
-        try {
-            proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(validatorKeysUpdatesList,
-                    withdrawalCertificate, previousCertificateOption, signatures,
-                    signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
-                    provingKeyPath, false, zk, true, true);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        CreateProofResult proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(validatorKeysUpdatesList,
+                withdrawalCertificate, previousCertificateOption, signatures,
+                signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
+                provingKeyPath, false, zk, true, true);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFieldElement.freeFieldElement();
@@ -146,9 +141,9 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                byte[] proof,
                                String verificationKeyPath) {
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
-        List<FieldElement> customFieldsElements = new ArrayList<>();
-        FieldElement genesisConstant = null;
-        boolean verificationResult = false;
+        List<FieldElement> customFieldsElements;
+        FieldElement genesisConstant;
+        boolean verificationResult;
         try (FieldElement constantFe = FieldElement.deserialize(constant)) {
             FieldElement sidechainIdFIeldElement = FieldElement.deserialize(sidechainId);
             customFieldsElements = prepareCustomFieldElements(customFields);
@@ -174,8 +169,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
             endCumulativeScTxCommTreeRootFe.freeFieldElement();
             sidechainIdFIeldElement.freeFieldElement();
             constantFe.freeFieldElement();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
         customFieldsElements.forEach(FieldElement::freeFieldElement);
         genesisConstant.freeFieldElement();
@@ -184,7 +177,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
 
     @Override
-    public byte[] generateSysDataConstant(List<byte[]> signerPublicKeysList, List<byte[]> masterPublicKeysList, long threshold) {
+    public byte[] generateSysDataConstant(List<byte[]> signerPublicKeysList, List<byte[]> masterPublicKeysList, long threshold) throws Exception {
 
         List<SchnorrPublicKey> signerPublicKeys = signerPublicKeysList.stream().map(SchnorrPublicKey::deserialize).
                 collect(Collectors.toList());
@@ -203,13 +196,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         );
 
         // Note: sc-cryptolib return constant in LittleEndian
-        FieldElement sysDataConstant;
-        try {
-            sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(schnorrKeysSignaturesList.getKeysRootHash(signerPublicKeys.size()), threshold);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Fail to get the Constant");
-        }
-
+        FieldElement sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(schnorrKeysSignaturesList.getKeysRootHash(signerPublicKeys.size()), threshold);
         byte[] sysDataConstantBytes = sysDataConstant.serializeFieldElement();
 
         sysDataConstant.freeFieldElement();
@@ -226,16 +213,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     @Override
-    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) {
-        boolean setupResult = false;
-        try {
-            setupResult = NaiveThresholdSignatureWKeyRotation.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, customFieldsNum,
-                    Optional.of(supportedSegmentSize),
-                    provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return setupResult;
+    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) throws Exception {
+        return NaiveThresholdSignatureWKeyRotation.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, customFieldsNum,
+                Optional.of(supportedSegmentSize),
+                provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 
     public byte[] generateKeysRootHash(List<byte[]> publicSignersKeysList, List<byte[]> publicMastersKeysList) {
