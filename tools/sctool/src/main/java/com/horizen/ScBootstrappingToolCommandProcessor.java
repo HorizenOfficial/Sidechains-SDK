@@ -309,7 +309,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
-            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW;
+            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION;
             if (isCSWEnabled){
                 numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW;
             }
@@ -437,10 +437,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         List<byte[]> signersPublicKeysBytes = signersPublicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
         List<byte[]> mastersPublicKeysBytes = mastersPublicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
-
-        byte[] keysRootHash = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateKeysRootHash(signersPublicKeysBytes, mastersPublicKeysBytes);
-
-        String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateSysDataConstant(keysRootHash, threshold));
+        String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateSysDataConstant(signersPublicKeysBytes, mastersPublicKeysBytes, threshold));
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         ObjectNode resJson = mapper.createObjectNode();
@@ -458,7 +455,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         ArrayNode masterKeyArrayNode = resJson.putArray("mastersPublicKeys");
         for (String publicKeyStr : mastersPublicKeys) {
-            signingKeyArrayNode.add(publicKeyStr);
+            masterKeyArrayNode.add(publicKeyStr);
         }
 
         String res = resJson.toString();

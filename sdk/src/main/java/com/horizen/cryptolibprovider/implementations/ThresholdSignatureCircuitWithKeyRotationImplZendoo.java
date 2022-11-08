@@ -111,10 +111,15 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 btrFee,
                 customFieldsElements
         );
-        CreateProofResult proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(validatorKeysUpdatesList,
-                withdrawalCertificate, previousCertificateOption, signatures,
-                signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
-                provingKeyPath, false, zk, true, true);
+        CreateProofResult proofAndQuality = null;
+        try {
+            proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(validatorKeysUpdatesList,
+                    withdrawalCertificate, previousCertificateOption, signatures,
+                    signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
+                    provingKeyPath, false, zk, true, true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFieldElement.freeFieldElement();
@@ -141,9 +146,9 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                byte[] proof,
                                String verificationKeyPath) {
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
-        List<FieldElement> customFieldsElements;
-        FieldElement genesisConstant;
-        boolean verificationResult;
+        List<FieldElement> customFieldsElements = null;
+        FieldElement genesisConstant = null;
+        boolean verificationResult = false;
         try (FieldElement constantFe = FieldElement.deserialize(constant)) {
             FieldElement sidechainIdFIeldElement = FieldElement.deserialize(sidechainId);
             customFieldsElements = prepareCustomFieldElements(customFields);
@@ -169,6 +174,8 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
             endCumulativeScTxCommTreeRootFe.freeFieldElement();
             sidechainIdFIeldElement.freeFieldElement();
             constantFe.freeFieldElement();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         customFieldsElements.forEach(FieldElement::freeFieldElement);
         genesisConstant.freeFieldElement();

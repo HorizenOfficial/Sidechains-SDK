@@ -1,12 +1,12 @@
 import json
 
 # execute a node/getKeyRotationProof call
-def http_get_key_rotation_proof(sidechainNode, withdrawalEpoch, indexOfSigner, keyType):
+def http_get_key_rotation_proof(sidechainNode, withdrawal_epoch, index_of_signer, key_type):
     j = {
-        "withdrawalEpoch": withdrawalEpoch,
-        "indexOfSigner": indexOfSigner,
-        "keyType": keyType
+        "withdrawalEpoch": withdrawal_epoch,
+        "indexOfSigner": index_of_signer,
+        "keyType": key_type
      }
     request = json.dumps(j)
-    response = sidechainNode.transaction_getKeyRotationProof(request)
+    response = sidechainNode.node_getKeyRotationProof(request)
     return response["result"]

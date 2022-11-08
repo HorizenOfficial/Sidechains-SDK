@@ -9,6 +9,7 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, 
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.schnorrnative.SchnorrPublicKey
+import com.horizen.utils.BytesUtils
 import com.horizen.{SidechainSettings, SidechainState}
 
 import java.util
@@ -98,8 +99,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     } yield {
       state.keyRotationProof(status.referencedEpoch, indexOfSigner, keyType = 0) match {
         case Some(keyRotationProof: KeyRotationProof) =>
-          (keyRotationProof.newValueOfKey.bytes(), keyRotationProof.signingKeySignature.bytes(), keyRotationProof.masterKeySignature.bytes())
-        case _ => (schnorrSignersPublicKeysBytesList(indexOfSigner), null, null)
+          (keyRotationProof.newValueOfKey.bytes(), Option.apply(keyRotationProof.signingKeySignature.bytes()), Option.apply(keyRotationProof.masterKeySignature.bytes()))
+        case _ => (schnorrSignersPublicKeysBytesList(indexOfSigner), Option.empty, Option.empty)
       }
     }).unzip3
 
@@ -108,8 +109,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     } yield {
       state.keyRotationProof(status.referencedEpoch, indexOfSigner, keyType = 1) match {
         case Some(keyRotationProof: KeyRotationProof) =>
-          (keyRotationProof.newValueOfKey.bytes(), keyRotationProof.signingKeySignature.bytes(), keyRotationProof.masterKeySignature.bytes())
-        case _ => (schnorrMastersPublicKeysBytesList(indexOfSigner), null, null)
+          (keyRotationProof.newValueOfKey.bytes(), Option.apply(keyRotationProof.signingKeySignature.bytes()), Option.apply(keyRotationProof.masterKeySignature.bytes()))
+        case _ => (schnorrMastersPublicKeysBytesList(indexOfSigner), Option.empty,  Option.empty)
       }
     }).unzip3
 
@@ -136,8 +137,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       schnorrKeysSignaturesListBytes,
       previousCertificateOption,
       CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
-        scala.collection.JavaConverters.seqAsJavaList(params.signersPublicKeys.map(sp => sp.bytes())),
-        scala.collection.JavaConverters.seqAsJavaList(params.mastersPublicKeys.map(sp => sp.bytes())))
+        scala.collection.JavaConverters.seqAsJavaList(params.signersPublicKeys.map(sp => sp.pubKeyBytes())),
+        scala.collection.JavaConverters.seqAsJavaList(params.mastersPublicKeys.map(sp => sp.pubKeyBytes())))
     )
   }
 

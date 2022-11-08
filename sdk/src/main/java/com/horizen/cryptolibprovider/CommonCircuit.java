@@ -4,7 +4,6 @@ import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.WithdrawalCertificate;
-import com.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
@@ -29,7 +28,9 @@ public class  CommonCircuit {
     // 2 custom fields that represent UtxoMerkleTreeRoot
     public static final int CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW = 2;
 
-    public static final int CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW = 0;
+    public static final int CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION = 0;
+
+    public static final int CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION = 1;
 
     public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(

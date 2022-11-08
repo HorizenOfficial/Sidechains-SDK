@@ -270,19 +270,16 @@ Output: CertificateProofInfo (see sc_bootstrap_info.py).
 def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths,
                                     is_csw_enabled, type_of_circuit_number):
     signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
-    master_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
 
     signer_secrets = []
-    master_secrets = []
     public_signing_keys = []
+    master_secrets = []
     public_master_keys = []
     for i in range(len(signer_keys)):
         signer_key = signer_keys[i]
         signer_secrets.append(signer_key.secret)
         public_signing_keys.append(signer_key.publicKey)
-        master_key = master_keys[i]
-        master_secrets.append(master_key.secret)
-        public_master_keys.append(master_key.publicKey)
+
 
     json_parameters = {
         "signersPublicKeys": public_signing_keys,
@@ -291,6 +288,16 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
         "verificationKeyPath": keys_paths.verification_key_path,
         "isCSWEnabled": is_csw_enabled
     }
+
+    if type_of_circuit_number == 1:
+        master_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
+        for i in range((len(master_keys))):
+            master_key = master_keys[i]
+            master_secrets.append(master_key.secret)
+            public_master_keys.append(master_key.publicKey)
+
+        json_parameters["mastersPublicKeys"] = public_master_keys
+
     output = launch_bootstrap_tool("generateCertProofInfo", json_parameters) if type_of_circuit_number == 0 else \
         launch_bootstrap_tool("generateCertWithKeyRotationProofInfo", json_parameters)
 
@@ -381,13 +388,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
-    all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
+    all_private_keys = bootstrap_info.certificate_proof_info.schnorr_signers_secrets
     signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
     api_key_hash = ""
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
-    genesis_secrets += sc_node_config.initial_signing_private_keys
-    genesis_secrets += sc_node_config.initial_master_private_keys
+    genesis_secrets += bootstrap_info.certificate_proof_info.schnorr_masters_secrets
 
     config = tmpConfig % {
         'NODE_NUMBER': n,
@@ -881,7 +887,8 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
                                                             cert_keys_paths,
-                                                            csw_keys_paths)
+                                                            csw_keys_paths,
+                                                            sc_creation_info.type_of_circuit_number)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:

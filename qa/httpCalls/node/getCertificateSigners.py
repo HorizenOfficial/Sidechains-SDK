@@ -4,5 +4,5 @@ import json
 def http_get_certificate_signers(sidechainNode):
     j = {}
     request = json.dumps(j)
-    response = sidechainNode.transaction_getCertificateSigners(request)
+    response = sidechainNode.node_getCertificateSigners(request)
     return response["result"]

@@ -12,6 +12,7 @@ import com.horizen.utils.BytesUtils
 
 import scala.collection.JavaConverters
 
+
 object CertificateDataWithKeyRotation {
   Library.load()
 }

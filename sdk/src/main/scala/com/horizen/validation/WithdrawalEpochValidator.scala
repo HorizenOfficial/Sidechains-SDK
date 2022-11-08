@@ -4,6 +4,8 @@ import com.horizen.block.SidechainBlock
 import com.horizen.params.NetworkParams
 import com.horizen.SidechainHistory
 import com.horizen.cryptolibprovider.CommonCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, WithdrawalEpochUtils}
 import scorex.util.idToBytes
@@ -30,7 +32,17 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block contains different withdrawal epoch length than expected in configs.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
     // Check that sidechain declares proper number of custom fields
-    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
+    val expectedNumOfCustomFields = params.isCSWEnabled match {
+      case true =>
+        CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW
+      case false =>
+        TypeOfCircuit(params.typeOfCircuitNumber) match {
+          case NaiveThresholdSignatureCircuit =>
+            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION
+          case NaiveThresholdSignatureCircuitWithKeyRotation =>
+            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION
+        }
+    }
     if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != expectedNumOfCustomFields) {
         throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
           "genesis block declares sidechain with different number of custom field configs. " +

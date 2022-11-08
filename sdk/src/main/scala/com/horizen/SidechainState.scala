@@ -312,8 +312,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
     }
     else {
-      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW )
-        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW} custom fields when ceased sidechain withdrawal is disabled.")
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION )
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION} custom fields when ceased sidechain withdrawal is disabled.")
     }
   }
 
@@ -570,7 +570,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
             val signerKeys = new JArrayList[SchnorrProposition]()
             val masterKeys = new JArrayList[SchnorrProposition]()
-            for (i <- 0 to certifiersKeys.signingKeys.size) {
+            for (i <- certifiersKeys.signingKeys.indices) {
               keyRotationProof(currentEpoch, i, SigningKeyRotationProofType.id) match {
                 case Some(keyRotationProof: KeyRotationProof) =>
                   signerKeys.add(keyRotationProof.newValueOfKey)

@@ -133,7 +133,7 @@ class SidechainApp @Inject()
     case NaiveThresholdSignatureCircuit =>
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
     case NaiveThresholdSignatureCircuitWithKeyRotation =>
-      mastersPublicKeys = sidechainSettings.withdrawalEpochCertificateSettings.masterPublicKeys
+      mastersPublicKeys = sidechainSettings.withdrawalEpochCertificateSettings.mastersPublicKeys
         .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
       CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, mastersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
   }
@@ -239,7 +239,17 @@ class SidechainApp @Inject()
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
-    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
+    val expectedNumOfCustomFields = params.isCSWEnabled match {
+      case true =>
+        CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW
+      case false =>
+        TypeOfCircuit(typeOfCircuitNumber) match {
+          case NaiveThresholdSignatureCircuit =>
+            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION
+          case NaiveThresholdSignatureCircuitWithKeyRotation =>
+            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION
+        }
+    }
     val result: Boolean = TypeOfCircuit(typeOfCircuitNumber) match {
       case NaiveThresholdSignatureCircuit =>
         CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)

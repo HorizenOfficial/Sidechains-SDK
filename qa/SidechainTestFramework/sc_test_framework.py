@@ -161,6 +161,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                 os.makedirs(self.options.tmpdir)
 
             logging.info("Initializing test directory "+self.options.tmpdir)
+            print("Initializing test directory "+self.options.tmpdir)
 
             self.setup_chain()
 
