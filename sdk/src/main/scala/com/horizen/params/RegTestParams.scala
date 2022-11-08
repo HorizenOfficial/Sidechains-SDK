@@ -45,4 +45,6 @@ case class RegTestParams(
   override val nPowMaxAdjustDown: Int = 0 // Turn off adjustment down
   override val nPowMaxAdjustUp: Int = 0 // Turn off adjustment up
   override val nPowTargetSpacing: Int = 150 // 2.5 * 60
+
+  override val minVirtualWithdrawalEpochLength: Int = 10
 }

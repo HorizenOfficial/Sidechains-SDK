@@ -28,6 +28,11 @@ Configuration:
     
     Network schema:
         N1 <-> N2 <-> N3 <-> N4
+Note:
+    This test can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     For the SC node:
         - generate MC and SC blocks to reach the end of the Withdrawal epoch 0

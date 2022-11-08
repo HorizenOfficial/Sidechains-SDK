@@ -216,13 +216,7 @@ class SidechainApp @Inject()
   }
 
   if (params.isNonCeasing) {
-    val minVirtualEpochLength = sidechainSettings.genesisData.mcNetwork match {
-      case "regtest" => 10
-      case "testnet" => 100
-      case "mainnet" => 100
-    }
-
-    if (params.withdrawalEpochLength < minVirtualEpochLength)
+    if (params.withdrawalEpochLength < params.minVirtualWithdrawalEpochLength)
       throw new IllegalArgumentException("Virtual withdrawal epoch length is too short.")
 
     log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")

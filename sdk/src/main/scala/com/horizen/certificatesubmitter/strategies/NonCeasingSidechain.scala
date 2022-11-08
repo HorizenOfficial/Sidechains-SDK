@@ -1,11 +1,12 @@
 package com.horizen.certificatesubmitter.strategies
 import com.horizen.block.SidechainBlock
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
+import com.horizen.certificatesubmitter.strategies.NonCeasingSidechain.NON_CEASING_SUBMISSION_DELAY
 import com.horizen.params.NetworkParams
 import com.horizen.utils.WithdrawalEpochInfo
 
 class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionStrategy {
-  private val nonCeasingSubmissionDelay = 1 // TBD length: at the moment like for ceasing sidechains
+
 
   override def getStatus(sidechainNodeView: View, block: SidechainBlock): SubmissionWindowStatus = {
     // Take withdrawal epoch info for block from the History.
@@ -22,7 +23,7 @@ class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionSt
       // Block belongs to the epoch after the next certificate submission epoch
       // It means that sidechain skips submission for some time
       SubmissionWindowStatus(nextCertReferencedEpochNumber, isInWindow = true)
-    } else if (certSubmissionEpoch == withdrawalEpochInfo.epoch && withdrawalEpochInfo.lastEpochIndex >= nonCeasingSubmissionDelay) {
+    } else if (certSubmissionEpoch == withdrawalEpochInfo.epoch && withdrawalEpochInfo.lastEpochIndex >= NON_CEASING_SUBMISSION_DELAY) {
       // Block belongs to the SAME epoch as the next certificate must be submitted
       // Moreover, the submission delay passed.
       SubmissionWindowStatus(nextCertReferencedEpochNumber, isInWindow = true)
@@ -38,4 +39,10 @@ class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionSt
     // Only one certificate per epoch is allowed.
     status.knownSigs.size >= params.signersThreshold
   }
+}
+
+object NonCeasingSidechain{
+  // Delay for non-ceasing sidechain is the same as for ceasing sidechain
+  // Measured in MC blocks. See `WithdrawalEpochUtils.inSubmitCertificateWindow(...)`
+  private val NON_CEASING_SUBMISSION_DELAY: Int = 1
 }

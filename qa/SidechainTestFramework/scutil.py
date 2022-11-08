@@ -164,6 +164,8 @@ Parameters:
  - genesis_secret: private key 25519 secret to sign SC block
  - vrf_secret: vrk secret key to check consensus rules SC block
  - block_timestamp_rewind: rewind genesis block timestamp by some value
+ - virtual_withdrawal_epoch_length - actual withdrawal epoch length from SC perspective in case of non-ceasing sidechain
+    Note: must be undefined or 0 in case of ceasing sidechain; >0 in case of non-ceasing sidechain.
  
 Output: a JSON object to be included in the settings file of the sidechain node nth.
 {

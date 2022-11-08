@@ -21,6 +21,11 @@ Configuration:
     Start 1 MC node and 1 SC node (with default websocket configuration).
     SC node connected to the first MC node.
 
+Note:
+    This test can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     For the SC node:
         - verify that all keys/boxes/balances are coherent with the default initialization

@@ -200,7 +200,7 @@ class CertificateSubmitter(settings: SidechainSettings,
         case Success(submissionWindowStatus) =>
           if (submissionWindowStatus.isInWindow) {
             signaturesStatus match {
-              // Nothing changes -> do nothing
+              // Nothing changed -> do nothing
               // Note: applicable only to non-ceasing sidechains
               case Some(status) if status.referencedEpoch == submissionWindowStatus.referencedWithdrawalEpochNumber => // Nothing changes -> do nothing
               case _ => // Case None or Some(status) for newer referencedEpoch

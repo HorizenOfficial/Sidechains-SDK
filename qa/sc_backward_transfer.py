@@ -322,5 +322,4 @@ class SCBackwardTransfer(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    # TODO add nonCeasing=false argument for sharing tests
     SCBackwardTransfer().main()

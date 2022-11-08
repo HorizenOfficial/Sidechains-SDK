@@ -20,6 +20,11 @@ Configuration:
     SC nodes 2 is a certificate submitter.
     SC Nodes altogether have enough keys to produce certificate signatures.
 
+Note:
+    This test can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     - Generate 2000 blocks on SC node 1
     - Connect SC node 2 to SC node 1 and start syncing

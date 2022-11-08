@@ -60,6 +60,8 @@ trait NetworkParams {
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
   val isNonCeasing: Boolean
 
+  val minVirtualWithdrawalEpochLength: Int
+
   // Sidechain forger restriction
   val restrictForgers: Boolean = false
   val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()

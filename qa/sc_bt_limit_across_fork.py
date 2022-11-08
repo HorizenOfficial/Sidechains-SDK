@@ -22,6 +22,11 @@ Configuration:
     WithdrawalEpochLength = 11
     WithdrawalRequestBox slots open per MC block reference = 3999 / (11 - 1) = 399
 
+Note:
+    This test can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     For the SC node:
         - ############## WITHDRAWAL EPOCH 0 #####################
@@ -54,11 +59,9 @@ class ScBtLimitAcrossForkTest(SidechainTestFramework):
         is_non_ceasing = self.options.nonceasing
         # Non ceasing sidechains must be of sidechain version 2
         sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
-        csw_enabled = False if is_non_ceasing else True
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
                                                         sc_creation_version=sc_creation_version,
-                                                        csw_enabled=csw_enabled,
                                                         is_non_ceasing=is_non_ceasing), sc_node_configuration)
 
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720*120*5).sidechain_id
@@ -71,11 +74,6 @@ class ScBtLimitAcrossForkTest(SidechainTestFramework):
         self.sync_all()
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
-
-        # Check CSW is enabled on SC node
-        is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
-        assert_false((is_csw_enabled and self.options.nonceasing), "Ceased Sidechain Withdrawal and non-ceasing sidechain cannot be enabled together.")
-        assert_true((is_csw_enabled or self.options.nonceasing), "Ceased Sidechain Withdrawal expected to be enabled.")
 
         # ******************** WITHDRAWAL EPOCH 0 START ********************
         print("******************** WITHDRAWAL EPOCH 0 START ********************")

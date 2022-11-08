@@ -285,7 +285,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
     if (isWithdrawalEpochSwitched) {
       if (!params.isNonCeasing) {
-        // For ceasing sidechain we remove outdatet information in the end of the withdrawal epoch
+        // For ceasing sidechain we remove outdated information in the end of the withdrawal epoch
         val wrEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
         for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
           removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))

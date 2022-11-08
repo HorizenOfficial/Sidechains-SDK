@@ -20,6 +20,11 @@ Configuration:
     SC nodes are certificate submitters.
     Every SC Node has enough keys to produce certificate signatures.
 
+Note:
+    This test can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     - Generate many MC blocks and SC blocks to pass 10 withdrawal epochs. SC node 1 generates certificates for every epoch.
     - Connect SC node 2 to SC node 1 and start syncing

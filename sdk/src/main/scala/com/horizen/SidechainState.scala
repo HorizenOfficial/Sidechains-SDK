@@ -250,7 +250,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     // Check that the top quality certificate data is relevant to the SC active chain cert data.
     // There is no need to check endEpochBlockHash, epoch number and Snark proof, because SC trusts MC consensus.
     // Currently we need to check only the consistency of backward transfers and utxoMerkleRoot
-    // TODO: for non-ceasing sidechains remove WRBs only when the proper cert has been validated
     val expectedWithdrawalRequests = withdrawalRequests(certReferencedEpochNumber)
 
     // Simple size check

@@ -45,4 +45,6 @@ case class MainNetParams(
   override val nPowMaxAdjustDown: Int = 32 // 32% adjustment down
   override val nPowMaxAdjustUp: Int = 16 // 16% adjustment up
   override val nPowTargetSpacing: Int = 150 // 2.5 * 60
+
+  override val minVirtualWithdrawalEpochLength: Int = 100
 }
