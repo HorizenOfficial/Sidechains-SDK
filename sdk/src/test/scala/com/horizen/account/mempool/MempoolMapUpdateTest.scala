@@ -17,6 +17,7 @@ import java.math.BigInteger
 class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture with SidechainTypes with MockitoSugar {
 
   val stateViewMock: AccountStateReader = mock[AccountStateReader]
+  val stateProvider: AccountStateReaderProvider = () => stateViewMock
 
   @Before
   def setUp(): Unit = {
@@ -32,7 +33,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testEmptyMemPool(): Unit = {
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
 
     val account = Keys.createEcKeyPair()
 
@@ -50,7 +51,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     // Try with only txs from applied blocks
     // Reset mempool
-    mempoolMap = new MempoolMap(stateViewMock)
+    mempoolMap = new MempoolMap(stateProvider)
     //Update the nonce in the state db
     Mockito
       .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
@@ -64,7 +65,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     // Try with txs from applied and reverted blocks
     // Reset mempool
-    mempoolMap = new MempoolMap(stateViewMock)
+    mempoolMap = new MempoolMap(stateProvider)
     listOfTxsToReAdd = listOfTxs.take(3)
     listOfTxsToRemove = listOfTxs
 
@@ -72,7 +73,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of txs in the mempool", 0, mempoolMap.size)
 
     // Reset mempool
-    mempoolMap = new MempoolMap(stateViewMock)
+    mempoolMap = new MempoolMap(stateProvider)
     listOfTxsToReAdd = listOfTxs
     listOfTxsToRemove = listOfTxs.take(4)
     //Update the nonce in the state db
@@ -86,7 +87,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of executable transactions", listOfTxsToReAdd.size - listOfTxsToRemove.size, executableTxs.size)
 
     //With orphans for balance
-    mempoolMap = new MempoolMap(stateViewMock)
+    mempoolMap = new MempoolMap(stateProvider)
     val invalidTx = createEIP1559Transaction(BigInteger.valueOf(20000), nonce = BigInteger.valueOf(expectedNumOfTxs),
       Some(account), gasLimit = BigInteger.valueOf(1000000), gasFee = BigInteger.valueOf(1000000))
     val validTx = createEIP1559Transaction(BigInteger.valueOf(12), nonce = BigInteger.valueOf(expectedNumOfTxs + 1),
@@ -106,7 +107,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testWithTxsInMemPool(): Unit = {
-    val mempoolMap = new MempoolMap(stateViewMock)
+    val mempoolMap = new MempoolMap(stateProvider)
 
     val account = Keys.createEcKeyPair()
 
@@ -190,7 +191,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testWithTxsInvalidForBalance(): Unit = {
-    val mempoolMap = new MempoolMap(stateViewMock)
+    val mempoolMap = new MempoolMap(stateProvider)
 
     val account = Keys.createEcKeyPair()
     val limitOfGas = BigInteger.valueOf(1000000)

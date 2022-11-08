@@ -145,7 +145,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("Starting test reverse order")
       // Resetting MemPool
-      mempool = AccountMemoryPool.createEmptyMempool(state)
+      mempool = AccountMemoryPool.createEmptyMempool(() => state)
 
       val reverseList = listOfTxs.reverse
       listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
@@ -562,7 +562,7 @@ class AccountSidechainNodeViewHolderPerfTest
       override def getView: AccountStateView = stateViewMock
     }
 
-    mempool = AccountMemoryPool.createEmptyMempool(state)
+    mempool = AccountMemoryPool.createEmptyMempool(() => state)
 
     val nodeViewHolderRef: TestActorRef[MockedAccountSidechainNodeViewHolder] = TestActorRef(
       Props(

@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
                          unconfirmed: MempoolMap,
-                         stateReader: AccountStateReader
+                         stateReaderProvider: AccountStateReaderProvider
                        ) extends sparkz.core.transaction.MemoryPool[
   SidechainTypes#SCAT,
   AccountMemoryPool
@@ -54,7 +54,7 @@ class AccountMemoryPool(
   ): AccountMemoryPool = {
     val filteredTxs = unconfirmed.values.filter(tx => condition(tx))
     //Reset everything
-    val newMemPool = AccountMemoryPool.createEmptyMempool(stateReader)
+    val newMemPool = AccountMemoryPool.createEmptyMempool(stateReaderProvider)
     filteredTxs.foreach(tx => newMemPool.put(tx))
     newMemPool
   }
@@ -69,7 +69,7 @@ class AccountMemoryPool(
 
   override def put(tx: SidechainTypes#SCAT): Try[AccountMemoryPool] = {
     Try {
-      new AccountMemoryPool(unconfirmed.add(tx).get, stateReader)
+      new AccountMemoryPool(unconfirmed.add(tx).get, stateReaderProvider)
     }
   }
 
@@ -96,7 +96,7 @@ class AccountMemoryPool(
 
   override def remove(tx: SidechainTypes#SCAT): AccountMemoryPool = {
     unconfirmed.remove(tx) match {
-      case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, stateReader)
+      case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, stateReaderProvider)
       case Failure(e) =>
         log.error(s"Exception while removing transaction $tx from MemPool", e)
         throw e
@@ -132,7 +132,12 @@ class AccountMemoryPool(
 }
 
 object AccountMemoryPool {
-  def createEmptyMempool(stateReader: AccountStateReader): AccountMemoryPool = {
-    new AccountMemoryPool(new MempoolMap(stateReader), stateReader)
+  def createEmptyMempool(stateReaderProvider: AccountStateReaderProvider): AccountMemoryPool = {
+    new AccountMemoryPool(new MempoolMap(stateReaderProvider), stateReaderProvider)
   }
+}
+
+trait AccountStateReaderProvider {
+  def getAccountStateReader(): AccountStateReader
+
 }

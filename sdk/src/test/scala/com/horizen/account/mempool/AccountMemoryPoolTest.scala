@@ -30,7 +30,7 @@ class AccountMemoryPoolTest
     Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.ZERO)
     Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(initialStateNonce)
 
-    val accountMemoryPool = AccountMemoryPool.createEmptyMempool(stateViewMock)
+    val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => stateViewMock)
 
     assertEquals("Wrong tx list size ", 0, accountMemoryPool.take(10).size)
 

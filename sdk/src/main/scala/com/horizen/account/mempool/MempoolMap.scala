@@ -13,7 +13,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 // TODO: check the usage of AccountStateReader instance here and in the mempool. Consider the stateReader as an immutable object that may become outdated after the state has been updated.
-class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
+class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends ScorexLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
 
   // All transactions currently in the mempool
@@ -31,7 +31,7 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
     require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
     val account = ethTransaction.getFrom
     if (!nonces.contains(account)) {
-      nonces.put(account, stateReader.getNonce(account.asInstanceOf[AddressProposition].address()))
+      nonces.put(account, stateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address()))
     }
 
     if (!contains(ethTransaction.id)) {
@@ -142,7 +142,7 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
   def takeExecutableTxs(limit: Int): Iterable[SidechainTypes#SCAT] = {
 
     def txOrder(tx: SidechainTypes#SCAT) = {
-      tx.getMaxFeePerGas.subtract(stateReader.baseFee).min(tx.getMaxPriorityFeePerGas)
+      tx.getMaxFeePerGas.subtract(stateReaderProvider.getAccountStateReader().baseFee).min(tx.getMaxPriorityFeePerGas)
     }
 
     val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
@@ -196,8 +196,8 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
       revertedTxs: Seq[SidechainTypes#SCAT]
   ): Any = {
     val fromAddress = account.asInstanceOf[AddressProposition].address()
-    var newExpectedNonce = if (expectedNonceOpt.isDefined) expectedNonceOpt.get.add(BigInteger.ONE) else stateReader.getNonce(fromAddress)
-    val balance = stateReader.getBalance(fromAddress)
+    var newExpectedNonce = if (expectedNonceOpt.isDefined) expectedNonceOpt.get.add(BigInteger.ONE) else stateReaderProvider.getAccountStateReader().getNonce(fromAddress)
+    val balance = stateReaderProvider.getAccountStateReader().getBalance(fromAddress)
     val oldExpectedNonce = nonces.get(account)
 
     val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()

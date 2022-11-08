@@ -22,6 +22,7 @@ class MempoolMapTest
     with MockitoSugar {
 
   val stateViewMock: AccountStateReader = mock[AccountStateReader]
+  val stateProvider: AccountStateReaderProvider = () => stateViewMock
 
   @Before
   def setUp(): Unit = {
@@ -35,7 +36,7 @@ class MempoolMapTest
 
   @Test
   def testCanPayHigherFee(): Unit = {
-    val mempoolMap = new MempoolMap(stateViewMock)
+    val mempoolMap = new MempoolMap(stateProvider)
 
     val nonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -76,7 +77,7 @@ class MempoolMapTest
 
   @Test
   def testAddExecutableTx(): Unit = {
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
 
     var expectedNumOfTxs = 0
     assertEquals(
@@ -228,7 +229,7 @@ class MempoolMapTest
   @Test
   def testAddNonExecutableTx(): Unit = {
 
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
     var expectedNumOfTxs = 0
     var expectedNumOfExecutableTxs = 0
     assertEquals(
@@ -437,7 +438,7 @@ class MempoolMapTest
   def testAddSameNonce(): Unit = {
     val account1KeyPairOpt = Some(Keys.createEcKeyPair)
 
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
 
@@ -601,7 +602,7 @@ class MempoolMapTest
 
   @Test
   def testRemove(): Unit = {
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -714,7 +715,7 @@ class MempoolMapTest
 
     val initialStateNonce = BigInteger.ZERO
     Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.TEN)
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
 
     assertEquals(
       "Wrong tx list size ",

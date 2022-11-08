@@ -19,13 +19,12 @@ import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import com.horizen.{AbstractSidechainNodeViewHolder, AbstractState, SidechainSettings, SidechainTypes}
+import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.util.ModifierId
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
-import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
+
 import scala.util.Success
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      params: NetworkParams,
@@ -62,7 +61,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
     state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
     wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-    pool <- Some(AccountMemoryPool.createEmptyMempool(state))
+    pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState()))
   } yield (history, state, wallet, pool)
 
   override def postStop(): Unit = {
@@ -81,7 +80,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
 
-      pool <- Success(AccountMemoryPool.createEmptyMempool(state))
+      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState()))
     } yield (history, state, wallet, pool)
 
     result.get
