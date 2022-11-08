@@ -2,7 +2,6 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.AccountStateReader
 import com.horizen.account.transaction.EthereumTransaction
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -141,8 +140,10 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
    */
   def takeExecutableTxs(limit: Int): Iterable[SidechainTypes#SCAT] = {
 
+    val baseFee = stateReaderProvider.getAccountStateReader().baseFee
+
     def txOrder(tx: SidechainTypes#SCAT) = {
-      tx.getMaxFeePerGas.subtract(stateReaderProvider.getAccountStateReader().baseFee).min(tx.getMaxPriorityFeePerGas)
+      tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
     }
 
     val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
