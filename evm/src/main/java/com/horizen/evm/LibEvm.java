@@ -10,10 +10,10 @@ import java.math.BigInteger;
 
 final class LibEvm {
     static native void Free(Pointer ptr);
+    static native void SetLogCallback(LibEvmLogCallback callback);
+    static native void SetLogLevel(String level);
 
     private static native JsonPointer Invoke(String method, JsonPointer args);
-
-    private static native void RegisterLogCallback(LibEvmLogCallback callback);
 
     static String getOSLibExtension() {
         var os = System.getProperty("os.name").toLowerCase();
@@ -29,8 +29,7 @@ final class LibEvm {
     static {
         // bind native methods in this class to libevm
         Native.register("libevm." + getOSLibExtension());
-        // register log callback
-        RegisterLogCallback(LibEvmLogCallback.instance);
+        LibEvmLogCallback.Register();
     }
 
     private LibEvm() {

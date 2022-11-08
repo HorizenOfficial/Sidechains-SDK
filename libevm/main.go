@@ -14,11 +14,11 @@ import (
 	"unsafe"
 )
 
-const logLevel = log.LvlDebug
-
 // instance holds a singleton of lib.Service
 var instance *lib.Service
 
+// initialize logger
+var logger = log.NewGlogHandler(log.FuncHandler(logToCallback))
 var logFormatter = log.JSONFormatEx(false, false)
 
 func logToCallback(r *log.Record) error {
@@ -39,10 +39,8 @@ func logToCallback(r *log.Record) error {
 
 // static initializer
 func init() {
-	// initialize logger
-	var logger = log.NewGlogHandler(log.FuncHandler(logToCallback))
-	//var logger = log.NewGlogHandler(log.StreamHandler(os.Stdout, log.TerminalFormat(true)))
-	logger.Verbosity(logLevel)
+	// set default log level to trace
+	logger.Verbosity(log.LvlTrace)
 	log.Root().SetHandler(logger)
 	// initialize instance of our service
 	instance = lib.New()
@@ -50,6 +48,16 @@ func init() {
 
 // main function is required by cgo, but doesn't do anything nor is it ever called
 func main() {
+}
+
+//export SetLogLevel
+func SetLogLevel(level *C.char) {
+	parsedLevel, err := log.LvlFromString(C.GoString(level))
+	if err != nil {
+		log.Error("unable to parse log level", "error", err)
+		return
+	}
+	logger.Verbosity(parsedLevel)
 }
 
 //export Invoke
