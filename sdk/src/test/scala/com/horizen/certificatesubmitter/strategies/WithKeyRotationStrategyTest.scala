@@ -112,61 +112,61 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
     assert(certificateDataWithKeyRotation.genesisKeysRootHash.length==32)
   }
 
-//  @Test
-//  def generateProofTest(): Unit = {
-//    val info = for (_ <- 0 until WithKeyRotationStrategyTest.keyCount) yield {
-//      val signerKeyPair: SchnorrKeyPair = SchnorrKeyPair.generate
-//      val masterKeyPair: SchnorrKeyPair = SchnorrKeyPair.generate
-//
-//      val updatedSigningKeysSkSignature = signerKeyPair.signMessage(signerKeyPair.getPublicKey.getHash)
-//      val updatedSigningKeysMkSignature = masterKeyPair.signMessage(signerKeyPair.getPublicKey.getHash)
-//      val updatedMasterKeysSkSignature = signerKeyPair.signMessage(masterKeyPair.getPublicKey.getHash)
-//      val updatedMasterKeysMkSignature = masterKeyPair.signMessage(masterKeyPair.getPublicKey.getHash)
-//      (signerKeyPair.getPublicKey, masterKeyPair.getPublicKey, updatedSigningKeysSkSignature,
-//        updatedSigningKeysMkSignature, updatedMasterKeysSkSignature, updatedMasterKeysMkSignature)
-//    }
-//
-//    val schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
-//      info.map(_._1.serializePublicKey()),
-//      info.map(_._2.serializePublicKey()),
-//      info.map(_._1.serializePublicKey()),
-//      info.map(_._2.serializePublicKey()),
-//      info.map(_._3.serializeSignature()),
-//      info.map(_._4.serializeSignature()),
-//      info.map(_._5.serializeSignature()),
-//      info.map(_._6.serializeSignature())
-//    )
-//
-//    val schnorrPropositionsAndSchnorrProofs: Seq[(SchnorrProposition, Option[SchnorrProof])] =
-//      for (i <- 0 until WithKeyRotationStrategyTest.keyCount) yield {
-//        (new SchnorrProposition(schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList(i)),
-//          Some(new SchnorrProof(schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures(i))))
-//      }
-//
-//
-//    val certificateData = CertificateDataWithKeyRotation(
-//      referencedEpochNumber = WithKeyRotationStrategyTest.epochNumber,
-//      sidechainId = FieldElement.createRandom.serializeFieldElement(),
-//      withdrawalRequests = Seq[WithdrawalRequestBox](),
-//      endEpochCumCommTreeHash = FieldElement.createRandom.serializeFieldElement(),
-//      btrFee = WithKeyRotationStrategyTest.btrFee,
-//      ftMinAmount = WithKeyRotationStrategyTest.ftMinAmount,
-//      schnorrKeyPairs = schnorrPropositionsAndSchnorrProofs,
-//      schnorrKeysSignaturesListBytes,
-//      previousCertificateOption = Option.empty[WithdrawalEpochCertificate],
-//      genesisKeysRootHash = FieldElement.createRandom.serializeFieldElement()
-//    )
-//
-//    //    val pair: com.horizen.utils.Pair[Array[Byte], java.lang.Long] =
-//    //      keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = WithKeyRotationStrategyTest.snarkPkPathCustomFields)
-//
-//    info.foreach(element => {
-//      element._3.freeSignature()
-//      element._4.freeSignature()
-//      element._5.freeSignature()
-//      element._6.freeSignature()
-//    })
-//  }
+  @Test
+  def generateProofTest(): Unit = {
+    val info = for (_ <- 0 until WithKeyRotationStrategyTest.keyCount) yield {
+      val signerKeyPair: SchnorrKeyPair = SchnorrKeyPair.generate
+      val masterKeyPair: SchnorrKeyPair = SchnorrKeyPair.generate
+
+      val updatedSigningKeysSkSignature = signerKeyPair.signMessage(signerKeyPair.getPublicKey.getHash)
+      val updatedSigningKeysMkSignature = masterKeyPair.signMessage(signerKeyPair.getPublicKey.getHash)
+      val updatedMasterKeysSkSignature = signerKeyPair.signMessage(masterKeyPair.getPublicKey.getHash)
+      val updatedMasterKeysMkSignature = masterKeyPair.signMessage(masterKeyPair.getPublicKey.getHash)
+      (signerKeyPair.getPublicKey, masterKeyPair.getPublicKey, updatedSigningKeysSkSignature,
+        updatedSigningKeysMkSignature, updatedMasterKeysSkSignature, updatedMasterKeysMkSignature)
+    }
+
+    val schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
+      info.map(_._1.serializePublicKey()),
+      info.map(_._2.serializePublicKey()),
+      info.map(_._1.serializePublicKey()),
+      info.map(_._2.serializePublicKey()),
+      info.map(_._3.serializeSignature()),
+      info.map(_._4.serializeSignature()),
+      info.map(_._5.serializeSignature()),
+      info.map(_._6.serializeSignature())
+    )
+
+    val schnorrPropositionsAndSchnorrProofs: Seq[(SchnorrProposition, Option[SchnorrProof])] =
+      for (i <- 0 until WithKeyRotationStrategyTest.keyCount) yield {
+        (new SchnorrProposition(schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList(i)),
+          Some(new SchnorrProof(schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures(i))))
+      }
+
+
+    val certificateData = CertificateDataWithKeyRotation(
+      referencedEpochNumber = WithKeyRotationStrategyTest.epochNumber,
+      sidechainId = FieldElement.createRandom.serializeFieldElement(),
+      withdrawalRequests = Seq[WithdrawalRequestBox](),
+      endEpochCumCommTreeHash = FieldElement.createRandom.serializeFieldElement(),
+      btrFee = WithKeyRotationStrategyTest.btrFee,
+      ftMinAmount = WithKeyRotationStrategyTest.ftMinAmount,
+      schnorrKeyPairs = schnorrPropositionsAndSchnorrProofs,
+      schnorrKeysSignaturesListBytes,
+      previousCertificateOption = Option.empty[WithdrawalEpochCertificate],
+      genesisKeysRootHash = FieldElement.createRandom.serializeFieldElement()
+    )
+
+        val pair: com.horizen.utils.Pair[Array[Byte], java.lang.Long] =
+          keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = WithKeyRotationStrategyTest.snarkPkPathCustomFields)
+
+    info.foreach(element => {
+      element._3.freeSignature()
+      element._4.freeSignature()
+      element._5.freeSignature()
+      element._6.freeSignature()
+    })
+  }
 
   @Test
   def getMessageToSignTest(): Unit = {
@@ -275,26 +275,26 @@ object WithKeyRotationStrategyTest {
   val CSW_SEGMENT_SIZE: Int = 1 << 18
   private val keyCount = 4
 
-//  @BeforeClass
-//  @throws[Exception]
-//  def initKeys(): Unit = {
-//    ProvingSystem.generateDLogKeys(psType, DLOG_KEYS_SIZE)
-//    assertTrue(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, 1, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, maxProofPlusVkSize))
-//    assertTrue(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, customFieldsNum, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, maxProofPlusVkSize))
-//    try {
-//      assertFalse(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, 1, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, 1))
-//      assertTrue(false) // Must be unreachable
-//    } catch {
-//      case ex: Exception =>
-//        assertTrue(ex.getMessage.contains("Circuit is too complex"))
-//    }
-//    assertEquals(psType, ProvingSystem.getVerifierKeyProvingSystemType(snarkVkPathCustomFields))
-//    assertEquals(ProvingSystem.getProverKeyProvingSystemType(snarkPkPathCustomFields), ProvingSystem.getVerifierKeyProvingSystemType(snarkVkPathCustomFields))
-//  }
+  @BeforeClass
+  @throws[Exception]
+  def initKeys(): Unit = {
+    ProvingSystem.generateDLogKeys(psType, DLOG_KEYS_SIZE)
+    assertTrue(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, 1, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, maxProofPlusVkSize))
+    assertTrue(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, customFieldsNum, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, maxProofPlusVkSize))
+    try {
+      assertFalse(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, 1, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, 1))
+      assertTrue(false) // Must be unreachable
+    } catch {
+      case ex: Exception =>
+        assertTrue(ex.getMessage.contains("Circuit is too complex"))
+    }
+    assertEquals(psType, ProvingSystem.getVerifierKeyProvingSystemType(snarkVkPathCustomFields))
+    assertEquals(ProvingSystem.getProverKeyProvingSystemType(snarkPkPathCustomFields), ProvingSystem.getVerifierKeyProvingSystemType(snarkVkPathCustomFields))
+  }
 
-//  @AfterClass
-//  def deleteKeys(): Unit = { // Delete proving keys and verification keys
-//    new File(snarkPkPathCustomFields).delete
-//    new File(snarkVkPathCustomFields).delete
-//  }
+  @AfterClass
+  def deleteKeys(): Unit = { // Delete proving keys and verification keys
+    new File(snarkPkPathCustomFields).delete
+    new File(snarkVkPathCustomFields).delete
+  }
 }
