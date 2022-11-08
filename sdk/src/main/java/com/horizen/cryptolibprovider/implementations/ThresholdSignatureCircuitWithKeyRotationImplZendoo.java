@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements ThresholdSignatureCircuitWithKeyRotation {
     // Note: supportedSegmentSize should correlate with the snark circuit complexity,
     // but is always less or equal the one defined in the MC network (maxSegmentSize).
-    private static final int supportedSegmentSize = (1 << 17);
+    private static final int supportedSegmentSize = (1 << 15);
 
     private List<FieldElement> prepareCustomFieldElements(List<byte[]> customFields) {
         Iterator<byte[]> iterator = customFields.iterator();
@@ -102,20 +102,25 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         ValidatorKeysUpdatesList validatorKeysUpdatesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
         SchnorrPublicKey[] signingPublicKeys = validatorKeysUpdatesList.getSigningKeys();
 
-        WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
-                sidechainIdFieldElement,
-                epochNumber,
-                CommonCircuit.getBackwardTransfers(bt),
-                endCumulativeScTxCommTreeRootFe,
-                ftMinAmount,
-                btrFee,
-                customFieldsElements
-        );
+        WithdrawalCertificate withdrawalCertificate = null;
+        try {
+            withdrawalCertificate = new WithdrawalCertificate(
+                    sidechainIdFieldElement,
+                    epochNumber,
+                    CommonCircuit.getBackwardTransfers(bt),
+                    endCumulativeScTxCommTreeRootFe,
+                    ftMinAmount,
+                    btrFee,
+                    customFieldsElements
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         CreateProofResult proofAndQuality = null;
         try {
             proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(validatorKeysUpdatesList,
                     withdrawalCertificate, previousCertificateOption, signatures,
-                    signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
+                    signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.of(supportedSegmentSize),
                     provingKeyPath, false, zk, true, true);
         } catch (Exception e) {
             e.printStackTrace();
@@ -138,7 +143,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                long btrFee,
                                long ftMinAmount,
                                List<byte[]> customFields,
-                               byte[] constant,
                                long quality,
                                Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
                                byte[] genesisConstantBytes,
@@ -149,34 +153,34 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         List<FieldElement> customFieldsElements = null;
         FieldElement genesisConstant = null;
         boolean verificationResult = false;
-        try (FieldElement constantFe = FieldElement.deserialize(constant)) {
-            FieldElement sidechainIdFIeldElement = FieldElement.deserialize(sidechainId);
-            customFieldsElements = prepareCustomFieldElements(customFields);
-            genesisConstant = FieldElement.deserialize(genesisConstantBytes);
+        FieldElement sidechainIdFIeldElement = FieldElement.deserialize(sidechainId);
+        customFieldsElements = prepareCustomFieldElements(customFields);
+        genesisConstant = FieldElement.deserialize(genesisConstantBytes);
 
-            WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
-                    sidechainIdFIeldElement,
-                    epochNumber,
-                    CommonCircuit.getBackwardTransfers(bt),
-                    quality,
-                    endCumulativeScTxCommTreeRootFe,
-                    ftMinAmount,
-                    btrFee,
-                    customFieldsElements
-            );
+        WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
+                sidechainIdFIeldElement,
+                epochNumber,
+                CommonCircuit.getBackwardTransfers(bt),
+                quality,
+                endCumulativeScTxCommTreeRootFe,
+                ftMinAmount,
+                btrFee,
+                customFieldsElements
+        );
 
-            Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
-                    .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.apply(sidechainCreationVersionNumber)));
+        Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
+                .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.apply(sidechainCreationVersionNumber)));
 
 
+        try {
             verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(withdrawalCertificate, previousCertificateOption, genesisConstant, proof, verificationKeyPath);
-
-            endCumulativeScTxCommTreeRootFe.freeFieldElement();
-            sidechainIdFIeldElement.freeFieldElement();
-            constantFe.freeFieldElement();
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        endCumulativeScTxCommTreeRootFe.freeFieldElement();
+        sidechainIdFIeldElement.freeFieldElement();
+
         customFieldsElements.forEach(FieldElement::freeFieldElement);
         genesisConstant.freeFieldElement();
         return verificationResult;
@@ -194,8 +198,8 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         ValidatorKeysUpdatesList schnorrKeysSignaturesList = new ValidatorKeysUpdatesList(
                 signerPublicKeys,
                 masterPublicKeys,
-                new ArrayList<>(),
-                new ArrayList<>(),
+                signerPublicKeys,
+                masterPublicKeys,
                 new ArrayList<>(),
                 new ArrayList<>(),
                 new ArrayList<>(),

@@ -41,7 +41,6 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                         long btrFee,
                         long ftMinAmount,
                         List<byte[]> customFields,
-                        byte[] constant,
                         long quality,
                         Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
                         byte[] genesisConstantBytes,
