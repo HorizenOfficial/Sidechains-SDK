@@ -17,6 +17,7 @@ import com.horizen.provingsystemnative.{ProvingSystem, ProvingSystemType}
 import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen._
+import com.horizen.librustsidechains.FieldElement
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{AfterClass, Before, BeforeClass, Test}
 import org.mockito.ArgumentMatchers
@@ -97,15 +98,15 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
 
     val certificateData = CertificateDataWithKeyRotation(
       referencedEpochNumber = WithKeyRotationStrategyTest.epochNumber,
-      sidechainId = Array(Byte.MinValue),
+      sidechainId = FieldElement.createRandom.serializeFieldElement(),
       withdrawalRequests = Seq[WithdrawalRequestBox](),
-      endEpochCumCommTreeHash = Array(Byte.MinValue),
+      endEpochCumCommTreeHash = FieldElement.createRandom.serializeFieldElement(),
       btrFee = WithKeyRotationStrategyTest.btrFee,
       ftMinAmount = WithKeyRotationStrategyTest.ftMinAmount,
       schnorrKeyPairs = schnorrPropositionsAndSchnorrProofs,
       schnorrKeysSignaturesListBytes,
       previousCertificateOption = Option.empty[WithdrawalEpochCertificate],
-      genesisKeysRootHash = Array(Byte.MinValue)
+      genesisKeysRootHash = FieldElement.createRandom.serializeFieldElement()
     )
 
     val pair: com.horizen.utils.Pair[Array[Byte], java.lang.Long] =
