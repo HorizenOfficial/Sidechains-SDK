@@ -131,16 +131,16 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       info.map(_._2.serializePublicKey()),
       info.map(_._1.serializePublicKey()),
       info.map(_._2.serializePublicKey()),
-      info.map(_._3.serializeSignature()),
-      info.map(_._4.serializeSignature()),
-      info.map(_._5.serializeSignature()),
-      info.map(_._6.serializeSignature())
+      info.map(x => Option.apply(x._3.serializeSignature())),
+      info.map(x => Option.apply(x._4.serializeSignature())),
+      info.map(x => Option.apply(x._5.serializeSignature())),
+      info.map(x => Option.apply(x._6.serializeSignature())),
     )
 
     val schnorrPropositionsAndSchnorrProofs: Seq[(SchnorrProposition, Option[SchnorrProof])] =
       for (i <- 0 until WithKeyRotationStrategyTest.keyCount) yield {
         (new SchnorrProposition(schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList(i)),
-          Some(new SchnorrProof(schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures(i))))
+          Some(new SchnorrProof(schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures(i).get)))
       }
 
 

@@ -7,8 +7,10 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignaturesListBytes}
-import com.horizen.certnative.NaiveThresholdSignatureWKeyRotation
-import com.horizen.chain.MainchainHeaderInfo
+import com.horizen.certnative.{NaiveThresholdSigProof, NaiveThresholdSignatureWKeyRotation}
+import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.cryptolibprovider.CommonCircuit
+import com.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -18,6 +20,8 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.provingsystemnative.{ProvingSystem, ProvingSystemType}
 import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{AfterClass, Before, BeforeClass, Test}
 import org.mockito.ArgumentMatchers
@@ -29,7 +33,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
 import java.io.File
-import java.util.Optional
+import java.util.{Optional => JOptional}
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -39,6 +43,7 @@ import scala.util.Try
 class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
   private var keyRotationStrategy: KeyRotationStrategy[CertificateDataWithoutKeyRotation] = _
   implicit val timeout: Timeout = 100 milliseconds
+  var params: RegTestParams = RegTestParams()
 
   @Before
   def init(): Unit = {
@@ -51,10 +56,10 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       keyGenerator.generateSecret("seed3".getBytes())
     )
     val signersThreshold = 2
-    val params: RegTestParams = RegTestParams(
+    params = RegTestParams(
       sidechainCreationVersion = SidechainCreationVersions.SidechainCreationVersion2,
       signersPublicKeys = schnorrSecrets.map(_.publicImage()),
-      mastersPublicKeys = schnorrSecrets.map(_.publicImage()),
+      mastersPublicKeys = Seq(),
       signersThreshold = signersThreshold
     )
 
@@ -71,6 +76,7 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
     when(sidechainState.withdrawalRequests(_)) thenAnswer (_ => Seq[WithdrawalRequestBox]())
     val certifiersKeys = CertifiersKeys(getSchnorrPropositions, getSchnorrPropositions)
     when(sidechainState.certifiersKeys(ArgumentMatchers.anyInt())).thenAnswer(_ => Some(certifiersKeys))
+    when(sidechainState.utxoMerkleTreeRoot(ArgumentMatchers.anyInt())).thenAnswer(_ =>Some(new Array[Byte](32)))
 
     val history = mock[SidechainHistory]
     val mainchainBlockReferenceInfo = mock[MainchainBlockReferenceInfo]
@@ -82,6 +88,11 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       when(info.sidechainBlockId).thenReturn(ModifierId @@ "some_block_id")
       Some(info)
     })
+    val sidechainBlockInfo = mock[SidechainBlockInfo]
+    val historyStorageMock: SidechainHistoryStorage = mock[SidechainHistoryStorage]
+    when(history.storage).thenAnswer(_ => historyStorageMock)
+    when(historyStorageMock.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>sidechainBlockInfo)
+    when(sidechainBlockInfo.timestamp).thenAnswer(_ => params.sidechainGenesisBlockTimestamp + 1)
 
     val certificateSignatureInfo = CertificateSignatureInfo(pubKeyIndex = 3, signature = getSchnorrProofs.head)
     val signaturesStatus = SignaturesStatus(
@@ -91,8 +102,9 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
     )
 
     val sidechainNodeView: View = CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])
-    val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation =
-      keyRotationStrategy.buildCertificateData(sidechainNodeView, signaturesStatus)
+    val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView, signaturesStatus)
+
+    //TODO: add checks
   }
 
     @Test
@@ -114,16 +126,16 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
         info.map(_._2.serializePublicKey()),
         info.map(_._1.serializePublicKey()),
         info.map(_._2.serializePublicKey()),
-        info.map(_._3.serializeSignature()),
-        info.map(_._4.serializeSignature()),
-        info.map(_._5.serializeSignature()),
-        info.map(_._6.serializeSignature())
+        info.map(x => Option.apply(x._3.serializeSignature())),
+        info.map(x => Option.apply(x._4.serializeSignature())),
+        info.map(x => Option.apply(x._5.serializeSignature())),
+        info.map(x => Option.apply(x._6.serializeSignature())),
       )
 
       val schnorrPropositionsAndSchnorrProofs: Seq[(SchnorrProposition, Option[SchnorrProof])] =
         for (i <- 0 until WithoutKeyRotationStrategyTest.keyCount) yield {
           (new SchnorrProposition(schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList(i)),
-            Some(new SchnorrProof(schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures(i))))
+            Some(new SchnorrProof(schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures(i).get)))
         }
 
 
@@ -138,8 +150,8 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
         Some(Array())
       )
 
-      //    val pair: com.horizen.utils.Pair[Array[Byte], java.lang.Long] =
-      //      keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = WithoutKeyRotationStrategyTest.snarkPkPathCustomFields)
+      val pair: com.horizen.utils.Pair[Array[Byte], java.lang.Long] =
+        keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = WithoutKeyRotationStrategyTest.snarkPkPathCustomFields)
 
       info.foreach(element => {
         element._3.freeSignature()
@@ -152,13 +164,23 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
   @Test
   def getMessageToSignTest(): Unit = {
     val sidechainState = mock[SidechainState]
+    when(sidechainState.utxoMerkleTreeRoot(ArgumentMatchers.anyInt())).thenAnswer(_ =>Some(new Array[Byte](32)))
+    when(sidechainState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ =>Seq())
     val history = mock[SidechainHistory]
     val mainchainHeaderInfo = MainchainHeaderInfo(hash = null,
       parentHash = null,
       height = 3,
       sidechainBlockId = null,
       cumulativeCommTreeHash = Array[Byte]())
+    val mainchainBlockMock = mock[MainchainBlockReferenceInfo]
     when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any())) thenAnswer (_ => Some(mainchainHeaderInfo))
+    when(history.getMainchainBlockReferenceInfoByMainchainBlockHeight(ArgumentMatchers.anyInt())).thenAnswer(_ => JOptional.of(mainchainBlockMock))
+    when(mainchainBlockMock.getMainchainHeaderHash).thenAnswer(_ => Array(13.toByte))
+    val sidechainBlockInfo = mock[SidechainBlockInfo]
+    val historyStorageMock: SidechainHistoryStorage = mock[SidechainHistoryStorage]
+    when(history.storage).thenAnswer(_ => historyStorageMock)
+    when(historyStorageMock.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>sidechainBlockInfo)
+    when(sidechainBlockInfo.timestamp).thenAnswer(_ => params.sidechainGenesisBlockTimestamp + 1)
     val sidechainNodeView = CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])
     val messageToSign: Try[Array[Byte]] = keyRotationStrategy.getMessageToSign(sidechainNodeView, WithoutKeyRotationStrategyTest.epochNumber)
     assert(messageToSign.isSuccess)
@@ -232,10 +254,9 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
 object WithoutKeyRotationStrategyTest {
 
 
-  private val customFieldsNum = 3
   private val threshold = 4
   private var backwardTransferCount = 10
-  private val zk = false
+  private val zk = true
 
   private val prevEpochNumber = 9
   private val epochNumber = 10
@@ -243,9 +264,6 @@ object WithoutKeyRotationStrategyTest {
   private val btrFee = 100L
   private val prevFtMinAmount = 200L
   private val ftMinAmount = 200L
-
-  private val maxProofPlusVkSize = 9 * 1024
-
 
   private val snarkPkPathCustomFields = "./test_cert_keyrot_snark_pk"
   private val snarkVkPathCustomFields = "./test_cert_keyrot_snark_vk"
@@ -256,19 +274,13 @@ object WithoutKeyRotationStrategyTest {
   val CSW_SEGMENT_SIZE: Int = 1 << 18
   private val keyCount = 4
 
+  val tresholdCircuit = new ThresholdSignatureCircuitImplZendoo
+
     @BeforeClass
     @throws[Exception]
     def initKeys(): Unit = {
       ProvingSystem.generateDLogKeys(psType, DLOG_KEYS_SIZE)
-      assertTrue(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, 1, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, maxProofPlusVkSize))
-      assertTrue(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, customFieldsNum, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, maxProofPlusVkSize))
-      try {
-        assertFalse(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, 1, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, 1))
-        assertTrue(false) // Must be unreachable
-      } catch {
-        case ex: Exception =>
-          assertTrue(ex.getMessage.contains("Circuit is too complex"))
-      }
+      tresholdCircuit.generateCoboundaryMarlinSnarkKeys(keyCount, snarkPkPathCustomFields, snarkVkPathCustomFields, CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW)
       assertEquals(psType, ProvingSystem.getVerifierKeyProvingSystemType(snarkVkPathCustomFields))
       assertEquals(ProvingSystem.getProverKeyProvingSystemType(snarkPkPathCustomFields), ProvingSystem.getVerifierKeyProvingSystemType(snarkVkPathCustomFields))
     }
