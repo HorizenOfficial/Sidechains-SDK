@@ -6,7 +6,7 @@ import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.state.{AccountState, MessageProcessor, MessageProcessorUtil}
+import com.horizen.account.state._
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
@@ -36,7 +36,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      customMessageProcessors: Seq[MessageProcessor],
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, timeProvider) {
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, timeProvider){
 
   override type HSTOR = AccountHistoryStorage
   override type HIS = AccountHistory
@@ -212,26 +212,10 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       })
   }
 
-  override protected def updateMemPool(blocksRemoved: Seq[AccountBlock], blocksApplied: Seq[AccountBlock], memPool: MP, state: MS): MP = {
-    val rollBackTxs = blocksRemoved.flatMap(extractTransactions)
-
-    val appliedTxs = blocksApplied.flatMap(extractTransactions)
-
-//    val applicableTxs = rollBackTxs ++ memPool.getTransactions.asScala
-//
-//    val newMemPool = AccountMemoryPool.createEmptyMempool(state)
-//
-//    applicableTxs.withFilter { tx =>
-//      !appliedTxs.exists(t => t.id == tx.id) && {
-//        state match {
-//          case v: TransactionValidation[SidechainTypes#SCAT] => v.validate(tx).isSuccess
-//          case _ => true
-//        }
-//      }
-//    }.foreach(tx => newMemPool.put(tx))
-//    newMemPool
-    memPool.updateMemPool(rollBackTxs, appliedTxs)
+  override protected def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock], memPool: MP, state: MS): MP = {
+    memPool.updateMemPool(removedBlocks, appliedBlocks)
   }
+
 }
 
 object AccountNodeViewHolderRef {

@@ -1,10 +1,12 @@
 package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
+import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountMemoryPool
 import sparkz.core.transaction.MempoolReader
 import scorex.util.{ModifierId, ScorexLogging}
 import com.horizen.account.state.AccountStateReader
+
 import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -87,12 +89,6 @@ class AccountMemoryPool(
   override def putWithoutCheck(
       txs: Iterable[SidechainTypes#SCAT]
   ): AccountMemoryPool = ???
-//  {
-//    for (t <- txs)
-//      unconfirmed.all.put(t.id, t)
-//
-//    this
-//  }
 
   override def remove(tx: SidechainTypes#SCAT): AccountMemoryPool = {
     unconfirmed.remove(tx) match {
@@ -125,9 +121,9 @@ class AccountMemoryPool(
     )
   }
 
-  def updateMemPool(listOfTxsToAdd: Seq[SidechainTypes#SCAT], listOfTxsToRemoved: Seq[SidechainTypes#SCAT]): AccountMemoryPool = {
-    unconfirmed.updateMemPool(listOfTxsToAdd, listOfTxsToRemoved)
-    this
+  def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): AccountMemoryPool = {
+    unconfirmed.updateMemPool(removedBlocks, appliedBlocks)
+    new AccountMemoryPool(unconfirmed, stateReaderProvider)
   }
 }
 
