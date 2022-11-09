@@ -1,14 +1,17 @@
 package com.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
+import com.horizen._
 import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignaturesListBytes}
 import com.horizen.certnative.NaiveThresholdSignatureWKeyRotation
-import com.horizen.chain.{MainchainHeaderHash, MainchainHeaderInfo}
+import com.horizen.chain.MainchainHeaderInfo
+import com.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.RegTestParams
 import com.horizen.proof.SchnorrProof
@@ -16,9 +19,6 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.provingsystemnative.{ProvingSystem, ProvingSystemType}
 import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen._
-import com.horizen.librustsidechains.FieldElement
-import com.horizen.utils.ByteArrayWrapper
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{AfterClass, Before, BeforeClass, Test}
 import org.mockito.ArgumentMatchers
@@ -60,7 +60,8 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       signersThreshold = signersThreshold
     )
 
-    keyRotationStrategy = new WithKeyRotationStrategy(mockedSettings, params)
+    val mockedCryptolibCircuit = mock[ThresholdSignatureCircuitWithKeyRotation]
+    keyRotationStrategy = new WithKeyRotationStrategy(mockedSettings, params, mockedCryptolibCircuit)
 
     val forkManagerUtil = new ForkManagerUtil()
     forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
@@ -95,21 +96,21 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
     val certificateDataWithKeyRotation: CertificateDataWithKeyRotation =
       keyRotationStrategy.buildCertificateData(sidechainNodeView, signaturesStatus)
     assert(certificateDataWithKeyRotation.btrFee == 0)
-    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures.length==7)
-    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysMkSignatures.length==7)
-    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysSkSignatures.length==7)
-    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysMkSignatures.length==7)
-    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList.length==7)
-    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList.length==7)
-    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList.length==7)
-    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList.length==7)
+    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures.length == 7)
+    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysMkSignatures.length == 7)
+    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysSkSignatures.length == 7)
+    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysMkSignatures.length == 7)
+    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList.length == 7)
+    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList.length == 7)
+    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList.length == 7)
+    assert(certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList.length == 7)
     assert(certificateDataWithKeyRotation.schnorrKeyPairs.length == 3)
     assert(certificateDataWithKeyRotation.endEpochCumCommTreeHash.length == 32)
     assert(certificateDataWithKeyRotation.sidechainId.length == 32)
     assert(certificateDataWithKeyRotation.referencedEpochNumber == WithKeyRotationStrategyTest.epochNumber)
     assert(certificateDataWithKeyRotation.previousCertificateOption == null)
     assert(certificateDataWithKeyRotation.ftMinAmount == 54)
-    assert(certificateDataWithKeyRotation.genesisKeysRootHash.length==32)
+    assert(certificateDataWithKeyRotation.genesisKeysRootHash.length == 32)
   }
 
   @Test
@@ -157,8 +158,8 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       genesisKeysRootHash = FieldElement.createRandom.serializeFieldElement()
     )
 
-        val pair: com.horizen.utils.Pair[Array[Byte], java.lang.Long] =
-          keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = WithKeyRotationStrategyTest.snarkPkPathCustomFields)
+    val pair: com.horizen.utils.Pair[Array[Byte], java.lang.Long] =
+      keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = WithKeyRotationStrategyTest.snarkPkPathCustomFields)
 
     info.foreach(element => {
       element._3.freeSignature()

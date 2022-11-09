@@ -7,10 +7,9 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignaturesListBytes}
-import com.horizen.certnative.{NaiveThresholdSigProof, NaiveThresholdSignatureWKeyRotation}
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.cryptolibprovider.CommonCircuit
 import com.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo
+import com.horizen.cryptolibprovider.{CommonCircuit, ThresholdSignatureCircuit}
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -21,8 +20,7 @@ import com.horizen.provingsystemnative.{ProvingSystem, ProvingSystemType}
 import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import org.junit.Assert.assertEquals
 import org.junit.{AfterClass, Before, BeforeClass, Test}
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.when
@@ -63,7 +61,8 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       signersThreshold = signersThreshold
     )
 
-    keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val mockedCryptolibCircuit = mock[ThresholdSignatureCircuit]
+    keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params, mockedCryptolibCircuit)
 
     val forkManagerUtil = new ForkManagerUtil()
     forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")

@@ -6,7 +6,7 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignaturesListBytes}
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.params.NetworkParams
 import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.utils.BytesUtils
@@ -18,7 +18,9 @@ import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.Try
 
-class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy[CertificateDataWithKeyRotation](settings, params) {
+class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams,
+                              cryptolibCircuit: ThresholdSignatureCircuitWithKeyRotation
+                             ) extends KeyRotationStrategy[CertificateDataWithKeyRotation](settings, params) {
 
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
@@ -45,7 +47,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     )
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
-    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.createProof(
+    cryptolibCircuit.createProof(
       certificateData.withdrawalRequests.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
@@ -136,7 +138,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       signersPublicKeyWithSignatures,
       schnorrKeysSignaturesListBytes,
       previousCertificateOption,
-      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
+      cryptolibCircuit.generateKeysRootHash(
         scala.collection.JavaConverters.seqAsJavaList(params.signersPublicKeys.map(sp => sp.pubKeyBytes())),
         scala.collection.JavaConverters.seqAsJavaList(params.mastersPublicKeys.map(sp => sp.pubKeyBytes())))
     )
@@ -155,13 +157,13 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val sidechainId = params.sidechainId
 
     val customFields: Array[Byte] = state.certifiersKeys(referencedWithdrawalEpochNumber) match {
-      case Some(keys) => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+      case Some(keys) => cryptolibCircuit
         .generateKeysRootHash(scala.collection.JavaConverters.seqAsJavaList(keys.signingKeys.map(sp => sp.bytes())),
           scala.collection.JavaConverters.seqAsJavaList(keys.masterKeys.map(sp => sp.bytes())))
       case None => Array[Byte]()
     }
 
-    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+    cryptolibCircuit
       .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
         endEpochCumCommTreeHash, btrFee, ftMinAmount, util.Arrays.asList(customFields))
   }

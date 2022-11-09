@@ -9,6 +9,7 @@ import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.certificatesubmitter.CertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithKeyRotationStrategy, WithoutKeyRotationStrategy}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -564,9 +565,9 @@ object CertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
     val keyRotationStrategy = if (params.typeOfCircuitNumber == 0) {
-      new WithoutKeyRotationStrategy(settings, params)
+      new WithoutKeyRotationStrategy(settings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
     } else {
-      new WithKeyRotationStrategy(settings, params)
+      new WithKeyRotationStrategy(settings, params, CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation)
     }
     Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel, keyRotationStrategy))
       .withMailbox("akka.actor.deployment.submitter-prio-mailbox")

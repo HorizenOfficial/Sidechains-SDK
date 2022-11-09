@@ -3,7 +3,7 @@ package com.horizen.certificatesubmitter.strategies
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuit}
 import com.horizen.params.NetworkParams
 import com.horizen.{SidechainSettings, SidechainState}
 
@@ -12,7 +12,9 @@ import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
 
-class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy[CertificateDataWithoutKeyRotation](settings, params) {
+class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams,
+                                 cryptolibCircuit: ThresholdSignatureCircuit)
+  extends KeyRotationStrategy[CertificateDataWithoutKeyRotation](settings, params) {
   override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       certificateData.schnorrKeyPairs.map {
