@@ -312,6 +312,14 @@
           <include>mcpublickeyhashproposition_hex</include>
           <include>boxmerklepathinfo_hex</include>
           <include>sidechaincoretransaction_hex</include>
+          <include>ethereumtransaction_eoa2eoa_legacy_signed_hex</include>
+          <include>ethereumtransaction_eoa2eoa_legacy_unsigned_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip1559_signed_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip1559_unsigned_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip155_legacy_signed_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip155_legacy_unsigned_hex</include>
+          <include>ethereumtransaction_contract_deployment_eip1559_hex</include>
+          <include>ethereumtransaction_contract_call_eip155_legacy_hex</include>
           <include>schnorr_sk01_hex</include>
           <include>schnorr_sk02_hex</include>
           <include>schnorr_sk03_hex</include>

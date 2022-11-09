@@ -73,7 +73,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         );
     }
 
-    private static boolean checkSignatureData(SignatureData signature) {
+    private static boolean checkSignatureDataSizes(SignatureData signature) {
         return SignatureSecp256k1.checkSignatureDataSizes(
                 signature.getV(), signature.getR(), signature.getS());
     }
@@ -140,17 +140,33 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public void semanticValidity() throws TransactionSemanticValidityException {
-        if (getFrom() == null)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is not properly signed, " +
-                    "can not get valid from address", id()));
-        if (getToAddress() != null && getToAddress().length() != 0 &&
-                Numeric.hexStringToByteArray(getToAddress()).length != Account.ADDRESS_SIZE) {
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "invalid to address", id()));
+
+        if (!isSigned())
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is not signed", id()));
+
+        if (getToAddress() != null && Numeric.hexStringToByteArray(getToAddress()).length != 0)
+        {
+            // regular to address
+
+            // sanity check of formatted string.
+            String toAddressNoPrefixStr = Numeric.cleanHexPrefix(getToAddress());
+            try {
+                //  Numeric library does not check hex characters' validity, BytesUtils does it
+                if (BytesUtils.fromHexString(toAddressNoPrefixStr).length != Account.ADDRESS_SIZE) {
+                    throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "invalid to address length %s", id(), getToAddress()));
+                }
+            } catch (IllegalArgumentException e) {
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "invalid to address string format %s", id(), getToAddress()));
+            }
+        } else {
+            // contract creation
+            if (getData().length == 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "smart contract declaration transaction without data", id()));
         }
-        if (getTo() == null && getData().length == 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "smart contract declaration transaction without data", id()));
+
         if (getValue().signum() < 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "negative value", id()));
@@ -180,11 +196,17 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
         if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo() == null)) < 0) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "gas limit is below intrinsic gas", id()));
+                    "gas limit %s is below intrinsic gas %s",
+                    id(), getGasLimit(), GasUtil.intrinsicGas(getData(), getTo() == null)));
         }
-        if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
-            throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
-                    "signature");
+        try {
+            if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
+                throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
+                        "signature");
+        } catch (Throwable t) {
+            // in case of really malformed signature we can not even compute the id()
+            throw new TransactionSemanticValidityException(String.format("Transaction signature not readable: %s", t.getMessage()));
+        }
 
     }
 
@@ -199,6 +221,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
+    @JsonIgnore
     public BigInteger getGasPrice() {
         if (!this.isEIP1559())
             return this.legacyTx().getGasPrice();
@@ -206,7 +229,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return getMaxFeePerGas();
     }
 
+    @JsonProperty("gasPrice")
+    public BigInteger getJsonGasPrice() {
+        if (!this.isEIP1559())
+            return this.legacyTx().getGasPrice();
+        // for eip1559 tx this not an attribute of the object, it is computed using baseFee which depends on block height
+        return null;
+    }
+
     @Override
+    @JsonIgnore
     public BigInteger getMaxFeePerGas() {
         if (this.isEIP1559())
             return this.eip1559Tx().getMaxFeePerGas();
@@ -215,12 +247,28 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             return this.legacyTx().getGasPrice();
     }
 
+    @JsonProperty("maxFeePerGas")
+    public BigInteger getJsonMaxFeePerGas() {
+        if (this.isEIP1559())
+            return this.eip1559Tx().getMaxFeePerGas();
+        return null;
+    }
+
+    @Override
+    @JsonIgnore
     public BigInteger getMaxPriorityFeePerGas() {
         if (this.isEIP1559())
             return this.eip1559Tx().getMaxPriorityFeePerGas();
         else
             //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
             return this.legacyTx().getGasPrice();
+    }
+
+    @JsonProperty("maxPriorityFeePerGas")
+    public BigInteger getJsonMaxPriorityFeePerGas() {
+        if (this.isEIP1559())
+            return this.eip1559Tx().getMaxPriorityFeePerGas();
+        return null;
     }
 
     public Long getChainId() {
@@ -261,7 +309,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public AddressProposition getFrom() {
-        if (this.isSigned() && checkSignatureData(getSignatureData()))
+        if (this.isSigned() && checkSignatureDataSizes(getSignatureData()))
             return new AddressProposition(Numeric.hexStringToByteArray(getFromAddress()));
         return null;
     }
@@ -273,8 +321,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (address == null)
             return null;
 
-        // TODO: do we really need the checks below? can we have address of different length? Add more UTs for this tx type.
-        // TODO: proabaly we need more checks in semantic validity method
         var to = Numeric.hexStringToByteArray(address);
         if (to.length == 0)
             return null;
@@ -292,7 +338,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @JsonIgnore
     public String getFromAddress() {
-        if (this.isSigned() && checkSignatureData(getSignatureData())) try {
+        if (this.isSigned() && checkSignatureDataSizes(getSignatureData())) try {
             return ((SignedRawTransaction) this.transaction).getFrom();
         } catch (SignatureException ignored) {
         }
@@ -311,7 +357,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public SignatureSecp256k1 getSignature() {
-        if (this.isSigned() && checkSignatureData(getSignatureData())) {
+        if (this.isSigned() && checkSignatureDataSizes(getSignatureData())) {
             SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
             return new SignatureSecp256k1(
                     new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},
@@ -355,7 +401,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (this.isEIP1559())
             return String.format(
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
-                        "maxFeePerGas=%s, maxPriorityFeePerGas=%s, Signature=%s}",
+                        "maxFeePerGas=%s, maxPriorityFeePerGas=%s, chainId=%s, type=%d, Signature=%s}",
                 id(),
                 getFromAddress(),
                 Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),
@@ -365,12 +411,14 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                 Numeric.toHexStringWithPrefix(this.getMaxFeePerGas() != null ? this.getMaxFeePerGas() : BigInteger.ZERO),
                 Numeric.toHexStringWithPrefix(this.getMaxPriorityFeePerGas() != null ? this.getMaxPriorityFeePerGas() : BigInteger.ZERO),
-                (isSigned() && checkSignatureData(getSignatureData())) ? new SignatureSecp256k1(getSignatureData()).toString() : ""
+                this.getChainId() != null ? this.getChainId() : "",
+                (int)this.version(),
+                (isSigned() && checkSignatureDataSizes(getSignatureData())) ? new SignatureSecp256k1(getSignatureData()).toString() : ""
             );
         else
             return String.format(
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
-                        "Signature=%s}",
+                        "chainId=%s, type=%d, Signature=%s}",
                 id(),
                 getFromAddress(),
                 Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),
@@ -379,7 +427,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 this.getToAddress() != null ? this.getToAddress() : "0x",
                 Numeric.toHexStringWithPrefix(this.getValue() != null ? this.getValue() : BigInteger.ZERO),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
-                (isSigned() && checkSignatureData(getSignatureData())) ? new SignatureSecp256k1(getSignatureData()).toString() : ""
+                this.getChainId() != null ? this.getChainId() : "",
+                (int)this.version(),
+                (isSigned() && checkSignatureDataSizes(getSignatureData())) ? new SignatureSecp256k1(getSignatureData()).toString() : ""
         );
     }
 
