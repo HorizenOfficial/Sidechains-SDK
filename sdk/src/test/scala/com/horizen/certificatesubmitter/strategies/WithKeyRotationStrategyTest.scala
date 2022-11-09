@@ -172,12 +172,12 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
   def getMessageToSignTest(): Unit = {
     val sidechainState = mock[SidechainState]
     val history = mock[SidechainHistory]
-    val mainchainHeaderInfo = MainchainHeaderInfo(hash = null,
-      parentHash = null,
-      height = 3,
-      sidechainBlockId = null,
-      cumulativeCommTreeHash = Array[Byte]())
-    when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any())) thenAnswer(_ => Some(mainchainHeaderInfo))
+    when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => {
+      val info: MainchainHeaderInfo = mock[MainchainHeaderInfo]
+      when(info.cumulativeCommTreeHash).thenReturn(new Array[Byte](32))
+      when(info.sidechainBlockId).thenReturn(ModifierId @@ "some_block_id")
+      Some(info)
+    })
     val sidechainNodeView = CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])
     val messageToSign: Try[Array[Byte]] = keyRotationStrategy.getMessageToSign(sidechainNodeView, WithKeyRotationStrategyTest.epochNumber)
     assert(messageToSign.isSuccess)

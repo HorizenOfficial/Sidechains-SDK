@@ -103,8 +103,6 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
 
     val sidechainNodeView: View = CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])
     val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView, signaturesStatus)
-
-    //TODO: add checks
   }
 
     @Test
@@ -167,13 +165,13 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
     when(sidechainState.utxoMerkleTreeRoot(ArgumentMatchers.anyInt())).thenAnswer(_ =>Some(new Array[Byte](32)))
     when(sidechainState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ =>Seq())
     val history = mock[SidechainHistory]
-    val mainchainHeaderInfo = MainchainHeaderInfo(hash = null,
-      parentHash = null,
-      height = 3,
-      sidechainBlockId = null,
-      cumulativeCommTreeHash = Array[Byte]())
+    when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => {
+      val info: MainchainHeaderInfo = mock[MainchainHeaderInfo]
+      when(info.cumulativeCommTreeHash).thenReturn(new Array[Byte](32))
+      when(info.sidechainBlockId).thenReturn(ModifierId @@ "some_block_id")
+      Some(info)
+    })
     val mainchainBlockMock = mock[MainchainBlockReferenceInfo]
-    when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any())) thenAnswer (_ => Some(mainchainHeaderInfo))
     when(history.getMainchainBlockReferenceInfoByMainchainBlockHeight(ArgumentMatchers.anyInt())).thenAnswer(_ => JOptional.of(mainchainBlockMock))
     when(mainchainBlockMock.getMainchainHeaderHash).thenAnswer(_ => Array(13.toByte))
     val sidechainBlockInfo = mock[SidechainBlockInfo]
