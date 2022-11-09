@@ -3,6 +3,7 @@ package com.horizen.certificatesubmitter.dataproof
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes
+import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.librustsidechains.Library
 import com.horizen.proof.SchnorrProof
@@ -30,13 +31,10 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
   extends CertificateData(referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
-    val signersPublicKeys = schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList.map(SchnorrPublicKey.deserialize)
-    val signersPublicKeysBytes = signersPublicKeys.map(_.getHash.serializeFieldElement())
-    val mastersPublicKeys = schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList.map(SchnorrPublicKey.deserialize)
-    val mastersPublicKeysBytes = mastersPublicKeys.map(_.getHash.serializeFieldElement())
-    JavaConverters.asScalaIteratorConverter(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getCertificateCustomFields(scala.collection.JavaConverters.seqAsJavaList(signersPublicKeysBytes ++ mastersPublicKeysBytes)
-      ).listIterator()).asScala.toSeq
+    Seq(getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes).
+      getUpdatedKeysRootHash(schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList.size).
+      serializeFieldElement()
+    )
   }
 
   override def toString: String = {
