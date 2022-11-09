@@ -45,31 +45,31 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
   def asRlpValues(log: EvmLog): util.List[RlpType] = {
     val result = new util.ArrayList[RlpType]
     val rlpTopics = new util.ArrayList[RlpType]
-    result.add(RlpString.create(log.address.toBytes))
-    for (t <- log.topics) {
+    result.add(RlpString.create(log.getAddress.toBytes))
+    for (t <- log.getTopics) {
       rlpTopics.add(RlpString.create(t.toBytes))
     }
     result.add(new RlpList(rlpTopics))
-    if (log.data == null){
+    if (log.getData == null){
       result.add(RlpString.create(Array[Byte](0)))
     }
     else {
-      result.add(RlpString.create(log.data))
+      result.add(RlpString.create(log.getData))
     }
     result
   }
 
   override def serialize(log: EvmLog, writer: Writer): Unit = {
-    writer.putBytes(log.address.toBytes)
+    writer.putBytes(log.getAddress.toBytes)
 
     // array of elements of fixed data size (32 bytes)
-    val topicsArraySize = log.topics.length
+    val topicsArraySize = log.getTopics.length
     writer.putInt(topicsArraySize)
     for (i <- 0 until topicsArraySize) {
-      writer.putBytes(log.topics(i).toBytes)
+      writer.putBytes(log.getTopics()(i).toBytes)
     }
 
-    val data = if (log.data != null) log.data else Array[Byte](0)
+    val data = if (log.getData != null) log.getData else Array[Byte](0)
     writer.putInt(data.length)
     writer.putBytes(data)
   }

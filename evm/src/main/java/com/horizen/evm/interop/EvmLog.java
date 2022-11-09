@@ -1,7 +1,7 @@
 package com.horizen.evm.interop;
 
-import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.annotation.Nulls;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
@@ -9,15 +9,14 @@ import com.horizen.evm.utils.Hash;
 import java.util.Arrays;
 
 public class EvmLog {
-    public Address address;
+    private Address address = Address.addressZero();
+    private Hash[] topics = new Hash[0];
+    private byte[] data = new byte[0];
 
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Hash[] topics = new Hash[0];
-    @JsonSetter(nulls = Nulls.SKIP)
-    public byte[] data = new byte[0];
+    @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
+    public EvmLog(@JsonProperty("address") Address address, @JsonProperty("topics") Hash[] topics, @JsonProperty("data") byte[] data) {
 
-    public EvmLog(Address address, Hash[] topics, byte[] data) {
-        this.address = address;
+        this.address = address == null ? Address.addressZero() : address;
         if (topics != null) {
             this.topics = topics;
         }
@@ -36,8 +35,8 @@ public class EvmLog {
         var log = (EvmLog) o;
         if ((address == null) != (log.address == null)) return false;
         return ((address == null) || Arrays.equals(address.toBytes(), log.address.toBytes())) &&
-            Arrays.equals(topics, log.topics) &&
-            Arrays.equals(data, log.data);
+                Arrays.equals(topics, log.topics) &&
+                Arrays.equals(data, log.data);
     }
 
     @Override
@@ -57,22 +56,46 @@ public class EvmLog {
         return result;
     }
 
+    public Hash[] getTopics() {
+        return topics;
+    }
+
+    public void setTopics(Hash[] topics) {
+        this.topics = topics == null ? new Hash[0] : topics;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public void setData(byte[] data) {
+        this.data = data == null ? new byte[0] : data;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
+
     private String getTopicsString() {
         if (topics == null) return "null";
         var strs = Arrays
-            .stream(topics)
-            .map(topic -> topic == null ? "null" : Converter.toHexString(topic.toBytes()))
-            .toArray(String[]::new);
+                .stream(topics)
+                .map(topic -> topic == null ? "null" : Converter.toHexString(topic.toBytes()))
+                .toArray(String[]::new);
         return String.format("[%s]", String.join(",", strs));
     }
 
     @Override
     public String toString() {
         return String.format(
-            "EvmLog (log consensus data) {address=%s, topics=%s, data=%s}",
-            address == null ? "null" : Converter.toHexString(address.toBytes()),
-            getTopicsString(),
-            data == null ? "null" : Converter.toHexString(data)
+                "EvmLog (log consensus data) {address=%s, topics=%s, data=%s}",
+                Converter.toHexString(address.toBytes()),
+                getTopicsString(),
+                Converter.toHexString(data)
         );
     }
 }

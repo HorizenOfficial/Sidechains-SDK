@@ -63,7 +63,7 @@ public class EvmTest extends LibEvmTestBase {
                 Arrays
                         .stream(logs)
                         .forEach(log ->
-                                assertArrayEquals(log.address.toBytes(), createResult.contractAddress.toBytes())
+                                assertArrayEquals(log.getAddress().toBytes(), createResult.contractAddress.toBytes())
                         );
 
                 // call "store" function on the contract to set a value

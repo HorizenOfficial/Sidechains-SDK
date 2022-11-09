@@ -13,8 +13,8 @@ public class AddLogParams extends HandleParams {
 
     public AddLogParams(int handle, EvmLog evmLog) {
         super(handle);
-        this.address = evmLog.address;
-        this.topics = evmLog.topics;
-        this.data = evmLog.data;
+        this.address = evmLog.getAddress();
+        this.topics = evmLog.getTopics();
+        this.data = evmLog.getData();
     }
 }

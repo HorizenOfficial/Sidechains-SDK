@@ -34,6 +34,10 @@ public class Address {
         return new Address(bytes);
     }
 
+    public static Address addressZero() {
+        return new Address(Converter.fromHexString("0000000000000000000000000000000000000000"));
+    }
+
     public byte[] toBytes() {
         return Arrays.copyOf(bytes, LENGTH);
     }
