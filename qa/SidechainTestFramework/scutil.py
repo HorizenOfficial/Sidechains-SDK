@@ -865,7 +865,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys, sc_creation_info.csw_enabled)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys, sc_creation_info.csw_enabled, sc_creation_info.type_of_circuit_number) 
     if sc_creation_info.csw_enabled:
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
     else:
@@ -900,13 +900,19 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False, key_rotation = False):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
     pk = "cert_marlin_snark_pk"
     vk = "cert_marlin_snark_vk"
-    if isCSWEnabled is False:
+
+    if key_rotation is True:
+        pk = "cert_marlin_snark_pk_with_key_rotation"
+        vk = "cert_marlin_snark_vk_with_key_rotation"   
+
+    elif isCSWEnabled is False:
         pk = "cert_marlin_snark_pk_csw_disabled"
-        vk = "cert_marlin_snark_vk_csw_disabled"
+        vk = "cert_marlin_snark_vk_csw_disabled"    
+    
     return ProofKeysPaths(
         os.path.join(dirname, pk + str(cert_threshold_sig_max_keys)).replace("\\", "/"),
         os.path.join(dirname, vk + str(cert_threshold_sig_max_keys)).replace("\\", "/"))

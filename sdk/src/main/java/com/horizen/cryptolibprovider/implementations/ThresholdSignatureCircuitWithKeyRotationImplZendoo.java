@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements ThresholdSignatureCircuitWithKeyRotation {
     // Note: supportedSegmentSize should correlate with the snark circuit complexity,
     // but is always less or equal the one defined in the MC network (maxSegmentSize).
-    private static final int supportedSegmentSize = (1 << 15);
+    private static final int supportedSegmentSize = (1 << 17);
 
     private List<FieldElement> prepareCustomFieldElements(List<byte[]> customFields) {
         Iterator<byte[]> iterator = customFields.iterator();
