@@ -599,11 +599,9 @@ class EthService(
   ): EthereumFeeHistoryView = {
     val percentiles = sanitizePercentiles(rewardPercentiles)
     applyOnAccountView { nodeView =>
-      val genesisHeight = nodeView.history.getBlockHeightById(networkParams.sidechainGenesisBlockId).get()
       val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, newestBlock)
-      val availableBlocks = requestedBlockInfo.height + 1 - genesisHeight
       // limit the range of blocks by the number of available blocks and cap at 1024
-      val blocks = blockCount.toNumber.intValueExact().min(availableBlocks).min(1024)
+      val blocks = blockCount.toNumber.intValueExact().min(requestedBlockInfo.height).min(1024)
       // geth comment: returning with no data and no error means there are no retrievable blocks
       if (blocks < 1) return new EthereumFeeHistoryView()
       // calculate block number of the "oldest" block in the range
