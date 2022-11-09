@@ -9,6 +9,7 @@ import com.horizen.account.state.Message;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.evm.utils.Address;
+import com.horizen.params.NetworkParams;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
@@ -53,23 +54,27 @@ public class TransactionArgs {
         return from == null ? new byte[Address.LENGTH] : from.toBytes();
     }
 
-    public EthereumTransaction toTransaction() {
-        Sign.SignatureData prepared = null;
-        if (chainId != null)
-            prepared = new Sign.SignatureData(BigInteger.valueOf(chainId.longValue()).toByteArray(), new byte[]{0}, new byte[]{0});
-        if (type == null || type.equals(BigInteger.ZERO) /* Legacy */) {
-            return new EthereumTransaction(
-                    to != null ? to.toUTXOString() : null, nonce, gasPrice, gas, value, this.getDataString(), prepared
-            );
-        } else if (type.equals(BigInteger.ONE)  /* TODO EIP-2... */) {
-            return new EthereumTransaction(
-                    to != null ? to.toUTXOString() : null, nonce, gasPrice, gas, value, this.getDataString(), prepared
-            );
-        } else if (type.equals(BigInteger.TWO) /* EIP-1559 */) {
-            assert chainId != null;
-            return new EthereumTransaction(
-                    chainId.longValue(),
-                    to != null ? to.toUTXOString() : null,
+    public EthereumTransaction toTransaction(NetworkParams params) throws RpcException {
+        var saneChainId = params.chainId();
+        if (chainId != null && chainId.longValueExact() != saneChainId) {
+            throw new RpcException(RpcError.fromCode(
+                RpcCode.InvalidParams,
+                String.format("invalid chainID: got %d, want %d", chainId, saneChainId)
+            ));
+        }
+        var saneType = type == null ? 0 : type.intValueExact();
+        var saneTo = to == null ? null : to.toUTXOString();
+        switch (saneType) {
+            case 0:
+                // Legacy
+                var prepared = new Sign.SignatureData(
+                    BigInteger.valueOf(saneChainId).toByteArray(), new byte[] { 0 }, new byte[] { 0 });
+                return new EthereumTransaction(saneTo, nonce, gasPrice, gas, value, this.getDataString(), prepared);
+            case 2:
+                // EIP-1559
+                return new EthereumTransaction(
+                    saneChainId,
+                    saneTo,
                     nonce,
                     gas,
                     maxPriorityFeePerGas,
@@ -77,27 +82,29 @@ public class TransactionArgs {
                     value,
                     this.getDataString(),
                     null
-            );
+                );
+            default:
+                // unsupported type
+                return null;
         }
-        return null;
     }
 
     @Override
     public String toString() {
         return "TransactionArgs{" +
-                "type=" + (type != null ? type.toString() : "empty") +
-                ", from=" + (from != null ? from.toString() : "empty") +
-                ", to=" + (to != null ? to.toString() : "empty") +
-                ", gas=" + (gas != null ? gas.toString() : "empty") +
-                ", gasPrice=" + (gasPrice != null ? gasPrice.toString() : "empty") +
-                ", maxFeePerGas=" + (maxFeePerGas != null ? maxFeePerGas.toString() : "empty") +
-                ", maxPriorityFeePerGas=" + (maxPriorityFeePerGas != null ? maxPriorityFeePerGas.toString() : "empty") +
-                ", value=" + (value != null ? value.toString() : "empty") +
-                ", nonce=" + (nonce != null ? nonce.toString() : "empty") +
-                ", data='" + (data != null ? data : "empty") + '\'' +
-                ", input='" + (input != null ? input : "empty") + '\'' +
-                ", chainId=" + (chainId != null ? chainId.toString() : "empty") +
-                '}';
+            "type=" + (type != null ? type.toString() : "empty") +
+            ", from=" + (from != null ? from.toString() : "empty") +
+            ", to=" + (to != null ? to.toString() : "empty") +
+            ", gas=" + (gas != null ? gas.toString() : "empty") +
+            ", gasPrice=" + (gasPrice != null ? gasPrice.toString() : "empty") +
+            ", maxFeePerGas=" + (maxFeePerGas != null ? maxFeePerGas.toString() : "empty") +
+            ", maxPriorityFeePerGas=" + (maxPriorityFeePerGas != null ? maxPriorityFeePerGas.toString() : "empty") +
+            ", value=" + (value != null ? value.toString() : "empty") +
+            ", nonce=" + (nonce != null ? nonce.toString() : "empty") +
+            ", data='" + (data != null ? data : "empty") + '\'' +
+            ", input='" + (input != null ? input : "empty") + '\'' +
+            ", chainId=" + (chainId != null ? chainId.toString() : "empty") +
+            '}';
     }
 
     /**
@@ -108,8 +115,8 @@ public class TransactionArgs {
     public Message toMessage(BigInteger baseFee) throws RpcException {
         if (gasPrice != null && (maxFeePerGas != null || maxPriorityFeePerGas != null)) {
             throw new RpcException(RpcError.fromCode(
-                    RpcCode.InvalidParams,
-                    "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"
+                RpcCode.InvalidParams,
+                "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"
             ));
         }
         // global RPC gas cap (in geth this is a config variable)
@@ -145,16 +152,16 @@ public class TransactionArgs {
             }
         }
         return new Message(
-                new AddressProposition(getFrom()),
-                to == null ? null : new AddressProposition(to.toBytes()),
-                effectiveGasPrice,
-                gasFeeCap,
-                gasTipCap,
-                gasLimit,
-                value == null ? BigInteger.ZERO : value,
-                nonce,
-                getData(),
-                true
+            new AddressProposition(getFrom()),
+            to == null ? null : new AddressProposition(to.toBytes()),
+            effectiveGasPrice,
+            gasFeeCap,
+            gasTipCap,
+            gasLimit,
+            value == null ? BigInteger.ZERO : value,
+            nonce,
+            getData(),
+            true
         );
     }
 }
