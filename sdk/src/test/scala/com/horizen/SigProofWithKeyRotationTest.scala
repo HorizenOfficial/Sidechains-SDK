@@ -1,24 +1,27 @@
 package com.horizen
 
 import com.google.common.io.Files
+import com.horizen.block.{FieldElementCertificateField, WithdrawalEpochCertificate}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
-import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes
-import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
+import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList
+import com.horizen.certnative.WithdrawalCertificate
+import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.schnorrnative.{SchnorrPublicKey, SchnorrSecretKey, SchnorrSignature, ValidatorKeysUpdatesList}
+import com.horizen.schnorrnative.SchnorrSecretKey
+import com.horizen.secret.SchnorrSecret
 import com.horizen.utils.BytesUtils
+import com.horizen.websocket.client.BackwardTransfer
 import org.junit.Assert.{assertEquals, assertTrue, fail}
-import org.junit.{After, Ignore, Test}
+import org.junit.{After, Test}
 
 import java.io._
-import java.util.{ArrayList, Optional}
+import java.util.Optional
 import java.{lang, util}
-import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
 import scala.util.Random
 
@@ -64,11 +67,9 @@ class SigProofWithKeyRotationTest {
     val signerPublicKeysBytes: util.List[Array[Byte]] = signerKeyPairs.map(_._2.serializePublicKey()).toList.asJava
     val masterPublicKeysBytes: util.List[Array[Byte]] = masterKeyPairs.map(_._2.serializePublicKey()).toList.asJava
 
-
-
     val sysConstant = sigCircuit.generateSysDataConstant(signerPublicKeysBytes, masterPublicKeysBytes, threshold)
 
-    val epochNumber: Int = 0
+    val epochNumber0: Int = 0
     val btrFee: Long = 100
     val ftMinAmount: Long = 100
     val endCumulativeScTxCommTreeRoot = FieldElementFixture.generateFieldElement()
@@ -77,12 +78,12 @@ class SigProofWithKeyRotationTest {
 
     val wb: util.List[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42)).asJava
 
-    // Try with no key updates and first certificate
-    val messageToBeSigned = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, util.Arrays.asList(genesisKeyRootHash))
+    // Try with no key updates and first epoch
+    val messageToBeSignedForEpoch0 = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, util.Arrays.asList(genesisKeyRootHash))
 
     val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())
-    val signatures: util.List[Optional[Array[Byte]]] = (signerKeyPairs
-      .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSigned)}
+    val signaturesForEpoch0: util.List[Optional[Array[Byte]]] = (signerKeyPairs
+      .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedForEpoch0)}
       .map(b => Optional.of(b))
       .take(threshold)
       .toList ++ emptySigs)
@@ -100,19 +101,9 @@ class SigProofWithKeyRotationTest {
     }
 
     println("Generating snark proof...")
-    val actualKeys = new ValidatorKeysUpdatesList(
-      signerKeyPairs.map(_._2).toList.asJava,
-      masterKeyPairs.map(_._2).toList.asJava,
-      signerKeyPairs.map(_._2).toList.asJava,
-      masterKeyPairs.map(_._2).toList.asJava,
-      List.fill[SchnorrSignature](keyPairsLen)(new SchnorrSignature()).asJava,
-      List.fill[SchnorrSignature](keyPairsLen)(new SchnorrSignature()).asJava,
-      List.fill[SchnorrSignature](keyPairsLen)(new SchnorrSignature()).asJava,
-      List.fill[SchnorrSignature](keyPairsLen)(new SchnorrSignature()).asJava)
-
     val emptyUpdateProofs = List.fill[Option[Array[Byte]]](keyPairsLen)(Option.empty[Array[Byte]])
 
-    val schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
+    var schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
       signerPublicKeysBytes.asScala,
       masterPublicKeysBytes.asScala,
       signerPublicKeysBytes.asScala,
@@ -122,17 +113,150 @@ class SigProofWithKeyRotationTest {
       emptyUpdateProofs,
       emptyUpdateProofs
     )
+    var actualKeys = getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes)
 
-    val customFields = new util.ArrayList[Array[Byte]]()
+    var customFields = new util.ArrayList[Array[Byte]]()
     customFields.add(actualKeys.getUpdatedKeysRootHash(keyPairsLen).serializeFieldElement())
 
-    val proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot,
-      btrFee, ftMinAmount, customFields, signatures, schnorrKeysSignaturesListBytes,
+    var proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, customFields, signaturesForEpoch0, schnorrKeysSignaturesListBytes,
       threshold, Optional.empty(), 2, genesisKeyRootHash, provingKeyPath, true, true)
 
 
-    val result = sigCircuit.verifyProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, customFields,
+    var result = sigCircuit.verifyProof(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, customFields,
       threshold.asInstanceOf[Long], Optional.empty(), sysConstant, 2, proofAndQuality.getKey, verificationKeyPath)
+
+    assertTrue("Proof verification expected to be successfully", result)
+
+    // Try with no key updates and no first epoch
+    val epochNumber10 = 10
+    val messageToBeSignedForEpoch10 = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, util.Arrays.asList(genesisKeyRootHash))
+    val signaturesForEpoch10 = (signerKeyPairs
+      .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedForEpoch10)}
+      .map(b => Optional.of(b))
+      .take(threshold)
+      .toList ++ emptySigs)
+      .asJava
+
+    var prevCustomFields = new util.ArrayList[Array[Byte]]()
+    prevCustomFields.add(actualKeys.getKeysRootHash(keyPairsLen).serializeFieldElement())
+
+    var prevCertificate = WithdrawalEpochCertificate(
+      Array[Byte](),
+      keyPairsLen,
+      sidechainId,
+      epochNumber10 - 1,
+      threshold.asInstanceOf[Long] - 1,
+      Array[Byte](),
+      prevCustomFields.asScala.map(el => FieldElementCertificateField(el)),
+      Seq(),
+      actualKeys.getKeysRootHash(keyPairsLen).serializeFieldElement(),
+      btrFee,
+      ftMinAmount,
+      Seq(),
+      Seq(),
+      Seq()
+    )
+    println("Generating snark proof...")
+    proofAndQuality = sigCircuit.createProof(wb, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, customFields, signaturesForEpoch10, schnorrKeysSignaturesListBytes,
+      threshold, Optional.of(prevCertificate), 2, genesisKeyRootHash, provingKeyPath, true, true)
+
+    result = sigCircuit.verifyProof(wb, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, customFields,
+      threshold.asInstanceOf[Long], Optional.of(prevCertificate), sysConstant, 2, proofAndQuality.getKey, verificationKeyPath)
+
+    assertTrue("Proof verification expected to be successfully", result)
+
+    // Try with signer key updates and first epoch
+    val newSigningKeySecretKey = buildSchnorrPrivateKey(2*keyPairsLen)
+    val newSigningKeyPublicKey = newSigningKeySecretKey.getPublicKey
+    val newKeyToSign = newSigningKeyPublicKey.getHash.serializeFieldElement()
+
+    val oldSignerSignature = new SchnorrSecret(signerKeyPairs.head._1.serializeSecretKey(), signerKeyPairs.head._2.serializePublicKey()).sign(newKeyToSign).bytes()
+    val olderMasterSignature = new SchnorrSecret(masterKeyPairs.head._1.serializeSecretKey(), masterKeyPairs.head._2.serializePublicKey()).sign(newKeyToSign).bytes()
+
+    val signerSignatures = new util.ArrayList[Option[Array[Byte]]]()
+    signerSignatures.add(Option.apply(oldSignerSignature))
+    val masterSignatures = new util.ArrayList[Option[Array[Byte]]]()
+    masterSignatures.add(Option.apply(olderMasterSignature))
+    for(i <- 0 until keyPairsLen-1) {
+      signerSignatures.add(Option.empty)
+      masterSignatures.add(Option.empty)
+    }
+
+    println("Generating snark proof...")
+
+    schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
+      signerPublicKeysBytes.asScala,
+      masterPublicKeysBytes.asScala,
+      signerPublicKeysBytes.asScala,
+      masterPublicKeysBytes.asScala,
+      signerSignatures.asScala,
+      masterSignatures.asScala,
+      emptyUpdateProofs,
+      emptyUpdateProofs
+    )
+
+    actualKeys = getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes)
+
+    customFields = new util.ArrayList[Array[Byte]]()
+    customFields.add(actualKeys.getUpdatedKeysRootHash(keyPairsLen).serializeFieldElement())
+
+    proofAndQuality = sigCircuit.createProof(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, customFields, signaturesForEpoch0, schnorrKeysSignaturesListBytes,
+      threshold, Optional.empty(), 2, genesisKeyRootHash, provingKeyPath, true, true)
+
+
+    result = sigCircuit.verifyProof(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, customFields,
+      threshold.asInstanceOf[Long], Optional.empty(), sysConstant, 2, proofAndQuality.getKey, verificationKeyPath)
+
+    assertTrue("Proof verification expected to be successfully", result)
+
+    // Try with master key updates and no first epoch
+
+    println("Generating snark proof...")
+
+    schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
+      signerPublicKeysBytes.asScala,
+      masterPublicKeysBytes.asScala,
+      signerPublicKeysBytes.asScala,
+      masterPublicKeysBytes.asScala,
+      emptyUpdateProofs,
+      emptyUpdateProofs,
+      signerSignatures.asScala,
+      masterSignatures.asScala
+    )
+
+    actualKeys = getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes)
+    customFields = new util.ArrayList[Array[Byte]]()
+    customFields.add(actualKeys.getUpdatedKeysRootHash(keyPairsLen).serializeFieldElement())
+
+    prevCustomFields = new util.ArrayList[Array[Byte]]()
+    prevCustomFields.add(actualKeys.getKeysRootHash(keyPairsLen).serializeFieldElement())
+
+    prevCertificate = WithdrawalEpochCertificate(
+      Array[Byte](),
+      keyPairsLen,
+      sidechainId,
+      epochNumber10 - 1,
+      threshold.asInstanceOf[Long] - 1,
+      Array[Byte](),
+      prevCustomFields.asScala.map(el => FieldElementCertificateField(el)),
+      Seq(),
+      actualKeys.getKeysRootHash(keyPairsLen).serializeFieldElement(),
+      btrFee,
+      ftMinAmount,
+      Seq(),
+      Seq(),
+      Seq()
+    )
+
+    proofAndQuality = sigCircuit.createProof(wb, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, customFields, signaturesForEpoch10, schnorrKeysSignaturesListBytes,
+      threshold, Optional.of(prevCertificate), 2, genesisKeyRootHash, provingKeyPath, true, true)
+
+    result = sigCircuit.verifyProof(wb, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, customFields,
+      threshold.asInstanceOf[Long], Optional.of(prevCertificate), sysConstant, 2, proofAndQuality.getKey, verificationKeyPath)
 
     assertTrue("Proof verification expected to be successfully", result)
   }
