@@ -32,7 +32,7 @@ public class EvmMessageProcessor implements MessageProcessor {
             throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
-        context.coinbase = Address.FromBytes(blockContext.forgerAddress);
+        context.coinbase = Address.fromBytes(blockContext.forgerAddress);
         context.time = BigInteger.valueOf(blockContext.timestamp);
         context.baseFee = blockContext.baseFee;
         context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);

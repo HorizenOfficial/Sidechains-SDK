@@ -17,13 +17,13 @@ trait ReceiptFixture {
       // random address and fixed topics/data
       val addressBytes = new Array[Byte](Address.LENGTH)
       Random.nextBytes(addressBytes)
-      val address = Address.FromBytes(addressBytes)
+      val address = Address.fromBytes(addressBytes)
 
       val topics = new Array[Hash](4)
-      topics(0) = Hash.FromBytes(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
-      topics(1) = Hash.FromBytes(BytesUtils.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"))
-      topics(2) = Hash.FromBytes(BytesUtils.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"))
-      topics(3) = Hash.FromBytes(BytesUtils.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"))
+      topics(0) = Hash.fromBytes(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
+      topics(1) = Hash.fromBytes(BytesUtils.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"))
+      topics(2) = Hash.fromBytes(BytesUtils.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"))
+      topics(3) = Hash.fromBytes(BytesUtils.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"))
 
       val data = BytesUtils.fromHexString("aabbccddeeff")
       new EvmLog(address, topics, data)

@@ -537,7 +537,7 @@ class EthService(
     val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        Hash.FromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
+        Hash.fromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
       }
     }
   }
