@@ -177,7 +177,7 @@ class EthService(
   def signTransaction(params: TransactionArgs): String = {
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value)
-        .map(secret => signTransactionWithSecret(secret, params.toTransaction))
+        .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
         .map(tx => Numeric.toHexString(TransactionEncoder.encode(tx.getTransaction, tx.getSignatureData)))
         .orNull
     }
