@@ -7,6 +7,6 @@ public class AccountParams extends HandleParams {
 
     public AccountParams(int handle, byte[] address) {
         super(handle);
-        this.address = Address.FromBytes(address);
+        this.address = Address.fromBytes(address);
     }
 }

@@ -31,8 +31,8 @@ public class EvmParams extends HandleParams {
             TraceOptions traceParams
     ) {
         super(handle);
-        this.from = Address.FromBytes(from);
-        this.to = Address.FromBytes(to);
+        this.from = Address.fromBytes(from);
+        this.to = Address.fromBytes(to);
         this.value = value;
         this.input = input;
         this.availableGas = availableGas;

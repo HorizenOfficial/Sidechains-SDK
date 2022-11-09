@@ -10,6 +10,6 @@ public class OpenStateParams extends DatabaseParams {
 
     public OpenStateParams(int databaseHandle, byte[] root) {
         super(databaseHandle);
-        this.root = Hash.FromBytes(root);
+        this.root = Hash.fromBytes(root);
     }
 }

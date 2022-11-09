@@ -11,7 +11,7 @@ public class SetTxContextParams extends HandleParams {
 
     public SetTxContextParams(int handle, byte[] txHash, Integer txIndex) {
         super(handle);
-        this.txHash = Hash.FromBytes(txHash);
+        this.txHash = Hash.fromBytes(txHash);
         this.txIndex = txIndex;
     }
 }

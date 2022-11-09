@@ -10,6 +10,6 @@ public class GetLogsParams extends HandleParams {
 
     public GetLogsParams(int handle, byte[] txHash) {
         super(handle);
-        this.txHash = Hash.FromBytes(txHash);
+        this.txHash = Hash.fromBytes(txHash);
     }
 }
