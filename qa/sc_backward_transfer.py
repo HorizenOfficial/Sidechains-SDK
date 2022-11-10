@@ -4,7 +4,7 @@ import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
@@ -59,10 +59,16 @@ class SCBackwardTransfer(SidechainTestFramework):
             submitter_private_keys_indexes=list(range(cert_max_keys))  # SC node owns all schnorr private keys.
         )
 
+        if (int(self.options.certcircuittype) == 1):
+            sc_creation_version = SC_CREATION_VERSION_2
+        else:
+            sc_creation_version = SC_CREATION_VERSION_1
+
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
                                                         cert_max_keys=cert_max_keys,
                                                         cert_sig_threshold=cert_sig_threshold,
-                                                        type_of_circuit_number=int(self.options.certcircuittype)),
+                                                        type_of_circuit_number=int(self.options.certcircuittype),
+                                                        sc_creation_version=sc_creation_version),
                                          sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 

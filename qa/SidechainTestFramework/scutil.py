@@ -900,12 +900,12 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False, key_rotation = False):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False, type_of_circuit = 0):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
     pk = "cert_marlin_snark_pk"
     vk = "cert_marlin_snark_vk"
 
-    if key_rotation is True:
+    if type_of_circuit == 1:
         pk = "cert_marlin_snark_pk_with_key_rotation"
         vk = "cert_marlin_snark_vk_with_key_rotation"   
 

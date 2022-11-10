@@ -6,16 +6,13 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList
-import com.horizen.certnative.WithdrawalCertificate
 import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.fixtures.FieldElementFixture
-import com.horizen.librustsidechains.FieldElement
-import com.horizen.proposition.MCPublicKeyHashProposition
+import com.horizen.proposition.{MCPublicKeyHashProposition, SchnorrProposition}
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.secret.SchnorrSecret
 import com.horizen.utils.BytesUtils
-import com.horizen.websocket.client.BackwardTransfer
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{After, Test}
 
@@ -79,7 +76,8 @@ class SigProofWithKeyRotationTest {
     val wb: util.List[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42)).asJava
 
     // Try with no key updates and first epoch
-    val messageToBeSignedForEpoch0 = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, util.Arrays.asList(genesisKeyRootHash))
+    val messageToBeSignedForEpoch0 = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, util.Arrays.asList(genesisKeyRootHash))
 
     val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())
     val signaturesForEpoch0: util.List[Optional[Array[Byte]]] = (signerKeyPairs
@@ -172,6 +170,15 @@ class SigProofWithKeyRotationTest {
     val newSigningKeyPublicKey = newSigningKeySecretKey.getPublicKey
     val newKeyToSign = newSigningKeyPublicKey.getHash.serializeFieldElement()
 
+    val updatedSignerPublicKeysBytes: util.ArrayList[Array[Byte]] = new util.ArrayList[Array[Byte]]()
+    val updatedMasterPublicKeysBytes: util.ArrayList[Array[Byte]] = new util.ArrayList[Array[Byte]]()
+    updatedSignerPublicKeysBytes.add(newSigningKeyPublicKey.serializePublicKey())
+    updatedMasterPublicKeysBytes.add(newSigningKeyPublicKey.serializePublicKey())
+    for (i<-1 until signerPublicKeysBytes.size()) {
+      updatedSignerPublicKeysBytes.add(signerPublicKeysBytes.get(i))
+      updatedMasterPublicKeysBytes.add(masterPublicKeysBytes.get(i))
+    }
+
     val oldSignerSignature = new SchnorrSecret(signerKeyPairs.head._1.serializeSecretKey(), signerKeyPairs.head._2.serializePublicKey()).sign(newKeyToSign).bytes()
     val olderMasterSignature = new SchnorrSecret(masterKeyPairs.head._1.serializeSecretKey(), masterKeyPairs.head._2.serializePublicKey()).sign(newKeyToSign).bytes()
 
@@ -184,12 +191,14 @@ class SigProofWithKeyRotationTest {
       masterSignatures.add(Option.empty)
     }
 
+    // Try with no key updates and first epoch
+
     println("Generating snark proof...")
 
     schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
       signerPublicKeysBytes.asScala,
       masterPublicKeysBytes.asScala,
-      signerPublicKeysBytes.asScala,
+      updatedSignerPublicKeysBytes.asScala,
       masterPublicKeysBytes.asScala,
       signerSignatures.asScala,
       masterSignatures.asScala,
@@ -202,8 +211,18 @@ class SigProofWithKeyRotationTest {
     customFields = new util.ArrayList[Array[Byte]]()
     customFields.add(actualKeys.getUpdatedKeysRootHash(keyPairsLen).serializeFieldElement())
 
+    val messageToBeSignedWithRotationEpoch0 = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, util.Arrays.asList(actualKeys.getUpdatedKeysRootHash(keyPairsLen).serializeFieldElement()))
+
+    val signaturesWithRotationEpoch0: util.List[Optional[Array[Byte]]] = (signerKeyPairs
+      .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedWithRotationEpoch0)}
+      .map(b => Optional.of(b))
+      .take(threshold)
+      .toList ++ emptySigs)
+      .asJava
+
     proofAndQuality = sigCircuit.createProof(wb, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
-      btrFee, ftMinAmount, customFields, signaturesForEpoch0, schnorrKeysSignaturesListBytes,
+      btrFee, ftMinAmount, customFields, signaturesWithRotationEpoch0, schnorrKeysSignaturesListBytes,
       threshold, Optional.empty(), 2, genesisKeyRootHash, provingKeyPath, true, true)
 
 
@@ -220,7 +239,7 @@ class SigProofWithKeyRotationTest {
       signerPublicKeysBytes.asScala,
       masterPublicKeysBytes.asScala,
       signerPublicKeysBytes.asScala,
-      masterPublicKeysBytes.asScala,
+      updatedMasterPublicKeysBytes.asScala,
       emptyUpdateProofs,
       emptyUpdateProofs,
       signerSignatures.asScala,
@@ -251,8 +270,18 @@ class SigProofWithKeyRotationTest {
       Seq()
     )
 
+    val messageToBeSignedWithRotationEpoch10 = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, util.Arrays.asList(actualKeys.getUpdatedKeysRootHash(keyPairsLen).serializeFieldElement()))
+
+    val signaturesWithRotationEpoch10: util.List[Optional[Array[Byte]]] = (signerKeyPairs
+      .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedWithRotationEpoch10)}
+      .map(b => Optional.of(b))
+      .take(threshold)
+      .toList ++ emptySigs)
+      .asJava
+
     proofAndQuality = sigCircuit.createProof(wb, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot,
-      btrFee, ftMinAmount, customFields, signaturesForEpoch10, schnorrKeysSignaturesListBytes,
+      btrFee, ftMinAmount, customFields, signaturesWithRotationEpoch10, schnorrKeysSignaturesListBytes,
       threshold, Optional.of(prevCertificate), 2, genesisKeyRootHash, provingKeyPath, true, true)
 
     result = sigCircuit.verifyProof(wb, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, customFields,

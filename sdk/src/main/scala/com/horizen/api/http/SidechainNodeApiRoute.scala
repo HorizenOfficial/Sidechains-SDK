@@ -285,8 +285,8 @@ object SidechainNodeRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSignSchnorrPublicKey(messageToSign: String, key: String) {
-    require(messageToSign != null && messageToSign.length > 0, "Null messageToSign")
-    require(key != null && key.length > 0, "Null key")
+    require(messageToSign != null && messageToSign.nonEmpty, "Null messageToSign")
+    require(key != null && key.nonEmpty, "Null key")
   }
 
   @JsonView(Array(classOf[Views.Default]))

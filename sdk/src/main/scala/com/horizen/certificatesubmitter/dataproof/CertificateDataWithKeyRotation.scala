@@ -4,14 +4,11 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList
 import com.horizen.librustsidechains.Library
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
-import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.utils.BytesUtils
-
-import scala.collection.JavaConverters
 
 
 object CertificateDataWithKeyRotation {
