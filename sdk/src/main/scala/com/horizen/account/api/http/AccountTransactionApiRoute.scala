@@ -213,7 +213,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               null
           )
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+            val txCost = signedTx.getMaxCost
 
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
@@ -256,7 +256,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               null
           )
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+            val txCost = signedTx.getMaxCost
 
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
@@ -285,8 +285,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         applyOnNodeView { sidechainNodeView =>
           var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
-
+            val txCost = signedTx.getMaxCost
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
             secret match {
@@ -310,7 +309,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         body => {
           applyOnNodeView { sidechainNodeView =>
             var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
-            val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+            val txCost = signedTx.getMaxCost
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
             secret match {

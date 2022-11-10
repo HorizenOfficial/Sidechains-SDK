@@ -150,7 +150,7 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
   def takeExecutableTxs(limit: Int): Iterable[SidechainTypes#SCAT] = {
 
     def txOrder(tx: SidechainTypes#SCAT) = {
-      tx.getMaxFeePerGas.subtract(stateReader.baseFee).min(tx.getMaxPriorityFeePerGas)
+      tx.getPriorityFeePerGas(stateReader.baseFee)
     }
 
     val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))

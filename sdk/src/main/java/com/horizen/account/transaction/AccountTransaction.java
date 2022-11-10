@@ -36,4 +36,8 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
     max fee - base fee. */
     public abstract BigInteger getMaxPriorityFeePerGas();
 
+    public abstract BigInteger getMaxCost();
+    public abstract BigInteger getEffectiveGasPrice(BigInteger base);
+    public abstract BigInteger getPriorityFeePerGas(BigInteger base);
+
 }

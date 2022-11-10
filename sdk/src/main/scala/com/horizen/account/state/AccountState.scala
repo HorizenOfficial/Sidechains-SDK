@@ -410,10 +410,9 @@ class AccountState(
           throw NonceTooLowException(sender, tx.getNonce, stateNonce)
         }
         //Check the balance
-        val maxTxCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
         val currentBalance = stateView.getBalance(sender)
-        if (currentBalance.compareTo(maxTxCost) < 0) {
-          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $maxTxCost")
+        if (currentBalance.compareTo(tx.getMaxCost) < 0) {
+          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost ${tx.getMaxCost}")
         }
 
         // Check that the sender is an EOA

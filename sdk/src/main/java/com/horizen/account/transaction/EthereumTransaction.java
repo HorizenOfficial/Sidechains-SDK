@@ -178,22 +178,32 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     "non-positive gas limit", id()));
         if (!BigIntegerUtil.isUint64(getGasLimit()))
             throw new GasUintOverflowException();
-        if (getMaxFeePerGas().signum() < 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "eip1559 transaction with negative maxFeePerGas", id()));
-        if (getMaxPriorityFeePerGas().signum() < 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "eip1559 transaction with negative maxPriorityFeePerGas", id()));
-        if (getMaxFeePerGas().bitLength() > 256)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
-        if (getMaxPriorityFeePerGas().bitLength() > 256)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
-        if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                            "eip1559 transaction max priority fee per gas [%s] higher than max fee per gas [%s]",
-                    id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
+
+        if (isEIP1559()) {
+            if (getMaxFeePerGas().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction with negative maxFeePerGas", id()));
+            if (getMaxPriorityFeePerGas().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction with negative maxPriorityFeePerGas", id()));
+            if (getMaxFeePerGas().bitLength() > 256)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
+            if (getMaxPriorityFeePerGas().bitLength() > 256)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
+            if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                                "eip1559 transaction maxPriorityFeePerGas [%s] higher than maxFeePerGas [%s]",
+                        id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
+        } else {
+            if (getGasPrice().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "legacy transaction with negative gasPrice", id()));
+            if (getGasPrice().bitLength() > 256)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "legacy transaction gasPrice bit length [%d] is too high", id(), getGasPrice().bitLength()));
+        }
         if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo() == null)) < 0) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "gas limit %s is below intrinsic gas %s",
@@ -269,6 +279,35 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (this.isEIP1559())
             return this.eip1559Tx().getMaxPriorityFeePerGas();
         return null;
+    }
+
+    @Override
+    @JsonIgnore
+    public BigInteger getMaxCost() {
+        if (isEIP1559()) {
+            return getValue().add(getGasLimit().multiply(getMaxFeePerGas()));
+        } else {
+            return getValue().add(getGasLimit().multiply(getGasPrice()));
+        }
+    }
+
+    @Override
+    @JsonIgnore
+    public BigInteger getPriorityFeePerGas(BigInteger base) {
+        if (isEIP1559()) {
+            return getMaxFeePerGas().subtract(base).min(getMaxPriorityFeePerGas());
+        } else {
+            return getGasPrice().subtract(base);
+        }
+    }
+
+    @Override
+    @JsonIgnore
+    public BigInteger getEffectiveGasPrice(BigInteger base) {
+        if (this.isEIP1559())
+            return base.add(getMaxPriorityFeePerGas()).min(getMaxFeePerGas());
+        else
+            return getGasPrice();
     }
 
     public Long getChainId() {
@@ -443,12 +482,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public Message asMessage(BigInteger baseFee) {
-        // both methods defaults to gasPrice if not EIP1559
-        var gasFeeCap = getMaxFeePerGas();
-        var gasTipCap = getMaxPriorityFeePerGas();
+        var gasFeeCap = isEIP1559() ? getMaxFeePerGas() : getGasPrice();
+        var gasTipCap = isEIP1559() ? getMaxPriorityFeePerGas() : getGasPrice();
         // calculate effective gas price as baseFee + tip capped at the fee cap
         // this will default to gasPrice if the transaction is not EIP-1559
-        var effectiveGasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
+        var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
                 getFrom(),
                 getTo(),

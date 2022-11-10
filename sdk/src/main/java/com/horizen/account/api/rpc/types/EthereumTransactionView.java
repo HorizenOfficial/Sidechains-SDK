@@ -39,15 +39,14 @@ public class EthereumTransactionView {
         gas = Numeric.encodeQuantity(ethTx.getGasLimit());
         value = Numeric.encodeQuantity(ethTx.getValue());
         input = Numeric.toHexString(ethTx.getData());
+        gasPrice = Numeric.encodeQuantity(ethTx.getEffectiveGasPrice(baseFee));
         if (ethTx.isEIP1559()) {
             maxPriorityFeePerGas = Numeric.encodeQuantity(ethTx.getMaxPriorityFeePerGas());
             maxFeePerGas = Numeric.encodeQuantity(ethTx.getMaxFeePerGas());
             // calculate effective gas price
-            gasPrice = Numeric.encodeQuantity(baseFee.add(ethTx.getMaxPriorityFeePerGas()).min(ethTx.getMaxFeePerGas()));
         } else {
             maxPriorityFeePerGas = null;
             maxFeePerGas = null;
-            gasPrice = Numeric.encodeQuantity(ethTx.getGasPrice());
         }
         chainId = ethTx.getChainId() == null ? null : Numeric.encodeQuantity(BigInteger.valueOf(ethTx.getChainId()));
         v = (ethTx.getV() != null) ? Numeric.toHexString(ethTx.getV()) : null;
