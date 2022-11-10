@@ -7,7 +7,7 @@ import akka.pattern.ask
 import com.horizen.SidechainNodeViewHolder
 import com.horizen.node.SidechainNodeView
 import sparkz.core.settings.RESTApiSettings
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}

@@ -11,7 +11,7 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
 import scala.Array;
-import scorex.util.encode.Base16;
+import sparkz.util.encode.Base16;
 import java.util.*;
 import static com.horizen.transaction.CoreTransactionsIdsEnum.MC2SCAggregatedTransactionId;
 

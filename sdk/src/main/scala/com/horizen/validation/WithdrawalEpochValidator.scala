@@ -6,7 +6,7 @@ import com.horizen.SidechainHistory
 import com.horizen.cryptolibprovider.CommonCircuit
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, WithdrawalEpochUtils}
-import scorex.util.idToBytes
+import sparkz.util.idToBytes
 
 import scala.util.Try
 

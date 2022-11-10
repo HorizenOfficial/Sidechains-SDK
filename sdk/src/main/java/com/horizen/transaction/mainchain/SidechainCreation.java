@@ -10,7 +10,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
 import com.horizen.proposition.VrfPublicKey;
 import scala.compat.java8.OptionConverters;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {

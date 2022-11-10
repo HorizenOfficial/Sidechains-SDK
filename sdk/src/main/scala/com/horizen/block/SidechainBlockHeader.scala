@@ -13,9 +13,9 @@ import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.ModifierId
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.util.Try
 

@@ -6,7 +6,7 @@ import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils, BytesUtils}
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 import scala.annotation.tailrec
 import scala.collection.mutable

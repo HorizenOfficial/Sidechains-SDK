@@ -4,7 +4,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.vrf.VrfOutput
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import supertagged.TaggedType
 
 import java.math.{BigDecimal, BigInteger, MathContext}

@@ -2,7 +2,7 @@ package com.horizen.api.http
 
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.forge.ForgingInfo
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.collection.mutable
 import scala.util.{Failure, Try}

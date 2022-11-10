@@ -14,7 +14,7 @@ import sparkz.core.NodeViewModifier
 import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
 import sparkz.core.validation.RecoverableModifierError
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import sparkz.util.{ModifierId, SparkzEncoding, SparkzLogging, idToBytes}
 
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
@@ -32,9 +32,9 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       SidechainHistory]
   with NetworkParamsUtils
   with ConsensusDataProvider
-  with sparkz.core.utils.SparkzEncoding
+  with SparkzEncoding
   with NodeHistory
-  with ScorexLogging
+  with SparkzLogging
 {
 
   override type NVCT = SidechainHistory

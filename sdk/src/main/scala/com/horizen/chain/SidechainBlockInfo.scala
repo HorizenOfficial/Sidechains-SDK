@@ -10,8 +10,8 @@ import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.serialization.{Reader, Writer}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 import scala.collection.mutable.ArrayBuffer
 
 @JsonView(Array(classOf[Views.Default]))

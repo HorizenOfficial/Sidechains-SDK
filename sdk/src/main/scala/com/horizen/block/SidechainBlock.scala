@@ -12,13 +12,13 @@ import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{BlockFeeInfo, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
-import com.horizen.{SparkzEncoding, SidechainTypes}
+import com.horizen.{SidechainTypes}
 import sparkz.core.block.Block
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.{ModifierTypeId, idToBytes}
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.{ModifierId, SparkzEncoding}
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}

@@ -18,7 +18,7 @@ import com.horizen.forge.ForgingInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._

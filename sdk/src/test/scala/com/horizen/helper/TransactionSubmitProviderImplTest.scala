@@ -11,7 +11,7 @@ import org.junit.Assert.{assertEquals, assertTrue, assertFalse}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.{Failure, Success, Try}

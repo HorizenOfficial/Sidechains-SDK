@@ -3,7 +3,7 @@ package com.horizen.validation
 import com.horizen.block.SidechainBlock
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
-import scorex.util.idToBytes
+import sparkz.util.idToBytes
 
 import scala.util.{Failure, Success, Try}
 

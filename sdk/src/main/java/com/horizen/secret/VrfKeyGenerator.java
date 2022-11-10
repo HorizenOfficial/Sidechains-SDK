@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.node.NodeWallet;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 import com.horizen.cryptolibprovider.VrfFunctions.KeyType;
 import java.util.EnumMap;
 import java.util.List;

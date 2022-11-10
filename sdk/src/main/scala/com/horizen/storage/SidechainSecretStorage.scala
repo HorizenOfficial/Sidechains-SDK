@@ -4,7 +4,7 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -14,7 +14,7 @@ import scala.util.{Random, Try}
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
     with SidechainStorageInfo
-    with ScorexLogging
+    with SparkzLogging
 {
   // Version - RandomBytes(32)
   // Key - Blake2b256 hash from public key bytes

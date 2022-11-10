@@ -19,7 +19,7 @@ import org.scalatestplus.mockito._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import org.mockito._
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 import scala.util.Try
 

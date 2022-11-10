@@ -37,8 +37,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-import scorex.crypto.hash.Blake2b256;
-import scorex.util.encode.Base16;
+import sparkz.crypto.hash.Blake2b256;
+import sparkz.util.encode.Base16;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 

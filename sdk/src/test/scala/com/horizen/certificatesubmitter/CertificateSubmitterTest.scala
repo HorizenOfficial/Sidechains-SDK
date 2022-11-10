@@ -34,7 +34,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}

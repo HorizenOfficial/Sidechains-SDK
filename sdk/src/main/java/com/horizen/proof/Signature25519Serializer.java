@@ -1,7 +1,7 @@
 package com.horizen.proof;
 
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public final class Signature25519Serializer implements ProofSerializer<Signature25519> {
 

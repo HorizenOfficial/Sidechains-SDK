@@ -5,7 +5,7 @@ import com.horizen.cryptolibprovider.{CryptoLibProvider, InMemorySparseMerkleTre
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer, Pair => JPair}
 import com.horizen.utils.Utils
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.util.{List => JList}
 import scala.collection.JavaConverters._
@@ -13,7 +13,7 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
-  extends ScorexLogging with SidechainStorageInfo with SidechainTypes {
+  extends SparkzLogging with SidechainStorageInfo with SidechainTypes {
 
   var merkleTreeWrapper: InMemorySparseMerkleTreeWrapper = loadMerkleTree()
 

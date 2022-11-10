@@ -12,7 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.block.Block
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 class TimeToEpochSlotConverterTest extends JUnitSuite {
 

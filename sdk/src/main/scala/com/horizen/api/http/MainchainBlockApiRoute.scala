@@ -12,7 +12,7 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext

@@ -14,7 +14,7 @@ import com.horizen.utils._
 import com.horizen.wallet.ApplicationWallet
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 import java.{lang, util}
@@ -57,7 +57,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                  SidechainWallet]
   with SidechainTypes
   with NodeWallet
-  with ScorexLogging {
+  with SparkzLogging {
   override type NVCT = SidechainWallet
 
   require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")

@@ -6,6 +6,8 @@ import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.ForgerBoxDataSerializer;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.VrfPublicKey;
+import sparkz.util.SparkzEncoder;
+import sparkz.util.encode.BytesEncoder;
 
 import java.util.Arrays;
 

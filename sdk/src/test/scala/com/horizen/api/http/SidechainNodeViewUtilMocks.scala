@@ -24,7 +24,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import com.horizen.utils.WithdrawalEpochInfo
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
 import scala.io.Source

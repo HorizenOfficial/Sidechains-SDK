@@ -13,7 +13,7 @@ import com.horizen.vrf.VrfOutput
 import org.junit.Assert._
 import sparkz.core.consensus.ModifierSemanticValidity
 import org.junit.{Before, Test}
-import scorex.util._
+import sparkz.util._
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -25,7 +25,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
                                   val params: NetworkParams)
   extends ConsensusDataProvider
   with NetworkParamsUtils
-  with ScorexLogging {
+  with SparkzLogging {
 
   require(slotsPresentation.forall(_.size == params.consensusSlotsInEpoch))
   private val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)

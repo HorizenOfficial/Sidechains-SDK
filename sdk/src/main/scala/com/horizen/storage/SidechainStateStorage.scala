@@ -10,7 +10,7 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
@@ -19,7 +19,7 @@ import scala.compat.java8.OptionConverters._
 import scala.util._
 
 class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
-  extends ScorexLogging
+  extends SparkzLogging
     with SidechainStorageInfo
     with SidechainTypes
 {

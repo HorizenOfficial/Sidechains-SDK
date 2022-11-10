@@ -14,7 +14,7 @@ import com.horizen.utils.TimeToEpochUtils
 import sparkz.core.NodeViewHolder.ReceivableMessages
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -26,7 +26,7 @@ class Forger(settings: SidechainSettings,
              mainchainSynchronizer: MainchainSynchronizer,
              companion: SidechainTransactionsCompanion,
              timeProvider: NetworkTimeProvider,
-             val params: NetworkParams) extends Actor with ScorexLogging {
+             val params: NetworkParams) extends Actor with SparkzLogging {
   val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
@@ -176,7 +176,7 @@ class Forger(settings: SidechainSettings,
   }
 }
 
-object Forger extends ScorexLogging {
+object Forger extends SparkzLogging {
   object ReceivableMessages {
     case object StartForging
     case object StopForging

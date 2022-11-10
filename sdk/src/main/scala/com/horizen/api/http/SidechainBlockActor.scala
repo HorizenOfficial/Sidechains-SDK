@@ -8,7 +8,7 @@ import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndS
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
 import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
@@ -19,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: SidechainHistory : ClassTag]
 (settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, forgerRef: ActorRef)(implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging {
+  extends Actor with SparkzLogging {
 
   private var generatedBlockGroups: TrieMap[ModifierId, Seq[ModifierId]] = TrieMap()
   private var generatedBlocksPromises: TrieMap[ModifierId, Promise[Try[Seq[ModifierId]]]] = TrieMap()

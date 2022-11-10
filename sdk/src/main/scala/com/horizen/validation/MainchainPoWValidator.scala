@@ -4,7 +4,7 @@ import com.horizen.SidechainHistory
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
-import scorex.util.idToBytes
+import sparkz.util.idToBytes
 
 import scala.util.{Failure, Success, Try}
 

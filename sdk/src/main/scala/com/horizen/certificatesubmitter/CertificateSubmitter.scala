@@ -23,7 +23,7 @@ import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorRespons
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.io.File
 import java.util
@@ -46,7 +46,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
-                          (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
+                          (implicit ec: ExecutionContext) extends Actor with Timers with SparkzLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._
   import CertificateSubmitter.ReceivableMessages._

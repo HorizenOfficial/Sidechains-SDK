@@ -5,13 +5,13 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import com.horizen.SidechainTypes
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Promise}
 
 class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolderRef: ActorRef)(implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging {
+  extends Actor with SparkzLogging {
 
   private val transactionMap : TrieMap[String, Promise[ModifierId]] = TrieMap()
 

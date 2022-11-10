@@ -9,8 +9,8 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{Pair => JPair, _}
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
@@ -24,7 +24,7 @@ trait SidechainBlockInfoProvider {
 class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
   extends SidechainBlockInfoProvider
     with SidechainStorageInfo
-    with ScorexLogging {
+    with SparkzLogging {
   // Version - RandomBytes(32)
 
   require(storage != null, "Storage must be NOT NULL.")

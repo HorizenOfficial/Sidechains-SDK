@@ -1,6 +1,5 @@
 package com.horizen
 
-import java.util
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
@@ -20,20 +19,18 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, 
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
 import sparkz.core.validation.RecoverableModifierError
-import sparkz.core.settings.NetworkSettings
 import sparkz.core.{VersionTag, idToVersion}
-import scorex.util.ModifierId
+import sparkz.util.{ModifierId, SparkzEncoding}
 
-import scala.collection.mutable.ListBuffer
+import java.util
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
   with SidechainBlockFixture
   with CompanionsFixture
-  with sparkz.core.utils.SparkzEncoding
+  with SparkzEncoding
 {
   var history: SidechainHistory = _
   var state: SidechainState = _

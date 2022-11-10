@@ -3,7 +3,7 @@ import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.params.NetworkParams
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._
 

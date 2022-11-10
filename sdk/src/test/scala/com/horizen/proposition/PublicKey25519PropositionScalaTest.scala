@@ -7,9 +7,9 @@ import com.horizen.utils.Ed25519
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
+import sparkz.util.SparkzEncoder
 
 import scala.collection.JavaConverters._
-import sparkz.core.utils.SparkzEncoder
 
 class PublicKey25519PropositionScalaTest
   extends JUnitSuite

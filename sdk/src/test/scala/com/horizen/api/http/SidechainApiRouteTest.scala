@@ -41,8 +41,8 @@ import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, Get
 import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, Outgoing, PeerSpec}
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}

@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
-import java.util.{HashMap => JHashMap, List => JList, Map => JMap}
+import java.util.{HashMap => JHashMap, List => JList}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
 import com.google.inject.Inject
@@ -44,7 +44,7 @@ import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.JavaConverters._
@@ -84,7 +84,7 @@ class SidechainApp @Inject()
    @Named("ApplicationStopper") val applicationStopper : SidechainAppStopper,
    @Named("ForkConfiguration") val forkConfigurator : ForkConfigurator
   )
-  extends Application  with ScorexLogging
+  extends Application  with SparkzLogging
 {
 
 
@@ -449,12 +449,7 @@ class SidechainApp @Inject()
     if (currentThreadId != shutdownHookThreadId)
       Runtime.getRuntime.removeShutdownHook(shutdownHookThread)
 
-    // We are doing this because it is the only way for accessing the private 'upnpGateway' parent data member, and we
-    // need to rewrite the implementation of the stopAll() base method, which we do not call from here
-    val upnpGateway = sparkzContext.upnpGateway
-
     log.info("Stopping network services")
-    upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
     networkControllerRef ! ShutdownNetwork
 
     log.info("Stopping actors")

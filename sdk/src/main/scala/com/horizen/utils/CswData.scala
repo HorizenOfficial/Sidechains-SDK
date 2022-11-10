@@ -1,7 +1,7 @@
 package com.horizen.utils
 
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.util
 import com.horizen.cryptolibprovider.FieldElementUtils

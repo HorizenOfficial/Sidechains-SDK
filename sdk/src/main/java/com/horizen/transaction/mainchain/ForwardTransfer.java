@@ -9,7 +9,7 @@ import com.horizen.cryptolibprovider.FieldElementUtils;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 
 
 public final class ForwardTransfer implements SidechainRelatedMainchainOutput<ZenBox> {

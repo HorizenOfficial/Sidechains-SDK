@@ -6,8 +6,8 @@ import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
-import scorex.util.idToBytes
+import sparkz.util.serialization.{Reader, Writer}
+import sparkz.util.idToBytes
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}

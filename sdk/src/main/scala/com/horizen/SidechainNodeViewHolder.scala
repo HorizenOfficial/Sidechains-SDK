@@ -19,7 +19,7 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifiersCache, idToVersion, versionToId}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
@@ -42,7 +42,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               applicationState: ApplicationState,
                               genesisBlock: SidechainBlock)
   extends sparkz.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
-    with ScorexLogging
+    with SparkzLogging
     with SidechainTypes {
   override type SI = SidechainSyncInfo
   override type HIS = SidechainHistory
@@ -450,7 +450,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.trimChainSuffix method.
-  protected def trimChainSuffix(suffix: IndexedSeq[SidechainBlock], rollbackPoint: scorex.util.ModifierId): IndexedSeq[SidechainBlock] = {
+  protected def trimChainSuffix(suffix: IndexedSeq[SidechainBlock], rollbackPoint: sparkz.util.ModifierId): IndexedSeq[SidechainBlock] = {
     val idx = suffix.indexWhere(_.id == rollbackPoint)
     if (idx == -1) IndexedSeq() else suffix.drop(idx)
   }
@@ -539,7 +539,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 }
 
-object SidechainNodeViewHolder /*extends ScorexLogging with SparkzEncoding*/ {
+object SidechainNodeViewHolder /*extends SparkzLogging with SparkzEncoding*/ {
   object ReceivableMessages {
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
 

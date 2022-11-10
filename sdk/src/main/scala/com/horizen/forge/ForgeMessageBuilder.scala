@@ -15,7 +15,7 @@ import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.JavaConverters._
 import com.horizen.vrf.VrfOutput
@@ -27,7 +27,7 @@ import scala.util.{Failure, Success, Try}
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                           companion: SidechainTransactionsCompanion,
                           val params: NetworkParams,
-                          allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging {
+                          allowNoWebsocketConnectionInRegtest: Boolean) extends SparkzLogging {
   type ForgeMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult]
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])

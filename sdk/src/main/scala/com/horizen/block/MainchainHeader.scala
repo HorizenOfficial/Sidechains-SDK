@@ -8,7 +8,7 @@ import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils}
 import com.horizen.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.util.Try
 
