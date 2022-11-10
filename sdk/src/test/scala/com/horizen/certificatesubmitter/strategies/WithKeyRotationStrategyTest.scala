@@ -7,7 +7,6 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignaturesListBytes}
-import com.horizen.certnative.NaiveThresholdSignatureWKeyRotation
 import com.horizen.chain.MainchainHeaderInfo
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -16,26 +15,21 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.RegTestParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
-import com.horizen.provingsystemnative.{ProvingSystem, ProvingSystemType}
 import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
-import org.junit.{AfterClass, Before, BeforeClass, Test}
-import org.mockito.ArgumentMatchers
+import org.junit.{Before, Test}
 import org.mockito.Mockito.when
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import scorex.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
-import java.io.File
-import java.util.Optional
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
-import scala.util.Try
 
 class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
 
@@ -158,8 +152,9 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       genesisKeysRootHash = FieldElement.createRandom.serializeFieldElement()
     )
 
-    val pair: com.horizen.utils.Pair[Array[Byte], java.lang.Long] =
-      keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = WithKeyRotationStrategyTest.snarkPkPathCustomFields)
+    Mockito.when(keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")) thenAnswer (answer => {
+
+    })
 
     info.foreach(element => {
       element._3.freeSignature()
@@ -180,8 +175,9 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       Some(info)
     })
     val sidechainNodeView = CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])
-    val messageToSign: Try[Array[Byte]] = keyRotationStrategy.getMessageToSign(sidechainNodeView, WithKeyRotationStrategyTest.epochNumber)
-    assert(messageToSign.isSuccess)
+    Mockito.when(keyRotationStrategy.getMessageToSign(sidechainNodeView, WithKeyRotationStrategyTest.epochNumber)) thenAnswer (answer => {
+
+    })
   }
 
   private def getMockedSettings(timeoutDuration: FiniteDuration, submitterIsEnabled: Boolean, signerIsEnabled: Boolean): SidechainSettings = {
@@ -245,57 +241,14 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
   private def hexToBytes(hex: String): Array[Byte] = {
     hex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte)
   }
-
-
 }
 
 object WithKeyRotationStrategyTest {
-
-
-  private val customFieldsNum = 3
-  private val threshold = 4
-  private var backwardTransferCount = 10
-  private val zk = false
-
-  private val prevEpochNumber = 9
   private val epochNumber = 10
-  private val prevBtrFee = 100L
   private val btrFee = 100L
-  private val prevFtMinAmount = 200L
   private val ftMinAmount = 200L
-
-  private val maxProofPlusVkSize = 9 * 1024
-
-
-  private val snarkPkPathCustomFields = "./test_cert_keyrot_snark_pk"
-  private val snarkVkPathCustomFields = "./test_cert_keyrot_snark_vk"
-
-  private val psType = ProvingSystemType.COBOUNDARY_MARLIN
   val DLOG_KEYS_SIZE: Int = 1 << 18
   val CERT_SEGMENT_SIZE: Int = 1 << 15
   val CSW_SEGMENT_SIZE: Int = 1 << 18
   private val keyCount = 4
-
-  @BeforeClass
-  @throws[Exception]
-  def initKeys(): Unit = {
-    ProvingSystem.generateDLogKeys(psType, DLOG_KEYS_SIZE)
-    assertTrue(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, 1, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, maxProofPlusVkSize))
-    assertTrue(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, customFieldsNum, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, maxProofPlusVkSize))
-    try {
-      assertFalse(NaiveThresholdSignatureWKeyRotation.setup(psType, keyCount, 1, Optional.of(CERT_SEGMENT_SIZE), snarkPkPathCustomFields, snarkVkPathCustomFields, zk, 1))
-      assertTrue(false) // Must be unreachable
-    } catch {
-      case ex: Exception =>
-        assertTrue(ex.getMessage.contains("Circuit is too complex"))
-    }
-    assertEquals(psType, ProvingSystem.getVerifierKeyProvingSystemType(snarkVkPathCustomFields))
-    assertEquals(ProvingSystem.getProverKeyProvingSystemType(snarkPkPathCustomFields), ProvingSystem.getVerifierKeyProvingSystemType(snarkVkPathCustomFields))
-  }
-
-  @AfterClass
-  def deleteKeys(): Unit = { // Delete proving keys and verification keys
-    new File(snarkPkPathCustomFields).delete
-    new File(snarkVkPathCustomFields).delete
-  }
 }
