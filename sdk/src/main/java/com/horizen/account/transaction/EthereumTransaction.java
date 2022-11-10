@@ -29,7 +29,7 @@ import java.util.Objects;
 @JsonPropertyOrder({
         "id", "from", "to", "value", "nonce", "data",
         "gasPrice", "gasLimit", "maxFeePerGas", "maxPriorityFeePerGas",
-        "eip1559", "type", "chainId", "signed", "signature"
+        "eip1559", "version", "chainId", "signed", "signature"
 })
 @JsonIgnoreProperties({"transaction", "encoder", "modifierTypeId"})
 @JsonView(Views.Default.class)
@@ -126,7 +126,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    @JsonProperty("type")
+    @JsonProperty("version")
     public byte version() {
         if (transaction.getType() == TransactionType.LEGACY)
             return 0x0;
@@ -440,7 +440,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (this.isEIP1559())
             return String.format(
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
-                        "maxFeePerGas=%s, maxPriorityFeePerGas=%s, chainId=%s, type=%d, Signature=%s}",
+                        "maxFeePerGas=%s, maxPriorityFeePerGas=%s, chainId=%s, version=%d, Signature=%s}",
                 id(),
                 getFromAddress(),
                 Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),
@@ -457,7 +457,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         else
             return String.format(
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
-                        "chainId=%s, type=%d, Signature=%s}",
+                        "chainId=%s, version=%d, Signature=%s}",
                 id(),
                 getFromAddress(),
                 Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),

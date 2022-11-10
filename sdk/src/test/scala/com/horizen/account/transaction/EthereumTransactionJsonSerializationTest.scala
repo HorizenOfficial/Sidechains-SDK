@@ -149,11 +149,11 @@ class EthereumTransactionJsonSerializationTest
 
     var txType: Int = 0x0
     try {
-      txType = node.path("type").asInt()
-      assertEquals("Transaction type json value must be the same.",
+      txType = node.path("version").asInt()
+      assertEquals("Transaction version json value must be the same.",
         transaction.version(), txType)
     } catch {
-      case _: Throwable => fail("Transaction type not found in json.")
+      case _: Throwable => fail("Transaction version not found in json.")
     }
 
     if (txType == 0x0) {
@@ -192,7 +192,7 @@ class EthereumTransactionJsonSerializationTest
         case _: Throwable => fail("Transaction maxPriorityFeePerGas not found in json.")
       }
     } else {
-      assertTrue(s"TX type $txType not expected", false)
+      assertTrue(s"TX version $txType not expected", false)
     }
 
     try {

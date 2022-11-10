@@ -156,7 +156,7 @@ public class EthereumTransactionTest {
         ethereumTransaction = new EthereumTransaction(rawTransaction);
         assertEquals("Ethereum Transaction to String expected to be equal",
                 "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=, nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
-                        "chainId=, type=" + ethereumTransaction.version() + ", Signature=}",
+                        "chainId=, version=" + ethereumTransaction.version() + ", Signature=}",
                 ethereumTransaction.toString());
 
         // Test 5: ethereum transaction object returns transaction type id correctly
@@ -289,7 +289,7 @@ public class EthereumTransactionTest {
         // Test 2: toString function returns correctly
         ethereumTransaction = new EthereumTransaction(rawTransaction);
         assertEquals("EthereumTransaction{id=" + ethereumTransaction.id() + ", from=, nonce=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
-                        "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, chainId=" + ethereumTransaction.getChainId() + ", type=" + ethereumTransaction.version() + ", Signature=}",
+                        "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, chainId=" + ethereumTransaction.getChainId() + ", version=" + ethereumTransaction.version() + ", Signature=}",
                 ethereumTransaction.toString());
 
         // Test 3: ethereum transaction object returns transaction type id correctly
@@ -372,7 +372,7 @@ public class EthereumTransactionTest {
             assertEquals("Ethereum Transaction to String expected to be equal",
                     "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=" + signedRawTransaction.getFrom()
                             + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, "
-                            + "chainId=, type=" + ethereumTransaction.version() + ", Signature=" + secp256k1Signature.toString() + "}",
+                            + "chainId=, version=" + ethereumTransaction.version() + ", Signature=" + secp256k1Signature.toString() + "}",
                     ethereumTransaction.toString());
         } catch (SignatureException e) {
             throw new RuntimeException(e);
@@ -423,7 +423,7 @@ public class EthereumTransactionTest {
             assertNotNull(someTx.getSignature());
             assertEquals("EthereumTransaction{id=" + someTx.id() + ", from=" + someTx.getFromAddress() + ", nonce=0x1, gasLimit=0x1, to=0x, value=" +
                             "0x1, data=0x, " +
-                            "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, chainId=" + someTx.getChainId() + ", type=" + someTx.version() + ", Signature=" + someTx.getSignature().toString() + '}',
+                            "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, chainId=" + someTx.getChainId() + ", version=" + someTx.version() + ", Signature=" + someTx.getSignature().toString() + '}',
                     someTx.toString());
 
             assertEquals(
@@ -460,7 +460,7 @@ public class EthereumTransactionTest {
             assertEquals("Ethereum Transaction to String expected to be equal",
                     "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=" + signedRawTransaction.getFrom()
                             + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, "
-                            + "chainId=, type=" + ethereumTransaction.version() + ", Signature=" + secp256k1Signature.toString() + "}",
+                            + "chainId=, version=" + ethereumTransaction.version() + ", Signature=" + secp256k1Signature.toString() + "}",
                     ethereumTransaction.toString());
         } catch (SignatureException e) {
             throw new RuntimeException(e);
