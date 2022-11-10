@@ -202,9 +202,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   protected def changedHistoryEvent: Receive = {
     case ChangedHistory(sHistory: SidechainHistory) =>
       historyReaderOpt = Some(sHistory)
-      if (!historyReaderOpt.isEmpty){
-        isReindexing = sHistory.isReindexing()
-      }
+      isReindexing = sHistory.isReindexing()
   }
 
   override protected def viewHolderEvents: Receive =
