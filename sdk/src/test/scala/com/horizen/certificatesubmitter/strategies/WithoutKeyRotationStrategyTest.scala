@@ -28,21 +28,20 @@ import scorex.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
+import java.lang
 import java.util.{Optional => JOptional}
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
+import scala.util.Success
 
 class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
-  private var keyRotationStrategy: KeyRotationStrategy[CertificateDataWithoutKeyRotation] = _
   implicit val timeout: Timeout = 100 milliseconds
   var params: RegTestParams = RegTestParams()
 
   @Before
   def init(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration, submitterIsEnabled = true, signerIsEnabled = true)
-
     val keyGenerator = SchnorrKeyGenerator.getInstance()
     val schnorrSecrets: Seq[SchnorrSecret] = Seq(
       keyGenerator.generateSecret("seed1".getBytes()),
@@ -57,9 +56,6 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
       signersThreshold = signersThreshold
     )
 
-    val mockedCryptolibCircuit = mock[ThresholdSignatureCircuit]
-    keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params, mockedCryptolibCircuit)
-
     val forkManagerUtil = new ForkManagerUtil()
     forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
@@ -68,7 +64,7 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
   def buildCertificateDataTest(): Unit = {
     type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
     val sidechainState = mock[SidechainState]
-    when(sidechainState.withdrawalRequests(_)) thenAnswer (_ => Seq[WithdrawalRequestBox]())
+    when(sidechainState.withdrawalRequests(ArgumentMatchers.any())) thenAnswer (_ => Seq[WithdrawalRequestBox]())
     val certifiersKeys = CertifiersKeys(getSchnorrPropositions, getSchnorrPropositions)
     when(sidechainState.certifiersKeys(ArgumentMatchers.anyInt())).thenAnswer(_ => Some(certifiersKeys))
     when(sidechainState.utxoMerkleTreeRoot(ArgumentMatchers.anyInt())).thenAnswer(_ =>Some(new Array[Byte](32)))
@@ -97,6 +93,10 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
     )
 
     val sidechainNodeView: View = CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])
+
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration, submitterIsEnabled = true, signerIsEnabled = true)
+    val mockedCryptolibCircuit = mock[ThresholdSignatureCircuit]
+    val keyRotationStrategy: KeyRotationStrategy[CertificateDataWithoutKeyRotation] = new WithoutKeyRotationStrategy(mockedSettings, params, mockedCryptolibCircuit)
     val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView, signaturesStatus)
   }
 
@@ -143,10 +143,20 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
         Some(Array())
       )
 
-      Mockito.when(keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")) thenAnswer (answer => {
+      val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration, submitterIsEnabled = true, signerIsEnabled = true)
+      val mockedCryptolibCircuit = mock[ThresholdSignatureCircuit]
+      val keyRotationStrategy: KeyRotationStrategy[CertificateDataWithoutKeyRotation] = new WithoutKeyRotationStrategy(mockedSettings, params, mockedCryptolibCircuit)
 
-      })
-
+      val key = new Array(Byte.MinValue)
+      Mockito.when(mockedCryptolibCircuit.createProof(ArgumentMatchers.any(),ArgumentMatchers.any(),ArgumentMatchers.any(),
+        ArgumentMatchers.any(),ArgumentMatchers.any(),ArgumentMatchers.any(),ArgumentMatchers.any(),
+        ArgumentMatchers.any(),ArgumentMatchers.any(),ArgumentMatchers.any(),ArgumentMatchers.any(),ArgumentMatchers.any(),
+        ArgumentMatchers.any())) thenAnswer (answer =>
+        new com.horizen.utils.Pair(key, 425L)
+        )
+      val result: utils.Pair[Array[Byte], lang.Long] = keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")
+      assert(result.getKey.sameElements(key))
+      assert(result.getValue == 425L)
       info.foreach(element => {
         element._3.freeSignature()
         element._4.freeSignature()
@@ -176,6 +186,10 @@ class WithoutKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
     when(historyStorageMock.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>sidechainBlockInfo)
     when(sidechainBlockInfo.timestamp).thenAnswer(_ => params.sidechainGenesisBlockTimestamp + 1)
     val sidechainNodeView = CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])
+
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration, submitterIsEnabled = true, signerIsEnabled = true)
+    val mockedCryptolibCircuit = mock[ThresholdSignatureCircuit]
+    val keyRotationStrategy: KeyRotationStrategy[CertificateDataWithoutKeyRotation] = new WithoutKeyRotationStrategy(mockedSettings, params, mockedCryptolibCircuit)
     Mockito.when(keyRotationStrategy.getMessageToSign(sidechainNodeView, WithoutKeyRotationStrategyTest.epochNumber)) thenAnswer (answer => {
 
     })
