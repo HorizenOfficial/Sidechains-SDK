@@ -8,13 +8,14 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.EthereumTransactionDecoder
+import com.horizen.account.utils.{EthereumTransactionDecoder}
 import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
@@ -576,6 +577,23 @@ class EthService(
         new EthereumAccountProof(stateView.getProof(address.toBytes, storageKeys))
       }
     }
+  }
+
+  @RpcMethod("eth_getFeePayments")
+  def getFeePayments(blockId: String): AccountFeePaymentsInfo = {
+    if (blockId == null) {
+      return null
+    }
+
+    var feePayments: AccountFeePaymentsInfo = null
+
+    applyOnAccountView { nodeView =>
+      nodeView.history
+        .getFeePaymentsInfo(blockId)
+        .ifPresent(p => feePayments = p)
+    }
+
+    feePayments
   }
 
   @RpcMethod("eth_accounts")
