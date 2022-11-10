@@ -74,7 +74,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val numOfAccounts = 100
+      val numOfAccounts = 1000
       val numOfTxsPerAccount = 100
       val numOfTxs = numOfAccounts * numOfTxsPerAccount
 

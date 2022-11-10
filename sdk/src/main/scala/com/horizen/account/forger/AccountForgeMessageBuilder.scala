@@ -101,6 +101,10 @@ class AccountForgeMessageBuilder(
     val accountsToSkip = new mutable.HashSet[SidechainTypes#SCP]
 
     for ((tx, txIndex) <- sidechainTransactions.zipWithIndex if !accountsToSkip.contains(tx.getFrom)) {
+      if (blockGasPool.getGas.compareTo(GasUtil.TxGas) < 0) {
+        log.trace(s"Finishing forging because block cannot contain any additional tx")
+        return Success(receiptList, txHashList, cumBaseFee, cumForgerTips)
+      }
       val revisionId = stateView.snapshot
       val initialBlockGas = blockGasPool.getGas
 
