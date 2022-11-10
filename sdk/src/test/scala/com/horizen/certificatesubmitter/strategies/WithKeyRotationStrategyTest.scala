@@ -104,7 +104,6 @@ class WithKeyRotationStrategyTest extends JUnitSuite with MockitoSugar {
     assert(certificateDataWithKeyRotation.referencedEpochNumber == WithKeyRotationStrategyTest.epochNumber)
     assert(certificateDataWithKeyRotation.previousCertificateOption == null)
     assert(certificateDataWithKeyRotation.ftMinAmount == 54)
-    assert(certificateDataWithKeyRotation.genesisKeysRootHash.length == 32)
   }
 
   @Test
