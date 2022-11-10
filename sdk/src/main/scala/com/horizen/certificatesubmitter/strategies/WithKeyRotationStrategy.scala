@@ -155,44 +155,5 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       updatedMasterKeysSkSignatures,
       updatedMasterKeysMkSignatures
     )
-
-    CertificateDataWithKeyRotation(
-      status.referencedEpoch,
-      sidechainId,
-      withdrawalRequests,
-      endEpochCumCommTreeHash,
-      btrFee,
-      ftMinAmount,
-      signersPublicKeyWithSignatures,
-      schnorrKeysSignaturesListBytes,
-      previousCertificateOption,
-      cryptolibCircuit.generateKeysRootHash(
-        scala.collection.JavaConverters.seqAsJavaList(params.signersPublicKeys.map(sp => sp.pubKeyBytes())),
-        scala.collection.JavaConverters.seqAsJavaList(params.mastersPublicKeys.map(sp => sp.pubKeyBytes())))
-    )
-  }
-
-  override def getMessageToSign(sidechainNodeView: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
-
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
-
-    val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-    val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
-
-    val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-    val sidechainId = params.sidechainId
-
-    val customFields: Array[Byte] = state.certifiersKeys(referencedWithdrawalEpochNumber) match {
-      case Some(keys) => cryptolibCircuit
-        .generateKeysRootHash(scala.collection.JavaConverters.seqAsJavaList(keys.signingKeys.map(sp => sp.bytes())),
-          scala.collection.JavaConverters.seqAsJavaList(keys.masterKeys.map(sp => sp.bytes())))
-      case None => Array[Byte]()
-    }
-
-    cryptolibCircuit
-      .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash, btrFee, ftMinAmount, util.Arrays.asList(customFields))
   }
 }
