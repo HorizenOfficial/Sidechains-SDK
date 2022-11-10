@@ -209,7 +209,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
 
                     // Try to calculate signatures if signing is enabled
                     if (certificateSigningEnabled) {
-                      calculateSignatures(messageToSign) match {
+                      calculateSignatures(messageToSign, referencedWithdrawalEpochNumber) match {
                         case Success(signaturesInfo) =>
                           signaturesInfo.foreach(sigInfo => {
                             self ! LocallyGeneratedSignature(sigInfo)
@@ -250,11 +250,20 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
 
-  private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
+  private def calculateSignatures(messageToSign: Array[Byte], referencedWithdrawalEpochNumber: Int): Try[Seq[CertificateSignatureInfo]] = Try {
     def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
       val wallet = sidechainNodeView.vault
-      params.signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
-        case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
+      val state = sidechainNodeView.state
+      state.certifiersKeys(referencedWithdrawalEpochNumber) match {
+        case Some(actualKeys) =>
+          actualKeys.signingKeys.foreach(k => System.out.println("KEY "+BytesUtils.toHexString(k.pubKeyBytes())))
+          actualKeys.signingKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
+            case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
+          }
+        case None =>
+          params.signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
+            case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
+          }
       }
     }
 
