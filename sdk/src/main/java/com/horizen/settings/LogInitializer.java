@@ -35,12 +35,16 @@ public class LogInitializer
         String logFileName = info.logInfo().logFileName();
         String logFileLevel = getCheckedLevel(info.logInfo().logFileLevel());
         String logConsoleLevel = getCheckedLevel(info.logInfo().logConsoleLevel());
+        String logAkkaMessagesFileName = info.logInfo().logAkkaMessagesFileName();
+        String logAkkaMessagesLevel = getCheckedLevel(info.logInfo().logAkkaMessagesLevel());
 
         // init log4j2 logger
         System.setProperty("logDir", logDir);
         System.setProperty("logFilename", logFileName);
         System.setProperty("logFileLevel", logFileLevel);
         System.setProperty("logConsoleLevel", logConsoleLevel);
+        System.setProperty("logAkkaMessagesFileName", logAkkaMessagesFileName);
+        System.setProperty("logAkkaMessagesLevel", logAkkaMessagesLevel);
 
         org.apache.logging.log4j.Logger logger = org.apache.logging.log4j.LogManager.getLogger(com.horizen.settings.LogInitializer.class);
         logger.log(Level.INFO,

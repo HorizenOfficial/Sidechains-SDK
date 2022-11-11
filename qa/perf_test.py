@@ -6,7 +6,8 @@ import time
 import urllib.request
 from multiprocessing import Pool, Value
 from time import sleep
-from os.path import exists
+import os
+import gzip
 import csv
 import numpy as np
 import psutil
@@ -26,7 +27,7 @@ from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.wallet.createVrfSecret import http_wallet_createVrfSecret
-from test_framework.util import start_nodes, \
+from test_framework.util import assert_false, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     deserialize_perf_test_json, connect_sc_nodes, start_sc_nodes_with_multiprocessing, generate_next_block
@@ -194,11 +195,8 @@ class PerformanceTest(SidechainTestFramework):
                 "test_run_time": test_run_time, "block_rate": block_rate,
                 "use_multiprocessing": perf_data["use_multiprocessing"], "initial_txs": initial_txs,
                 "network_topology": topology,
-                "get_peer_spec_latency": [],
-                "peer_spec_latency": [],
                 "transaction_latency": [],
                 "block_latency": [],
-                "request_modifier_spec_latency": [],
                 "modifiers_spec_latency": [],
                 "n_nodes": len(sc_node_data), "n_forgers": sum(map(lambda x: x["forger"] == True, sc_nodes_list)),
                 "n_tx_creator": sum(map(lambda x: x["tx_creator"] == True, sc_nodes_list)), "initial_balances": [],
@@ -211,7 +209,8 @@ class PerformanceTest(SidechainTestFramework):
                 "send_coins_to_address": send_coins_to_address,
                 "block_tps": [],
                 "forks": [],
-                "blocks_mined": 0
+                "blocks_mined": 0,
+                "max_forks_length": []
                 }
 
     def get_latency_config(self):
@@ -270,7 +269,7 @@ class PerformanceTest(SidechainTestFramework):
         return node_data
 
     def fill_csv(self):
-        if not exists(self.CSV_FILE):
+        if not os.path.exists(self.CSV_FILE):
             f = open(self.CSV_FILE, 'w')
             writer = csv.writer(f)
 
@@ -333,6 +332,7 @@ class PerformanceTest(SidechainTestFramework):
                     block_rate=self.block_rate,
                     latency_settings=latency_configurations[index],
                     machine_credentials=machine_credentials
+                    log_akka_messages=self.sc_node_data[index]['log_akka_messages'] if 'log_akka_messages'  in self.sc_node_data[index] else "ERROR"
                 )
             )
         return node_configuration
@@ -456,6 +456,7 @@ class PerformanceTest(SidechainTestFramework):
         non_txs_creator = []
         for index, node in enumerate(self.sc_nodes_list):
             if node["tx_creator"]:
+                assert_false(node["forger"])
                 txs_creators.append(self.sc_nodes[index])
             else:
                 non_txs_creator.append(self.sc_nodes[index])
@@ -536,14 +537,18 @@ class PerformanceTest(SidechainTestFramework):
         index = 0
         errors = 0
         for node in self.sc_nodes:
-            try:
-                block = http_block_best(node)
-                block_ids[self.sc_nodes.index(node)] = block["id"]
-            except Exception as e:
-                logging.warning(f"Node API ERROR {index}")
-                errors += 1
-                block = http_block_best(node)
-                block_ids[self.sc_nodes.index(node)] = block["id"]
+            n_try = 0
+            error = True
+            while n_try < 20 and error:
+                try:
+                    block = http_block_best(node)
+                    block_ids[self.sc_nodes.index(node)] = block["id"]
+                    error = False
+                except Exception as e:
+                    logging.warning(f"Node API ERROR {index}")
+                    errors += 1
+                    n_try += 1
+
             index += 1
         logging.debug("Block ids: " + str(block_ids))
         return (block_ids, errors)
@@ -557,9 +562,19 @@ class PerformanceTest(SidechainTestFramework):
 
     def log_node_wallet_balances(self):
         balances = []
+        errors = 0
         # Output the balance of each node
         for index, node in enumerate(self.sc_nodes):
-            wallet_boxes = http_wallet_allBoxesOfType(node, "ZenBox")
+            n_try = 0
+            error = True
+            while n_try < 20 and error:
+                try:
+                    wallet_boxes = http_wallet_allBoxesOfType(node, "ZenBox")
+                    error = False
+                except Exception as e:
+                    logging.warning(f"Node API ERROR {index}")
+                    n_try += 1
+                    errors += 1
             wallet_balance = 0
             for box in wallet_boxes:
                 wallet_balance += box["value"]
@@ -568,7 +583,7 @@ class PerformanceTest(SidechainTestFramework):
                 logging.info(f"Node{index} (Transaction Creator) Wallet Balance: {wallet_balance}")
             else:
                 logging.info(f"Node{index} Wallet Balance: {wallet_balance}")
-        return balances
+        return (balances, errors)
 
     def get_node_mined_transactions_by_block_id(self, node, block_id):
         result = http_block_findById(node, block_id)
@@ -708,19 +723,38 @@ class PerformanceTest(SidechainTestFramework):
         # Start timing
         return time.time()
 
+    def get_fork_length(self, line, max_fork_length):
+        tmp = line.split("TPS-TEST:")
+        block_removed = tmp[1].split("blocks are to be removed")
+        fork_length = int(block_removed[0]) 
+        if (fork_length > max_fork_length):
+            return fork_length
+        else:
+            return max_fork_length
+
     def scan_logs_for_forks(self):
         for i in range(len(self.sc_nodes)):
-            assert_true(exists(self.options.tmpdir + "/sc_node" + str(i)))
-            last_fork = "0"
-            with open(self.options.tmpdir + "/sc_node" + str(i) + "/log/debugLog.txt", 'r') as fp:
-                logging.info(f"Check node {i} log...")
-                for line in fp:
-                    if 'the fork number' in line:
-                        print(line)
-                        tmp = line.split("fork number")
-                        last_fork = tmp[1].split("has been")[0]
+            assert_true(os.path.exists(self.options.tmpdir+"/sc_node"+str(i)))
+            last_fork = 0
+            max_fork_length = 0
+            for filename in os.scandir(self.options.tmpdir+"/sc_node"+str(i)+"/log/"):
+                if (".gz" in filename.name):
+                    with gzip.open(filename, 'r') as fp:
+                        for line in fp:
+                            if 'blocks are to be removed' in str(line):
+                                max_fork_length = self.get_fork_length(str(line), max_fork_length)
+                else:
+                    with open(filename, 'r') as fp:
+                        logging.info(f"Check node {i} log...")
+                        for line in fp:
+                            if 'the fork number' in line:
+                                tmp = line.split("fork number")
+                                last_fork = int(tmp[1].split("has been")[0])
+                            if 'blocks are to be removed' in line:
+                                max_fork_length = self.get_fork_length(line, max_fork_length)
 
             self.csv_data["forks"].append(last_fork)
+            self.csv_data["max_forks_length"].append(max_fork_length)
 
     def run_test(self):
         mc_nodes = self.nodes
@@ -746,8 +780,10 @@ class PerformanceTest(SidechainTestFramework):
                 http_wallet_createPrivateKey25519(txs_creators[i]))
         self.sc_sync_all()
 
-        # Generate 1 SC block to include FTs.
+        # Generate 2 SC blocks to include all the FTs.
         forger_nodes = self.find_forger_nodes()
+        generate_next_blocks(forger_nodes[0], "first node", 1)[0]
+        self.sc_sync_all()
         generate_next_blocks(forger_nodes[0], "first node", 1)[0]
         self.sc_sync_all()
 
@@ -961,8 +997,9 @@ class PerformanceTest(SidechainTestFramework):
         # sum(balance of each node) => total ZEN present at the end of the test
         # Output the wallet balance of each node
         logging.info("Node Wallet Balances After Test...")
-        end_balances = self.log_node_wallet_balances()
+        end_balances, wallet_balance_api_errors = self.log_node_wallet_balances()
         self.csv_data["end_balances"] = end_balances
+        api_errors += wallet_balance_api_errors
 
         # OUTPUT TEST RESULTS
         blocks_per_node = []
@@ -1025,11 +1062,8 @@ class PerformanceTest(SidechainTestFramework):
         # Get latency configuration values
         latency_configurations = self.get_latency_config()
         for config in latency_configurations:
-            self.csv_data["get_peer_spec_latency"].append(config.get_peer_spec)
-            self.csv_data["peer_spec_latency"].append(config.peer_spec)
             self.csv_data["transaction_latency"].append(config.transaction)
             self.csv_data["block_latency"].append(config.block)
-            self.csv_data["request_modifier_spec_latency"].append(config.request_modifier_spec)
             self.csv_data["modifiers_spec_latency"].append(config.modifiers_spec)
 
         self.scan_logs_for_forks()

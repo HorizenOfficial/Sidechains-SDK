@@ -61,12 +61,12 @@ class CswManager(settings: SidechainSettings,
   }
 
   private def initialization: Receive = {
-    onApplicationStart orElse
+    testLog orElse  onApplicationStart orElse
       reportStrangeInput
   }
 
   private[csw] def workingCycle: Receive = {
-    onChangedState orElse
+    testLog orElse onChangedState orElse
       onGetCeasedStatus orElse
       onGetBoxNullifier orElse
       onGetCswBoxIds orElse
@@ -76,6 +76,16 @@ class CswManager(settings: SidechainSettings,
       processProofGenerationResults orElse
       reportStrangeInput
   }
+
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("CswManager", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
+  }
+
 
   private def reportStrangeInput: Receive = {
     case nonsense =>

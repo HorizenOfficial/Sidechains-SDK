@@ -91,6 +91,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   override def receive: Receive = reportStrangeInput
+  
 
   private def reportStrangeInput: Receive = {
     case nonsense =>
@@ -98,11 +99,11 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   private[certificatesubmitter] def initialization: Receive = {
-    checkSubmitter orElse reportStrangeInput
+    testLog orElse checkSubmitter orElse reportStrangeInput
   }
 
   private[certificatesubmitter] def workingCycle: Receive = {
-    onCertificateSubmissionEvent orElse
+    testLog orElse onCertificateSubmissionEvent orElse
     newBlockArrived orElse
     locallyGeneratedSignature orElse
     signatureFromRemote orElse
@@ -113,6 +114,15 @@ class CertificateSubmitter(settings: SidechainSettings,
     submitterStatus orElse
     signerStatus orElse
     reportStrangeInput
+  }
+
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("CertificateSubmitter", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 
   protected def checkSubmitter: Receive = {

@@ -2,6 +2,7 @@
 <Configuration status="WARN" monitorInterval="30">
 
     <Properties>
+        <Property name="MESSAGELOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss:SSS} | %msg%n</Property>
         <Property name="LOG_PATTERN">[%-5level] %d{yyyy-MM-dd HH:mm:ss:SSS Z} [%28F:%-4L] [%t] %c - %msg%n</Property>
     </Properties>
 
@@ -11,15 +12,14 @@
             <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
 
-        <!--RollingFile name="errorLog" fileName="${sys:logDir}application-error.log"
-                     filePattern="${sys:logDir}application-error-%d{yyyy-MM-dd}-%i.log" >
-            <LevelRangeFilter minLevel="ERROR" maxLevel="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
-            <PatternLayout pattern="${LOG_PATTERN}"/>
+        <RollingFile name="akkaMessageLog" fileName="${sys:logDir}${sys:logAkkaMessagesFileName}"
+                     filePattern="${sys:logDir}${sys:logAkkaMessagesFileName}-%d{yyyy-MM-dd}-%i.log" >
+            <PatternLayout pattern="${MESSAGELOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="10000KB" />
             </Policies>
             <DefaultRolloverStrategy max="10"/>
-        </RollingFile-->
+        </RollingFile>
 
         <!-- if filePattern ends in .gz, the rollover files are compressed -->
         <RollingFile name="fileLog" fileName="${sys:logDir}${sys:logFilename}"
@@ -36,11 +36,10 @@
 
     <Loggers>
 
-        <!-- Specify this if some class need special handling-->
-        <!---Logger name="io.horizen.simpleapp" additivity="false">
-            <AppenderRef ref="debugLog" />
-            <AppenderRef ref="Console"/>
-        </Logger-->
+        <!-- Akka message logging -->
+        <Logger name="sparkz.core.debug" additivity="false">
+            <AppenderRef ref="akkaMessageLog" level="${sys:logAkkaMessagesLevel}"/>
+        </Logger>
 
         <Root level="all">
             <AppenderRef ref="fileLog" level="${sys:logFileLevel}"/>

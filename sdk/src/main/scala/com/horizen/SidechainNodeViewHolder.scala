@@ -314,7 +314,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   override def receive: Receive = {
-    applyFunctionOnNodeView orElse
+      testLog orElse 
+      applyFunctionOnNodeView orElse
       applyBiFunctionOnNodeView orElse
       getCurrentSidechainNodeViewInfo orElse
       processLocallyGeneratedSecret orElse
@@ -324,6 +325,15 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       processLocallyGeneratedTransaction orElse
       super.receive
   }
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("SidechainNodeViewHolder", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
+  }
+
 
   /**
    * Process new modifiers from remote.

@@ -54,7 +54,9 @@ case class CeasedSidechainWithdrawalSettings(cswProvingKeyFilePath: String,
 
 case class LogInfoSettings(logFileName: String = "debug.log",
                            logFileLevel: String = "all",
-                           logConsoleLevel: String = "error")
+                           logConsoleLevel: String = "error",
+                           logAkkaMessagesFileName: String = "akkaMessages.log",
+                           logAkkaMessagesLevel: String = "warn")
 
 case class SidechainSettings(
                               sparkzSettings: SparkzSettings,

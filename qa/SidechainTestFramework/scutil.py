@@ -527,6 +527,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
         'LOG_FILE_LEVEL': log_info.logFileLevel,
+        'LOG_AKKAMSG_FILE_LEVEL': sc_node_config.log_akka_messages,
         'LOG_CONSOLE_LEVEL': log_info.logConsoleLevel,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': api_address,
@@ -723,7 +724,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     '''
     dbg_agent_opt = ''
     if (extra_args is not None) and ("-agentlib" in extra_args):
-        dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+        dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:' + str(5005+i)
 
     cfgFileName = datadir + ('/node%s.conf' % i)
     '''
