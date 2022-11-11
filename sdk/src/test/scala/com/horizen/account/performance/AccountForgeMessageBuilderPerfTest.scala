@@ -74,8 +74,8 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val numOfAccounts = 100
-      val numOfTxsPerAccount = 100
+      val numOfAccounts = 1
+      val numOfTxsPerAccount = 100000
       val numOfTxs = numOfAccounts * numOfTxsPerAccount
 
       out.write(s"Total number of transactions:                    $numOfTxs\n")
@@ -103,6 +103,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         100,
         Seq.empty[SidechainTypes#SCAT]
       )
+      val collectTime = System.currentTimeMillis() - startTime
 
       val (_, appliedTxs, _) = forger.computeBlockInfo(stateView, listOfExecTxs, Seq.empty, blockContext, null)
       val totalTime = System.currentTimeMillis() - startTime
@@ -111,6 +112,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
       val expectedNumOfAppliedTxs = if (numOfTxs < maxNumOfTxsInBlock) numOfTxs else maxNumOfTxsInBlock
 
       assertEquals(expectedNumOfAppliedTxs, appliedTxs.size)
+      println(s"Collect time $collectTime ms")
       println(s"Total time $totalTime ms")
       out.write(s"\n********************* Test results *********************\n")
       out.write(s"Duration of the test:                      $totalTime ms\n")

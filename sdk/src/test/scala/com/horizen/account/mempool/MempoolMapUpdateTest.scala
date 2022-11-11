@@ -58,7 +58,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs, mempoolMap.size)
 
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfTxs, executableTxs.size)
 
     // Try with only txs from applied blocks
@@ -101,7 +101,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", listOfTxsToReAdd.size - listOfTxsToRemove.size, mempoolMap.size)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", listOfTxsToReAdd.size - listOfTxsToRemove.size, executableTxs.size)
 
     //With orphans for balance
@@ -121,7 +121,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", listOfTxsToReAdd.size - listOfTxsToRemove.size - 1, mempoolMap.size)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", listOfTxsToReAdd.size - listOfTxsToRemove.size - 2, executableTxs.size)
   }
 
@@ -138,7 +138,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //initialize mem pool
     listOfTxs.foreach(tx => mempoolMap.add(tx))
     assertEquals(expectedNumOfTxs, mempoolMap.size)
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs, executableTxs.size)
 
     // Try with only txs from applied blocks
@@ -154,7 +154,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", expectedNumOfExecutableTxs, mempoolMap.size)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 1, executableTxs.size)
 
     // Try with only txs from reverted blocks
@@ -171,7 +171,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs, mempoolMap.size)
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs, executableTxs.size)
 
 
@@ -188,7 +188,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs - 2, mempoolMap.size)
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs - 2, executableTxs.size)
 
     // Reset mempool to initial situation
@@ -201,7 +201,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .thenReturn(BigInteger.ZERO)
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs, mempoolMap.size)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs, executableTxs.size)
 
     //Apply enough txs so that the non executable txs become executable
@@ -215,7 +215,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 2, mempoolMap.size)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 2, executableTxs.size)
 
   }
@@ -249,7 +249,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //initialize mem pool
     listOfTxs.foreach(tx => mempoolMap.add(tx))
     assertEquals(expectedNumOfTxs, mempoolMap.size)
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs, executableTxs.size)
 
     // Try with only txs from applied blocks
@@ -271,7 +271,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 2, mempoolMap.size)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 0, executableTxs.size)
 
 
@@ -288,7 +288,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 1, executableTxs.size)
 
     //Apply txs with nonce 0, 1 and 2 => tx3 becomes executable
@@ -308,7 +308,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 2, mempoolMap.size)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 1, executableTxs.size)
 
   }

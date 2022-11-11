@@ -71,7 +71,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  @Ignore
+ // @Ignore
   def txModifyTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/txModifyTest.txt", true))
 
@@ -182,7 +182,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  @Ignore
+ // @Ignore
   def updateMemPoolTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolTest.txt", true))
 
@@ -280,7 +280,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  @Ignore
+//  @Ignore
   def updateMemPoolMultipleBlocksTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolMultiBlocksTest.txt", true))
 
@@ -344,8 +344,8 @@ class AccountSidechainNodeViewHolderPerfTest
       }
 
       // Update the nonces
-      listOfExecTransactionsToApply.asInstanceOf[Seq[EthereumTransaction]].foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+      listOfExecTransactionsToApply.foreach(tx =>
+        mockStateDbNonces.put(new ByteArrayWrapper(tx.asInstanceOf[EthereumTransaction].getFrom.address()), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -354,7 +354,7 @@ class AccountSidechainNodeViewHolderPerfTest
       val updateTime = System.currentTimeMillis() - startTime
       assertEquals(numOfTxs - numOfBlocks * numOfTxsInBlock, newMemPool.size)
       println(s"total time $updateTime ms")
-      out.write(s"\n********************* Testing with one block to apply results *********************\n")
+      out.write(s"\n********************* Testing with ${numOfBlocks} blocks to apply results *********************\n")
       out.write(s"Duration of the test:                      $updateTime ms\n")
 
       println(s"************** Testing with $numOfBlocks rejected blocks and $numOfBlocks blocks to apply **************")
@@ -369,10 +369,11 @@ class AccountSidechainNodeViewHolderPerfTest
       val listOfBlocks2 = new scala.collection.mutable.ListBuffer[AccountBlock]
 
       val numOfReappliedTxs = numOfTxsInBlock - 400 //TODO make it configurable
+      val listOfUsedTxs = rollBackBlocks.foldLeft(Seq.empty[SidechainTypes#SCAT])(_ ++ _.transactions)
       val numOfNewTxs = numOfTxsInBlock - numOfReappliedTxs
       (0 to numOfBlocks - 1).foreach { idx =>
         val appliedBlock: AccountBlock = mock[AccountBlock]
-        val listOfTxsInBlock = listOfExecTransactionsToApply.slice(idx * numOfReappliedTxs, (idx + 1) * numOfReappliedTxs) ++ additionalTxs.slice(idx * (numOfNewTxs), (idx + 1) * numOfNewTxs)
+        val listOfTxsInBlock = listOfUsedTxs.slice(idx * (numOfReappliedTxs), (idx + 1) *numOfReappliedTxs) ++ additionalTxs.slice(idx * (numOfNewTxs), (idx + 1) * numOfNewTxs)
         Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
         listOfBlocks2.append(appliedBlock)
       }
@@ -390,7 +391,7 @@ class AccountSidechainNodeViewHolderPerfTest
       val updateTime2 = System.currentTimeMillis() - startTime2
       assertEquals(numOfTxs, newMemPool2.size)
       println(s"total time $updateTime2 ms")
-      out.write(s"\n********************* Testing rollback block and one to apply results *********************\n")
+      out.write(s"\n********************* Testing $numOfBlocks rejected blocks and $numOfBlocks blocks results *********************\n")
       out.write(s"Duration of the test:                      $updateTime2 ms\n")
 
     } finally {
@@ -400,7 +401,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
 
   @Test
-  @Ignore
+ // @Ignore
   def takeTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/takeTest.txt", true))
 

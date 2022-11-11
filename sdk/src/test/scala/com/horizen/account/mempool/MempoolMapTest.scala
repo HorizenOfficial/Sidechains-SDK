@@ -117,7 +117,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
@@ -169,16 +169,17 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
       executableTxs.size
     )
+
     assertEquals(
       "Added transaction is not executable",
       account1ExecTransaction1.id(),
-      executableTxs(1).id
+      executableTxs.last.id
     )
 
     val account2KeyPair = Keys.createEcKeyPair
@@ -214,7 +215,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
@@ -266,7 +267,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfExecutableTxs,
@@ -303,7 +304,7 @@ class MempoolMapTest
         .getTransaction(ModifierId @@ account1NonExecTransaction1.id)
         .nonEmpty
     )
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfExecutableTxs,
@@ -337,7 +338,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
 
     assertEquals(
       "Wrong number of executable transactions",
@@ -345,20 +346,21 @@ class MempoolMapTest
       executableTxs.size
     )
 
+    val iter = executableTxs.iterator
     assertEquals(
       "Wrong first tx",
       account1ExecTransaction0.id(),
-      executableTxs.head.id
+      iter.next().id
     )
     assertEquals(
       "Wrong second tx",
       account1NonExecTransaction1.id(),
-      executableTxs(1).id
+      iter.next().id
     )
     assertEquals(
       "Wrong third tx",
       account1NonExecTransaction0.id(),
-      executableTxs(2).id
+      iter.next().id
     )
 
     val account1ExecTransaction1 = createEIP1559Transaction(
@@ -389,7 +391,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
 
     assertEquals(
       "Wrong number of executable transactions",
@@ -424,7 +426,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
 
     assertEquals(
       "Wrong number of executable transactions",
@@ -632,7 +634,7 @@ class MempoolMapTest
       "Transaction is still in the mempool",
       mempoolMap.contains(ModifierId @@ account1NonExecTransaction0.id)
     )
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
@@ -660,7 +662,7 @@ class MempoolMapTest
       "Transaction is still in the mempool",
       mempoolMap.contains(ModifierId @@ account1ExecTransaction0.id)
     )
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
@@ -693,7 +695,7 @@ class MempoolMapTest
       "Transaction is still in the mempool",
       mempoolMap.contains(ModifierId @@ txToRemove.id)
     )
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       3,
@@ -701,7 +703,7 @@ class MempoolMapTest
     )
 
     res = mempoolMap.add(txToRemove)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       6,
@@ -717,10 +719,9 @@ class MempoolMapTest
     Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.TEN)
     var mempoolMap = new MempoolMap(stateProvider)
 
-    assertEquals(
+    assertTrue(
       "Wrong tx list size ",
-      0,
-      mempoolMap.takeExecutableTxs(10).size
+      mempoolMap.takeExecutableTxs().isEmpty
     )
 
     //Adding some txs in the mempool
@@ -739,12 +740,12 @@ class MempoolMapTest
     assertTrue(res.isSuccess)
     mempoolMap = res.get
 
-    var listOfExecTxs = mempoolMap.takeExecutableTxs(10).toList
+    var listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      listOfExecTxs.head.id
     )
 
     val account1NonExecTransaction0 = createEIP1559Transaction(
@@ -757,12 +758,12 @@ class MempoolMapTest
     res = mempoolMap.add(account1NonExecTransaction0)
     assertTrue(res.isSuccess)
     mempoolMap = res.get
-    listOfExecTxs = mempoolMap.takeExecutableTxs(10).toList
+    listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      listOfExecTxs.head.id
     )
 
     //Adding other Txs to the same account and verify they are returned ordered by nonce and not by gas price
@@ -788,36 +789,25 @@ class MempoolMapTest
     assertTrue(res.isSuccess)
     mempoolMap = res.get
 
-    listOfExecTxs = mempoolMap.takeExecutableTxs(10).toList
+    listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 3, listOfExecTxs.size)
+    var iter = listOfExecTxs.iterator
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction1.id(),
-      listOfExecTxs(1).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction2.id(),
-      listOfExecTxs(2).id
+      iter.next().id
     )
-
-    listOfExecTxs = mempoolMap.takeExecutableTxs(2).toList
-    assertEquals("Wrong tx list size ", 2, listOfExecTxs.size)
-    assertEquals(
-      "Wrong tx ",
-      account1ExecTransaction0.id(),
-      listOfExecTxs(0).id
-    )
-    assertEquals(
-      "Wrong tx ",
-      account1ExecTransaction1.id(),
-      listOfExecTxs(1).id
-    )
+    assertFalse("Iterator still finds txs", iter.hasNext)
 
     //Create txs for other accounts and verify that the list is ordered by nonce and gas price
     //The expected order is: tx3_0, tx3_1, tx3_2, tx2_0, tx1_0, tx2_1, tx2_2, tx1_1, tx1_2
@@ -887,78 +877,56 @@ class MempoolMapTest
     assertTrue(res.isSuccess)
     mempoolMap = res.get
 
-    listOfExecTxs = mempoolMap.takeExecutableTxs(10).toList
+    listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 9, listOfExecTxs.size)
+    iter = listOfExecTxs.iterator
     assertEquals(
       "Wrong tx ",
       account3ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account3ExecTransaction1.id(),
-      listOfExecTxs(1).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account3ExecTransaction2.id(),
-      listOfExecTxs(2).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction0.id(),
-      listOfExecTxs(3).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(4).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction1.id(),
-      listOfExecTxs(5).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction2.id(),
-      listOfExecTxs(6).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction1.id(),
-      listOfExecTxs(7).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction2.id(),
-      listOfExecTxs(8).id
+      iter.next().id
     )
 
-    listOfExecTxs = mempoolMap.takeExecutableTxs(4).toList
-    assertEquals("Wrong tx list size ", 4, listOfExecTxs.size)
-    assertEquals(
-      "Wrong tx ",
-      account3ExecTransaction0.id(),
-      listOfExecTxs(0).id
-    )
-    assertEquals(
-      "Wrong tx ",
-      account3ExecTransaction1.id(),
-      listOfExecTxs(1).id
-    )
-    assertEquals(
-      "Wrong tx ",
-      account3ExecTransaction2.id(),
-      listOfExecTxs(2).id
-    )
-    assertEquals(
-      "Wrong tx ",
-      account2ExecTransaction0.id(),
-      listOfExecTxs(3).id
-    )
+    assertFalse(iter.hasNext)
 
   }
-
-
 }

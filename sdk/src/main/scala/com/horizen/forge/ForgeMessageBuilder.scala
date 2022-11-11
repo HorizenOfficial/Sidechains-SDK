@@ -40,6 +40,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   type MS = SidechainState
   type MP = SidechainMemoryPool
 
+
   override def createNewBlock(
                  nodeView: View,
                  branchPointInfo: BranchPointInfo,
@@ -47,7 +48,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  parentId: BlockId,
                  timestamp: Block.Timestamp,
                  mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                 sidechainTransactions: Seq[SidechainTypes#SCBT],
+                 sidechainTransactions: Iterable[SidechainTypes#SCBT],
                  mainchainHeaders: Seq[MainchainHeader],
                  ommers: Seq[Ommer[SidechainBlockHeader]],
                  ownerPrivateKey: PrivateKey25519,
@@ -70,7 +71,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         SidechainBlock.BLOCK_VERSION,
         timestamp,
         mainchainBlockReferencesData,
-        sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
+        sidechainTransactions.toSeq.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
         mainchainHeaders,
         ommers,
         ownerPrivateKey,
@@ -97,7 +98,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       SidechainBlock.BLOCK_VERSION,
       timestamp,
       mainchainBlockReferencesData,
-      sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
+      sidechainTransactions.toSeq.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
       mainchainHeaders,
       ommers,
       ownerPrivateKey,
@@ -132,7 +133,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]): Seq[SidechainTypes#SCBT] = {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]): Iterable[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
 
     var txsCounter: Int = 0
