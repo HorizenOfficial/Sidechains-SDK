@@ -2,14 +2,173 @@
 	"openrpc": "1.2.4",
 	"info": {
 		"title": "Ethereum JSON-RPC Specification",
-		"description": "A specification of the standard interface for Ethereum clients.",
+		"description": "A specification of the interface for Ethereum clients with additional custom methods.",
 		"license": {
 			"name": "CC0-1.0",
 			"url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode"
 		},
-		"version": "0.0.0"
+		"version": "1.2.4"
 	},
 	"methods": [
+		{
+			"name": "eth_getForwardTransfers",
+			"description": "This is horizen specific",
+			"summary": "Returns a list of forward transfers contained in the block",
+			"params": [
+				{
+					"name": "Block",
+					"required": true,
+					"schema": {
+						"title": "Block number or tag",
+						"oneOf": [
+							{
+								"title": "Block number",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+							},
+							{
+								"title": "Block tag",
+								"type": "string",
+								"enum": [
+									"earliest",
+									"finalized",
+									"safe",
+									"latest",
+									"pending"
+								],
+								"description": "`earliest`: The lowest numbered block the client has available; `finalized`: The most recent crypto-economically secure block, cannot be re-orged outside of manual intervention driven by community coordination; `safe`: The most recent block that is safe from re-orgs under honest majority and certain synchronicity assumptions; `latest`: The most recent block in the canonical chain observed by the client, this block may be re-orged out of the canonical chain even under healthy/normal conditions; `pending`: A sample next block built by the client on top of `latest` and containing the set of transactions usually taken from local mempool. Before the merge transition is finalized, any call querying for `finalized` or `safe` block MUST be responded to with `-39001: Unknown block` error"
+							}
+						]
+					}
+				}
+			],
+			"result": {
+				"name": "List of forward transfers",
+				"schema": {
+					"title": "Forward transfers",
+					"type": "object",
+					"properties": {
+						"to": {
+							"title": "hex encoded address",
+							"type": "string",
+							"pattern": "^0x[0-9,a-f,A-F]{40}$"
+						},
+						"value": {
+							"title": "hex encoded value",
+							"type": "string",
+							"pattern": "^0x[0-9,a-f,A-F]{40}$"
+						}
+					}
+				}
+			}
+		},
+		{
+			"name": "eth_getFeePayments",
+			"description": "This is horizen specific",
+			"summary": "Returns a list of fee payments in the block",
+			"params": [
+				{
+					"name": "Block",
+					"required": true,
+					"schema": {
+						"title": "Block number or tag",
+						"oneOf": [
+							{
+								"title": "Block number",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+							},
+							{
+								"title": "Block tag",
+								"type": "string",
+								"enum": [
+									"earliest",
+									"finalized",
+									"safe",
+									"latest",
+									"pending"
+								],
+								"description": "`earliest`: The lowest numbered block the client has available; `finalized`: The most recent crypto-economically secure block, cannot be re-orged outside of manual intervention driven by community coordination; `safe`: The most recent block that is safe from re-orgs under honest majority and certain synchronicity assumptions; `latest`: The most recent block in the canonical chain observed by the client, this block may be re-orged out of the canonical chain even under healthy/normal conditions; `pending`: A sample next block built by the client on top of `latest` and containing the set of transactions usually taken from local mempool. Before the merge transition is finalized, any call querying for `finalized` or `safe` block MUST be responded to with `-39001: Unknown block` error"
+							}
+						]
+					}
+				}
+			],
+			"result": {
+				"name": "List of fee payments",
+				"schema": {
+					"title": "Fee payments",
+					"type": "object",
+					"properties": {
+						"address": {
+							"title": "hex encoded address",
+							"type": "string",
+							"pattern": "^0x[0-9,a-f,A-F]{40}$"
+						},
+						"value": {
+							"title": "hex encoded value",
+							"type": "string",
+							"pattern": "^0x[0-9,a-f,A-F]{40}$"
+						}
+					}
+				}
+			}
+		},
+		{
+			"name": "net_peerCount",
+			"description": "It is not implemented, yet, but will be.",
+			"summary": "Returns number of peers currently connected to the client",
+			"params": [],
+			"result": {
+				"name": "Peer count",
+				"schema": {
+					"title": "hex encoded unsigned integer of the number of connected peers",
+					"type": "string",
+					"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+				}
+			}
+		},
+		{
+			"name": "net_listening",
+			"description": "It is not implemented, yet, but will be.",
+			"summary": "Returns true if client is actively listening for network connections",
+			"params": [],
+			"result": {
+				"name": "Listening",
+				"schema": {
+					"title": "boolean - true when listening, otherwise false",
+					"type": "boolean",
+					"pattern": "false / true"
+				}
+			}
+		},
+		{
+			"name": "net_version",
+			"summary": "Returns the current network id",
+			"params": [],
+			"result": {
+				"name": "Network Id",
+				"schema": {
+					"title": "String value of current network id",
+					"type": "string",
+					"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+				}
+			}
+		},
+		{
+			"name": "eth_protocolVersion",
+			"description": "It is not implemented, yet and needs to be decided if it will be.",
+			"summary": "Returns the current ethereum protocol version",
+			"params": [],
+			"result": {
+				"name": "Protocol version",
+				"schema": {
+					"title": "hex encoded unsigned integer of current ethereum protocol version",
+					"type": "string",
+					"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+				}
+			}
+		},
 		{
 			"name": "eth_getBlockByHash",
 			"summary": "Returns information about a block by hash.",
@@ -1062,19 +1221,6 @@
 			}
 		},
 		{
-			"name": "eth_coinbase",
-			"summary": "Returns the client coinbase address.",
-			"params": [],
-			"result": {
-				"name": "Coinbase address",
-				"schema": {
-					"title": "hex encoded address",
-					"type": "string",
-					"pattern": "^0x[0-9,a-f,A-F]{40}$"
-				}
-			}
-		},
-		{
 			"name": "eth_accounts",
 			"summary": "Returns a list of addresses owned by client.",
 			"params": [],
@@ -1504,6 +1650,7 @@
 		},
 		{
 			"name": "eth_newFilter",
+			"description": "It is not implemented, yet, but will be.",
 			"summary": "Creates a filter object, based on filter options, to notify when the state changes (logs).",
 			"params": [
 				{
@@ -1583,6 +1730,7 @@
 		},
 		{
 			"name": "eth_newBlockFilter",
+			"description": "It is not implemented, yet, but will be.",
 			"summary": "Creates a filter in the node, to notify when a new block arrives.",
 			"params": [],
 			"result": {
@@ -1596,6 +1744,7 @@
 		},
 		{
 			"name": "eth_newPendingTransactionFilter",
+			"description": "It is not implemented, yet, but will be.",
 			"summary": "Creates a filter in the node, to notify when new pending transactions arrive.",
 			"params": [],
 			"result": {
@@ -1609,6 +1758,7 @@
 		},
 		{
 			"name": "eth_uninstallFilter",
+			"description": "It is not implemented, yet, but will be.",
 			"summary": "Uninstalls a filter with given id.",
 			"params": [
 				{
@@ -1629,6 +1779,7 @@
 		},
 		{
 			"name": "eth_getFilterChanges",
+			"description": "It is not implemented, yet, but will be.",
 			"summary": "Polling method for a filter, which returns an array of logs which occurred since last poll.",
 			"params": [
 				{
@@ -1730,6 +1881,7 @@
 		},
 		{
 			"name": "eth_getFilterLogs",
+			"description": "It is not implemented, yet, but will be.",
 			"summary": "Returns an array of all logs matching filter with given id.",
 			"params": [
 				{
@@ -1831,6 +1983,7 @@
 		},
 		{
 			"name": "eth_getLogs",
+			"description": "It is not implemented, yet, but will be.",
 			"summary": "Returns an array of all logs matching filter with given id.",
 			"params": [
 				{
@@ -1984,18 +2137,6 @@
 							}
 						}
 					]
-				}
-			}
-		},
-		{
-			"name": "eth_mining",
-			"summary": "Returns whether the client is actively mining new blocks.",
-			"params": [],
-			"result": {
-				"name": "Mining status",
-				"schema": {
-					"title": "miningStatus",
-					"type": "boolean"
 				}
 			}
 		},
