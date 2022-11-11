@@ -12,11 +12,11 @@
         </Console>
 
         <RollingFile name="errorLog" fileName="log/ut_test.log"
-                     filePattern="log/ut_test.log-%d{yyyy-MM-dd}-%i.log" >
+                     filePattern="log/ut_test.log-%d{yyyy-MM-dd}-%i.log">
             <ThresholdFilter level="all" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
-                <SizeBasedTriggeringPolicy size="50 MB" />
+                <SizeBasedTriggeringPolicy size="50 MB"/>
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
@@ -32,8 +32,8 @@
         </Logger-->
 
         <Root level="all">
-           <AppenderRef ref="errorLog" level="ALL"/>
-           <AppenderRef ref="Console" level="DEBUG"/>
+            <AppenderRef ref="errorLog" level="ALL"/>
+            <AppenderRef ref="Console" level="DEBUG"/>
         </Root>
 
     </Loggers>
