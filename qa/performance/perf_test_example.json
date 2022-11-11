@@ -13,14 +13,12 @@
   "machine_credentials": [
     {
       "ip_address": "127.0.0.1",
-      "port": "",
       "base_directory": "/home/abc",
       "ssh_username": "myname",
       "ssh_password": ""
     },
     {
       "ip_address": "127.0.0.2",
-      "port": "",
       "base_directory": "/home/abc",
       "ssh_username": "myname",
       "ssh_password": ""

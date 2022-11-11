@@ -161,9 +161,8 @@ class NodeData:
 
 
 class MachineCredentials:
-    def __init__(self, ip_address, port, base_directory, ssh_username, ssh_password):
+    def __init__(self, ip_address, base_directory, ssh_username, ssh_password):
         self.ip_address = ip_address
-        self.port = port
         self.base_directory = base_directory
         self.ssh_username = ssh_username
         self.ssh_password = ssh_password
@@ -237,7 +236,6 @@ class PerformanceTest(SidechainTestFramework):
         for machine in machines:
             machine_credentials.append(
                 MachineCredentials(machine["ip_address"],
-                                   machine["port"],
                                    machine["base_directory"],
                                    machine["ssh_username"],
                                    machine["ssh_password"])
@@ -331,7 +329,7 @@ class PerformanceTest(SidechainTestFramework):
                     max_connections=max_connections,
                     block_rate=self.block_rate,
                     latency_settings=latency_configurations[index],
-                    machine_credentials=machine_credentials
+                    machine_credentials=machine_credentials,
                     log_akka_messages=self.sc_node_data[index]['log_akka_messages'] if 'log_akka_messages'  in self.sc_node_data[index] else "ERROR"
                 )
             )

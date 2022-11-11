@@ -70,9 +70,6 @@
           "ip_address": {
             "type": "string"
           },
-          "port": {
-            "type": "string"
-          },
           "base_directory": {
             "type": "string"
           },
@@ -86,7 +83,6 @@
         },
         "required": [
           "ip_address",
-          "port",
           "base_directory",
           "ssh_username",
           "ssh_password"
