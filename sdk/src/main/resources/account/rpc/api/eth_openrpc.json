@@ -115,6 +115,277 @@
 			}
 		},
 		{
+			"name": "debug_traceBlockByNumber",
+			"summary": "Replays the block that is already present in the database",
+			"params": [
+				{
+					"name": "Block",
+					"required": true,
+					"schema": {
+						"title": "Block number or tag",
+						"oneOf": [
+							{
+								"title": "Block number",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+							},
+							{
+								"title": "Block tag",
+								"type": "string",
+								"enum": [
+									"earliest",
+									"finalized",
+									"safe",
+									"latest",
+									"pending"
+								],
+								"description": "`earliest`: The lowest numbered block the client has available; `finalized`: The most recent crypto-economically secure block, cannot be re-orged outside of manual intervention driven by community coordination; `safe`: The most recent block that is safe from re-orgs under honest majority and certain synchronicity assumptions; `latest`: The most recent block in the canonical chain observed by the client, this block may be re-orged out of the canonical chain even under healthy/normal conditions; `pending`: A sample next block built by the client on top of `latest` and containing the set of transactions usually taken from local mempool. Before the merge transition is finalized, any call querying for `finalized` or `safe` block MUST be responded to with `-39001: Unknown block` error"
+							}
+						]
+					}
+				},
+				{
+					"name": "Tracer configuration",
+					"schema": {
+						"type": "object",
+						"required": [
+							"enableMemory",
+							"disableStack",
+							"disableStorage",
+							"enableReturnData"
+						],
+						"properties": {
+							"enableMemory": {
+								"type": "boolean"
+							},
+							"disableStack": {
+								"type": "boolean"
+							},
+							"disableStorage": {
+								"type": "boolean"
+							},
+							"enableReturnData": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			],
+			"result": {
+				"name": "List of transaction traces in the block",
+				"schema": {
+					"type": "object",
+					"properties": {
+						"gas": {
+							"title": "hex encoded gas",
+							"type": "string",
+							"pattern": "^0x[0-9,a-f,A-F]{40}$"
+						},
+						"returnValue": {
+							"title": "hex encoded return value",
+							"type": "string",
+							"pattern": "^0x[0-9,a-f,A-F]{40}$"
+						},
+						"structLogs": {
+							"title": "List of EVM trace logs",
+							"type": "object",
+							"properties": {
+								"pc": {
+									"title": "hex encoded pc",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"op": {
+									"title": "string op code",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"gas": {
+									"title": "hex encoded gas",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"gasCost": {
+									"title": "hex encoded gasCost",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"depth": {
+									"title": "hex encoded depth",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"error": {
+									"title": "string error",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"stack": {
+									"title": "string array with stack data",
+									"type": "array",
+									"items": {
+										"title": "32 byte hex value",
+										"type": "string",
+										"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+									}
+								},
+								"memory": {
+									"title": "string array with memory data",
+									"type": "array",
+									"items": {
+										"title": "32 byte hex value",
+										"type": "string",
+										"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+									}
+								},
+								"storage": {
+									"title": "string array with storage data",
+									"type": "array",
+									"items": {
+										"title": "32 byte hex value",
+										"type": "string",
+										"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"name": "debug_traceTransaction",
+			"summary": "Replays the transaction that is already present in the database",
+			"params": [
+				{
+					"name": "transactionHash",
+					"required": true,
+					"schema": {
+						"title": "transaction hash",
+						"type": "string",
+						"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+					}
+				},
+				{
+					"name": "Tracer configuration",
+					"schema": {
+						"type": "object",
+						"required": [
+							"enableMemory",
+							"disableStack",
+							"disableStorage",
+							"enableReturnData"
+						],
+						"properties": {
+							"enableMemory": {
+								"type": "boolean"
+							},
+							"disableStack": {
+								"type": "boolean"
+							},
+							"disableStorage": {
+								"type": "boolean"
+							},
+							"enableReturnData": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			],
+			"result": {
+				"name": "List of transaction traces",
+				"schema": {
+					"gas": {
+						"title": "hex encoded gas",
+						"type": "string",
+						"pattern": "^0x[0-9,a-f,A-F]{40}$"
+					},
+					"returnValue": {
+						"title": "hex encoded return value",
+						"type": "string",
+						"pattern": "^0x[0-9,a-f,A-F]{40}$"
+					},
+					"structLogs": {
+						"title": "List of EVM trace logs",
+						"type": "object",
+						"properties": {
+							"pc": {
+								"title": "hex encoded pc",
+								"type": "string",
+								"pattern": "^0x[0-9,a-f,A-F]{40}$"
+							},
+							"op": {
+								"title": "string op code",
+								"type": "string",
+								"pattern": "^0x[0-9,a-f,A-F]{40}$"
+							},
+							"gas": {
+								"title": "hex encoded gas",
+								"type": "string",
+								"pattern": "^0x[0-9,a-f,A-F]{40}$"
+							},
+							"gasCost": {
+								"title": "hex encoded gasCost",
+								"type": "string",
+								"pattern": "^0x[0-9,a-f,A-F]{40}$"
+							},
+							"depth": {
+								"title": "hex encoded depth",
+								"type": "string",
+								"pattern": "^0x[0-9,a-f,A-F]{40}$"
+							},
+							"error": {
+								"title": "string error",
+								"type": "string",
+								"pattern": "^0x[0-9,a-f,A-F]{40}$"
+							},
+							"stack": {
+								"title": "string array with stack data",
+								"type": "array",
+								"items": {
+									"title": "32 byte hex value",
+									"type": "string",
+									"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+								}
+							},
+							"memory": {
+								"title": "string array with memory data",
+								"type": "array",
+								"items": {
+									"title": "32 byte hex value",
+									"type": "string",
+									"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+								}
+							},
+							"storage": {
+								"title": "string array with storage data",
+								"type": "array",
+								"items": {
+									"title": "32 byte hex value",
+									"type": "string",
+									"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"name": "web3_clientVersion",
+			"description": "It is not implemented, yet and needs to be decided if it will be.",
+			"summary": "Returns the client version",
+			"params": [],
+			"result": {
+				"name": "Client version",
+				"schema": {
+					"title": "Current client version in string format",
+					"type": "string"
+				}
+			}
+		},
+		{
 			"name": "net_peerCount",
 			"description": "It is not implemented, yet, but will be.",
 			"summary": "Returns number of peers currently connected to the client",
