@@ -13,7 +13,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
     connect_sc_nodes, convertZenToWei, convertZenToZennies, generate_next_block, generate_secrets, generate_vrf_secrets,
-    get_account_balance, start_sc_nodes,
+    get_account_balance, start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
 from test_framework.util import (
     assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, start_nodes,
@@ -75,7 +75,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
             SCCreationInfo(mc_node, self.sc_creation_amount, LARGE_WITHDRAWAL_EPOCH_LENGTH),
             sc_node_1_configuration, sc_node_2_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=720 * 120 * 10,
+                                                                 block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10,
                                                                  blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):

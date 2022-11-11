@@ -225,7 +225,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         else if (this.isSigned()) {
             var signedTx = (SignedRawTransaction) this.transaction;
             var sigData = signedTx.getSignatureData();
-            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0) {
+            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0 && sigData.getS().length == 1 && sigData.getR().length == 1) {
                 // for a not-really signed legacy tx implementing EIP155, here the chainid is the V itself
                 // the caller needs it for encoding the tx properly
                 return EthereumTransactionUtils.convertToLong(sigData.getV());

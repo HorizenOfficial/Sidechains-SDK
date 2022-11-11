@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity 0.8.17;
+pragma solidity ^0.8.0;
 
 type StakeID is bytes32;
 
-// contract address: 0000000000000000000022222222222222222222
+// contract address: 0x0000000000000000000022222222222222222222
 interface ForgerStakes {
 
     struct StakeInfo {

@@ -1,5 +1,5 @@
 **0.5.0**
-1. Scorex dependency has been updated from Scorex 2.0.0-RC6 to Sparkz 2.0.0-RC8 (package name has been changed to sparkz).
+1. Scorex dependency has been updated from Scorex 2.0.0-RC6 to Sparkz 2.0.0-RC9 (package name has been changed to sparkz).
 2. Bootstrapping tool interface changed: cert proof info was separated from signers key generation.
 3. Fork manager introduced to be able to implement new backward incompatible functionality.
 4. Coin boxes dust check added in the Fork 1.
