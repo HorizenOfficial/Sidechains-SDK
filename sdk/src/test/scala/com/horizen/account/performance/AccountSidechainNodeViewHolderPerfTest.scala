@@ -23,7 +23,6 @@ import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
-import org.web3j.crypto.{ECKeyPair, Keys}
 import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
 
@@ -71,7 +70,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
- // @Ignore
+  @Ignore
   def txModifyTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/txModifyTest.txt", true))
 
@@ -182,7 +181,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
- // @Ignore
+  @Ignore
   def updateMemPoolTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolTest.txt", true))
 
@@ -280,7 +279,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-//  @Ignore
+  @Ignore
   def updateMemPoolMultipleBlocksTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolMultiBlocksTest.txt", true))
 
@@ -401,7 +400,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
 
   @Test
- // @Ignore
+  @Ignore
   def takeTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/takeTest.txt", true))
 

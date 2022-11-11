@@ -2,6 +2,7 @@ package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.mempool.{MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
@@ -38,8 +39,8 @@ class AccountForgeMessageBuilderTest
 
       val forger = new AccountForgeMessageBuilder(null, null, null, false)
       val initialStateRoot = stateView.getIntermediateRoot
-      val listOfTxs =
-        Seq[SidechainTypes#SCAT](transaction.asInstanceOf[SidechainTypes#SCAT])
+      val listOfTxs = setupTransactionsByPriceAndNonce(
+        Seq[SidechainTypes#SCAT](transaction.asInstanceOf[SidechainTypes#SCAT]))
 
       val (_,appliedTxs,_) = forger.computeBlockInfo(
         stateView,
@@ -90,10 +91,10 @@ class AccountForgeMessageBuilderTest
 
       val forger = new AccountForgeMessageBuilder(null, null, null, false)
       val initialStateRoot = stateView.getIntermediateRoot
-      val listOfTxs =
+      val listOfTxs = setupTransactionsByPriceAndNonce(
         List[SidechainTypes#SCAT](
           invalidTx.asInstanceOf[SidechainTypes#SCAT]
-        )
+        ))
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
@@ -153,11 +154,11 @@ class AccountForgeMessageBuilderTest
 
       val forger = new AccountForgeMessageBuilder(null, null, null, false)
 
-      val listOfTxs =
+      val listOfTxs = setupTransactionsByPriceAndNonce(
         List[SidechainTypes#SCAT](
           invalidTx.asInstanceOf[SidechainTypes#SCAT],
           validTx.asInstanceOf[SidechainTypes#SCAT]
-        )
+        ))
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
@@ -191,5 +192,27 @@ class AccountForgeMessageBuilderTest
       )
       .thenReturn(Array.empty[Byte])
     mockMsgProcessor
+  }
+
+  private def setupTransactionsByPriceAndNonce(listOfTxs: Seq[SidechainTypes#SCAT]): Iterable[SidechainTypes#SCAT] = {
+    val txsByPriceAndNonceIter: TransactionsByPriceAndNonceIter = new TransactionsByPriceAndNonceIter {
+      var idx = 0
+      override def peek(): SidechainTypes#SCAT = listOfTxs(idx)
+
+      override def pop(): SidechainTypes#SCAT = {
+        next()
+      }
+
+      override def hasNext: Boolean = idx < listOfTxs.size
+
+      override def next(): SidechainTypes#SCAT =  {
+        val curr = listOfTxs(idx)
+        idx = idx + 1
+        curr
+      }
+    }
+    val txsByPriceAndNonce : Iterable[SidechainTypes#SCAT] = mock[Iterable[SidechainTypes#SCAT]]
+    Mockito.when(txsByPriceAndNonce.iterator).thenReturn(txsByPriceAndNonceIter)
+    txsByPriceAndNonce
   }
 }

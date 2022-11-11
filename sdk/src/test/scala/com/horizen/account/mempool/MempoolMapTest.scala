@@ -719,10 +719,17 @@ class MempoolMapTest
     Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.TEN)
     var mempoolMap = new MempoolMap(stateProvider)
 
+    var listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertTrue(
       "Wrong tx list size ",
-      mempoolMap.takeExecutableTxs().isEmpty
+      listOfExecTxs.isEmpty
     )
+
+    var iter =  listOfExecTxs.iterator
+    assertFalse(iter.hasNext)
+    assertThrows[NoSuchElementException](iter.peek)
+    assertThrows[NoSuchElementException](iter.pop())
+    assertThrows[NoSuchElementException](iter.next())
 
     //Adding some txs in the mempool
 
@@ -740,13 +747,31 @@ class MempoolMapTest
     assertTrue(res.isSuccess)
     mempoolMap = res.get
 
-    var listOfExecTxs = mempoolMap.takeExecutableTxs()
+    listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
       listOfExecTxs.head.id
     )
+
+    iter =  listOfExecTxs.iterator
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Peek should return always the same element ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.pop().id
+    )
+    assertThrows[NoSuchElementException]("Pop should modify the iterator", iter.pop())
 
     val account1NonExecTransaction0 = createEIP1559Transaction(
       value,
@@ -765,6 +790,24 @@ class MempoolMapTest
       account1ExecTransaction0.id(),
       listOfExecTxs.head.id
     )
+
+    iter = listOfExecTxs.iterator
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Peek should return always the same element ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.pop().id
+    )
+    assertThrows[NoSuchElementException]("Pop should modify the iterator", iter.pop())
 
     //Adding other Txs to the same account and verify they are returned ordered by nonce and not by gas price
 
@@ -791,11 +834,21 @@ class MempoolMapTest
 
     listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 3, listOfExecTxs.size)
-    var iter = listOfExecTxs.iterator
+    iter = listOfExecTxs.iterator
+    assertEquals(
+      "Wrong tx by peek ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
       iter.next().id
+    )
+    assertEquals(
+      "Wrong tx by peek ",
+      account1ExecTransaction1.id(),
+      iter.peek.id
     )
     assertEquals(
       "Wrong tx ",
@@ -803,11 +856,25 @@ class MempoolMapTest
       iter.next().id
     )
     assertEquals(
+      "Wrong tx by peek ",
+      account1ExecTransaction2.id(),
+      iter.peek.id
+    )
+    assertEquals(
       "Wrong tx ",
       account1ExecTransaction2.id(),
       iter.next().id
     )
     assertFalse("Iterator still finds txs", iter.hasNext)
+
+    iter = listOfExecTxs.iterator
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.pop.id
+    )
+    assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.pop())
+
 
     //Create txs for other accounts and verify that the list is ordered by nonce and gas price
     //The expected order is: tx3_0, tx3_1, tx3_2, tx2_0, tx1_0, tx2_1, tx2_2, tx1_1, tx1_2
@@ -927,6 +994,42 @@ class MempoolMapTest
     )
 
     assertFalse(iter.hasNext)
+
+
+    iter = listOfExecTxs.iterator
+    assertEquals(
+      "Wrong tx ",
+      account3ExecTransaction0.id(),
+      iter.pop().id
+    )
+
+    assertEquals(
+      "Wrong tx by peek after pop",
+      account2ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Wrong tx ",
+      account2ExecTransaction0.id(),
+      iter.next.id
+    )
+    assertEquals(
+      "Wrong tx by peek after next",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Wrong tx",
+      account1ExecTransaction0.id(),
+      iter.pop.id
+    )
+    assertEquals(
+      "Wrong tx ",
+      account2ExecTransaction1.id(),
+      iter.pop.id
+    )
+    assertFalse(iter.hasNext)
+    assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.pop())
 
   }
 }

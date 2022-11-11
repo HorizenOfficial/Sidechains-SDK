@@ -344,8 +344,8 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
   class TransactionsByPriceAndNonce(baseFee: BigInteger) extends Iterable[SidechainTypes#SCAT] {
 
-    override def iterator: Iterator[SidechainTypes#SCAT] = {
-      new Iterator[SidechainTypes#SCAT] {
+
+    class Iter extends TransactionsByPriceAndNonceIter {
 
         def txOrder(tx: SidechainTypes#SCAT) = {
           tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
@@ -367,9 +367,26 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
             orderedQueue.enqueue(tx)
           }
           bestTx
-
         }
+
+        def peek:  SidechainTypes#SCAT = {
+          orderedQueue.head
+        }
+
+      def pop(): SidechainTypes#SCAT = {
+        orderedQueue.dequeue()
       }
+
+    }
+
+
+    override def iterator: TransactionsByPriceAndNonceIter = {
+      new Iter()
     }
   }
+}
+
+trait TransactionsByPriceAndNonceIter extends Iterator[SidechainTypes#SCAT] {
+  def peek: SidechainTypes#SCAT
+  def pop(): SidechainTypes#SCAT
 }

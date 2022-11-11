@@ -13,7 +13,7 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
 import com.horizen.evm.interop.EvmLog
 import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.{Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView
@@ -63,6 +63,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
   val blockContext = new BlockContext(Array.empty[Byte], 1000, BigInteger.ZERO, FeeUtils.GAS_LIMIT, 11, 2, 3)
 
   @Test
+  @Ignore
   def testComputeBlockInfo(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/computeBlockInfoTest.txt", true))
 
@@ -74,8 +75,8 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val numOfAccounts = 1
-      val numOfTxsPerAccount = 100000
+      val numOfAccounts = 1000
+      val numOfTxsPerAccount = 100
       val numOfTxs = numOfAccounts * numOfTxsPerAccount
 
       out.write(s"Total number of transactions:                    $numOfTxs\n")
