@@ -143,7 +143,10 @@ class ScBtLimitTest(SidechainTestFramework):
         # Create a transaction that generates 999 WBs 
         bt_address = mc_node.getnewaddress()
         bt_addresses = [bt_address for i in range(999)]
-        amounts = [54 for i in range(999)]
+        # Note: usage of big BTs like: 10000 satoshi is important for non-ceasing case
+        # Otherwise, starting from the second certificate, MC node wallet uses BTs from previous epoch to pay fees
+        # If BTs are too smale MC node may fail to create a cert of valid size. (known issue on MC side)
+        amounts = [10000 for i in range(999)]  # 10000 satoshi each
         withdrawMultiCoins(sc_node, bt_addresses, amounts)
 
         # Try to Generate 1 SC block.
@@ -195,7 +198,10 @@ class ScBtLimitTest(SidechainTestFramework):
         # Create a transaction that generates 999 WBs 
         bt_address = mc_node.getnewaddress()
         bt_addresses = [bt_address for i in range(999)]
-        amounts = [54 for i in range(999)]
+        # Note: usage of big BTs like: 10000 satoshi is important for non-ceasing case
+        # Otherwise, starting from the second certificate, MC node wallet uses BTs from previous epoch to pay fees
+        # If BTs are too smale MC node may fail to create a cert of valid size. (known issue on MC side)
+        amounts = [10000 for i in range(999)]  # 10000 satoshi each
         withdrawMultiCoins(sc_node, bt_addresses, amounts)
 
         # Try to Generate 1 SC block.
