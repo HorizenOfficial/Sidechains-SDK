@@ -546,7 +546,7 @@ class EthService(
     }
   }
 
-  @RpcMethod("eth_getForwardTransfers")
+  @RpcMethod("zen_getForwardTransfers")
   def getForwardTransfers(blockId: String): ForwardTransfersView = {
     if (blockId == null) return null
     applyOnAccountView { nodeView =>
@@ -579,7 +579,7 @@ class EthService(
     }
   }
 
-  @RpcMethod("eth_getFeePayments")
+  @RpcMethod("zen_getFeePayments")
   def getFeePayments(blockId: String): AccountFeePaymentsInfo = {
     if (blockId == null) {
       return null
