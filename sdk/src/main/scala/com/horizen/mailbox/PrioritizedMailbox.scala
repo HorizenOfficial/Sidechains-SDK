@@ -4,6 +4,7 @@ import akka.actor.ActorSystem.Settings
 import akka.dispatch.{PriorityGenerator, UnboundedStablePriorityMailbox}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, LocallyGeneratedSecret}
 import com.horizen.SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier
+import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages.ModifiersIgnoredForReindex
 import com.typesafe.config.Config
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedTransaction, ModifiersFromRemote}
 
@@ -16,9 +17,9 @@ class PrioritizedMailbox (settings: Settings, cfg: Config) extends UnboundedStab
     case ApplyBiFunctionOnNodeView => 1
     case LocallyGeneratedSecret => 1
     case LocallyGeneratedTransaction => 1
+    case ModifiersIgnoredForReindex => 1
     case ApplyModifier => 2
     case ModifiersFromRemote => 3
-
     case _ => 100
   }
 

@@ -1,26 +1,20 @@
 package com.horizen.network
 
-import java.nio.ByteBuffer
 
 import akka.actor.{ActorRef, ActorRefFactory, Props}
 import com.horizen._
 import com.horizen.block.SidechainBlock
+import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages.ModifiersIgnoredForReindex
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
-import scorex.util.serialization.{VLQByteBufferReader, VLQReader}
-import sparkz.core.NodeViewHolder.ReceivableMessages.{ModifiersFromRemote, TransactionsFromRemote}
-import sparkz.core.network.ModifiersStatus.Requested
-import sparkz.core.network.{ConnectedPeer, ModifiersStatus, NodeViewSynchronizer}
+import sparkz.core.network.{ConnectedPeer,  NodeViewSynchronizer}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SyntacticallyFailedModification}
-import sparkz.core.network.message.{InvData, Message, ModifiersData}
+import sparkz.core.network.message.{InvData, ModifiersData}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
-import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.validation.MalformedModifierError
-import sparkz.core.{ModifierId, ModifierTypeId, NodeViewModifier}
-
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.network.ModifiersStatus._
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
 
 class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
                                     viewHolderRef: ActorRef,
@@ -32,6 +26,11 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     SidechainBlock, SidechainHistory, SidechainMemoryPool](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
 
   protected var isReindexing : Boolean = false
+
+  override def preStart(): Unit = {
+    context.system.eventStream.subscribe(self, classOf[ModifiersIgnoredForReindex])
+    super.preStart()
+  }
 
   override def postStop(): Unit = {
     log.info("SidechainNodeViewSynchronizer actor is stopping...")
@@ -70,132 +69,21 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   }
 
 
-
-  /**
-   * Method copied as-is from the parent class just to use the below modified version of validateAndSetStatus
-   * TODO: this method can be removed once following methods from Sparkz will be changed to protected visibility:
-   * parseModifiers
-   * validateAndSetStatus
-   * processSpam
-   *
-   * Logic to process modifiers got from another peer.
-   * Filter out non-requested modifiers (with a penalty to spamming peer),
-   * parse modifiers and send valid modifiers to NodeViewHolder
-   */
   override protected def modifiersFromRemote(data: ModifiersData, remote: ConnectedPeer): Unit = {
     val typeId = data.typeId
     val modifiers = data.modifiers
-    log.info(s"Got ${modifiers.size} modifiers of type $typeId from remote connected peer: $remote")
-    log.trace(s"Received modifier ids ${modifiers.keySet.map(encoder.encodeId).mkString(",")}")
-
-    // filter out non-requested modifiers
-    val requestedModifiers = processSpam(remote, typeId, modifiers)
-
-    modifierSerializers.get(typeId) match {
-      case Some(serializer: SparkzSerializer[SidechainTypes#SCBT]@unchecked) if typeId == Transaction.ModifierTypeId =>
-        // parse all transactions and send them to node view holder
-        val parsed: Iterable[SidechainTypes#SCBT] = parseModifiers(requestedModifiers, serializer, remote)
-        viewHolderRef ! TransactionsFromRemote(parsed)
-
-      case Some(serializer: SparkzSerializer[SidechainBlock]@unchecked) =>
-        // parse all modifiers and put them to modifiers cache
-        val parsed: Iterable[SidechainBlock] = parseModifiers(requestedModifiers, serializer, remote)
-        val valid: Iterable[SidechainBlock] = parsed.filter(validateAndSetStatus(remote, _))
-        if (valid.nonEmpty) viewHolderRef ! ModifiersFromRemote[SidechainBlock](valid)
-
-      case _ =>
-        log.error(s"Undefined serializer for modifier of type $typeId")
-    }
-  }
-
-  /**
-   * Method copied as-is  from the parent class to be used by the previous
-   * TODO: this method can be removed once inherited method from Sparkz will be changed to protected visibility
-   *
-   * Parse modifiers using specified serializer, check that its id is equal to the declared one,
-   * penalize misbehaving peer for every incorrect modifier or additional bytes after the modifier,
-   * call deliveryTracker.onReceive() for every correct modifier to update its status
-   *
-   * @return collection of parsed modifiers
-   */
-  private def parseModifiers[M <: NodeViewModifier](modifiers: Map[ModifierId, Array[Byte]],
-                                                    serializer: SparkzSerializer[M],
-                                                    remote: ConnectedPeer): Iterable[M] = {
-    modifiers.flatMap { case (id, bytes) =>
-      val reader: VLQReader = new VLQByteBufferReader(ByteBuffer.wrap(bytes))
-
-      serializer.parseTry(reader) match {
-        case Success(mod) if id == mod.id =>
-          if (reader.remaining != 0) {
-            penalizeMisbehavingPeer(remote)
-            log.warn(s"Received additional bytes after block. Declared id ${encoder.encodeId(id)} from ${remote.toString}")
-          }
-          Some(mod)
-        case _ =>
-          // Penalize peer and do nothing - it will be switched to correct state on CheckDelivery
-          penalizeMisbehavingPeer(remote)
-          log.warn(s"Failed to parse modifier with declared id ${encoder.encodeId(id)} from ${remote.toString}")
-          None
-      }
-    }
-  }
-
-  /**
-   * Method copied from the parent class, with the addition of isReindexing check: we must avoid to penalize
-   * a peer if receiving a block during reindex
-   *
-   * Move `pmod` to `Invalid` if it is permanently invalid, to `Received` otherwise
-   */
-  @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
-  private def validateAndSetStatus(remote: ConnectedPeer, pmod: SidechainBlock): Boolean = {
     if (isReindexing) {
-      log.error("Got modifier while reindexing - will be discarded")
-      deliveryTracker.setReceived(pmod.id, remote)
-      false
+      log.info(s"Got ${modifiers.size} modifiers of type $typeId from remote connected peer: $remote while reindexing - wil be discarded" )
+      modifiers.keySet.foreach(id =>
+        if (deliveryTracker.status(id) != Unknown){
+          //we are receiving a modifier previously requested, but in the meantime we started to reindex: we ingore
+          //it and set the delivery to unknown, so it will be cleared from the delivery cache
+          deliveryTracker.setUnknown(id)
+        }
+      )
     }else{
-      historyReaderOpt match {
-        case Some(hr) =>
-          hr.applicableTry(pmod) match {
-            case Failure(e) if e.isInstanceOf[MalformedModifierError] =>
-              log.warn(s"Modifier ${pmod.encodedId} is permanently invalid", e)
-              deliveryTracker.setInvalid(pmod.id)
-              penalizeMisbehavingPeer(remote)
-              false
-            case _ =>
-              deliveryTracker.setReceived(pmod.id, remote)
-              true
-          }
-        case None =>
-          log.error("Got modifier while history reader is not ready")
-          deliveryTracker.setReceived(pmod.id, remote)
-          true
-      }
+      super.modifiersFromRemote(data,remote)
     }
-  }
-
-  /**
-   * Method copied as-is  from the parent class to be used by the previous
-   * TODO: this method can be removed once inherited method from Sparkz will be changed to protected visibility
-   *
-   * Get modifiers from remote peer,
-   * filter out spam modifiers and penalize peer for spam
-   *
-   * @return ids and bytes of modifiers that were requested by our node
-   */
-  private def processSpam(remote: ConnectedPeer,
-                          typeId: ModifierTypeId,
-                          modifiers: Map[ModifierId, Array[Byte]]): Map[ModifierId, Array[Byte]] = {
-
-    val (requested, spam) = modifiers.partition { case (id, _) =>
-      deliveryTracker.status(id) == Requested
-    }
-
-    if (spam.nonEmpty) {
-      log.info(s"Spam attempt: peer $remote has sent a non-requested modifiers of type $typeId with ids" +
-        s": ${spam.keys.map(encoder.encodeId)}")
-      penalizeSpammingPeer(remote)
-    }
-    requested
   }
 
 
@@ -205,15 +93,25 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
       isReindexing = sHistory.isReindexing()
   }
 
+  protected def onModifierIgnoredForReindex: Receive = {
+    case ModifiersIgnoredForReindex(ids: Seq[scorex.util.ModifierId]) =>
+      ids.foreach(id => deliveryTracker.setUnknown(id))
+
+  }
+
   override protected def viewHolderEvents: Receive =
       onSyntacticallyFailedModifier orElse
+      onModifierIgnoredForReindex orElse
       changedHistoryEvent orElse
       super.viewHolderEvents
 }
 
-
-
 object SidechainNodeViewSynchronizer {
+
+  object ReceivableMessages {
+    case class ModifiersIgnoredForReindex(ids: Seq[scorex.util.ModifierId])
+  }
+
   def props(networkControllerRef: ActorRef,
             viewHolderRef: ActorRef,
             syncInfoSpec: SidechainSyncInfoMessageSpec.type,

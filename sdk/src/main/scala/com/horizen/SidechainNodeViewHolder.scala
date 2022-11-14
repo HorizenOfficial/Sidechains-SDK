@@ -15,6 +15,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.{EliminateTransactions, Loc
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.{ConnectedPeer, ModifiersStatus}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
+import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.transaction.state.TransactionValidation
@@ -507,12 +508,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override protected def processRemoteModifiers: Receive = {
     case sparkz.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[SidechainBlock]) =>
       if (isReindexing()){
-        log.debug("Received remote block while reindex in progress - will be ignored")
+        log.debug("Received remote blocks while reindex in progress - will be ignored")
+        //we fire an event with the ignored modifiers, to let the nodeviewsynchronizer to remove them
+        //from the delivery queue.
+        //NOTE: we don't put them in the modifiers cache since can elapse a lot of time before unqueing them
+        context.system.eventStream.publish(ModifiersIgnoredForReindex(mods.map(_.id)))
       }else{
         mods.foreach(m => modifiersCache.put(m.id, m))
-
         log.debug(s"Cache size before: ${modifiersCache.size}")
-
         if (!applyingBlock) {
           applyingBlock = true
           self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(Seq())
