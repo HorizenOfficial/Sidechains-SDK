@@ -141,7 +141,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Set to true to regenerate regression data
     if (false) {
       val bytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock.data)
-      val out = new BufferedWriter(new FileWriter("src/test/resources/new_mc_blocks/mc_block_reference_empty_sidechains"))
+      val out = new BufferedWriter(new FileWriter("src/test/resources/new_mc_blocks/mc_block_reference_data_empty_sidechains"))
       out.write(BytesUtils.toHexString(bytes))
       out.close()
     }
@@ -524,7 +524,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Set to true to regenerate regression data
     if (false) {
       val bytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock1.data)
-      val out = new BufferedWriter(new FileWriter("src/test/resources/new_mc_blocks/mc_block_reference_certificate_with_bts"))
+      val out = new BufferedWriter(new FileWriter("src/test/resources/new_mc_blocks/mc_block_reference_data_certificate_with_bts"))
       out.write(BytesUtils.toHexString(bytes))
       out.close()
     }
@@ -594,7 +594,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Set to true to regenerate regression data
     if (false) {
       val bytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock1.data)
-      val out = new BufferedWriter(new FileWriter("src/test/resources/new_mc_blocks/mc_block_reference_2_certificates"))
+      val out = new BufferedWriter(new FileWriter("src/test/resources/new_mc_blocks/mc_block_reference_data_2_certificates"))
       out.write(BytesUtils.toHexString(bytes))
       out.close()
     }
@@ -989,7 +989,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   }
 
   @Test
-  def mcBlockReferenceDataSerializationMultipleCertificates(): Unit = {
+  def mcBlockReferenceDataSerializationRegressionMultipleCertificates(): Unit = {
     // Test: parse MC block with 2 certificates.
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_2_certificates").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
@@ -1003,12 +1003,12 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val mcblock = mcblockTry.get
 
     assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params).isSuccess)
+    val originalBytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock.data)
 
-    val bytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock.data)
     var bytesFromFile:Array[Byte] = null
     try {
       val classLoader = getClass.getClassLoader
-      val file = new FileReader(classLoader.getResource("new_mc_blocks/mc_block_reference_2_certificates").getFile)
+      val file = new FileReader(classLoader.getResource("new_mc_blocks/mc_block_reference_data_2_certificates").getFile)
       bytesFromFile = BytesUtils.fromHexString(new BufferedReader(file).readLine())
     }
     catch {
@@ -1016,9 +1016,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
         jFail(e.toString)
     }
 
-    assertArrayEquals("Serialized and regression bytes expected to be equal", bytesFromFile, bytes)
-
-    val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytes)
+    val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytesFromFile)
     assertTrue("MainchainBlockReferenceData expected to by parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
@@ -1028,14 +1026,14 @@ class MainchainBlockReferenceTest extends JUnitSuite {
       mcblock.data.lowerCertificateLeaves.size, mcBlockReferenceData.lowerCertificateLeaves.size)
     assertTrue("Block reference data must contain proof of existence.", mcBlockReferenceData.existenceProof.isDefined)
     assertTrue("Block reference data must not contain proof of absence.", mcBlockReferenceData.absenceProof.isEmpty)
+
+    assertArrayEquals("Serialized and regression bytes expected to be equal", bytesFromFile, originalBytes)
   }
 
   @Test
-  def mcBlockReferenceDataSerializationEmptySidechains(): Unit = {
-
+  def mcBlockReferenceDataSerializationRegressionEmptySidechains(): Unit = {
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_empty_sidechains").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-
 
     // Test: Check for existing sidechain
     val scIdHex = "0000000000000000000000000000000000000000000000000000000000000000" // valid FieldElement in BigEndian
@@ -1043,18 +1041,18 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     val params = RegTestParams(scId.data)
 
-    val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params, TestSidechainsVersionsManager(params))
+    val mcblockTry = MainchainBlockReference.create(mcBlockBytes, params, TestSidechainsVersionsManager(params))
 
-    assertTrue("Block expected to be parsed", mcblockTry1.isSuccess)
-    val mcblock1 = mcblockTry1.get
+    assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
+    val mcblock = mcblockTry.get
 
-    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params).isSuccess)
+    assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params).isSuccess)
+    val originalBytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock.data)
 
-    val bytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock1.data)
     var bytesFromFile:Array[Byte] = null
     try {
       val classLoader = getClass.getClassLoader
-      val file = new FileReader(classLoader.getResource("new_mc_blocks/mc_block_reference_empty_sidechains").getFile)
+      val file = new FileReader(classLoader.getResource("new_mc_blocks/mc_block_reference_data_empty_sidechains").getFile)
       bytesFromFile = BytesUtils.fromHexString(new BufferedReader(file).readLine())
     }
     catch {
@@ -1062,9 +1060,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
         jFail(e.toString)
     }
 
-    assertArrayEquals("Serialized and regression bytes expected to be equal", bytesFromFile, bytes)
-
-    val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytes)
+    val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytesFromFile)
     assertTrue("MainchainBlockReferenceData expected to by parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
@@ -1072,10 +1068,12 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block reference data must not contain certificate.", mcBlockReferenceData.topQualityCertificates.isEmpty)
     assertTrue("Block reference data must not contain proof of existence.", mcBlockReferenceData.existenceProof.isEmpty)
     assertTrue("Block reference data must not contain proof of absence", mcBlockReferenceData.absenceProof.isEmpty)
+
+    assertArrayEquals("Serialized and regression bytes expected to be equal", bytesFromFile, originalBytes)
   }
 
   @Test
-  def mcBlockReferenceDataSerializationWithBTs(): Unit = {
+  def mcBlockReferenceDataSerializationRegressionWithBTs(): Unit = {
 
     // Test: parse MC block with tx version -4 with a single certificate with backward transfers.
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_certificate_with_bts").getLines().next()
@@ -1090,12 +1088,12 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val mcblock = mcblockTry.get
 
     assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params).isSuccess)
+    val originalBytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock.data)
 
-    val bytes = MainchainBlockReferenceDataSerializer.toBytes(mcblock.data)
     var bytesFromFile:Array[Byte] = null
     try {
       val classLoader = getClass.getClassLoader
-      val file = new FileReader(classLoader.getResource("new_mc_blocks/mc_block_reference_certificate_with_bts").getFile)
+      val file = new FileReader(classLoader.getResource("new_mc_blocks/mc_block_reference_data_certificate_with_bts").getFile)
       bytesFromFile = BytesUtils.fromHexString(new BufferedReader(file).readLine())
     }
     catch {
@@ -1103,9 +1101,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
         jFail(e.toString)
     }
 
-    assertArrayEquals("Serialized and regression bytes expected to be equal", bytesFromFile, bytes)
-
-    val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytes)
+    val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytesFromFile)
     assertTrue("MainchainBlockReferenceData expected to by parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
@@ -1116,6 +1112,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block reference data must not-contain lower quality certificate leaves.", mcBlockReferenceData.lowerCertificateLeaves.isEmpty)
     assertTrue("Block reference data must contain proof of existence.", mcBlockReferenceData.existenceProof.isDefined)
     assertTrue("Block reference data must not contain proof of absence", mcBlockReferenceData.absenceProof.isEmpty)
+
+    assertArrayEquals("Serialized and regression bytes expected to be equal", bytesFromFile, originalBytes)
   }
 
   @Test

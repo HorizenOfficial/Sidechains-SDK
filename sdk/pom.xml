@@ -348,9 +348,9 @@
           <include>cert_with_bts</include>
           <include>sc_node_holder_fixter_settings.conf</include>
           <include>new_mc_blocks/mc_block_empty_sidechains</include>
-          <include>new_mc_blocks/mc_block_reference_2_certificates</include>
-          <include>new_mc_blocks/mc_block_reference_empty_sidechains</include>
-          <include>new_mc_blocks/mc_block_reference_certificate_with_bts</include>
+          <include>new_mc_blocks/mc_block_reference_data_2_certificates</include>
+          <include>new_mc_blocks/mc_block_reference_data_empty_sidechains</include>
+          <include>new_mc_blocks/mc_block_reference_data_certificate_with_bts</include>
           <include>new_mc_blocks/mc_block_with_1_sc_creation</include>
           <include>new_mc_blocks/mc_block_with_1_ft</include>
           <!-- generated on regtest on 26.05.2021 using test_data_generators/mc_blocks_data.py -->
