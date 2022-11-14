@@ -14,10 +14,17 @@ final class LibEvmLogCallback implements Callback {
         // this is a singleton, prevent more instances
     }
 
+    static void Register() {
+        // register log callback
+        LibEvm.SetLogCallback(LibEvmLogCallback.instance);
+        // propagate log4j log level to glog
+        LibEvm.SetLogLevel(log4jToGlogLevel(logger.getLevel()));
+    }
+
     // this singleton instance of the callback will be passed to libevm to be used for logging,
     // the static reference here will also prevent the callback instance from being garbage collected,
     // because without it the only reference might be from native code (libevm) and the JVM does not know about that
-    static final LibEvmLogCallback instance = new LibEvmLogCallback();
+    private static final LibEvmLogCallback instance = new LibEvmLogCallback();
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final Logger logger = LogManager.getLogger(LibEvm.class);
@@ -59,6 +66,28 @@ final class LibEvmLogCallback implements Callback {
                 return Level.ERROR;
             case "crit":
                 return Level.FATAL;
+        }
+    }
+
+    private static String log4jToGlogLevel(Level level) {
+        switch (level.toString()) {
+            default:
+            case "ALL":
+            case "TRACE":
+                // glog does not have an ALL level, fallback to TRACE
+                return "trce";
+            case "DEBUG":
+                return "dbug";
+            case "INFO":
+                return "info";
+            case "WARN":
+                return "warn";
+            case "ERROR":
+                return "eror";
+            case "FATAL":
+            case "OFF":
+                // glog does not have an OFF level, fallback to FATAL
+                return "crit";
         }
     }
 }

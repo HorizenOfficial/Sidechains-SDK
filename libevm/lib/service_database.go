@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 type Database struct {
@@ -23,9 +24,7 @@ type LevelDBParams struct {
 func (s *Service) open(storage ethdb.Database) int {
 	db := &Database{
 		storage:  storage,
-		database: state.NewDatabase(storage),
-		// TODO: enable caching
-		//database: state.NewDatabaseWithConfig(storage, &trie.Config{Cache: 16})
+		database: state.NewDatabaseWithConfig(storage, &trie.Config{Cache: 256}),
 	}
 	return s.databases.Add(db)
 }
@@ -37,7 +36,7 @@ func (s *Service) OpenMemoryDB() (error, int) {
 
 func (s *Service) OpenLevelDB(params LevelDBParams) (error, int) {
 	log.Info("initializing leveldb", "path", params.Path)
-	storage, err := rawdb.NewLevelDBDatabase(params.Path, 0, 0, "zen/db/data/", false)
+	storage, err := rawdb.NewLevelDBDatabase(params.Path, 256, 0, "zen/db/data/", false)
 	if err != nil {
 		log.Error("failed to initialize database", "error", err)
 		return err, 0
