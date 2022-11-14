@@ -29,7 +29,6 @@ trait SidechainTypes {
 
   implicit def sidechainTxToScbt(t: SidechainTransaction[Proposition, Box[Proposition]]): SCBT = t.asInstanceOf[SCBT]
 
-  //implicit def ethereumTxToScat(t: EthereumTransaction): SCAT = t.asInstanceOf[SCAT]
   implicit def ethereumNewTxToScat(t: EthereumTransactionNew): SCAT = t.asInstanceOf[SCAT]
 
   implicit def sidechainTxListToScbtList(tl: JList[SidechainTransaction[Proposition, Box[Proposition]]]): JList[SCBT] = tl.asInstanceOf[JList[SCBT]]

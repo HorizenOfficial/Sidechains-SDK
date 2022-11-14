@@ -282,7 +282,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       entity(as[ReqRawTransaction]) { body =>
         // lock the view and try to create CoreTransaction
         applyOnNodeView { sidechainNodeView =>
-          //var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
           var signedTx = EthereumTransactionNewDecoder.decode(body.payload)
           if (!signedTx.isSigned) {
             val txCost = signedTx.getMaxCost
@@ -308,7 +307,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       entity(as[ReqRawTransaction]) {
         body => {
           applyOnNodeView { sidechainNodeView =>
-            //var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
             var signedTx = EthereumTransactionNewDecoder.decode(body.payload)
 
             val txCost = signedTx.getMaxCost
