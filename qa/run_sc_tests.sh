@@ -52,6 +52,7 @@ testScripts=(
     'sc_evm_forger.py'
     'sc_evm_closed_forger.py'
     'sc_evm_forging_fee_payments.py'
+    'sc_evm_fee_payments_rpc.py'
     'sc_evm_mempool.py'
     'sc_evm_mempool_invalid_txs.py'
     'sc_evm_orphan_txs.py'
