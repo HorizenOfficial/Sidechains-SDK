@@ -3,7 +3,6 @@ package com.horizen.account.fixtures
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.state.GasUtil
 import com.horizen.account.transaction.EthereumTransactionNew
-import com.horizen.account.utils.EthereumTransactionUtils
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
@@ -32,12 +31,10 @@ trait EthereumTransactionNewFixture {
                               pairOpt: Option[ECKeyPair] = None,
                               gasPrice: BigInteger = BigInteger.valueOf(10000),
                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransactionNew = {
-    var signData = new Sign.SignatureData(
+    val signData = new Sign.SignatureData(
       BytesUtils.fromHexString("26"), // chain id 1 (1*2+36)
-      SignatureSecp256k1.EMPTY_SIGNATURE_RS,
-      SignatureSecp256k1.EMPTY_SIGNATURE_RS
-      //Array[Byte](0),
-      //Array[Byte](0)
+      SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
+      SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS
     )
     val unsignedTx = new EthereumTransactionNew(
       "0x1234567890123456789012345678901234567890", nonce, gasPrice, gasLimit, value, "", signData)
@@ -186,7 +183,7 @@ trait EthereumTransactionNewFixture {
     )
   }
 
-  def getUnsignedEip155LegacyTransaction: EthereumTransactionNew = {
+  def getPartiallySignedEip155LegacyTransaction: EthereumTransactionNew = {
     new EthereumTransactionNew(
       "0x3535353535353535353535353535353535353535",
       BigInteger.valueOf(9L), // nonce
@@ -196,10 +193,8 @@ trait EthereumTransactionNewFixture {
       "",
       new SignatureData(
         BytesUtils.fromHexString("25"), // chain id 1 (1*2+35)
-        //Array[Byte](0),
-        //Array[Byte](0)
-        SignatureSecp256k1.EMPTY_SIGNATURE_RS,
-        SignatureSecp256k1.EMPTY_SIGNATURE_RS
+        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
+        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS
       )
     )
   }

@@ -18,7 +18,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransactionNew
-import com.horizen.account.utils.{EthereumTransactionNewDecoder, EthereumTransactionUtils, ZenWeiConverter}
+import com.horizen.account.utils.{EthereumTransactionNewDecoder, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -29,7 +29,7 @@ import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey2
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Sign.{CHAIN_ID_INC, SignatureData}
+import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
 import sparkz.core.settings.RESTApiSettings
 
@@ -146,10 +146,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val isEIP155 = body.EIP155.getOrElse(false)
               val response = if (isEIP155) {
-                val encodedChainId =
-                  BigInteger.valueOf(params.chainId)
-                    .multiply(BigInteger.TWO)
-                    .add(BigInteger.valueOf(CHAIN_ID_INC)).intValue()
+                val encodedChainId = EthereumTransactionNew.encodeEip155ChainId(params.chainId)
                 val tmpTx = new EthereumTransactionNew(
                   destAddress,
                   nonce,
@@ -158,11 +155,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   valueInWei,
                   "",
                   new SignatureData(
-                    EthereumTransactionUtils.convertToBytes(encodedChainId),
-                    //Array[Byte](0),
-                    //Array[Byte](0)
-                    SignatureSecp256k1.EMPTY_SIGNATURE_RS,
-                    SignatureSecp256k1.EMPTY_SIGNATURE_RS
+                    encodedChainId.toByteArray,
+                    SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
+                    SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS
                   )
                 )
                 validateAndSendTransaction(signTransactionEIP155WithSecret(secret, tmpTx))

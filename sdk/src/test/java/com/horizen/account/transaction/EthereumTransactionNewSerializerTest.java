@@ -13,78 +13,10 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.math.BigInteger;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.util.Optional;
 
 import static org.junit.Assert.*;
 
 public class EthereumTransactionNewSerializerTest implements EthereumTransactionNewFixture {
-
-    /*
-    EthereumTransactionNew ethereumTransaction;
-    EthereumTransactionNew signedEthereumTransaction;
-
-    private void initSerializationTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        // Create the raw Transaction
-        String payload = "This is string to sign";
-        var message = payload.getBytes(StandardCharsets.UTF_8);
-        var someValue = BigInteger.ONE;
-        var rawTransaction = RawTransaction.createTransaction(someValue,
-                someValue, someValue, "0x", someValue, "");
-
-        // Create a key pair, create tx signature and create ethereum Transaction
-        ECKeyPair pair = Keys.createEcKeyPair();
-        var msgSignature = Sign.signMessage(message, pair, true);
-
-        var signedRawTransaction = new SignedRawTransaction(someValue,
-                someValue, someValue, "0x", someValue, "",
-                msgSignature);
-        ethereumTransaction = new EthereumTransactionNew(rawTransaction);
-        signedEthereumTransaction = new EthereumTransactionNew(signedRawTransaction);
-    }
-
-    @Test
-    public void ethereumTransactionSerializeTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        initSerializationTest();
-
-        // Get transaction serializer and serialize
-        TransactionSerializer serializer = ethereumTransaction.serializer();
-        byte[] bytes = serializer.toBytes(ethereumTransaction);
-
-        // Test 1: Correct bytes deserialization
-        Try<EthereumTransactionNew> t = serializer.parseBytesTry(bytes);
-
-        assertTrue("Transaction serialization failed.", t.isSuccess());
-
-        assertEquals("Deserialized transactions expected to be equal", ethereumTransaction.toString(), t.get().toString());
-
-        // Test 2: try to parse broken bytes
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
-        assertTrue("Failure during parsing expected", failureExpected);
-    }
-
-    @Test
-    public void ethereumTransactionSerializeSignedTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        initSerializationTest();
-
-        // Get transaction serializer and serialize
-        TransactionSerializer serializer = signedEthereumTransaction.serializer();
-        byte[] bytes = serializer.toBytes(signedEthereumTransaction);
-
-        // Test 1: Correct bytes deserialization
-        Try<EthereumTransactionNew> t = serializer.parseBytesTry(bytes);
-
-        assertTrue("Transaction serialization failed.", t.isSuccess());
-
-        assertEquals("Deserialized transactions expected to be equal", signedEthereumTransaction.toString(), t.get().toString());
-
-        // Test 2: try to parse broken bytes
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
-        assertTrue("Failure during parsing expected", failureExpected);
-    }
-    */
 
     // Check that using the same key pair for signing two transactions give the same from address
     @Test
@@ -116,7 +48,7 @@ public class EthereumTransactionNewSerializerTest implements EthereumTransaction
         }
 
         // different signatures but same from address
-        assertTrue(!tx1.getSignature().equals(tx2.getSignature()));
+        assertNotEquals(tx1.getSignature(), tx2.getSignature());
         assertEquals(tx1.getFromAddress(), tx2.getFromAddress());
 
         var maxFeePerGas = BigInteger.valueOf(15);
@@ -130,7 +62,7 @@ public class EthereumTransactionNewSerializerTest implements EthereumTransaction
         }
 
         // different signatures but same from address
-        assertTrue(!tx1.getSignature().equals(tx3.getSignature()));
+        assertNotEquals(tx1.getSignature(), tx3.getSignature());
         assertEquals(tx1.getFromAddress(), tx3.getFromAddress());
 
         var tx4 = createLegacyEip155Transaction(value, nonce.add(BigInteger.ONE), account1KeyPair, gasPrice, gasLimit);
@@ -142,7 +74,7 @@ public class EthereumTransactionNewSerializerTest implements EthereumTransaction
         }
 
         // different signatures but same from address
-        assertTrue(!tx1.getSignature().equals(tx4.getSignature()));
+        assertNotEquals(tx1.getSignature(), tx4.getSignature());
         assertEquals(tx1.getFromAddress(), tx4.getFromAddress());
     }
 
@@ -177,8 +109,8 @@ public class EthereumTransactionNewSerializerTest implements EthereumTransaction
     }
 
     @Test
-    public void regressionTestUnsignedEip155() {
-        EthereumTransactionNew transaction = getUnsignedEip155LegacyTransaction();
+    public void regressionTestPartiallySignedEip155() {
+        EthereumTransactionNew transaction = getPartiallySignedEip155LegacyTransaction();
         doTest(transaction, "ethereumtransaction_eoa2eoa_eip155_legacy_unsigned_hex", false);
     }
 
@@ -224,6 +156,8 @@ public class EthereumTransactionNewSerializerTest implements EthereumTransaction
         assertTrue("Transaction serialization failed.", t.isSuccess());
 
         EthereumTransactionNew parsedTransaction = t.get();
+        System.out.println(transaction.id());
+        System.out.println(parsedTransaction.id());
         assertEquals("Transaction is different to the origin.", transaction.id(), parsedTransaction.id());
     }
 }

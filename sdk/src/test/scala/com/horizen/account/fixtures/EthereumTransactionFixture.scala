@@ -166,10 +166,8 @@ trait EthereumTransactionFixture {
       "",
       new SignatureData(
         BytesUtils.fromHexString("25"), // chain id 1 (1*2+35)
-        //Array[Byte](0),
-        //Array[Byte](0)
-        SignatureSecp256k1.EMPTY_SIGNATURE_RS,
-        SignatureSecp256k1.EMPTY_SIGNATURE_RS
+        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
+        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS
       )
     )
   }

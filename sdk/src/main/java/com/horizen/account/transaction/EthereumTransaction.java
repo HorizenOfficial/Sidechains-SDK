@@ -81,8 +81,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private static boolean isNullEip155Signature(SignatureData data) {
         if (data == null)
             return false;
-        return data.getR().equals(SignatureSecp256k1.EMPTY_SIGNATURE_RS) &&
-                data.getS().equals(SignatureSecp256k1.EMPTY_SIGNATURE_RS);
+        return data.getR().equals(SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS) &&
+                data.getS().equals(SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS);
     }
 
     // creates an eip1559 transaction
@@ -323,7 +323,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         else if (this.isSigned()) {
             var signedTx = (SignedRawTransaction) this.transaction;
             var sigData = signedTx.getSignatureData();
-            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0 && sigData.getS().length == 1 && sigData.getR().length == 1) {
+            if (/*sigData.getS()[0] == 0 && sigData.getR()[0] == 0 &&*/ sigData.getS().length == 0 && sigData.getR().length == 0) {
                 // for a not-really signed legacy tx implementing EIP155, here the chainid is the V itself
                 // the caller needs it for encoding the tx properly
                 return EthereumTransactionUtils.convertToLong(sigData.getV());
@@ -387,7 +387,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @JsonIgnore
     public String getFromAddress() {
-        if (this.isSigned() && checkSignatureDataSizes(getSignatureData())) try {
+        if (
+                this.isSigned() &&
+                        checkSignatureDataSizes(getSignatureData()) &&
+                        (getSignatureData().getR().length != 0 && getSignatureData().getS().length != 0)
+        ) try {
             return ((SignedRawTransaction) this.transaction).getFrom();
         } catch (SignatureException ignored) {
         } catch (IllegalArgumentException ignored) {

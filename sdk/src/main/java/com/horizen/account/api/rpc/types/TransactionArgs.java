@@ -13,10 +13,8 @@ import com.horizen.evm.utils.Address;
 import com.horizen.params.NetworkParams;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
-
 import java.math.BigInteger;
 
-import static org.web3j.crypto.Sign.CHAIN_ID_INC;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
@@ -70,13 +68,13 @@ public class TransactionArgs {
         switch (saneType) {
             case 0:
                 // Legacy TODO we are handling it as a EIP155, but it is not always like that!!!!
-                var encodedChainId =
-                        BigInteger.valueOf(saneChainId)
-                                .multiply(BigInteger.TWO)
-                                .add(BigInteger.valueOf(CHAIN_ID_INC)).intValue();
+                var encodedChainId = EthereumTransactionNew.encodeEip155ChainId(saneChainId);
+
                 var prepared = new Sign.SignatureData(
-                        //BigInteger.valueOf(encodedChainId).toByteArray(), new byte[] { 0 }, new byte[] { 0 });
-                        BigInteger.valueOf(encodedChainId).toByteArray(), SignatureSecp256k1.EMPTY_SIGNATURE_RS, SignatureSecp256k1.EMPTY_SIGNATURE_RS);
+                        encodedChainId.toByteArray(),
+                        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
+                        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS);
+
                 return new EthereumTransactionNew(saneTo, nonce, gasPrice, gas, value, this.getDataString(), prepared);
             case 2:
                 // EIP-1559

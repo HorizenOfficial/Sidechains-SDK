@@ -87,7 +87,7 @@ class EthereumTransactionNewJsonSerializationTest
 
   @Test
   def testUnsignedEip155TxToJson(): Unit = {
-    val transaction = getUnsignedEip155LegacyTransaction
+    val transaction = getPartiallySignedEip155LegacyTransaction
     evalJsonRepr(transaction)
   }
 
@@ -117,7 +117,7 @@ class EthereumTransactionNewJsonSerializationTest
     }
 
     // optional, can be empty for contract deployment
-    if (!node.path("to").isEmpty) {
+    if (!node.path("to").isMissingNode) {
       try {
         val toAddress = node.path("to").path("address").asText()
         assertEquals("Transaction to address json value must be the same.",
@@ -174,11 +174,11 @@ class EthereumTransactionNewJsonSerializationTest
       } catch {
         case _: Throwable => fail("Transaction gasPrice not found in json.")
       }
-      assertTrue(node.path("maxFeePerGas").isEmpty)
-      assertTrue(node.path("maxPriorityFeePerGas").isEmpty)
+      assertTrue(node.path("maxFeePerGas").isMissingNode)
+      assertTrue(node.path("maxPriorityFeePerGas").isMissingNode)
     } else
     if (txType == TransactionType.EIP1559.getRlpType) {
-      assertTrue(node.path("gasPrice").isEmpty)
+      assertTrue(node.path("gasPrice").isMissingNode)
 
       try {
         val maxFeePerGas = node.path("maxFeePerGas").bigIntegerValue()
@@ -223,7 +223,7 @@ class EthereumTransactionNewJsonSerializationTest
 
 
     // optional, can be empty for legacy non eip155 signed tx
-    if (!node.path("chainId").isEmpty) {
+    if (!node.path("chainId").isMissingNode) {
       try {
         val chainId = node.path("chainId").asLong()
         assertEquals("Transaction chainId json value must be the same.",

@@ -73,8 +73,8 @@ public class EthereumTransactionNew extends AccountTransaction<AddressPropositio
     private static boolean isPartialEip155Signature(SignatureData data) {
         if (data == null)
             return false;
-        return data.getR().equals(SignatureSecp256k1.EMPTY_SIGNATURE_RS) &&
-               data.getS().equals(SignatureSecp256k1.EMPTY_SIGNATURE_RS);
+        return data.getR().length == SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS_SIZE &&
+               data.getS().length == SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS_SIZE;
     }
 
     // creates a signed transaction from an existing one
@@ -234,8 +234,8 @@ public class EthereumTransactionNew extends AccountTransaction<AddressPropositio
 
         if (signatureData != null) {
             result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getV())));
-            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getR())));
-            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getS())));
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getR())));
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getS())));
         }
 
         return result;
@@ -455,7 +455,8 @@ public class EthereumTransactionNew extends AccountTransaction<AddressPropositio
             if (isPartialEip155Signature(sigData)) {
                 // for a not-really signed legacy tx implementing EIP155, here the chainid is the V itself
                 // the caller needs it for encoding the tx properly
-                return EthereumTransactionUtils.convertToLong(sigData.getV());
+                return extractEip155ChainId();
+
             } else {
                 // for a fully signed legacy tx implementing EIP155
                 return extractEip155ChainId();
@@ -558,7 +559,7 @@ public class EthereumTransactionNew extends AccountTransaction<AddressPropositio
 
         Sign.SignatureData signatureData =
                 new Sign.SignatureData(longToBytes(chainId),
-                        SignatureSecp256k1.EMPTY_SIGNATURE_RS, SignatureSecp256k1.EMPTY_SIGNATURE_RS);
+                        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS, SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS);
         return encode(signatureData);
     }
 

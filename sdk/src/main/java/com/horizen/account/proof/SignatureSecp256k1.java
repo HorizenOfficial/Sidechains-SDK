@@ -24,12 +24,17 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     @JsonProperty("s")
     private final byte[] s;
 
-    public static final byte[] EMPTY_SIGNATURE_RS = new byte[Secp256k1.SIGNATURE_RS_SIZE];
+    public static final int EIP155_PARTIAL_SIGNATURE_RS_SIZE = 0;
+    public static final byte[] EIP155_PARTIAL_SIGNATURE_RS = new byte[EIP155_PARTIAL_SIGNATURE_RS_SIZE];
 
     public static boolean checkSignatureDataSizes(byte[] v, byte[] r, byte[] s) {
         return (v.length > 0 && v.length <= Secp256k1.SIGNATURE_V_MAXSIZE) &&
-               (r.length == Secp256k1.SIGNATURE_RS_SIZE) &&
-               (s.length == Secp256k1.SIGNATURE_RS_SIZE);
+            (
+                // a regular signature
+                (r.length == Secp256k1.SIGNATURE_RS_SIZE      && s.length == Secp256k1.SIGNATURE_RS_SIZE) ||
+                // or a partially signed eip155 legacy signature
+                (r.length == EIP155_PARTIAL_SIGNATURE_RS_SIZE && s.length == EIP155_PARTIAL_SIGNATURE_RS_SIZE)
+            );
     }
 
     private static void verifySignatureData(byte[] v, byte[] r, byte[] s) {
@@ -37,10 +42,12 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             throw new IllegalArgumentException("Null v/r/s obj passed in signature data");
         if  (!checkSignatureDataSizes(v, r, s)) {
             throw new IllegalArgumentException(String.format(
-                    "Incorrect signature data obj size: v=%d (expected 0<v<=%d); r=%d (expected %d); s=%d (expected %d)",
+                    "Incorrect signature data obj size: v=%d (expected 0<v<=%d); r/s==%d/%d (expected %d/%d or %d/%d)",
                     v.length, Secp256k1.SIGNATURE_V_MAXSIZE,
-                    r.length, Secp256k1.SIGNATURE_RS_SIZE,
-                    s.length, Secp256k1.SIGNATURE_RS_SIZE
+                    r.length, s.length,
+                    Secp256k1.SIGNATURE_RS_SIZE, Secp256k1.SIGNATURE_RS_SIZE,
+                    EIP155_PARTIAL_SIGNATURE_RS_SIZE, EIP155_PARTIAL_SIGNATURE_RS_SIZE
+
             ));
         }
     }
