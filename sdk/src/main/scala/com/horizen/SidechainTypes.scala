@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
+import com.horizen.account.transaction.{AccountTransaction, EthereumTransactionNew}
 
 import language.implicitConversions
 import java.util.{List => JList}
@@ -29,7 +29,8 @@ trait SidechainTypes {
 
   implicit def sidechainTxToScbt(t: SidechainTransaction[Proposition, Box[Proposition]]): SCBT = t.asInstanceOf[SCBT]
 
-  implicit def ethereumTxToScat(t: EthereumTransaction): SCAT = t.asInstanceOf[SCAT]
+  //implicit def ethereumTxToScat(t: EthereumTransaction): SCAT = t.asInstanceOf[SCAT]
+  implicit def ethereumNewTxToScat(t: EthereumTransactionNew): SCAT = t.asInstanceOf[SCAT]
 
   implicit def sidechainTxListToScbtList(tl: JList[SidechainTransaction[Proposition, Box[Proposition]]]): JList[SCBT] = tl.asInstanceOf[JList[SCBT]]
 

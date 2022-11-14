@@ -16,15 +16,22 @@ import com.horizen.utils.BytesUtils;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.crypto.*;
 import org.web3j.crypto.Sign.SignatureData;
-import org.web3j.crypto.transaction.type.LegacyTransaction;
-import org.web3j.crypto.transaction.type.Transaction1559;
+import org.web3j.crypto.exception.CryptoWeb3jException;
 import org.web3j.crypto.transaction.type.TransactionType;
+import org.web3j.rlp.RlpEncoder;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
+import org.web3j.rlp.RlpType;
+import org.web3j.utils.Bytes;
 import org.web3j.utils.Numeric;
-
 import javax.annotation.Nullable;
 import java.math.BigInteger;
-import java.security.SignatureException;
-import java.util.Objects;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.web3j.crypto.Sign.CHAIN_ID_INC;
+import static org.web3j.crypto.Sign.LOWER_REAL_V;
 
 @JsonPropertyOrder({
         "id", "from", "to", "value", "nonce", "data",
@@ -33,60 +40,96 @@ import java.util.Objects;
 })
 @JsonIgnoreProperties({"transaction", "encoder", "modifierTypeId"})
 @JsonView(Views.Default.class)
-public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
+public class EthereumTransactionNew extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
 
-    private final RawTransaction transaction;
+    private SignatureSecp256k1 signature;
+    private TransactionType type;
+    private BigInteger nonce;
+    private BigInteger gasPrice;
+    private BigInteger gasLimit;
+    private String to;
+    private BigInteger value;
+    private String data;
 
-    // depends on the transaction
-    public EthereumTransaction(
-            RawTransaction transaction
-    ) throws NullPointerException {
-        Objects.requireNonNull(transaction, "RawTransaction private data member is null!");
-        if (transaction instanceof SignedRawTransaction)
-            Objects.requireNonNull(((SignedRawTransaction) transaction).getSignatureData(), "signature data can not be null in a signed transaction!");
-        this.transaction = transaction;
+    private java.lang.Long chainId;
+    private BigInteger maxPriorityFeePerGas;
+    private BigInteger maxFeePerGas;
+
+    private boolean isEip1559Type;
+
+    private SignatureData signatureData() {
+        if (signature != null)
+            return new SignatureData(signature.getV(), signature.getR(), signature.getS());
+        return null;
+    }
+
+    private static boolean checkSignatureDataSizes(SignatureData data) {
+        if (data == null)
+            return false;
+        return SignatureSecp256k1.checkSignatureDataSizes(
+                data.getV(), data.getR(), data.getS());
+    }
+
+    private static boolean isPartialEip155Signature(SignatureData data) {
+        if (data == null)
+            return false;
+        return data.getR().equals(SignatureSecp256k1.EMPTY_SIGNATURE_RS) &&
+               data.getS().equals(SignatureSecp256k1.EMPTY_SIGNATURE_RS);
+    }
+
+    // creates a signed transaction from an existing one
+    public EthereumTransactionNew(
+            EthereumTransactionNew txToSign,
+            @Nullable SignatureData signatureData
+    ) {
+        this.isEip1559Type = txToSign.isEip1559Type;
+        this.type = txToSign.type;
+        this.nonce = txToSign.nonce;
+        this.gasPrice = txToSign.gasPrice;
+        this.gasLimit = txToSign.gasLimit;
+        this.to = txToSign.to;
+        this.value = txToSign.value;
+        this.data = txToSign.data;
+
+        this.chainId = txToSign.chainId;
+        this.maxPriorityFeePerGas = txToSign.maxPriorityFeePerGas;
+        this.maxFeePerGas = txToSign.maxFeePerGas;
+        if (signatureData != null) {
+            signature = new SignatureSecp256k1(signatureData);
+        } else {
+            signature = null;
+        }
     }
 
     // creates a legacy transaction
-    public EthereumTransaction(
+    public EthereumTransactionNew(
             @Nullable String to,
             @NotNull BigInteger nonce,
             @NotNull BigInteger gasPrice,
             @NotNull BigInteger gasLimit,
             @Nullable BigInteger value,
-            @Nullable String data,
-            @Nullable SignatureData signature
+            @NotNull String data,
+            @Nullable SignatureData signatureData
     ) {
-        this(signature != null ?
-                new SignedRawTransaction(
-                        RawTransaction.createTransaction(
-                                nonce,
-                                gasPrice,
-                                gasLimit,
-                                to != null ? to : "",
-                                value != null ? value :
-                                        BigInteger.ZERO,
-                                data
-                        ).getTransaction(),
-                        signature) :
-                RawTransaction.createTransaction(nonce, gasPrice, gasLimit, to, value, data)
-        );
-    }
+        if (signatureData != null) {
+            signature = new SignatureSecp256k1(signatureData);
+        }
+        this.isEip1559Type = false;
+        this.type = TransactionType.LEGACY;
+        this.nonce = nonce;
+        this.gasPrice = gasPrice;
+        this.gasLimit = gasLimit;
+        this.to = to;
+        this.value = value;
+        this.data = data;
 
-    private static boolean checkSignatureDataSizes(SignatureData signature) {
-        return SignatureSecp256k1.checkSignatureDataSizes(
-                signature.getV(), signature.getR(), signature.getS());
-    }
-
-    private static boolean isNullEip155Signature(SignatureData data) {
-        if (data == null)
-            return false;
-        return data.getR().equals(SignatureSecp256k1.EMPTY_SIGNATURE_RS) &&
-                data.getS().equals(SignatureSecp256k1.EMPTY_SIGNATURE_RS);
+        this.chainId = null;
+        this.maxPriorityFeePerGas = null;
+        this.maxFeePerGas = null;
     }
 
     // creates an eip1559 transaction
-    public EthereumTransaction(
+    public EthereumTransactionNew(
             long chainId,
             @Nullable String to,
             @NotNull BigInteger nonce,
@@ -95,24 +138,28 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             @NotNull BigInteger maxFeePerGas,
             @Nullable BigInteger value,
             @Nullable String data,
-            @Nullable SignatureData signature
+            @Nullable SignatureData signatureData
     ) {
-        this(
-                signature != null ?
-                        new SignedRawTransaction(
-                                RawTransaction.createTransaction(chainId, nonce, gasLimit, to != null ? to : "", value != null ? value :
-                                        BigInteger.ZERO, data, maxPriorityFeePerGas, maxFeePerGas).getTransaction(), signature)
-                        : RawTransaction.createTransaction(chainId, nonce, gasLimit, to != null ? to : "", value != null ? value :
-                        BigInteger.ZERO, data, maxPriorityFeePerGas, maxFeePerGas)
-        );
-    }
+        if (signatureData != null) {
+            signature = new SignatureSecp256k1(signatureData);
+        }
+        this.isEip1559Type = true;
+        this.type = TransactionType.EIP1559;
+        this.nonce = nonce;
+        this.gasPrice = null;
+        this.gasLimit = gasLimit;
+        this.to = to;
+        this.value = value;
+        this.data = data;
 
-    public RawTransaction getTransaction() {
-        return this.transaction;
+        this.chainId = chainId;
+        this.maxPriorityFeePerGas = maxPriorityFeePerGas;
+        this.maxFeePerGas = maxFeePerGas;
+
     }
 
     public boolean isSigned() {
-        return this.transaction instanceof SignedRawTransaction;
+        return signature != null;
     }
 
     @Override
@@ -120,29 +167,111 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return AccountTransactionsIdsEnum.EthereumTransactionId.id();
     }
 
+    public List<RlpType> eip1559AsRlpValues(Sign.SignatureData signatureData) {
+
+        List<RlpType> result = new ArrayList<>();
+
+        result.add(RlpString.create(getChainId()));
+
+        result.add(RlpString.create(getNonce()));
+
+        // add maxPriorityFeePerGas and maxFeePerGas if this is an EIP-1559 transaction
+        result.add(RlpString.create(getMaxPriorityFeePerGas()));
+        result.add(RlpString.create(getMaxFeePerGas()));
+
+        result.add(RlpString.create(getGasLimit()));
+
+        // an empty to address (contract creation) should not be encoded as a numeric 0 value
+        if (to != null && to.length() > 0) {
+            // addresses that start with zeros should be encoded with the zeros included, not
+            // as numeric values
+            result.add(RlpString.create(Numeric.hexStringToByteArray(to)));
+        } else {
+            result.add(RlpString.create(""));
+        }
+
+        result.add(RlpString.create(getValue()));
+
+        // value field will already be hex encoded, so we need to convert into binary first
+        byte[] data = Numeric.hexStringToByteArray(this.data);
+        result.add(RlpString.create(data));
+
+        // access list
+        result.add(new RlpList());
+
+        if (signatureData != null) {
+            result.add(RlpString.create(Sign.getRecId(signatureData, getChainId())));
+            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getR())));
+            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getS())));
+        }
+
+        return result;
+    }
+
+    public List<RlpType> legacyAsRlpValues(Sign.SignatureData signatureData) {
+
+        List<RlpType> result = new ArrayList<>();
+
+        result.add(RlpString.create(this.getNonce()));
+
+        result.add(RlpString.create(this.getGasPrice()));
+        result.add(RlpString.create(this.getGasLimit()));
+
+        // an empty to address (contract creation) should not be encoded as a numeric 0 value
+        if (this.to != null && this.to.length() > 0) {
+            // addresses that start with zeros should be encoded with the zeros included, not
+            // as numeric values
+            result.add(RlpString.create(Numeric.hexStringToByteArray(to)));
+        } else {
+            result.add(RlpString.create(""));
+        }
+
+        result.add(RlpString.create(getValue()));
+
+        // value field will already be hex encoded, so we need to convert into binary first
+        byte[] dataBytes = Numeric.hexStringToByteArray(this.data);
+        result.add(RlpString.create(dataBytes));
+
+        if (signatureData != null) {
+            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getV())));
+            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getR())));
+            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getS())));
+        }
+
+        return result;
+    }
+
     @Override
     @JsonProperty("id")
     public String id() {
         byte[] encodedMessage;
-        if (this.isSigned()) {
-            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
-            encodedMessage = TransactionEncoder.encode(this.getTransaction(),
-                    stx.getSignatureData());
-        } else encodedMessage = TransactionEncoder.encode(this.getTransaction());
+        if (isEIP1559()) {
+            List<RlpType> values  = this.eip1559AsRlpValues(this.signatureData());
+            RlpList rlpList = new RlpList(values);
+            byte[] encodedMessagePre = RlpEncoder.encode(rlpList);
+            encodedMessage = ByteBuffer.allocate(encodedMessagePre.length + 1)
+                    .put(this.type.getRlpType())
+                    .put(encodedMessagePre)
+                    .array();
+        } else {
+            List<RlpType> values  = this.legacyAsRlpValues(this.signatureData());
+            RlpList rlpList = new RlpList(values);
+            encodedMessage = RlpEncoder.encode(rlpList);
+        }
         return BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
     }
 
     @Override
     @JsonProperty("version")
     public byte version() {
-        if (transaction.getType() == TransactionType.LEGACY)
+        if (this.type == TransactionType.LEGACY)
             return 0x0;
-        return transaction.getType().getRlpType();
+        return this.type.getRlpType();
     }
 
     @Override
     public TransactionSerializer serializer() {
-        return EthereumTransactionSerializer.getSerializer();
+        return EthereumTransactionNewSerializer.getSerializer();
     }
 
     @Override
@@ -234,14 +363,14 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public BigInteger getNonce() {
-        return this.transaction.getNonce();
+        return this.nonce;
     }
 
     @Override
     @JsonIgnore
     public BigInteger getGasPrice() {
         if (!this.isEIP1559())
-            return this.legacyTx().getGasPrice();
+            return this.gasPrice;
         //in Geth for EIP1559 tx gasPrice returns gasFeeCap
         return getMaxFeePerGas();
     }
@@ -249,7 +378,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonProperty("gasPrice")
     public BigInteger getJsonGasPrice() {
         if (!this.isEIP1559())
-            return this.legacyTx().getGasPrice();
+            return this.gasPrice;
         // for eip1559 tx this not an attribute of the object, it is computed using baseFee which depends on block height
         return null;
     }
@@ -258,16 +387,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonIgnore
     public BigInteger getMaxFeePerGas() {
         if (this.isEIP1559())
-            return this.eip1559Tx().getMaxFeePerGas();
+            return this.maxFeePerGas;
         else
             //in Geth for Legacy tx gasFeeCap is equal to gasPrice
-            return this.legacyTx().getGasPrice();
+            return this.gasPrice;
     }
 
     @JsonProperty("maxFeePerGas")
     public BigInteger getJsonMaxFeePerGas() {
         if (this.isEIP1559())
-            return this.eip1559Tx().getMaxFeePerGas();
+            return this.maxFeePerGas;
         return null;
     }
 
@@ -275,16 +404,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonIgnore
     public BigInteger getMaxPriorityFeePerGas() {
         if (this.isEIP1559())
-            return this.eip1559Tx().getMaxPriorityFeePerGas();
+            return this.maxPriorityFeePerGas;
         else
             //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
-            return this.legacyTx().getGasPrice();
+            return this.gasPrice;
     }
 
     @JsonProperty("maxPriorityFeePerGas")
     public BigInteger getJsonMaxPriorityFeePerGas() {
         if (this.isEIP1559())
-            return this.eip1559Tx().getMaxPriorityFeePerGas();
+            return this.maxPriorityFeePerGas;
         return null;
     }
 
@@ -319,17 +448,17 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     public Long getChainId() {
         if (this.isEIP1559())
-            return this.eip1559Tx().getChainId();
+            return this.chainId;
         else if (this.isSigned()) {
-            var signedTx = (SignedRawTransaction) this.transaction;
-            var sigData = signedTx.getSignatureData();
-            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0 && sigData.getS().length == 1 && sigData.getR().length == 1) {
+            var sigData = signatureData();
+            //if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0 && sigData.getS().length == 1 && sigData.getR().length == 1) {
+            if (isPartialEip155Signature(sigData)) {
                 // for a not-really signed legacy tx implementing EIP155, here the chainid is the V itself
                 // the caller needs it for encoding the tx properly
                 return EthereumTransactionUtils.convertToLong(sigData.getV());
             } else {
                 // for a fully signed legacy tx implementing EIP155
-                return ((SignedRawTransaction) this.transaction).getChainId();
+                return extractEip155ChainId();
             }
         }
 
@@ -337,29 +466,41 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public boolean isEIP1559() {
-        return this.transaction.getTransaction() instanceof Transaction1559;
+        return this.isEip1559Type;
     }
 
-    private Transaction1559 eip1559Tx() {
-        return (Transaction1559) this.transaction.getTransaction();
+    public Long extractEip155ChainId() {
+        // for a fully signed legacy tx implementing EIP155
+        BigInteger bv = Numeric.toBigInt(signatureData().getV());
+        return decodeEip155ChainId(bv);
     }
 
-    private LegacyTransaction legacyTx() {
-        return (LegacyTransaction) this.transaction.getTransaction();
+    public static BigInteger encodeEip155ChainId(Long inChainId) {
+        return BigInteger.valueOf(inChainId)
+                        .multiply(BigInteger.TWO)
+                        .add(BigInteger.valueOf(CHAIN_ID_INC));
+    }
+
+    public static Long decodeEip155ChainId(BigInteger inChainId) {
+        long v = inChainId.longValue();
+        if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
+            return null;
+        }
+        return (v - CHAIN_ID_INC) / 2;
     }
 
     @Override
     public BigInteger getGasLimit() {
-        return this.transaction.getGasLimit();
+        return this.gasLimit;
     }
 
     @Override
     public AddressProposition getFrom() {
-        if (this.isSigned() &&
-                checkSignatureDataSizes(getSignatureData()) &&
-                !isNullEip155Signature(getSignatureData())
-        )
+        if (this.isSigned() && checkSignatureDataSizes(getSignatureData()) &&
+            !isPartialEip155Signature(getSignatureData())
+        ) {
             return new AddressProposition(Numeric.hexStringToByteArray(getFromAddress()));
+        }
         return null;
     }
 
@@ -382,52 +523,111 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @JsonIgnore
     public String getToAddress() {
-        return this.transaction.getTo();
+        return this.to;
+    }
+
+    public byte[] encode(SignatureData signatureData) {
+        List<RlpType> values;
+        if (type.isEip1559()) {
+            values = eip1559AsRlpValues(signatureData);
+        } else {
+            values = legacyAsRlpValues(signatureData);
+        }
+        RlpList rlpList = new RlpList(values);
+        byte[] encoded = RlpEncoder.encode(rlpList);
+
+        if (type.isEip1559()) {
+            return ByteBuffer.allocate(encoded.length + 1)
+                    .put(type.getRlpType())
+                    .put(encoded)
+                    .array();
+        }
+        return encoded;
+    }
+
+    private static byte[] longToBytes(long x) {
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.putLong(x);
+        return buffer.array();
+    }
+
+    public byte[] encode(Long chainId) {
+        if (!type.isLegacy()) {
+            throw new CryptoWeb3jException("Incorrect transaction type. Tx type should be Legacy.");
+        }
+
+        Sign.SignatureData signatureData =
+                new Sign.SignatureData(longToBytes(chainId),
+                        SignatureSecp256k1.EMPTY_SIGNATURE_RS, SignatureSecp256k1.EMPTY_SIGNATURE_RS);
+        return encode(signatureData);
+    }
+
+    public byte[] getEncodedTransaction(Long chainId, SignatureData signatureData) {
+        if (null == chainId) {
+            return this.encode(signatureData);
+        } else {
+            return this.encode(chainId);
+        }
+    }
+
+    private byte getRealV(BigInteger bv) {
+        long v = bv.longValue();
+        if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
+            return (byte) v;
+        }
+        byte realV = LOWER_REAL_V;
+        int inc = 0;
+        if ((int) v % 2 == 0) {
+            inc = 1;
+        }
+        return (byte) (realV + inc);
     }
 
     @JsonIgnore
     public String getFromAddress() {
-        if (this.isSigned() && checkSignatureDataSizes(getSignatureData())) try {
-            return ((SignedRawTransaction) this.transaction).getFrom();
-        } catch (SignatureException ignored) {
-        } catch (IllegalArgumentException ignored) {
+        if (this.isSigned()
+                && checkSignatureDataSizes(getSignatureData())
+                && !isPartialEip155Signature(getSignatureData())
+        ) {
+            try {
+                byte[] encodedTransaction = getEncodedTransaction(extractEip155ChainId(), null);
+                BigInteger v = Numeric.toBigInt(getSignatureData().getV());
+                byte[] r = getSignatureData().getR();
+                byte[] s = getSignatureData().getS();
+                Sign.SignatureData signatureDataV = new Sign.SignatureData(getRealV(v), r, s);
+                BigInteger key = Sign.signedMessageToKey(encodedTransaction, signatureDataV);
+                return "0x" + Keys.getAddress(key);
+            } catch (Throwable ignored) {
+                // whatever exception may result in processing the signature we return the empty string
+            }
         }
         return "";
     }
 
     @Override
     public BigInteger getValue() {
-        return this.transaction.getValue();
+        return this.value;
     }
 
     @Override
     public byte[] getData() {
-        return Numeric.hexStringToByteArray(transaction.getData());
+        return Numeric.hexStringToByteArray(this.data);
     }
 
     @Override
     public SignatureSecp256k1 getSignature() {
         if (this.isSigned() && checkSignatureDataSizes(getSignatureData())) {
-            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
             return new SignatureSecp256k1(
-                    new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},
-                    stx.getSignatureData().getR(),
-                    stx.getSignatureData().getS());
+                    new byte[]{getRealV(Numeric.toBigInt(signatureData().getV()))},
+                    signatureData().getR(),
+                    signatureData().getS());
         }
-        return null;
-    }
+        return null;    }
 
 
     @JsonIgnore
-    public Sign.SignatureData getSignatureData() {
-        if (this.isSigned()) {
-            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
-            return new Sign.SignatureData(
-                    stx.getSignatureData().getV(),
-                    stx.getSignatureData().getR(),
-                    stx.getSignatureData().getS());
-        }
-        return null;
+    public SignatureData getSignatureData() {
+        return signatureData();
     }
 
     // In case of EIP155 tx getV() returns the value carrying the chainId
@@ -448,6 +648,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public String toString() {
+
         if (this.isEIP1559())
             return String.format(
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
@@ -481,15 +682,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 (int)this.version(),
                 (isSigned() && checkSignatureDataSizes(getSignatureData())) ? new SignatureSecp256k1(getSignatureData()).toString() : ""
         );
+
     }
 
     @Override
     public byte[] messageToSign() {
-        if (this.transaction.getType().isLegacy() && this.isSigned()) {
+        if (this.type.isLegacy() && this.isSigned()) {
             // the chainid might be set also in legacy case due to EIP155
-            return ((SignedRawTransaction) this.transaction).getEncodedTransaction(this.getChainId());
+            return this.getEncodedTransaction(extractEip155ChainId(), null /*getSignatureData()*/);
         }
-        return TransactionEncoder.encode(this.transaction);
+        return this.encode((SignatureData) null /*this.signatureData()*/);
     }
 
     public Message asMessage(BigInteger baseFee) {

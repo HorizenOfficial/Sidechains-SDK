@@ -12,9 +12,9 @@ import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
-import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.transaction.EthereumTransactionNew
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.EthereumTransactionDecoder
+import com.horizen.account.utils.EthereumTransactionNewDecoder
 import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
@@ -25,7 +25,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.crypto.Sign.SignatureData
-import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
+import org.web3j.crypto.TransactionEncoder
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.NodeViewHolder.CurrentView
@@ -108,7 +108,7 @@ class EthService(
     nodeView.history
       .getStorageBlockById(blockId)
       .map(block => {
-        val transactions = block.transactions.map(_.asInstanceOf[EthereumTransaction])
+        val transactions = block.transactions.map(_.asInstanceOf[EthereumTransactionNew])
         new EthereumBlock(
           Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
           Numeric.prependHexPrefix(blockId),
@@ -178,7 +178,7 @@ class EthService(
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value)
         .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
-        .map(tx => Numeric.toHexString(TransactionEncoder.encode(tx.getTransaction, tx.getSignatureData)))
+        .map(tx => Numeric.toHexString(tx.encode(tx.getSignatureData)))
         .orNull
     }
   }
@@ -217,13 +217,13 @@ class EthService(
       )
   }
 
-  private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
+  private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransactionNew): EthereumTransactionNew = {
     val signature = secret.sign(tx.messageToSign())
     var signatureData = new SignatureData(signature.getV, signature.getR, signature.getS)
-    if (!tx.isEIP1559 && tx.isSigned && tx.getChainId != null) {
-      signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getChainId)
+    if (!tx.isEIP1559 && tx.isSigned && tx.extractEip155ChainId() != null) {
+      signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.extractEip155ChainId())
     }
-    new EthereumTransaction(new SignedRawTransaction(tx.getTransaction.getTransaction, signatureData))
+    new EthereumTransactionNew(tx, signatureData)
   }
 
   private def binarySearch(lowBound: BigInteger, highBound: BigInteger)(fun: BigInteger => Boolean): BigInteger = {
@@ -400,7 +400,7 @@ class EthService(
               .map(ModifierId(_))
               .flatMap(nodeView.history.getStorageBlockById)
               .map(block => {
-                val tx = block.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction]
+                val tx = block.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransactionNew]
                 (block, tx, receipt)
               })
           })
@@ -434,7 +434,7 @@ class EthService(
           block.transactions
             .drop(txIndex)
             .headOption
-            .map(_.asInstanceOf[EthereumTransaction])
+            .map(_.asInstanceOf[EthereumTransactionNew])
             .flatMap(tx =>
               using(nodeView.state.getView)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
                 .map(new EthereumTransactionView(_, tx, block.header.baseFee))
@@ -452,7 +452,7 @@ class EthService(
 
   @RpcMethod("eth_sendRawTransaction")
   def sendRawTransaction(signedTxData: String): String = {
-    val tx = new EthereumTransaction(EthereumTransactionDecoder.decode(signedTxData))
+    val tx = EthereumTransactionNewDecoder.decode(signedTxData)
     implicit val timeout: Timeout = new Timeout(5, SECONDS)
     // submit tx to sidechain transaction actor
     val submit = (sidechainTransactionActorRef ? BroadcastTransaction(tx)).asInstanceOf[Future[Future[ModifierId]]]
@@ -654,7 +654,7 @@ class EthService(
       stateView: AccountStateView,
       percentiles: Array[Double]
   ): Array[BigInteger] = {
-    val txs = block.transactions.map(_.asInstanceOf[EthereumTransaction])
+    val txs = block.transactions.map(_.asInstanceOf[EthereumTransactionNew])
     // return an all zero row if there are no transactions to gather data from
     if (txs.isEmpty) return percentiles.map(_ => BigInteger.ZERO)
 
@@ -685,7 +685,7 @@ class EthService(
     rewards
   }
 
-  private def getEffectiveGasTip(tx: EthereumTransaction, baseFee: BigInteger): BigInteger = {
+  private def getEffectiveGasTip(tx: EthereumTransactionNew, baseFee: BigInteger): BigInteger = {
     if (baseFee == null) tx.getMaxPriorityFeePerGas
     // we do not need to check if MaxFeePerGas is higher than baseFee, because the tx is already included in the block
     else tx.getMaxPriorityFeePerGas.min(tx.getMaxFeePerGas.subtract(baseFee))

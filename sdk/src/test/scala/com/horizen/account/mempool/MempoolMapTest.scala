@@ -1,9 +1,9 @@
 package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
-import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.fixtures.EthereumTransactionNewFixture
 import com.horizen.account.state.AccountStateReader
-import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.transaction.EthereumTransactionNew
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -17,7 +17,7 @@ import scala.util.Random
 
 class MempoolMapTest
     extends JUnitSuite
-    with EthereumTransactionFixture
+    with EthereumTransactionNewFixture
     with SidechainTypes
     with MockitoSugar {
 
@@ -667,7 +667,7 @@ class MempoolMapTest
     )
 
     //Create some additional exec txs
-    var txToRemove: EthereumTransaction = null
+    var txToRemove: EthereumTransactionNew = null
     (0 to 5).foreach(i => {
       val nonce = account1InitialStateNonce.add(BigInteger.valueOf(i))
       val tx = createEIP1559Transaction(value, nonce, account1KeyPairOpt)

@@ -4,9 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.horizen.account.api.rpc.handler.RpcException;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
+import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.Message;
-import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.account.transaction.EthereumTransactionNew;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.evm.utils.Address;
 import com.horizen.params.NetworkParams;
@@ -14,6 +15,8 @@ import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
+
+import static org.web3j.crypto.Sign.CHAIN_ID_INC;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
@@ -54,7 +57,7 @@ public class TransactionArgs {
         return from == null ? new byte[Address.LENGTH] : from.toBytes();
     }
 
-    public EthereumTransaction toTransaction(NetworkParams params) throws RpcException {
+    public EthereumTransactionNew toTransaction(NetworkParams params) throws RpcException {
         var saneChainId = params.chainId();
         if (chainId != null && chainId.longValueExact() != saneChainId) {
             throw new RpcException(RpcError.fromCode(
@@ -66,13 +69,18 @@ public class TransactionArgs {
         var saneTo = to == null ? null : to.toUTXOString();
         switch (saneType) {
             case 0:
-                // Legacy
+                // Legacy TODO we are handling it as a EIP155, but it is not always like that!!!!
+                var encodedChainId =
+                        BigInteger.valueOf(saneChainId)
+                                .multiply(BigInteger.TWO)
+                                .add(BigInteger.valueOf(CHAIN_ID_INC)).intValue();
                 var prepared = new Sign.SignatureData(
-                    BigInteger.valueOf(saneChainId).toByteArray(), new byte[] { 0 }, new byte[] { 0 });
-                return new EthereumTransaction(saneTo, nonce, gasPrice, gas, value, this.getDataString(), prepared);
+                        //BigInteger.valueOf(encodedChainId).toByteArray(), new byte[] { 0 }, new byte[] { 0 });
+                        BigInteger.valueOf(encodedChainId).toByteArray(), SignatureSecp256k1.EMPTY_SIGNATURE_RS, SignatureSecp256k1.EMPTY_SIGNATURE_RS);
+                return new EthereumTransactionNew(saneTo, nonce, gasPrice, gas, value, this.getDataString(), prepared);
             case 2:
                 // EIP-1559
-                return new EthereumTransaction(
+                return new EthereumTransactionNew(
                     saneChainId,
                     saneTo,
                     nonce,

@@ -1,20 +1,21 @@
 package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
-import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.fixtures.EthereumTransactionNewFixture
 import com.horizen.account.state._
-import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.transaction.EthereumTransactionNew
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
+import org.web3j.crypto.Sign.SignatureData
 
 import java.math.BigInteger
 
 class AccountForgeMessageBuilderTest
     extends MockitoSugar
     with MessageProcessorFixture
-    with EthereumTransactionFixture {
+    with EthereumTransactionNewFixture {
 
   @Test
   def testConsistentStateAfterMissingMsgProcessorError(): Unit = {
@@ -58,17 +59,16 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentStateAfterRandomException(): Unit = {
 
-    class BuggyTransaction(th: EthereumTransaction)
-      extends EthereumTransaction(th.getTransaction) {
+    class BuggyTransaction(th: EthereumTransactionNew, sign : SignatureData)
+      extends EthereumTransactionNew(th, sign) {
       override def version(): Byte = throw new Exception()
     }
 
-    val invalidTx = new BuggyTransaction(
-      createLegacyTransaction(
-        BigInteger.TEN,
-        gasLimit = BigInteger.valueOf(10000000)
-      )
+    val tmpTx = createLegacyTransaction(
+      BigInteger.TEN,
+      gasLimit = BigInteger.valueOf(10000000)
     )
+    val invalidTx = new BuggyTransaction(tmpTx, tmpTx.getSignatureData)
 
     val blockContext = new BlockContext(
       Array.empty[Byte],
@@ -111,17 +111,18 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentBlockGasAfterRandomException(): Unit = {
 
-    class BuggyTransaction(th: EthereumTransaction)
-      extends EthereumTransaction(th.getTransaction) {
+    class BuggyTransaction(th: EthereumTransactionNew, sign : SignatureData)
+      extends EthereumTransactionNew(th, sign) {
       override def version(): Byte = throw new Exception()
     }
 
     val gasLimit = GasUtil.intrinsicGas(Array.empty[Byte], isContractCreation = true).add(BigInteger.TEN)
+    val tmpTx = createLegacyTransaction(
+      BigInteger.TEN,
+      gasLimit = gasLimit
+    )
     val invalidTx = new BuggyTransaction(
-      createLegacyTransaction(
-        BigInteger.TEN,
-        gasLimit = gasLimit
-      )
+      tmpTx, tmpTx.getSignatureData
     )
 
     val validTx = createLegacyTransaction(

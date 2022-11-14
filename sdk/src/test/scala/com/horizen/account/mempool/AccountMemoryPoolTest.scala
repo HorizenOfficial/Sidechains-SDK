@@ -1,7 +1,7 @@
 package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
-import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.fixtures.EthereumTransactionNewFixture
 import com.horizen.account.state.AccountStateReader
 import org.junit.Assert._
 import org.junit._
@@ -14,7 +14,7 @@ import java.math.BigInteger
 
 class AccountMemoryPoolTest
   extends JUnitSuite
-    with EthereumTransactionFixture
+    with EthereumTransactionNewFixture
     with SidechainTypes
     with MockitoSugar {
 

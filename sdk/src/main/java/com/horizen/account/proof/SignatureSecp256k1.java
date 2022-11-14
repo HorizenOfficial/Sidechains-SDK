@@ -24,16 +24,20 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     @JsonProperty("s")
     private final byte[] s;
 
+    public static final byte[] EMPTY_SIGNATURE_RS = new byte[Secp256k1.SIGNATURE_RS_SIZE];
+
     public static boolean checkSignatureDataSizes(byte[] v, byte[] r, byte[] s) {
         return (v.length > 0 && v.length <= Secp256k1.SIGNATURE_V_MAXSIZE) &&
                (r.length == Secp256k1.SIGNATURE_RS_SIZE) &&
                (s.length == Secp256k1.SIGNATURE_RS_SIZE);
     }
 
-    private static void verifySignatureDataSizes(byte[] v, byte[] r, byte[] s) {
+    private static void verifySignatureData(byte[] v, byte[] r, byte[] s) {
+        if (v == null || r == null || s == null)
+            throw new IllegalArgumentException("Null v/r/s obj passed in signature data");
         if  (!checkSignatureDataSizes(v, r, s)) {
             throw new IllegalArgumentException(String.format(
-                    "Incorrect signature data: v=%d (expected at most %d); r=%d (expected %d); s=%d (expected %d)",
+                    "Incorrect signature data obj size: v=%d (expected 0<v<=%d); r=%d (expected %d); s=%d (expected %d)",
                     v.length, Secp256k1.SIGNATURE_V_MAXSIZE,
                     r.length, Secp256k1.SIGNATURE_RS_SIZE,
                     s.length, Secp256k1.SIGNATURE_RS_SIZE
@@ -42,7 +46,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     }
 
     public SignatureSecp256k1(byte[] v, byte[] r, byte[] s) {
-        verifySignatureDataSizes(v, r, s);
+        verifySignatureData(v, r, s);
 
         this.v = v;
         this.r = r;

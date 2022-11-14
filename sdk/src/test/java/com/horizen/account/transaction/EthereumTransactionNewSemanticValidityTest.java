@@ -1,6 +1,6 @@
 package com.horizen.account.transaction;
 
-import com.horizen.account.fixtures.EthereumTransactionFixture;
+import com.horizen.account.fixtures.EthereumTransactionNewFixture;
 import com.horizen.account.state.GasUtil;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
@@ -10,11 +10,11 @@ import org.web3j.crypto.Sign;
 import java.math.BigInteger;
 import java.util.Optional;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
-public class EthereumTransactionSemanticValidityTest implements EthereumTransactionFixture {
+public class EthereumTransactionNewSemanticValidityTest implements EthereumTransactionNewFixture {
 
-    private void assertNotValid(EthereumTransaction tx) {
+    private void assertNotValid(EthereumTransactionNew tx) {
         try {
             tx.semanticValidity();
             fail("Failure expected" );
@@ -33,7 +33,6 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         assertNotValid(transaction);
     }
 
-
     @Test
     public void testEoa2EoaEip155LegacyValidity() {
         var goodTx = getEoa2EoaEip155LegacyTransaction();
@@ -45,12 +44,41 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     }
 
     @Test
+    public void testEoa2EoaLegacyValidity() {
+        var goodTx = getEoa2EoaLegacyTransaction();
+        try {
+            goodTx.semanticValidity();
+        } catch (Throwable e) {
+            fail("Test1: Successful EthereumTransactionNew creation expected." + e);
+        }
+
+        // 1. bad gasPrice
+        // 1.1 negative
+        assertNotValid(
+                copyLegacyEthereumTransaction(goodTx,
+                        null,null, null, goodTx.getGasPrice().negate(),
+                        null, null,
+                        null)
+        );
+
+        // 1.2 not an uint256
+        assertNotValid(
+                copyLegacyEthereumTransaction(goodTx,
+                        null,null, null,
+                        new BigInteger(BytesUtils.fromHexString("220000000000000000000000000000000000000000000000000000000011223344")),
+                        null,
+                        null,null)
+        );
+
+    }
+
+    @Test
     public void testEoa2EoaEip1559Validity() {
         var goodTx = getEoa2EoaEip1559Transaction();
         try {
           goodTx.semanticValidity();
         } catch (Throwable e) {
-            fail("Test1: Successful EthereumTransaction creation expected." + e);
+            fail("Test1: Successful EthereumTransactionNew creation expected." + e);
         }
 
         // negative tests
@@ -70,11 +98,12 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         ));
 
         assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null,null, null,
-                        null, null, null, null, null,
-                        badSignOpt1)
+            copyEip1599EthereumTransaction(goodTx,
+                null, null, null,
+                null, null, null, null, null,
+                badSignOpt1)
         );
+
 
         // 2.2 - null v-value array
         var badSignOpt2 = Optional.of(new Sign.SignatureData(
@@ -82,13 +111,22 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                 BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
                 BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
         ));
-
-        assertNotValid(
+        try {
+            assertNotValid(
                 copyEip1599EthereumTransaction(goodTx,
                         null,null, null,
                         null, null, null, null, null,
                         badSignOpt2)
-        );
+            );
+            fail("IllegalArgumentException expected");
+
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
 
         // 2.3 - null r-value array
         var badSignOpt3 = Optional.of(new Sign.SignatureData(
@@ -97,12 +135,22 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                 BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
         ));
 
-        assertNotValid(
+        try {
+            assertNotValid(
                 copyEip1599EthereumTransaction(goodTx,
                         null,null, null,
                         null, null, null, null, null,
                         badSignOpt3)
-        );
+            );
+            fail("IllegalArgumentException expected");
+
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
 
         // 2.4 - Short s-value array
         var badSignOpt4 = Optional.of(new Sign.SignatureData(
@@ -110,13 +158,20 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                 BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
                 BytesUtils.fromHexString("E9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
         ));
-
-        assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null,null, null,
-                        null, null, null, null, null,
-                        badSignOpt4)
-        );
+        try {
+            assertNotValid(
+                    copyEip1599EthereumTransaction(goodTx,
+                            null,null, null,
+                            null, null, null, null, null,
+                            badSignOpt4)
+            );
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
 
         // 3. Bad to address
         // 3.1 - invalid hex string
@@ -233,7 +288,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         try {
             goodTx.semanticValidity();
         } catch (Throwable e) {
-            fail("Test1: Successful EthereumTransaction creation expected." + e);
+            fail("Test1: Successful EthereumTransactionNew creation expected." + e);
         }
 
         // negative tests

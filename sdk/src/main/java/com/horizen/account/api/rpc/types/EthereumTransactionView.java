@@ -2,7 +2,7 @@ package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
-import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.account.transaction.EthereumTransactionNew;
 import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
@@ -32,7 +32,7 @@ public class EthereumTransactionView {
     private final String r;
     private final String s;
 
-    public EthereumTransactionView(EthereumReceipt receipt, EthereumTransaction ethTx, BigInteger baseFee) {
+    public EthereumTransactionView(EthereumReceipt receipt, EthereumTransactionNew ethTx, BigInteger baseFee) {
         type = Numeric.prependHexPrefix((Integer.toHexString(ethTx.transactionTypeId())));
         nonce = Numeric.encodeQuantity(ethTx.getNonce());
         to = Numeric.cleanHexPrefix(ethTx.getToAddress()).length() != 2 * Account.ADDRESS_SIZE ? null : ethTx.getToAddress();
