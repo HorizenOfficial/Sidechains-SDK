@@ -8,9 +8,9 @@ import (
 )
 
 func Invoke(target interface{}, method string, args string) string {
-	log.Debug(">> invoke", "method", method, "args", args)
+	log.Trace(">> invoke", "method", method, "args", args)
 	result := toJsonResponse(callMethod(target, method, args))
-	log.Debug("<< response", "result", result)
+	log.Trace("<< response", "result", result)
 	return result
 }
 

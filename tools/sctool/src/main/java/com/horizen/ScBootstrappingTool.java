@@ -20,6 +20,8 @@ public class ScBootstrappingTool {
         // - default levels: all in the file and just errors on console
         System.setProperty("logFileLevel", "all");
         System.setProperty("logConsoleLevel", "error");
+        // set root log level to the highest level applied to either file or console appender
+        System.setProperty("logRootLevel", "all");
 
         Logger logger = LogManager.getLogger(com.horizen.ScBootstrappingTool.class);
 

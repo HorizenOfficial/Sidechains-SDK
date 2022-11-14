@@ -10,7 +10,7 @@ typedef void (*logFunction)(char *msg);
 static logFunction log = NULL;
 
 // exported symbol to set the log function pointer
-void RegisterLogCallback(logFunction callback) {
+void SetLogCallback(logFunction callback) {
     log = callback;
 }
 
