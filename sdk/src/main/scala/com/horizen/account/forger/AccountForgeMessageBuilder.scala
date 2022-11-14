@@ -14,7 +14,7 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, LogsBloom}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.transaction.EthereumTransactionNew
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
@@ -107,7 +107,7 @@ class AccountForgeMessageBuilder(
       try {
         stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext, finalizeChanges = false) match {
           case Success(consensusDataReceipt) =>
-            val ethTx = tx.asInstanceOf[EthereumTransactionNew]
+            val ethTx = tx.asInstanceOf[EthereumTransaction]
             val txHash = BytesUtils.fromHexString(ethTx.id)
 
             receiptList += consensusDataReceipt

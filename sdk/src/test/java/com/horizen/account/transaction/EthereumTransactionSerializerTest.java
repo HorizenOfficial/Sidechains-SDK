@@ -1,6 +1,6 @@
 package com.horizen.account.transaction;
 
-import com.horizen.account.fixtures.EthereumTransactionNewFixture;
+import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.state.GasUtil;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
@@ -16,7 +16,7 @@ import java.math.BigInteger;
 
 import static org.junit.Assert.*;
 
-public class EthereumTransactionNewSerializerTest implements EthereumTransactionNewFixture {
+public class EthereumTransactionSerializerTest implements EthereumTransactionFixture {
 
     // Check that using the same key pair for signing two transactions give the same from address
     @Test
@@ -80,53 +80,53 @@ public class EthereumTransactionNewSerializerTest implements EthereumTransaction
 
     @Test
     public void regressionTestLegacySigned() {
-        EthereumTransactionNew transaction = getEoa2EoaLegacyTransaction();
+        EthereumTransaction transaction = getEoa2EoaLegacyTransaction();
         doTest(transaction, "ethereumtransaction_eoa2eoa_legacy_signed_hex", false);
     }
 
     @Test
     public void regressionTestLegacyUnsigned() {
-        EthereumTransactionNew transaction = getUnsignedEoa2EoaLegacyTransaction();
+        EthereumTransaction transaction = getUnsignedEoa2EoaLegacyTransaction();
         doTest(transaction, "ethereumtransaction_eoa2eoa_legacy_unsigned_hex", false);
     }
 
     @Test
     public void regressionTestEoa2EoaEip1559() {
-        EthereumTransactionNew transaction = getEoa2EoaEip1559Transaction();
+        EthereumTransaction transaction = getEoa2EoaEip1559Transaction();
         doTest(transaction, "ethereumtransaction_eoa2eoa_eip1559_signed_hex", false);
     }
 
     @Test
     public void regressionTestEoa2EoaEip1559Unsigned() {
-        EthereumTransactionNew transaction = getUnsignedEoa2EoaEip1559Transaction();
+        EthereumTransaction transaction = getUnsignedEoa2EoaEip1559Transaction();
         doTest(transaction, "ethereumtransaction_eoa2eoa_eip1559_unsigned_hex", false);
     }
 
     @Test
     public void regressionTestEip155() {
-        EthereumTransactionNew transaction = getEoa2EoaEip155LegacyTransaction();
+        EthereumTransaction transaction = getEoa2EoaEip155LegacyTransaction();
         doTest(transaction, "ethereumtransaction_eoa2eoa_eip155_legacy_signed_hex", false);
     }
 
     @Test
     public void regressionTestPartiallySignedEip155() {
-        EthereumTransactionNew transaction = getPartiallySignedEip155LegacyTransaction();
+        EthereumTransaction transaction = getPartiallySignedEip155LegacyTransaction();
         doTest(transaction, "ethereumtransaction_eoa2eoa_eip155_legacy_unsigned_hex", false);
     }
 
     @Test
     public void regressionTestContractDeploymentEip1559() {
-        EthereumTransactionNew transaction = getContractDeploymentEip1559Transaction();
+        EthereumTransaction transaction = getContractDeploymentEip1559Transaction();
         doTest(transaction, "ethereumtransaction_contract_deployment_eip1559_hex", false);
     }
 
     @Test
     public void regressionTestContractCallEip155Legacy() {
-        EthereumTransactionNew transaction = getContractCallEip155LegacyTransaction();
+        EthereumTransaction transaction = getContractCallEip155LegacyTransaction();
         doTest(transaction, "ethereumtransaction_contract_call_eip155_legacy_hex", false);
     }
 
-    private void doTest(EthereumTransactionNew transaction, String hexFileName, boolean writeMode) {
+    private void doTest(EthereumTransaction transaction, String hexFileName, boolean writeMode) {
         // Set `true` and run if you want to update regression data.
         if (writeMode) {
             try {
@@ -152,10 +152,10 @@ public class EthereumTransactionNewSerializerTest implements EthereumTransaction
         }
 
         TransactionSerializer serializer = transaction.serializer();
-        Try<EthereumTransactionNew> t = serializer.parseBytesTry(bytes);
+        Try<EthereumTransaction> t = serializer.parseBytesTry(bytes);
         assertTrue("Transaction serialization failed.", t.isSuccess());
 
-        EthereumTransactionNew parsedTransaction = t.get();
+        EthereumTransaction parsedTransaction = t.get();
         System.out.println(transaction.id());
         System.out.println(parsedTransaction.id());
         assertEquals("Transaction is different to the origin.", transaction.id(), parsedTransaction.id());

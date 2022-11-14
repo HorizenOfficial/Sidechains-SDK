@@ -2,20 +2,15 @@ package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.utils.EthereumTransactionNewDecoder;
+import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
 import com.horizen.utils.BytesUtils;
-import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
@@ -23,17 +18,17 @@ import java.util.Map;
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
-public class EthereumTransactionNewTest {
+public class EthereumTransactionTest {
     SignatureSecp256k1 secp256k1Signature;
     AddressProposition addressProposition;
     Sign.SignatureData msgSignature;
 
-    public void checkEthTx(EthereumTransactionNew tx) {
+    public void checkEthTx(EthereumTransaction tx) {
         assertTrue(tx.getSignature().isValid(tx.getFrom(), tx.messageToSign()));
         String strBefore = tx.toString();
-        byte[] encodedTx = EthereumTransactionNewSerializer.getSerializer().toBytes(tx);
+        byte[] encodedTx = EthereumTransactionSerializer.getSerializer().toBytes(tx);
         // read what *it wrote
-        EthereumTransactionNew decodedTx = EthereumTransactionNewSerializer.getSerializer().parseBytes(encodedTx);
+        EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(encodedTx);
         String strAfter = decodedTx.toString();
         // we must have the same representation
         assertEquals(strBefore.toLowerCase(Locale.ROOT), strAfter.toLowerCase(Locale.ROOT));
@@ -44,7 +39,7 @@ public class EthereumTransactionNewTest {
     @Test
     public void transactionIdTests() {
         // EIP-1559
-        var eipSignedTx = new EthereumTransactionNew(
+        var eipSignedTx = new EthereumTransaction(
                 31337,
                 "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
                 BigInteger.valueOf(0L),
@@ -61,7 +56,7 @@ public class EthereumTransactionNewTest {
         checkEthTx(eipSignedTx);
 
         // Legacy
-        var legacyTx = new EthereumTransactionNew(
+        var legacyTx = new EthereumTransaction(
                 "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
                 BigInteger.valueOf(0L),
                 BigInteger.valueOf(1),
@@ -76,18 +71,18 @@ public class EthereumTransactionNewTest {
         checkEthTx(legacyTx);
 
         // EIP-155 tx
-        var unsignedEip155Tx = new EthereumTransactionNew(
+        var unsignedEip155Tx = new EthereumTransaction(
                 "0x3535353535353535353535353535353535353535",
                 BigInteger.valueOf(9L),
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                 BigInteger.valueOf(21000),
                 BigInteger.TEN.pow(18),
                 "",
-                new Sign.SignatureData(EthereumTransactionNew.encodeEip155ChainId(1L).toByteArray(),
+                new Sign.SignatureData(EthereumTransaction.encodeEip155ChainId(1L).toByteArray(),
                         SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
                         SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS)
         );
-        var eip155Tx = new EthereumTransactionNew(
+        var eip155Tx = new EthereumTransaction(
                 "0x3535353535353535353535353535353535353535",
                 BigInteger.valueOf(9L),
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
@@ -109,8 +104,8 @@ public class EthereumTransactionNewTest {
         // Test 1: direct constructor test
         try {
             Long chainId = 1L;
-            var encodedChainId = EthereumTransactionNew.encodeEip155ChainId(chainId);
-            var someTx = new EthereumTransactionNew(
+            var encodedChainId = EthereumTransaction.encodeEip155ChainId(chainId);
+            var someTx = new EthereumTransaction(
                     "0x3535353535353535353535353535353535353535",
                     BigInteger.valueOf(9),
                     BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
@@ -135,7 +130,7 @@ public class EthereumTransactionNewTest {
         // - chain id: 1997
         String metamaskHexStr = "de01f86d02843b9aca0082520894d830603264bd3118cf95f1fc623749337342f9e98829a2241af62c000080820fbea0f638802002d7c0a3115716f7d24d646452d598050ffc2d6892ba0ed88aeb76bea01dd5a7fb9ea0ec2a414dbb93b09b3e716a3cd05c1e333d40622c63d0c34e3d35";
 
-        EthereumTransactionNew decodedTx = EthereumTransactionNewSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(metamaskHexStr));
+        EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(metamaskHexStr));
         long chainId = decodedTx.getChainId();
         byte[] fromAddress = decodedTx.getFrom().address();
         byte[] toAddress = decodedTx.getTo().address();
@@ -147,7 +142,7 @@ public class EthereumTransactionNewTest {
         assertEquals("3000000000000000000", decodedTx.getValue().toString());
 
         // re-encode and check it is the same
-        byte[] encodedTx = EthereumTransactionNewSerializer.getSerializer().toBytes(decodedTx);
+        byte[] encodedTx = EthereumTransactionSerializer.getSerializer().toBytes(decodedTx);
         assertEquals(metamaskHexStr, BytesUtils.toHexString(encodedTx));
     }
 
@@ -219,20 +214,20 @@ public class EthereumTransactionNewTest {
     @Test
     public void ethereumTransactionDecoderTest() {
         // Test 1: Decoded tx should be as expected - same tx as linked above, just without access list
-        var actualTx = EthereumTransactionNewDecoder.decode("0x02f8c60183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701c080a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb");
-        var expectedTx = new EthereumTransactionNew(1, "0x00000000003b3cc22aF3aE1EAc0440BcEe416B40", Numeric.toBigInt("12EC7"), Numeric.toBigInt("0x03851d"), Numeric.toBigInt("0x023199fa3df8"), Numeric.toBigInt("0x02e59652e99b"), BigInteger.ZERO, "0x0100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701", null);
+        var actualTx = EthereumTransactionDecoder.decode("0x02f8c60183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701c080a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb");
+        var expectedTx = new EthereumTransaction(1, "0x00000000003b3cc22aF3aE1EAc0440BcEe416B40", Numeric.toBigInt("12EC7"), Numeric.toBigInt("0x03851d"), Numeric.toBigInt("0x023199fa3df8"), Numeric.toBigInt("0x02e59652e99b"), BigInteger.ZERO, "0x0100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701", null);
         assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
 
         // Test 2: Access list is not allowed in Ethereum Transaction, should throw exception
         assertThrows("Test2: Exception during tx decoding expected", IllegalArgumentException.class,
-                () -> EthereumTransactionNewDecoder.decode("0x02f9040c0183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701f90344f9024994a68dd8cb83097765263adad881af6eed479c4a33f90231a00000000000000000000000000000000000000000000000000000000000000004a0745448ebd86f892e3973b919a6686b32d8505f8eb2e02df5a36797f187adb881a00000000000000000000000000000000000000000000000000000000000000003a00000000000000000000000000000000000000000000000000000000000000011a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c86a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab6a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab8a0bf9ee777cf4683df01da9dfd7aeab60490278463b1d516455d67d23c750f96dca00000000000000000000000000000000000000000000000000000000000000012a0000000000000000000000000000000000000000000000000000000000000000fa00000000000000000000000000000000000000000000000000000000000000010a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c88a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050fba06306683371f43cb3203ee553ce8ac90eb82e4721cc5335d281e1e556d3edcdbca00000000000000000000000000000000000000000000000000000000000000013a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050f9a00000000000000000000000000000000000000000000000000000000000000014f89b94ab293dce330b92aa52bc2a7cd3816edaa75f890bf884a0000000000000000000000000000000000000000000000000000000000000000ca00000000000000000000000000000000000000000000000000000000000000008a00000000000000000000000000000000000000000000000000000000000000006a00000000000000000000000000000000000000000000000000000000000000007f85994c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2f842a051c9df7cdd01b5cb5fb293792b1e67ec1ac1048ae7e4c7cf6cf46883589dfbd4a03c679e5fc421e825187f885e3dcd7f4493f886ceeb4930450588e35818a32b9c80a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb"));
+                () -> EthereumTransactionDecoder.decode("0x02f9040c0183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701f90344f9024994a68dd8cb83097765263adad881af6eed479c4a33f90231a00000000000000000000000000000000000000000000000000000000000000004a0745448ebd86f892e3973b919a6686b32d8505f8eb2e02df5a36797f187adb881a00000000000000000000000000000000000000000000000000000000000000003a00000000000000000000000000000000000000000000000000000000000000011a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c86a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab6a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab8a0bf9ee777cf4683df01da9dfd7aeab60490278463b1d516455d67d23c750f96dca00000000000000000000000000000000000000000000000000000000000000012a0000000000000000000000000000000000000000000000000000000000000000fa00000000000000000000000000000000000000000000000000000000000000010a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c88a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050fba06306683371f43cb3203ee553ce8ac90eb82e4721cc5335d281e1e556d3edcdbca00000000000000000000000000000000000000000000000000000000000000013a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050f9a00000000000000000000000000000000000000000000000000000000000000014f89b94ab293dce330b92aa52bc2a7cd3816edaa75f890bf884a0000000000000000000000000000000000000000000000000000000000000000ca00000000000000000000000000000000000000000000000000000000000000008a00000000000000000000000000000000000000000000000000000000000000006a00000000000000000000000000000000000000000000000000000000000000007f85994c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2f842a051c9df7cdd01b5cb5fb293792b1e67ec1ac1048ae7e4c7cf6cf46883589dfbd4a03c679e5fc421e825187f885e3dcd7f4493f886ceeb4930450588e35818a32b9c80a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb"));
     }
 
 
     @Test
     public void ethereumGetChainIdTest() {
         // from: 0x2623DFF4B37abc95aefD0767C5c4f71DfEecBe63
-        var tx = new EthereumTransactionNew(
+        var tx = new EthereumTransaction(
                 "0x3b6C3B23dB14E37e19982A5BA1A6fEfc64Cc0Ef1",
                 BigInteger.ZERO,
                 Numeric.toBigInt("0x012a05f200"),

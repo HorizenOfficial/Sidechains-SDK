@@ -3,7 +3,7 @@ package com.horizen.account.mempool
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.AccountStateReader
-import com.horizen.account.transaction.EthereumTransactionNew
+import com.horizen.account.transaction.EthereumTransaction
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
@@ -26,7 +26,7 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
   private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap[SidechainTypes#SCP, BigInteger]()
 
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
-    require(ethTransaction.isInstanceOf[EthereumTransactionNew], "Transaction is not EthereumTransactionNew")
+    require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransactionNew")
     val account = ethTransaction.getFrom
     if (!nonces.contains(account)) {
       nonces.put(account, stateReader.getNonce(account.asInstanceOf[AddressProposition].address()))

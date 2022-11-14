@@ -2,7 +2,7 @@ package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
-import com.horizen.account.transaction.EthereumTransactionNew;
+import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
@@ -29,7 +29,7 @@ public class EthereumReceiptView {
     public final String status;
     public final String effectiveGasPrice;
 
-    public EthereumReceiptView(EthereumReceipt receipt, EthereumTransactionNew tx, BigInteger baseFee) {
+    public EthereumReceiptView(EthereumReceipt receipt, EthereumTransaction tx, BigInteger baseFee) {
         type = Numeric.toHexString(new byte[]{tx.version()});
         transactionHash = Numeric.toHexString(receipt.transactionHash());
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));

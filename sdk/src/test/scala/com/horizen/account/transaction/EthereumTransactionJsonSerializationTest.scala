@@ -1,7 +1,7 @@
 package com.horizen.account.transaction
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.account.fixtures.EthereumTransactionNewFixture
+import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -13,9 +13,9 @@ import sparkz.core.utils.SparkzEncoder
 
 import java.math.BigInteger
 
-class EthereumTransactionNewJsonSerializationTest
+class EthereumTransactionJsonSerializationTest
   extends JUnitSuite
-    with EthereumTransactionNewFixture
+    with EthereumTransactionFixture
 {
 
   val serializer: ApplicationJsonSerializer = ApplicationJsonSerializer.getInstance()
@@ -66,7 +66,7 @@ class EthereumTransactionNewJsonSerializationTest
   @Test
   def testPartiallySignedEip155TxToJson(): Unit = {
     try {
-      val transaction = new EthereumTransactionNew(
+      val transaction = new EthereumTransaction(
         "0x3535353535353535353535353535353535353535",
         BigInteger.valueOf(9L),
         BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
@@ -91,7 +91,7 @@ class EthereumTransactionNewJsonSerializationTest
     evalJsonRepr(transaction)
   }
 
-  def evalJsonRepr(transaction: EthereumTransactionNew, printOutput: Boolean = false): Unit = {
+  def evalJsonRepr(transaction: EthereumTransaction, printOutput: Boolean = false): Unit = {
     val jsonStr = serializer.serialize(transaction)
     val node: JsonNode = serializer.getObjectMapper.readTree(jsonStr)
 

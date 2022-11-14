@@ -7,7 +7,7 @@ import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.account.transaction.EthereumTransactionNew
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
@@ -148,10 +148,10 @@ class AccountStateView(
       blockContext: BlockContext,
       finalizeChanges: Boolean = true
   ): Try[EthereumConsensusDataReceipt] = Try {
-    if (!tx.isInstanceOf[EthereumTransactionNew])
+    if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
-    val ethTx = tx.asInstanceOf[EthereumTransactionNew]
+    val ethTx = tx.asInstanceOf[EthereumTransaction]
     val txHash = BytesUtils.fromHexString(ethTx.id)
     val msg = ethTx.asMessage(blockContext.baseFee)
 

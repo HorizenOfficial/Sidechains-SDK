@@ -1,6 +1,6 @@
 package com.horizen.account.transaction;
 
-import com.horizen.account.fixtures.EthereumTransactionNewFixture;
+import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.state.GasUtil;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
@@ -12,9 +12,9 @@ import java.util.Optional;
 
 import static org.junit.Assert.fail;
 
-public class EthereumTransactionNewSemanticValidityTest implements EthereumTransactionNewFixture {
+public class EthereumTransactionSemanticValidityTest implements EthereumTransactionFixture {
 
-    private void assertNotValid(EthereumTransactionNew tx) {
+    private void assertNotValid(EthereumTransaction tx) {
         try {
             tx.semanticValidity();
             fail("Failure expected" );

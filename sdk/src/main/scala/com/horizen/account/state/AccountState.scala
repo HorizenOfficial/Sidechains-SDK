@@ -6,7 +6,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.{EthereumReceipt, LogsBloom}
 import com.horizen.account.storage.AccountStateMetadataStorage
-import com.horizen.account.transaction.EthereumTransactionNew
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
@@ -15,12 +15,12 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, ScorexLogging}
+
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -129,7 +129,7 @@ class AccountState(
             val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
             // update cumulative gas used so far
             cumGasUsed = consensusDataReceipt.cumulativeGasUsed
-            val ethTx = tx.asInstanceOf[EthereumTransactionNew]
+            val ethTx = tx.asInstanceOf[EthereumTransaction]
 
             val txHash = BytesUtils.fromHexString(ethTx.id)
 
@@ -397,13 +397,13 @@ class AccountState(
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
-    if (!tx.isInstanceOf[EthereumTransactionNew]) return Success()
+    if (!tx.isInstanceOf[EthereumTransaction]) return Success()
 
     if (BigInteger.valueOf(FeeUtils.GAS_LIMIT).compareTo(tx.getGasLimit) < 0)
       throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${tx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")
     using(getView) { stateView =>
         //Check the nonce
-        val ethTx = tx.asInstanceOf[EthereumTransactionNew]
+        val ethTx = tx.asInstanceOf[EthereumTransaction]
         val sender = ethTx.getFrom.address()
         val stateNonce = stateView.getNonce(sender)
         if (stateNonce.compareTo(tx.getNonce) > 0) {

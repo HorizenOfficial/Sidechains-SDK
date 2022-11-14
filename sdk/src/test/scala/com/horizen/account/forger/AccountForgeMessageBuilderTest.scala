@@ -1,9 +1,9 @@
 package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
-import com.horizen.account.fixtures.EthereumTransactionNewFixture
+import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.state._
-import com.horizen.account.transaction.EthereumTransactionNew
+import com.horizen.account.transaction.EthereumTransaction
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -15,7 +15,7 @@ import java.math.BigInteger
 class AccountForgeMessageBuilderTest
     extends MockitoSugar
     with MessageProcessorFixture
-    with EthereumTransactionNewFixture {
+    with EthereumTransactionFixture {
 
   @Test
   def testConsistentStateAfterMissingMsgProcessorError(): Unit = {
@@ -59,8 +59,8 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentStateAfterRandomException(): Unit = {
 
-    class BuggyTransaction(th: EthereumTransactionNew, sign : SignatureData)
-      extends EthereumTransactionNew(th, sign) {
+    class BuggyTransaction(th: EthereumTransaction, sign : SignatureData)
+      extends EthereumTransaction(th, sign) {
       override def version(): Byte = throw new Exception()
     }
 
@@ -111,8 +111,8 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentBlockGasAfterRandomException(): Unit = {
 
-    class BuggyTransaction(th: EthereumTransactionNew, sign : SignatureData)
-      extends EthereumTransactionNew(th, sign) {
+    class BuggyTransaction(th: EthereumTransaction, sign : SignatureData)
+      extends EthereumTransaction(th, sign) {
       override def version(): Byte = throw new Exception()
     }
 

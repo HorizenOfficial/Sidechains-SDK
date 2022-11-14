@@ -1,12 +1,12 @@
 package com.horizen.account.api.http
 
-import com.horizen.account.fixtures.EthereumTransactionNewFixture
+import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, ForgerStakeData, WithdrawalRequest}
-import com.horizen.account.transaction.EthereumTransactionNew
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.api.http.SidechainApiMockConfiguration
 import com.horizen.fixtures._
@@ -25,7 +25,7 @@ import scala.util.Random
 class AccountNodeViewUtilMocks extends MockitoSugar
   with BoxFixture
   with CompanionsFixture
-  with EthereumTransactionNewFixture
+  with EthereumTransactionFixture
   with SecretFixture {
 
   val ownerSecret: PrivateKeySecp256k1 = getPrivateKeySecp256k1(2222222)
@@ -34,7 +34,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
   val vrfPublicKeyString = "aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
   val stakeId = "9e26bd4ff89374e916b369024e882db68a49b824e71008b827c7794e9f4d0170"
 
-  val transactionList: util.List[EthereumTransactionNew] = getTransactionList
+  val transactionList: util.List[EthereumTransaction] = getTransactionList
   val listOfStakes: Seq[AccountForgingStakeInfo] = getListOfStakes
   val listOfWithdrawalRequests: Seq[WithdrawalRequest] = getListOfWithdrawalRequests
 
@@ -77,8 +77,8 @@ class AccountNodeViewUtilMocks extends MockitoSugar
     wallet
   }
 
-  def getTransactionList: util.List[EthereumTransactionNew] = {
-    val list: util.List[EthereumTransactionNew] = new util.ArrayList[EthereumTransactionNew]()
+  def getTransactionList: util.List[EthereumTransaction] = {
+    val list: util.List[EthereumTransaction] = new util.ArrayList[EthereumTransaction]()
     list.add(createLegacyTransaction(ZenWeiConverter.convertZenniesToWei(1))) // 1 Zenny
     list.add(createLegacyTransaction(ZenWeiConverter.convertZenniesToWei(12))) // 12 Zennies
     list

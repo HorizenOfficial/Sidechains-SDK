@@ -7,7 +7,7 @@ import com.horizen.account.api.rpc.utils.RpcError;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.Message;
-import com.horizen.account.transaction.EthereumTransactionNew;
+import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.evm.utils.Address;
 import com.horizen.params.NetworkParams;
@@ -55,7 +55,7 @@ public class TransactionArgs {
         return from == null ? new byte[Address.LENGTH] : from.toBytes();
     }
 
-    public EthereumTransactionNew toTransaction(NetworkParams params) throws RpcException {
+    public EthereumTransaction toTransaction(NetworkParams params) throws RpcException {
         var saneChainId = params.chainId();
         if (chainId != null && chainId.longValueExact() != saneChainId) {
             throw new RpcException(RpcError.fromCode(
@@ -68,17 +68,17 @@ public class TransactionArgs {
         switch (saneType) {
             case 0:
                 // Legacy TODO we are handling it as a EIP155, but it is not always like that!!!!
-                var encodedChainId = EthereumTransactionNew.encodeEip155ChainId(saneChainId);
+                var encodedChainId = EthereumTransaction.encodeEip155ChainId(saneChainId);
 
                 var prepared = new Sign.SignatureData(
                         encodedChainId.toByteArray(),
                         SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
                         SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS);
 
-                return new EthereumTransactionNew(saneTo, nonce, gasPrice, gas, value, this.getDataString(), prepared);
+                return new EthereumTransaction(saneTo, nonce, gasPrice, gas, value, this.getDataString(), prepared);
             case 2:
                 // EIP-1559
-                return new EthereumTransactionNew(
+                return new EthereumTransaction(
                     saneChainId,
                     saneTo,
                     nonce,

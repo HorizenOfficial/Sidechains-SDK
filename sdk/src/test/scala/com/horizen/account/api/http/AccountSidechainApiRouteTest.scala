@@ -12,7 +12,7 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.transaction.{AccountTransaction, EthereumTransactionNew}
+import com.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiTokenHeader, SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
@@ -71,7 +71,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val utilMocks = new AccountNodeViewUtilMocks()
 
-  val memoryPool: java.util.List[EthereumTransactionNew] = utilMocks.transactionList
+  val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
 //  val genesisBlock = utilMocks.genesisBlock
 //
 //  val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef

@@ -1,9 +1,7 @@
 package com.horizen.account.utils;
 
-import com.horizen.account.transaction.EthereumTransactionNew;
-import org.web3j.crypto.RawTransaction;
+import com.horizen.account.transaction.EthereumTransaction;
 import org.web3j.crypto.Sign;
-import org.web3j.crypto.SignedRawTransaction;
 import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
@@ -13,14 +11,14 @@ import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 import java.util.Arrays;
 
-public class EthereumTransactionNewDecoder {
+public class EthereumTransactionDecoder {
 
     private static final int UNSIGNED_EIP1559TX_RLP_LIST_SIZE = 9;
 
-    public EthereumTransactionNewDecoder() {
+    public EthereumTransactionDecoder() {
     }
 
-    public static EthereumTransactionNew decode(String hexTransaction) {
+    public static EthereumTransaction decode(String hexTransaction) {
         byte[] transaction = Numeric.hexStringToByteArray(hexTransaction);
         return getTransactionType(transaction) == TransactionType.EIP1559 ? decodeEIP1559Transaction(transaction) : decodeLegacyTransaction(transaction);
     }
@@ -30,7 +28,7 @@ public class EthereumTransactionNewDecoder {
         return firstByte == TransactionType.EIP1559.getRlpType() ? TransactionType.EIP1559 : TransactionType.LEGACY;
     }
 
-    private static EthereumTransactionNew decodeEIP1559Transaction(byte[] transaction) {
+    private static EthereumTransaction decodeEIP1559Transaction(byte[] transaction) {
         byte[] encodedTx = Arrays.copyOfRange(transaction, 1, transaction.length);
         RlpList rlpList = RlpDecoder.decode(encodedTx);
         RlpList values = (RlpList)rlpList.getValues().get(0);
@@ -44,17 +42,17 @@ public class EthereumTransactionNewDecoder {
         String data = ((RlpString)values.getValues().get(7)).asString();
         if (((RlpList)values.getValues().get(8)).getValues().size() > 0) throw new IllegalArgumentException("Access list is not supported");
         if (values.getValues().size() == 9) {
-            return new EthereumTransactionNew(chainId, to, nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, null);
+            return new EthereumTransaction(chainId, to, nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, null);
         } else {
             byte[] v = Sign.getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(10)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(11)).getBytes()), 32);
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
-            return new EthereumTransactionNew(chainId, to, nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, signatureData);
+            return new EthereumTransaction(chainId, to, nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, signatureData);
         }
     }
 
-    private static EthereumTransactionNew decodeLegacyTransaction(byte[] transaction) {
+    private static EthereumTransaction decodeLegacyTransaction(byte[] transaction) {
         RlpList rlpList = RlpDecoder.decode(transaction);
         RlpList values = (RlpList)rlpList.getValues().get(0);
         BigInteger nonce = ((RlpString)values.getValues().get(0)).asPositiveBigInteger();
@@ -68,9 +66,9 @@ public class EthereumTransactionNewDecoder {
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(7)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(8)).getBytes()), 32);
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
-            return new EthereumTransactionNew(to, nonce, gasPrice, gasLimit, value, data, signatureData);
+            return new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, signatureData);
         } else {
-            return new EthereumTransactionNew(to, nonce, gasPrice, gasLimit, value, data, null);
+            return new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, null);
         }
     }
 }

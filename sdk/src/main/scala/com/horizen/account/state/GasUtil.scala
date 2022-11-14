@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.horizen.account.transaction.EthereumTransactionNew
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.BigIntegerUtil
 import com.horizen.evm.interop.EvmLog
 
@@ -65,7 +65,7 @@ object GasUtil {
 
   def logGas(evmLog: EvmLog): BigInteger = LogGas.add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
 
-  def getTxFeesPerGas(tx: EthereumTransactionNew, baseFeePerGas: BigInteger): (BigInteger, BigInteger) = {
+  def getTxFeesPerGas(tx: EthereumTransaction, baseFeePerGas: BigInteger): (BigInteger, BigInteger) = {
 
     if (tx.isEIP1559) {
       val maxFeePerGas = tx.getMaxFeePerGas

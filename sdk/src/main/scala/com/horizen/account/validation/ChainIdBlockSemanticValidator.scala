@@ -1,7 +1,7 @@
 package com.horizen.account.validation
 
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.transaction.{AccountTransactionsIdsEnum, EthereumTransactionNew}
+import com.horizen.account.transaction.{AccountTransactionsIdsEnum, EthereumTransaction}
 import com.horizen.params.NetworkParams
 import com.horizen.validation.SemanticBlockValidator
 
@@ -11,7 +11,7 @@ case class ChainIdBlockSemanticValidator(params: NetworkParams) extends Semantic
   override def validate(block: AccountBlock): Try[Unit] = Try {
     for (actx <- block.transactions) {
       if (actx.transactionTypeId == AccountTransactionsIdsEnum.EthereumTransactionId.id()) {
-        val tx = actx.asInstanceOf[EthereumTransactionNew];
+        val tx = actx.asInstanceOf[EthereumTransaction];
         if (tx.isSigned) {
           if (tx.isEIP1559)
             if (tx.getChainId != params.chainId)
