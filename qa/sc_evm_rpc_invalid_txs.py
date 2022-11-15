@@ -2,8 +2,7 @@
 import logging
 from decimal import Decimal
 
-from SidechainTestFramework.account.address_util import format_evm
-from SidechainTestFramework.account.eoa_util import eoa_transaction
+from SidechainTestFramework.account.ac_utils import format_evm, eoa_transaction
 from SidechainTestFramework.sc_boostrap_info import (
     LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
     SCNetworkConfiguration, SCNodeConfiguration,

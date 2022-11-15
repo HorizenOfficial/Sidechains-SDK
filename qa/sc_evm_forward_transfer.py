@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-import json
 import logging
 import json
 from decimal import Decimal
 
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
-from SidechainTestFramework.account.address_util import format_evm, format_eoa
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_utils import format_evm, format_eoa
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework

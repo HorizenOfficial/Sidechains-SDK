@@ -2,8 +2,8 @@
 import logging
 from decimal import Decimal
 
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
-from SidechainTestFramework.account.address_util import format_evm
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_utils import format_evm, eoa_transaction, CallMethod
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -12,8 +12,6 @@ from test_framework.util import assert_equal, assert_true, start_nodes, websocke
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
     EVM_APP_BINARY, generate_next_blocks, generate_next_block, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
-from SidechainTestFramework.account.evm_util import CallMethod
-from SidechainTestFramework.account.eoa_util import eoa_transaction
 
 global_call_method = CallMethod.RPC_EIP155
 
