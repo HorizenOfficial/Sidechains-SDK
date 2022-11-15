@@ -2,6 +2,7 @@ package interop
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"libevm/lib"
@@ -112,4 +113,106 @@ func TestInvoke(t *testing.T) {
 	call(t, instance, "CloseDatabase", lib.DatabaseParams{
 		DatabaseHandle: dbHandle,
 	})
+}
+
+type MockLibrary struct{}
+
+func (m *MockLibrary) NoParam()               {}
+func (m *MockLibrary) OneParam(a int)         {}
+func (m *MockLibrary) TwoParams(a int, b int) {}
+
+func (m *MockLibrary) NoParamNilError() error {
+	return nil
+}
+func (m *MockLibrary) NoParamError() error {
+	return fmt.Errorf("kaputt")
+}
+func (m *MockLibrary) OneParamError(fail int) error {
+	if fail != 0 {
+		return fmt.Errorf("kaputt: %v", fail)
+	}
+	return nil
+}
+func (m *MockLibrary) NoParamResult() string {
+	return "toot gaya"
+}
+
+func (m *MockLibrary) OneParamEcho(str string) string {
+	return str
+}
+
+func (m *MockLibrary) OneParam7kaputt(nr int) (error, string) {
+	if nr == 7 {
+		return fmt.Errorf("oh noes"), ""
+	}
+	return nil, "success"
+}
+func (m *MockLibrary) NoParamBadErrorReturn() (string, error) {
+	return "", nil
+}
+func (m *MockLibrary) NoParamTwoResults() (string, string) {
+	return "", ""
+}
+
+func TestInvokeMarshal(t *testing.T) {
+	m := new(MockLibrary)
+	checks := []struct {
+		method      string
+		args        string
+		shouldError bool
+		result      interface{}
+	}{
+		{method: "UnknownMethod", args: "", shouldError: true},
+
+		{method: "NoParam", args: ""},
+		{method: "NoParam", args: "123", shouldError: true},
+		{method: "OneParam", args: "", shouldError: true},
+		{method: "OneParam", args: "123"},
+		{method: "OneParam", args: "false", shouldError: true}, // wrong argument type
+		{method: "TwoParams", args: "", shouldError: true},
+		{method: "TwoParams", args: "123", shouldError: true},
+
+		{method: "NoParamNilError", args: ""},
+		{method: "NoParamNilError", args: "123", shouldError: true},
+		{method: "NoParamError", args: "", shouldError: true},
+		{method: "NoParamError", args: "123", shouldError: true},
+
+		{method: "OneParamError", args: "", shouldError: true},
+		{method: "OneParamError", args: "0"},
+		{method: "OneParamError", args: "1", shouldError: true},
+
+		{method: "NoParamResult", args: "", result: "toot gaya"},
+		{method: "NoParamResult", args: "123", shouldError: true},
+
+		{method: "OneParamEcho", args: "", shouldError: true},
+		{method: "OneParamEcho", args: "123", shouldError: true},
+		{method: "OneParamEcho", args: "\"foo\"", result: "foo"},
+		{method: "OneParamEcho", args: "\"bar\"", result: "bar"},
+
+		{method: "OneParam7kaputt", args: "", shouldError: true},
+		{method: "OneParam7kaputt", args: "0", result: "success"},
+		{method: "OneParam7kaputt", args: "6", result: "success"},
+		{method: "OneParam7kaputt", args: "7", shouldError: true},
+		{method: "OneParam7kaputt", args: "8", result: "success"},
+
+		{method: "NoParamBadErrorReturn", args: "", shouldError: true},
+		{method: "NoParamTwoResults", args: "", shouldError: true},
+	}
+	for _, check := range checks {
+		t.Run(check.method, func(t *testing.T) {
+			err, result := callMethod(m, check.method, check.args)
+			if check.shouldError {
+				if err == nil {
+					t.Error("expected an error")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+			if check.result != result {
+				t.Errorf("unexpected result: want %v got %v", check.result, result)
+			}
+		})
+	}
 }
