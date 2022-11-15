@@ -31,6 +31,9 @@ public class Address {
     }
 
     public static Address fromBytes(byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
         return new Address(bytes);
     }
 
