@@ -9,7 +9,7 @@ import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.utils.{BytesUtils, SDKModifiersCache}
+import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
@@ -18,7 +18,7 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.{ModifiersCache, idToVersion, versionToId}
+import sparkz.core.{DefaultModifiersCache, ModifiersCache, idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
@@ -80,7 +80,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
    * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
    */
   protected override lazy val modifiersCache: ModifiersCache[SidechainBlock, HIS] =
-    new SDKModifiersCache[SidechainBlock, HIS](sparksSettings.network.maxModifiersCacheSize)
+    new DefaultModifiersCache[SidechainBlock, HIS](sparksSettings.network.maxModifiersCacheSize)
 
   // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
   // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
