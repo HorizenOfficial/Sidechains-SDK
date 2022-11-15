@@ -19,12 +19,12 @@ func call(t *testing.T, instance *lib.Service, method string, args interface{}) 
 		}
 		jsonArgs = string(jsonBytes)
 	}
-	t.Log("invoke", method, jsonArgs)
+	//t.Log("invoke", method, jsonArgs)
 	err, result := callMethod(instance, method, jsonArgs)
 	if err != nil {
 		t.Errorf("invocation failed: %v", err)
 	}
-	t.Log("response", toJsonResponse(err, result))
+	//t.Log("response", toJsonResponse(err, result))
 	return result
 }
 
@@ -72,10 +72,8 @@ func TestInvoke(t *testing.T) {
 		HandleParams: lib.HandleParams{Handle: handle},
 		Address:      *result.ContractAddress,
 	}).([]byte)
-	const expectedCode = "60806040526004361060305760003560e01c80632e64cec1146035578063371303c01460565780636057361d14606a575b600080fd5b348015604057600080fd5b5060005460405190815260200160405180910390f35b348015606157600080fd5b506068607a565b005b606860753660046086565b600055565b6000546075906001609e565b600060208284031215609757600080fd5b5035919050565b8082018082111560be57634e487b7160e01b600052601160045260246000fd5b9291505056fea26469706673582212205b989fe38f3c1c7022e6705c5e79a5d2fc589594d6a6075c784b1d171f60832c64736f6c63430008100033"
-	if expectedCode != common.Bytes2Hex(getCodeResult) {
-		// note: this depends on the version of the currently installed Solidity compiler, skip this for now
-		//t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getCodeResult))
+	if common.Bytes2Hex(test.StorageContractRuntimeCode()) != common.Bytes2Hex(getCodeResult) {
+		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getCodeResult))
 	}
 	// call function to store value
 	call(t, instance, "EvmApply", lib.EvmParams{
