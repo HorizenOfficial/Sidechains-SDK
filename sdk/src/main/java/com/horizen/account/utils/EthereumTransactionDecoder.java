@@ -11,9 +11,10 @@ import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 import java.util.Arrays;
 
-public class EthereumTransactionDecoder {
+import static org.web3j.crypto.Sign.CHAIN_ID_INC;
+import static org.web3j.crypto.Sign.LOWER_REAL_V;
 
-    private static final int UNSIGNED_EIP1559TX_RLP_LIST_SIZE = 9;
+public class EthereumTransactionDecoder {
 
     public EthereumTransactionDecoder() {
     }
@@ -70,5 +71,18 @@ public class EthereumTransactionDecoder {
         } else {
             return new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, null);
         }
+    }
+
+
+    public static Long getDecodedChainIdFromSignature(Sign.SignatureData inSignatureData) {
+        if (inSignatureData != null && inSignatureData.getV() != null) {
+            BigInteger bv = Numeric.toBigInt(inSignatureData.getV());
+            long v = bv.longValue();
+            if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
+                return null;
+            }
+            return (v - CHAIN_ID_INC) / 2;
+        }
+        return null;
     }
 }

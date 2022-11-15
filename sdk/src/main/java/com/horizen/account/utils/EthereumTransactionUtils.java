@@ -6,7 +6,13 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import static org.web3j.crypto.Sign.LOWER_REAL_V;
+
 public final class EthereumTransactionUtils {
+
+    private EthereumTransactionUtils() {
+        // prevent instantiation
+    }
 
     // Util function
     // w3j private method in TransactionEncoder, it returns a byte array with Long.BYTES length
@@ -22,10 +28,6 @@ public final class EthereumTransactionUtils {
         return bi.longValueExact();
     }
 
-    private EthereumTransactionUtils() {
-        // prevent instantiation
-    }
-
     // similar to web3j utility but does not keep the last byte if all are 0s
     private static byte[] trimLeadingBytes(byte[] bytes, byte b) {
         int offset = 0;
@@ -39,5 +41,17 @@ public final class EthereumTransactionUtils {
     }
     public static byte[] trimLeadingZeroes(byte[] bytes) {
         return trimLeadingBytes(bytes, (byte) 0);
+    }
+
+    public static byte getRealV(BigInteger bv) {
+        long v = bv.longValue();
+        if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
+            return (byte) v;
+        }
+        int inc = 0;
+        if ((int) v % 2 == 0) {
+            inc = 1;
+        }
+        return (byte) (LOWER_REAL_V + inc);
     }
 }

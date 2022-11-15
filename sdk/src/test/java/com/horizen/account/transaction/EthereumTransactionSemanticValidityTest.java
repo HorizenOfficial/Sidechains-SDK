@@ -89,6 +89,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                 null, null, null, null, null, null)
         );
 
+
         // 2. Bad signature
         // 2.1 - null v-value
         var badSignOpt1 = Optional.of(new Sign.SignatureData(
@@ -103,6 +104,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                 null, null, null, null, null,
                 badSignOpt1)
         );
+
+
 
 
         // 2.2 - null v-value array

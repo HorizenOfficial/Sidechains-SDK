@@ -16,6 +16,7 @@ import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.EthereumTransactionDecoder
+import com.horizen.account.utils.EthereumTransactionDecoder.getDecodedChainIdFromSignature
 import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
@@ -221,8 +222,12 @@ class EthService(
   private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
     val signature = secret.sign(tx.messageToSign())
     var signatureData = new SignatureData(signature.getV, signature.getR, signature.getS)
-    if (!tx.isEIP1559 && tx.isSigned && tx.getDecodedEip155ChainId() != null) {
-      signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getDecodedEip155ChainId())
+
+    if (!tx.isEIP1559 && tx.isSigned) {
+      val decodedChainId = getDecodedChainIdFromSignature(tx.getSignatureData);
+      if (decodedChainId != null) {
+        signatureData = TransactionEncoder.createEip155SignatureData(signatureData, decodedChainId)
+      }
     }
     new EthereumTransaction(tx, signatureData)
   }

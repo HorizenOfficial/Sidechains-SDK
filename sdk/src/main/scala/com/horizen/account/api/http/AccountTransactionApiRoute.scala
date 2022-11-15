@@ -18,7 +18,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{EthereumTransactionDecoder, ZenWeiConverter}
+import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionEncoder, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -146,7 +146,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val isEIP155 = body.EIP155.getOrElse(false)
               val response = if (isEIP155) {
-                val encodedChainId = EthereumTransaction.encodeEip155ChainId(params.chainId)
+                val encodedChainId = EthereumTransactionEncoder.encodeEip155ChainId(params.chainId)
                 val tmpTx = new EthereumTransaction(
                   destAddress,
                   nonce,

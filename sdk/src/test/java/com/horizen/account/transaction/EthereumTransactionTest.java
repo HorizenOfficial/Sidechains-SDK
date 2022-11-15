@@ -3,6 +3,7 @@ package com.horizen.account.transaction;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.EthereumTransactionDecoder;
+import com.horizen.account.utils.EthereumTransactionEncoder;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
 import com.horizen.utils.BytesUtils;
@@ -78,7 +79,7 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(21000),
                 BigInteger.TEN.pow(18),
                 "",
-                new Sign.SignatureData(EthereumTransaction.encodeEip155ChainId(1L).toByteArray(),
+                new Sign.SignatureData(EthereumTransactionEncoder.encodeEip155ChainId(1L).toByteArray(),
                         SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
                         SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS)
         );
@@ -104,7 +105,7 @@ public class EthereumTransactionTest {
         // Test 1: direct constructor test
         try {
             Long chainId = 1L;
-            var encodedChainId = EthereumTransaction.encodeEip155ChainId(chainId);
+            var encodedChainId = EthereumTransactionEncoder.encodeEip155ChainId(chainId);
             var someTx = new EthereumTransaction(
                     "0x3535353535353535353535353535353535353535",
                     BigInteger.valueOf(9),

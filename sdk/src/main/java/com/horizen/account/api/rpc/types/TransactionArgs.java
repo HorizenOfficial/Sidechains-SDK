@@ -9,6 +9,7 @@ import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.Message;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
+import com.horizen.account.utils.EthereumTransactionEncoder;
 import com.horizen.evm.utils.Address;
 import com.horizen.params.NetworkParams;
 import org.web3j.crypto.Sign;
@@ -68,7 +69,7 @@ public class TransactionArgs {
         switch (saneType) {
             case 0:
                 // Legacy TODO we are handling it as a EIP155, but it is not always like that!!!!
-                var encodedChainId = EthereumTransaction.encodeEip155ChainId(saneChainId);
+                var encodedChainId = EthereumTransactionEncoder.encodeEip155ChainId(saneChainId);
 
                 var prepared = new Sign.SignatureData(
                         encodedChainId.toByteArray(),
