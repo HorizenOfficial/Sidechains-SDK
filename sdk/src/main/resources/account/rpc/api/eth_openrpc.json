@@ -11,7 +11,7 @@
 	},
 	"methods": [
 		{
-			"name": "eth_getForwardTransfers",
+			"name": "zen_getForwardTransfers",
 			"description": "This is horizen specific",
 			"summary": "Returns a list of forward transfers contained in the block",
 			"params": [
@@ -63,7 +63,7 @@
 			}
 		},
 		{
-			"name": "eth_getFeePayments",
+			"name": "zen_getFeePayments",
 			"description": "This is horizen specific",
 			"summary": "Returns a list of fee payments in the block",
 			"params": [
