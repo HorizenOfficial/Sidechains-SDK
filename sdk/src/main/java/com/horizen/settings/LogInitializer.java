@@ -14,9 +14,8 @@ public class LogInitializer {
     // note: need to use a set that preserves the insertion-order
     private static final Set<String> levelSet = new LinkedHashSet<>();
 
-    public static void initLogManager(SidechainSettings info) {
-        if (initDone)
-            return;
+    public static void initLogManager(String logDir, String logFileName, String logFileLevel, String logConsoleLevel) {
+        if (initDone) return;
         initDone = true;
 
         // allowed levels
@@ -30,35 +29,40 @@ public class LogInitializer {
         levelSet.add("fatal");
         levelSet.add("off");
 
-        String logDir = info.sparkzSettings().logDir().toString();
-        if (!logDir.endsWith(File.separator)) {
-            logDir = logDir + File.separator;
-        }
-        String logFileName = info.logInfo().logFileName();
-        String logFileLevel = getCheckedLevel(info.logInfo().logFileLevel());
-        String logConsoleLevel = getCheckedLevel(info.logInfo().logConsoleLevel());
+        String checkedFileLevel = getCheckedLevel(logFileLevel);
+        String checkedConsoleLevel = getCheckedLevel(logConsoleLevel);
         String logRootLevel = "all";
         // reduce root log level to the highest level applied to either file or console appender
         for (var level : levelSet) {
-            if (level.equals(logFileLevel) || level.equals(logConsoleLevel)) {
+            if (level.equals(checkedFileLevel) || level.equals(checkedConsoleLevel)) {
                 logRootLevel = level;
                 break;
             }
         }
 
+        // make sure logDir ends with a separator
+        if (!logDir.isBlank() && !logDir.endsWith(File.separator)) {
+            logDir = logDir + File.separator;
+        }
+
         // init log4j2 logger
         System.setProperty("logDir", logDir);
-        System.setProperty("logFilename", logFileName);
+        System.setProperty("logFileName", logFileName);
         System.setProperty("logRootLevel", logRootLevel);
-        System.setProperty("logFileLevel", logFileLevel);
-        System.setProperty("logConsoleLevel", logConsoleLevel);
+        System.setProperty("logFileLevel", checkedFileLevel);
+        System.setProperty("logConsoleLevel", checkedConsoleLevel);
 
         Logger logger = LogManager.getLogger(LogInitializer.class);
         logger.log(
-            Level.INFO,
-            "Logging system started, log file: [{}], file log level: [{}], console log level: [{}]",
-            logDir + File.separator + logFileName, logFileLevel, logConsoleLevel
+            Level.INFO, "Logging system started, log file: [{}], file log level: [{}], console log level: [{}]",
+            logDir + logFileName, logFileLevel, logConsoleLevel
         );
+    }
+
+    public static void initLogManager(SidechainSettings info) {
+        String logDir = info.sparkzSettings().logDir().toString();
+        var logInfo = info.logInfo();
+        initLogManager(logDir, logInfo.logFileName(), logInfo.logFileLevel(), logInfo.logConsoleLevel());
     }
 
     public static String getCheckedLevel(String inLevel) {
