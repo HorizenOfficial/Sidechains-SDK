@@ -401,6 +401,61 @@ class AccountSidechainNodeViewHolderPerfTest
 
   @Test
   @Ignore
+  def updateMemPoolSingleAccountTest(): Unit = {
+    val out = new BufferedWriter(new FileWriter("log/updateMemPoolSingleAccountTest.txt", true))
+
+    val cal = Calendar.getInstance()
+    try {
+      out.write("\n\n")
+      out.write("*********************************************************************\n\n")
+      out.write("*       Updating Memory Pool with Single Account performance test   *\n\n")
+      out.write("*********************************************************************\n\n")
+
+      out.write(s"Date and time of the test: ${cal.getTime}\n\n")
+
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
+
+      val numOfTxs = 12000
+      val numOfNormalAccount = 1
+      val numOfTxsInBlock = 1400
+
+      out.write(s"Total number of transactions:                    $numOfTxs\n")
+      out.write(s"Number of normal accounts:                       $numOfNormalAccount\n")
+      out.write(s"Number of transactions for each block:           $numOfTxsInBlock\n")
+
+      println("************** Testing with one block to apply **************")
+
+      val listOfTxs = createTransactions(numOfNormalAccount, numOfTxs)
+
+      listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
+      assertEquals(numOfTxs, mempool.size)
+
+      val appliedBlock: AccountBlock = mock[AccountBlock]
+      val listOfTxsInBlock = listOfTxs.take(numOfTxsInBlock)
+
+      Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
+      // Update the nonces
+      listOfTxsInBlock.foreach(tx =>
+        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+      )
+
+      println("Starting test")
+      val startTime = System.currentTimeMillis()
+      val newMemPool = nodeViewHolder.updateMemPool(Seq(), Seq(appliedBlock), mempool, state)
+      val updateTime = System.currentTimeMillis() - startTime
+      assertEquals(numOfTxs - numOfTxsInBlock, newMemPool.size)
+      println(s"total time $updateTime ms")
+      out.write(s"\n********************* Testing with one block to apply results *********************\n")
+      out.write(s"Duration of the test:                      $updateTime ms\n")
+
+    } finally {
+      out.close()
+    }
+  }
+
+
+  @Test
+  @Ignore
   def takeTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/takeTest.txt", true))
 

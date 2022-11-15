@@ -260,7 +260,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     var haveBecomeNonExecutable = false
 
     if (existRejectedTxsWithValidNonce(txsFromRejectedBlocks, newExpectedNonce)) {
-      txsFromRejectedBlocks.dropWhile(tx => tx.getNonce.compareTo(newExpectedNonce) < 0).foreach { tx =>
+      txsFromRejectedBlocks.withFilter(tx => tx.getNonce.compareTo(newExpectedNonce) >= 0).foreach { tx =>
         if (balance.compareTo(tx.maxCost) >= 0) {
           all.put(tx.id, tx)
           destMap.put(tx.getNonce, tx.id)
@@ -277,16 +277,15 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     val execTxsOpt = executableTxs.remove(account)
     if (execTxsOpt.nonEmpty) {
       execTxsOpt.get
-        .dropWhile {
+        .withFilter {
           case (nonce, id) => {
             if (nonce.compareTo(newExpectedNonce) < 0) {
               all.remove(id)
-              true
-            } else
               false
+            } else
+              true
           }
-        }
-        .foreach { case (nonce, id) =>
+        }.foreach { case (nonce, id) =>
           if (balance.compareTo(all(id).maxCost) >= 0) {
             destMap.put(nonce, id)
           } else {
@@ -305,13 +304,13 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     val nonExecTxs = nonExecutableTxs.remove(account)
     if (nonExecTxs.nonEmpty) {
       nonExecTxs.get
-        .dropWhile {
+        .withFilter {
           case (nonce, id) => {
             if (nonce.compareTo(newExpectedNonce) < 0) {
               all.remove(id)
-              true
-            } else
               false
+            } else
+              true
           }
         }
         .foreach { case (nonce, id) =>
