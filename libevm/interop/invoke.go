@@ -67,7 +67,7 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 		}
 		inputs = append(inputs, argsType.Elem())
 	default:
-		return fmt.Errorf("%w: functions must have zero or one argument, but the called function %s has %d arguments", ErrInvocationError, method, funInputs), nil
+		return fmt.Errorf("%w: functions must have zero or one argument, but the function %s has %d arguments", ErrInvocationError, method, funInputs), nil
 	}
 	// validate outputs
 	switch funOutputs {
@@ -77,10 +77,10 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 		// check if the first return value is an error
 		canError = funType.Out(0).Implements(errorInterfaceType)
 		if funOutputs == 2 && !canError {
-			return fmt.Errorf("%w: functions with two return values must have an error type as the first one, function %s has two non-error return values", ErrInvocationError, method), nil
+			return fmt.Errorf("%w: functions with two return values must have an error type as the first one, but the function %s has two non-error return values", ErrInvocationError, method), nil
 		}
 	default:
-		return fmt.Errorf("%w: functions must have two or less return values, but the called function %s has %d return values", ErrInvocationError, method, funOutputs), nil
+		return fmt.Errorf("%w: functions must have two or less return values, but the function %s has %d return values", ErrInvocationError, method, funOutputs), nil
 	}
 	// call method
 	results := fun.Call(inputs)
