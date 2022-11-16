@@ -36,7 +36,7 @@ public class EthereumEvent {
      * @throws IllegalAccessException
      * @throws InvocationTargetException
      */
-    private static TreeMap<Integer, EventParameterData> getEventParameterData(Object eventInstance) throws IllegalAccessException, InvocationTargetException {
+    private static ArrayList<EventParameterData> getEventParameterData(Object eventInstance) throws IllegalAccessException, InvocationTargetException {
         var annotatedParams = new TreeMap<Integer, EventParameterData>();
         var parameterCandidates = new ArrayList<AccessibleObject>();
 
@@ -64,7 +64,7 @@ public class EthereumEvent {
                 annotatedParams.put(acObj.getAnnotation(Parameter.class).value(), new EventParameterData(indexed, method.getReturnType(), (Type) method.invoke(eventInstance)));
             }
         }
-        return annotatedParams;
+        return new ArrayList<>(annotatedParams.values());
     }
 
     /**
@@ -113,7 +113,7 @@ public class EthereumEvent {
         List<Type> convertedParams = new ArrayList<>();
         var annotatedParameters = getEventParameterData(eventInstance);
 
-        for (var parameterData : annotatedParameters.values()) {
+        for (var parameterData : annotatedParameters) {
             convertedParams.add(parameterData.value);
             parametersTypeRef.add(TypeReference.makeTypeReference(parameterData.value.getTypeAsString(), parameterData.indexed, false));
         }
