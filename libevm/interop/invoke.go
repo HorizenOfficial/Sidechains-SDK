@@ -2,12 +2,19 @@ package interop
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/log"
 	"reflect"
 )
 
 var errorInterfaceType = reflect.TypeOf((*error)(nil)).Elem()
+
+var (
+	ErrMethodNotFound   = errors.New("method not found")
+	ErrInvalidArguments = errors.New("invalid arguments")
+	ErrInvocationError  = errors.New("invocation error")
+)
 
 func Invoke(target interface{}, method string, args string) string {
 	log.Trace(">> invoke", "method", method, "args", args)
@@ -27,7 +34,7 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 	// find the target function
 	fun := reflect.ValueOf(target).MethodByName(method)
 	if !fun.IsValid() {
-		return fmt.Errorf("method not found: %s", method), nil
+		return fmt.Errorf("%w: %s", ErrMethodNotFound, method), nil
 	}
 	var (
 		funType    = fun.Type()
@@ -41,11 +48,11 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 	switch funInputs {
 	case 0:
 		if args != "" {
-			return fmt.Errorf("invalid arguments: function %s has no arguments, but was called with: %s", method, args), nil
+			return fmt.Errorf("%w: function %s has no arguments, but was called with: %s", ErrInvalidArguments, method, args), nil
 		}
 	case 1:
 		if args == "" {
-			return fmt.Errorf("missing arguments: function %s must be called with an argument", method), nil
+			return fmt.Errorf("%w: function %s must be called with an argument", ErrInvalidArguments, method), nil
 		}
 		// unmarshal args to the type of the one parameter of the function
 		v := reflect.New(funType.In(0))
@@ -55,7 +62,7 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 		}
 		inputs = append(inputs, v.Elem())
 	default:
-		return fmt.Errorf("invocation error: functions must have zero or one argument, but the called function %s has %d arguments", method, funInputs), nil
+		return fmt.Errorf("%w: functions must have zero or one argument, but the called function %s has %d arguments", ErrInvocationError, method, funInputs), nil
 	}
 	// validate outputs
 	switch funOutputs {
@@ -65,10 +72,10 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 		// check if the first return value is an error
 		canError = funType.Out(0).Implements(errorInterfaceType)
 		if funOutputs == 2 && !canError {
-			return fmt.Errorf("invocation error: functions with two return values must have an error type as the first one, function %s has two non-error return values", method), nil
+			return fmt.Errorf("%w: functions with two return values must have an error type as the first one, function %s has two non-error return values", ErrInvocationError, method), nil
 		}
 	default:
-		return fmt.Errorf("invocation error: functions must have two or less return values, but the called function %s has %d return values", method, funOutputs), nil
+		return fmt.Errorf("%w: functions must have two or less return values, but the called function %s has %d return values", ErrInvocationError, method, funOutputs), nil
 	}
 	// call method
 	results := fun.Call(inputs)

@@ -2,12 +2,14 @@ package interop
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"libevm/lib"
 	"libevm/test"
 	"math/big"
+	"reflect"
 	"testing"
 )
 
@@ -117,6 +119,8 @@ func TestInvoke(t *testing.T) {
 
 type MockLibrary struct{}
 
+var MockError = errors.New("mock error")
+
 func (m *MockLibrary) NoParam()               {}
 func (m *MockLibrary) OneParam(a int)         {}
 func (m *MockLibrary) TwoParams(a int, b int) {}
@@ -125,11 +129,11 @@ func (m *MockLibrary) NoParamNilError() error {
 	return nil
 }
 func (m *MockLibrary) NoParamError() error {
-	return fmt.Errorf("kaputt")
+	return fmt.Errorf("%w: kaputt", MockError)
 }
 func (m *MockLibrary) OneParamError(fail int) error {
 	if fail != 0 {
-		return fmt.Errorf("kaputt: %v", fail)
+		return fmt.Errorf("%w: kaputt %v", MockError, fail)
 	}
 	return nil
 }
@@ -143,7 +147,7 @@ func (m *MockLibrary) OneParamEcho(str string) string {
 
 func (m *MockLibrary) OneParam7kaputt(nr int) (error, string) {
 	if nr == 7 {
-		return fmt.Errorf("oh noes"), ""
+		return fmt.Errorf("%w: oh noes", MockError), ""
 	}
 	return nil, "success"
 }
@@ -154,63 +158,75 @@ func (m *MockLibrary) NoParamTwoResults() (string, string) {
 	return "", ""
 }
 
+type MockArgs struct {
+	Foo    int       `json:"foo"`
+	Bar    string    `json:"bar"`
+	Nested *MockArgs `json:"nested"`
+}
+
+func (m *MockLibrary) ComplexTypes(args MockArgs) *MockArgs {
+	return args.Nested
+}
+
 func TestInvokeMarshal(t *testing.T) {
 	m := new(MockLibrary)
 	checks := []struct {
-		method      string
-		args        string
-		shouldError bool
-		result      interface{}
+		method string
+		args   string
+		err    error
+		result interface{}
 	}{
-		{method: "UnknownMethod", args: "", shouldError: true},
+		{method: "ThisDoesNotExist", args: "", err: ErrMethodNotFound},
 
 		{method: "NoParam", args: ""},
-		{method: "NoParam", args: "123", shouldError: true},
-		{method: "OneParam", args: "", shouldError: true},
+		{method: "NoParam", args: "123", err: ErrInvalidArguments},
+		{method: "OneParam", args: "", err: ErrInvalidArguments},
 		{method: "OneParam", args: "123"},
-		{method: "OneParam", args: "false", shouldError: true}, // wrong argument type
-		{method: "TwoParams", args: "", shouldError: true},
-		{method: "TwoParams", args: "123", shouldError: true},
+		{method: "OneParam", args: "false", err: ErrInvalidArguments}, // wrong argument type
+		{method: "TwoParams", args: "", err: ErrInvocationError},
+		{method: "TwoParams", args: "123", err: ErrInvocationError},
 
 		{method: "NoParamNilError", args: ""},
-		{method: "NoParamNilError", args: "123", shouldError: true},
-		{method: "NoParamError", args: "", shouldError: true},
-		{method: "NoParamError", args: "123", shouldError: true},
+		{method: "NoParamNilError", args: "123", err: ErrInvalidArguments},
+		{method: "NoParamError", args: "", err: MockError},
+		{method: "NoParamError", args: "123", err: ErrInvalidArguments},
 
-		{method: "OneParamError", args: "", shouldError: true},
+		{method: "OneParamError", args: "", err: ErrInvalidArguments},
 		{method: "OneParamError", args: "0"},
-		{method: "OneParamError", args: "1", shouldError: true},
+		{method: "OneParamError", args: "1", err: MockError},
 
 		{method: "NoParamResult", args: "", result: "toot gaya"},
-		{method: "NoParamResult", args: "123", shouldError: true},
+		{method: "NoParamResult", args: "123", err: ErrInvalidArguments},
 
-		{method: "OneParamEcho", args: "", shouldError: true},
-		{method: "OneParamEcho", args: "123", shouldError: true},
+		{method: "OneParamEcho", args: "", err: ErrInvalidArguments},
+		{method: "OneParamEcho", args: "123", err: ErrInvalidArguments},
 		{method: "OneParamEcho", args: "\"foo\"", result: "foo"},
 		{method: "OneParamEcho", args: "\"bar\"", result: "bar"},
 
-		{method: "OneParam7kaputt", args: "", shouldError: true},
+		{method: "OneParam7kaputt", args: "", err: ErrInvalidArguments},
 		{method: "OneParam7kaputt", args: "0", result: "success"},
 		{method: "OneParam7kaputt", args: "6", result: "success"},
-		{method: "OneParam7kaputt", args: "7", shouldError: true},
+		{method: "OneParam7kaputt", args: "7", err: MockError},
 		{method: "OneParam7kaputt", args: "8", result: "success"},
 
-		{method: "NoParamBadErrorReturn", args: "", shouldError: true},
-		{method: "NoParamTwoResults", args: "", shouldError: true},
+		{method: "NoParamBadErrorReturn", args: "", err: ErrInvocationError},
+		{method: "NoParamTwoResults", args: "", err: ErrInvocationError},
+
+		{method: "ComplexTypes", args: "", err: ErrInvalidArguments},
+		{method: "ComplexTypes", args: "123", err: ErrInvalidArguments},
+		{method: "ComplexTypes", args: "{\"foo\":42}", result: (*MockArgs)(nil)},
+		{method: "ComplexTypes", args: "{\"foo\":42,\"breakit\":true}", err: ErrInvalidArguments},
+		{method: "ComplexTypes", args: "{\"foo\":42,\"nested\":{\"bar\":\"baz\"}}", result: &MockArgs{Bar: "baz"}},
 	}
 	for _, check := range checks {
 		t.Run(check.method, func(t *testing.T) {
 			err, result := callMethod(m, check.method, check.args)
-			if check.shouldError {
-				if err == nil {
-					t.Error("expected an error")
-				}
+			if !errors.Is(err, check.err) {
+				t.Errorf("unexpected error: want %v got %v", check.err, err)
 			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
+				//t.Logf("got correct error: %v", err)
 			}
-			if check.result != result {
+			if !reflect.DeepEqual(result, check.result) {
 				t.Errorf("unexpected result: want %v got %v", check.result, result)
 			}
 		})
