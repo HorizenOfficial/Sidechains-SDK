@@ -2,10 +2,8 @@
 import logging
 from decimal import Decimal
 
-from eth_utils import to_checksum_address
-
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
-from SidechainTestFramework.account.address_util import format_eoa, format_evm
+from SidechainTestFramework.account.ac_utils import format_eoa, format_evm
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
