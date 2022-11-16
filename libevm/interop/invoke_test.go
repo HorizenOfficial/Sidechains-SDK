@@ -121,54 +121,37 @@ type MockLibrary struct{}
 
 var MockError = errors.New("mock error")
 
-func (m *MockLibrary) NoParam()               {}
-func (m *MockLibrary) OneParam(a int)         {}
-func (m *MockLibrary) TwoParams(a int, b int) {}
+type MockParams struct {
+	Foo    int         `json:"foo"`
+	Bar    string      `json:"bar"`
+	Nested *MockParams `json:"nested"`
+}
 
-func (m *MockLibrary) NoParamNilError() error {
-	return nil
-}
-func (m *MockLibrary) NoParamError() error {
-	return fmt.Errorf("%w: kaputt", MockError)
-}
-func (m *MockLibrary) OneParamError(fail int) error {
+func (m *MockLibrary) NoParam()                                   {}
+func (m *MockLibrary) NoParamResult() string                      { return "toot gaya" }
+func (m *MockLibrary) NoParamNilError() error                     { return nil }
+func (m *MockLibrary) NoParamError() error                        { return fmt.Errorf("%w: kaputt", MockError) }
+func (m *MockLibrary) NoParamBadErrorReturn() (string, error)     { return "", nil }
+func (m *MockLibrary) NoParamTwoResults() (string, string)        { return "", "" }
+func (m *MockLibrary) OneParam(a int)                             {}
+func (m *MockLibrary) OneParamEcho(str string) string             { return str }
+func (m *MockLibrary) TwoParams(a int, b int)                     { /* invalid: more than one parameter */ }
+func (m *MockLibrary) ComplexParam(params MockParams) *MockParams { return params.Nested }
+func (m *MockLibrary) ArrayParam(params []int) int                { return len(params) }
+func (m *MockLibrary) ConditionalErrorNoResult(fail int) error {
 	if fail != 0 {
 		return fmt.Errorf("%w: kaputt %v", MockError, fail)
 	}
 	return nil
 }
-func (m *MockLibrary) NoParamResult() string {
-	return "toot gaya"
-}
-
-func (m *MockLibrary) OneParamEcho(str string) string {
-	return str
-}
-
-func (m *MockLibrary) OneParam7kaputt(nr int) (error, string) {
+func (m *MockLibrary) ConditionalErrorWithResult(nr int) (error, string) {
 	if nr == 7 {
 		return fmt.Errorf("%w: oh noes", MockError), ""
 	}
 	return nil, "success"
 }
-func (m *MockLibrary) NoParamBadErrorReturn() (string, error) {
-	return "", nil
-}
-func (m *MockLibrary) NoParamTwoResults() (string, string) {
-	return "", ""
-}
 
-type MockArgs struct {
-	Foo    int       `json:"foo"`
-	Bar    string    `json:"bar"`
-	Nested *MockArgs `json:"nested"`
-}
-
-func (m *MockLibrary) ComplexTypes(args MockArgs) *MockArgs {
-	return args.Nested
-}
-
-func TestInvokeMarshal(t *testing.T) {
+func TestCallMethod(t *testing.T) {
 	m := new(MockLibrary)
 	checks := []struct {
 		method string
@@ -176,47 +159,55 @@ func TestInvokeMarshal(t *testing.T) {
 		err    error
 		result interface{}
 	}{
-		{method: "ThisDoesNotExist", args: "", err: ErrMethodNotFound},
+		{method: "ThisDoesNotExist", err: ErrMethodNotFound},
 
-		{method: "NoParam", args: ""},
+		{method: "NoParam"},
 		{method: "NoParam", args: "123", err: ErrInvalidArguments},
-		{method: "OneParam", args: "", err: ErrInvalidArguments},
-		{method: "OneParam", args: "123"},
-		{method: "OneParam", args: "false", err: ErrInvalidArguments}, // wrong argument type
-		{method: "TwoParams", args: "", err: ErrInvocationError},
-		{method: "TwoParams", args: "123", err: ErrInvocationError},
-
-		{method: "NoParamNilError", args: ""},
-		{method: "NoParamNilError", args: "123", err: ErrInvalidArguments},
-		{method: "NoParamError", args: "", err: MockError},
-		{method: "NoParamError", args: "123", err: ErrInvalidArguments},
-
-		{method: "OneParamError", args: "", err: ErrInvalidArguments},
-		{method: "OneParamError", args: "0"},
-		{method: "OneParamError", args: "1", err: MockError},
-
-		{method: "NoParamResult", args: "", result: "toot gaya"},
+		{method: "NoParamResult", result: "toot gaya"},
 		{method: "NoParamResult", args: "123", err: ErrInvalidArguments},
+		{method: "NoParamNilError"},
+		{method: "NoParamNilError", args: "123", err: ErrInvalidArguments},
+		{method: "NoParamError", err: MockError},
+		{method: "NoParamError", args: "123", err: ErrInvalidArguments},
+		{method: "NoParamBadErrorReturn", err: ErrInvocationError},
+		{method: "NoParamTwoResults", err: ErrInvocationError},
 
-		{method: "OneParamEcho", args: "", err: ErrInvalidArguments},
+		{method: "OneParam", err: ErrInvalidArguments},
+		{method: "OneParam", args: "123"},
+		{method: "OneParam", args: "false", err: ErrInvalidArguments},
+		{method: "OneParamEcho", err: ErrInvalidArguments},
 		{method: "OneParamEcho", args: "123", err: ErrInvalidArguments},
 		{method: "OneParamEcho", args: "\"foo\"", result: "foo"},
 		{method: "OneParamEcho", args: "\"bar\"", result: "bar"},
 
-		{method: "OneParam7kaputt", args: "", err: ErrInvalidArguments},
-		{method: "OneParam7kaputt", args: "0", result: "success"},
-		{method: "OneParam7kaputt", args: "6", result: "success"},
-		{method: "OneParam7kaputt", args: "7", err: MockError},
-		{method: "OneParam7kaputt", args: "8", result: "success"},
+		{method: "TwoParams", err: ErrInvocationError},
+		{method: "TwoParams", args: "123", err: ErrInvocationError},
 
-		{method: "NoParamBadErrorReturn", args: "", err: ErrInvocationError},
-		{method: "NoParamTwoResults", args: "", err: ErrInvocationError},
+		{method: "ComplexParam", err: ErrInvalidArguments},
+		{method: "ComplexParam", args: "123", err: ErrInvalidArguments},
+		{method: "ComplexParam", args: "{\"foo\":42}", result: (*MockParams)(nil)},
+		{method: "ComplexParam", args: "{\"foo\":42,\"breakit\":true}", err: ErrInvalidArguments},
+		{method: "ComplexParam", args: "{\"foo\":42,\"nested\":{\"bar\":\"baz\"}}", result: &MockParams{Bar: "baz"}},
+		{method: "ComplexParam", args: "null", err: ErrInvalidArguments},
 
-		{method: "ComplexTypes", args: "", err: ErrInvalidArguments},
-		{method: "ComplexTypes", args: "123", err: ErrInvalidArguments},
-		{method: "ComplexTypes", args: "{\"foo\":42}", result: (*MockArgs)(nil)},
-		{method: "ComplexTypes", args: "{\"foo\":42,\"breakit\":true}", err: ErrInvalidArguments},
-		{method: "ComplexTypes", args: "{\"foo\":42,\"nested\":{\"bar\":\"baz\"}}", result: &MockArgs{Bar: "baz"}},
+		{method: "ArrayParam", args: "[4,8,15,16,23,42]", result: 6},
+		{method: "ArrayParam", args: "[]", result: 0},
+		{method: "ArrayParam", args: "null", result: 0},
+		{method: "ArrayParam", args: "1,2,3,4", err: ErrInvalidArguments},
+		{method: "ArrayParam", args: "", err: ErrInvalidArguments},
+		{method: "ArrayParam", args: "{\"args\":[1,2,3]}", err: ErrInvalidArguments},
+
+		{method: "ConditionalErrorNoResult", err: ErrInvalidArguments},
+		{method: "ConditionalErrorNoResult", args: "0"},
+		{method: "ConditionalErrorNoResult", args: "1", err: MockError},
+
+		{method: "ConditionalErrorWithResult", err: ErrInvalidArguments},
+		{method: "ConditionalErrorWithResult", args: " null  ", err: ErrInvalidArguments},
+		{method: "ConditionalErrorWithResult", args: "\"null\"", err: ErrInvalidArguments},
+		{method: "ConditionalErrorWithResult", args: "  0", result: "success"},
+		{method: "ConditionalErrorWithResult", args: "6  ", result: "success"},
+		{method: "ConditionalErrorWithResult", args: " 7 ", err: MockError},
+		{method: "ConditionalErrorWithResult", args: "8", result: "success"},
 	}
 	for _, check := range checks {
 		t.Run(check.method, func(t *testing.T) {
