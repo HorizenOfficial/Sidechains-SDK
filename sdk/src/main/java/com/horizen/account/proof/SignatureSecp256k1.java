@@ -27,7 +27,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     public static final int EIP155_PARTIAL_SIGNATURE_RS_SIZE = 0;
     public static final byte[] EIP155_PARTIAL_SIGNATURE_RS = new byte[EIP155_PARTIAL_SIGNATURE_RS_SIZE];
 
-    public static boolean checkSignatureDataSizes(byte[] v, byte[] r, byte[] s) {
+    private static boolean checkSignatureDataSizes(byte[] v, byte[] r, byte[] s) {
         return (v.length > 0 && v.length <= Secp256k1.SIGNATURE_V_MAXSIZE) &&
             (
                 // a regular signature
@@ -37,7 +37,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             );
     }
 
-    private static void verifySignatureData(byte[] v, byte[] r, byte[] s) {
+    public static void verifySignatureData(byte[] v, byte[] r, byte[] s) {
         if (v == null || r == null || s == null)
             throw new IllegalArgumentException("Null v/r/s obj passed in signature data");
         if  (!checkSignatureDataSizes(v, r, s)) {

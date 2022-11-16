@@ -28,6 +28,12 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     }
 
     @Test
+    public void testPartiallySignedEip155TxValidity() {
+        var transaction = getPartiallySignedEip155LegacyTransaction();
+        assertNotValid(transaction);
+    }
+
+    @Test
     public void testUnsignedTxValidity() {
         var transaction = getUnsignedEoa2EoaEip1559Transaction();
         assertNotValid(transaction);

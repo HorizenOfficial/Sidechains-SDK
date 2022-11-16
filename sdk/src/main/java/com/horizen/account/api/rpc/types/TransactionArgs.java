@@ -67,18 +67,21 @@ public class TransactionArgs {
         var saneType = type == null ? 0 : type.intValueExact();
         var saneTo = to == null ? null : to.toUTXOString();
         switch (saneType) {
-            case 0:
-                // Legacy TODO we are handling it as a EIP155, but it is not always like that!!!!
-                var encodedChainId = EthereumTransactionEncoder.encodeEip155ChainId(saneChainId);
+            case 0: // LEGACY type
+                Sign.SignatureData prepared;
+                if (chainId != null) {
+                    // eip155
+                    var encodedChainId = EthereumTransactionEncoder.encodeEip155ChainId(saneChainId);
 
-                var prepared = new Sign.SignatureData(
-                        encodedChainId.toByteArray(),
-                        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
-                        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS);
-
+                    prepared = new Sign.SignatureData(
+                            encodedChainId.toByteArray(),
+                            SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
+                            SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS);
+                } else {
+                    prepared = null;
+                }
                 return new EthereumTransaction(saneTo, nonce, gasPrice, gas, value, this.getDataString(), prepared);
-            case 2:
-                // EIP-1559
+            case 2: // EIP-1559
                 return new EthereumTransaction(
                     saneChainId,
                     saneTo,

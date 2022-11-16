@@ -73,16 +73,19 @@ public class EthereumTransactionDecoder {
         }
     }
 
-
     public static Long getDecodedChainIdFromSignature(Sign.SignatureData inSignatureData) {
         if (inSignatureData != null && inSignatureData.getV() != null) {
             BigInteger bv = Numeric.toBigInt(inSignatureData.getV());
-            long v = bv.longValue();
-            if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
-                return null;
-            }
-            return (v - CHAIN_ID_INC) / 2;
+            return decodeEip155ChainId(bv);
         }
         return null;
+    }
+
+    public static Long decodeEip155ChainId(BigInteger bv) {
+        long v = bv.longValue();
+        if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
+            return null;
+        }
+        return (v - CHAIN_ID_INC) / 2;
     }
 }
