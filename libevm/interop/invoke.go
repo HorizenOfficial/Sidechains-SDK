@@ -33,6 +33,8 @@ func Invoke(target interface{}, method string, args string) string {
 // 4. if there is one return value it must be either an error type or a return value that can be marshalled to json
 // 5. if there are two return values the first one must be an error type and the second must be a return value that can be marshalled to json
 func callMethod(target interface{}, method string, args string) (error, interface{}) {
+	// cleanup whitespace from args
+	args = strings.TrimSpace(args)
 	// find the target function
 	fun := reflect.ValueOf(target).MethodByName(method)
 	if !fun.IsValid() {
@@ -56,7 +58,7 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 		if args == "" {
 			return fmt.Errorf("%w: function %s must be called with an argument", ErrInvalidArguments, method), nil
 		}
-		if strings.TrimSpace(args) == "null" {
+		if args == "null" {
 			return fmt.Errorf("%w: null args is not allowed", ErrInvalidArguments), nil
 		}
 		// unmarshal args to the type of the one parameter of the function
