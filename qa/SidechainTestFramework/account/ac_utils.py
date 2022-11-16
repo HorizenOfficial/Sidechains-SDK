@@ -1,8 +1,50 @@
-from enum import Enum
 import logging
+import os
+import subprocess
+from enum import Enum
 
-from SidechainTestFramework.account.address_util import format_eoa, format_evm
-from SidechainTestFramework.account.evm_util import CallMethod
+from eth_utils import to_checksum_address
+
+cwd = None
+nodeModulesInstalled = False
+
+
+def get_cwd():
+    global cwd
+    if cwd is None:
+        cwd = os.environ.get("SIDECHAIN_SDK") + "/qa/SidechainTestFramework/account/smart_contract_resources"
+    return cwd
+
+
+def install_npm_packages():
+    global nodeModulesInstalled
+    if not nodeModulesInstalled:
+        logging.info("Installing node packages...")
+        logging.info("The first time this runs on your machine, it can take a few minutes...")
+        proc = subprocess.run(
+            ["yarn", "install", "--quiet", "--non-interactive", "--frozen-lockfile"],
+            cwd=get_cwd(),
+            stdout=subprocess.PIPE)
+        proc.check_returncode()
+        logging.info("Done!")
+        nodeModulesInstalled = True
+
+
+def ensure_nonce(node, address, nonce, tag='latest'):
+    if nonce is None:
+        on_chain_nonce = int(node.rpc_eth_getTransactionCount(format_evm(address), tag)['result'], 16)
+        nonce = on_chain_nonce
+    return nonce
+
+
+def ensure_chain_id(node):
+    return node.rpc_eth_chainId()['result']
+
+
+class CallMethod(Enum):
+    RPC_LEGACY = 0
+    RPC_EIP155 = 1
+    RPC_EIP1559 = 2
 
 
 def __make_static_call_payload(*, from_addr: str, to_addr: str, nonce: int, gas_limit: int, gas_price: int, value: int,
@@ -19,7 +61,7 @@ def __make_static_call_payload(*, from_addr: str, to_addr: str, nonce: int, gas_
 
 
 def __make_legacy_sign_payload(*, from_addr: str, to: str = None, nonce: int, gas: int, value: int = 1,
-                               data: str = '0x', gas_price: int = 1):
+                               data: str = None, gas_price: int = 1):
     r = {
         "type": 0,
         "nonce": nonce,
@@ -37,7 +79,7 @@ def __make_legacy_sign_payload(*, from_addr: str, to: str = None, nonce: int, ga
 
 
 def __make_eip155_sign_payload(*, from_addr: str, to: str = None, nonce: int, gas: int, value: int,
-                               data: str = '0x', gas_price: int = 1, chain_id: str):
+                               data: str = None, gas_price: int = 1, chain_id: str):
     r = {
         "type": 0,
         "nonce": nonce,
@@ -56,7 +98,7 @@ def __make_eip155_sign_payload(*, from_addr: str, to: str = None, nonce: int, ga
 
 
 def __make_eip1559_sign_payload(*, from_addr: str, to: str = None, nonce: int, gas: int, value: int,
-                                data: str = '0x', max_priority_fee_per_gas: int = None, max_fee_per_gas: int = None,
+                                data: str = None, max_priority_fee_per_gas: int = None, max_fee_per_gas: int = None,
                                 chain_id: str):
     r = {
         "type": 2,
@@ -76,17 +118,6 @@ def __make_eip1559_sign_payload(*, from_addr: str, to: str = None, nonce: int, g
     return r
 
 
-def __ensure_nonce(node, address, nonce, tag='latest'):
-    on_chain_nonce = int(node.rpc_eth_getTransactionCount(str(address), tag)['result'], 16)
-    if nonce is None:
-        nonce = on_chain_nonce
-    return nonce
-
-
-def __ensure_chain_id(node):
-    return node.rpc_eth_chainId()['result']
-
-
 def eoa_transaction(node, *,
                     call_method: CallMethod = CallMethod.RPC_LEGACY,
                     static_call: bool = False,
@@ -100,8 +131,8 @@ def eoa_transaction(node, *,
                     data: str = '0x',
                     nonce: int = None,
                     tag='latest'):
-    nonce = __ensure_nonce(node, address=from_addr, nonce=nonce, tag=tag)
-    chain_id = __ensure_chain_id(node)
+    nonce = ensure_nonce(node, address=from_addr, nonce=nonce, tag=tag)
+    chain_id = ensure_chain_id(node)
     payload = ''
     from_addr = format_evm(from_addr)
     to_addr = format_evm(to_addr)
@@ -139,3 +170,14 @@ def eoa_transaction(node, *,
             return response["result"]
 
     raise RuntimeError("Something went wrong, see {}".format(str(response)))
+
+
+def format_evm(add: str):
+    return to_checksum_address(add)
+
+
+def format_eoa(add: str):
+    if add.startswith('0x'):
+        return add[2:].lower()
+    else:
+        return add.lower()

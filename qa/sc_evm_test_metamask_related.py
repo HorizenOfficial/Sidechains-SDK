@@ -3,8 +3,7 @@ import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.address_util import format_evm, format_eoa
-from SidechainTestFramework.account.evm_util import CallMethod
+from SidechainTestFramework.account.ac_utils import format_evm, format_eoa, eoa_transaction, CallMethod
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -14,7 +13,6 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_no
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
     EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxFee, \
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
-from SidechainTestFramework.account.eoa_util import eoa_transaction
 
 """
 Check basic metamask-like functionality.

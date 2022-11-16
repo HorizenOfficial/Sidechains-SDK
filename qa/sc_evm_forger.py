@@ -8,7 +8,7 @@ from eth_abi import decode
 from eth_utils import add_0x_prefix, encode_hex, event_signature_to_log_topic, remove_0x_prefix, to_hex
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.address_util import format_eoa, format_evm
+from SidechainTestFramework.account.ac_utils import format_eoa, format_evm
 from SidechainTestFramework.sc_boostrap_info import (
     LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
     SCNetworkConfiguration, SCNodeConfiguration,
