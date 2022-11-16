@@ -1,4 +1,4 @@
-package com.horizen.account.event;
+package com.horizen.account.event.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

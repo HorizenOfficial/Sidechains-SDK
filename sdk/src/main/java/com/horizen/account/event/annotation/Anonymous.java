@@ -1,4 +1,4 @@
-package com.horizen.account.event;
+package com.horizen.account.event.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,5 +6,5 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.METHOD})
-public @interface Parameter { int value(); }
+@Target({ElementType.TYPE})
+public @interface Anonymous {}
