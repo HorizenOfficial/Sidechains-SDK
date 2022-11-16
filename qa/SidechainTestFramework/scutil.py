@@ -36,6 +36,12 @@ DEFAULT_REST_API_TIMEOUT = 5
 # max P2P message size for a Modifier
 DEFAULT_MAX_PACKET_SIZE = 5242980
 
+SLOTS_IN_EPOCH = 720
+SIMPLE_APP_SLOT_TIME = 120  # seconds
+EVM_APP_SLOT_TIME = 12  # seconds
+
+DEFAULT_SIMPLE_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * SIMPLE_APP_SLOT_TIME * 5  # 5 epochs
+DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 5  # 5 epochs
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)

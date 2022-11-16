@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// Log is a reduced representation of the geth Log type. It only contains the consensus fields and no derived data.
 type Log struct {
 	// address of the contract that generated the event
 	Address common.Address `json:"address"`

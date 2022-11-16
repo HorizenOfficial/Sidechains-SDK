@@ -8,13 +8,15 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.EthereumTransactionDecoder
+import com.horizen.account.utils.{EthereumTransactionDecoder}
+import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
@@ -50,7 +52,7 @@ class EthService(
       with ScorexLogging {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
-  def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
+  private def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
     implicit val timeout: Timeout = new Timeout(nvtimeout)
     val res = scNodeViewHolderRef
       .ask {
@@ -107,8 +109,7 @@ class EthService(
     nodeView.history
       .getStorageBlockById(blockId)
       .map(block => {
-        val transactions =
-          block.transactions.filter(_.isInstanceOf[EthereumTransaction]).map(_.asInstanceOf[EthereumTransaction])
+        val transactions = block.transactions.map(_.asInstanceOf[EthereumTransaction])
         new EthereumBlock(
           Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
           Numeric.prependHexPrefix(blockId),
@@ -167,27 +168,35 @@ class EthService(
     }
   }
 
-  def binarySearch(lowBound: BigInteger, highBound: BigInteger)(fun: BigInteger => Boolean): BigInteger = {
-    var low = lowBound
-    var high = highBound
-    while (low.add(BigInteger.ONE).compareTo(high) < 0) {
-      val mid = high.add(low).divide(BigInteger.TWO)
-      if (fun(mid)) {
-        // on success lower the upper bound
-        high = mid
-      } else {
-        // on failure raise the lower bound
-        low = mid
-      }
-    }
-    high
+  @RpcMethod("eth_sendTransaction")
+  def sendTransaction(params: TransactionArgs): String = {
+    val tx = signTransaction(params)
+    sendRawTransaction(tx)
   }
 
-  @RpcMethod("eth_signTransaction") def signTransaction(params: TransactionArgs): String = {
+  @RpcMethod("eth_signTransaction")
+  def signTransaction(params: TransactionArgs): String = {
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value)
-        .map(secret => signTransactionWithSecret(secret, params.toTransaction))
+        .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
         .map(tx => Numeric.toHexString(TransactionEncoder.encode(tx.getTransaction, tx.getSignatureData)))
+        .orNull
+    }
+  }
+
+  /**
+   * Sign calculates an ECDSA signature for: keccack256("\x19Ethereum Signed Message:\n" + len(message) + message). This
+   * gives context to the signed message and prevents signing of transactions.
+   */
+  @RpcMethod("eth_sign")
+  def sign(sender: Address, message: String): String = {
+    val data = Numeric.hexStringToByteArray(message)
+    val prefix = s"\u0019Ethereum Signed Message:\n${data.length}"
+    val messageToSign = prefix.getBytes() ++ data
+    applyOnAccountView { nodeView =>
+      getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
+        .map(secret => secret.sign(messageToSign))
+        .map(signature => Numeric.toHexString(signature.getR ++ signature.getS ++ signature.getV))
         .orNull
     }
   }
@@ -216,6 +225,22 @@ class EthService(
       signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getChainId)
     }
     new EthereumTransaction(new SignedRawTransaction(tx.getTransaction.getTransaction, signatureData))
+  }
+
+  private def binarySearch(lowBound: BigInteger, highBound: BigInteger)(fun: BigInteger => Boolean): BigInteger = {
+    var low = lowBound
+    var high = highBound
+    while (low.add(BigInteger.ONE).compareTo(high) < 0) {
+      val mid = high.add(low).divide(BigInteger.TWO)
+      if (fun(mid)) {
+        // on success lower the upper bound
+        high = mid
+      } else {
+        // on failure raise the lower bound
+        low = mid
+      }
+    }
+    high
   }
 
   @RpcMethod("eth_estimateGas")
@@ -426,7 +451,8 @@ class EthService(
     }.orNull
   }
 
-  @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): String = {
+  @RpcMethod("eth_sendRawTransaction")
+  def sendRawTransaction(signedTxData: String): String = {
     val tx = new EthereumTransaction(EthereumTransactionDecoder.decode(signedTxData))
     implicit val timeout: Timeout = new Timeout(5, SECONDS)
     // submit tx to sidechain transaction actor
@@ -520,7 +546,7 @@ class EthService(
     }
   }
 
-  @RpcMethod("eth_getForwardTransfers")
+  @RpcMethod("zen_getForwardTransfers")
   def getForwardTransfers(blockId: String): ForwardTransfersView = {
     if (blockId == null) return null
     applyOnAccountView { nodeView =>
@@ -551,5 +577,135 @@ class EthService(
         new EthereumAccountProof(stateView.getProof(address.toBytes, storageKeys))
       }
     }
+  }
+
+  @RpcMethod("zen_getFeePayments")
+  def getFeePayments(blockId: String): AccountFeePaymentsInfo = {
+    if (blockId == null) {
+      return null
+    }
+
+    var feePayments: AccountFeePaymentsInfo = null
+
+    applyOnAccountView { nodeView =>
+      nodeView.history
+        .getFeePaymentsInfo(blockId)
+        .ifPresent(p => feePayments = p)
+    }
+
+    feePayments
+  }
+
+  @RpcMethod("eth_accounts")
+  def getAccounts: Array[String] = {
+    applyOnAccountView { nodeView =>
+      nodeView.vault
+        .secretsOfType(classOf[PrivateKeySecp256k1])
+        .map(_.asInstanceOf[PrivateKeySecp256k1])
+        .map(_.publicImage())
+        .map(_.checksumAddress())
+        .toArray
+    }
+  }
+
+  @RpcMethod("eth_feeHistory")
+  @RpcOptionalParameters(1)
+  def feeHistory(
+      blockCount: Quantity,
+      newestBlock: String,
+      rewardPercentiles: Array[Double]
+  ): EthereumFeeHistoryView = {
+    val percentiles = sanitizePercentiles(rewardPercentiles)
+    applyOnAccountView { nodeView =>
+      val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, newestBlock)
+      // limit the range of blocks by the number of available blocks and cap at 1024
+      val blocks = blockCount.toNumber.intValueExact().min(requestedBlockInfo.height).min(1024)
+      // geth comment: returning with no data and no error means there are no retrievable blocks
+      if (blocks < 1) return new EthereumFeeHistoryView()
+      // calculate block number of the "oldest" block in the range
+      val oldestBlock = requestedBlockInfo.height + 1 - blocks
+
+      // include the calculated base fee of the next block after the requested range
+      val baseFeePerGas = new Array[BigInteger](blocks + 1)
+      val gasUsedRatio = new Array[Double](blocks)
+      val reward = if (percentiles.nonEmpty) new Array[Array[BigInteger]](blocks) else null
+
+      using(nodeView.state.getView) { stateView =>
+        for (i <- 0 until blocks) {
+          val block = nodeView.history
+            .blockIdByHeight(oldestBlock + i)
+            .map(ModifierId(_))
+            .flatMap(nodeView.history.getStorageBlockById)
+            .get
+          baseFeePerGas(i) = block.header.baseFee
+          gasUsedRatio(i) = block.header.gasUsed.toDouble / block.header.gasLimit.toDouble
+          if (percentiles.nonEmpty) reward(i) = getRewardsForBlock(block, stateView, percentiles)
+        }
+      }
+      // calculate baseFee for the next block after the requested range
+      baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock)
+
+      new EthereumFeeHistoryView(oldestBlock, baseFeePerGas, gasUsedRatio, reward)
+    }
+  }
+
+  private def sanitizePercentiles(percentiles: Array[Double]): Array[Double] = {
+    if (percentiles == null || percentiles.isEmpty) return Array.emptyDoubleArray
+    // verify that percentiles are within [0,100]
+    percentiles
+      .find(p => p < 0 || p > 100)
+      .map(p => throw new RpcException(new RpcError(RpcCode.InvalidParams, s"invalid reward percentile: $p", null)))
+    // verify that percentiles are monotonically increasing
+    percentiles
+      .sliding(2)
+      .filter(p => p.head > p.last)
+      .map(p =>
+        throw new RpcException(
+          new RpcError(RpcCode.InvalidParams, s"invalid reward percentile: ${p.head} > ${p.last}", null)
+        )
+      )
+    percentiles
+  }
+
+  private def getRewardsForBlock(
+      block: AccountBlock,
+      stateView: AccountStateView,
+      percentiles: Array[Double]
+  ): Array[BigInteger] = {
+    val txs = block.transactions.map(_.asInstanceOf[EthereumTransaction])
+    // return an all zero row if there are no transactions to gather data from
+    if (txs.isEmpty) return percentiles.map(_ => BigInteger.ZERO)
+
+    // collect gas used and reward (effective gas tip) per transaction, sorted ascending by reward
+    case class GasAndReward(gasUsed: Long, reward: BigInteger)
+    val sortedRewards = txs
+      .map(tx =>
+        GasAndReward(
+          stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)).get.gasUsed.longValueExact(),
+          getEffectiveGasTip(tx, block.header.baseFee)
+        )
+      )
+      .sortBy(_.reward)
+      .iterator
+
+    var current = sortedRewards.next()
+    var sumGasUsed = current.gasUsed
+    val rewards = new Array[BigInteger](percentiles.length)
+    for (i <- percentiles.indices) {
+      val thresholdGasUsed = (block.header.gasUsed.toDouble * percentiles(i) / 100).toLong
+      // continue summation as long as the total is below the percentile threshold
+      while (sumGasUsed < thresholdGasUsed && sortedRewards.hasNext) {
+        current = sortedRewards.next()
+        sumGasUsed += current.gasUsed
+      }
+      rewards(i) = current.reward
+    }
+    rewards
+  }
+
+  private def getEffectiveGasTip(tx: EthereumTransaction, baseFee: BigInteger): BigInteger = {
+    if (baseFee == null) tx.getMaxPriorityFeePerGas
+    // we do not need to check if MaxFeePerGas is higher than baseFee, because the tx is already included in the block
+    else tx.getMaxPriorityFeePerGas.min(tx.getMaxFeePerGas.subtract(baseFee))
   }
 }
