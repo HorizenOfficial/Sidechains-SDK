@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/log"
 	"reflect"
+	"strings"
 )
 
 var errorInterfaceType = reflect.TypeOf((*error)(nil)).Elem()
@@ -55,17 +56,20 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 		if args == "" {
 			return fmt.Errorf("%w: function %s must be called with an argument", ErrInvalidArguments, method), nil
 		}
+		if strings.TrimSpace(args) == "null" {
+			return fmt.Errorf("%w: null args is not allowed", ErrInvalidArguments), nil
+		}
 		// unmarshal args to the type of the one parameter of the function
 		dec := json.NewDecoder(bytes.NewReader([]byte(args)))
 		// make sure to throw errors incase unknown fields are passed, do not silently ignore this
 		// as it is most likely a sign of buggy interface code
 		dec.DisallowUnknownFields()
-		argsType := reflect.New(funType.In(0))
-		err := dec.Decode(argsType.Interface())
+		argsInstance := reflect.New(funType.In(0))
+		err := dec.Decode(argsInstance.Interface())
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrInvalidArguments, err), nil
 		}
-		inputs = append(inputs, argsType.Elem())
+		inputs = append(inputs, argsInstance.Elem())
 	default:
 		return fmt.Errorf("%w: functions must have zero or one argument, but the function %s has %d arguments", ErrInvocationError, method, funInputs), nil
 	}
