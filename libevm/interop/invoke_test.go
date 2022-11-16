@@ -131,8 +131,8 @@ func (m *MockLibrary) NoParam()                                   {}
 func (m *MockLibrary) NoParamResult() string                      { return "toot gaya" }
 func (m *MockLibrary) NoParamNilError() error                     { return nil }
 func (m *MockLibrary) NoParamError() error                        { return fmt.Errorf("%w: kaputt", MockError) }
-func (m *MockLibrary) NoParamBadErrorReturn() (string, error)     { return "", nil }
-func (m *MockLibrary) NoParamTwoResults() (string, string)        { return "", "" }
+func (m *MockLibrary) NoParamBadErrorReturn() (string, error)     { return "", nil /* invalid */ }
+func (m *MockLibrary) NoParamTwoResults() (string, string)        { return "", "" /* invalid */ }
 func (m *MockLibrary) OneParam(a int)                             {}
 func (m *MockLibrary) OneParamEcho(str string) string             { return str }
 func (m *MockLibrary) TwoParams(a int, b int)                     { /* invalid: more than one parameter */ }
