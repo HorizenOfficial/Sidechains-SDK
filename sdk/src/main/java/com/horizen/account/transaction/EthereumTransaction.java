@@ -48,11 +48,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private final BigInteger maxPriorityFeePerGas;
     private final BigInteger maxFeePerGas;
 
-    private static boolean isPartialEip155Signature(SignatureData data) {
-        if (data == null)
-            return false;
-        return data.getR().length == SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS_SIZE &&
-               data.getS().length == SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS_SIZE;
+    public boolean isPartiallyEip155Signed() {
+        return (signatureData != null && // if this is not null, we alreay enforce v/r/s are not null
+                signatureData.getR().length == SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS_SIZE &&
+                signatureData.getS().length == SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS_SIZE);
     }
 
     private void initSignature(SignatureData inSignatureData) {
@@ -138,7 +137,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public boolean isSigned() {
-        return (signatureData != null && !isPartialEip155Signature(signatureData));
+        return (signatureData != null && !isPartiallyEip155Signed());
     }
 
     @Override
@@ -346,8 +345,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public Long getChainId() {
         if (isEIP1559())
             return this.chainId;
-        else if (isSigned() || isPartialEip155Signature(getSignatureData())) {
-            return getDecodedChainIdFromSignature(getSignatureData());
+        else if (signatureData != null) {
+            return getDecodedChainIdFromSignature(signatureData);
         }
         return null;
     }
@@ -458,7 +457,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public SignatureSecp256k1 getSignature() {
-        if (isSigned() || isPartialEip155Signature(getSignatureData())) {
+        if (signatureData != null) {
             return new SignatureSecp256k1(
                     new byte[]{getRealV(Numeric.toBigInt(getSignatureData().getV()))},
                     getSignatureData().getR(),
@@ -532,8 +531,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public byte[] messageToSign() {
         Sign.SignatureData inSignatureData = null;
 
-        if (isLegacy() &&
-                (isSigned() || isPartialEip155Signature(getSignatureData()))) {
+        if (isLegacy() && signatureData != null) {
 
             Long encodedChainId = getDecodedChainIdFromSignature(getSignatureData());
             if (encodedChainId != null) {

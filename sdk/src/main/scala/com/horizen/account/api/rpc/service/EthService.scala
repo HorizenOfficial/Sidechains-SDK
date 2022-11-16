@@ -223,7 +223,7 @@ class EthService(
     val signature = secret.sign(tx.messageToSign())
     var signatureData = new SignatureData(signature.getV, signature.getR, signature.getS)
 
-    if (!tx.isEIP1559 && tx.isSigned) {
+    if (tx.isLegacy && tx.isPartiallyEip155Signed) {
       val decodedChainId = getDecodedChainIdFromSignature(tx.getSignatureData);
       if (decodedChainId != null) {
         signatureData = TransactionEncoder.createEip155SignatureData(signatureData, decodedChainId)
