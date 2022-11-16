@@ -110,7 +110,7 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         assert_equal("0x1cd0525fe2e7a0000", balance["result"], "FT to EOA failed")
 
         # verify forward transfer is contained in block and contains given value and to address via rpc
-        forward_transfer = sc_node.rpc_eth_getForwardTransfers("latest")['result']['forwardTransfers'][0]
+        forward_transfer = sc_node.rpc_zen_getForwardTransfers("latest")['result']['forwardTransfers'][0]
         assert_equal("0x1cd0525fe2e7a0000", forward_transfer['value'])
         assert_equal(evm_address.lower(), forward_transfer['to'])
 
