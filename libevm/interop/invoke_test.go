@@ -192,7 +192,7 @@ func TestCallMethod(t *testing.T) {
 
 		{method: "ArrayParam", args: "[4,8,15,16,23,42]", result: 6},
 		{method: "ArrayParam", args: "[]", result: 0},
-		{method: "ArrayParam", args: "null", result: 0},
+		{method: "ArrayParam", args: "null", err: ErrInvalidArguments},
 		{method: "ArrayParam", args: "1,2,3,4", err: ErrInvalidArguments},
 		{method: "ArrayParam", args: "", err: ErrInvalidArguments},
 		{method: "ArrayParam", args: "{\"args\":[1,2,3]}", err: ErrInvalidArguments},
