@@ -1,6 +1,7 @@
 package interop
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -55,12 +56,16 @@ func callMethod(target interface{}, method string, args string) (error, interfac
 			return fmt.Errorf("%w: function %s must be called with an argument", ErrInvalidArguments, method), nil
 		}
 		// unmarshal args to the type of the one parameter of the function
-		v := reflect.New(funType.In(0))
-		err := json.Unmarshal([]byte(args), v.Interface())
+		dec := json.NewDecoder(bytes.NewReader([]byte(args)))
+		// make sure to throw errors incase unknown fields are passed, do not silently ignore this
+		// as it is most likely a sign of buggy interface code
+		dec.DisallowUnknownFields()
+		argsType := reflect.New(funType.In(0))
+		err := dec.Decode(argsType.Interface())
 		if err != nil {
-			return err, nil
+			return fmt.Errorf("%w: %v", ErrInvalidArguments, err), nil
 		}
-		inputs = append(inputs, v.Elem())
+		inputs = append(inputs, argsType.Elem())
 	default:
 		return fmt.Errorf("%w: functions must have zero or one argument, but the called function %s has %d arguments", ErrInvocationError, method, funInputs), nil
 	}
@@ -105,10 +110,10 @@ func toJsonResponse(err error, result interface{}) string {
 	} else {
 		res.Result = result
 	}
-	bytes, marshalErr := json.Marshal(res)
+	jsonBytes, marshalErr := json.Marshal(res)
 	if marshalErr != nil {
 		log.Error("unable to marshal response", "marshalErr", marshalErr, "response", res)
 		return ""
 	}
-	return string(bytes)
+	return string(jsonBytes)
 }
