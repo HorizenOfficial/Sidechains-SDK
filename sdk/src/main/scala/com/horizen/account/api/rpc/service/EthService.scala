@@ -109,24 +109,10 @@ class EthService(
     nodeView.history
       .getStorageBlockById(blockId)
       .map(block => {
-        val transactions = block.transactions.map(_.asInstanceOf[EthereumTransaction])
         new EthereumBlockView(
-          Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
+          nodeView.history.getBlockHeightById(blockId).get().toLong,
           Numeric.prependHexPrefix(blockId),
-          if (!hydratedTx) {
-            transactions.map(tx => Numeric.prependHexPrefix(tx.id)).toList.asJava
-          } else {
-            using(nodeView.state.getView) { stateView =>
-              transactions
-                .flatMap(tx =>
-                  stateView
-                    .getTransactionReceipt(Numeric.hexStringToByteArray(tx.id))
-                    .map(new EthereumTransactionView(_, tx, block.header.baseFee))
-                )
-                .toList
-                .asJava
-            }
-          },
+          hydratedTx,
           block
         )
       })
