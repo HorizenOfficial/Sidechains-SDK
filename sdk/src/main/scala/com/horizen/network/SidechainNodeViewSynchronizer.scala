@@ -4,7 +4,6 @@ package com.horizen.network
 import akka.actor.{ActorRef, ActorRefFactory, Props}
 import com.horizen._
 import com.horizen.block.SidechainBlock
-import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages.ModifiersIgnoredForReindex
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
 import sparkz.core.network.{ConnectedPeer,  NodeViewSynchronizer}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SyntacticallyFailedModification}
@@ -26,11 +25,6 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     SidechainBlock, SidechainHistory, SidechainMemoryPool](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
 
   protected var isReindexing : Boolean = false
-
-  override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, classOf[ModifiersIgnoredForReindex])
-    super.preStart()
-  }
 
   override def postStop(): Unit = {
     log.info("SidechainNodeViewSynchronizer actor is stopping...")
@@ -68,49 +62,21 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     }
   }
 
-
-  override protected def modifiersFromRemote(data: ModifiersData, remote: ConnectedPeer): Unit = {
-    val typeId = data.typeId
-    val modifiers = data.modifiers
-    if (isReindexing) {
-      log.info(s"Got ${modifiers.size} modifiers of type $typeId from remote connected peer: $remote while reindexing - wil be discarded" )
-      modifiers.keySet.foreach(id =>
-        if (deliveryTracker.status(id) != Unknown){
-          //we are receiving a modifier previously requested, but in the meantime we started to reindex: we ingore
-          //it and set the delivery to unknown, so it will be cleared from the delivery cache
-          deliveryTracker.setUnknown(id)
-        }
-      )
-    }else{
-      super.modifiersFromRemote(data,remote)
-    }
-  }
-
-
   protected def changedHistoryEvent: Receive = {
     case ChangedHistory(sHistory: SidechainHistory) =>
       historyReaderOpt = Some(sHistory)
       isReindexing = sHistory.isReindexing()
   }
 
-  protected def onModifierIgnoredForReindex: Receive = {
-    case ModifiersIgnoredForReindex(ids: Seq[scorex.util.ModifierId]) =>
-      ids.foreach(id => deliveryTracker.setUnknown(id))
 
-  }
 
   override protected def viewHolderEvents: Receive =
       onSyntacticallyFailedModifier orElse
-      onModifierIgnoredForReindex orElse
       changedHistoryEvent orElse
       super.viewHolderEvents
 }
 
 object SidechainNodeViewSynchronizer {
-
-  object ReceivableMessages {
-    case class ModifiersIgnoredForReindex(ids: Seq[scorex.util.ModifierId])
-  }
 
   def props(networkControllerRef: ActorRef,
             viewHolderRef: ActorRef,

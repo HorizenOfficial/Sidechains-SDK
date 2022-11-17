@@ -13,14 +13,11 @@ import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
 import sparkz.core.NodeViewHolder.ReceivableMessages.{EliminateTransactions, LocallyGeneratedModifier, LocallyGeneratedTransaction, NewTransactions}
 import sparkz.core.consensus.History.ProgressInfo
-import sparkz.core.network.{ConnectedPeer, ModifiersStatus}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
-import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
-import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.{ModifiersCache, idToVersion, versionToId}
+import sparkz.core.ModifiersCache
 import sparkz.core.{idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging}
 import scala.annotation.tailrec
@@ -482,6 +479,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override protected def transactionsProcessing: Receive = {
     case newTxs: NewTransactions[SidechainTypes#SCBT] =>
       if (isReindexing()){
+        //If reindexing, just ignore the tx
+        //Note: The tx will stay in requested state inside the  deliveryTracker, but the event
+        //NodeViewSyncronizer.CheckDelivery will clear it without any penalization after the delivery timeout expires
         log.debug("Received NewTransactions while reindex in progress - will be ignored")
       }else{
         newTxs.txs.foreach(txModify)
@@ -507,36 +507,42 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
    */
   override protected def processRemoteModifiers: Receive = {
     case sparkz.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[SidechainBlock]) =>
-      if (isReindexing()){
-        log.debug("Received remote blocks while reindex in progress - will be ignored")
-        //we fire an event with the ignored modifiers, to let the nodeviewsynchronizer to remove them
-        //from the delivery queue.
-        //NOTE: we don't put them in the modifiers cache since can elapse a lot of time before unqueing them
-        context.system.eventStream.publish(ModifiersIgnoredForReindex(mods.map(_.id)))
-      }else{
         mods.foreach(m => modifiersCache.put(m.id, m))
         log.debug(s"Cache size before: ${modifiersCache.size}")
         if (!applyingBlock) {
           applyingBlock = true
           self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(Seq())
         }
-      }
   }
 
+  /**
+   * Apply next doable block from the modifiersCache.
+   * Block modifiers are applied one by one, until something is applicable from the cache or a reindex is happening
+   */
   def applyModifier: Receive = {
+        //
     case SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[SidechainBlock]) => {
-      modifiersCache.popCandidate(history()) match {
-        case Some(mod) =>
-          pmodModify(mod)
-          self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
-        case None => {
-          val cleared = modifiersCache.cleanOverfull()
-          context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))
-          applyingBlock = false
-          log.debug(s"Cache size after: ${modifiersCache.size}")
+      if (isReindexing()){
+        //we are reindexing: no more block can be applied, and we terminate this activity
+        //Note: applied Seq can be not empty if the reindex started in the middle of a sequence of blocks
+        terminateApply(applied)
+      }else{
+        modifiersCache.popCandidate(history()) match {
+          case Some(mod) =>
+            pmodModify(mod)
+            self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
+          case None =>
+            terminateApply(applied)
         }
       }
     }
+  }
+
+  private def terminateApply(alreadyApplied: Seq[SidechainBlock]) = {
+    val cleared = modifiersCache.cleanOverfull()
+    context.system.eventStream.publish(ModifiersProcessingResult(alreadyApplied, cleared))
+    applyingBlock = false
+    log.debug(s"Cache size after: ${modifiersCache.size}")
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
