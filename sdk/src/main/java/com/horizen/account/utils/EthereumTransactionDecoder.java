@@ -21,6 +21,9 @@ public class EthereumTransactionDecoder {
 
     public static EthereumTransaction decode(String hexTransaction) {
         byte[] transaction = Numeric.hexStringToByteArray(hexTransaction);
+        return decode(transaction);
+    }
+    public static EthereumTransaction decode(byte[] transaction) {
         return getTransactionType(transaction) == TransactionType.EIP1559 ? decodeEIP1559Transaction(transaction) : decodeLegacyTransaction(transaction);
     }
 

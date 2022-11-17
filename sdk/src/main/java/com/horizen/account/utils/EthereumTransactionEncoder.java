@@ -37,7 +37,7 @@ public class EthereumTransactionEncoder {
         result.add(RlpString.create(tx.getValue()));
 
         // value field will already be hex encoded, so we need to convert into binary first
-        byte[] dataBytes = Numeric.hexStringToByteArray(tx.getDataString());
+        byte[] dataBytes = tx.getData();
         result.add(RlpString.create(dataBytes));
 
         if (signatureData != null) {

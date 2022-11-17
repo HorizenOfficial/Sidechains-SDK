@@ -40,7 +40,7 @@ public class TransactionArgs {
     public BigInteger chainId;
 
     public byte[] getData() {
-        var hex = input != null ? input : data;
+        var hex = getDataString();
         if (hex == null) return null;
         return Numeric.hexStringToByteArray(hex);
     }

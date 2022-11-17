@@ -33,7 +33,7 @@ trait EthereumTransactionFixture {
                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
 
     val unsignedTx = new EthereumTransaction(
-      1, "0x1234567890123456789012345678901234567890", nonce, gasPrice, gasLimit, value, "", null)
+      1997L, "0x1234567890123456789012345678901234567890", nonce, gasPrice, gasLimit, value, "", null)
     createSignedLegacyEip155Transaction(unsignedTx, pairOpt)
   }
 
@@ -45,7 +45,7 @@ trait EthereumTransactionFixture {
                                gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
 
 
-    val unsignedTx = new EthereumTransaction(1997, "0x1234567890123456789012345678901234567890", nonce, gasLimit, priorityGasFee, gasFee, value, "", null)
+    val unsignedTx = new EthereumTransaction(1997L, "0x1234567890123456789012345678901234567890", nonce, gasLimit, priorityGasFee, gasFee, value, "", null)
     createSignedTransaction(unsignedTx, pairOpt)
   }
 
@@ -67,7 +67,6 @@ trait EthereumTransactionFixture {
     val pair = pairOpt.getOrElse(Keys.createEcKeyPair)
     val msgSignature = Sign.signMessage(message, pair, true)
     new EthereumTransaction(unsignedTx,
-      //new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
       createEip155SignatureData(new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS), unsignedTx.getChainId)
     )
   }

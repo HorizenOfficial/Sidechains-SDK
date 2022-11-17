@@ -14,6 +14,7 @@ import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
+import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.crypto.*;
 import org.web3j.crypto.Sign.SignatureData;
@@ -21,6 +22,7 @@ import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
+import java.util.logging.Logger;
 
 import static com.horizen.account.utils.EthereumTransactionUtils.*;
 
@@ -55,27 +57,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         } else {
             this.signatureData = null;
         }
-    }
-
-    // creates a signed transaction from an existing one
-    public EthereumTransaction(
-            EthereumTransaction txToSign,
-            @Nullable SignatureData inSignatureData
-    ) {
-        initSignature(inSignatureData);
-
-        this.type = txToSign.type;
-        this.nonce = txToSign.nonce;
-        this.gasPrice = txToSign.gasPrice;
-        this.gasLimit = txToSign.gasLimit;
-        this.to = txToSign.to;
-        this.value = txToSign.value;
-        this.data = txToSign.data;
-
-        this.chainId = txToSign.chainId;
-        this.maxPriorityFeePerGas = txToSign.maxPriorityFeePerGas;
-        this.maxFeePerGas = txToSign.maxFeePerGas;
-
     }
 
     // creates a legacy transaction
@@ -139,7 +120,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             @NotNull BigInteger maxPriorityFeePerGas,
             @NotNull BigInteger maxFeePerGas,
             @Nullable BigInteger value,
-            @Nullable String data,
+            @NotNull String data,
             @Nullable SignatureData inSignatureData
     ) {
         initSignature(inSignatureData);
@@ -155,6 +136,27 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.chainId = chainId;
         this.maxPriorityFeePerGas = maxPriorityFeePerGas;
         this.maxFeePerGas = maxFeePerGas;
+    }
+
+    // creates a signed transaction from an existing one
+    public EthereumTransaction(
+            EthereumTransaction txToSign,
+            @Nullable SignatureData inSignatureData
+    ) {
+        initSignature(inSignatureData);
+
+        this.type = txToSign.type;
+        this.nonce = txToSign.nonce;
+        this.gasPrice = txToSign.gasPrice;
+        this.gasLimit = txToSign.gasLimit;
+        this.to = txToSign.to;
+        this.value = txToSign.value;
+        this.data = txToSign.data;
+
+        this.chainId = txToSign.chainId;
+        this.maxPriorityFeePerGas = txToSign.maxPriorityFeePerGas;
+        this.maxFeePerGas = txToSign.maxFeePerGas;
+
     }
 
     public boolean isSigned() {
@@ -181,7 +183,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonProperty("version")
     public byte version() {
-        if (this.type == TransactionType.LEGACY)
+        if (isLegacy())
             return 0x0;
         return this.type.getRlpType();
     }
@@ -224,7 +226,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             }
         } else {
             // contract creation
-            if (getData().length == 0)
+            if (getDataString().isEmpty())
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "smart contract declaration transaction without data", id()));
         }
@@ -248,10 +250,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             if (getMaxPriorityFeePerGas().signum() < 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "eip1559 transaction with negative maxPriorityFeePerGas", id()));
-            if (getMaxFeePerGas().bitLength() > 256)
+            if (!BigIntegerUtil.isUint256(getMaxFeePerGas()))
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
-            if (getMaxPriorityFeePerGas().bitLength() > 256)
+            if (!BigIntegerUtil.isUint256(getMaxPriorityFeePerGas()))
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
             if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
@@ -262,7 +264,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             if (getGasPrice().signum() < 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "legacy transaction with negative gasPrice", id()));
-            if (getGasPrice().bitLength() > 256)
+            if (!BigIntegerUtil.isUint256(getGasPrice()))
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "legacy transaction gasPrice bit length [%d] is too high", id(), getGasPrice().bitLength()));
         }
@@ -295,15 +297,15 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonIgnore
     public BigInteger getGasPrice() {
-        if (!isEIP1559())
+        if (isLegacy())
             return this.gasPrice;
         //in Geth for EIP1559 tx gasPrice returns gasFeeCap
-        return getMaxFeePerGas();
+        return this.maxFeePerGas;
     }
 
     @JsonProperty("gasPrice")
     public BigInteger getJsonGasPrice() {
-        if (!isEIP1559())
+        if (isLegacy())
             return this.gasPrice;
         // for eip1559 tx this not an attribute of the object, it is computed using baseFee which depends on block height
         return null;
@@ -314,9 +316,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public BigInteger getMaxFeePerGas() {
         if (isEIP1559())
             return this.maxFeePerGas;
-        else
-            //in Geth for Legacy tx gasFeeCap is equal to gasPrice
-            return this.gasPrice;
+        //in Geth for Legacy tx gasFeeCap is equal to gasPrice
+        return this.gasPrice;
     }
 
     @JsonProperty("maxFeePerGas")
@@ -331,9 +332,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public BigInteger getMaxPriorityFeePerGas() {
         if (isEIP1559())
             return this.maxPriorityFeePerGas;
-        else
-            //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
-            return this.gasPrice;
+        //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
+        return this.gasPrice;
     }
 
     @JsonProperty("maxPriorityFeePerGas")
@@ -412,14 +412,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (address == null)
             return null;
 
-        var to = Numeric.hexStringToByteArray(address);
+        // sanity check of formatted string.
+        //  Numeric library does not check hex characters' validity, BytesUtils does it
+        var to = BytesUtils.fromHexString(Numeric.cleanHexPrefix(address));
         if (to.length == 0)
             return null;
 
-        if (to.length == Account.ADDRESS_SIZE)
-            return new AddressProposition(to);
-
-        throw new RuntimeException(String.format("Invalid to address length %d", to.length));
+        return new AddressProposition(to);
     }
 
     @JsonIgnore
@@ -461,8 +460,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 Sign.SignatureData signatureDataV = new Sign.SignatureData(realV, r, s);
                 BigInteger key = Sign.signedMessageToKey(encodedTransaction, signatureDataV);
                 return "0x" + Keys.getAddress(key);
-            } catch (Throwable ignored) {
+            } catch (Exception justTraced) {
                 // whatever exception may result in processing the signature we return the empty string
+                LogManager.getLogger().info("Could not find from address, Signature not valid:", justTraced);
             }
         }
         return "";
@@ -530,11 +530,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                         "maxFeePerGas=%s, maxPriorityFeePerGas=%s, chainId=%s, version=%d, Signature=%s}",
                 id(),
                 getFromAddress(),
-                Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
                 Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
                 getToString() != null ? getToString() : "0x",
                 Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
-                getData() != null ? Numeric.toHexString(getData()) : "",
+                getDataString() != null ? Numeric.cleanHexPrefix(getDataString()) : "",
                 Numeric.toHexStringWithPrefix(getMaxFeePerGas() != null ? getMaxFeePerGas() : BigInteger.ZERO),
                 Numeric.toHexStringWithPrefix(getMaxPriorityFeePerGas() != null ? getMaxPriorityFeePerGas() : BigInteger.ZERO),
                 getChainId() != null ? getChainId() : "",
@@ -547,12 +547,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                         "chainId=%s, version=%d, Signature=%s}",
                 id(),
                 getFromAddress(),
-                Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
                 Numeric.toHexStringWithPrefix(getGasPrice() != null ? getGasPrice() : BigInteger.ZERO),
                 Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
                 getToString() != null ? getToString() : "0x",
                 Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
-                getData() != null ? Numeric.toHexString(getData()) : "",
+                getDataString() != null ? Numeric.cleanHexPrefix(getDataString()) : "",
                 getChainId() != null ? getChainId() : "",
                 (int)version(),
                 isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""

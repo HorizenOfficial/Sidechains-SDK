@@ -36,6 +36,6 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
     public EthereumTransaction parse(Reader reader) {
         var length = reader.getInt();
         var encodedMessage = reader.getBytes(length);
-        return EthereumTransactionDecoder.decode(Numeric.toHexString(encodedMessage));
+        return EthereumTransactionDecoder.decode(encodedMessage);
     }
 }

@@ -203,7 +203,7 @@ public class EthereumTransactionTest {
 
     // https://etherscan.io/getRawTx?tx=0xde78fe4a45109823845dc47c9030aac4c3efd3e5c540e229984d6f7b5eb4ec83
     @Test
-    public void ethereumTransactionDecoderTest() {
+    public void ethereumTransactionEIP1559DecoderTest() {
         // Test 1: Decoded tx should be as expected - same tx as linked above, just without access list
         var actualTx = EthereumTransactionDecoder.decode("0x02f8c60183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701c080a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb");
         var expectedTx = new EthereumTransaction(
@@ -230,4 +230,52 @@ public class EthereumTransactionTest {
                 () -> EthereumTransactionDecoder.decode("0x02f9040c0183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701f90344f9024994a68dd8cb83097765263adad881af6eed479c4a33f90231a00000000000000000000000000000000000000000000000000000000000000004a0745448ebd86f892e3973b919a6686b32d8505f8eb2e02df5a36797f187adb881a00000000000000000000000000000000000000000000000000000000000000003a00000000000000000000000000000000000000000000000000000000000000011a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c86a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab6a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab8a0bf9ee777cf4683df01da9dfd7aeab60490278463b1d516455d67d23c750f96dca00000000000000000000000000000000000000000000000000000000000000012a0000000000000000000000000000000000000000000000000000000000000000fa00000000000000000000000000000000000000000000000000000000000000010a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c88a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050fba06306683371f43cb3203ee553ce8ac90eb82e4721cc5335d281e1e556d3edcdbca00000000000000000000000000000000000000000000000000000000000000013a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050f9a00000000000000000000000000000000000000000000000000000000000000014f89b94ab293dce330b92aa52bc2a7cd3816edaa75f890bf884a0000000000000000000000000000000000000000000000000000000000000000ca00000000000000000000000000000000000000000000000000000000000000008a00000000000000000000000000000000000000000000000000000000000000006a00000000000000000000000000000000000000000000000000000000000000007f85994c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2f842a051c9df7cdd01b5cb5fb293792b1e67ec1ac1048ae7e4c7cf6cf46883589dfbd4a03c679e5fc421e825187f885e3dcd7f4493f886ceeb4930450588e35818a32b9c80a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb"));
     }
 
+    // https://etherscan.io/getRawTx?tx=0x2513ac39d04c0d88611e509666c5da0f0d6dce367cf29dd6bdb339a62d541251
+    @Test
+    public void ethereumTransactionEip155LegacyDecoderTest() {
+        // Test 1: Decoded tx should be as expected - same tx as linked above, just without access list
+        var actualTx = EthereumTransactionDecoder.decode("0xf86b3f850f224d4a008257a09461122d8e2d464bad53e054c965110de321233bc6870110d9316ec0008026a0a4e306691e16bbaa67faafeb00d81431b13194dcb39d97cf7dde47a6874d92d8a03b3b6a4500ff90d25022616d237de8559ab79cb294905cf79cadcdf076b50a2a");
+        var expectedTx = new EthereumTransaction(
+                1L,
+                "0x61122d8e2d464bad53e054c965110de321233bc6",
+                Numeric.toBigInt("0x3f"),
+                Numeric.toBigInt("0xf224d4a00"),
+                Numeric.toBigInt("0x57a0"),
+                Numeric.toBigInt("0x110d9316ec000"),
+                "",
+                null);
+
+        assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
+
+        // similar test adding the signature and comparing ids
+        var expectedTx2 = new EthereumTransaction(expectedTx, new Sign.SignatureData((byte) 0x26,
+                BytesUtils.fromHexString("a4e306691e16bbaa67faafeb00d81431b13194dcb39d97cf7dde47a6874d92d8"),
+                BytesUtils.fromHexString("3b3b6a4500ff90d25022616d237de8559ab79cb294905cf79cadcdf076b50a2a")));
+
+        assertEquals(expectedTx2.id(), actualTx.id());
+    }
+
+    // https://etherscan.io/getRawTx?tx=0xdac06fbbe4389a99ac696c5d603a8e5c32ee540c519ffe4472981f38d3107d2c
+    @Test
+    public void ethereumTransactionLegacyDecoderTest() {
+        // Test 1: Decoded tx should be as expected - same tx as linked above, just without access list
+        var actualTx = EthereumTransactionDecoder.decode("0xf86e82b7ea850ba43b740083015f9094f8b786fdb1193f4a4cc2a8bc24a7cf47a7ce1cc28729b1c422c243fe801ba00c46734fb4d40be33b2b9bf7c367dc87097cfd4c75189b47c2148740ef031cb0a0726dad551589d504fdf065029a17b14523fbcc526a05c0146b71afec5394563b");
+        var expectedTx = new EthereumTransaction(
+                "0xf8b786fdb1193f4a4cc2a8bc24a7cf47a7ce1cc2",
+                Numeric.toBigInt("0xb7ea"),
+                Numeric.toBigInt("0xba43b7400"),
+                Numeric.toBigInt("0x15f90"),
+                Numeric.toBigInt("0x29b1c422c243fe"),
+                "",
+                null);
+
+        assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
+
+        // similar test adding the signature and comparing ids
+        var expectedTx2 = new EthereumTransaction(expectedTx, new Sign.SignatureData((byte) 0x1b,
+                BytesUtils.fromHexString("0c46734fb4d40be33b2b9bf7c367dc87097cfd4c75189b47c2148740ef031cb0"),
+                BytesUtils.fromHexString("726dad551589d504fdf065029a17b14523fbcc526a05c0146b71afec5394563b")));
+
+        assertEquals(expectedTx2.id(), actualTx.id());
+    }
 }
