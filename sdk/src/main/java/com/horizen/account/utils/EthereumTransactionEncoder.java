@@ -92,7 +92,7 @@ public class EthereumTransactionEncoder {
         byte[] encoded = RlpEncoder.encode(rlpList);
 
         return ByteBuffer.allocate(encoded.length + 1)
-                .put(tx.getType().getRlpType())
+                .put(tx.version())
                 .put(encoded)
                 .array();
     }

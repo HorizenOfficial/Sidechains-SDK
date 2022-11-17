@@ -18,11 +18,9 @@ import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.crypto.*;
 import org.web3j.crypto.Sign.SignatureData;
-import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
-import java.util.logging.Logger;
 
 import static com.horizen.account.utils.EthereumTransactionUtils.*;
 
@@ -36,9 +34,18 @@ import static com.horizen.account.utils.EthereumTransactionUtils.*;
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
 
+    //  The 3 versions of tx are supported by go eth and we have test vectors generated using all of them
+    //  We are using elsewhere the enum from w3j, which just supports 0 and 2:
+    //   org/web3j/crypto/transaction/type/TransactionType.java
+    public enum EthereumTransactionType {
+        LegacyTxType,     // Legacy
+        AccessListTxType, // - not supported
+        DynamicFeeTxType  // eip1559
+    }
+
     private SignatureData signatureData;
 
-    private final TransactionType type;
+    private final EthereumTransactionType type;
     private final BigInteger nonce;
     private final BigInteger gasPrice;
     private final BigInteger gasLimit;
@@ -71,7 +78,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     ) {
         initSignature(inSignatureData);
 
-        this.type = TransactionType.LEGACY;
+        this.type = EthereumTransactionType.LegacyTxType;
         this.nonce = nonce;
         this.gasPrice = gasPrice;
         this.gasLimit = gasLimit;
@@ -98,7 +105,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     ) {
         initSignature(inSignatureData);
 
-        this.type = TransactionType.LEGACY;
+        this.type = EthereumTransactionType.LegacyTxType;
         this.nonce = nonce;
         this.gasPrice = gasPrice;
         this.gasLimit = gasLimit;
@@ -125,7 +132,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     ) {
         initSignature(inSignatureData);
 
-        this.type = TransactionType.EIP1559;
+        this.type = EthereumTransactionType.DynamicFeeTxType;
         this.nonce = nonce;
         this.gasPrice = null;
         this.gasLimit = gasLimit;
@@ -168,11 +175,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return AccountTransactionsIdsEnum.EthereumTransactionId.id();
     }
 
-    @JsonIgnore
-    public TransactionType getType() {
-        return this.type;
-    }
-
     @Override
     @JsonProperty("id")
     public String id() {
@@ -183,9 +185,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonProperty("version")
     public byte version() {
-        if (isLegacy())
-            return 0x0;
-        return this.type.getRlpType();
+        return (byte)this.type.ordinal();
     }
 
     @Override
@@ -209,7 +209,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     id(), getChainId(), EthereumTransactionDecoder.getDecodedChainIdFromSignature(signatureData)));
         }
 
-        if (getToString() != null && Numeric.hexStringToByteArray(getToString()).length != 0) {
+        if (getToString() != null && !getToString().isEmpty()) {
             // regular to address
 
             // sanity check of formatted string.
@@ -381,11 +381,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public boolean isEIP1559() {
-        return this.type == TransactionType.EIP1559;
+        return this.type == EthereumTransactionType.DynamicFeeTxType;
     }
 
     public boolean isLegacy() {
-        return this.type == TransactionType.LEGACY;
+        return this.type == EthereumTransactionType.LegacyTxType;
     }
 
     public boolean isEIP155() {
@@ -427,7 +427,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public byte[] encode(SignatureData inSignatureData) {
-        if (type.isEip1559()) {
+        if (this.isEIP1559()) {
             return EthereumTransactionEncoder.encodeEip1559AsRlpValues(this, inSignatureData);
         } else {
             return EthereumTransactionEncoder.encodeLegacyAsRlpValues(this, inSignatureData);

@@ -70,7 +70,9 @@ class SCEvmEOA2EOA(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY]*2)#, extra_args=[['-agentlib'], []])
+                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY]*2
+                              #, extra_args=[['-agentlib'], []]
+                              )
 
     def makeEoa2Eoa(self, from_sc_node, to_sc_node, from_addr, to_addr, amount_in_zen, *,
                     nonce = None, isEIP155 = False, print_json_results = False):
