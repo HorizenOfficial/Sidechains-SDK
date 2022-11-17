@@ -1,6 +1,12 @@
 package com.horizen.account.api.rpc.request;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.horizen.account.api.rpc.handler.RpcException;
+import com.horizen.account.api.rpc.utils.RpcCode;
+import com.horizen.account.api.rpc.utils.RpcError;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * {"id":1648039192785,"jsonrpc":"2.0","method":"eth_chainId","params":[]}
@@ -11,7 +17,15 @@ public class RpcRequest {
     private String method;
     private JsonNode params;
 
-    public RpcRequest(JsonNode json) {
+    public RpcRequest(JsonNode json) throws RpcException {
+        List<String> keys = new ArrayList<>();
+        var iterator = json.fieldNames();
+        iterator.forEachRemaining(e -> keys.add(e));
+
+        if (!keys.containsAll(List.of("jsonrpc", "id", "method", "params"))) {
+            throw new RpcException(RpcError.fromCode(RpcCode.ParseError));
+        }
+
         this.jsonrpc = json.get("jsonrpc").asText();
         this.id = new RpcId(json.get("id"));
         this.method = json.get("method").asText();
@@ -44,10 +58,6 @@ public class RpcRequest {
 
     public JsonNode getParams() {
         return params;
-    }
-
-    public void setParams(JsonNode params) {
-        this.params = params;
     }
 
     @Override
