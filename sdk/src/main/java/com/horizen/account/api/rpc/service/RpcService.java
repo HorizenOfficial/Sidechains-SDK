@@ -78,6 +78,10 @@ public class RpcService {
             return method.invoke(this, args);
         } catch (InvocationTargetException e) {
             // unpack and rethrow potential RpcException
+            LogManager.getLogger().warn("RPC call failed: " + method, e);
+            throw e.getCause();
+        } catch (IllegalArgumentException e) {
+            LogManager.getLogger().warn("RPC call failed: " + method, e);
             throw e.getCause();
         }
     }
