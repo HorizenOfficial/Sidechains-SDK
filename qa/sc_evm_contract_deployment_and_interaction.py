@@ -104,7 +104,7 @@ def compare_secret(node, smart_contract_type, smart_contract_address, from_addre
     logging.info("Comparing secrets...")
     res = get_secret(node, smart_contract_type, format_evm(smart_contract_address), from_address)
     logging.info("Expected secret: {}, actual secret: {}".format(expected_secret, res))
-    assert_equal(res, expected_secret)
+    assert_equal(expected_secret, res)
     return res
 
 
@@ -165,8 +165,6 @@ class SCEvmDeployingContract(SidechainTestFramework):
         logging.info("SC genesis mc block hex = " + mc_block_hex)
 
         sc_best_block = sc_node.block_best()["result"]
-
-        assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
 
         # verify MC block reference's inclusion
         res = is_mainchain_block_included_in_sc_block(sc_best_block["block"], mc_block)
