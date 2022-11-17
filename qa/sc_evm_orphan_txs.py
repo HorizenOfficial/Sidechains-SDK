@@ -10,6 +10,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenToZennies, connect_sc_nodes, \
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
+from qa.SidechainTestFramework.account.httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, assert_false
 from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
@@ -112,8 +113,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(orphan_tx_hash in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1)
+        assert_true(orphan_tx_hash in response)
 
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
@@ -121,8 +122,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         txs_in_block = sc_node_1.block_best()["result"]["block"]["sidechainTransactions"]
         assert_equal(0, len(txs_in_block), "Orphan transaction shouldn't be included in the block")
         # Check it is still in the mempool
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(orphan_tx_hash in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1)
+        assert_true(orphan_tx_hash in response)
 
         logging.info("Create the missing transaction and check that now both are included in a block...")
         j["nonce"] = 0
@@ -136,8 +137,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(tx_hash_nonce_0 in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1)
+        assert_true(tx_hash_nonce_0 in response)
 
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
@@ -148,8 +149,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         assert_equal(orphan_tx_hash, txs_in_block[1]['id'], "Wrong second tx")
 
         # Check the mempool is empty
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']))
+        response = allTransactions(sc_node_1)
+        assert_equal(0, len(response))
 
         # Check that the transactions with the highest effective gas tip are included first in the block
         # The expected order is: txC_0, txC_1, txC_2, txB_0, txA_0, txB_1, txB_2, txA_1, txA_2
@@ -270,8 +271,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         oldTxId = response['result']['transactionId']
 
         # check mempool contains oldTxId
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(oldTxId in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1)
+        assert_true(oldTxId in response)
 
         j["gasInfo"]["maxFeePerGas"] = 900000500
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
@@ -280,9 +281,9 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         newTxId = response['result']['transactionId']
 
         # check mempool contains newTxId
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_false(oldTxId in response['result']['transactionIds'])
-        assert_true(newTxId in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1)
+        assert_false(oldTxId in response)
+        assert_true(newTxId in response)
 
         self.sc_sync_all()
 

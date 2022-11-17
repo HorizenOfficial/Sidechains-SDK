@@ -9,6 +9,7 @@ from SidechainTestFramework.account.address_util import format_evm, format_eoa
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from qa.SidechainTestFramework.account.httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_true, start_nodes, websocket_port_by_mc_node_index, \
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
@@ -137,13 +138,13 @@ class SCEvmForwardTransfer(SidechainTestFramework):
 
         self.sc_sync_all()
         logging.info("Mempool node before")
-        response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
+        response = allTransactions(sc_node, True)
         logging.info(response)
 
         generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()
         logging.info("Mempool node after")
-        response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
+        response = allTransactions(sc_node, True)
         logging.info(response)
 
         # verify smart contract has a balance of zero
