@@ -209,7 +209,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     id(), getChainId(), EthereumTransactionDecoder.getDecodedChainIdFromSignature(signatureData)));
         }
 
-        if (getToString() != null && !getToString().isEmpty()) {
+        if (getToString() != null && Numeric.hexStringToByteArray(getToString()).length != 0) {
             // regular to address
 
             // sanity check of formatted string.
