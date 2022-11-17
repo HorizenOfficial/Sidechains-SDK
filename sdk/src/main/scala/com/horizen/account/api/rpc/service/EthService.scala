@@ -71,15 +71,15 @@ class EthService(
           case reverted: ExecutionRevertedException =>
             throw new RpcException(
               new RpcError(
-                RpcCode.ExecutionError.getCode,
+                RpcCode.ExecutionError.code,
                 reverted.getMessage,
                 Numeric.toHexString(reverted.revertReason)
               )
             )
           case err: ExecutionFailedException =>
-            throw new RpcException(new RpcError(RpcCode.ExecutionError.getCode, err.getMessage, null))
+            throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
           case err: TransactionSemanticValidityException =>
-            throw new RpcException(new RpcError(RpcCode.ExecutionError.getCode, err.getMessage, null))
+            throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
           case _ =>
             log.error("unexpected exception", exception)
             throw exception
