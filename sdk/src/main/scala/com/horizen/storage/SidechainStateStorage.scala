@@ -21,6 +21,7 @@ import scala.util._
 class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
     with SidechainStorageInfo
+    with SidechainStorageCleanable
     with SidechainTypes
 {
   // Version - block Id
@@ -374,4 +375,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       storage.update(lastVersionWrapper,updateList, removeList)
     log.info("SidechainStateStorage restore completed successfully!")
   }
+
+  override def cleanup(): Unit = storage.cleanup()
 }

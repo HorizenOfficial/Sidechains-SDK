@@ -11,8 +11,8 @@ import java.util.{Optional => JOptional}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
-import com.horizen.api.http.SidechainDebugRestScheme.{RespCertGenerationState, RespCertSignerState, RespCertSubmitterState, RespSubmitterOk}
+import com.horizen.api.http.SidechainSubmitterErrorResponse.{ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
+import com.horizen.api.http.SidechainSubmitterRestScheme.{RespCertGenerationState, RespCertSignerState, RespCertSubmitterState, RespSubmitterOk}
 
 case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef)
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
@@ -78,7 +78,7 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
   }
 }
 
-object SidechainDebugRestScheme {
+object SidechainSubmitterRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespCertGenerationState(state: Boolean) extends SuccessResponse
 
@@ -92,7 +92,7 @@ object SidechainDebugRestScheme {
   private[api] object RespSubmitterOk extends SuccessResponse
 }
 
-object SidechainDebugErrorResponse {
+object SidechainSubmitterErrorResponse {
   case class ErrorRetrievingCertGenerationState(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0601"
   }

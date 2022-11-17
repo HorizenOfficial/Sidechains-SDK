@@ -283,7 +283,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecret")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqImportSecret("002b64a179846da0b13ed5b4354dbdeb85a500c60ccb12c01a0fded2bd5d8b58e58bb8302e2b46763c830099c6fd862da0774a7b8f1323db5bbd96d3652176e485"))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqImportSecret("002b64a179846da0b13ed5b4354dbdeb85a500c60ccb12c01a0fded2bd5d8b58e58bb8302e2b46763c830099c6fd862da0774a7b8f1323db5bbd96d3652176e485", Option.empty))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -303,7 +303,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecret")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqImportSecret("002b64a179846da0b13ed5b4354dbdeb85a500c60ccb12c01a0fded2bd5d8b58e58bb8302e2b46763c830099c6fd862da0774a7b8f1323db5bbd96d3652176e485"))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqImportSecret("002b64a179846da0b13ed5b4354dbdeb85a500c60ccb12c01a0fded2bd5d8b58e58bb8302e2b46763c830099c6fd862da0774a7b8f1323db5bbd96d3652176e485", Option.empty))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretAlreadyPresent("", JOptional.empty()).code)
@@ -313,7 +313,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecret")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqImportSecret("03ff697dccef0a296a9a6682cd97a10056580f7447a2ff3e9b8609f35757b4661a076a9191a89fee51439600b0455db357a9899694d1cdad6a3c71bf65e6cce53280"))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqImportSecret("03ff697dccef0a296a9a6682cd97a10056580f7447a2ff3e9b8609f35757b4661a076a9191a89fee51439600b0455db357a9899694d1cdad6a3c71bf65e6cce53280", Option.empty))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -334,7 +334,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecret")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqImportSecret("03ff697dccef0a296a9a6682cd97a10056580f7447a2ff3e9b8609f35757b4661a076a9191a89fee51439600b0455db357a9899694d1cdad6a3c71bf65e6cce53280"))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqImportSecret("03ff697dccef0a296a9a6682cd97a10056580f7447a2ff3e9b8609f35757b4661a076a9191a89fee51439600b0455db357a9899694d1cdad6a3c71bf65e6cce53280", Option.empty))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretAlreadyPresent("", JOptional.empty()).code)
@@ -344,7 +344,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecret")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqImportSecret("04a785e48940b0e4653d67f7b347def796a8fc601f583c8dd238c13c93de127f35effcc974d518c9ca00bbbde69041141b5901cd325d237a1f3bf489ff804e712400"))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqImportSecret("04a785e48940b0e4653d67f7b347def796a8fc601f583c8dd238c13c93de127f35effcc974d518c9ca00bbbde69041141b5901cd325d237a1f3bf489ff804e712400", Option.empty))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -365,7 +365,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecret")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqImportSecret("04a785e48940b0e4653d67f7b347def796a8fc601f583c8dd238c13c93de127f35effcc974d518c9ca00bbbde69041141b5901cd325d237a1f3bf489ff804e712400"))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqImportSecret("04a785e48940b0e4653d67f7b347def796a8fc601f583c8dd238c13c93de127f35effcc974d518c9ca00bbbde69041141b5901cd325d237a1f3bf489ff804e712400", Option.empty))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretAlreadyPresent("", JOptional.empty()).code)

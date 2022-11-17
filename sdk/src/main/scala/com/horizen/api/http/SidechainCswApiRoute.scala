@@ -32,6 +32,9 @@ abstract class SidechainCswApiRoute(override val settings: RESTApiSettings,
     Try {
       applyOnNodeView {
         sidechainNodeView =>
+          if (sidechainNodeView.getNodeHistory.isReindexing) {
+            Failure(new IllegalStateException("Node reindex in progress - unable get info"))
+          }
           val sidechainState = sidechainNodeView.getNodeState
           ApiResponseUtil.toResponse(RespCswHasCeasedState(sidechainState.hasCeased))
       }

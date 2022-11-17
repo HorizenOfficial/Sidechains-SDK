@@ -27,6 +27,8 @@ public interface Storage extends AutoCloseable {
 
     int numberOfVersions();
 
+    void cleanup();
+
     @Override
     void close();
 

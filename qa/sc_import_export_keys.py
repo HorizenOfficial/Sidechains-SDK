@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import shutil
+import time
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_false, assert_true, initialize_chain_clean, start_nodes, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, connect_sc_nodes
@@ -15,6 +16,7 @@ from httpCalls.wallet.importSecrets import http_wallet_importSecrets
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
+from httpCalls.wallet.reindex import http_wallet_reindex_status
 
 """
     - Setup 2 SC Node.
@@ -25,6 +27,7 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
     
     - Create some new addresses on node1 and dump all its secret on file
     - Import the node1 secrets inside the node2 and verify that we imported only the secrets that were missing
+    - Test import secret + reindex flag set to true
 """
 class SidechainImportExportKeysTest(SidechainTestFramework):
     number_of_mc_nodes = 1
@@ -263,6 +266,29 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
 
         assert_true(sc_address_3 in propositions_node2)
         assert_true(sc_address_4 in propositions_node2)
+
+        #Test import secret + reindex flag
+        sc_address_new = http_wallet_createPrivateKey25519(sc_node2, self.API_KEY_NODE2)
+        sc_address_new_secret = http_wallet_exportSecret(sc_node2, sc_address_new, self.API_KEY_NODE2)
+        sendCoinsToAddress(sc_node2, sc_address_new, 1000, 0, self.API_KEY_NODE2)
+        self.sc_sync_all()
+        generate_next_blocks(sc_node1, "first node", 1)
+        self.sc_sync_all()
+        balance_node1_beforeImport = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
+        http_wallet_importSecret(sc_node1, sc_address_new_secret, self.API_KEY_NODE1, True)
+
+        #ensure the reindex ended correctly
+        reindexStatus = http_wallet_reindex_status(sc_node1, self.API_KEY_NODE1)
+        maxTries = 60 #maximum time of 1 minute more or less to complete the reindex
+        while (reindexStatus != 'inactive' or maxTries < 0):
+            time.sleep(1)
+            maxTries = maxTries - 1
+            reindexStatus = http_wallet_reindex_status(sc_node1, self.API_KEY_NODE1)
+        assert_equal(reindexStatus, 'inactive')
+
+        #after an import + reindex the balance should by immediately updated
+        balance_node1_afterImport = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
+        assert_true(balance_node1_afterImport == (balance_node1_beforeImport+1000))
 
 
 if __name__ == "__main__":

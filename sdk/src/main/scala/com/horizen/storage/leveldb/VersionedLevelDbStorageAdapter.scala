@@ -86,6 +86,9 @@ class VersionedLevelDbStorageAdapter(pathToDB: File) extends Storage{
 
   override def close(): Unit = dataBase.close()
 
+  override def cleanup(): Unit = dataBase.cleanup()
+
+
   private def createDb(path: File): VersionedLDBKVStore = {
     path.mkdirs()
     val options = new Options()

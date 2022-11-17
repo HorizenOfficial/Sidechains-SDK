@@ -1,16 +1,18 @@
 package com.horizen.network
 
+
 import akka.actor.{ActorRef, ActorRefFactory, Props}
 import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
-import sparkz.core.network.NodeViewSynchronizer
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
+import sparkz.core.network.{ConnectedPeer,  NodeViewSynchronizer}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SyntacticallyFailedModification}
+import sparkz.core.network.message.{InvData, ModifiersData}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-
+import sparkz.core.network.ModifiersStatus._
 import scala.concurrent.ExecutionContext
 
 class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
@@ -21,6 +23,8 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
                                     modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]])(implicit ec: ExecutionContext)
   extends NodeViewSynchronizer[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
     SidechainBlock, SidechainHistory, SidechainMemoryPool](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
+
+  protected var isReindexing : Boolean = false
 
   override def postStop(): Unit = {
     log.info("SidechainNodeViewSynchronizer actor is stopping...")
@@ -45,14 +49,35 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
       }
   }
 
+  /**
+   * Object ids coming from other node.
+   * Filter out modifier ids that are already in process (requested, received or applied),
+   * request unknown ids from peer and set this ids to requested state.
+   */
+  override protected def processInv(invData: InvData, peer: ConnectedPeer): Unit = {
+    if (this.isReindexing){
+      log.warn("Got data from peer while reindexing - will be discarded")
+    }else {
+      super.processInv(invData, peer)
+    }
+  }
+
+  protected def changedHistoryEvent: Receive = {
+    case ChangedHistory(sHistory: SidechainHistory) =>
+      historyReaderOpt = Some(sHistory)
+      isReindexing = sHistory.isReindexing()
+  }
+
+
+
   override protected def viewHolderEvents: Receive =
-    onSyntacticallyFailedModifier orElse
+      onSyntacticallyFailedModifier orElse
+      changedHistoryEvent orElse
       super.viewHolderEvents
 }
 
-
-
 object SidechainNodeViewSynchronizer {
+
   def props(networkControllerRef: ActorRef,
             viewHolderRef: ActorRef,
             syncInfoSpec: SidechainSyncInfoMessageSpec.type,
@@ -82,3 +107,4 @@ object SidechainNodeViewSynchronizer {
            (implicit context: ActorRefFactory, ex: ExecutionContext): ActorRef =
     context.actorOf(props(networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers), name)
 }
+

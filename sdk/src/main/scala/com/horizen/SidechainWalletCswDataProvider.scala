@@ -25,6 +25,8 @@ trait SidechainWalletCswDataProvider extends SidechainStorageInfo {
 
   def getCswData(withdrawalEpoch: Int): Seq[CswData]
 
+  def cleanup()
+
   override def getStorageName: String = "SidechainWalletCswDataStorage"
 }
 
@@ -104,6 +106,8 @@ case class SidechainWalletCswDataProviderCSWEnabled(private val sidechainWalletC
 
     ftCswDataList
   }
+
+  def cleanup(): Unit = sidechainWalletCswDataStorage.cleanup()
 }
 
 case class SidechainWalletCswDataProviderCSWDisabled() extends  SidechainWalletCswDataProvider {
@@ -125,4 +129,6 @@ case class SidechainWalletCswDataProviderCSWDisabled() extends  SidechainWalletC
 
 
   override def getCswData(withdrawalEpoch: Int): Seq[CswData] = Seq()
+
+  def cleanup(): Unit = None
 }

@@ -21,6 +21,7 @@ import scala.util.Try
 class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends SidechainTypes
     with SidechainStorageInfo
+    with SidechainStorageCleanable
     with ScorexLogging
 {
   // Version - block Id
@@ -34,6 +35,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   private val _walletBoxesByType = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], mutable.Map[ByteArrayWrapper, WalletBox]]()
   private val _walletBoxesBalances = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], Long]()
   private val _walletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
+
 
   loadWalletBoxes()
 
@@ -164,4 +166,10 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   def getIterator: StorageIterator = storage.getIterator
 
+  override def cleanup(): Unit = {
+    _walletBoxes.clear()
+    _walletBoxesByType.clear()
+    _walletBoxesBalances.clear()
+    storage.cleanup()
+  }
 }

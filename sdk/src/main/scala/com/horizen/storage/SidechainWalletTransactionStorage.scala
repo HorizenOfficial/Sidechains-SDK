@@ -14,6 +14,7 @@ import scala.util.{Failure, Success, Try}
 class SidechainWalletTransactionStorage (storage : Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion)
 extends SidechainTypes
   with SidechainStorageInfo
+  with SidechainStorageCleanable
   with ScorexLogging
 {
   // Version - block Id
@@ -72,5 +73,7 @@ extends SidechainTypes
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  override def cleanup(): Unit = storage.cleanup()
 
 }

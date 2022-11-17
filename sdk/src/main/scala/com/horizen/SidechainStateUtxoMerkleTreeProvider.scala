@@ -18,6 +18,8 @@ trait SidechainStateUtxoMerkleTreeProvider extends SidechainStorageInfo {
 
   def getMerkleTreeRoot: Option[Array[Byte]]
 
+  def cleanup()
+
   override def getStorageName: String = "SidechainStateUtxoMerkleTreeStorage"
 }
 
@@ -47,6 +49,8 @@ case class SidechainUtxoMerkleTreeProviderCSWEnabled(private val utxoMerkleTreeS
   }
 
   override def getMerkleTreeRoot: Option[Array[Byte]] = Some(utxoMerkleTreeStorage.getMerkleTreeRoot)
+
+  override def cleanup(): Unit = utxoMerkleTreeStorage.cleanup()
 }
 
 case class SidechainUtxoMerkleTreeProviderCSWDisabled() extends SidechainStateUtxoMerkleTreeProvider{
@@ -67,4 +71,6 @@ case class SidechainUtxoMerkleTreeProviderCSWDisabled() extends SidechainStateUt
   }
 
   override def getMerkleTreeRoot: Option[Array[Byte]] = None
+
+  override def cleanup(): Unit = None
 }

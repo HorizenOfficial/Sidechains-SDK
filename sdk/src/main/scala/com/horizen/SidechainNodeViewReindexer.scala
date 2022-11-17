@@ -1,0 +1,80 @@
+package com.horizen
+
+import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges}
+import sparkz.core.PersistentNodeViewModifier
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedHistory
+import scorex.util.ScorexLogging
+import scala.concurrent.ExecutionContext
+import scala.util.Success
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import sparkz.core.consensus.{HistoryReader, SyncInfo}
+import scala.reflect.ClassTag
+
+
+class SidechainNodeViewReindexer
+[SI <: SyncInfo,
+  PMOD <: PersistentNodeViewModifier,
+  HR <: HistoryReader[PMOD, SI] : ClassTag]
+(viewHolderRef: ActorRef) (implicit ec: ExecutionContext) extends Actor with ScorexLogging {
+
+  protected var reindexStatus : Int = SidechainHistory.ReindexNotInProgress
+
+  override def preStart(): Unit = {
+    //subscribe for all the node view holder events involving history
+    context.system.eventStream.subscribe(self, classOf[ChangedHistory[HR]])
+    viewHolderRef ! GetNodeViewChanges(history = true, state = false, vault = false, mempool = false)
+  }
+
+  //Actor's event handling
+  override def receive: Receive = {
+    processReindexEvents orElse
+    processViewHolderEvents
+  }
+
+  protected def processViewHolderEvents: Receive = {
+    case ChangedHistory(history: SidechainHistory) =>
+      this.reindexStatus = history.reindexStatus
+  }
+
+  protected def processReindexEvents: Receive = {
+    case SidechainNodeViewReindexer.ReceivableMessages.StartReindex => startReindex()
+    case SidechainNodeViewReindexer.ReceivableMessages.StatusReindex => statusReindex()
+  }
+
+  protected def startReindex(): Unit = {
+    if (reindexStatus == SidechainHistory.ReindexNotInProgress) {
+      reindexStatus = SidechainHistory.ReindexJustStarted //status is updated immediately to avoid cuncurrent calls conflicts
+      viewHolderRef ! SidechainNodeViewHolder.InternalReceivableMessages.ReindexStep(true)
+      sender() ! Success(Option.empty)
+    }else {
+      //nothing to do, just return the current progress
+      sender() ! Success(Some(reindexStatus))
+    }
+  }
+
+
+  protected def statusReindex(): Unit = {
+    sender() ! Success(reindexStatus)
+  }
+}
+
+object SidechainNodeViewReindexer {
+  object ReceivableMessages {
+    case object StartReindex
+    case object StatusReindex
+  }
+}
+
+object SidechainNodeViewReindexerRef {
+  def props(viewHolderRef: ActorRef)
+           (implicit ec: ExecutionContext): Props =
+    Props(new SidechainNodeViewReindexer(viewHolderRef))
+
+  def apply(name: String, viewHolderRef: ActorRef)
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
+    system.actorOf(props(viewHolderRef), name)
+
+  def apply(sviewHolderRef: ActorRef)
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
+    system.actorOf(props(sviewHolderRef))
+}

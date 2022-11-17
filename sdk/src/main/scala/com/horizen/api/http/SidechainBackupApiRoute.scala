@@ -37,6 +37,9 @@ case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
   def getSidechainBlockIdForBackup: Route = (post & path("getSidechainBlockIdForBackup")) {
     withView { nodeView =>
       try {
+        if (nodeView.history.isReindexing) {
+          Failure(new IllegalStateException("Node reindex in progress - unable get info"))
+        }
         val withdrawalEpochLength = nodeView.state.params.withdrawalEpochLength
         val currentEpoch = nodeView.state.getWithdrawalEpochInfo.epoch
         val genesisMcBlockHeight = nodeView.history.getMainchainCreationBlockHeight

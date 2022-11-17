@@ -13,7 +13,7 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 
 
-class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with SidechainStorageInfo with ScorexLogging
+class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with SidechainStorageInfo with SidechainStorageCleanable with ScorexLogging
 {
   require(storage != null, "Storage must be NOT NULL.")
 
@@ -117,4 +117,6 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Side
   def isEmpty: Boolean = storage.isEmpty
 
   def numberOfVersions : Int = storage.numberOfVersions()
+
+  override def cleanup(): Unit = storage.cleanup()
 }

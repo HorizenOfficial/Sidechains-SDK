@@ -18,7 +18,6 @@ class PrioritizedMailbox (settings: Settings, cfg: Config) extends UnboundedStab
     case LocallyGeneratedTransaction => 1
     case ApplyModifier => 2
     case ModifiersFromRemote => 3
-
     case _ => 100
   }
 

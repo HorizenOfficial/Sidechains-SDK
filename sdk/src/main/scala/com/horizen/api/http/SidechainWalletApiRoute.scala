@@ -6,7 +6,8 @@ import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
-import com.horizen.SidechainTypes
+import com.horizen.SidechainNodeViewReindexer.ReceivableMessages.{StartReindex, StatusReindex}
+import com.horizen.{SidechainHistory, SidechainTypes}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorFailedToParseSecret, ErrorPropositionNotFound, ErrorPropositionNotMatch, ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
 import com.horizen.api.http.SidechainWalletRestScheme.{ReqDumpWallet, ReqExportSecret, ReqImportSecret, RespDumpSecrets, RespExportSecret, RespImportSecrets, _}
@@ -17,8 +18,8 @@ import com.horizen.secret.{PrivateKey25519Creator, Secret, VrfKeyGenerator}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-
 import java.io.{File, PrintWriter}
+
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success, Try}
@@ -27,12 +28,13 @@ import java.util.{ArrayList => JArrayList}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef,
+                                   sidechainNodeViewReindexer: ActorRef,
                                    sidechainSecretsCompanion: SidechainSecretsCompanion)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
   //Please don't forget to add Auth for every new method of the wallet.
   override val route: Route = pathPrefix("wallet") {
-    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets
+    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets ~ reindex ~ reindexStatus
   }
 
   /**
@@ -170,10 +172,56 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
         Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
           case Success(_) =>
+            if (body.reindex.isDefined && body.reindex.get){
+              sidechainNodeViewReindexer ? StartReindex
+            }
             ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
           case Failure(e) =>
             ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to add the key.", JOptional.of(e)))
         }
+      }
+    }
+  }
+
+  /**
+   * Reindex endpoint.
+   * Returns true if the reindex started succesfully
+   * Return false if  reindex not started (was already ongoing)
+   */
+  def reindex: Route = (post & path("reindex")) {
+    withAuth {
+      val future = sidechainNodeViewReindexer ? StartReindex
+      Await.result(future, timeout.duration).asInstanceOf[Try[Option[Int]]] match {
+        case Success(ret) => {
+          if (ret.isEmpty){
+            ApiResponseUtil.toResponse(RespReindexStart(true))
+          }else{
+            ApiResponseUtil.toResponse(RespReindexStart(false))
+          }
+        }
+        case Failure(e) =>
+          ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to launch reindex", JOptional.of(e)))
+      }
+    }
+  }
+
+
+  /**
+   * Reindex status.
+   * Returns the status (inactive, ongoing), and, if ongoing, the height reached
+   */
+  def reindexStatus: Route = (post & path("reindexStatus")) {
+    withAuth {
+      val future = sidechainNodeViewReindexer ? StatusReindex
+      Await.result(future, timeout.duration).asInstanceOf[Try[Int]] match {
+        case Success(ret) => {
+          ret match {
+            case SidechainHistory.ReindexNotInProgress =>  ApiResponseUtil.toResponse(RespReindexStatus(SidechainWalletApiRoute.ReindexInactive, Option.empty))
+            case reachedHeight =>  ApiResponseUtil.toResponse(RespReindexStatus(SidechainWalletApiRoute.ReindexOngoing, Some(reachedHeight)))
+          }
+        }
+        case Failure(e) =>
+          ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to get reindexStatus", JOptional.of(e)))
       }
     }
   }
@@ -223,7 +271,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
    */
   def importSecrets: Route = (post & path("importSecrets")) {
     withAuth {
-      entity(as[ReqDumpWallet]) { body =>
+      entity(as[ReqImportWallet]) { body =>
         val reader = new Scanner(new File(body.path))
 
         //First collect every secrets and verify that their public image match with the corresponding public key in the file.
@@ -269,6 +317,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                 errorDetail.add(ImportSecretsDetail(secret._2, e.getMessage))
             }
           })
+          if (body.reindex.isDefined && body.reindex.get && successfullyAdded  > 0){
+            sidechainNodeViewReindexer ? StartReindex
+          }
           ApiResponseUtil.toResponse(RespImportSecrets(successfullyAdded, failedToAdd, errorDetail))
         }
       }
@@ -286,6 +337,11 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   }
 }
 
+object SidechainWalletApiRoute {
+  val ReindexInactive = "inactive"
+  val ReindexOngoing = "ongoing"
+}
+
 object SidechainWalletRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
@@ -301,6 +357,12 @@ object SidechainWalletRestScheme {
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespReindexStart(started: Boolean) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespReindexStatus(status: String, heightReached: Option[Int]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespCreatePrivateKey(proposition: Proposition) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
@@ -313,7 +375,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqImportSecret(privKey: String) {
+  private[api] case class ReqImportSecret(privKey: String, reindex: Option[Boolean]) {
     require(privKey.nonEmpty, "Private key cannot be empty!")
   }
 
@@ -327,6 +389,11 @@ object SidechainWalletRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqDumpWallet(path: String) {
+    require(path.nonEmpty, "Path cannot be empty!")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqImportWallet(path: String, reindex: Option[Boolean]) {
     require(path.nonEmpty, "Path cannot be empty!")
   }
 
