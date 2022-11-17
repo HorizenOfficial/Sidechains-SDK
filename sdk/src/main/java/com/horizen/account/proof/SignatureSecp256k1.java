@@ -6,6 +6,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
+import org.apache.logging.log4j.LogManager;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
@@ -24,17 +25,9 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     @JsonProperty("s")
     private final byte[] s;
 
-    public static final int EIP155_PARTIAL_SIGNATURE_RS_SIZE = 0;
-    public static final byte[] EIP155_PARTIAL_SIGNATURE_RS = new byte[EIP155_PARTIAL_SIGNATURE_RS_SIZE];
-
     private static boolean checkSignatureDataSizes(byte[] v, byte[] r, byte[] s) {
         return (v.length > 0 && v.length <= Secp256k1.SIGNATURE_V_MAXSIZE) &&
-            (
-                // a regular signature
-                (r.length == Secp256k1.SIGNATURE_RS_SIZE      && s.length == Secp256k1.SIGNATURE_RS_SIZE) ||
-                // or a partially signed eip155 legacy signature
-                (r.length == EIP155_PARTIAL_SIGNATURE_RS_SIZE && s.length == EIP155_PARTIAL_SIGNATURE_RS_SIZE)
-            );
+                (r.length == Secp256k1.SIGNATURE_RS_SIZE && s.length == Secp256k1.SIGNATURE_RS_SIZE);
     }
 
     public static void verifySignatureData(byte[] v, byte[] r, byte[] s) {
@@ -42,12 +35,10 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             throw new IllegalArgumentException("Null v/r/s obj passed in signature data");
         if  (!checkSignatureDataSizes(v, r, s)) {
             throw new IllegalArgumentException(String.format(
-                    "Incorrect signature data obj size: v=%d (expected 0<v<=%d); r/s==%d/%d (expected %d/%d or %d/%d)",
+                    "Incorrect signature data obj size: v=%d (expected 0<v<=%d); r/s==%d/%d (expected %d/%d)",
                     v.length, Secp256k1.SIGNATURE_V_MAXSIZE,
                     r.length, s.length,
-                    Secp256k1.SIGNATURE_RS_SIZE, Secp256k1.SIGNATURE_RS_SIZE,
-                    EIP155_PARTIAL_SIGNATURE_RS_SIZE, EIP155_PARTIAL_SIGNATURE_RS_SIZE
-
+                    Secp256k1.SIGNATURE_RS_SIZE, Secp256k1.SIGNATURE_RS_SIZE
             ));
         }
     }
@@ -73,6 +64,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             // verify that the signature was created with the expected address
             return Objects.equals(signingAddress, Numeric.toHexStringNoPrefix(proposition.address()));
         } catch (SignatureException e) {
+            LogManager.getLogger().info("Signature not valid:", e);
             return false;
         }
     }

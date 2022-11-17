@@ -146,19 +146,15 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val isEIP155 = body.EIP155.getOrElse(false)
               val response = if (isEIP155) {
-                val encodedChainId = EthereumTransactionEncoder.encodeEip155ChainId(params.chainId)
                 val tmpTx = new EthereumTransaction(
+                  params.chainId,
                   destAddress,
                   nonce,
                   gasPrice,
                   gasLimit,
                   valueInWei,
                   "",
-                  new SignatureData(
-                    encodedChainId.toByteArray,
-                    SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
-                    SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS
-                  )
+                  null
                 )
                 validateAndSendTransaction(signTransactionEIP155WithSecret(secret, tmpTx))
               } else {

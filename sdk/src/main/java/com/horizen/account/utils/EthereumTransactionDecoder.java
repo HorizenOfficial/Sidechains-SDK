@@ -67,7 +67,13 @@ public class EthereumTransactionDecoder {
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(7)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(8)).getBytes()), 32);
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
-            return new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, signatureData);
+            Long chainId = decodeEip155ChainId(Numeric.toBigInt(v));
+            if (chainId != null) {
+                // chainid is encoded into V part, this is an EIP 155
+                return new EthereumTransaction(chainId, to, nonce, gasPrice, gasLimit, value, data, signatureData);
+            } else {
+                return new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, signatureData);
+            }
         } else {
             return new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, null);
         }

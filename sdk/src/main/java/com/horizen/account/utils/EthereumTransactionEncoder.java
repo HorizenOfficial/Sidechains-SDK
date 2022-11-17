@@ -42,8 +42,8 @@ public class EthereumTransactionEncoder {
 
         if (signatureData != null) {
             result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getV())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getR())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getS())));
+            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getR())));
+            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getS())));
         }
 
         RlpList rlpList = new RlpList(result);
@@ -97,10 +97,4 @@ public class EthereumTransactionEncoder {
                 .array();
     }
 
-
-    public static BigInteger encodeEip155ChainId(Long inChainId) {
-        return BigInteger.valueOf(inChainId)
-                .multiply(BigInteger.TWO)
-                .add(BigInteger.valueOf(CHAIN_ID_INC));
-    }
 }

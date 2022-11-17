@@ -8,6 +8,7 @@ import com.horizen.account.state.GasUtil;
 import com.horizen.account.state.Message;
 import com.horizen.account.utils.Account;
 import com.horizen.account.utils.BigIntegerUtil;
+import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.EthereumTransactionEncoder;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
@@ -16,12 +17,11 @@ import com.horizen.utils.BytesUtils;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.crypto.*;
 import org.web3j.crypto.Sign.SignatureData;
-import org.web3j.crypto.exception.CryptoWeb3jException;
 import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
-import static com.horizen.account.utils.EthereumTransactionDecoder.getDecodedChainIdFromSignature;
+
 import static com.horizen.account.utils.EthereumTransactionUtils.*;
 
 
@@ -47,12 +47,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private final java.lang.Long chainId;
     private final BigInteger maxPriorityFeePerGas;
     private final BigInteger maxFeePerGas;
-
-    public boolean isPartiallyEip155Signed() {
-        return (signatureData != null && // if this is not null, we alreay enforce v/r/s are not null
-                signatureData.getR().length == SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS_SIZE &&
-                signatureData.getS().length == SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS_SIZE);
-    }
 
     private void initSignature(SignatureData inSignatureData) {
         if (inSignatureData != null) {
@@ -109,9 +103,36 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxFeePerGas = null;
     }
 
+
+    // creates a legacy eip155 transaction
+    public EthereumTransaction(
+            @NotNull java.lang.Long chainId,
+            @Nullable String to,
+            @NotNull BigInteger nonce,
+            @NotNull BigInteger gasPrice,
+            @NotNull BigInteger gasLimit,
+            @Nullable BigInteger value,
+            @NotNull String data,
+            @Nullable SignatureData inSignatureData
+    ) {
+        initSignature(inSignatureData);
+
+        this.type = TransactionType.LEGACY;
+        this.nonce = nonce;
+        this.gasPrice = gasPrice;
+        this.gasLimit = gasLimit;
+        this.to = to;
+        this.value = value;
+        this.data = data;
+        this.chainId = chainId;
+
+        this.maxPriorityFeePerGas = null;
+        this.maxFeePerGas = null;
+    }
+
     // creates an eip1559 transaction
     public EthereumTransaction(
-            long chainId,
+            @NotNull java.lang.Long chainId,
             @Nullable String to,
             @NotNull BigInteger nonce,
             @NotNull BigInteger gasLimit,
@@ -137,7 +158,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public boolean isSigned() {
-        return (signatureData != null && !isPartiallyEip155Signed());
+        return (signatureData != null);
     }
 
     @Override
@@ -173,11 +194,20 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     public void semanticValidity() throws TransactionSemanticValidityException {
 
-        if (!isSigned())
+        if (!isSigned()) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is not signed", id()));
+        }
 
-        if (getToString() != null && Numeric.hexStringToByteArray(getToString()).length != 0)
-        {
+        if (getChainId() != null && getChainId().compareTo(1L) < 0) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] has invalid chainId set: %d", id(), getChainId()));
+        }
+
+        if (isEIP155() && !getChainId().equals(EthereumTransactionDecoder.getDecodedChainIdFromSignature(signatureData))) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is eip155 but has incompatible chainId set: %d != encoded in sign=%d",
+                    id(), getChainId(), EthereumTransactionDecoder.getDecodedChainIdFromSignature(signatureData)));
+        }
+
+        if (getToString() != null && Numeric.hexStringToByteArray(getToString()).length != 0) {
             // regular to address
 
             // sanity check of formatted string.
@@ -343,12 +373,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public Long getChainId() {
-        if (isEIP1559())
+        if (isEIP1559() || isEIP155())
             return this.chainId;
-        else if (signatureData != null) {
-            return getDecodedChainIdFromSignature(signatureData);
+        else {
+            return null;
         }
-        return null;
     }
 
     public boolean isEIP1559() {
@@ -357,6 +386,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     public boolean isLegacy() {
         return this.type == TransactionType.LEGACY;
+    }
+
+    public boolean isEIP155() {
+        return (isLegacy() && this.chainId != null);
     }
 
     @Override
@@ -409,28 +442,23 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             Sign.SignatureData inSignatureData = null;
 
             try {
-                Long encodedChainId = getDecodedChainIdFromSignature(getSignatureData());
+                Long chainId = getChainId();
 
-                if (isLegacy()) {
-                    if (encodedChainId != null) {
-                        // we have eip155 transaction
-                        inSignatureData = new Sign.SignatureData(
-                                convertToBytes(encodedChainId),
-                                SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
-                                SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS);
-
-                    }
-                } else {
-                    if (encodedChainId != null)
-                        throw new CryptoWeb3jException("Incorrect transaction type.");
+                if (isEIP155()) {
+                    inSignatureData = createEip155PartialSignatureData(chainId);
                 }
 
                 byte[] encodedTransaction = encode(inSignatureData);
 
-                BigInteger v = Numeric.toBigInt(getSignatureData().getV());
+                byte[] realV ;
+                if (isEIP155())
+                    realV = new byte[]{getRealV(Numeric.toBigInt(getSignatureData().getV()))};
+                else
+                    realV = getSignatureData().getV();
                 byte[] r = getSignatureData().getR();
                 byte[] s = getSignatureData().getS();
-                Sign.SignatureData signatureDataV = new Sign.SignatureData(getRealV(v), r, s);
+
+                Sign.SignatureData signatureDataV = new Sign.SignatureData(realV, r, s);
                 BigInteger key = Sign.signedMessageToKey(encodedTransaction, signatureDataV);
                 return "0x" + Keys.getAddress(key);
             } catch (Throwable ignored) {
@@ -458,8 +486,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     public SignatureSecp256k1 getSignature() {
         if (signatureData != null) {
+            byte[] realV ;
+            if (isEIP155())
+                realV = new byte[]{getRealV(Numeric.toBigInt(getSignatureData().getV()))};
+            else
+                realV = getSignatureData().getV();
             return new SignatureSecp256k1(
-                    new byte[]{getRealV(Numeric.toBigInt(getSignatureData().getV()))},
+                    realV,
                     getSignatureData().getR(),
                     getSignatureData().getS());
         }
@@ -531,17 +564,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public byte[] messageToSign() {
         Sign.SignatureData inSignatureData = null;
 
-        if (isLegacy() && signatureData != null) {
-
-            Long encodedChainId = getDecodedChainIdFromSignature(getSignatureData());
-            if (encodedChainId != null) {
-                // we have eip155 transaction
-                inSignatureData = new Sign.SignatureData(
-                        convertToBytes(encodedChainId),
-                        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
-                        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS);
-
-            }
+        if (isEIP155()) {
+            Long chainId = getChainId();
+            inSignatureData = createEip155PartialSignatureData(chainId);
         }
         return encode(inSignatureData);
     }

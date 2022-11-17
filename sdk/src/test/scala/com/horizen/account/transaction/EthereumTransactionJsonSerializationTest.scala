@@ -87,7 +87,7 @@ class EthereumTransactionJsonSerializationTest
 
   @Test
   def testUnsignedEip155TxToJson(): Unit = {
-    val transaction = getPartiallySignedEip155LegacyTransaction
+    val transaction = getUnsignedEip155LegacyTransaction
     evalJsonRepr(transaction)
   }
 

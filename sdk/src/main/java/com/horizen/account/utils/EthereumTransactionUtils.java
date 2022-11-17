@@ -1,10 +1,10 @@
 package com.horizen.account.utils;
 
+import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import static org.web3j.crypto.Sign.LOWER_REAL_V;
 
@@ -28,21 +28,6 @@ public final class EthereumTransactionUtils {
         return bi.longValueExact();
     }
 
-    // similar to web3j utility but does not keep the last byte if all are 0s
-    private static byte[] trimLeadingBytes(byte[] bytes, byte b) {
-        int offset = 0;
-        for (; offset < bytes.length; offset++) {
-            if (bytes[offset] != b) {
-                break;
-            }
-        }
-
-        return Arrays.copyOfRange(bytes, offset, bytes.length);
-    }
-    public static byte[] trimLeadingZeroes(byte[] bytes) {
-        return trimLeadingBytes(bytes, (byte) 0);
-    }
-
     public static byte getRealV(BigInteger bv) {
         long v = bv.longValue();
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
@@ -53,5 +38,9 @@ public final class EthereumTransactionUtils {
             inc = 1;
         }
         return (byte) (LOWER_REAL_V + inc);
+    }
+
+    public static Sign.SignatureData createEip155PartialSignatureData(Long chainId) {
+        return new Sign.SignatureData(convertToBytes(chainId), new byte[] {}, new byte[] {});
     }
 }

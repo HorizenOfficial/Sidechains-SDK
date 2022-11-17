@@ -1,12 +1,13 @@
 package com.horizen.account.fixtures
 
-import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.state.GasUtil
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.EthereumTransactionEncoder
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Sign.SignatureData
+import org.web3j.crypto.Sign.{CHAIN_ID_INC, LOWER_REAL_V, SignatureData}
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
 import org.web3j.crypto._
+import org.web3j.utils.Numeric
 
 import java.lang
 import java.math.BigInteger
@@ -25,20 +26,15 @@ trait EthereumTransactionFixture {
     createSignedTransaction(unsignedTx, pairOpt)
   }
 
-
   def createLegacyEip155Transaction(value: BigInteger,
                               nonce: BigInteger = BigInteger.ZERO,
                               pairOpt: Option[ECKeyPair] = None,
                               gasPrice: BigInteger = BigInteger.valueOf(10000),
                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
-    val signData = new Sign.SignatureData(
-      BytesUtils.fromHexString("26"), // chain id 1 (1*2+36)
-      SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
-      SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS
-    )
+
     val unsignedTx = new EthereumTransaction(
-      "0x1234567890123456789012345678901234567890", nonce, gasPrice, gasLimit, value, "", signData)
-    createSignedLegacyEip155Transaction(unsignedTx, pairOpt, 1)
+      1, "0x1234567890123456789012345678901234567890", nonce, gasPrice, gasLimit, value, "", null)
+    createSignedLegacyEip155Transaction(unsignedTx, pairOpt)
   }
 
   def createEIP1559Transaction(value: BigInteger,
@@ -64,7 +60,7 @@ trait EthereumTransactionFixture {
     )
   }
 
-  private def createSignedLegacyEip155Transaction(unsignedTx: EthereumTransaction, pairOpt: Option[ECKeyPair], chainId: Long): EthereumTransaction = {
+  private def createSignedLegacyEip155Transaction(unsignedTx: EthereumTransaction, pairOpt: Option[ECKeyPair]): EthereumTransaction = {
     val message = unsignedTx.messageToSign()
 
     // Create a key pair, create tx signature and create ethereum Transaction
@@ -72,8 +68,7 @@ trait EthereumTransactionFixture {
     val msgSignature = Sign.signMessage(message, pair, true)
     new EthereumTransaction(unsignedTx,
       //new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
-      createEip155SignatureData(new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS), chainId)
-
+      createEip155SignatureData(new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS), unsignedTx.getChainId)
     )
   }
 
@@ -106,6 +101,7 @@ trait EthereumTransactionFixture {
 
   def getContractCallEip155LegacyTransaction: EthereumTransaction = {
     new EthereumTransaction(
+      1L,
       "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
       BigInteger.valueOf(0x15), // nonce
       new BigInteger(BytesUtils.fromHexString("0a02ffee00")), // gasPrice
@@ -168,7 +164,11 @@ trait EthereumTransactionFixture {
   }
 
   def getEoa2EoaEip155LegacyTransaction: EthereumTransaction = {
+    val chainId : lang.Long  = 77L
+    val encodedChainId = encodeEip155ChainId(chainId).toByteArray
+
     new EthereumTransaction(
+      77L,
       "0x3535353535353535353535353535353535353535",
       BigInteger.valueOf(9L), // nonce
       new BigInteger(BytesUtils.fromHexString("0a02ffee00")), // gasPrice
@@ -176,26 +176,23 @@ trait EthereumTransactionFixture {
       BigInteger.TEN.pow(18), // value
       "",
       new Sign.SignatureData(
-        BytesUtils.fromHexString("25"), // chain id 1 (1*2+35)
+        encodedChainId,
         BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
         BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
       )
     )
   }
 
-  def getPartiallySignedEip155LegacyTransaction: EthereumTransaction = {
+  def getUnsignedEip155LegacyTransaction: EthereumTransaction = {
     new EthereumTransaction(
+      1L,
       "0x3535353535353535353535353535353535353535",
       BigInteger.valueOf(9L), // nonce
       new BigInteger(BytesUtils.fromHexString("0a02ffee00")), // gasPrice
       GasUtil.TxGas,  // gasLimit
       BigInteger.TEN.pow(18), // value
       "",
-      new SignatureData(
-        BytesUtils.fromHexString("25"), // chain id 1 (1*2+35)
-        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS,
-        SignatureSecp256k1.EIP155_PARTIAL_SIGNATURE_RS
-      )
+      null
     )
   }
 
@@ -268,5 +265,60 @@ trait EthereumTransactionFixture {
 
   }
 
+  def copyEip155LegacyEthereumTransaction(
+                                     inTx: EthereumTransaction,
+                                     inChainId: Optional[java.lang.Long],
+                                     inTo: Optional[String] = null,
+                                     inNonce: BigInteger = null,
+                                     inGasLimit: BigInteger = null,
+                                     inGasPrice: BigInteger = null,
+                                     inValue: BigInteger = null,
+                                     inData: String = null,
+                                     inSignatureData: Optional[SignatureData] = null): EthereumTransaction =
+  {
+    val chainId : lang.Long = if (inChainId != null) {
+      if (!inChainId.isEmpty()) {
+        inChainId.get()
+      } else {
+        null
+      }
+    } else {
+      inTx.getChainId
+    }
+
+    val to : String = if (inTo != null) {
+      inTo.get()
+    } else {
+      if (inTx.getTo != null) {
+        BytesUtils.toHexString(inTx.getTo.address())
+      }
+      else
+        null
+    }
+
+    val nonce    = if (inNonce != null) inNonce       else inTx.getNonce
+    val gasLimit = if (inGasLimit != null) inGasLimit else inTx.getGasLimit
+    val gasPrice = if (inGasPrice != null) inGasPrice else inTx.getGasPrice
+    val value = if (inValue != null) inValue else inTx.getValue
+    val data = if (inData != null) inData else BytesUtils.toHexString(inTx.getData)
+
+    val signatureData = if (inSignatureData != null) inSignatureData.get() else inTx.getSignatureData
+
+    if (chainId != null)
+      new EthereumTransaction(chainId, to, nonce, gasPrice, gasLimit, value, data, signatureData)
+    else
+      new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, signatureData)
+
+  }
+
+  def encodeEip155ChainId(inChainId: Long, realV: Long = 27): BigInteger = {
+    // assumes realV=0x1b/0x1c
+    var v: BigInteger = BigInteger.valueOf(realV)
+    v = v.subtract(BigInteger.valueOf(LOWER_REAL_V))
+    v = v.add(BigInteger.valueOf(inChainId).multiply(BigInteger.valueOf(2)))
+    v = v.add(BigInteger.valueOf(CHAIN_ID_INC))
+
+    BigInteger.valueOf(inChainId).multiply(BigInteger.TWO).add(BigInteger.valueOf(CHAIN_ID_INC))
+  }
 }
 
