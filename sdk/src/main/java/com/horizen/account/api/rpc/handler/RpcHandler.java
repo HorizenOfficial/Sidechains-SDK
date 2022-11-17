@@ -12,7 +12,6 @@ import com.horizen.api.http.ApiResponse;
 public class RpcHandler {
     private final EthService ethService;
 
-    @Inject
     public RpcHandler(EthService ethService) {
         this.ethService = ethService;
     }
