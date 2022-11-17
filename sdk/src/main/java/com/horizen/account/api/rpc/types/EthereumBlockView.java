@@ -7,10 +7,11 @@ import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @JsonView(Views.Default.class)
 public class EthereumBlockView {
-    private final String number;
+    private final Long number;
     private final String hash;
     private final String parentHash;
     private final String nonce;
@@ -34,10 +35,10 @@ public class EthereumBlockView {
     private List<String> sealFields;
     private String baseFeePerGas;
 
-    public EthereumBlockView(String number, String hash, List<?> transactions, AccountBlock block) {
+    public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block) {
         var blockHeader = block.header();
         this.author = Numeric.toHexString(block.header().forgerAddress().address());
-        this.number = number;
+        this.number = blockNumber;
         this.hash = hash;
         this.parentHash = Numeric.prependHexPrefix((String) block.parentId());
         this.nonce = "0x"; // no nonce
@@ -53,12 +54,20 @@ public class EthereumBlockView {
         this.gasLimit = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasLimit()));
         this.gasUsed = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasUsed()));
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
-        this.transactions = transactions;
         this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
+
+        var transactions = scala.collection.JavaConverters.seqAsJavaList(block.transactions());
+
+        if (!hydratedTx) {
+            this.transactions = transactions.stream().map(t -> Numeric.prependHexPrefix((String) t.id())).collect(Collectors.toList());
+        }
+        else {
+            this.transactions = transactions;
+        }
     }
 
     public String getNumber() {
-        return this.number;
+        return this.number.toString();
     }
 
     public String getHash() {
