@@ -11,8 +11,6 @@ public class RpcRequest {
     private String method;
     private JsonNode params;
 
-    public RpcRequest() {}
-
     public RpcRequest(JsonNode json) {
         this.jsonrpc = json.get("jsonrpc").asText();
         this.id = new RpcId(json.get("id"));
