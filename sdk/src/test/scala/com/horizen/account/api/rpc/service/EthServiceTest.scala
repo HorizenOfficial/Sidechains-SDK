@@ -71,5 +71,25 @@ class EthServiceTest extends JUnitSuite
     request = mapper.readTree(json)
     rpcRequest = new RpcRequest(request)
     assertEquals(Numeric.toHexStringWithPrefix(BigInteger.valueOf(params.chainId)), ethService.execute(rpcRequest).asInstanceOf[Quantity].getValue)
+
+    // Test 4: Trigger IllegalArgumentException rpc call
+    json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":[-1]}}"
+    request = mapper.readTree(json)
+    rpcRequest = new RpcRequest(request)
+    assertThrows[RpcException] {
+      ethService.execute(rpcRequest)
+    }
+  }
+
+  @Test
+  def invalidJsonRpcData(): Unit = {
+    val mapper = new ObjectMapper
+
+    // Try to read json request with missing data
+    val json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"params\":[]}}"
+    val request = mapper.readTree(json)
+    assertThrows[RpcException] {
+      val rpcRequest = new RpcRequest(request)
+    }
   }
 }
