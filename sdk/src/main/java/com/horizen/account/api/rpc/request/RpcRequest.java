@@ -1,5 +1,6 @@
 package com.horizen.account.api.rpc.request;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.horizen.account.api.rpc.handler.RpcException;
 import com.horizen.account.api.rpc.utils.RpcCode;
@@ -32,6 +33,7 @@ public class RpcRequest {
         this.params = json.get("params");
     }
 
+    @JsonGetter
     public String getJsonrpc() {
         return jsonrpc;
     }
@@ -40,6 +42,7 @@ public class RpcRequest {
         this.jsonrpc = jsonrpc;
     }
 
+    @JsonGetter
     public RpcId getId() {
         return id;
     }
