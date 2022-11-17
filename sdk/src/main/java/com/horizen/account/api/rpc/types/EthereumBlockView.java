@@ -9,7 +9,7 @@ import java.math.BigInteger;
 import java.util.List;
 
 @JsonView(Views.Default.class)
-public class EthereumBlock {
+public class EthereumBlockView {
     private final String number;
     private final String hash;
     private final String parentHash;
@@ -34,7 +34,7 @@ public class EthereumBlock {
     private List<String> sealFields;
     private String baseFeePerGas;
 
-    public EthereumBlock(String number, String hash, List<?> transactions, AccountBlock block) {
+    public EthereumBlockView(String number, String hash, List<?> transactions, AccountBlock block) {
         var blockHeader = block.header();
         this.author = Numeric.toHexString(block.header().forgerAddress().address());
         this.number = number;

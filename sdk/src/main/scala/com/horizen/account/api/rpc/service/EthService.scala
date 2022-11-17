@@ -88,14 +88,14 @@ class EthService(
   }
 
   @RpcMethod("eth_getBlockByNumber")
-  def getBlockByNumber(tag: String, hydratedTx: Boolean): EthereumBlock = {
+  def getBlockByNumber(tag: String, hydratedTx: Boolean): EthereumBlockView = {
     applyOnAccountView { nodeView =>
       constructEthBlockWithTransactions(nodeView, getBlockIdByTag(nodeView, tag), hydratedTx)
     }
   }
 
   @RpcMethod("eth_getBlockByHash")
-  def getBlockByHash(hash: Hash, hydratedTx: Boolean): EthereumBlock = {
+  def getBlockByHash(hash: Hash, hydratedTx: Boolean): EthereumBlockView = {
     applyOnAccountView { nodeView =>
       constructEthBlockWithTransactions(nodeView, bytesToId(hash.toBytes), hydratedTx)
     }
@@ -105,12 +105,12 @@ class EthService(
       nodeView: NV,
       blockId: ModifierId,
       hydratedTx: Boolean
-  ): EthereumBlock = {
+  ): EthereumBlockView = {
     nodeView.history
       .getStorageBlockById(blockId)
       .map(block => {
         val transactions = block.transactions.map(_.asInstanceOf[EthereumTransaction])
-        new EthereumBlock(
+        new EthereumBlockView(
           Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
           Numeric.prependHexPrefix(blockId),
           if (!hydratedTx) {
@@ -570,11 +570,11 @@ class EthService(
 
   @RpcMethod("eth_getProof")
   @RpcOptionalParameters(1)
-  def getProof(address: Address, keys: Array[Quantity], tag: String): EthereumAccountProof = {
+  def getProof(address: Address, keys: Array[Quantity], tag: String): EthereumAccountProofView = {
     val storageKeys = keys.map(key => Numeric.toBytesPadded(key.toNumber, 32))
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        new EthereumAccountProof(stateView.getProof(address.toBytes, storageKeys))
+        new EthereumAccountProofView(stateView.getProof(address.toBytes, storageKeys))
       }
     }
   }
