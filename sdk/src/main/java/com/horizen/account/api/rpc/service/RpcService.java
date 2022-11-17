@@ -65,7 +65,7 @@ public class RpcService {
             }
             return convertedArgs;
         } catch (IllegalArgumentException err) {
-            LogManager.getLogger().warn("RPC call with invalid params", err);
+            LogManager.getLogger().warn("RPC call with invalid params: " + method, err);
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, err.getMessage()));
         }
     }
