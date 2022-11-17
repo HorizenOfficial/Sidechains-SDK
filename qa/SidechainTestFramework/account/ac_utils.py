@@ -5,7 +5,7 @@ from enum import Enum
 
 from eth_utils import to_checksum_address
 
-from SidechainTestFramework.scutil import generate_next_blocks, assert_equal, generate_next_block
+from SidechainTestFramework.scutil import assert_equal, generate_next_block
 
 cwd = None
 nodeModulesInstalled = False
