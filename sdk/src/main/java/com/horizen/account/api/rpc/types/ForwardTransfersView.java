@@ -40,20 +40,12 @@ public class ForwardTransfersView {
 
     @JsonView(Views.Default.class)
     private static class ForwardTransferData {
-        String to;
-        String value;
+        public final String to;
+        public final String value;
 
         public ForwardTransferData(String to, String value) {
             this.to = to;
             this.value = value;
-        }
-
-        public String getValue() {
-            return this.value;
-        }
-
-        public String getTo() {
-            return this.to;
         }
     }
 }
