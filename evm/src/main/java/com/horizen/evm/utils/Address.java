@@ -38,7 +38,7 @@ public class Address {
     }
 
     public static Address addressZero() {
-        return new Address(Converter.fromHexString("0000000000000000000000000000000000000000"));
+        return new Address(new byte[20]);
     }
 
     public byte[] toBytes() {
