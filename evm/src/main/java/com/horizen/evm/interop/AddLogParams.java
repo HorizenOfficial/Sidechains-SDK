@@ -8,9 +8,6 @@ public class AddLogParams extends HandleParams {
     public Hash[] topics;
     public byte[] data;
 
-    public AddLogParams() {
-    }
-
     public AddLogParams(int handle, EvmLog evmLog) {
         super(handle);
         this.address = evmLog.getAddress();

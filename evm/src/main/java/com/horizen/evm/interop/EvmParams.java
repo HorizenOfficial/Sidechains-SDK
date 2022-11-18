@@ -16,9 +16,6 @@ public class EvmParams extends HandleParams {
 
     public TraceOptions traceParams;
 
-    public EvmParams() {
-    }
-
     public EvmParams(
             int handle,
             byte[] from,
