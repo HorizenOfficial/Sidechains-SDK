@@ -52,7 +52,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private final BigInteger gasLimit;
     private Optional<AddressProposition> to;
     private final BigInteger value;
-    private final String data;
+    private byte[] data;
 
     private final java.lang.Long chainId;
     private final BigInteger maxPriorityFeePerGas;
@@ -67,11 +67,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
     }
 
-    private void initTo(String to) {
-        if (to == null) {
+    private void initTo(String toString) {
+        if (toString == null) {
             this.to = Optional.empty();
         } else {
-            String toClean = Numeric.cleanHexPrefix(to);
+            String toClean = Numeric.cleanHexPrefix(toString);
             if (toClean.isEmpty()) {
                 this.to = Optional.empty();
             } else {
@@ -79,9 +79,29 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 //  Numeric library does not check hex characters' validity, BytesUtils does it
                 var toBytes = BytesUtils.fromHexString(toClean);
                 if (toBytes.length == 0) {
-                    throw new IllegalArgumentException("Invalid input to string: " + to);
+                    throw new IllegalArgumentException("Invalid input to string: " + toString);
                 } else {
                     this.to = Optional.of(new AddressProposition(toBytes));
+                }
+            }
+        }
+    }
+
+    private void initData(String dataString) {
+        if (dataString == null) {
+            this.data = new byte[]{};
+        } else {
+            String dataStringClean = Numeric.cleanHexPrefix(dataString);
+            if (dataStringClean.isEmpty()) {
+                this.data = new byte[]{};
+            } else {
+                // sanity check of formatted string.
+                //  Numeric library does not check hex characters' validity, BytesUtils does it
+                var dataBytes = BytesUtils.fromHexString(dataStringClean);
+                if (dataBytes.length == 0) {
+                    throw new IllegalArgumentException("Invalid input to string: " + dataString);
+                } else {
+                    this.data = dataBytes;
                 }
             }
         }
@@ -100,13 +120,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     ) {
         initSignature(inSignatureData);
         initTo(to);
+        initData(data);
 
         this.type = EthereumTransactionType.LegacyTxType;
         this.nonce = nonce;
         this.gasPrice = gasPrice;
         this.gasLimit = gasLimit;
         this.value = value;
-        this.data = data;
 
         this.chainId = null;
         this.maxPriorityFeePerGas = null;
@@ -127,13 +147,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     ) {
         initSignature(inSignatureData);
         initTo(to);
+        initData(data);
 
         this.type = EthereumTransactionType.LegacyTxType;
         this.nonce = nonce;
         this.gasPrice = gasPrice;
         this.gasLimit = gasLimit;
         this.value = value;
-        this.data = data;
         this.chainId = chainId;
 
         this.maxPriorityFeePerGas = null;
@@ -154,13 +174,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     ) {
         initSignature(inSignatureData);
         initTo(to);
+        initData(data);
 
         this.type = EthereumTransactionType.DynamicFeeTxType;
         this.nonce = nonce;
         this.gasPrice = null;
         this.gasLimit = gasLimit;
         this.value = value;
-        this.data = data;
 
         this.chainId = chainId;
         this.maxPriorityFeePerGas = maxPriorityFeePerGas;
@@ -185,7 +205,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.chainId = txToSign.chainId;
         this.maxPriorityFeePerGas = txToSign.maxPriorityFeePerGas;
         this.maxFeePerGas = txToSign.maxFeePerGas;
-
     }
 
     public boolean isSigned() {
@@ -231,7 +250,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     id(), getChainId(), EthereumTransactionDecoder.getDecodedChainIdFromSignature(signatureData)));
         }
 
-        if (getToString() != null && Numeric.hexStringToByteArray(getToString()).length != 0) {
+        if (Numeric.hexStringToByteArray(getToString()).length != 0) {
             // regular to address
 
             // sanity check of formatted string.
@@ -490,12 +509,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public byte[] getData() {
-        return Numeric.hexStringToByteArray(this.data);
+        return this.data;
     }
 
     @JsonIgnore
     public String getDataString() {
-        return this.data;
+        return BytesUtils.toHexString(this.data);
     }
 
     @Override
@@ -547,9 +566,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 getFromAddress(),
                 Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
                 Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
-                getToString() != null ? getToString() : "0x",
+                getToString(),
                 Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
-                getDataString() != null ? Numeric.cleanHexPrefix(getDataString()) : "",
+                getDataString(),
                 Numeric.toHexStringWithPrefix(getMaxFeePerGas() != null ? getMaxFeePerGas() : BigInteger.ZERO),
                 Numeric.toHexStringWithPrefix(getMaxPriorityFeePerGas() != null ? getMaxPriorityFeePerGas() : BigInteger.ZERO),
                 getChainId() != null ? getChainId() : "",
@@ -565,9 +584,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
                 Numeric.toHexStringWithPrefix(getGasPrice() != null ? getGasPrice() : BigInteger.ZERO),
                 Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
-                getToString() != null ? getToString() : "0x",
+                getToString(),
                 Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
-                getDataString() != null ? Numeric.cleanHexPrefix(getDataString()) : "",
+                getDataString(),
                 getChainId() != null ? getChainId() : "",
                 (int)version(),
                 isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
