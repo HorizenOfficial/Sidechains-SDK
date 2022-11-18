@@ -5,7 +5,7 @@ import math
 
 from eth_utils import add_0x_prefix
 
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import (
     MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
     SCNodeConfiguration,

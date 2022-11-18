@@ -105,7 +105,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
 
         # verifies that there are no withdrawal requests yet
         current_epoch_number = 0
-        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(0, len(list_of_WR))
 
         # creates FT to SC to withdraw later
@@ -223,7 +223,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
 
         # verifies that there are no withdrawal requests yet
         current_epoch_number = 1
-        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(0, len(list_of_WR))
 
         # Generate SC block
@@ -242,7 +242,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")
 
         # verifies that there is one withdrawal request
-        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(1, len(list_of_WR), "Wrong number of withdrawal requests")
         assert_equal(mc_address1, list_of_WR[0]["proposition"]["mainchainAddress"])
         assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_1), list_of_WR[0]["value"])
@@ -274,7 +274,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")
 
         # verifies that there are 2 withdrawal requests
-        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(2, len(list_of_WR))
 
         assert_equal(mc_address1, list_of_WR[0]["proposition"]["mainchainAddress"])
