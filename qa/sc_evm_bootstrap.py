@@ -10,7 +10,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from httpCalls.wallet.createPrivateKeySecp256k1 import http_wallet_createPrivateKeySec256k1
-from qa.SidechainTestFramework.account.httpCalls.transaction.allTransactions import allTransactions
+from qa.httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
@@ -193,14 +193,14 @@ class SCEvmBootstrap(SidechainTestFramework):
         self.sc_sync_all()
 
         # get mempool contents
-        response_1 = allTransactions(sc_node_1, True)
-        response_2 = allTransactions(sc_node_2, True)
+        response_1 = allTransactions(sc_node_1)
+        response_2 = allTransactions(sc_node_2)
         logging.info("mempool contents:")
         logging.info(response_1)
         assert_equal(response_1, response_2)
 
         # tx json repr has amount in wei
-        tx_amount_in_wei = response_2[0]["value"]
+        tx_amount_in_wei = response_2["transactions"][0]["value"]
         assert_equal(str(tx_amount_in_wei), str(transferred_amount_in_wei))
 
         # send more zen with another from address to have more than one transaction in block

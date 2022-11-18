@@ -5,7 +5,7 @@ import math
 
 from eth_utils import add_0x_prefix
 
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from qa.SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import (
     MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
     SCNodeConfiguration,
@@ -17,11 +17,9 @@ from SidechainTestFramework.scutil import (
     computeForgedTxFee, connect_sc_nodes, convertZenToWei, convertZenToZennies, convertZenniesToWei,
     generate_account_proposition, generate_next_block, get_account_balance, start_sc_nodes,
 )
-from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain, initialize_chain_clean, start_nodes,
-    websocket_port_by_mc_node_index, assert_true,
-)
+    websocket_port_by_mc_node_index, )
 
 
 class BlockFeeInfo(object):
