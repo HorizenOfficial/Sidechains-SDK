@@ -485,7 +485,7 @@ class EthService(
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceOptions() else traceParams)
+        blockContext.setTraceParams(if (traceParams == null) new TraceOptions(true, false, false, true) else traceParams)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
@@ -535,7 +535,7 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceOptions() else traceParams)
+        blockContext.setTraceParams(if (traceParams == null) new TraceOptions(true, false, false, true) else traceParams)
 
         // apply requested transaction with tracing enabled
         blockContext.setEvmResult(null)
