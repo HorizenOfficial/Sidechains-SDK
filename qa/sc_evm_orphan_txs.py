@@ -10,10 +10,10 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenToZennies, connect_sc_nodes, \
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
-from qa.httpCalls.transaction.allTransactions import allTransactions
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, assert_false
-from qa.SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 
 """
 Test that the Sidechain can manage orphan transactions correctly

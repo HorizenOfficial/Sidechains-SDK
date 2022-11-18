@@ -3,14 +3,14 @@ import logging
 import random
 from decimal import Decimal
 
-from qa.SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_block, \
     EVM_APP_BINARY, AccountModelBlockVersion, assert_equal, \
     assert_true, BLOCK_GAS_LIMIT, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
-from qa.httpCalls.transaction.allTransactions import allTransactions
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 

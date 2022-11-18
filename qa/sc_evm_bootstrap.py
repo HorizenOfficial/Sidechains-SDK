@@ -10,7 +10,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from httpCalls.wallet.createPrivateKeySecp256k1 import http_wallet_createPrivateKeySec256k1
-from qa.httpCalls.transaction.allTransactions import allTransactions
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \

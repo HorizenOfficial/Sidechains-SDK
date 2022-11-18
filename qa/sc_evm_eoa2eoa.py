@@ -16,7 +16,7 @@ from SidechainTestFramework.scutil import (
     convertZenToZennies, generate_next_block, get_account_balance, start_sc_nodes,
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
-from qa.httpCalls.transaction.allTransactions import allTransactions
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,

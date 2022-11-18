@@ -6,7 +6,7 @@ import json
 
 def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce=None, gasLimit,
                              maxPriorityFeePerGas, maxFeePerGas, value=0, data='', signature_v=None, signature_r=None,
-                             signature_s=None):
+                             signature_s=None, api_key = None):
     j = {
         "from": fromAddress,
         "to": toAddress,
@@ -22,7 +22,11 @@ def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None,
     if nonce:
         j["nonce"] = nonce
     request = json.dumps(j)
-    response = sidechainNode.transaction_createEIP1559Transaction(request)
+    if (api_key != None):
+        response = sidechainNode.transaction_createEIP1559Transaction(request, api_key)
+    else:
+        response = sidechainNode.transaction_createEIP1559Transaction(request)
+
 
     if "result" in response:
         if "transactionId" in response["result"]:
