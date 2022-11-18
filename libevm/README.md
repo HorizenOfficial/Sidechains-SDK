@@ -10,6 +10,8 @@ The project can be build via Maven or the standard Go tooling:
 
 `go build -buildmode c-shared -o bin/linux-x86-64/libevm.so`
 
+As defined in the file `go.mod`, the required minimum version of Go is `1.18`. When building via Maven the mvn-golang plugin will automatically download and use the version of Go defined in the modules pom file.
+
 ## Tests
 
 Note: Some tests require smart contract code which is compiled during `go generate` using the Solidity compiler `solc`. Make sure to have `solc` installed and run `go generate ./...` before tests.
