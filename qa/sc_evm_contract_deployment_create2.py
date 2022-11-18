@@ -223,6 +223,20 @@ class SCEvmContractDeploymentCreate2(SidechainTestFramework):
 
         assert_equal(str(transferred_amount_in_wei), str(balance[0]))
 
+        # Set storage value of Simple Wallet contract and check if it was set
+        method = 'setStorageValue(string)'
+        method_args = '5'
+        res = contract_function_call(sc_node, simple_wallet_contract, simple_wallet_contract_address, evm_address,
+                                     method,
+                                     method_args)
+        assert_equal('0x1', res, "Check that function call was successful")
+
+        method = 'getStorageValue()'
+        storage_value = contract_function_static_call(sc_node, simple_wallet_contract, simple_wallet_contract_address,
+                                                      evm_hex_address, method)
+
+        assert_equal(str(method_args), str(storage_value[0]))
+
         # Call destroy method of Simple Wallet contract with sending all funds to evm_address
         method = 'destroy(address)'
         method_args = evm_hex_address
@@ -236,6 +250,13 @@ class SCEvmContractDeploymentCreate2(SidechainTestFramework):
         res = contract_function_call(sc_node, factory_contract, factory_contract_address, evm_address, method,
                                      method_args)
         assert_equal('0x1', res, "Check that function call was successful")
+
+        # Check that previous smart contract storage was cleared
+        method = 'getStorageValue()'
+        storage_value = contract_function_static_call(sc_node, simple_wallet_contract, simple_wallet_contract_address,
+                                                      evm_hex_address, method)
+
+        assert_equal('', storage_value[0])
 
         # Check that we can not deploy to the same address again
         exception_occurs = False

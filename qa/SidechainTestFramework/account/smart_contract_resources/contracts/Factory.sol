@@ -12,6 +12,7 @@ contract Factory {
         // https://docs.soliditylang.org/en/latest/control-structures.html#salted-contract-creations-create2
         return address(new SimpleWallet{salt : bytes32(_salt)}(msg.sender));
     }
+
     // 1. Get bytecode of contract to be deployed
     function getBytecode()
     public
@@ -21,6 +22,7 @@ contract Factory {
         bytes memory bytecode = type(SimpleWallet).creationCode;
         return abi.encodePacked(bytecode, abi.encode(msg.sender));
     }
+
     /** 2. Compute the address of the contract to be deployed
         params:
             _salt: random unsigned number used to precompute an address
