@@ -6,7 +6,7 @@ from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGT
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, \
     AccountModelBlockVersion, start_sc_nodes, EVM_APP_BINARY, is_mainchain_block_included_in_sc_block, \
-    check_mainchain_block_reference_info, generate_next_block
+    check_mainchain_block_reference_info, generate_next_block, connect_sc_nodes
 from test_framework.util import start_nodes, websocket_port_by_mc_node_index, assert_equal, assert_true, \
     forward_transfer_to_sidechain
 
@@ -28,15 +28,19 @@ class AccountChainSetup(SidechainTestFramework):
 
     def sc_setup_network(self):
         self.sc_nodes = self.sc_setup_nodes()
+        if self.number_of_sidechain_nodes > 1:
+            connect_sc_nodes(self.sc_nodes[0], 1)
+            self.sync_all()
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
-        sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key=self.API_KEY
-        )
+        sc_node_configuration = []
+        for x in range(self.number_of_sidechain_nodes):
+            sc_node_configuration.append(SCNodeConfiguration(
+                MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                api_key=self.API_KEY))
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.withdrawalEpochLength),
-                                         sc_node_configuration)
+                                         *sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
                                                                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
                                                                  blockversion=AccountModelBlockVersion)
@@ -44,7 +48,7 @@ class AccountChainSetup(SidechainTestFramework):
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               auth_api_key=self.API_KEY,
-                              binary=[EVM_APP_BINARY])  # , extra_args=['-agentlib'])
+                              binary=[EVM_APP_BINARY] * self.number_of_sidechain_nodes)  # , extra_args=['-agentlib'])
 
     def sc_ac_setup(self, wallet=True, forwardTransfer=True, ft_amount_in_zen=Decimal("33.22")):
         sc_node = self.sc_nodes[0]

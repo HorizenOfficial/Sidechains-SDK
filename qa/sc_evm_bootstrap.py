@@ -5,20 +5,15 @@ from decimal import Decimal
 
 from eth_utils import to_checksum_address
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.scutil import is_mainchain_block_included_in_sc_block, \
+    check_mainchain_block_reference_info, \
+    generate_next_blocks, generate_next_block, generate_account_proposition, \
+    convertZenniesToWei, convertZenToZennies, computeForgedTxFee
 from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from httpCalls.wallet.createPrivateKeySecp256k1 import http_wallet_createPrivateKeySec256k1
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, \
-    check_mainchain_block_reference_info, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, computeForgedTxFee, \
-    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
-from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain
 
 """
 Check the EVM bootstrap feature.
@@ -33,41 +28,11 @@ Test:
     For the SC node:
         - verify the MC block is included
 """
-class SCEvmBootstrap(SidechainTestFramework):
-
-    sc_nodes_bootstrap_info=None
-    number_of_mc_nodes = 1
-    number_of_sidechain_nodes = 2
-    API_KEY = "Horizen"
-
-    def setup_nodes(self):
-        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
-
-    def sc_setup_network(self, split = False):
-        self.sc_nodes = self.sc_setup_nodes()
-        logging.info("Connecting sc nodes...")
-        connect_sc_nodes(self.sc_nodes[0], 1)
-        self.sc_sync_all()
-
-    def sc_setup_chain(self):
-        mc_node = self.nodes[0]
-        sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
-        )
-        sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
-        )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
-                                         sc_node_1_configuration, sc_node_2_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, blockversion=AccountModelBlockVersion)
 
 
-    def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY]*2)#, extra_args=[['-agentlib'], []])
-
+class SCEvmBootstrap(AccountChainSetup):
+    def __init__(self):
+        super().__init__(number_of_sidechain_nodes=2)
 
     def run_test(self):
 
@@ -93,7 +58,7 @@ class SCEvmBootstrap(SidechainTestFramework):
             "The mainchain block is not included inside SC block reference info.")
 
         mc_return_address = self.nodes[0].getnewaddress()
-        #evm_address = generate_account_proposition("seed2", 1)[0]
+        # evm_address = generate_account_proposition("seed2", 1)[0]
 
         # test we can not use a wrong key
         exception_occurs = False
@@ -104,7 +69,6 @@ class SCEvmBootstrap(SidechainTestFramework):
             logging.info("We had an exception as expected: {}".format(str(e)))
         finally:
             assert_true(exception_occurs, "Using a wrong key should fail")
-
 
         evm_address = http_wallet_createPrivateKeySec256k1(sc_node_1)
         evm_hex_address = to_checksum_address(evm_address)
@@ -134,7 +98,7 @@ class SCEvmBootstrap(SidechainTestFramework):
                                       ft_amount_in_zen,
                                       mc_return_address)
 
-        #input("\n\t======> Enter any input to continue generating a new sc block...")
+        # input("\n\t======> Enter any input to continue generating a new sc block...")
         generate_next_blocks(sc_node_1, "first node", 1)
         self.sc_sync_all()
         sc_best_block = sc_node_1.block_best()["result"]
@@ -156,7 +120,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         generate_next_block(sc_node, "first node")
         '''
 
-        #input("\n\t======> Enter any input to continue generating blocks till next consensus epoch...")
+        # input("\n\t======> Enter any input to continue generating blocks till next consensus epoch...")
         # Generate SC block on SC node 1 for the next consensus epoch
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
@@ -231,7 +195,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         logging.info(sc_best_block)
 
         # check if header contains correct gasUsed (2 * eoa to eoa transfer gas costs)
-        assert_equal(21000*2, sc_best_block['block']['header']['gasUsed'])
+        assert_equal(21000 * 2, sc_best_block['block']['header']['gasUsed'])
 
         assert_equal(669921875, sc_best_block['block']['header']['baseFee'])
         transactionFee, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
