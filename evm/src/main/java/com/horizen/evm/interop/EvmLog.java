@@ -16,7 +16,7 @@ public class EvmLog {
     @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
     public EvmLog(@JsonProperty("address") Address address, @JsonProperty("topics") Hash[] topics, @JsonProperty("data") byte[] data) {
 
-        this.address = address == null ? Address.addressZero() : address;
+        this.address = address;
         if (topics != null) {
             this.topics = topics;
         }
@@ -33,8 +33,8 @@ public class EvmLog {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         var log = (EvmLog) o;
-        if ((address == null) != (log.address == null)) return false;
-        return ((address == null) || Arrays.equals(address.toBytes(), log.address.toBytes())) &&
+        if ((address.toBytes() == Address.addressZero().toBytes()) != (log.address.toBytes() == Address.addressZero().toBytes())) return false;
+        return ((address.toBytes() == Address.addressZero().toBytes()) || Arrays.equals(address.toBytes(), log.address.toBytes())) &&
                 Arrays.equals(topics, log.topics) &&
                 Arrays.equals(data, log.data);
     }
@@ -42,7 +42,7 @@ public class EvmLog {
     @Override
     public int hashCode() {
         var result = 1;
-        var addressBytes = (address == null) ? null : address.toBytes();
+        var addressBytes = address.toBytes();
         result = result + Arrays.hashCode(addressBytes);
         if (topics != null && topics.length != 0) {
             for (var hash : topics) {
