@@ -88,7 +88,7 @@ public class StateDBTest extends LibEvmTestBase {
     }
 
     @Test
-    public void TestAccountStorage() throws Exception {
+    public void accountStorage() throws Exception {
         final var databaseFolder = tempFolder.newFolder("account-db");
         final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
@@ -139,7 +139,7 @@ public class StateDBTest extends LibEvmTestBase {
     }
 
     @Test
-    public void TestAccountTypes() throws Exception {
+    public void accountTypes() throws Exception {
         final byte[] codeHash =
                 Converter.fromHexString("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
         final byte[] addr1 = Converter.fromHexString("1234561234561234561234561234561234561230");
