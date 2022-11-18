@@ -23,8 +23,8 @@ class EvmLogTest
     val decodedConsensusDataLog = EvmLogUtils.rlpDecode(dataBytes)
     //println(decodedConsensusDataLog)
     assertEquals(
-      BytesUtils.toHexString(evmLog.getAddress.toBytes),
-      BytesUtils.toHexString(decodedConsensusDataLog.getAddress.toBytes))
+      BytesUtils.toHexString(evmLog.address.toBytes),
+      BytesUtils.toHexString(decodedConsensusDataLog.address.toBytes))
     assertEquals(evmLog, decodedConsensusDataLog)
     assertEquals(evmLog.hashCode(), decodedConsensusDataLog.hashCode())
   }

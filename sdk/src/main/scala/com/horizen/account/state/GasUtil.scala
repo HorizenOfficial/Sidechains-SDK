@@ -63,7 +63,7 @@ object GasUtil {
     gas
   }
 
-  def logGas(evmLog: EvmLog): BigInteger = LogGas.add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.getTopics.length)))
+  def logGas(evmLog: EvmLog): BigInteger = LogGas.add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
 
   def getTxFeesPerGas(tx: EthereumTransaction, baseFeePerGas: BigInteger): (BigInteger, BigInteger) = {
 

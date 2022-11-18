@@ -21,8 +21,8 @@ class LogsBloom() extends BytesSerializable {
   }
 
   def addLogToBloomFilter(log: EvmLog): Unit = {
-    addBytesToBloomFilter(log.getAddress.toBytes)
-    log.getTopics.foreach(topic => addBytesToBloomFilter(topic.toBytes))
+    addBytesToBloomFilter(log.address.toBytes)
+    log.topics.foreach(topic => addBytesToBloomFilter(topic.toBytes))
   }
 
   def addBytesToBloomFilter(data: Array[Byte]): Unit = {

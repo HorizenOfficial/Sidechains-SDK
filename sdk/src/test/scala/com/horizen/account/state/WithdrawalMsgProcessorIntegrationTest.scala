@@ -125,25 +125,25 @@ class WithdrawalMsgProcessorIntegrationTest
     assertArrayEquals(
       "Wrong address",
       WithdrawalMsgProcessor.contractAddress,
-      actualEvent.getAddress.toBytes)
+      actualEvent.address.toBytes)
     // The first topic is the hash of the signature of the event
-    assertEquals("Wrong number of topics", NumOfIndexedEvtParams + 1, actualEvent.getTopics.length)
-    assertArrayEquals("Wrong event signature", AddNewWithdrawalRequestEventSig, actualEvent.getTopics()(0).toBytes)
+    assertEquals("Wrong number of topics", NumOfIndexedEvtParams + 1, actualEvent.topics.length)
+    assertArrayEquals("Wrong event signature", AddNewWithdrawalRequestEventSig, actualEvent.topics(0).toBytes)
     assertEquals(
       "Wrong from address in topic",
       expectedEvent.from,
-      decodeEventTopic(actualEvent.getTopics()(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
+      decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
     assertEquals(
       "Wrong mcAddr in topic",
       expectedEvent.mcDest,
-      decodeEventTopic(actualEvent.getTopics()(2), TypeReference.makeTypeReference(expectedEvent.mcDest.getTypeAsString)))
+      decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.mcDest.getTypeAsString)))
 
     val listOfRefs = util.Arrays
       .asList(
         TypeReference.makeTypeReference(expectedEvent.value.getTypeAsString),
         TypeReference.makeTypeReference(expectedEvent.epochNumber.getTypeAsString))
       .asInstanceOf[util.List[TypeReference[Type[_]]]]
-    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.getData), listOfRefs)
+    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
     assertEquals("Wrong amount in data", expectedEvent.value, listOfDecodedData.get(0))
     assertEquals("Wrong epoch number in data", expectedEvent.epochNumber, listOfDecodedData.get(1))
   }

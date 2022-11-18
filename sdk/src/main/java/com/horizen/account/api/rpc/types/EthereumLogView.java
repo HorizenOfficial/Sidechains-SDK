@@ -23,9 +23,9 @@ public class EthereumLogView {
     public final boolean removed;
 
     public EthereumLogView(EthereumReceipt receipt, EvmLog log, int logIndex) {
-        this.address = log.getAddress().toString();
-        this.topics = Arrays.stream(log.getTopics()).map(Hash::toBytes).map(Numeric::toHexString).toArray(String[]::new);
-        this.data = Numeric.toHexString(log.getData());
+        this.address = log.address.toString();
+        this.topics = Arrays.stream(log.topics).map(Hash::toBytes).map(Numeric::toHexString).toArray(String[]::new);
+        this.data = Numeric.toHexString(log.data);
         this.blockHash = Numeric.toHexString(receipt.blockHash());
         this.blockNumber = Numeric.toHexStringWithPrefix(BigInteger.valueOf(receipt.blockNumber()));
         this.transactionHash = Numeric.toHexString(receipt.transactionHash());

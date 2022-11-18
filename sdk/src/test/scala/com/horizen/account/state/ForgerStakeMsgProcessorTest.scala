@@ -767,26 +767,26 @@ class ForgerStakeMsgProcessorTest
   }
 
   def checkAddNewForgerStakeEvent(expectedEvent: DelegateForgerStake, actualEvent: EvmLog): Unit = {
-    assertArrayEquals("Wrong address", contractAddress, actualEvent.getAddress.toBytes)
-    assertEquals("Wrong number of topics", NumOfIndexedAddNewStakeEvtParams + 1, actualEvent.getTopics.length) //The first topic is the hash of the signature of the event
-    assertArrayEquals("Wrong event signature", AddNewForgerStakeEventSig, actualEvent.getTopics()(0).toBytes)
-    assertEquals("Wrong from address in topic", expectedEvent.from, decodeEventTopic(actualEvent.getTopics()(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
-    assertEquals("Wrong owner address in topic", expectedEvent.owner, decodeEventTopic(actualEvent.getTopics()(2), TypeReference.makeTypeReference(expectedEvent.owner.getTypeAsString)))
+    assertArrayEquals("Wrong address", contractAddress, actualEvent.address.toBytes)
+    assertEquals("Wrong number of topics", NumOfIndexedAddNewStakeEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
+    assertArrayEquals("Wrong event signature", AddNewForgerStakeEventSig, actualEvent.topics(0).toBytes)
+    assertEquals("Wrong from address in topic", expectedEvent.from, decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
+    assertEquals("Wrong owner address in topic", expectedEvent.owner, decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.owner.getTypeAsString)))
 
     val listOfRefs = util.Arrays.asList(TypeReference.makeTypeReference(expectedEvent.stakeId.getTypeAsString), TypeReference.makeTypeReference(expectedEvent.value.getTypeAsString)).asInstanceOf[util.List[TypeReference[Type[_]]]]
-    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.getData), listOfRefs)
+    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
     assertEquals("Wrong amount in data", expectedEvent.stakeId, listOfDecodedData.get(0))
     assertEquals("Wrong stakeId in data", expectedEvent.value, listOfDecodedData.get(1))
   }
 
   def checkRemoveForgerStakeEvent(expectedEvent: WithdrawForgerStake, actualEvent: EvmLog): Unit = {
-    assertArrayEquals("Wrong address", contractAddress, actualEvent.getAddress.toBytes)
-    assertEquals("Wrong number of topics", NumOfIndexedRemoveForgerStakeEvtParams + 1, actualEvent.getTopics.length) //The first topic is the hash of the signature of the event
-    assertArrayEquals("Wrong event signature", RemoveForgerStakeEventSig, actualEvent.getTopics()(0).toBytes)
-    assertEquals("Wrong owner address in topic", expectedEvent.owner, decodeEventTopic(actualEvent.getTopics()(1), TypeReference.makeTypeReference(expectedEvent.owner.getTypeAsString)))
+    assertArrayEquals("Wrong address", contractAddress, actualEvent.address.toBytes)
+    assertEquals("Wrong number of topics", NumOfIndexedRemoveForgerStakeEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
+    assertArrayEquals("Wrong event signature", RemoveForgerStakeEventSig, actualEvent.topics(0).toBytes)
+    assertEquals("Wrong owner address in topic", expectedEvent.owner, decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.owner.getTypeAsString)))
 
     val listOfRefs = util.Arrays.asList(TypeReference.makeTypeReference(expectedEvent.stakeId.getTypeAsString)).asInstanceOf[util.List[TypeReference[Type[_]]]]
-    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.getData), listOfRefs)
+    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
     assertEquals("Wrong stakeId in data", expectedEvent.stakeId, listOfDecodedData.get(0))
   }
 
