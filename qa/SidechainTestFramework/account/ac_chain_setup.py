@@ -19,6 +19,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.evm_address = None
         self.sc_nodes = None
         self.sc_nodes_bootstrap_info = None
+        self.mc_return_address = None
         self.API_KEY = API_KEY
         self.number_of_mc_nodes = number_of_mc_nodes
         self.number_of_sidechain_nodes = number_of_sidechain_nodes
@@ -63,7 +64,7 @@ class AccountChainSetup(SidechainTestFramework):
     def sc_ac_setup(self, wallet=True, forwardTransfer=True, ft_amount_in_zen=Decimal("33.22")):
         sc_node = self.sc_nodes[0]
         mc_node = self.nodes[0]
-        mc_return_address = mc_node.getnewaddress()
+        self.mc_return_address = mc_node.getnewaddress()
         mc_block = mc_node.getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = mc_node.getblock(mc_block["hash"], False)
         logging.info("SC genesis mc block hex = " + mc_block_hex)
@@ -93,7 +94,7 @@ class AccountChainSetup(SidechainTestFramework):
                                           self.nodes[0],
                                           self.evm_address[2:],
                                           ft_amount_in_zen,
-                                          mc_return_address)
+                                          self.mc_return_address)
 
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()

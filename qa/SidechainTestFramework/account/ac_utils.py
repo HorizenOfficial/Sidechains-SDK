@@ -244,3 +244,15 @@ def generate_block_and_get_tx_receipt(node, tx_hash, return_status=False):
 
 def random_byte_string(*, length=20):
     return '0x' + bytes([random.randrange(0, 256) for _ in range(0, length)]).hex()
+
+
+def estimate_gas(node, from_address=None, to_address=None, data='0x', value='0x0', gasPrice='0x4B9ACA00', nonce=None):
+    request = {
+        "from": from_address,
+        "to": to_address,
+        "data": data,
+        "value": value,
+        "gasPrice": gasPrice,
+        "nonce": nonce
+    }
+    return node.rpc_eth_estimateGas(request)
