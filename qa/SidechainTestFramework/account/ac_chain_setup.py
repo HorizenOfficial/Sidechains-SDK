@@ -40,10 +40,15 @@ class AccountChainSetup(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_configuration = []
         for x in range(self.number_of_sidechain_nodes):
-            sc_node_configuration.append(SCNodeConfiguration(
-                MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-                forger_options=self.forger_options,
-                api_key=self.API_KEY))
+            if self.forger_options is None:
+                sc_node_configuration.append(SCNodeConfiguration(
+                    MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                    api_key=self.API_KEY))
+            else:
+                sc_node_configuration.append(SCNodeConfiguration(
+                    MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                    forger_options=self.forger_options,
+                    api_key=self.API_KEY))
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, self.withdrawalEpochLength),
                                          *sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
