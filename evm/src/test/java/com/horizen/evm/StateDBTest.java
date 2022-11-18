@@ -164,4 +164,24 @@ public class StateDBTest extends LibEvmTestBase {
             }
         }
     }
+
+    @Test
+    public void proof() throws Exception {
+        final var address = bytes("1afe484cb38eF97A5Ab6b461AD60dc9941714aFF");
+        final var fakeCodeHash = bytes("abcdef00000000000000000000000000000000ff010101010101010102020202");
+
+        try (var db = new MemoryDatabase()) {
+            try (var statedb = new StateDB(db, hashNull)) {
+                var proofWithoutStorage = statedb.getProof(address, new byte[0][0]);
+                assertArrayEquals(proofWithoutStorage.accountProof, new String[0]);
+
+                statedb.setCodeHash(address, fakeCodeHash);
+                statedb.commit();
+
+                var proofWithStorage = statedb.getProof(address, new byte[0][0]);
+                assertNotSame("Code hashes shouldn't match", proofWithStorage.codeHash, proofWithoutStorage.codeHash);
+                assertTrue("Proof shouldn't be empty", proofWithStorage.accountProof.length != 0);
+            }
+        }
+    }
 }
