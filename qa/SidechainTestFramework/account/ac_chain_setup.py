@@ -14,7 +14,8 @@ from test_framework.util import start_nodes, websocket_port_by_mc_node_index, as
 class AccountChainSetup(SidechainTestFramework):
 
     def __init__(self, API_KEY='Horizen', number_of_mc_nodes=1, number_of_sidechain_nodes=1,
-                 withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH):
+                 withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
+                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None):
         self.evm_address = None
         self.sc_nodes = None
         self.sc_nodes_bootstrap_info = None
@@ -22,6 +23,9 @@ class AccountChainSetup(SidechainTestFramework):
         self.number_of_mc_nodes = number_of_mc_nodes
         self.number_of_sidechain_nodes = number_of_sidechain_nodes
         self.withdrawalEpochLength = withdrawalEpochLength
+        self.forward_amount = forward_amount
+        self.block_timestamp_rewind = block_timestamp_rewind
+        self.forger_options = forger_options
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -38,11 +42,12 @@ class AccountChainSetup(SidechainTestFramework):
         for x in range(self.number_of_sidechain_nodes):
             sc_node_configuration.append(SCNodeConfiguration(
                 MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                forger_options=self.forger_options,
                 api_key=self.API_KEY))
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.withdrawalEpochLength),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, self.withdrawalEpochLength),
                                          *sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
+                                                                 block_timestamp_rewind=self.block_timestamp_rewind,
                                                                  blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):
