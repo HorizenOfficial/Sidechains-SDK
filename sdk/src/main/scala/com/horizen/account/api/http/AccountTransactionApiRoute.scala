@@ -59,8 +59,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ allActiveForgingStakeInfo ~ myForgingStakes ~ myActiveForgingStakeInfo ~
-      decodeTransactionBytes
+      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes
   }
 
   def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)

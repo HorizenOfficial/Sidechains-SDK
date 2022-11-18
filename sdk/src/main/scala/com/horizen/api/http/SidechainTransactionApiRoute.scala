@@ -55,8 +55,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ allActiveForgingStakeInfo ~
-    createOpenStakeTransaction ~ createOpenStakeTransactionSimplified
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~
+      createOpenStakeTransaction ~ createOpenStakeTransactionSimplified
   }
 
 

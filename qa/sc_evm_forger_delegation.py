@@ -11,7 +11,7 @@ from SidechainTestFramework.sc_boostrap_info import (
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes, connect_sc_nodes,
-    convertZenToZennies, generate_next_block, start_sc_nodes
+    convertZenToZennies, generate_next_block, start_sc_nodes, convertZenniesToWei
 )
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain, start_nodes, websocket_port_by_mc_node_index
@@ -30,8 +30,7 @@ Test:
     - SC3 delegates to SC2 with the same block/vrf pub key as SC1 delegation
     - SC2 delegates to itself with the same block/vrf pub key as SC1 and SC3 delegation
     - Check there are a total of 5 stakes id (genesis creation + 4 delegations)
-    - Check there are a total of 3 forging stake info grouped by block/vrf pub key and with the
-      expected order and total delegated stake
+    - Check that forged block headers have the expected forging stake amount
 
 
 """
@@ -77,6 +76,16 @@ class SCEvmForgerDelegation(SidechainTestFramework):
                               binary=[EVM_APP_BINARY] * self.number_of_sidechain_nodes)#, extra_args=[['-agentlib'], [], []])
 
     def run_test(self):
+
+        def getSignerStakeAmount(myInfoList, inSignerAddress):
+            sum = 0
+            for entry in myInfoList:
+                signerAddress = entry['forgerStakeData']['forgerPublicKeys']['blockSignPublicKey']['publicKey']
+                if signerAddress == inSignerAddress:
+                    sum += entry['forgerStakeData']['stakedAmount']
+            #print("Sum = {}, address={}".format(sum, inSignerAddress))
+            return sum
+
 
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
@@ -208,27 +217,40 @@ class SCEvmForgerDelegation(SidechainTestFramework):
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
+        # SC 1 is owner of 3 delegated stakes
+        myInfoList = sc_node_1.transaction_myForgingStakes()['result']['stakes']
+        assert_equal(3, len(myInfoList))
+
+        # SC 2 is owner of 1 delegated stake
+        myInfoList = sc_node_2.transaction_myForgingStakes()['result']['stakes']
+        assert_equal(1, len(myInfoList))
+
+        # SC 3 is owner of 1 delegated stake
+        myInfoList = sc_node_3.transaction_myForgingStakes()['result']['stakes']
+        assert_equal(1, len(myInfoList))
+
         # we have a total of 5 stake ids, the genesis creation and the 4 txes just forged
         stakeList = sc_node_1.transaction_allForgingStakes()['result']['stakes']
         #pprint.pprint(stakeList)
         assert_equal(5, len(stakeList))
 
-        # we have 3 entries in the forging stake info list, grouped by blockSignPublicKey/vrfPubKey pairs and sorted by total delegated
-        # stake amount in decreasing order
-        stakeInfoList = sc_node_1.transaction_allActiveForgingStakeInfo()['result']['stakes']
-        assert_equal(3, len(stakeInfoList))
+        # take amounts of forger block signers
+        sum1 = getSignerStakeAmount(stakeList, sc1_blockSignPubKey)
+        sum2 = getSignerStakeAmount(stakeList, sc2_blockSignPubKey)
+        sum3 = getSignerStakeAmount(stakeList, sc3_blockSignPubKey)
 
-        # the head of this ordered list is the delegation made by SC1/2/3 to SC2 (total of 143 zen)
-        stake_123_to_2 = stakeInfoList[0]['stakeAmount']
-        assert_equal(stake_123_to_2, convertZenToZennies(forgerStake12_amount+forgerStake22_amount+forgerStake32_amount))
+        # delegation made by genesis creation to SC1 (99 zen)
+        stake_gen_to_1 = genStakeAmount
 
-        # the middle of this ordered list is the delegation made by genesis creation to SC1 (99 zen)
-        stake_gen_to_1 = stakeInfoList[1]['stakeAmount']
-        assert_equal(stake_gen_to_1, genStakeAmount)
+        # delegation made by SC1/2/3 to SC2 (total of 143 zen)
+        stake_123_to_2 = convertZenToZennies(forgerStake12_amount+forgerStake22_amount+forgerStake32_amount)
 
-        # the tail of this ordered list is the delegation made by SC1 to SC3 (total of 4 zen)
-        stake_1_to_3 = stakeInfoList[2]['stakeAmount']
-        assert_equal(stake_1_to_3, convertZenToZennies(forgerStake13_amount))
+        # delegation made by SC1 to SC3 (total of 4 zen)
+        stake_1_to_3 = convertZenToZennies(forgerStake13_amount)
+
+        assert_equal(convertZenniesToWei(stake_gen_to_1), sum1)
+        assert_equal(convertZenniesToWei(stake_123_to_2), sum2)
+        assert_equal(convertZenniesToWei(stake_1_to_3), sum3)
 
         # Generate an SC block
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
@@ -251,36 +273,6 @@ class SCEvmForgerDelegation(SidechainTestFramework):
         assert_equal(blockStakeInfo['stakeAmount'], stake_123_to_2)
         assert_equal(blockStakeInfo['blockSignPublicKey']['publicKey'], sc2_blockSignPubKey)
         assert_equal(blockStakeInfo['vrfPublicKey']['publicKey'], sc2_vrfPubKey)
-
-        # SC 1 is owner of 3 delegated stakes
-        myInfoList = sc_node_1.transaction_myForgingStakes()['result']['stakes']
-        assert_equal(3, len(myInfoList))
-
-        # SC 2 is owner of 1 delegated stake
-        myInfoList = sc_node_2.transaction_myForgingStakes()['result']['stakes']
-        assert_equal(1, len(myInfoList))
-
-        # SC 3 is owner of 1 delegated stake
-        myInfoList = sc_node_3.transaction_myForgingStakes()['result']['stakes']
-        assert_equal(1, len(myInfoList))
-
-        # SC 1 can forge with 1 delegation group
-        myInfoList = sc_node_1.transaction_myActiveForgingStakeInfo()['result']['stakes']
-        assert_equal(1, len(myInfoList))
-        assert_equal(myInfoList[0]['stakeAmount'], stake_gen_to_1)
-
-        # SC 2 can forge with 1 delegation group
-        myInfoList = sc_node_2.transaction_myActiveForgingStakeInfo()['result']['stakes']
-        assert_equal(1, len(myInfoList))
-        assert_equal(myInfoList[0]['stakeAmount'], stake_123_to_2)
-
-        # SC 3 can forge with 1 delegation group
-        myInfoList = sc_node_3.transaction_myActiveForgingStakeInfo()['result']['stakes']
-        assert_equal(1, len(myInfoList))
-        assert_equal(myInfoList[0]['stakeAmount'], stake_1_to_3)
-
-
-
 
 
 if __name__ == "__main__":

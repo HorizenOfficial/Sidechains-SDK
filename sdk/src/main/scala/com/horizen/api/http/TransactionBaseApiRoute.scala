@@ -72,35 +72,6 @@ abstract class TransactionBaseApiRoute[
     }
   }
 
-  def allActiveForgingStakeInfo: Route = (post & path("allActiveForgingStakeInfo")) {
-    withNodeView { sidechainNodeView =>
-      val nodeState = sidechainNodeView.getNodeState
-      val listOfForgerStakes = nodeState.getOrderedForgingStakesInfoSeq
-      ApiResponseUtil.toResponse(RespAllForgingStakesInfo(listOfForgerStakes.toList))
-    }
-  }
-
-  def myActiveForgingStakeInfo: Route = (post & path("myActiveForgingStakeInfo")) {
-    withAuth {
-      withNodeView { sidechainNodeView =>
-        val nodeState = sidechainNodeView.getNodeState
-        val listOfForgerStakes = nodeState.getOrderedForgingStakesInfoSeq
-
-        if (listOfForgerStakes.nonEmpty) {
-          val wallet = sidechainNodeView.getNodeWallet
-          val walletPubKeys = wallet.allSecrets().map(_.publicImage).toSeq
-          val signingStakes = listOfForgerStakes.view.filter(stake => {
-            walletPubKeys.contains(stake.blockSignPublicKey) &&
-              walletPubKeys.contains(stake.vrfPublicKey)
-          })
-          ApiResponseUtil.toResponse(RespAllForgingStakesInfo(signingStakes.toList))
-        } else {
-          ApiResponseUtil.toResponse(RespAllForgingStakesInfo(Seq().toList))
-        }
-      }
-    }
-  }
-
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
   val defaultTransactionResponseRepresentation: TX => SuccessResponse = {
     transaction => TransactionIdDTO(transaction.id)
