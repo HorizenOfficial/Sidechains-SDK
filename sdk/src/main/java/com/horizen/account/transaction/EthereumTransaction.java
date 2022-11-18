@@ -21,6 +21,7 @@ import org.web3j.crypto.Sign.SignatureData;
 import org.web3j.utils.Numeric;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
+import java.util.Optional;
 
 import static com.horizen.account.utils.EthereumTransactionUtils.*;
 
@@ -49,7 +50,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private final BigInteger nonce;
     private final BigInteger gasPrice;
     private final BigInteger gasLimit;
-    private final String to;
+    private Optional<AddressProposition> to;
     private final BigInteger value;
     private final String data;
 
@@ -66,6 +67,27 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
     }
 
+    private void initTo(String to) {
+        if (to == null) {
+            this.to = Optional.empty();
+        } else {
+            String toClean = Numeric.cleanHexPrefix(to);
+            if (toClean.isEmpty()) {
+                this.to = Optional.empty();
+            } else {
+                // sanity check of formatted string.
+                //  Numeric library does not check hex characters' validity, BytesUtils does it
+                var toBytes = BytesUtils.fromHexString(toClean);
+                if (toBytes.length == 0) {
+                    throw new IllegalArgumentException("Invalid input to string: " + to);
+                } else {
+                    this.to = Optional.of(new AddressProposition(toBytes));
+                }
+            }
+        }
+    }
+
+
     // creates a legacy transaction
     public EthereumTransaction(
             @Nullable String to,
@@ -77,12 +99,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             @Nullable SignatureData inSignatureData
     ) {
         initSignature(inSignatureData);
+        initTo(to);
 
         this.type = EthereumTransactionType.LegacyTxType;
         this.nonce = nonce;
         this.gasPrice = gasPrice;
         this.gasLimit = gasLimit;
-        this.to = to;
         this.value = value;
         this.data = data;
 
@@ -104,12 +126,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             @Nullable SignatureData inSignatureData
     ) {
         initSignature(inSignatureData);
+        initTo(to);
 
         this.type = EthereumTransactionType.LegacyTxType;
         this.nonce = nonce;
         this.gasPrice = gasPrice;
         this.gasLimit = gasLimit;
-        this.to = to;
         this.value = value;
         this.data = data;
         this.chainId = chainId;
@@ -131,12 +153,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             @Nullable SignatureData inSignatureData
     ) {
         initSignature(inSignatureData);
+        initTo(to);
 
         this.type = EthereumTransactionType.DynamicFeeTxType;
         this.nonce = nonce;
         this.gasPrice = null;
         this.gasLimit = gasLimit;
-        this.to = to;
         this.value = value;
         this.data = data;
 
@@ -407,23 +429,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public AddressProposition getTo() {
-        String address = getToString();
-        // In case of smart contract declaration
-        if (address == null)
-            return null;
-
-        // sanity check of formatted string.
-        //  Numeric library does not check hex characters' validity, BytesUtils does it
-        var to = BytesUtils.fromHexString(Numeric.cleanHexPrefix(address));
-        if (to.length == 0)
-            return null;
-
-        return new AddressProposition(to);
+        if (this.to.isPresent())
+            return this.to.get();
+        return null;
     }
 
     @JsonIgnore
     public String getToString() {
-        return this.to;
+        if (this.to.isPresent())
+            return BytesUtils.toHexString(this.to.get().address());
+        return "";
     }
 
     public byte[] encode(SignatureData inSignatureData) {

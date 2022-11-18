@@ -173,8 +173,6 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                         badSignOpt1B)
         );
 
-
-
         // 2.3 - null v-value array
         var badSignOpt2 = Optional.of(new Sign.SignatureData(
                 null,
@@ -182,14 +180,12 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                 BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
         ));
         try {
-            assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null, null, null,
-                        null, null, null, null, null,
-                        badSignOpt2)
+            copyEip1599EthereumTransaction(goodTx,
+                    null, null, null,
+                    null, null, null, null, null,
+                    badSignOpt2
             );
             fail("IllegalArgumentException expected");
-
         } catch (IllegalArgumentException e){
             //  expected
             System.out.println(e);
@@ -204,16 +200,13 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                 null,
                 BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
         ));
-
         try {
-            assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null, null, null,
-                        null, null, null, null, null,
-                        badSignOpt3)
+            copyEip1599EthereumTransaction(goodTx,
+                    null, null, null,
+                    null, null, null, null, null,
+                    badSignOpt3
             );
             fail("IllegalArgumentException expected");
-
         } catch (IllegalArgumentException e){
             //  expected
             System.out.println(e);
@@ -229,12 +222,12 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                 BytesUtils.fromHexString("E9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
         ));
         try {
-            assertNotValid(
-                    copyEip1599EthereumTransaction(goodTx,
-                            null,null, null,
-                            null, null, null, null, null,
-                            badSignOpt4)
+            copyEip1599EthereumTransaction(goodTx,
+                    null,null, null,
+                    null, null, null, null, null,
+                    badSignOpt4
             );
+            fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e){
             //  expected
             System.out.println(e);
@@ -245,38 +238,53 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
 
         // 3. Bad to address
         // 3.1 - invalid hex string
-        assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null, Optional.of("0x11223344556677889900112233445566778899xx"), null,
-                        null, null, null, null, null,
-                        null)
-        );
+        try {
+            copyEip1599EthereumTransaction(goodTx,
+                    null, Optional.of("0x11223344556677889900112233445566778899xx"), null,
+                    null, null, null, null, null,
+                    null
+            );
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
 
         // 3.2 - Short string as to address
-        assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null, Optional.of("0x11223344556677889900112233445566778899"), null,
-                        null, null, null, null, null,
-                        null)
-        );
+        try {
+            copyEip1599EthereumTransaction(goodTx,
+                    null, Optional.of("0x11223344556677889900112233445566778899"), null,
+                    null, null, null, null, null,
+                    null
+            );
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
 
         // 3.3 - Longer string as to address
-        assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null, Optional.of("0x1122334455667788990011223344556677889900aa"),null,
-                        null, null, null, null, null,
-                        null)
-        );
+        try {
+            copyEip1599EthereumTransaction(goodTx,
+                    null, Optional.of("0x1122334455667788990011223344556677889900aa"),null,
+                    null, null, null, null, null,
+                    null);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
 
-        // 3.4 - string without prefix
-        assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null, Optional.of("1122334455667788990011223344556677889900aa"),null,
-                        null, null, null, null, null,
-                        null)
-        );
-
-        // 4. negative value
+        // 4. negative tx value
         assertNotValid(
                 copyEip1599EthereumTransaction(goodTx,
                         null, null, null,
@@ -317,6 +325,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                         null, null, goodTx.getMaxFeePerGas().negate(), null,
                         null,null)
         );
+
         // 6.2 not an uint256
         assertNotValid(
                 copyEip1599EthereumTransaction(goodTx,
