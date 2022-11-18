@@ -4,8 +4,7 @@ import logging
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import deploy_smart_contract, contract_function_call, \
-    CallMethod, eoa_transaction
-from SidechainTestFramework.scutil import generate_next_block
+    CallMethod, eoa_transaction, generate_block_and_get_tx_receipt
 from test_framework.util import assert_equal, assert_true
 
 """
@@ -29,7 +28,7 @@ Test:
 class SCEvmDebugMethods(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=20)
+        super().__init__(withdrawalEpochLength=100)
 
     def run_test(self):
         self.sc_ac_setup()
@@ -49,10 +48,8 @@ class SCEvmDebugMethods(AccountChainSetup):
         tx_hash = contract_function_call(sc_node, smart_contract, smart_contract_address, self.evm_address, method,
                                          other_address, transfer_amount)
 
-        generate_next_block(sc_node, "first node")
-
-        res = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
-        assert_equal(res['result']['status'], '0x1', "Error in tx - unrelated to debug methods")
+        tx_status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
+        assert_equal(tx_status, 1, "Error in tx - unrelated to debug methods")
 
         res = sc_node.rpc_debug_traceTransaction(tx_hash)['result']
         assert_true("error" not in res, "debug_traceTransaction failed for successful smart contract transaction")
@@ -60,10 +57,8 @@ class SCEvmDebugMethods(AccountChainSetup):
         tx_hash = eoa_transaction(sc_node, from_addr=self.evm_address, to_addr=other_address,
                                   call_method=CallMethod.RPC_EIP155, value=transfer_amount)
 
-        generate_next_block(sc_node, "first node")
-
-        res = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
-        assert_equal(res['result']['status'], '0x1', "Error in tx - unrelated to debug methods")
+        tx_status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
+        assert_equal(tx_status, 1, "Error in tx - unrelated to debug methods")
 
         res = sc_node.rpc_debug_traceTransaction(tx_hash)
         assert_true("error" not in res['result'], "debug_traceTransaction failed for successful eoa transfer")

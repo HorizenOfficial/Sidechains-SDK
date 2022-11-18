@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import subprocess
 from enum import Enum
 
@@ -221,7 +222,7 @@ def deploy_smart_contract(node, smart_contract, from_address, *args):
     logging.info("Estimated gas is {}".format(estimated_gas))
 
     logging.info("Deploying smart contract...")
-    tx_hash, address = smart_contract.deploy(node,
+    tx_hash, address = smart_contract.deploy(node, *args,
                                              fromAddress=from_address,
                                              gasLimit=estimated_gas)
 
@@ -231,3 +232,15 @@ def deploy_smart_contract(node, smart_contract, from_address, *args):
     assert_equal(tx_receipt['result']['contractAddress'], address.lower())
     logging.info("Smart contract deployed successfully to address 0x{}".format(address))
     return address
+
+
+def generate_block_and_get_tx_receipt(node, tx_hash, return_status=False):
+    generate_next_block(node, "first node")
+    tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
+    if return_status:
+        return int(tx_receipt['result']['status'], 0)
+    return tx_receipt
+
+
+def random_byte_string(*, length=20):
+    return '0x' + bytes([random.randrange(0, 256) for _ in range(0, length)]).hex()
