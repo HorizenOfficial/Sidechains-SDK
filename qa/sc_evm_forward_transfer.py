@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-import logging
 import json
+import logging
 from decimal import Decimal
 
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_evm, format_eoa
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, websocket_port_by_mc_node_index, \
-    forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
-    is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
+from SidechainTestFramework.scutil import is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, \
+    generate_next_blocks, generate_next_block
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain
 
 """
 Check that forward transfer to non-EOA account does not change balance.
@@ -33,34 +29,9 @@ Test:
 """
 
 
-class SCEvmForwardTransfer(SidechainTestFramework):
-    sc_nodes_bootstrap_info = None
-    API_KEY = "Horizen"
-
-    def setup_nodes(self):
-        return start_nodes(1, self.options.tmpdir)
-
-    def sc_setup_network(self, split=False):
-        self.sc_nodes = self.sc_setup_nodes()
-        logging.info("...skip sync since it would timeout as of now")
-        # self.sc_sync_all()
-
-    def sc_setup_chain(self):
-        mc_node = self.nodes[0]
-        sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
-        )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
-                                         sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
-                                                                 blockversion=AccountModelBlockVersion)
-
-    def sc_setup_nodes(self):
-        return start_sc_nodes(num_nodes=1, dirname=self.options.tmpdir,
-                              auth_api_key=self.API_KEY,
-                              binary=[EVM_APP_BINARY])  # , extra_args=['-agentlib'])
+class SCEvmForwardTransfer(AccountChainSetup):
+    def __init__(self):
+        super().__init__()
 
     def run_test(self):
         sc_node = self.sc_nodes[0]
