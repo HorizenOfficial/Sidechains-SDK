@@ -49,7 +49,7 @@ class SCEvmDebugMethods(AccountChainSetup):
                                          other_address, transfer_amount)
 
         tx_status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
-        assert_equal(tx_status, 1, "Error in tx - unrelated to debug methods")
+        assert_equal(1, tx_status, "Error in tx - unrelated to debug methods")
 
         res = sc_node.rpc_debug_traceTransaction(tx_hash)['result']
         assert_true("error" not in res, "debug_traceTransaction failed for successful smart contract transaction")
@@ -58,7 +58,7 @@ class SCEvmDebugMethods(AccountChainSetup):
                                   call_method=CallMethod.RPC_EIP155, value=transfer_amount)
 
         tx_status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
-        assert_equal(tx_status, 1, "Error in tx - unrelated to debug methods")
+        assert_equal(1, tx_status, "Error in tx - unrelated to debug methods")
 
         res = sc_node.rpc_debug_traceTransaction(tx_hash)
         assert_true("error" not in res['result'], "debug_traceTransaction failed for successful eoa transfer")

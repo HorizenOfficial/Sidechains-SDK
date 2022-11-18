@@ -44,7 +44,7 @@ class SCEvmDeployingContract(AccountChainSetup):
 
         tx_hash = contract_function_call(sc_node, smart_contract, smart_contract_address, self.evm_address, method)
         tx_status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
-        assert_equal(tx_status, 1, "Transaction failed for some reason")
+        assert_equal(1, tx_status, "Transaction failed for some reason")
 
     def __assert_child_count_and_return(self, smart_contract, smart_contract_address, number_of_children):
         method = 'getChildren()'
@@ -118,7 +118,7 @@ class SCEvmDeployingContract(AccountChainSetup):
         tx_hash = contract_function_call(sc_node, child_smart_contract_type, children[-1], self.evm_address, method,
                                          new_secret)
         tx_status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
-        assert_equal(tx_status, 1, "Transaction failed for some reason")
+        assert_equal(1, tx_status, "Transaction failed for some reason")
 
         self.__assert_secret(child_smart_contract_type, children[-1], new_secret)
         self.__assert_secret(child_smart_contract_type, children[0], new_secret)

@@ -1,7 +1,7 @@
 import json
 
 #executes a wallet/balance call on an account sidechain
-def http_wallet_balance(sidechainNode, evm_address, api_key = None):
+def http_wallet_balance(sidechainNode, evm_address, api_key = 'Horizen'):
       j = {"address": str(evm_address)}
       balance_request = json.dumps(j)
 
