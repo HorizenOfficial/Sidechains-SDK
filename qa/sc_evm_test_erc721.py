@@ -113,7 +113,7 @@ def compare_and_return_nat_balance(node, account_address, expected_balance):
     logging.info("Checking native balance of 0x{}".format(account_address))
     new_balance = get_native_balance(node, account_address)
     logging.info("Expected native balance: '{}', actual native balance: '{}'".format(expected_balance, new_balance))
-    assert_equal(new_balance, expected_balance)
+    assert_equal(expected_balance, new_balance)
     return new_balance
 
 
@@ -124,7 +124,7 @@ def compare_ownerof(node, smart_contract, contract_address, sender_address, toke
     res = contract_function_static_call(node, smart_contract, contract_address, sender_address, method,
                                         tokenid)
     logging.info("Expected owner: '{}', actual owner: '{}'".format(expected_owner, res[0]))
-    assert_equal(format_evm(res[0]), format_evm(expected_owner))
+    assert_equal(format_evm(expected_owner), format_evm(res[0]))
 
 
 class SCEvmERC721Contract(AccountChainSetup):
