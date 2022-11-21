@@ -58,6 +58,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private AddressProposition to;
     private byte[] data;
     private SignatureSecp256k1 signature;
+    private String hashString;
 
     private void initSignatureData(SignatureData inSignatureData) {
         if (inSignatureData != null) {
@@ -162,6 +163,15 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 }
             }
         }
+    }
+
+
+    private synchronized String getTxHash() {
+        if (this.hashString == null) {
+            byte[] encodedMessage = encode(getSignatureData());
+            this.hashString = BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
+        }
+        return this.hashString;
     }
 
 
@@ -276,9 +286,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonProperty("id")
     public String id() {
-        byte[] encodedMessage = encode(getSignatureData());
-        return BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
+        return getTxHash();
     }
+
 
     @Override
     @JsonProperty("version")
