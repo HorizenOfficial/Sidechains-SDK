@@ -4,13 +4,14 @@ import logging
 from decimal import Decimal
 
 
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_block, \
     EVM_APP_BINARY, connect_sc_nodes, AccountModelBlockVersion, disconnect_sc_nodes_bi, sync_sc_blocks, assert_equal, \
     assert_true, convertZenToZennies, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
@@ -149,11 +150,9 @@ class SCEvmMempool(SidechainTestFramework):
 
         self.sc_sync_all()
         logging.info("Mempool node 1")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        logging.info(response)
+        logging.info(allTransactions(sc_node_1, False))
         logging.info("Mempool node 2")
-        response = sc_node_2.transaction_allTransactions(json.dumps({"format": False}))
-        logging.info(response)
+        logging.info(allTransactions(sc_node_2, False))
 
         # Disconnect SC nodes
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
@@ -172,16 +171,14 @@ class SCEvmMempool(SidechainTestFramework):
            nonce_addr_2 += 1
 
         logging.info("Mempool node 1 after disconnection")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        logging.info(response)
+        logging.info(allTransactions(sc_node_1, False))
         logging.info("Mempool node 2 after disconnection")
-        response = sc_node_2.transaction_allTransactions(json.dumps({"format": False}))
-        logging.info(response)
+        logging.info(allTransactions(sc_node_2, False))
 
         # Create a block on node 1
         generate_next_block(sc_node_1, "first node")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Wrong number of transactions in node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Wrong number of transactions in node 1 mempool")
 
         # Connect SC nodes
         connect_sc_nodes(sc_node_1, 1)
@@ -189,16 +186,15 @@ class SCEvmMempool(SidechainTestFramework):
         sync_sc_blocks(self.sc_nodes)
 
         logging.info("Mempool node 1 after nodes reconnection")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        logging.info(response)
+        logging.info(allTransactions(sc_node_1, False))
         logging.info("Mempool node 2 after nodes reconnection")
-        response = sc_node_2.transaction_allTransactions(json.dumps({"format": False}))
+        response = allTransactions(sc_node_2, False)
         logging.info(response)
 
         # Check that node 2 mem pool doesn't contain common txs anymore but still contains its own txs
-        assert_equal(len(node_2_tx_list), len(response['result']['transactionIds']), "Wrong number of transactions in node 2 mempool")
+        assert_equal(len(node_2_tx_list), len(response["transactionIds"]), "Wrong number of transactions in node 2 mempool")
         for i in range(len(node_2_tx_list)):
-            assert_true(node_2_tx_list[i] in response['result']['transactionIds'])
+            assert_true(node_2_tx_list[i] in response["transactionIds"])
 
         # Create a block on node 2 to reset the mem pool
         generate_next_block(sc_node_2, "second node")
@@ -229,8 +225,8 @@ class SCEvmMempool(SidechainTestFramework):
         generate_next_block(sc_node_1, "first node")
 
         # Check that node 1 mem pool is empty
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Wrong number of transactions in node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Wrong number of transactions in node 1 mempool")
 
         # Create a block on node 2
         node_2_tx_list = []
@@ -262,10 +258,10 @@ class SCEvmMempool(SidechainTestFramework):
         assert_equal(best_block_node_1, best_block_node_2)
 
         # Check that node 1 mem pool contains only its own txs
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(len(node_1_tx_list), len(response['result']['transactionIds']), "Wrong number of transactions in node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(len(node_1_tx_list), len(response["transactionIds"]), "Wrong number of transactions in node 1 mempool")
         for i in range(len(node_1_tx_list)):
-            assert_true(node_1_tx_list[i] in response['result']['transactionIds'])
+            assert_true(node_1_tx_list[i] in response["transactionIds"])
 
 
 if __name__ == "__main__":

@@ -11,7 +11,11 @@ def http_wallet_balance(sidechainNode, evm_address, api_key = None):
       else:
             response = sidechainNode.wallet_getBalance(balance_request)
 
-      return response["result"]["balance"]
+      if "result" in response:
+            if "balance" in response["result"]:
+                  return response["result"]["balance"]
+
+      raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
 
 
