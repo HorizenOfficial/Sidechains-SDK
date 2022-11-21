@@ -4,8 +4,10 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.account.api.rpc.handler.RpcHandler
-import com.horizen.account.api.rpc.request.RpcRequest
+import com.horizen.account.api.rpc.request.{RpcBatchRequest, RpcRequest}
+import com.horizen.account.api.rpc.response.RpcResponseError
 import com.horizen.account.api.rpc.service.EthService
+import com.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
@@ -19,9 +21,9 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
-import sparkz.core.settings.RESTApiSettings
 import scorex.util.ScorexLogging
 import sparkz.core.api.http.ApiDirectives
+import sparkz.core.settings.RESTApiSettings
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
@@ -72,10 +74,27 @@ case class AccountEthRpcRoute(
   def ethRpc: Route = post {
     withAuth {
       entity(as[JsonNode]) { body =>
-        val req = new RpcRequest(body)
+
+        val req =
+          if(body.isArray && body.isEmpty) {
+            new RpcResponseError(null, RpcError.fromCode(RpcCode.InvalidRequest, null))}
+          else if(body.isArray()) {
+            new RpcBatchRequest(body)}
+          else {
+            new RpcRequest(body)}
         log.debug(s"request >> $body")
-        val res = rpcHandler.apply(req)
+
+        val res = {
+          if(req.isInstanceOf[RpcResponseError]) {
+            req}
+          else if(req.isInstanceOf[RpcRequest]) {
+            rpcHandler.apply(req.asInstanceOf[RpcRequest])}
+          else if(req.isInstanceOf[RpcBatchRequest]) {
+            rpcHandler.apply(req.asInstanceOf[RpcBatchRequest])}
+        }
+
         val json = SerializationUtil.serialize(res)
+
         log.debug(s"response << $json")
         SidechainApiResponse(json);
       }
