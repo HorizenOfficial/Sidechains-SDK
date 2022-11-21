@@ -19,22 +19,23 @@ type EvmParams struct {
 	HandleParams
 	From          common.Address   `json:"from"`
 	To            *common.Address  `json:"to"`
-	Value         hexutil.Big      `json:"value"`
+	Value         *hexutil.Big     `json:"value"`
 	Input         []byte           `json:"input"`
 	AvailableGas  hexutil.Uint64   `json:"availableGas"`
-	GasPrice      hexutil.Big      `json:"gasPrice"`
+	GasPrice      *hexutil.Big     `json:"gasPrice"`
 	AccessList    types.AccessList `json:"accessList"`
 	Context       EvmContext       `json:"context"`
 	TxTraceParams *TraceParams     `json:"traceParams"`
 }
 
 type EvmContext struct {
-	Coinbase    common.Address `json:"coinbase"`
-	GasLimit    hexutil.Uint64 `json:"gasLimit"`
-	BlockNumber *hexutil.Big   `json:"blockNumber"`
-	Time        *hexutil.Big   `json:"time"`
-	BaseFee     *hexutil.Big   `json:"baseFee"`
-	Random      *common.Hash   `json:"random"`
+	ChainID     *hexutil.Uint64 `json:"chainID"`
+	Coinbase    common.Address  `json:"coinbase"`
+	GasLimit    *hexutil.Uint64 `json:"gasLimit"`
+	BlockNumber *hexutil.Big    `json:"blockNumber"`
+	Time        *hexutil.Big    `json:"time"`
+	BaseFee     *hexutil.Big    `json:"baseFee"`
+	Random      *common.Hash    `json:"random"`
 }
 
 type TraceParams struct {
@@ -46,19 +47,30 @@ type TraceParams struct {
 
 // setDefaults for parameters that were omitted
 func (p *EvmParams) setDefaults() {
+	if p.Value == nil {
+		p.Value = (*hexutil.Big)(common.Big0)
+	}
 	if p.AvailableGas == 0 {
 		p.AvailableGas = (hexutil.Uint64)(math.MaxInt64)
+	}
+	if p.GasPrice == nil {
+		p.GasPrice = (*hexutil.Big)(common.Big0)
 	}
 	p.Context.setDefaults()
 }
 
 // setDefaults for parameters that were omitted
 func (c *EvmContext) setDefaults() {
-	if c.Random == nil {
-		c.Random = new(common.Hash)
+	if c.ChainID == nil {
+		defaultChainID := uint64(0)
+		c.ChainID = (*hexutil.Uint64)(&defaultChainID)
+	}
+	if c.GasLimit == nil {
+		defaultGasLimit := uint64(math.MaxInt64)
+		c.GasLimit = (*hexutil.Uint64)(&defaultGasLimit)
 	}
 	if c.BlockNumber == nil {
-		c.BlockNumber = (*hexutil.Big)(new(big.Int))
+		c.BlockNumber = (*hexutil.Big)(common.Big0)
 	}
 	if c.Time == nil {
 		c.Time = (*hexutil.Big)(big.NewInt(time.Now().Unix()))
@@ -66,8 +78,8 @@ func (c *EvmContext) setDefaults() {
 	if c.BaseFee == nil {
 		c.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
 	}
-	if c.GasLimit == 0 {
-		c.GasLimit = (hexutil.Uint64)(math.MaxInt64)
+	if c.Random == nil {
+		c.Random = new(common.Hash)
 	}
 }
 
@@ -77,12 +89,31 @@ func (c *EvmContext) getBlockContext() vm.BlockContext {
 		Transfer:    core.Transfer,
 		GetHash:     mockBlockHashFn,
 		Coinbase:    c.Coinbase,
-		GasLimit:    uint64(c.GasLimit),
+		GasLimit:    uint64(*c.GasLimit),
 		BlockNumber: c.BlockNumber.ToInt(),
 		Time:        c.Time.ToInt(),
 		Difficulty:  common.Big0,
 		BaseFee:     c.BaseFee.ToInt(),
 		Random:      c.Random,
+	}
+}
+
+func (c *EvmContext) getChainConfig() *params.ChainConfig {
+	return &params.ChainConfig{
+		ChainID:             new(big.Int).SetUint64(uint64(*c.ChainID)),
+		HomesteadBlock:      common.Big0,
+		DAOForkBlock:        nil,
+		DAOForkSupport:      false,
+		EIP150Block:         common.Big0,
+		EIP155Block:         common.Big0,
+		EIP158Block:         common.Big0,
+		ByzantiumBlock:      common.Big0,
+		ConstantinopleBlock: common.Big0,
+		PetersburgBlock:     common.Big0,
+		IstanbulBlock:       common.Big0,
+		MuirGlacierBlock:    common.Big0,
+		BerlinBlock:         common.Big0,
+		LondonBlock:         common.Big0,
 	}
 }
 
@@ -102,26 +133,6 @@ func (t *TraceParams) getTracer() *logger.StructLogger {
 func mockBlockHashFn(n uint64) common.Hash {
 	// TODO: fetch real block hashes
 	return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
-}
-
-func defaultChainConfig() *params.ChainConfig {
-	return &params.ChainConfig{
-		// TODO: set correct chain id as it is returned by the opcode CHAINID
-		ChainID:             big.NewInt(1),
-		HomesteadBlock:      common.Big0,
-		DAOForkBlock:        nil,
-		DAOForkSupport:      false,
-		EIP150Block:         common.Big0,
-		EIP155Block:         common.Big0,
-		EIP158Block:         common.Big0,
-		ByzantiumBlock:      common.Big0,
-		ConstantinopleBlock: common.Big0,
-		PetersburgBlock:     common.Big0,
-		IstanbulBlock:       common.Big0,
-		MuirGlacierBlock:    common.Big0,
-		BerlinBlock:         common.Big0,
-		LondonBlock:         common.Big0,
-	}
 }
 
 type EvmResult struct {
@@ -145,10 +156,10 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	var (
 		txContext = vm.TxContext{
 			Origin:   params.From,
-			GasPrice: new(big.Int).Set(params.GasPrice.ToInt()),
+			GasPrice: params.GasPrice.ToInt(),
 		}
 		blockContext = params.Context.getBlockContext()
-		chainConfig  = defaultChainConfig()
+		chainConfig  = params.Context.getChainConfig()
 		tracer       = params.TxTraceParams.getTracer()
 		evmConfig    = vm.Config{
 			Debug:                   tracer != nil,
