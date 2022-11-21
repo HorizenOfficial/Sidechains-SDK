@@ -6,7 +6,6 @@ import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.GasUintOverflowException;
 import com.horizen.account.state.GasUtil;
 import com.horizen.account.state.Message;
-import com.horizen.account.utils.Account;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.EthereumTransactionEncoder;
@@ -317,22 +316,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     id(), getChainId(), EthereumTransactionDecoder.getDecodedChainIdFromSignature(signatureData)));
         }
 
-        if (Numeric.hexStringToByteArray(getToString()).length != 0) {
-            // regular to address
-
-            // sanity check of formatted string.
-            String toAddressNoPrefixStr = Numeric.cleanHexPrefix(getToString());
-            try {
-                //  Numeric library does not check hex characters' validity, BytesUtils does it
-                if (BytesUtils.fromHexString(toAddressNoPrefixStr).length != Account.ADDRESS_SIZE) {
-                    throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "invalid to address length %s", id(), getToString()));
-                }
-            } catch (IllegalArgumentException e) {
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "invalid to address string format %s", id(), getToString()));
-            }
-        } else {
+        // for 'to' address, all checks have been performed during obj initialization
+        if (this.getTo() == null) {
             // contract creation
             if (getDataString().isEmpty())
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
@@ -411,14 +396,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return this.maxFeePerGas;
     }
 
-    @JsonProperty("gasPrice")
-    public BigInteger getJsonGasPrice() {
-        if (isLegacy())
-            return this.gasPrice;
-        // for eip1559 tx this not an attribute of the object, it is computed using baseFee which depends on block height
-        return null;
-    }
-
     @Override
     @JsonIgnore
     public BigInteger getMaxFeePerGas() {
@@ -426,13 +403,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             return this.maxFeePerGas;
         //in Geth for Legacy tx gasFeeCap is equal to gasPrice
         return this.gasPrice;
-    }
-
-    @JsonProperty("maxFeePerGas")
-    public BigInteger getJsonMaxFeePerGas() {
-        if (isEIP1559())
-            return this.maxFeePerGas;
-        return null;
     }
 
     @Override
@@ -444,6 +414,22 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return this.gasPrice;
     }
 
+    // These 3 methods are never explicitly called and are useful for the JSON representation with conditional behaviour
+    // given by the fact that a legacy TX does not have maxFeePerGas/maxPriorityFeePerGas and Eip1559 TX does not have
+    // gasPrice as an obj attribute
+    @JsonProperty("gasPrice")
+    private BigInteger getJsonGasPrice() {
+        if (isLegacy())
+            return this.gasPrice;
+        // for eip1559 tx this not an attribute of the object, it is computed using baseFee which depends on block height
+        return null;
+    }
+    @JsonProperty("maxFeePerGas")
+    private BigInteger getJsonMaxFeePerGas() {
+        if (isEIP1559())
+            return this.maxFeePerGas;
+        return null;
+    }
     @JsonProperty("maxPriorityFeePerGas")
     public BigInteger getJsonMaxPriorityFeePerGas() {
         if (isEIP1559())

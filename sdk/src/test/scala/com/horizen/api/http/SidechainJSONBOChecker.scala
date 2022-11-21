@@ -82,10 +82,6 @@ class SidechainJSONBOChecker {
     assertTrue(json.elements().asScala.length >= 3)
     assertTrue(json.get("id").isTextual)
     assertEquals(transaction.id, json.get("id").asText())
-    // modifier type id is not part of json anymore
-    // assertTrue(json.get("modifierTypeId").isNumber)
-    //assertEquals(transaction.modifierTypeId.toInt, json.get("modifierTypeId").asInt())
-
     assertTrue(json.get("value").isNumber)
     assertEquals(transaction.getValue(), json.get("value").bigIntegerValue())
   }

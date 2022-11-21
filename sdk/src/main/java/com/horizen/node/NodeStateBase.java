@@ -1,5 +1,7 @@
 package com.horizen.node;
 
-public interface NodeStateBase  {
+import com.horizen.consensus.ForgingStakeInfo;
 
+public interface NodeStateBase  {
+    scala.collection.Seq<ForgingStakeInfo> getOrderedForgingStakesInfoSeq();
 }
