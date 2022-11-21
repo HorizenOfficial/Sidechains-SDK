@@ -13,11 +13,13 @@ case class ChainIdBlockSemanticValidator(params: NetworkParams) extends Semantic
       if (actx.transactionTypeId == AccountTransactionsIdsEnum.EthereumTransaction.id()) {
         val tx = actx.asInstanceOf[EthereumTransaction];
         if (tx.isSigned) {
-          if (tx.isEIP1559)
+          //if (tx.isEIP1559 || tx.isEIP155)) to be used once the PR 601 is merged
+          if (tx.getChainId != null) {
             if (tx.getChainId != params.chainId)
               throw new InvalidTransactionChainIdException(s"Transaction ${tx.id} chain ID ${tx.getChainId} " +
-                s"does not match network chain ID ${params.chainId}."
+                s"does not match network chain ID ${params.chainId}"
             )
+          }
         } else
           throw new MissingTransactionSignatureException(s"Transaction ${tx.id} without signature found in block ${block.id}");
       }
