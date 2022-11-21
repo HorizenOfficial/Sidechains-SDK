@@ -360,6 +360,14 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                         null,null)
         );
 
+        //  maxPriorityFeePerGas [%s] higher than maxFeePerGas
+        assertNotValid(
+                copyEip1599EthereumTransaction(goodTx,
+                        null, null, null,
+                        null, goodTx.getMaxFeePerGas().add(BigInteger.ONE), null, null,
+                        null,null)
+        );
+
         // 9 bad chainId
         // 9.1 zero chainId
         assertNotValid(
