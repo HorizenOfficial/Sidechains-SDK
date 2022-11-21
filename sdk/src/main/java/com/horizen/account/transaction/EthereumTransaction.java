@@ -57,19 +57,21 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private AddressProposition from;
     private AddressProposition to;
     private byte[] data;
+    private SignatureSecp256k1 signature;
 
-    private void initSignature(SignatureData inSignatureData) {
+    private void initSignatureData(SignatureData inSignatureData) {
         if (inSignatureData != null) {
             SignatureSecp256k1.verifySignatureData(inSignatureData.getV(), inSignatureData.getR(), inSignatureData.getS());
             this.signatureData = inSignatureData;
             initFrom();
+            initSignature();
         } else {
             this.signatureData = null;
         }
     }
 
-    // this initialization relies on the condition that initialization of transaction signature and transaction type
-    // data members have already been performed
+    // this initialization relies on the condition that initialization of transaction signatureData (if any) and
+    // transaction type data members have already been performed
     private void initFrom() {
         if (this.signatureData != null) {
             Sign.SignatureData inSignatureData = null;
@@ -101,6 +103,24 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             }
         } else {
             this.from = null;
+        }
+    }
+
+    // this initialization relies on the condition that initialization of transaction signatureData (if any) and
+    // transaction type data members have already been performed
+    private void initSignature() {
+        if (signatureData != null) {
+            byte[] realV ;
+            if (isEIP155())
+                realV = new byte[]{getRealV(Numeric.toBigInt(this.signatureData.getV()))};
+            else
+                realV = this.signatureData.getV();
+            this.signature = new SignatureSecp256k1(
+                    realV,
+                    this.signatureData.getR(),
+                    this.signatureData.getS());
+        } else {
+            this.signature = null;
         }
     }
 
@@ -167,7 +187,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
         initTo(to);
         initData(data);
-        initSignature(inSignatureData);
+        initSignatureData(inSignatureData);
     }
 
 
@@ -194,7 +214,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
         initTo(to);
         initData(data);
-        initSignature(inSignatureData);
+        initSignatureData(inSignatureData);
     }
 
     // creates an eip1559 transaction
@@ -221,7 +241,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
         initTo(to);
         initData(data);
-        initSignature(inSignatureData);
+        initSignatureData(inSignatureData);
     }
 
     // creates a signed transaction from an existing one
@@ -241,7 +261,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxPriorityFeePerGas = txToSign.maxPriorityFeePerGas;
         this.maxFeePerGas = txToSign.maxFeePerGas;
 
-        initSignature(inSignatureData);
+        initSignatureData(inSignatureData);
     }
 
     public boolean isSigned() {
@@ -517,19 +537,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public SignatureSecp256k1 getSignature() {
-        // TODO use a data member var similar to 'from' to be initialized from the ctor: this code is the same as at line 87/94
-        if (signatureData != null) {
-            byte[] realV ;
-            if (isEIP155())
-                realV = new byte[]{getRealV(Numeric.toBigInt(getSignatureData().getV()))};
-            else
-                realV = getSignatureData().getV();
-            return new SignatureSecp256k1(
-                    realV,
-                    getSignatureData().getR(),
-                    getSignatureData().getS());
-        }
-        return null;
+        return this.signature;
     }
 
 

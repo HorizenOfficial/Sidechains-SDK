@@ -203,7 +203,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
         try:
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
                                           nonce=0, gasLimit=10, maxPriorityFeePerGas=900000000,
-                                            maxFeePerGas=900000000, value=1, data='12344')
+                                            maxFeePerGas=900000000, value=1, data='012344')
         except RuntimeError as e:
             exception_occurs = True
             logging.info("Adding a transaction with gas limit < intrinsic gas had an exception as expected: {}".format(str(e)))
