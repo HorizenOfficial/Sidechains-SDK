@@ -29,13 +29,13 @@ type EvmParams struct {
 }
 
 type EvmContext struct {
-	ChainID     *hexutil.Uint64 `json:"chainID"`
-	Coinbase    common.Address  `json:"coinbase"`
-	GasLimit    *hexutil.Uint64 `json:"gasLimit"`
-	BlockNumber *hexutil.Big    `json:"blockNumber"`
-	Time        *hexutil.Big    `json:"time"`
-	BaseFee     *hexutil.Big    `json:"baseFee"`
-	Random      *common.Hash    `json:"random"`
+	ChainID     hexutil.Uint64 `json:"chainID"`
+	Coinbase    common.Address `json:"coinbase"`
+	GasLimit    hexutil.Uint64 `json:"gasLimit"`
+	BlockNumber *hexutil.Big   `json:"blockNumber"`
+	Time        *hexutil.Big   `json:"time"`
+	BaseFee     *hexutil.Big   `json:"baseFee"`
+	Random      *common.Hash   `json:"random"`
 }
 
 type TraceParams struct {
@@ -61,13 +61,8 @@ func (p *EvmParams) setDefaults() {
 
 // setDefaults for parameters that were omitted
 func (c *EvmContext) setDefaults() {
-	if c.ChainID == nil {
-		defaultChainID := uint64(0)
-		c.ChainID = (*hexutil.Uint64)(&defaultChainID)
-	}
-	if c.GasLimit == nil {
-		defaultGasLimit := uint64(math.MaxInt64)
-		c.GasLimit = (*hexutil.Uint64)(&defaultGasLimit)
+	if c.GasLimit == 0 {
+		c.GasLimit = (hexutil.Uint64)(math.MaxInt64)
 	}
 	if c.BlockNumber == nil {
 		c.BlockNumber = (*hexutil.Big)(common.Big0)
@@ -89,7 +84,7 @@ func (c *EvmContext) getBlockContext() vm.BlockContext {
 		Transfer:    core.Transfer,
 		GetHash:     mockBlockHashFn,
 		Coinbase:    c.Coinbase,
-		GasLimit:    uint64(*c.GasLimit),
+		GasLimit:    uint64(c.GasLimit),
 		BlockNumber: c.BlockNumber.ToInt(),
 		Time:        c.Time.ToInt(),
 		Difficulty:  common.Big0,
@@ -100,7 +95,7 @@ func (c *EvmContext) getBlockContext() vm.BlockContext {
 
 func (c *EvmContext) getChainConfig() *params.ChainConfig {
 	return &params.ChainConfig{
-		ChainID:             new(big.Int).SetUint64(uint64(*c.ChainID)),
+		ChainID:             new(big.Int).SetUint64(uint64(c.ChainID)),
 		HomesteadBlock:      common.Big0,
 		DAOForkBlock:        nil,
 		DAOForkSupport:      false,
