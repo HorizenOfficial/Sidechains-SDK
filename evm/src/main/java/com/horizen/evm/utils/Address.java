@@ -15,10 +15,6 @@ public class Address {
     private final byte[] bytes;
 
     private Address(byte[] bytes) {
-        if (bytes == null) {
-            this.bytes = new byte[20];
-            return;
-        }
         if (bytes.length != LENGTH) {
             throw new IllegalArgumentException("address must have a length of " + LENGTH);
         }
@@ -42,7 +38,7 @@ public class Address {
     }
 
     public static Address addressZero() {
-        return new Address(new byte[20]);
+        return new Address(new byte[LENGTH]);
     }
 
     public byte[] toBytes() {
