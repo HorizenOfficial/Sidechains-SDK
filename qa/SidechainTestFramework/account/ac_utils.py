@@ -202,27 +202,29 @@ def contract_function_static_call(node, smart_contract_type, smart_contract_addr
     return res
 
 
-def contract_function_call(node, smart_contract_type, smart_contract_address, from_address, method, *args):
+def contract_function_call(node, smart_contract_type, smart_contract_address, from_address, method, *args, value=0,
+                           overrideGas=None):
     logging.info("Estimating gas for contract call...")
-    estimated_gas = smart_contract_type.estimate_gas(node, method, *args,
+    estimated_gas = smart_contract_type.estimate_gas(node, method, *args, value=value,
                                                      fromAddress=from_address, toAddress=smart_contract_address)
     logging.info("Estimated gas is {}".format(estimated_gas))
 
     logging.info("Calling {}: using call function".format(method))
     res = smart_contract_type.call_function(node, method, *args, fromAddress=from_address,
-                                            gasLimit=estimated_gas,
+                                            value=value,
+                                            gasLimit=estimated_gas if overrideGas is None else overrideGas,
                                             toAddress=smart_contract_address)
     return res
 
 
-def deploy_smart_contract(node, smart_contract, from_address, *args):
+def deploy_smart_contract(node, smart_contract, from_address, *args, call_method: CallMethod = CallMethod.RPC_LEGACY):
     logging.info("Estimating gas for deployment...")
     estimated_gas = smart_contract.estimate_gas(node, 'constructor', *args,
                                                 fromAddress=from_address)
     logging.info("Estimated gas is {}".format(estimated_gas))
 
     logging.info("Deploying smart contract...")
-    tx_hash, address = smart_contract.deploy(node, *args,
+    tx_hash, address = smart_contract.deploy(node, *args, call_method=call_method,
                                              fromAddress=from_address,
                                              gasLimit=estimated_gas)
 

@@ -63,7 +63,7 @@ testScripts=(
     'sc_evm_test_storage_contract.py'
     'sc_evm_test_erc20.py'
     'sc_evm_test_erc721.py'
-    'sc_evm_contract_deployment_and_interaction.py'
+    'sc_evm_test_contract_contract_deployment_and_interaction.py'
     'sc_evm_test_metamask_related.py'
     'mc_sc_connected_nodes.py'
     'mc_sc_forging1.py'
