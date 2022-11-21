@@ -170,17 +170,31 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     txs
   }
 
+  //This method needs to check both maxFeePerGas and PriorityFeePerGas because
+  //the effective tip depends of baseFee (tip = min(mxFee-baseFee, priority-baseFee))
+  //and when a tx is added to the mempool, the baseFee that will be used is still unknown.
   def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
     (newTx.getMaxFeePerGas.compareTo(oldTx.getMaxFeePerGas) > 0) &&
     (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
   }
 
   def updateMemPool(rejectedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): Unit = {
-    val appliedTxNoncesByAccount = TrieMap.empty[SidechainTypes#SCP, BigInteger]
+    /* Mem pool needs to be updated after state modifications. Transactions that have become invalid
+    (or for a nonce too low or for insufficient balance), should be removed. Txs
+    from blocks rejected due to a switch of the active chain, that are still valid, should be re-added
+    to the mem pool instead.
+    For efficiency, mem pool is updated account per account and only accounts whose state was modified
+    are considered.
+     */
 
+    //Creates a map with with the max nonce for each account. The txs in a block are ordered by nonce,
+    //so there is no need to check if the nonce already in the map is greater or not => the last one is
+    //always the greatest.
+    val appliedTxNoncesByAccount = TrieMap.empty[SidechainTypes#SCP, BigInteger]
     appliedBlocks.foreach(block => {
       block.transactions.foreach(tx => appliedTxNoncesByAccount.put(tx.getFrom, tx.getNonce))
     })
+
 
     val listOfRejectedBlocksTxs = rejectedBlocks.flatMap(_.transactions)
     val rejectedTransactionsByAccount = listOfRejectedBlocksTxs.groupBy(_.getFrom)
@@ -201,7 +215,11 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
       account: SidechainTypes#SCP,
       txsFromRejectedBlocks: Seq[SidechainTypes#SCAT]
   ): Unit = {
-    // In this case there is no need to check for nonce but we still need to check for balance
+    // In this case, the current account state wasn't modified by new blocks
+    // but it was just reverted to an older state. So there is no need to check for nonce, because the txs were already
+    // verified for it. However we still need to check for balance because it is possible that both txs in mem pool and
+    // txs from reverted blocks were verified with a different balance respect the one restored. The only exception are
+    // txs from the oldest reverted block but for simplicity they are checked the same.
 
     val fromAddress = account.asInstanceOf[AddressProposition].address()
     val balance = stateReaderProvider.getAccountStateReader().getBalance(fromAddress)
@@ -209,6 +227,10 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
     val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
 
+    // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
+    // They are by default directly added to the execTxs map, because the nonce is surely correct. If a tx is found invalid
+    // for balance, it is discarded. All the subsequent txs, if valid, will become not executable and they will be added
+    // to the nonExec map.
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
 
@@ -221,14 +243,13 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
           if (!haveBecomeNonExecutable) {
             destMap = newNonExecTxs
             haveBecomeNonExecutable = true
-
           }
         }
       }
 
     val execTxsOpt = executableTxs.remove(account)
 
-    if (execTxsOpt.isDefined) {
+    if (execTxsOpt.nonEmpty) {
       val execTxs = execTxsOpt.get
       execTxs.foreach { case (nonce, id) =>
         if (balance.compareTo(all(id).maxCost) >= 0) {
@@ -244,7 +265,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     }
 
     val nonExecTxsOpt = nonExecutableTxs.remove(account)
-    if (nonExecTxsOpt.isDefined) {
+    if (nonExecTxsOpt.nonEmpty) {
       val nonExecTxs = nonExecTxsOpt.get
       nonExecTxs.foreach { case (nonce, id) =>
         if (balance.compareTo(all(id).maxCost) >= 0) {
@@ -282,6 +303,12 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
     val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
 
+    // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
+    // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
+    // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, because
+    // they come from reverted blocks so it is impossible to have nonce gaps. They still need to be checked for balance.
+    // If a tx is found invalid for balance, it is discarded. All the subsequent txs, if valid, will become not executable
+    // and they will be added to the nonExec map.
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
 
@@ -300,6 +327,11 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
     }
 
+    // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
+    // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, unless
+    // a previous tx was found invalid. They remaining txs are checked for balance.
+    // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
+    // and they will be added to the nonExec map.
     val execTxsOpt = executableTxs.remove(account)
     if (execTxsOpt.nonEmpty){
       execTxsOpt.get.dropWhile {
@@ -326,6 +358,8 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     if (newExecTxs.nonEmpty)
       newExpectedNonce = newExecTxs.lastKey.add(BigInteger.ONE)
 
+    // Last we need to check txs in nonExec map. The checks are the same as the other txs with the only difference that
+    // some of them could have become executable, thanks to the txs in the applied block.
     val nonExecTxs = nonExecutableTxs.remove(account)
     if (nonExecTxs.nonEmpty){
       nonExecTxs.get.dropWhile {
