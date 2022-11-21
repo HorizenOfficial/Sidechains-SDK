@@ -6,7 +6,7 @@ import com.horizen.evm.utils.Hash;
 import java.math.BigInteger;
 
 public class EvmContext {
-    public long chainID;
+    public BigInteger chainID;
     public Address coinbase;
     public BigInteger gasLimit;
     public BigInteger blockNumber;
