@@ -42,7 +42,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
   // Check block version
   def versionIsValid(): Boolean
 
-  def verifyTransactionsListSize: Boolean = sidechainTransactions.size > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER
+  def transactionsListExceedsSizeLimit: Boolean = sidechainTransactions.size > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER
 
   // Verify that included sidechainTransactions are consistent to header.sidechainTransactionsMerkleRootHash.
   @throws(classOf[InconsistentSidechainBlockDataException])
@@ -131,7 +131,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
       case Failure(e) => throw e
     }
 
-    if(verifyTransactionsListSize)
+    if(transactionsListExceedsSizeLimit)
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id sidechain transactions amount exceeds the limit.")
 
     // Check Block size

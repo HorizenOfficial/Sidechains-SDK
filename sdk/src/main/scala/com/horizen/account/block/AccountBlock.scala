@@ -69,7 +69,7 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override def versionIsValid(): Boolean = version == AccountBlock.ACCOUNT_BLOCK_VERSION
 
-  override def verifyTransactionsListSize(): Boolean = true
+  override def transactionsListExceedsSizeLimit(): Boolean = false
 }
 
 
