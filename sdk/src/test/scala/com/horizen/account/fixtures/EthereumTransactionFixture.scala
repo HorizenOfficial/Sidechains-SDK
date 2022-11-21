@@ -188,7 +188,7 @@ trait EthereumTransactionFixture {
           BytesUtils.toHexString(inTx.getTo.address())
         }
         else
-          null
+          ""
     }
 
     val nonce    = if (inNonce != null) inNonce       else inTx.getNonce

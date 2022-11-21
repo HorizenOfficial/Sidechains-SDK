@@ -239,14 +239,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return getMaxFeePerGas();
     }
 
-    @JsonProperty("gasPrice")
-    public BigInteger getJsonGasPrice() {
-        if (!this.isEIP1559())
-            return this.legacyTx().getGasPrice();
-        // for eip1559 tx this not an attribute of the object, it is computed using baseFee which depends on block height
-        return null;
-    }
-
     @Override
     @JsonIgnore
     public BigInteger getMaxFeePerGas() {
@@ -255,13 +247,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         else
             //in Geth for Legacy tx gasFeeCap is equal to gasPrice
             return this.legacyTx().getGasPrice();
-    }
-
-    @JsonProperty("maxFeePerGas")
-    public BigInteger getJsonMaxFeePerGas() {
-        if (this.isEIP1559())
-            return this.eip1559Tx().getMaxFeePerGas();
-        return null;
     }
 
     @Override
@@ -274,8 +259,24 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             return this.legacyTx().getGasPrice();
     }
 
+    // These 3 methods are never explicitly called and are useful for the JSON representation with conditional behaviour
+    // given by the fact that a legacy TX does not have maxFeePerGas/maxPriorityFeePerGas and Eip1559 TX does not have
+    // gasPrice as an obj attribute
+    @JsonProperty("gasPrice")
+    private BigInteger getJsonGasPrice() {
+        if (!this.isEIP1559())
+            return this.legacyTx().getGasPrice();
+        // for eip1559 tx this not an attribute of the object, it is computed using baseFee which depends on block height
+        return null;
+    }
+    @JsonProperty("maxFeePerGas")
+    private BigInteger getJsonMaxFeePerGas() {
+        if (this.isEIP1559())
+            return this.eip1559Tx().getMaxFeePerGas();
+        return null;
+    }
     @JsonProperty("maxPriorityFeePerGas")
-    public BigInteger getJsonMaxPriorityFeePerGas() {
+    private BigInteger getJsonMaxPriorityFeePerGas() {
         if (this.isEIP1559())
             return this.eip1559Tx().getMaxPriorityFeePerGas();
         return null;
