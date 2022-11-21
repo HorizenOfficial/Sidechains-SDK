@@ -143,7 +143,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
    */
   def takeExecutableTxs(limit: Int): Iterable[SidechainTypes#SCAT] = {
 
-    val baseFee = stateReaderProvider.getAccountStateReader().baseFee
+    val baseFee = stateReaderProvider.getAccountStateReader().nextBaseFee
 
     def txOrder(tx: SidechainTypes#SCAT) = {
       tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)

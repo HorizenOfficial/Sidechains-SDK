@@ -26,7 +26,7 @@ class MempoolMapTest
 
   @Before
   def setUp(): Unit = {
-    Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
 
     Mockito
       .when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
@@ -714,7 +714,7 @@ class MempoolMapTest
   def testTakeExecutableTxs(): Unit = {
 
     val initialStateNonce = BigInteger.ZERO
-    Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.TEN)
+    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.TEN)
     var mempoolMap = new MempoolMap(stateProvider)
 
     assertEquals(

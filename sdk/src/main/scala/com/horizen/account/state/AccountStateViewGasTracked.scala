@@ -121,7 +121,7 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
 
   override def getIntermediateRoot: Array[Byte] = view.getIntermediateRoot
 
-  override def baseFee: BigInteger = view.baseFee
+  override def nextBaseFee: BigInteger = view.nextBaseFee
 
 
 }

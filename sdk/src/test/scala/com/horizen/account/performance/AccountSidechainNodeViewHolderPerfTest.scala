@@ -58,7 +58,7 @@ class AccountSidechainNodeViewHolderPerfTest
       .when(stateViewMock.getBalance(ArgumentMatchers.any[Array[Byte]]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
     Mockito.when(stateViewMock.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenReturn(true)
-    Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
 
     Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer { answer =>
       {

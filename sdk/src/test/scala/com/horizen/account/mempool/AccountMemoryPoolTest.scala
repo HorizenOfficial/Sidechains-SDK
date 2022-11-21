@@ -27,7 +27,7 @@ class AccountMemoryPoolTest
 
     val initialStateNonce = BigInteger.ZERO
     val stateViewMock = mock[AccountStateReader]
-    Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
     Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(initialStateNonce)
 
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => stateViewMock)

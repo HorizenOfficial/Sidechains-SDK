@@ -192,8 +192,8 @@ class AccountState(
       // eventually, store full receipts in the metaDataStorage indexed by txid
       stateView.updateTransactionReceipts(receiptList)
 
-      // update current base fee
-      stateView.updateBaseFee(FeeUtils.calculateNextBaseFee(mod))
+      // update next base fee
+      stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod))
 
       stateView.commit(idToVersion(mod.id)).get
 
@@ -392,7 +392,7 @@ class AccountState(
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
-  override def baseFee: BigInteger = using(getView)(_.baseFee)
+  override def nextBaseFee: BigInteger = using(getView)(_.nextBaseFee)
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
