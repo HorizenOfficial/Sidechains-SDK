@@ -49,7 +49,7 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
 
         // different signatures but same from address
         assertNotEquals(tx1.getSignature(), tx2.getSignature());
-        assertEquals(tx1.getFromAddress(), tx2.getFromAddress());
+        assertEquals(tx1.getFrom(), tx2.getFrom());
 
         var maxFeePerGas = BigInteger.valueOf(15);
         var maxPriorityFeePerGas = BigInteger.valueOf(15);
@@ -63,7 +63,7 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
 
         // different signatures but same from address
         assertNotEquals(tx1.getSignature(), tx3.getSignature());
-        assertEquals(tx1.getFromAddress(), tx3.getFromAddress());
+        assertEquals(tx1.getFrom(), tx3.getFrom());
 
         var tx4 = createLegacyEip155Transaction(value, nonce.add(BigInteger.ONE), account1KeyPair, gasPrice, gasLimit);
 
@@ -75,7 +75,7 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
 
         // different signatures but same from address
         assertNotEquals(tx1.getSignature(), tx4.getSignature());
-        assertEquals(tx1.getFromAddress(), tx4.getFromAddress());
+        assertEquals(tx1.getFrom(), tx4.getFrom());
     }
 
     @Test
