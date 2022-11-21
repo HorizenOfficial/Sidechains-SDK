@@ -13,10 +13,16 @@ import scala.util.Random
 
 trait ReceiptFixture {
 
-    def createTestEvmLog: EvmLog = {
+    def createTestEvmLog(addressBytes: Array[Byte] = null): EvmLog = {
       // random address and fixed topics/data
-      val addressBytes = new Array[Byte](Address.LENGTH)
-      Random.nextBytes(addressBytes)
+      var addressBytesTemp = new Array[Byte](Address.LENGTH)
+      if(addressBytes == null) {
+        Random.nextBytes(addressBytesTemp)
+      }
+      else {
+        addressBytesTemp = addressBytes
+      }
+
       val address = Address.fromBytes(addressBytes)
 
       val topics = new Array[Hash](4)
@@ -29,13 +35,19 @@ trait ReceiptFixture {
       new EvmLog(address, topics, data)
     }
 
-  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true): EthereumReceipt = {
-    val txHash = new Array[Byte](32)
-    Random.nextBytes(txHash)
+  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Array[Byte] = null, address: Array[Byte] = null): EthereumReceipt = {
+    var txHashTemp: Array[Byte] = new Array[Byte](32)
+
+    if(txHash != null) {
+      txHashTemp = txHash
+    }
+    else {
+      Random.nextBytes(txHashTemp)
+    }
 
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
-      logs += createTestEvmLog
+      logs += createTestEvmLog(address)
 
     val contractAddress = if (contractAddressPresence) {
       BytesUtils.fromHexString("1122334455667788990011223344556677889900")
@@ -44,19 +56,19 @@ trait ReceiptFixture {
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs)
     val receipt = EthereumReceipt(consensusDataReceipt,
-      txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
+      txHashTemp, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
       BigInteger.valueOf(1234567),
       contractAddress
       )
     receipt
   }
 
-  def createTestEthereumConsensusDataReceipt(txType: Integer, num_logs: Integer): EthereumConsensusDataReceipt = {
+  def createTestEthereumConsensusDataReceipt(txType: Integer, num_logs: Integer, address: Array[Byte] = null): EthereumConsensusDataReceipt = {
     val txHash = new Array[Byte](32)
     Random.nextBytes(txHash)
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
-      logs += createTestEvmLog
+      logs += createTestEvmLog(address)
     new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs)
   }
 
