@@ -31,6 +31,9 @@ import java.math.BigInteger
 import java.util.Calendar
 import scala.collection.concurrent.TrieMap
 
+/*
+  This class is used for testing performance related to modifications to the memory pool.
+ */
 class AccountSidechainNodeViewHolderPerfTest
     extends JUnitSuite
       with MockedSidechainNodeViewHolderFixture
@@ -57,7 +60,7 @@ class AccountSidechainNodeViewHolderPerfTest
       .when(stateViewMock.getBalance(ArgumentMatchers.any[Array[Byte]]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
     Mockito.when(stateViewMock.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenReturn(true)
-    Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
 
     Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer { answer =>
       {
@@ -69,6 +72,13 @@ class AccountSidechainNodeViewHolderPerfTest
     Mockito.when(wallet.scanOffchain(ArgumentMatchers.any[SidechainTypes#SCAT])).thenReturn(wallet)
   }
 
+  /*
+  This method tests the performance related to adding new txs to the mem pool. In order to simulate a more realistic scenario,
+  the txs come from different accounts. There are to types of accounts: normal and spammers.
+  Normal accounts have only few txs each (5), while spammers have 100 txs each.
+  The test is executed twice, the first time txs are added ordered by increasing nonce, the second time they are added
+  ordered by decreasing nonce, to see the impact on the mem pool of reordering the txs.
+   */
   @Test
   @Ignore
   def txModifyTest(): Unit = {
@@ -87,7 +97,7 @@ class AccountSidechainNodeViewHolderPerfTest
       val numOfTxs = 10000
       val numOfTxsPerSpammerAccounts = 100
       val numOfTxsPerNormalAccounts = 5
-      val normalSpammerRatio = 20
+      val normalSpammerRatio = numOfTxsPerSpammerAccounts / numOfTxsPerNormalAccounts
       assertTrue(
         "Invalid test parameters",
         numOfTxs % (numOfTxsPerSpammerAccounts + normalSpammerRatio * numOfTxsPerNormalAccounts) == 0
@@ -180,6 +190,12 @@ class AccountSidechainNodeViewHolderPerfTest
     }
   }
 
+  /*
+  This method tests the performance related to updating the mem pool after a new block was applied to the blockchain.
+   First the mem pool is filled with txs from different accounts, normal and spammers (i.e. with few or several txs, respectively).
+   Some txs are orphans. A set of these txs are then used for creating the block that will be applied.
+   In the second part of the test, the same block will be "reverted" and a new one will be applied.
+   */
   @Test
   @Ignore
   def updateMemPoolTest(): Unit = {
@@ -222,16 +238,20 @@ class AccountSidechainNodeViewHolderPerfTest
       val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
+      //Adding txs to the initial mem pool
       listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
       assertEquals(numOfTxs, mempool.size)
 
+      //Creating the block to be applied
       val appliedBlock: AccountBlock = mock[AccountBlock]
+      //Takes txs from both spammers and normal accounts. While the gas tip is not important for this test, we must ensure
+      // that txs from the same account are ordered by increasing nonce in the block.
       val listOfTxsInBlock =
         (listOfSpammerTxs.take(numOfSpammerAccount) ++ listOfNormalTxs.take(
           numOfTxsInBlock - numOfSpammerAccount
         )).toSeq
       Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
-      // Update the nonces
+      // Update the nonces in the mock state
       listOfTxsInBlock.foreach(tx =>
         mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
       )
@@ -253,14 +273,15 @@ class AccountSidechainNodeViewHolderPerfTest
       additionalTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
       assertEquals(numOfTxs, mempool.size)
 
-      // the block to applied will have 1000 txs of the rolledBack block and 400 from the additionalTxs
+      // The new block to be applied will have 1000 txs of the rolledBack block and 400 from the additionalTxs, just to
+      // make the test more realistic. The new txs are taken from new accounts, so we are sure to avoid gaps in the nonces.
       val appliedBlock2: AccountBlock = mock[AccountBlock]
-      val listOfTxsInBlock2 = listOfTxsInBlock.take(1000) ++ additionalTxs.take(400)//TODO
+      val listOfTxsInBlock2 = listOfTxsInBlock.take(1000) ++ additionalTxs.take(400)//TODO this should be configurable
       Mockito.when(appliedBlock2.transactions).thenReturn(listOfTxsInBlock2.asInstanceOf[Seq[SidechainTypes#SCAT]])
 
-      // Update the nonces
-      // First reapplying the txs in the rollBackBlock, then the ones in appliedBlock2
-      listOfTxsInBlock.foreach(tx => mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce))
+      // Update the nonces in the mock state.
+      // First resetting the nonces (so it will restart from 0), then put the new nonces for txs in appliedBlock2
+      mockStateDbNonces.clear()
       listOfTxsInBlock2.foreach(tx =>
         mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
       )
@@ -278,6 +299,10 @@ class AccountSidechainNodeViewHolderPerfTest
     }
   }
 
+  /*
+  This method tests the performance related to updating the mem pool after a new block was applied to the blockchain.
+  In this case the chain reorg causes a switch of the active chain composed by several blocks.
+   */
   @Test
   @Ignore
   def updateMemPoolMultipleBlocksTest(): Unit = {
@@ -321,7 +346,7 @@ class AccountSidechainNodeViewHolderPerfTest
       )
 
       println(s"************** Testing with ${numOfBlocks} blocks to apply **************")
-
+      //This in real life should never happen, but taking some measures could be useful
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
       val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
@@ -353,7 +378,7 @@ class AccountSidechainNodeViewHolderPerfTest
       val updateTime = System.currentTimeMillis() - startTime
       assertEquals(numOfTxs - numOfBlocks * numOfTxsInBlock, newMemPool.size)
       println(s"total time $updateTime ms")
-      out.write(s"\n********************* Testing with ${numOfBlocks} blocks to apply results *********************\n")
+      out.write(s"\n********************* Testing with $numOfBlocks blocks to apply results *********************\n")
       out.write(s"Duration of the test:                      $updateTime ms\n")
 
       println(s"************** Testing with $numOfBlocks rejected blocks and $numOfBlocks blocks to apply **************")
@@ -364,7 +389,7 @@ class AccountSidechainNodeViewHolderPerfTest
       additionalTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
       assertEquals(numOfTxs, mempool.size)
 
-      // the blocks to applied will have 1000 txs of the rolledBack blocks and 400 from the additionalTxs
+      // the blocks to be applied will have 1000 txs of the rolledBack blocks and 400 from the additionalTxs
       val listOfBlocks2 = new scala.collection.mutable.ListBuffer[AccountBlock]
 
       val numOfReappliedTxs = numOfTxsInBlock - 400 //TODO make it configurable
@@ -372,15 +397,16 @@ class AccountSidechainNodeViewHolderPerfTest
       val numOfNewTxs = numOfTxsInBlock - numOfReappliedTxs
       (0 to numOfBlocks - 1).foreach { idx =>
         val appliedBlock: AccountBlock = mock[AccountBlock]
-        val listOfTxsInBlock = listOfUsedTxs.slice(idx * (numOfReappliedTxs), (idx + 1) *numOfReappliedTxs) ++ additionalTxs.slice(idx * (numOfNewTxs), (idx + 1) * numOfNewTxs)
+        val listOfTxsInBlock = listOfExecTransactionsToApply.slice(idx * numOfReappliedTxs, (idx + 1) * numOfReappliedTxs) ++
+          additionalTxs.slice(idx * (numOfNewTxs), (idx + 1) * numOfNewTxs)
         Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
         listOfBlocks2.append(appliedBlock)
       }
 
 
       // Update the nonces
-      // First reapplying the txs in the rollBackBlock, then the ones in appliedBlock2
-      rollBackBlocks.foreach( block => block.transactions.foreach(tx => mockStateDbNonces.put(new ByteArrayWrapper(tx.asInstanceOf[EthereumTransaction].getFrom.address()), tx.getNonce)))
+      // First resetting the nonces in the mock state, then the ones in appliedBlock2
+      mockStateDbNonces.clear()
       listOfBlocks2.foreach( block => block.transactions.foreach(tx =>
         mockStateDbNonces.put(new ByteArrayWrapper(tx.asInstanceOf[EthereumTransaction].getFrom.address()), tx.getNonce.add(BigInteger.ONE))
       ))
@@ -500,6 +526,7 @@ class AccountSidechainNodeViewHolderPerfTest
     }
 
   }
+
 
   class MockedAccountSidechainNodeViewHolder(
       sidechainSettings: SidechainSettings,

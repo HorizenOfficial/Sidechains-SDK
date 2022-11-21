@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.AccountStateReader
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider}
 import com.horizen.account.utils.ZenWeiConverter
 import org.junit.Assert._
 import org.junit._

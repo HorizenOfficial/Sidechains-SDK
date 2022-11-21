@@ -51,7 +51,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
   Mockito
     .when(state.getBalance(ArgumentMatchers.any[Array[Byte]]))
     .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
-  Mockito.when(state.baseFee).thenReturn(BigInteger.ZERO)
+  Mockito.when(state.nextBaseFee).thenReturn(BigInteger.ZERO)
 
   Mockito.when(state.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(BigInteger.ZERO)
   val mempool = AccountMemoryPool.createEmptyMempool(() => state)
