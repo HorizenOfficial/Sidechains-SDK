@@ -97,8 +97,8 @@ class SCEvmContractDeploymentCreate2(AccountChainSetup):
                                          self.evm_address,
                                          method,
                                          method_args)
-        res = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
-        assert_equal(1, res, "Check that function call was successful")
+        status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
+        assert_true(status, "Transaction failed")
 
         method = 'getStorageValue()'
         storage_value = contract_function_static_call(sc_node, simple_wallet_contract, simple_wallet_contract_address,
@@ -112,16 +112,16 @@ class SCEvmContractDeploymentCreate2(AccountChainSetup):
         tx_hash = contract_function_call(sc_node, simple_wallet_contract, simple_wallet_contract_address,
                                          self.evm_address,
                                          method, method_args)
-        res = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
-        assert_equal(1, res, "Check that function call was successful")
+        status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
+        assert_true(status, "Transaction failed")
 
         # CREATE2 deployment of Simple Wallet via Factory contract call
         method = 'deploy(uint256)'
         method_args = salt
         tx_hash = contract_function_call(sc_node, factory_contract, factory_contract_address, self.evm_address, method,
                                          method_args)
-        res = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
-        assert_equal(1, res, "Check that function call was successful")
+        status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
+        assert_true(status, "Transaction failed")
 
         # Check that previous smart contract storage was cleared
         method = 'getStorageValue()'
