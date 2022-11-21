@@ -23,7 +23,7 @@ trait ReceiptFixture {
         addressBytesTemp = addressBytes
       }
 
-      val address = Address.fromBytes(addressBytes)
+      val address = Address.fromBytes(addressBytesTemp)
 
       val topics = new Array[Hash](4)
       topics(0) = Hash.fromBytes(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))

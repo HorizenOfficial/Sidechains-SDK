@@ -14,8 +14,6 @@ public class TrieHasherTest extends LibEvmTestBase {
 
     @Test
     public void trieHasher() {
-        final var emptyRootHash = hashEmpty;
-
         // verify that:
         // - interop works
         // - we get the well-known empty root hash for anything that results in an empty trie
@@ -33,9 +31,9 @@ public class TrieHasherTest extends LibEvmTestBase {
         var hashF = TrieHasher.Root(new byte[200][1]);
         var hashG = TrieHasher.Root(new byte[1000][67]);
 
-        assertArrayEquals("should return well-known empty root hash", emptyRootHash, hashEmpty);
-        assertArrayEquals("should return well-known empty root hash", emptyRootHash, hashEmpty2);
-        assertArrayNotEquals("should not give empty root hash", emptyRootHash, hashA);
+        assertArrayEquals("should return well-known empty root hash", hashEmpty, hashEmpty);
+        assertArrayEquals("should return well-known empty root hash", hashEmpty, hashEmpty2);
+        assertArrayNotEquals("should not give empty root hash", hashEmpty, hashA);
         assertArrayEquals("should return same root hash for same input", hashA, hashA2);
         assertArrayNotEquals("should return different root hash for different input", hashA, hashB);
         assertArrayNotEquals("should return different root hash for different input", hashB, hashC);

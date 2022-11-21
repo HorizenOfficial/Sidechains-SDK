@@ -10,15 +10,12 @@ import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.utils.Numeric
-import scorex.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import java.util
 import java.util.Map.entry
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
-
 
 class EthereumReceiptTest
   extends JUnitSuite
