@@ -16,6 +16,7 @@ from SidechainTestFramework.scutil import (
     convertZenToZennies, generate_next_block, get_account_balance, start_sc_nodes,
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,
@@ -102,11 +103,11 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = from_sc_node.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(tx_hash in response['result']['transactionIds'])
+        response = allTransactions(from_sc_node, False)
+        assert_true(tx_hash in response["transactionIds"])
 
         if print_json_results:
-            logging.info(from_sc_node.transaction_allTransactions(json.dumps({"format": True})))
+            logging.info(allTransactions(from_sc_node))
 
         generate_next_block(from_sc_node, "first node")
         self.sc_sync_all()

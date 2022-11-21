@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-import json
 import logging
 import random
 from decimal import Decimal
 
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_block, \
     EVM_APP_BINARY, AccountModelBlockVersion, assert_equal, \
     assert_true, BLOCK_GAS_LIMIT, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 
@@ -103,8 +103,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
             logging.info("Adding a transaction with with negative nonce had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with with negative nonce should fail")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Transaction with negative nonce added to node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Transaction with negative nonce added to node 1 mempool")
 
         #Test that a transaction with negative value is rejected by the mem pool
         exception_occurs = False
@@ -117,8 +117,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
             logging.info("Adding a transaction with with negative value had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with with negative value should fail")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Transaction with negative value added to node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Transaction with negative value added to node 1 mempool")
 
         #Test that a transaction with max fee lower than priority fee is rejected by the mem pool
         exception_occurs = False
@@ -131,8 +131,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
             logging.info("Adding a transaction  with max fee lower than priority fee had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction  with max fee lower than priority fee should fail")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Transaction  with max fee lower than priority fee added to node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Transaction  with max fee lower than priority fee added to node 1 mempool")
 
         # Test that a transaction with max fee with a value of more than 256 bits is rejected by the mem pool
         # TODO at the moment it is not possible to test this case, because createEIP1559Transaction looks for
@@ -151,8 +151,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
         #     logging.info("Adding a transaction with max fee with more than 256 bits  had an exception as expected: {}".format(str(e)))
         #
         # assert_true(exception_occurs, "Adding a transaction with max fee with more than 256 bits should fail")
-        # response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        # assert_equal(0, len(response['result']['transactionIds']), "Transaction with max fee with more than 256 bits added to node 1 mempool")
+        # response = allTransactions(sc_node_1, False)
+        # assert_equal(0, len(response["transactionIds"]), "Transaction with max fee with more than 256 bits added to node 1 mempool")
 
         # Test that a transaction with gas limit with more than 64 bits is rejected by the mem pool
         very_large_num = random.getrandbits(65)
@@ -167,8 +167,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
             logging.info("Adding a transaction with gas limit with more than 64 bits had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with gas limit with more than 64 bits should fail")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Transaction with gas limit with more than 64 bitsadded to node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Transaction with gas limit with more than 64 bitsadded to node 1 mempool")
 
         #Test that a transaction with gas limit greater that block gas limit is rejected by the mem pool
         exception_occurs = False
@@ -180,8 +180,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
             logging.info("Adding a transaction with gas limit > block gas limit had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with gas limit > block gas limit should fail")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Transaction with gas limit > block gas limit added to node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Transaction with gas limit > block gas limit added to node 1 mempool")
 
         #Test that a transaction that creates a smart contract (to = None) cannot have empty data
         exception_occurs = False
@@ -194,8 +194,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
             logging.info("Adding a transaction that creates a smart contract with empty data had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction that creates a smart contract with empty data should fail")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Transaction that creates a smart contract with empty data added to node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Transaction that creates a smart contract with empty data added to node 1 mempool")
 
 
         #Test that a transaction with gas limit < intrinsic gas is rejected by the mem pool
@@ -209,8 +209,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
             logging.info("Adding a transaction with gas limit < intrinsic gas had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with gas limit < intrinsic gas should fail")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Transaction with gas limit < intrinsic gas added to node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Transaction with gas limit < intrinsic gas added to node 1 mempool")
 
         #Test that a transaction with nonce too low is rejected by the mem pool
         nonce_addr_1 = 0
@@ -231,8 +231,8 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
             logging.info("Adding a transaction with nonce too low had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with nonce too low should fail")
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']), "Transaction with nonce too low  added to node 1 mempool")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]), "Transaction with nonce too low  added to node 1 mempool")
 
 
 if __name__ == "__main__":
