@@ -64,7 +64,6 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             // verify that the signature was created with the expected address
             return Objects.equals(signingAddress, Numeric.toHexStringNoPrefix(proposition.address()));
         } catch (SignatureException e) {
-            LogManager.getLogger().info("Signature not valid:", e);
             return false;
         }
     }

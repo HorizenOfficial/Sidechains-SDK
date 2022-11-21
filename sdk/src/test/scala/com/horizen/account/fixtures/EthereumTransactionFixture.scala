@@ -316,8 +316,7 @@ trait EthereumTransactionFixture {
     v = v.subtract(BigInteger.valueOf(LOWER_REAL_V))
     v = v.add(BigInteger.valueOf(inChainId).multiply(BigInteger.valueOf(2)))
     v = v.add(BigInteger.valueOf(CHAIN_ID_INC))
-
-    BigInteger.valueOf(inChainId).multiply(BigInteger.TWO).add(BigInteger.valueOf(CHAIN_ID_INC))
+    v
   }
 }
 

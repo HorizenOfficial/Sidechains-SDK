@@ -26,7 +26,7 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
   private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap[SidechainTypes#SCP, BigInteger]()
 
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
-    require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransactionNew")
+    require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
     val account = ethTransaction.getFrom
     if (!nonces.contains(account)) {
       nonces.put(account, stateReader.getNonce(account.asInstanceOf[AddressProposition].address()))

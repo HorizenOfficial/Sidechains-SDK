@@ -47,7 +47,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         try {
             goodTx.semanticValidity();
         } catch (Throwable e) {
-            fail("Test1: Successful EthereumTransactionNew creation expected." + e);
+            fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
 
         // 1. bad chainId
@@ -99,7 +99,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         try {
             goodTx.semanticValidity();
         } catch (Throwable e) {
-            fail("Test1: Successful EthereumTransactionNew creation expected." + e);
+            fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
 
         // 1. bad gasPrice
@@ -128,7 +128,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         try {
           goodTx.semanticValidity();
         } catch (Throwable e) {
-            fail("Test1: Successful EthereumTransactionNew creation expected." + e);
+            fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
 
         // negative tests
@@ -392,7 +392,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         try {
             goodTx.semanticValidity();
         } catch (Throwable e) {
-            fail("Test1: Successful EthereumTransactionNew creation expected." + e);
+            fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
 
         // negative tests

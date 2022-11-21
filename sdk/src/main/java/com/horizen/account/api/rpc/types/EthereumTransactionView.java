@@ -35,7 +35,7 @@ public class EthereumTransactionView {
     public EthereumTransactionView(EthereumReceipt receipt, EthereumTransaction ethTx, BigInteger baseFee) {
         type = Numeric.prependHexPrefix((Integer.toHexString(ethTx.version())));
         nonce = Numeric.encodeQuantity(ethTx.getNonce());
-        to = Numeric.cleanHexPrefix(ethTx.getToString()).length() != 2 * Account.ADDRESS_SIZE ? null : ethTx.getToString();
+        to = Numeric.cleanHexPrefix(ethTx.getToAddressString()).length() != 2 * Account.ADDRESS_SIZE ? null : ethTx.getToAddressString();
         gas = Numeric.encodeQuantity(ethTx.getGasLimit());
         value = Numeric.encodeQuantity(ethTx.getValue());
         input = Numeric.toHexString(ethTx.getData());

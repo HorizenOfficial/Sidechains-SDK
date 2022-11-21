@@ -5,11 +5,10 @@ import org.web3j.crypto.Sign;
 import org.web3j.rlp.*;
 import org.web3j.utils.Bytes;
 import org.web3j.utils.Numeric;
-import java.math.BigInteger;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import static org.web3j.crypto.Sign.CHAIN_ID_INC;
 
 public class EthereumTransactionEncoder {
 
@@ -26,10 +25,10 @@ public class EthereumTransactionEncoder {
         result.add(RlpString.create(tx.getGasLimit()));
 
         // an empty to address (contract creation) should not be encoded as a numeric 0 value
-        if (tx.getToString() != null && tx.getToString().length() > 0) {
+        if (tx.getToAddressString() != null && tx.getToAddressString().length() > 0) {
             // addresses that start with zeros should be encoded with the zeros included, not
             // as numeric values
-            result.add(RlpString.create(Numeric.hexStringToByteArray(tx.getToString())));
+            result.add(RlpString.create(Numeric.hexStringToByteArray(tx.getToAddressString())));
         } else {
             result.add(RlpString.create(""));
         }
@@ -65,10 +64,10 @@ public class EthereumTransactionEncoder {
         result.add(RlpString.create(tx.getGasLimit()));
 
         // an empty to address (contract creation) should not be encoded as a numeric 0 value
-        if (tx.getToString() != null && tx.getToString().length() > 0) {
+        if (tx.getToAddressString() != null && tx.getToAddressString().length() > 0) {
             // addresses that start with zeros should be encoded with the zeros included, not
             // as numeric values
-            result.add(RlpString.create(Numeric.hexStringToByteArray(tx.getToString())));
+            result.add(RlpString.create(Numeric.hexStringToByteArray(tx.getToAddressString())));
         } else {
             result.add(RlpString.create(""));
         }
