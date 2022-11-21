@@ -151,7 +151,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
     val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
     executableTxs.foreach { case (_, listOfTxsPerAccount) =>
-      val tx = getTransaction(listOfTxsPerAccount.values.head).get
+      val tx = all(listOfTxsPerAccount.values.head)
       orderedQueue.enqueue(tx)
     }
     val txs = new ListBuffer[SidechainTypes#SCAT]()
@@ -162,7 +162,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
       txs.append(bestTx)
       val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
       if (nextTxIdOpt.isDefined) {
-        val tx = getTransaction(nextTxIdOpt.get).get
+        val tx = all(nextTxIdOpt.get)
         orderedQueue.enqueue(tx)
       }
       i += 1
