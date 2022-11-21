@@ -3,9 +3,9 @@ package com.horizen.account.mempool
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountMemoryPool
-import sparkz.core.transaction.MempoolReader
+import com.horizen.account.state.AccountStateReaderProvider
 import scorex.util.{ModifierId, ScorexLogging}
-import com.horizen.account.state.AccountStateReader
+import sparkz.core.transaction.MempoolReader
 
 import java.util
 import java.util.{Comparator, Optional}
@@ -131,9 +131,4 @@ object AccountMemoryPool {
   def createEmptyMempool(stateReaderProvider: AccountStateReaderProvider): AccountMemoryPool = {
     new AccountMemoryPool(new MempoolMap(stateReaderProvider), stateReaderProvider)
   }
-}
-
-trait AccountStateReaderProvider {
-  def getAccountStateReader(): AccountStateReader
-
 }

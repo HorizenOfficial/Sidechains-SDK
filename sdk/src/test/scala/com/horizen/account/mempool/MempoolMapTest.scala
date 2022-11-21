@@ -2,7 +2,7 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.state.AccountStateReader
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import org.junit.Assert._
 import org.junit._

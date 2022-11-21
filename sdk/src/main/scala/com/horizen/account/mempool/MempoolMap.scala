@@ -3,6 +3,7 @@ package com.horizen.account.mempool
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.state.AccountStateReaderProvider
 import com.horizen.account.transaction.EthereumTransaction
 import scorex.util.{ModifierId, ScorexLogging}
 
