@@ -23,7 +23,7 @@ class AccountMemoryPoolTest
   }
 
   @Test
-  def testTake(): Unit = {
+  def testTakeExecutableTxs(): Unit = {
 
     val initialStateNonce = BigInteger.ZERO
     val stateViewMock = mock[AccountStateReader]
@@ -32,7 +32,7 @@ class AccountMemoryPoolTest
 
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => stateViewMock)
 
-    assertEquals("Wrong tx list size ", 0, accountMemoryPool.take(10).size)
+    assertTrue("Wrong tx list size ", accountMemoryPool.takeExecutableTxs.isEmpty)
 
     //Adding some txs in the mempool
 
@@ -43,15 +43,15 @@ class AccountMemoryPoolTest
     val account1ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account1KeyPair), gasFee = BigInteger.valueOf(3), priorityGasFee = BigInteger.valueOf(3))
     assertTrue(accountMemoryPool.put(account1ExecTransaction0).isSuccess)
 
-    var listOfExecTxs = accountMemoryPool.take(10).toList
+    var listOfExecTxs = accountMemoryPool.takeExecutableTxs
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
-    assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs(0).id)
+    assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs.head.id)
 
     val account1NonExecTransaction0 = createEIP1559Transaction(value, BigInteger.valueOf(1000), Option(account1KeyPair))
     assertTrue(accountMemoryPool.put(account1NonExecTransaction0).isSuccess)
-    listOfExecTxs = accountMemoryPool.take(10).toList
+    listOfExecTxs = accountMemoryPool.takeExecutableTxs
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
-    assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs(0).id)
+    assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs.head.id)
 
     //Adding other Txs to the same account and verify they are returned ordered by nonce and not by gas price
 
@@ -60,16 +60,17 @@ class AccountMemoryPoolTest
     val account1ExecTransaction2 = createEIP1559Transaction(value, account1ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account1KeyPair), gasFee = BigInteger.valueOf(1000), priorityGasFee = BigInteger.valueOf(110))
     assertTrue(accountMemoryPool.put(account1ExecTransaction2).isSuccess)
 
-    listOfExecTxs = accountMemoryPool.take(10).toList
+    listOfExecTxs = accountMemoryPool.takeExecutableTxs
     assertEquals("Wrong tx list size ", 3, listOfExecTxs.size)
-    assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs(0).id)
-    assertEquals("Wrong tx ", account1ExecTransaction1.id(), listOfExecTxs(1).id)
-    assertEquals("Wrong tx ", account1ExecTransaction2.id(), listOfExecTxs(2).id)
+    var iter = listOfExecTxs.iterator
+    assertEquals("Wrong tx ", account1ExecTransaction0.id(), iter.next().id)
+    assertEquals("Wrong tx ", account1ExecTransaction1.id(), iter.next().id)
+    assertEquals("Wrong tx ", account1ExecTransaction2.id(), iter.next().id)
 
-    listOfExecTxs = accountMemoryPool.take(2).toList
-    assertEquals("Wrong tx list size ", 2, listOfExecTxs.size)
-    assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs(0).id)
-    assertEquals("Wrong tx ", account1ExecTransaction1.id(), listOfExecTxs(1).id)
+    var subListOfExecTxs = accountMemoryPool.take(2).toList
+    assertEquals("Wrong tx list size ", 2, subListOfExecTxs.size)
+    assertEquals("Wrong tx ", account1ExecTransaction0.id(), subListOfExecTxs(0).id)
+    assertEquals("Wrong tx ", account1ExecTransaction1.id(), subListOfExecTxs(1).id)
 
 
     //Create txs for other accounts and verify that the list is ordered by nonce and gas price
@@ -90,24 +91,25 @@ class AccountMemoryPoolTest
     assertTrue(accountMemoryPool.put(account3ExecTransaction2).isSuccess)
     assertTrue(accountMemoryPool.put(account3ExecTransaction1).isSuccess)
 
-    listOfExecTxs = accountMemoryPool.take(10).toList
+    listOfExecTxs = accountMemoryPool.takeExecutableTxs
     assertEquals("Wrong tx list size ", 9, listOfExecTxs.size)
-    assertEquals("Wrong tx ", account3ExecTransaction0.id(), listOfExecTxs(0).id)
-    assertEquals("Wrong tx ", account3ExecTransaction1.id(), listOfExecTxs(1).id)
-    assertEquals("Wrong tx ", account3ExecTransaction2.id(), listOfExecTxs(2).id)
-    assertEquals("Wrong tx ", account2ExecTransaction0.id(), listOfExecTxs(3).id)
-    assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs(4).id)
-    assertEquals("Wrong tx ", account2ExecTransaction1.id(), listOfExecTxs(5).id)
-    assertEquals("Wrong tx ", account2ExecTransaction2.id(), listOfExecTxs(6).id)
-    assertEquals("Wrong tx ", account1ExecTransaction1.id(), listOfExecTxs(7).id)
-    assertEquals("Wrong tx ", account1ExecTransaction2.id(), listOfExecTxs(8).id)
+    iter = listOfExecTxs.iterator
+    assertEquals("Wrong tx ", account3ExecTransaction0.id(), iter.next().id)
+    assertEquals("Wrong tx ", account3ExecTransaction1.id(), iter.next().id)
+    assertEquals("Wrong tx ", account3ExecTransaction2.id(), iter.next().id)
+    assertEquals("Wrong tx ", account2ExecTransaction0.id(), iter.next().id)
+    assertEquals("Wrong tx ", account1ExecTransaction0.id(), iter.next().id)
+    assertEquals("Wrong tx ", account2ExecTransaction1.id(), iter.next().id)
+    assertEquals("Wrong tx ", account2ExecTransaction2.id(), iter.next().id)
+    assertEquals("Wrong tx ", account1ExecTransaction1.id(), iter.next().id)
+    assertEquals("Wrong tx ", account1ExecTransaction2.id(), iter.next().id)
 
-    listOfExecTxs = accountMemoryPool.take(4).toList
-    assertEquals("Wrong tx list size ", 4, listOfExecTxs.size)
-    assertEquals("Wrong tx ", account3ExecTransaction0.id(), listOfExecTxs(0).id)
-    assertEquals("Wrong tx ", account3ExecTransaction1.id(), listOfExecTxs(1).id)
-    assertEquals("Wrong tx ", account3ExecTransaction2.id(), listOfExecTxs(2).id)
-    assertEquals("Wrong tx ", account2ExecTransaction0.id(), listOfExecTxs(3).id)
+    subListOfExecTxs = accountMemoryPool.take(4).toList
+    assertEquals("Wrong tx list size ", 4, subListOfExecTxs.size)
+    assertEquals("Wrong tx ", account3ExecTransaction0.id(), subListOfExecTxs(0).id)
+    assertEquals("Wrong tx ", account3ExecTransaction1.id(), subListOfExecTxs(1).id)
+    assertEquals("Wrong tx ", account3ExecTransaction2.id(), subListOfExecTxs(2).id)
+    assertEquals("Wrong tx ", account2ExecTransaction0.id(), subListOfExecTxs(3).id)
 
   }
 

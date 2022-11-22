@@ -23,7 +23,6 @@ import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
-import org.web3j.crypto.{ECKeyPair, Keys}
 import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
 
@@ -369,8 +368,8 @@ class AccountSidechainNodeViewHolderPerfTest
       }
 
       // Update the nonces
-      listOfExecTransactionsToApply.asInstanceOf[Seq[EthereumTransaction]].foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+      listOfExecTransactionsToApply.foreach(tx =>
+        mockStateDbNonces.put(new ByteArrayWrapper(tx.asInstanceOf[EthereumTransaction].getFrom.address()), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -394,6 +393,7 @@ class AccountSidechainNodeViewHolderPerfTest
       val listOfBlocks2 = new scala.collection.mutable.ListBuffer[AccountBlock]
 
       val numOfReappliedTxs = numOfTxsInBlock - 400 //TODO make it configurable
+      val listOfUsedTxs = rollBackBlocks.foldLeft(Seq.empty[SidechainTypes#SCAT])(_ ++ _.transactions)
       val numOfNewTxs = numOfTxsInBlock - numOfReappliedTxs
       (0 to numOfBlocks - 1).foreach { idx =>
         val appliedBlock: AccountBlock = mock[AccountBlock]
@@ -416,8 +416,63 @@ class AccountSidechainNodeViewHolderPerfTest
       val updateTime2 = System.currentTimeMillis() - startTime2
       assertEquals(numOfTxs, newMemPool2.size)
       println(s"total time $updateTime2 ms")
-      out.write(s"\n********************* Testing $numOfBlocks rejected blocks and $numOfBlocks blocks to apply results *********************\n")
+      out.write(s"\n********************* Testing $numOfBlocks rejected blocks and $numOfBlocks blocks results *********************\n")
       out.write(s"Duration of the test:                      $updateTime2 ms\n")
+
+    } finally {
+      out.close()
+    }
+  }
+
+
+  @Test
+  @Ignore
+  def updateMemPoolSingleAccountTest(): Unit = {
+    val out = new BufferedWriter(new FileWriter("log/updateMemPoolSingleAccountTest.txt", true))
+
+    val cal = Calendar.getInstance()
+    try {
+      out.write("\n\n")
+      out.write("*********************************************************************\n\n")
+      out.write("*       Updating Memory Pool with Single Account performance test   *\n\n")
+      out.write("*********************************************************************\n\n")
+
+      out.write(s"Date and time of the test: ${cal.getTime}\n\n")
+
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
+
+      val numOfTxs = 12000
+      val numOfNormalAccount = 1
+      val numOfTxsInBlock = 1400
+
+      out.write(s"Total number of transactions:                    $numOfTxs\n")
+      out.write(s"Number of normal accounts:                       $numOfNormalAccount\n")
+      out.write(s"Number of transactions for each block:           $numOfTxsInBlock\n")
+
+      println("************** Testing with one block to apply **************")
+
+      val listOfTxs = createTransactions(numOfNormalAccount, numOfTxs)
+
+      listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
+      assertEquals(numOfTxs, mempool.size)
+
+      val appliedBlock: AccountBlock = mock[AccountBlock]
+      val listOfTxsInBlock = listOfTxs.take(numOfTxsInBlock)
+
+      Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
+      // Update the nonces
+      listOfTxsInBlock.foreach(tx =>
+        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+      )
+
+      println("Starting test")
+      val startTime = System.currentTimeMillis()
+      val newMemPool = nodeViewHolder.updateMemPool(Seq(), Seq(appliedBlock), mempool, state)
+      val updateTime = System.currentTimeMillis() - startTime
+      assertEquals(numOfTxs - numOfTxsInBlock, newMemPool.size)
+      println(s"total time $updateTime ms")
+      out.write(s"\n********************* Testing with one block to apply results *********************\n")
+      out.write(s"Duration of the test:                      $updateTime ms\n")
 
     } finally {
       out.close()
@@ -472,79 +527,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
   }
 
-  /*
-  This method creates a list of txs for different accounts. In case orphanIdx is set, 1 account out of 10 will have a gap
-  in the nonce at index orphanIdx, in order to create orphan txs.
-  Every tx will have the same maxGasFee but different priorityGasFee
-   */
-  def createTransactions(
-      numOfAccount: Int,
-      numOfTxsPerAccount: Int,
-      orphanIdx: Int = -1
-  ): scala.collection.mutable.ListBuffer[EthereumTransaction] = {
-    val toAddr = "0x00112233445566778899AABBCCDDEEFF01020304"
-    val value = BigInteger.valueOf(12)
-
-    val baseGas = 10000
-    val maxGasFee = BigInteger.valueOf(baseGas + numOfAccount * numOfTxsPerAccount)
-    val listOfAccounts: scala.collection.mutable.ListBuffer[Option[ECKeyPair]] =
-      new scala.collection.mutable.ListBuffer[Option[ECKeyPair]]
-    val listOfTxs = new scala.collection.mutable.ListBuffer[EthereumTransaction]
-
-    // CircularPriorityGasBuilder is used to guarantee the txs with the highest fees
-    // don't come all from the same accounts
-    val gasBuilder = new CircularPriorityGasBuilder(baseGas, 17)
-
-    (1 to numOfAccount).foreach(_ => {
-      listOfAccounts += Some(Keys.createEcKeyPair())
-    })
-
-    (0 until numOfTxsPerAccount).foreach(nonceTx => {
-      val currentNonce = BigInteger.valueOf(nonceTx)
-
-      listOfAccounts.zipWithIndex.foreach {
-        case (pair, idx) => {
-          if (idx % 10 == 0 && orphanIdx >= 0 && nonceTx >= orphanIdx) { // Create orphans
-            listOfTxs += createEIP1559Transaction(
-              value,
-              nonce = BigInteger.valueOf(nonceTx + 1),
-              pairOpt = pair,
-              gasFee = maxGasFee,
-              priorityGasFee = gasBuilder.nextPriorityGas(),
-              to = toAddr
-            )
-          } else
-            listOfTxs += createEIP1559Transaction(
-              value,
-              nonce = currentNonce,
-              pairOpt = pair,
-              gasFee = maxGasFee,
-              priorityGasFee = gasBuilder.nextPriorityGas(),
-              to = toAddr
-            )
-        }
-      }
-    })
-    listOfTxs
-  }
-
-  /*
-  This class returns an increasing priority gas every time nextPriorityGas is called.
-  When the number of times nextPriorityGas is called is equal to period, the priority gas value returns to its original value.
-
-   */
-  class CircularPriorityGasBuilder(baseGas: Int, period: Int) {
-    var counter: Int = 0
-
-    def nextPriorityGas(): BigInteger = {
-      if (counter == period) {
-        counter = 0
-      }
-      val gas = baseGas + counter
-      counter = counter + 1
-      BigInteger.valueOf(gas)
-    }
-  }
 
   class MockedAccountSidechainNodeViewHolder(
       sidechainSettings: SidechainSettings,

@@ -10,7 +10,6 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends ScorexLogging {
@@ -139,40 +138,16 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
   def values: Iterable[SidechainTypes#SCAT] = all.values
 
   /**
-   * Take n executable transactions sorted by gas tip (descending)
+   * Returns executable transactions sorted by gas tip (descending) and nonce. The ordering is performed in a semi-lazy
+   * way.
    */
-  def takeExecutableTxs(limit: Int): Iterable[SidechainTypes#SCAT] = {
+  def takeExecutableTxs(): TransactionsByPriceAndNonce = {
 
     val baseFee = stateReaderProvider.getAccountStateReader().nextBaseFee
 
-    def txOrder(tx: SidechainTypes#SCAT) = {
-      tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
-    }
-
-    val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
-    executableTxs.foreach { case (_, listOfTxsPerAccount) =>
-      val tx = all(listOfTxsPerAccount.values.head)
-      orderedQueue.enqueue(tx)
-    }
-    val txs = new ListBuffer[SidechainTypes#SCAT]()
-
-    var i = 1
-    while (i <= limit && orderedQueue.nonEmpty) {
-      val bestTx = orderedQueue.dequeue()
-      txs.append(bestTx)
-      val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
-      if (nextTxIdOpt.isDefined) {
-        val tx = all(nextTxIdOpt.get)
-        orderedQueue.enqueue(tx)
-      }
-      i += 1
-    }
-    txs
+    new TransactionsByPriceAndNonce(baseFee)
   }
 
-  //This method needs to check both maxFeePerGas and PriorityFeePerGas because
-  //the effective tip depends of baseFee (tip = min(mxFee-baseFee, priority-baseFee))
-  //and when a tx is added to the mempool, the baseFee that will be used is still unknown.
   def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
     (newTx.getMaxFeePerGas.compareTo(oldTx.getMaxFeePerGas) > 0) &&
     (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
@@ -282,19 +257,16 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
       nonExecutableTxs.put(account, newNonExecTxs)
     }
 
-
   }
 
-  def existRejectedTxsWithValidNonce(rejectedTxs: Seq[SidechainTypes#SCAT],
-                                     expectedNonce: BigInteger): Boolean = {
+  def existRejectedTxsWithValidNonce(rejectedTxs: Seq[SidechainTypes#SCAT], expectedNonce: BigInteger): Boolean = {
     rejectedTxs.nonEmpty && rejectedTxs.last.getNonce.compareTo(expectedNonce) >= 0
   }
 
-
   def updateAccount(
-                     account: SidechainTypes#SCP,
-                     nonceOfTheLatestAppliedTx: BigInteger,
-                     txsFromRejectedBlocks: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
+      account: SidechainTypes#SCP,
+      nonceOfTheLatestAppliedTx: BigInteger,
+      txsFromRejectedBlocks: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
   ): Unit = {
     var newExpectedNonce = nonceOfTheLatestAppliedTx.add(BigInteger.ONE)
     val fromAddress = account.asInstanceOf[AddressProposition].address()
@@ -312,8 +284,8 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
 
-    if (existRejectedTxsWithValidNonce(txsFromRejectedBlocks,newExpectedNonce)) {
-      txsFromRejectedBlocks.dropWhile(tx => tx.getNonce.compareTo(newExpectedNonce) < 0).foreach { tx =>
+    if (existRejectedTxsWithValidNonce(txsFromRejectedBlocks, newExpectedNonce)) {
+      txsFromRejectedBlocks.withFilter(tx => tx.getNonce.compareTo(newExpectedNonce) >= 0).foreach { tx =>
         if (balance.compareTo(tx.maxCost) >= 0) {
           all.put(tx.id, tx)
           destMap.put(tx.getNonce, tx.id)
@@ -333,26 +305,27 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
     // and they will be added to the nonExec map.
     val execTxsOpt = executableTxs.remove(account)
-    if (execTxsOpt.nonEmpty){
-      execTxsOpt.get.dropWhile {
-        case (nonce, id) => {
-          if (nonce.compareTo(newExpectedNonce) < 0) {
+    if (execTxsOpt.nonEmpty) {
+      execTxsOpt.get
+        .withFilter {
+          case (nonce, id) => {
+            if (nonce.compareTo(newExpectedNonce) < 0) {
+              all.remove(id)
+              false
+            } else
+              true
+          }
+        }.foreach { case (nonce, id) =>
+          if (balance.compareTo(all(id).maxCost) >= 0) {
+            destMap.put(nonce, id)
+          } else {
             all.remove(id)
-            true
-          } else
-            false
-        }
-      }.foreach { case (nonce, id) =>
-        if (balance.compareTo(all(id).maxCost) >= 0) {
-          destMap.put(nonce, id)
-        } else {
-          all.remove(id)
-          if (!haveBecomeNonExecutable) {
-            destMap = newNonExecTxs
-            haveBecomeNonExecutable = true
+            if (!haveBecomeNonExecutable) {
+              destMap = newNonExecTxs
+              haveBecomeNonExecutable = true
+            }
           }
         }
-      }
     }
 
     if (newExecTxs.nonEmpty)
@@ -361,27 +334,29 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     // Last we need to check txs in nonExec map. The checks are the same as the other txs with the only difference that
     // some of them could have become executable, thanks to the txs in the applied block.
     val nonExecTxs = nonExecutableTxs.remove(account)
-    if (nonExecTxs.nonEmpty){
-      nonExecTxs.get.dropWhile {
-        case (nonce, id) => {
-          if (nonce.compareTo(newExpectedNonce) < 0) {
-            all.remove(id)
-            true
-          } else
-            false
-        }
-      }.foreach { case (nonce, id) =>
-        if (balance.compareTo(all(id).maxCost) >= 0) {
-          if (nonce.compareTo(newExpectedNonce) == 0) {
-            newExecTxs.put(nonce, id)
-            newExpectedNonce = newExpectedNonce.add(BigInteger.ONE)
-          } else {
-            newNonExecTxs.put(nonce, id)
+    if (nonExecTxs.nonEmpty) {
+      nonExecTxs.get
+        .withFilter {
+          case (nonce, id) => {
+            if (nonce.compareTo(newExpectedNonce) < 0) {
+              all.remove(id)
+              false
+            } else
+              true
           }
-        } else {
-          all.remove(id)
         }
-      }
+        .foreach { case (nonce, id) =>
+          if (balance.compareTo(all(id).maxCost) >= 0) {
+            if (nonce.compareTo(newExpectedNonce) == 0) {
+              newExecTxs.put(nonce, id)
+              newExpectedNonce = newExpectedNonce.add(BigInteger.ONE)
+            } else {
+              newNonExecTxs.put(nonce, id)
+            }
+          } else {
+            all.remove(id)
+          }
+        }
 
     }
 
@@ -398,4 +373,49 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     }
   }
 
+  class TransactionsByPriceAndNonce(baseFee: BigInteger) extends Iterable[SidechainTypes#SCAT] {
+
+    class Iter extends TransactionsByPriceAndNonceIter {
+
+      def txOrder(tx: SidechainTypes#SCAT) = {
+        tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
+      }
+
+      val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
+      executableTxs.foreach { case (_, listOfTxsPerAccount) =>
+        val tx = getTransaction(listOfTxsPerAccount.values.head).get
+        orderedQueue.enqueue(tx)
+      }
+
+      override def hasNext: Boolean = orderedQueue.nonEmpty
+
+      override def next(): SidechainTypes#SCAT = {
+        val bestTx = orderedQueue.dequeue()
+        val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
+        if (nextTxIdOpt.nonEmpty) {
+          val tx = getTransaction(nextTxIdOpt.get).get
+          orderedQueue.enqueue(tx)
+        }
+        bestTx
+      }
+
+      def peek: SidechainTypes#SCAT = {
+        orderedQueue.head
+      }
+
+      def removeAndSkipAccount(): SidechainTypes#SCAT = {
+        orderedQueue.dequeue()
+      }
+
+    }
+
+    override def iterator: TransactionsByPriceAndNonceIter = {
+      new Iter()
+    }
+  }
+}
+
+trait TransactionsByPriceAndNonceIter extends Iterator[SidechainTypes#SCAT] {
+  def peek: SidechainTypes#SCAT
+  def removeAndSkipAccount(): SidechainTypes#SCAT
 }
