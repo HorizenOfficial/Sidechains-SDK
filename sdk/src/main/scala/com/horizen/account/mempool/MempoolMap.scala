@@ -10,7 +10,6 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends ScorexLogging {
@@ -404,7 +403,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
         orderedQueue.head
       }
 
-      def pop(): SidechainTypes#SCAT = {
+      def removeAndSkipAccount(): SidechainTypes#SCAT = {
         orderedQueue.dequeue()
       }
 
@@ -418,5 +417,5 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
 trait TransactionsByPriceAndNonceIter extends Iterator[SidechainTypes#SCAT] {
   def peek: SidechainTypes#SCAT
-  def pop(): SidechainTypes#SCAT
+  def removeAndSkipAccount(): SidechainTypes#SCAT
 }

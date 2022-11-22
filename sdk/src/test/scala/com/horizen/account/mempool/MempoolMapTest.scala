@@ -728,7 +728,7 @@ class MempoolMapTest
     var iter =  listOfExecTxs.iterator
     assertFalse(iter.hasNext)
     assertThrows[NoSuchElementException](iter.peek)
-    assertThrows[NoSuchElementException](iter.pop())
+    assertThrows[NoSuchElementException](iter.removeAndSkipAccount())
     assertThrows[NoSuchElementException](iter.next())
 
     //Adding some txs in the mempool
@@ -769,9 +769,9 @@ class MempoolMapTest
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      iter.pop().id
+      iter.removeAndSkipAccount().id
     )
-    assertThrows[NoSuchElementException]("Pop should modify the iterator", iter.pop())
+    assertThrows[NoSuchElementException]("Pop should modify the iterator", iter.removeAndSkipAccount())
 
     val account1NonExecTransaction0 = createEIP1559Transaction(
       value,
@@ -805,9 +805,9 @@ class MempoolMapTest
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      iter.pop().id
+      iter.removeAndSkipAccount().id
     )
-    assertThrows[NoSuchElementException]("Pop should modify the iterator", iter.pop())
+    assertThrows[NoSuchElementException]("Pop should modify the iterator", iter.removeAndSkipAccount())
 
     //Adding other Txs to the same account and verify they are returned ordered by nonce and not by gas price
 
@@ -871,9 +871,9 @@ class MempoolMapTest
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      iter.pop.id
+      iter.removeAndSkipAccount.id
     )
-    assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.pop())
+    assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.removeAndSkipAccount())
 
 
     //Create txs for other accounts and verify that the list is ordered by nonce and gas price
@@ -1000,7 +1000,7 @@ class MempoolMapTest
     assertEquals(
       "Wrong tx ",
       account3ExecTransaction0.id(),
-      iter.pop().id
+      iter.removeAndSkipAccount().id
     )
 
     assertEquals(
@@ -1021,15 +1021,15 @@ class MempoolMapTest
     assertEquals(
       "Wrong tx",
       account1ExecTransaction0.id(),
-      iter.pop.id
+      iter.removeAndSkipAccount.id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction1.id(),
-      iter.pop.id
+      iter.removeAndSkipAccount.id
     )
     assertFalse(iter.hasNext)
-    assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.pop())
+    assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.removeAndSkipAccount())
 
   }
 }

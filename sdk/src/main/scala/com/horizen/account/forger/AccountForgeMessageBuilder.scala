@@ -124,7 +124,7 @@ class AccountForgeMessageBuilder(
             // keep trying to fit transactions into the block: this TX did not fit, but another one might
             log.trace(s"Could not apply tx, reason: ${e.getMessage}")
             // skip all txs from the same account
-            priceAndNonceIter.pop()
+            priceAndNonceIter.removeAndSkipAccount()
           case Failure(e: FeeCapTooLowException) =>
             // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
             // if they are from other accounts, they will have a lower fee cap
@@ -137,7 +137,7 @@ class AccountForgeMessageBuilder(
           case Failure(e) =>
             // skip all txs from the same account but remove any changes caused by the rejected tx
             log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
-            priceAndNonceIter.pop()
+            priceAndNonceIter.removeAndSkipAccount()
             stateView.revertToSnapshot(revisionId)
             // Restore gas
             val usedGas = initialBlockGas.subtract(blockGasPool.getGas)

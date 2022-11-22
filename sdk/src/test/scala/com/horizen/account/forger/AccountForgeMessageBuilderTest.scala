@@ -199,7 +199,7 @@ class AccountForgeMessageBuilderTest
       var idx = 0
       override def peek(): SidechainTypes#SCAT = listOfTxs(idx)
 
-      override def pop(): SidechainTypes#SCAT = {
+      override def removeAndSkipAccount(): SidechainTypes#SCAT = {
         next()
       }
 
