@@ -45,13 +45,21 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     private final EthereumTransactionType type;
-    private final Optional<AddressProposition> to;
     private final BigInteger nonce;
+
+    @JsonProperty("to")
+    private final AddressProposition to;
+
+    @JsonProperty("gasPrice")
     private final BigInteger gasPrice;
+
     private final BigInteger gasLimit;
     private final BigInteger value;
     private final Long chainId;
+
+    @JsonProperty("maxPriorityFeePerGas")
     private final BigInteger maxPriorityFeePerGas;
+    @JsonProperty("maxFeePerGas")
     private final BigInteger maxFeePerGas;
 
     private SignatureData signatureData;
@@ -125,7 +133,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
     }
 
-
     private synchronized String getTxHash() {
         if (this.hashString == null) {
             byte[] encodedMessage = encode(getSignatureData());
@@ -133,7 +140,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
         return this.hashString;
     }
-
 
     // creates a legacy transaction
     public EthereumTransaction(
@@ -155,7 +161,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxPriorityFeePerGas = null;
         this.maxFeePerGas = null;
 
-        this.to = to;
+        this.to = to.orElse(null);
         this.data = data;
         initSignatureData(inSignatureData);
     }
@@ -182,7 +188,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxPriorityFeePerGas = null;
         this.maxFeePerGas = null;
 
-        this.to = to;
+        this.to = to.orElse(null);
         this.data = data;
         initSignatureData(inSignatureData);
     }
@@ -209,7 +215,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxPriorityFeePerGas = maxPriorityFeePerGas;
         this.maxFeePerGas = maxFeePerGas;
 
-        this.to = to;
+        this.to = to.orElse(null);
         this.data = data;
         initSignatureData(inSignatureData);
     }
@@ -375,34 +381,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return this.gasPrice;
     }
 
-    // These 3 methods are never explicitly called and are useful for the JSON representation with conditional behaviour
-    // given by the fact that a legacy TX does not have maxFeePerGas/maxPriorityFeePerGas and Eip1559 TX does not have
-    // gasPrice as an obj attribute
-    @JsonProperty("gasPrice")
-    private BigInteger getJsonGasPrice() {
-        if (isLegacy())
-            return this.gasPrice;
-        // for eip1559 tx this not an attribute of the object, it is computed using baseFee which depends on block height
-        return null;
-    }
-    @JsonProperty("maxFeePerGas")
-    private BigInteger getJsonMaxFeePerGas() {
-        if (isEIP1559())
-            return this.maxFeePerGas;
-        return null;
-    }
-    @JsonProperty("maxPriorityFeePerGas")
-    private BigInteger getJsonMaxPriorityFeePerGas() {
-        if (isEIP1559())
-            return this.maxPriorityFeePerGas;
-        return null;
-    }
-    // TODO find a proper way to avoid this if any
-    @JsonProperty("to")
-    private AddressProposition getJsonTo() {
-        return this.to.orElse(null);
-    }
-
     @Override
     @JsonIgnore
     public BigInteger getMaxCost() {
@@ -460,13 +438,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonIgnore
     public Optional<AddressProposition> getTo() {
-        return this.to;
+        return Optional.ofNullable(this.to);
     }
 
     @JsonIgnore
     public String getToAddressString() {
-        if (this.to.isPresent())
-            return BytesUtils.toHexString(this.to.get().address());
+        if (this.to != null)
+            return BytesUtils.toHexString(this.to.address());
         return "";
     }
 
