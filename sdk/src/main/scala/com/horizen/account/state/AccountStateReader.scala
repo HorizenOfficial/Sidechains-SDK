@@ -1,7 +1,6 @@
 package com.horizen.account.state
 
 import com.horizen.evm.interop.EvmLog
-
 import java.math.BigInteger
 
 trait AccountStateReader {

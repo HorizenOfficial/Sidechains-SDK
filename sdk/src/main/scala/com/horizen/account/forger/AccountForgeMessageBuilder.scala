@@ -380,11 +380,13 @@ class AccountForgeMessageBuilder(
     val forgingStakeInfoTree = MerkleTree.createMerkleTree(forgingStakeInfoSeq.map(info => info.hash).asJava)
     val merkleTreeLeaves = forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
-    // Calculate merkle path for all delegated forgerBoxes
+    // Calculate merkle path for all delegated forger stakes
     val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
       filteredForgingStakeInfoSeq.flatMap(forgingStakeInfo => {
         merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgingStakeInfo.hash)) match {
-          case -1 => None // May occur in case Wallet doesn't contain information about blockSignKey and vrfKey
+          case -1 =>
+            log.warn(s"ForgingStakeInfo not a leaf in merkle tree: should never happen: $forgingStakeInfo ")
+            None
           case index =>
             Some(ForgingStakeMerklePathInfo(forgingStakeInfo, forgingStakeInfoTree.getMerklePathForLeaf(index)))
         }

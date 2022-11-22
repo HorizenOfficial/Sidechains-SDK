@@ -14,7 +14,9 @@ from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, ForgerStakeSmartContractAddress,
     WithdrawalReqSmartContractAddress, bootstrap_sidechain_nodes, connect_sc_nodes, convertWeiToZen, convertZenToWei,
     convertZenToZennies, generate_next_block, get_account_balance, start_sc_nodes,
+    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,
@@ -64,7 +66,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration, sc_node_2_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind=720*120*5, blockversion=AccountModelBlockVersion)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, blockversion=AccountModelBlockVersion)
 
 
     def sc_setup_nodes(self):
@@ -99,11 +101,11 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = from_sc_node.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(tx_hash in response['result']['transactionIds'])
+        response = allTransactions(from_sc_node, False)
+        assert_true(tx_hash in response["transactionIds"])
 
         if print_json_results:
-            logging.info(from_sc_node.transaction_allTransactions(json.dumps({"format": True})))
+            logging.info(allTransactions(from_sc_node))
 
         generate_next_block(from_sc_node, "first node")
         self.sc_sync_all()

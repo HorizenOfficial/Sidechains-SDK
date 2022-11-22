@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -13,6 +14,7 @@ import (
 )
 
 var chunkKeySalt = common.HexToHash("fa09428dd8121ea57327c9f21af74ffad8bfd5e6e39dc3dc6c53241a85ec5b0d").Bytes()
+var ErrEmptyAccount = errors.New("account is empty, cannot modify storage trie")
 
 type StateParams struct {
 	DatabaseParams
@@ -335,7 +337,7 @@ func (s *Service) StateSetStorageBytes(params SetStorageBytesParams) error {
 	}
 	if statedb.Empty(params.Address) {
 		// if the account is empty any changes would be dropped during the commit phase
-		return fmt.Errorf("account is empty, cannot modify storage trie: %v", params.Address)
+		return fmt.Errorf("%w: %v", ErrEmptyAccount, params.Address)
 	}
 	// get previous length of value stored, if any
 	oldLength := hashToInt(statedb.GetState(params.Address, params.Key))

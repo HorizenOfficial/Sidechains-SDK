@@ -5,7 +5,7 @@ import math
 
 from eth_utils import add_0x_prefix
 
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import (
     MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
     SCNodeConfiguration,
@@ -16,6 +16,7 @@ from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
     computeForgedTxFee, connect_sc_nodes, convertZenToWei, convertZenToZennies, convertZenniesToWei,
     generate_account_proposition, generate_next_block, get_account_balance, start_sc_nodes,
+    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
 from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import (
@@ -88,7 +89,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
 
       # rewind sc genesis block timestamp for 5 consensus epochs
       self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                               block_timestamp_rewind=720 * 120 * 5,
+                                                               block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
                                                                blockversion=AccountModelBlockVersion)
   def sc_setup_nodes(self):
       # Start 2 SC nodes

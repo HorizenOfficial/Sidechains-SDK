@@ -10,13 +10,15 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from httpCalls.wallet.createPrivateKeySecp256k1 import http_wallet_createPrivateKeySec256k1
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, \
     check_mainchain_block_reference_info, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, computeForgedTxFee
+    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, computeForgedTxFee, \
+    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 
 """
@@ -60,7 +62,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration, sc_node_2_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind=720*120*5, blockversion=AccountModelBlockVersion)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, blockversion=AccountModelBlockVersion)
 
 
     def sc_setup_nodes(self):
@@ -191,14 +193,14 @@ class SCEvmBootstrap(SidechainTestFramework):
         self.sc_sync_all()
 
         # get mempool contents
-        response_1 = sc_node_1.transaction_allTransactions()
-        response_2 = sc_node_2.transaction_allTransactions()
+        response_1 = allTransactions(sc_node_1)
+        response_2 = allTransactions(sc_node_2)
         logging.info("mempool contents:")
         logging.info(response_1)
         assert_equal(response_1, response_2)
 
         # tx json repr has amount in wei
-        tx_amount_in_wei = response_2["result"]["transactions"][0]["value"]
+        tx_amount_in_wei = response_2["transactions"][0]["value"]
         assert_equal(str(tx_amount_in_wei), str(transferred_amount_in_wei))
 
         # send more zen with another from address to have more than one transaction in block

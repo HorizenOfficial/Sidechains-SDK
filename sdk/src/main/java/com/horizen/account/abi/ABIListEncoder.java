@@ -17,7 +17,7 @@ public interface ABIListEncoder<M extends ABIEncodable<T>, T extends Type> {
         DefaultFunctionEncoder encoder = new DefaultFunctionEncoder();
         List<T> listOfABIObj = listOfObj.stream().map(wr -> wr.asABIType()).collect(Collectors.toList());
 
-        return Numeric.hexStringToByteArray(encoder.encodeParameters(Arrays.asList(new DynamicArray<T>(getAbiClass(), listOfABIObj))));
+        return Numeric.hexStringToByteArray(encoder.encodeParameters(List.of(new DynamicArray<T>(getAbiClass(), listOfABIObj))));
 
     }
 }

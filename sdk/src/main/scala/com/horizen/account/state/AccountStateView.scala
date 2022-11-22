@@ -110,12 +110,27 @@ class AccountStateView(
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
 
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
-    forgerStakesProvider.getListOfForgers(this).map { item =>
-      ForgingStakeInfo(
-        item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
-        item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
-        ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
-    }.sorted(Ordering[ForgingStakeInfo].reverse)
+    // get forger stakes list view (scala lazy collection)
+    getListOfForgerStakes.view
+
+       // group delegation stakes by blockSignPublicKey/vrfPublicKey pairs
+      .groupBy(stake => (stake.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
+                         stake.forgerStakeData.forgerPublicKeys.vrfPublicKey))
+
+      // create a seq of forging stake info for every group entry summing all the delegation amounts.
+      // Note: ForgingStakeInfo amount is a long and contains a Zennies amount converted from a BigInteger wei amount
+      //       That is safe since the stakedAmount is checked in creation phase to be an exact zennies amount
+      .map { case ((blockSignKey, vrfKey), stakes) =>
+          ForgingStakeInfo(
+            blockSignKey,
+            vrfKey,
+            stakes.map(
+              stake =>
+                ZenWeiConverter.convertWeiToZennies(stake.forgerStakeData.stakedAmount)).sum) }
+      .toSeq
+
+      // sort the resulting sequence by decreasing stake amount
+      .sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
   def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = {
