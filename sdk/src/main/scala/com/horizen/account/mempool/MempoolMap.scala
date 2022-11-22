@@ -376,41 +376,39 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
   class TransactionsByPriceAndNonce(baseFee: BigInteger) extends Iterable[SidechainTypes#SCAT] {
 
-
     class Iter extends TransactionsByPriceAndNonceIter {
 
-        def txOrder(tx: SidechainTypes#SCAT) = {
-          tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
-        }
+      def txOrder(tx: SidechainTypes#SCAT) = {
+        tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
+      }
 
-        val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
-        executableTxs.foreach { case (_, listOfTxsPerAccount) =>
-          val tx = getTransaction(listOfTxsPerAccount.values.head).get
+      val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
+      executableTxs.foreach { case (_, listOfTxsPerAccount) =>
+        val tx = getTransaction(listOfTxsPerAccount.values.head).get
+        orderedQueue.enqueue(tx)
+      }
+
+      override def hasNext: Boolean = orderedQueue.nonEmpty
+
+      override def next(): SidechainTypes#SCAT = {
+        val bestTx = orderedQueue.dequeue()
+        val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
+        if (nextTxIdOpt.nonEmpty) {
+          val tx = getTransaction(nextTxIdOpt.get).get
           orderedQueue.enqueue(tx)
         }
+        bestTx
+      }
 
-        override def hasNext: Boolean = orderedQueue.nonEmpty
-
-        override def next(): SidechainTypes#SCAT = {
-          val bestTx = orderedQueue.dequeue()
-          val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
-          if (nextTxIdOpt.nonEmpty) {
-            val tx = getTransaction(nextTxIdOpt.get).get
-            orderedQueue.enqueue(tx)
-          }
-          bestTx
-        }
-
-        def peek:  SidechainTypes#SCAT = {
-          orderedQueue.head
-        }
+      def peek: SidechainTypes#SCAT = {
+        orderedQueue.head
+      }
 
       def pop(): SidechainTypes#SCAT = {
         orderedQueue.dequeue()
       }
 
     }
-
 
     override def iterator: TransactionsByPriceAndNonceIter = {
       new Iter()
