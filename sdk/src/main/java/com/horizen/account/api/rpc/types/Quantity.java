@@ -22,6 +22,11 @@ public class Quantity {
         this(BigInteger.valueOf(number));
     }
 
+    @JsonValue
+    public String getValue() {
+        return value;
+    }
+
     public BigInteger toNumber() {
         return Numeric.decodeQuantity(value);
     }

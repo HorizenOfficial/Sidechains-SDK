@@ -3,8 +3,8 @@ package com.horizen.account.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.account.api.rpc.handler.RpcHandler
-import com.horizen.account.api.rpc.request.{RpcBatchRequest, RpcRequest}
+import com.horizen.account.api.rpc.handler.{RpcException, RpcHandler}
+import com.horizen.account.api.rpc.request.{RpcBatchRequest, RpcId, RpcRequest}
 import com.horizen.account.api.rpc.response.RpcResponseError
 import com.horizen.account.api.rpc.service.EthService
 import com.horizen.account.api.rpc.utils.{RpcCode, RpcError}
@@ -18,7 +18,7 @@ import com.horizen.api.http.{SidechainApiResponse, SidechainApiRoute}
 import com.horizen.evm.LevelDBDatabase
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.SerializationUtil
+import com.horizen.serialization.{RpcIdSerializer, SerializationUtil}
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
 import scorex.util.ScorexLogging
@@ -75,13 +75,15 @@ case class AccountEthRpcRoute(
     withAuth {
       entity(as[JsonNode]) { body =>
 
-        val req =
-          if(body.isArray && body.isEmpty) {
-            new RpcResponseError(null, RpcError.fromCode(RpcCode.InvalidRequest, null))}
-          else if(body.isArray()) {
-            new RpcBatchRequest(body)}
-          else {
-            new RpcRequest(body)}
+        val req = {
+          try {
+            if(body.isArray()) {
+              new RpcBatchRequest(body)}
+            else {
+              new RpcRequest(body)}
+          } catch {
+            case _: RpcException => new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest, null))}
+        }
         log.debug(s"request >> $body")
 
         val res = {

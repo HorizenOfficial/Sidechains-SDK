@@ -7,6 +7,8 @@ public class RpcId {
     private Long longId;
     private String stringId;
 
+    public RpcId() {}
+
     public RpcId(JsonNode jsonId) {
 
         // manage numeric id input

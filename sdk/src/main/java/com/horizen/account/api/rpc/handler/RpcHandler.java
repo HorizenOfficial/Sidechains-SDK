@@ -1,6 +1,7 @@
 package com.horizen.account.api.rpc.handler;
 
 import com.horizen.account.api.rpc.request.RpcBatchRequest;
+import com.horizen.account.api.rpc.request.RpcId;
 import com.horizen.account.api.rpc.request.RpcRequest;
 import com.horizen.account.api.rpc.response.RpcResponse;
 import com.horizen.account.api.rpc.response.RpcResponseError;
@@ -54,7 +55,7 @@ public class RpcHandler {
 
         // add invalid requests to the batch response
         for(int i=0; i<request.getInvalidRequestsNumber(); i++)
-            responseList.add(new RpcResponseError(null, RpcError.fromCode(RpcCode.InvalidRequest, null)));
+            responseList.add(new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest, null)));
 
         return responseList;
     }
