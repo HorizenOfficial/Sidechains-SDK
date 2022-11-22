@@ -197,7 +197,8 @@ class AccountForgeMessageBuilder(
       TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
       WithdrawalEpochUtils
         .getWithdrawalEpochInfo(mainchainBlockReferencesData, parentInfo.withdrawalEpochInfo, params)
-        .epoch
+        .epoch,
+      params.chainId
     )
 
     // 5. create a disposable view and try to apply all transactions in the list and apply fee payments if needed, collecting all data needed for
