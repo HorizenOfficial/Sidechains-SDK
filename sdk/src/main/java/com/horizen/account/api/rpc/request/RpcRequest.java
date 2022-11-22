@@ -38,10 +38,6 @@ public class RpcRequest {
         return jsonrpc;
     }
 
-    public void setJsonrpc(String jsonrpc) {
-        this.jsonrpc = jsonrpc;
-    }
-
     @JsonGetter
     public RpcId getId() {
         return id;
@@ -65,6 +61,6 @@ public class RpcRequest {
 
     @Override
     public String toString() {
-        return String.format("RpcRequest{jsonrpc='%s', id='%s', method='%s', params=%s}", jsonrpc, id.toString(), method, params);
+        return String.format("RpcRequest={jsonrpc='%s', id='%s', method='%s', params=%s}", jsonrpc, id.toString(), method, params);
     }
 }

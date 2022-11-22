@@ -47,8 +47,6 @@ public class RpcBatchRequest {
 
     @Override
     public String toString() {
-        return "RpcBatchRequest{" +
-                "rpcRequests=" + rpcRequests +
-                '}';
+        return "RpcBatchRequest=" + rpcRequests.toString();
     }
 }

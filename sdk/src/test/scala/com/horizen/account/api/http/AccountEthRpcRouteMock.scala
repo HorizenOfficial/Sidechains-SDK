@@ -47,8 +47,6 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   val apiTokenHeader = new ApiTokenHeader("api_key", "Horizen")
   val badApiTokenHeader = new ApiTokenHeader("api_key", "Harizen")
 
-  val jsonChecker = new SidechainJSONBOChecker
-
   val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
 
   val mapper: ObjectMapper = ApplicationJsonSerializer.getInstance().getObjectMapper
