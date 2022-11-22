@@ -4,15 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.horizen.account.api.rpc.handler.RpcException;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
-import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.Message;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
-import com.horizen.account.utils.EthereumTransactionEncoder;
+import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.utils.Address;
 import com.horizen.params.NetworkParams;
-import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 
@@ -65,20 +63,26 @@ public class TransactionArgs {
             ));
         }
         var saneType = type == null ? 0 : type.intValueExact();
-        var saneTo = to == null ? null : to.toUTXOString();
+        var toAddressString = to == null ? null : to.toUTXOString();
+        var optionalToAddress = EthereumTransactionUtils.getToAddressFromString(toAddressString);
         switch (saneType) {
             case 0: // LEGACY type
                 if (chainId != null) {
                     // eip155
-                    return new EthereumTransaction(saneChainId, saneTo, nonce, gasPrice, gas, value, this.getDataString(), null);
+                    return new EthereumTransaction(
+                            saneChainId,
+                            optionalToAddress,
+                            nonce, gasPrice, gas, value, this.getDataString(), null);
 
                 } else {
-                    return new EthereumTransaction(saneTo, nonce, gasPrice, gas, value, this.getDataString(), null);
+                    return new EthereumTransaction(
+                            optionalToAddress,
+                            nonce, gasPrice, gas, value, this.getDataString(), null);
                 }
             case 2: // EIP-1559
                 return new EthereumTransaction(
                     saneChainId,
-                    saneTo,
+                    optionalToAddress,
                     nonce,
                     gas,
                     maxPriorityFeePerGas,

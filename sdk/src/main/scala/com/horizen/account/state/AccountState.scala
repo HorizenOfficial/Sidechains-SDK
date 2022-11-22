@@ -134,7 +134,7 @@ class AccountState(
             val txHash = BytesUtils.fromHexString(ethTx.id)
 
             // The contract address created, if the transaction was a contract creation
-            val contractAddress = if (ethTx.getTo == null) {
+            val contractAddress = if (ethTx.getTo.isEmpty) {
               // this w3j util method is equivalent to the createAddress() in geth triggered also by CREATE opcode.
               // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
               // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.

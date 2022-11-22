@@ -36,7 +36,7 @@ public class EthereumTransactionTest {
         // EIP-1559
         var eipSignedTx = new EthereumTransaction(
                 31337L,
-                "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+                EthereumTransactionUtils.getToAddressFromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
                 BigInteger.valueOf(0L),
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
@@ -52,7 +52,7 @@ public class EthereumTransactionTest {
 
         // Legacy
         var legacyTx = new EthereumTransaction(
-                "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+                EthereumTransactionUtils.getToAddressFromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
                 BigInteger.valueOf(0L),
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
@@ -68,7 +68,7 @@ public class EthereumTransactionTest {
         // EIP-155 tx
         var unsignedEip155Tx = new EthereumTransaction(
                 1L,
-                "0x3535353535353535353535353535353535353535",
+                EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
                 BigInteger.valueOf(9L),
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                 BigInteger.valueOf(21000),
@@ -78,7 +78,7 @@ public class EthereumTransactionTest {
         );
         var eip155Tx = new EthereumTransaction(
                 1L,
-                "0x3535353535353535353535353535353535353535",
+                EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
                 BigInteger.valueOf(9L),
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                 BigInteger.valueOf(21000),
@@ -101,7 +101,7 @@ public class EthereumTransactionTest {
             Long chainId = 1L;
             var someTx = new EthereumTransaction(
                     chainId,
-                    "0x3535353535353535353535353535353535353535",
+                    EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
                     BigInteger.valueOf(9),
                     BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                     BigInteger.valueOf(21000),
@@ -125,7 +125,9 @@ public class EthereumTransactionTest {
         EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(metamaskHexStr));
         long chainId = decodedTx.getChainId();
         byte[] fromAddress = decodedTx.getFrom().address();
-        byte[] toAddress = decodedTx.getTo().address();
+        byte[] toAddress = new byte[] {};
+        if (decodedTx.getTo().isPresent())
+            toAddress = decodedTx.getTo().get().address();
 
         assertTrue(decodedTx.getSignature().isValid(decodedTx.getFrom(), decodedTx.messageToSign()));
         assertEquals("892278d9f50a1da5b2e98e5056f165b1b2486d97", BytesUtils.toHexString(fromAddress));
@@ -162,7 +164,9 @@ public class EthereumTransactionTest {
             var nonce = BigInteger.valueOf(i);
             var value = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(18));
 //            if (i % 3 == 0) {
-            txs[i] = new EthereumTransaction(to, nonce, gasPrice, gas, value, data, null);
+            txs[i] = new EthereumTransaction(
+                    EthereumTransactionUtils.getToAddressFromString(to),
+                    nonce, gasPrice, gas, value, data, null);
 //            } else {
 //                txs[i] = RawTransaction.createTransaction(0, nonce, gas, to, value, data, gasPrice, gasPrice);
 //            }
@@ -207,7 +211,8 @@ public class EthereumTransactionTest {
         // Test 1: Decoded tx should be as expected - same tx as linked above, just without access list
         var actualTx = EthereumTransactionDecoder.decode("0x02f8c60183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701c080a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb");
         var expectedTx = new EthereumTransaction(
-                1L, "0x00000000003b3cc22aF3aE1EAc0440BcEe416B40",
+                1L,
+                EthereumTransactionUtils.getToAddressFromString("0x00000000003b3cc22aF3aE1EAc0440BcEe416B40"),
                 Numeric.toBigInt("12EC7"),
                 Numeric.toBigInt("0x03851d"),
                 Numeric.toBigInt("0x023199fa3df8"),
@@ -237,7 +242,7 @@ public class EthereumTransactionTest {
         var actualTx = EthereumTransactionDecoder.decode("0xf86b3f850f224d4a008257a09461122d8e2d464bad53e054c965110de321233bc6870110d9316ec0008026a0a4e306691e16bbaa67faafeb00d81431b13194dcb39d97cf7dde47a6874d92d8a03b3b6a4500ff90d25022616d237de8559ab79cb294905cf79cadcdf076b50a2a");
         var expectedTx = new EthereumTransaction(
                 1L,
-                "0x61122d8e2d464bad53e054c965110de321233bc6",
+                EthereumTransactionUtils.getToAddressFromString("0x61122d8e2d464bad53e054c965110de321233bc6"),
                 Numeric.toBigInt("0x3f"),
                 Numeric.toBigInt("0xf224d4a00"),
                 Numeric.toBigInt("0x57a0"),
@@ -261,7 +266,7 @@ public class EthereumTransactionTest {
         // Test 1: Decoded tx should be as expected - same tx as linked above, just without access list
         var actualTx = EthereumTransactionDecoder.decode("0xf86e82b7ea850ba43b740083015f9094f8b786fdb1193f4a4cc2a8bc24a7cf47a7ce1cc28729b1c422c243fe801ba00c46734fb4d40be33b2b9bf7c367dc87097cfd4c75189b47c2148740ef031cb0a0726dad551589d504fdf065029a17b14523fbcc526a05c0146b71afec5394563b");
         var expectedTx = new EthereumTransaction(
-                "0xf8b786fdb1193f4a4cc2a8bc24a7cf47a7ce1cc2",
+                EthereumTransactionUtils.getToAddressFromString("0xf8b786fdb1193f4a4cc2a8bc24a7cf47a7ce1cc2"),
                 Numeric.toBigInt("0xb7ea"),
                 Numeric.toBigInt("0xba43b7400"),
                 Numeric.toBigInt("0x15f90"),

@@ -20,6 +20,7 @@ import org.web3j.crypto.Sign.SignatureData;
 import org.web3j.utils.Numeric;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
+import java.util.Optional;
 
 import static com.horizen.account.utils.EthereumTransactionUtils.*;
 import static com.horizen.account.utils.Secp256k1.PUBLIC_KEY_SIZE;
@@ -44,6 +45,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     private final EthereumTransactionType type;
+    private final Optional<AddressProposition> to;
     private final BigInteger nonce;
     private final BigInteger gasPrice;
     private final BigInteger gasLimit;
@@ -54,7 +56,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     private SignatureData signatureData;
     private AddressProposition from;
-    private AddressProposition to;
     private byte[] data;
     private SignatureSecp256k1 signature;
     private String hashString;
@@ -72,7 +73,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     // this initialization relies on the condition that initialization of transaction signatureData (if any) and
     // transaction type data members have already been performed
-    private void initFrom() {
+    private void initFrom() { // just do a lazy init on read
         if (this.signatureData != null) {
             Sign.SignatureData inSignatureData = null;
 
@@ -87,11 +88,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
                 byte[] realV ;
                 if (isEIP155())
-                    realV = new byte[]{getRealV(Numeric.toBigInt(getSignatureData().getV()))};
+                    realV = new byte[]{getRealV(Numeric.toBigInt(this.signatureData.getV()))};
                 else
-                    realV = getSignatureData().getV();
-                byte[] r = getSignatureData().getR();
-                byte[] s = getSignatureData().getS();
+                    realV = this.signatureData.getV();
+                byte[] r = this.signatureData.getR();
+                byte[] s = this.signatureData.getS();
 
                 Sign.SignatureData realSignatureData = new Sign.SignatureData(realV, r, s);
                 BigInteger pubKey = Sign.signedMessageToKey(encodedTransaction, realSignatureData);
@@ -124,25 +125,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
     }
 
-    private void initTo(String toString) {
-        if (toString == null) {
-            this.to = null;
-        } else {
-            String toClean = Numeric.cleanHexPrefix(toString);
-            if (toClean.isEmpty()) {
-                this.to = null;
-            } else {
-                // sanity check of formatted string.
-                //  Numeric library does not check hex characters' validity, BytesUtils does it
-                var toBytes = BytesUtils.fromHexString(toClean);
-                if (toBytes.length == 0) {
-                    throw new IllegalArgumentException("Invalid input to string: " + toString);
-                } else {
-                    this.to = new AddressProposition(toBytes);
-                }
-            }
-        }
-    }
 
     private void initData(String dataString) {
         if (dataString == null) {
@@ -176,7 +158,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     // creates a legacy transaction
     public EthereumTransaction(
-            @NotNull String to,
+            @NotNull Optional<AddressProposition> to,
             @NotNull BigInteger nonce,
             @NotNull BigInteger gasPrice,
             @NotNull BigInteger gasLimit,
@@ -194,7 +176,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxPriorityFeePerGas = null;
         this.maxFeePerGas = null;
 
-        initTo(to);
+        this.to = to;
         initData(data);
         initSignatureData(inSignatureData);
     }
@@ -202,8 +184,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     // creates a legacy eip155 transaction
     public EthereumTransaction(
-            @NotNull java.lang.Long chainId,
-            @NotNull String to,
+            @NotNull Long chainId,
+            @NotNull Optional<AddressProposition> to,
             @NotNull BigInteger nonce,
             @NotNull BigInteger gasPrice,
             @NotNull BigInteger gasLimit,
@@ -221,15 +203,15 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxPriorityFeePerGas = null;
         this.maxFeePerGas = null;
 
-        initTo(to);
+        this.to = to;
         initData(data);
         initSignatureData(inSignatureData);
     }
 
     // creates an eip1559 transaction
     public EthereumTransaction(
-            @NotNull java.lang.Long chainId,
-            @NotNull String to,
+            @NotNull Long chainId,
+            @NotNull Optional<AddressProposition> to,
             @NotNull BigInteger nonce,
             @NotNull BigInteger gasLimit,
             @NotNull BigInteger maxPriorityFeePerGas,
@@ -248,7 +230,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxPriorityFeePerGas = maxPriorityFeePerGas;
         this.maxFeePerGas = maxFeePerGas;
 
-        initTo(to);
+        this.to = to;
         initData(data);
         initSignatureData(inSignatureData);
     }
@@ -317,7 +299,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
 
         // for 'to' address, all checks have been performed during obj initialization
-        if (this.getTo() == null) {
+        if (this.getTo().isEmpty()) {
             // contract creation
             if (this.getData().length == 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
@@ -361,10 +343,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "legacy transaction gasPrice bit length [%d] is too high", id(), getGasPrice().bitLength()));
         }
-        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo() == null)) < 0) {
+        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo().isEmpty())) < 0) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "gas limit %s is below intrinsic gas %s",
-                    id(), getGasLimit(), GasUtil.intrinsicGas(getData(), getTo() == null)));
+                    id(), getGasLimit(), GasUtil.intrinsicGas(getData(), getTo().isEmpty())));
         }
         try {
             if (!getSignature().isValid(getFrom(), messageToSign()))
@@ -431,10 +413,15 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
     @JsonProperty("maxPriorityFeePerGas")
-    public BigInteger getJsonMaxPriorityFeePerGas() {
+    private BigInteger getJsonMaxPriorityFeePerGas() {
         if (isEIP1559())
             return this.maxPriorityFeePerGas;
         return null;
+    }
+    // TODO find a proper way to avoid this if any
+    @JsonProperty("to")
+    private AddressProposition getJsonTo() {
+        return this.to.orElse(null);
     }
 
     @Override
@@ -492,14 +479,15 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    public AddressProposition getTo() {
+    @JsonIgnore
+    public Optional<AddressProposition> getTo() {
         return this.to;
     }
 
     @JsonIgnore
     public String getToAddressString() {
-        if (this.to != null)
-            return BytesUtils.toHexString(this.to.address());
+        if (this.to.isPresent())
+            return BytesUtils.toHexString(this.to.get().address());
         return "";
     }
 
@@ -614,7 +602,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
                 getFrom(),
-                getTo(),
+                getTo().orElse(null),
                 effectiveGasPrice,
                 gasFeeCap,
                 gasTipCap,

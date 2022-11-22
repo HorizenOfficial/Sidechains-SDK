@@ -1,10 +1,13 @@
 package com.horizen.account.utils;
 
+import com.horizen.account.proposition.AddressProposition;
+import com.horizen.utils.BytesUtils;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 import static org.web3j.crypto.Sign.LOWER_REAL_V;
 
@@ -42,5 +45,25 @@ public final class EthereumTransactionUtils {
 
     public static Sign.SignatureData createEip155PartialSignatureData(Long chainId) {
         return new Sign.SignatureData(convertToBytes(chainId), new byte[] {}, new byte[] {});
+    }
+
+    public static Optional<AddressProposition> getToAddressFromString(String toString) {
+        if (toString == null) {
+            return Optional.empty();
+        } else {
+            String toClean = Numeric.cleanHexPrefix(toString);
+            if (toClean.isEmpty()) {
+                return Optional.empty();
+            } else {
+                // sanity check of formatted string.
+                //  Numeric library does not check hex characters' validity, BytesUtils does it
+                var toBytes = BytesUtils.fromHexString(toClean);
+                if (toBytes.length == 0) {
+                    throw new IllegalArgumentException("Invalid input to string: " + toString);
+                } else {
+                    return Optional.of(new AddressProposition(toBytes));
+                }
+            }
+        }
     }
 }

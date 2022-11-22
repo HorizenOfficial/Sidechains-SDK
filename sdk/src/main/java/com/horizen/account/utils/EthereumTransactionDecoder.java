@@ -1,5 +1,6 @@
 package com.horizen.account.utils;
 
+import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.transaction.EthereumTransaction;
 import org.web3j.crypto.Sign;
 import org.web3j.crypto.transaction.type.TransactionType;
@@ -46,13 +47,19 @@ public class EthereumTransactionDecoder {
         String data = ((RlpString)values.getValues().get(7)).asString();
         if (((RlpList)values.getValues().get(8)).getValues().size() > 0) throw new IllegalArgumentException("Access list is not supported");
         if (values.getValues().size() == 9) {
-            return new EthereumTransaction(chainId, to, nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, null);
+            return new EthereumTransaction(
+                    chainId,
+                    EthereumTransactionUtils.getToAddressFromString(to),
+                    nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, null);
         } else {
             byte[] v = Sign.getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(10)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(11)).getBytes()), 32);
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
-            return new EthereumTransaction(chainId, to, nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, signatureData);
+            return new EthereumTransaction(
+                    chainId,
+                    EthereumTransactionUtils.getToAddressFromString(to),
+                    nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, signatureData);
         }
     }
 
@@ -73,12 +80,19 @@ public class EthereumTransactionDecoder {
             Long chainId = decodeEip155ChainId(Numeric.toBigInt(v));
             if (chainId != null) {
                 // chainid is encoded into V part, this is an EIP 155
-                return new EthereumTransaction(chainId, to, nonce, gasPrice, gasLimit, value, data, signatureData);
+                return new EthereumTransaction(
+                        chainId,
+                        EthereumTransactionUtils.getToAddressFromString(to),
+                        nonce, gasPrice, gasLimit, value, data, signatureData); //new SignatureSecp256k1(realv, r, s));
             } else {
-                return new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, signatureData);
+                return new EthereumTransaction(
+                        EthereumTransactionUtils.getToAddressFromString(to),
+                        nonce, gasPrice, gasLimit, value, data, signatureData);
             }
         } else {
-            return new EthereumTransaction(to, nonce, gasPrice, gasLimit, value, data, null);
+            return new EthereumTransaction(
+                    EthereumTransactionUtils.getToAddressFromString(to),
+                    nonce, gasPrice, gasLimit, value, data, null);
         }
     }
 

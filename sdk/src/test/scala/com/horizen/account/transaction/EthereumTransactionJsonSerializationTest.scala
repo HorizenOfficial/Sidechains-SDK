@@ -2,6 +2,7 @@ package com.horizen.account.transaction
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.utils.EthereumTransactionUtils
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -67,7 +68,7 @@ class EthereumTransactionJsonSerializationTest
   def testPartiallySignedEip155TxToJson(): Unit = {
     try {
       val transaction = new EthereumTransaction(
-        "0x3535353535353535353535353535353535353535",
+        EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
         BigInteger.valueOf(9L),
         BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
         BigInteger.valueOf(21000),
@@ -121,7 +122,7 @@ class EthereumTransactionJsonSerializationTest
       try {
         val toAddress = node.path("to").path("address").asText()
         assertEquals("Transaction to address json value must be the same.",
-          SparkzEncoder.default.encode(transaction.getTo.address()), toAddress)
+          SparkzEncoder.default.encode(transaction.getTo.get().address()), toAddress)
       } catch {
         case _: Throwable => fail("Transaction to address not found in json.")
       }

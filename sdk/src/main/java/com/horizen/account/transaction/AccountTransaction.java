@@ -5,6 +5,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.transaction.Transaction;
 
 import java.math.BigInteger;
+import java.util.Optional;
 
 public abstract class AccountTransaction<P extends Proposition, PR extends Proof<P>> extends Transaction {
 
@@ -17,7 +18,7 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
 
     public abstract P getFrom();
 
-    public abstract P getTo();
+    public abstract Optional<P> getTo();
 
     public abstract BigInteger getValue();
 

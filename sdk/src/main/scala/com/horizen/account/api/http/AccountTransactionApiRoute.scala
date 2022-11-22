@@ -17,7 +17,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionEncoder, ZenWeiConverter}
+import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
 import com.horizen.node.NodeWalletBase
@@ -127,7 +127,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val response = if (isEIP155) {
                 val tmpTx = new EthereumTransaction(
                   params.chainId,
-                  destAddress,
+                  EthereumTransactionUtils.getToAddressFromString(destAddress),
                   nonce,
                   gasPrice,
                   gasLimit,
@@ -138,7 +138,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 validateAndSendTransaction(signTransactionEIP155WithSecret(secret, tmpTx))
               } else {
                 val tmpTx = new EthereumTransaction(
-                  destAddress,
+                  EthereumTransactionUtils.getToAddressFromString(destAddress),
                   nonce,
                   gasPrice,
                   gasLimit,
@@ -171,7 +171,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
           var signedTx: EthereumTransaction = new EthereumTransaction(
             params.chainId,
-            body.to.orNull,
+            EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
             nonce,
             body.gasLimit,
             body.maxPriorityFeePerGas,
@@ -215,7 +215,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         // lock the view and try to send the tx
         applyOnNodeView { sidechainNodeView =>
           var signedTx = new EthereumTransaction(
-            body.to.orNull,
+            EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
             body.nonce,
             body.gasPrice,
             body.gasLimit,
@@ -333,7 +333,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val data = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                to,
+                EthereumTransactionUtils.getToAddressFromString(to),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
@@ -391,7 +391,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     val data = encodeSpendStakeCmdRequest(signature, body.stakeId)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
                       params.chainId,
-                      to,
+                      EthereumTransactionUtils.getToAddressFromString(to),
                       nonce,
                       gasLimit,
                       maxPriorityFeePerGas,
@@ -473,7 +473,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                to,
+                EthereumTransactionUtils.getToAddressFromString(to),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
@@ -527,7 +527,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val data = body.contractCode
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                to,
+                EthereumTransactionUtils.getToAddressFromString(to),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
