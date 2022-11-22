@@ -8,7 +8,3 @@ typechain
 cache
 artifacts
 
-/evm/contracts/compiled/Storage.bin
-/evm/contracts/compiled/Storage.opcode
-/evm/contracts/compiled/Storage.signatures
-/evm/contracts/compiled/Storage_storage.json
