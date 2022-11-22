@@ -15,13 +15,7 @@ func TestEvmTrace(t *testing.T) {
 		initialValue = common.Big0
 		sender       = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
 	)
-	err, dbHandle := instance.OpenMemoryDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
-	}()
+	dbHandle := instance.OpenMemoryDB()
 	err, stateDbHandle := instance.StateOpen(StateParams{
 		DatabaseParams: DatabaseParams{
 			DatabaseHandle: dbHandle,
