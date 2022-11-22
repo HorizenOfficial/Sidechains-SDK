@@ -1,20 +1,20 @@
 package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
-import com.horizen.account.utils.{Account, AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
-import com.horizen.account.utils.FeeUtils.calculateBaseFee
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, LogsBloom}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.FeeUtils.calculateBaseFee
+import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
@@ -23,14 +23,13 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochUtils}
+import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochUtils}
 import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
-import sparkz.core.{NodeViewModifier, idToBytes}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -54,64 +53,62 @@ class AccountForgeMessageBuilder(
   type MS = AccountState
   type MP = AccountMemoryPool
 
-
   def computeBlockInfo(
-                        view: AccountStateView,
-                        sidechainTransactions: Seq[SidechainTypes#SCAT],
-                        mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                        blockContext: BlockContext,
-                        forgerAddress: AddressProposition)
-  : (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = {
+      view: AccountStateView,
+      sidechainTransactions: Iterable[SidechainTypes#SCAT],
+      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+      blockContext: BlockContext,
+      forgerAddress: AddressProposition
+  ): (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = {
 
     // we must ensure that all the tx we get from mempool are applicable to current state view
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
 
-    val (receiptList, listOfAppliedTxHash, cumBaseFee, cumForgerTips) =
+    val (receiptList, appliedTransactions, cumBaseFee, cumForgerTips) =
       tryApplyAndGetBlockInfo(view, mainchainBlockReferencesData, sidechainTransactions, blockContext).get
-
-    // get only the transactions for which we got a receipt
-    val appliedTransactions = sidechainTransactions.filter {
-      t => {
-        val txHash = idToBytes(t.id)
-        listOfAppliedTxHash.contains(new ByteArrayWrapper(txHash))
-      }
-    }
 
     (receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, forgerAddress))
   }
 
-  private def tryApplyAndGetBlockInfo(stateView: AccountStateView,
-                                      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                                      sidechainTransactions: Seq[SidechainTypes#SCAT],
-                                      blockContext: BlockContext)
-  : Try[(Seq[EthereumConsensusDataReceipt], Seq[ByteArrayWrapper], BigInteger, BigInteger)] = Try {
+  private def tryApplyAndGetBlockInfo(
+      stateView: AccountStateView,
+      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+      sidechainTransactions: Iterable[SidechainTypes#SCAT],
+      blockContext: BlockContext
+  ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
     for (mcBlockRefData <- mainchainBlockReferencesData) {
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
-    val txHashList = new ListBuffer[ByteArrayWrapper]()
+    val listOfTxsInBlock = new ListBuffer[SidechainTypes#SCAT]()
 
-    val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
 
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
-    var cumForgerTips: BigInteger = BigInteger.ZERO  // cumulative max-priority-fee, is paid to block forger
-    val accountsToSkip = new mutable.HashSet[SidechainTypes#SCP]
+    var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
-    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex if !accountsToSkip.contains(tx.getFrom)) {
+    val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
+
+    val iter = sidechainTransactions.iterator
+    while (iter.hasNext) {
+      if (blockGasPool.getGas.compareTo(GasUtil.TxGas) < 0) {
+        log.trace(s"Finishing forging because block cannot contain any additional tx")
+        return Success(receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
+      }
       val revisionId = stateView.snapshot
       val initialBlockGas = blockGasPool.getGas
+      val priceAndNonceIter = iter.asInstanceOf[TransactionsByPriceAndNonceIter]
 
       try {
-        stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext, finalizeChanges = false) match {
+        val tx = priceAndNonceIter.peek
+        stateView.applyTransaction(tx, listOfTxsInBlock.size, blockGasPool, blockContext, finalizeChanges = false) match {
           case Success(consensusDataReceipt) =>
             val ethTx = tx.asInstanceOf[EthereumTransaction]
-            val txHash = BytesUtils.fromHexString(ethTx.id)
 
             receiptList += consensusDataReceipt
-            txHashList += txHash
+            listOfTxsInBlock += tx
 
             val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
             // update cumulative gas used so far
@@ -121,37 +118,37 @@ class AccountForgeMessageBuilder(
             val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
             cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
             cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
-
+            priceAndNonceIter.next()
           case Failure(e: GasLimitReached) =>
             // block gas limit reached
             // keep trying to fit transactions into the block: this TX did not fit, but another one might
             log.trace(s"Could not apply tx, reason: ${e.getMessage}")
             // skip all txs from the same account
-            accountsToSkip += tx.getFrom
+            priceAndNonceIter.removeAndSkipAccount()
           case Failure(e: FeeCapTooLowException) =>
             // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
             // if they are from other accounts, they will have a lower fee cap
             log.trace(s"Could not apply tx, reason: ${e.getMessage}")
-            return Success(receiptList, txHashList, cumBaseFee, cumForgerTips)
+            return Success(receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
           case Failure(e: NonceTooLowException) =>
-            //SHOULD NEVER HAPPEN, but in case just skip this tx
+            // SHOULD NEVER HAPPEN, but in case just skip this tx
             log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
+            priceAndNonceIter.next()
           case Failure(e) =>
             // skip all txs from the same account but remove any changes caused by the rejected tx
             log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
-            accountsToSkip += tx.getFrom
+            priceAndNonceIter.removeAndSkipAccount()
             stateView.revertToSnapshot(revisionId)
-            //Restore gas
+            // Restore gas
             val usedGas = initialBlockGas.subtract(blockGasPool.getGas)
             blockGasPool.addGas(usedGas)
         }
-      }
-      finally {
+      } finally {
         stateView.finalizeChanges()
       }
 
     }
-    (receiptList, txHashList, cumBaseFee, cumForgerTips)
+    (receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
   }
 
   override def createNewBlock(
@@ -161,7 +158,7 @@ class AccountForgeMessageBuilder(
       parentId: BlockId,
       timestamp: Timestamp,
       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-      sidechainTransactions: Seq[SidechainTypes#SCAT],
+      sidechainTransactions: Iterable[SidechainTypes#SCAT],
       mainchainHeaders: Seq[MainchainHeader],
       ommers: Seq[Ommer[AccountBlockHeader]],
       ownerPrivateKey: PrivateKey25519,
@@ -315,11 +312,17 @@ class AccountForgeMessageBuilder(
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Timestamp, forcedTx: Iterable[SidechainTypes#SCAT]): Seq[SidechainTypes#SCAT] = {
+  override def collectTransactionsFromMemPool(
+      nodeView: View,
+      blockSizeIn: Int,
+      mainchainBlockReferenceData: Seq[MainchainBlockReferenceData],
+      timestamp: Timestamp,
+      forcedTx: Iterable[SidechainTypes#SCAT]
+  ): MempoolMap#TransactionsByPriceAndNonce = {
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 
-    nodeView.pool.take(nodeView.pool.size).toSeq
+    nodeView.pool.takeExecutableTxs()
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[AccountBlockHeader]]): Int = {

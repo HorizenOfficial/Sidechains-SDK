@@ -192,8 +192,8 @@ class AccountState(
       // eventually, store full receipts in the metaDataStorage indexed by txid
       stateView.updateTransactionReceipts(receiptList)
 
-      // update current base fee
-      stateView.updateBaseFee(FeeUtils.calculateNextBaseFee(mod))
+      // update next base fee
+      stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod))
 
       stateView.commit(idToVersion(mod.id)).get
 
@@ -392,7 +392,7 @@ class AccountState(
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
-  override def baseFee: BigInteger = using(getView)(_.baseFee)
+  override def nextBaseFee: BigInteger = using(getView)(_.nextBaseFee)
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
@@ -410,7 +410,7 @@ class AccountState(
           throw NonceTooLowException(sender, tx.getNonce, stateNonce)
         }
         //Check the balance
-        val maxTxCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
+        val maxTxCost = tx.maxCost()
         val currentBalance = stateView.getBalance(sender)
         if (currentBalance.compareTo(maxTxCost) < 0) {
           throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $maxTxCost")

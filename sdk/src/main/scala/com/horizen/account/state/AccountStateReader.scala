@@ -15,6 +15,7 @@ trait AccountStateReader {
 
   def getLogs(txHash: Array[Byte]): Array[EvmLog]
   def getIntermediateRoot: Array[Byte]
-  def baseFee: BigInteger
+  //Contains the base fee to be used when forging the next block
+  def nextBaseFee: BigInteger
 
 }
