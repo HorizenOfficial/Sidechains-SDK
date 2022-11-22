@@ -75,7 +75,7 @@ class SCEvmBlockBloomFilter(AccountChainSetup):
         block = sc_node.rpc_eth_getBlockByNumber("latest", "false")
         bloom_filter = BloomFilter(int(block["result"]["logsBloom"], 16))
 
-        assert_true(bytes.fromhex(erc20_address[2:]) in bloom_filter,
+        assert_true(bytes.fromhex(remove_0x_prefix(erc20_address)) in bloom_filter,
                     "bloom filter should contain the address of emitting contract")
 
         transfer_event_signature = keccak(b"Transfer(address,address,uint256)")
@@ -116,7 +116,7 @@ class SCEvmBlockBloomFilter(AccountChainSetup):
         block = sc_node.rpc_eth_getBlockByNumber("latest", "false")
         bloom_filter = BloomFilter(int(block["result"]["logsBloom"], 16))
 
-        assert_true(bytes.fromhex(erc721_address[2:]) in bloom_filter,
+        assert_true(bytes.fromhex(remove_0x_prefix(erc721_address)) in bloom_filter,
                     "bloom filter should contain the address of nft contract")
 
         transfer_event_signature = keccak(b"Transfer(address,address,uint256)")

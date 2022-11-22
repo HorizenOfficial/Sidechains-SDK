@@ -12,29 +12,22 @@ from SidechainTestFramework.scutil import generate_next_block, \
 from test_framework.util import forward_transfer_to_sidechain
 
 """
-Check Mem Pool is correctly updated after:
-1. Blocks are applied to the blockchain
-2. Some blocks are applied to the blockchain and others are reverted (fork).
-Check also that invalid transactions are not added to the mem pool.
+Check that invalid transactions are not added to the mem pool.
 
 Configuration:
     - 1 SC node
     - 1 MC node
 
 Test:
-    TODO: Update comment -> seems to be wrong
-    - Add some transactions to the SC nodes. 
-    - Disconnect the SC nodes and create 2 different sets of txs
-    on the 2 nodes, so they have different txs in their mempool.
-    - Forge a block on node 1.
-    - Connect the SC nodes. Verify that node 2 mempool doesn't contain anymore the txs included in the block
-    but still contains the txs created only on node 2.
-    - Add some transactions to the SC nodes. 
-    - Disconnect the SC nodes
-    - On node 1 create some txs and then create a block
-    - On node 2 create some txs and then create 2 blocks
-    - Connect the SC nodes. Verify that the nodes are aligned and the block created on node 1 is reverted. 
-    Verify that node 1 mem pool contains only the txs created on itself.
+   - Verify that following transactions are not added to the mempool
+    - negative nonce
+    - negative value
+    - max fee lower than priority fee
+    - gas limit > 64 bits
+    - gas limit > block gas limit
+    - smart contract creation with empty data
+    - gas limit < intrinsic gas
+    - nonce too low
     
 """
 
@@ -44,7 +37,6 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         super().__init__()
 
     def run_test(self):
-        # Synchronize mc_node1, mc_node2 and mc_node3, then disconnect them.
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
 
@@ -89,9 +81,9 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         except RuntimeError as e:
             exception_occurs = True
             logging.info(
-                "Adding a transaction with with negative value had an exception as expected: {}".format(str(e)))
+                "Adding a transaction with negative value had an exception as expected: {}".format(str(e)))
 
-        assert_true(exception_occurs, "Adding a transaction with with negative value should fail")
+        assert_true(exception_occurs, "Adding a transaction with negative value should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
         assert_equal(0, len(response['result']['transactionIds']),
                      "Transaction with negative value added to node 1 mempool")
@@ -105,13 +97,13 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         except RuntimeError as e:
             exception_occurs = True
             logging.info(
-                "Adding a transaction  with max fee lower than priority fee had an exception as expected: {}".format(
+                "Adding a transaction with max fee lower than priority fee had an exception as expected: {}".format(
                     str(e)))
 
-        assert_true(exception_occurs, "Adding a transaction  with max fee lower than priority fee should fail")
+        assert_true(exception_occurs, "Adding a transaction with max fee lower than priority fee should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
         assert_equal(0, len(response['result']['transactionIds']),
-                     "Transaction  with max fee lower than priority fee added to node 1 mempool")
+                     "Transaction with max fee lower than priority fee added to node 1 mempool")
 
         # Test that a transaction with max fee with a value of more than 256 bits is rejected by the mem pool
         # TODO at the moment it is not possible to test this case, because createEIP1559Transaction looks for

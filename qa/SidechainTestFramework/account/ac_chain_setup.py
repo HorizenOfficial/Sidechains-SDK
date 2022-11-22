@@ -20,6 +20,8 @@ class AccountChainSetup(SidechainTestFramework):
         self.sc_nodes = None
         self.sc_nodes_bootstrap_info = None
         self.mc_return_address = None
+        self.block_id = None
+        self.ft_amount_in_zen = None
         self.API_KEY = API_KEY
         self.number_of_mc_nodes = number_of_mc_nodes
         self.number_of_sidechain_nodes = number_of_sidechain_nodes
@@ -89,6 +91,7 @@ class AccountChainSetup(SidechainTestFramework):
             forwardTransfer = False
 
         if forwardTransfer:
+            self.ft_amount_in_zen = ft_amount_in_zen
             # transfer some fund from MC to SC using the evm address created before
             forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                           self.nodes[0],
@@ -96,7 +99,7 @@ class AccountChainSetup(SidechainTestFramework):
                                           ft_amount_in_zen,
                                           self.mc_return_address)
 
-            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            self.block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 
             sc_best_block = sc_node.block_best()["result"]

@@ -125,16 +125,16 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # balance now is initial (ft) minus forgerStake and fee
         assert_equal(
-            sc_node_2.wallet_getTotalBalance()['result']['balance'],
             ft_amount_in_wei -
-            (forger_stake_amount_in_wei + transactionFee_0)
+            (forger_stake_amount_in_wei + transactionFee_0),
+            sc_node_2.wallet_getTotalBalance()['result']['balance']
         )
 
         sc_block_fee_info.append(BlockFeeInfo(1, forgersPoolFee, forgerTip))
 
         # we now have 2 stakes, one from creation and one just added
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(len(stakeList), 2)
+        assert_equal(2, len(stakeList))
 
         # Generate SC block on SC node 1 for the next consensus epoch
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
@@ -172,7 +172,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         transferred_amount_in_wei_2 = convertZenToWei(transferred_amount_in_zen_2)
 
         blockJson = sc_node_2.rpc_eth_getBlockByHash(add_0x_prefix(sc_middle_we_block_id), False)['result']
-        if (blockJson is None):
+        if blockJson is None:
             raise Exception('Unexpected error: block not found {}'.format(sc_middle_we_block_id))
         baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
 
@@ -197,11 +197,11 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # balance now is initial (ft) without forgerStake and fee and without transferred amounts and fees
         assert_equal(
-            sc_node_2.wallet_getTotalBalance()['result']['balance'],
             ft_amount_in_wei -
             (forger_stake_amount_in_wei + transactionFee_0) -
             (transferred_amount_in_wei_1 + transactionFee_1) -
-            (transferred_amount_in_wei_2 + transactionFee_2)
+            (transferred_amount_in_wei_2 + transactionFee_2),
+            sc_node_2.wallet_getTotalBalance()['result']['balance']
         )
 
         # Collect SC node balances before fees redistribution
@@ -225,13 +225,15 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         logging.info("total fee = {}".format(total_fee))
         logging.info("pool fee = {}".format(pool_fee))
 
+        average_fee = math.floor(pool_fee / len(sc_block_fee_info))
+
         for idx, sc_block_fee in enumerate(sc_block_fee_info):
             if sc_block_fee.node in forger_fees:
                 forger_fees[sc_block_fee.node] += sc_block_fee.forgerTips
             else:
                 forger_fees[sc_block_fee.node] = sc_block_fee.forgerTips
 
-            forger_fees[sc_block_fee.node] += math.floor(pool_fee / len(sc_block_fee_info))
+            forger_fees[sc_block_fee.node] += average_fee
 
             if idx < pool_fee % len(sc_block_fee_info):
                 forger_fees[sc_block_fee.node] += 1
@@ -256,9 +258,9 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         assert_equal(node_1_fees + node_2_fees, total_fee)
 
         # Check forger fee payments
-        assert_equal(sc_node_1_balance_after_payments, sc_node_1_balance_before_payments + node_1_fees,
+        assert_equal(sc_node_1_balance_before_payments + node_1_fees, sc_node_1_balance_after_payments,
                      "Wrong fee payment amount for SC node 1")
-        assert_equal(sc_node_2_balance_after_payments, sc_node_2_balance_before_payments + node_2_fees,
+        assert_equal(sc_node_2_balance_before_payments + node_2_fees, sc_node_2_balance_after_payments,
                      "Wrong fee payment amount for SC node 2")
 
         # Check fee payments from API perspective

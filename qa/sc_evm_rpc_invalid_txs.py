@@ -2,13 +2,11 @@
 import logging
 from decimal import Decimal
 
-from eth_utils import remove_0x_prefix
-
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import format_evm, eoa_transaction
+from SidechainTestFramework.account.ac_utils import eoa_transaction
 from SidechainTestFramework.scutil import (
     assert_true,
-    convertZenToWei, )
+    convertZenToWei)
 
 """
 Check that sending an invalid transaction to the RPC method eth_sendRawTransaction returns an error
@@ -26,7 +24,7 @@ class SCEvmRPCInvalidTx(AccountChainSetup):
         self.sc_ac_setup(ft_amount_in_zen=ft_amount_in_zen)
 
         # transfer some fund from MC to SC1 at a new evm address, then mine mc block
-        evm_address_sc1 = remove_0x_prefix(self.evm_address)
+        evm_address_sc1 = self.evm_address
         evm_address_sc2 = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
         # test that sending an invalid transaction to eth_sendRawTransaction fails with an error
@@ -35,7 +33,7 @@ class SCEvmRPCInvalidTx(AccountChainSetup):
         try:
             res = eoa_transaction(
                 sc_node_1, gas=20000,
-                from_addr=format_evm(evm_address_sc1), to_addr=format_evm(evm_address_sc2), value=convertZenToWei(1)
+                from_addr=evm_address_sc1, to_addr=evm_address_sc2, value=convertZenToWei(1)
             )
             logging.error("invalid transaction was accepted via RPC api: {}".format(str(res)))
         except RuntimeError as err:
