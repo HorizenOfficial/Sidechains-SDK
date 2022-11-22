@@ -180,23 +180,36 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		contractAddress *common.Address
 	)
 	if contractCreation {
-		var deployedContractAddress common.Address
-		// Since we increase the nonce before any transactions, we would get a wrong result here
-		// So we reduce the nonce by 1 and then evm.Create will increase it again to the value it should
-		// be after the transaction. This is necessary, since in the non-creation case the nonce should
-		// already be increased
+		// The following nonce modification is a workaround for the following problem:
+		//
+		// Creating a smart contract should increment the callers' nonce, this is true for EOAs as well as contracts
+		// creating other contracts. Thus, the nonce increment is done in evm.Create and must be there.
+		// In contrast to that behavior, for the top level call the nonce was already increased by the SDK at this
+		// point. So if we don't do anything here the nonce of an EOA will be increased twice when a smart contract is
+		// deployed.
+		//
+		// As the contract address is calculated from the nonce we can't just decrement the nonce afterwards (to undo
+		// the unwanted change), we have to do that before running the EVM. This also introduces two edge cases:
+		//
+		// - The check nonce > 0 was necessary in an earlier version where the nonce was NOT increased when the call was
+		//   performed in the context of eth_call via RPC. This is fixed now, but we should still keep this as a
+		//   precaution (this would cause unsigned integer underflow to maxUint64) and because it is useful for tests.
+		//
+		// - The EVM.create call can fail before it even reaches the point of incrementing the nonce. We have to make
+		//   sure to NOT decrement the nonce in that case. Hence, setting the nonce to the value before the EVM call in
+		//   case it was modified.
 		nonce := statedb.GetNonce(params.From)
 		if nonce > 0 {
 			statedb.SetNonce(params.From, nonce-1)
 		}
 		// we ignore returnData here because it holds the contract code that was just deployed
+		var deployedContractAddress common.Address
 		_, deployedContractAddress, gas, vmerr = evm.Create(sender, params.Input, gas, params.Value.ToInt())
+		contractAddress = &deployedContractAddress
 		// if there is an error evm.Create might not have incremented the nonce as expected,
-		// in that case we correct it to the previous value
 		if statedb.GetNonce(params.From) != nonce {
 			statedb.SetNonce(params.From, nonce)
 		}
-		contractAddress = &deployedContractAddress
 	} else {
 		returnData, gas, vmerr = evm.Call(sender, *params.To, params.Input, gas, params.Value.ToInt())
 	}
