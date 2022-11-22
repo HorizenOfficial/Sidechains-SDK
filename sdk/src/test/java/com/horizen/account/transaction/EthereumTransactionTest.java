@@ -42,7 +42,7 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
-                "",
+                new byte[] {},
                 new Sign.SignatureData((byte) 27,
                         BytesUtils.fromHexString("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023"),
                         BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"))
@@ -57,7 +57,7 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
-                "",
+                new byte[] {},
                 new Sign.SignatureData((byte) 28,
                         BytesUtils.fromHexString("2a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5"),
                         BytesUtils.fromHexString("7ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"))
@@ -73,7 +73,7 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                 BigInteger.valueOf(21000),
                 BigInteger.TEN.pow(18),
-                "",
+                new byte[] {},
                 null
         );
         var eip155Tx = new EthereumTransaction(
@@ -83,7 +83,7 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                 BigInteger.valueOf(21000),
                 BigInteger.TEN.pow(18),
-                "",
+                new byte[] {},
                 new Sign.SignatureData((byte) 37,
                         BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
                         BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83"))
@@ -106,7 +106,7 @@ public class EthereumTransactionTest {
                     BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                     BigInteger.valueOf(21000),
                     BigInteger.TEN.pow(18),
-                    "",
+                    new byte[] {},
                     null
             );
             assertEquals("Chainid was not correct", someTx.getChainId(), chainId);
@@ -155,8 +155,8 @@ public class EthereumTransactionTest {
     }
 
     private EthereumTransaction[] generateTransactions(int count) {
-        var to = "0x0000000000000000000000000000000000001337";
-        var data = "01020304050607080a";
+        var to = EthereumTransactionUtils.getToAddressFromString("0x0000000000000000000000000000000000001337");
+        var data = EthereumTransactionUtils.getDataFromString("01020304050607080a");
         var gas = BigInteger.valueOf(21000);
         var gasPrice = BigInteger.valueOf(2000000000);
         var txs = new EthereumTransaction[count];
@@ -164,9 +164,7 @@ public class EthereumTransactionTest {
             var nonce = BigInteger.valueOf(i);
             var value = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(18));
 //            if (i % 3 == 0) {
-            txs[i] = new EthereumTransaction(
-                    EthereumTransactionUtils.getToAddressFromString(to),
-                    nonce, gasPrice, gas, value, data, null);
+            txs[i] = new EthereumTransaction(to, nonce, gasPrice, gas, value, data,null);
 //            } else {
 //                txs[i] = RawTransaction.createTransaction(0, nonce, gas, to, value, data, gasPrice, gasPrice);
 //            }
@@ -217,7 +215,8 @@ public class EthereumTransactionTest {
                 Numeric.toBigInt("0x03851d"),
                 Numeric.toBigInt("0x023199fa3df8"),
                 Numeric.toBigInt("0x02e59652e99b"),
-                BigInteger.ZERO, "0x0100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701",
+                BigInteger.ZERO,
+                EthereumTransactionUtils.getDataFromString("0x0100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701"),
                 null);
 
         assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
@@ -247,7 +246,7 @@ public class EthereumTransactionTest {
                 Numeric.toBigInt("0xf224d4a00"),
                 Numeric.toBigInt("0x57a0"),
                 Numeric.toBigInt("0x110d9316ec000"),
-                "",
+                new byte[] {},
                 null);
 
         assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
@@ -271,7 +270,7 @@ public class EthereumTransactionTest {
                 Numeric.toBigInt("0xba43b7400"),
                 Numeric.toBigInt("0x15f90"),
                 Numeric.toBigInt("0x29b1c422c243fe"),
-                "",
+                new byte[] {},
                 null);
 
         assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());

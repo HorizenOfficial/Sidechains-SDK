@@ -73,7 +73,7 @@ class EthereumTransactionJsonSerializationTest
         BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
         BigInteger.valueOf(21000),
         BigInteger.TEN.pow(18),
-        "",
+        new Array[Byte](0),
         new Sign.SignatureData(Array[Byte](1), Array[Byte](0), Array[Byte](0))
       )
       fail("IllegalArgumentException expected")

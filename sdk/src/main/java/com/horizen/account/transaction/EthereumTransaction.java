@@ -126,27 +126,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
 
-    private void initData(String dataString) {
-        if (dataString == null) {
-            this.data = new byte[]{};
-        } else {
-            String dataStringClean = Numeric.cleanHexPrefix(dataString);
-            if (dataStringClean.isEmpty()) {
-                this.data = new byte[]{};
-            } else {
-                // sanity check of formatted string.
-                //  Numeric library does not check hex characters' validity, BytesUtils does it
-                var dataBytes = BytesUtils.fromHexString(dataStringClean);
-                if (dataBytes.length == 0) {
-                    throw new IllegalArgumentException("Invalid input to string: " + dataString);
-                } else {
-                    this.data = dataBytes;
-                }
-            }
-        }
-    }
-
-
     private synchronized String getTxHash() {
         if (this.hashString == null) {
             byte[] encodedMessage = encode(getSignatureData());
@@ -163,7 +142,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             @NotNull BigInteger gasPrice,
             @NotNull BigInteger gasLimit,
             @NotNull BigInteger value,
-            @NotNull String data,
+            @NotNull byte[] data,
             @Nullable SignatureData inSignatureData
     ) {
         this.type = EthereumTransactionType.LegacyTxType;
@@ -177,7 +156,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxFeePerGas = null;
 
         this.to = to;
-        initData(data);
+        this.data = data;
         initSignatureData(inSignatureData);
     }
 
@@ -190,7 +169,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             @NotNull BigInteger gasPrice,
             @NotNull BigInteger gasLimit,
             @NotNull BigInteger value,
-            @NotNull String data,
+            @NotNull byte[] data,
             @Nullable SignatureData inSignatureData
     ) {
         this.type = EthereumTransactionType.LegacyTxType;
@@ -204,7 +183,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxFeePerGas = null;
 
         this.to = to;
-        initData(data);
+        this.data = data;
         initSignatureData(inSignatureData);
     }
 
@@ -217,7 +196,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             @NotNull BigInteger maxPriorityFeePerGas,
             @NotNull BigInteger maxFeePerGas,
             @NotNull BigInteger value,
-            @NotNull String data,
+            @NotNull byte[] data,
             @Nullable SignatureData inSignatureData
     ) {
         this.type = EthereumTransactionType.DynamicFeeTxType;
@@ -231,7 +210,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxFeePerGas = maxFeePerGas;
 
         this.to = to;
-        initData(data);
+        this.data = data;
         initSignatureData(inSignatureData);
     }
 

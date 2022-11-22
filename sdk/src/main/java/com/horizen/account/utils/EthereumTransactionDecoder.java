@@ -45,12 +45,18 @@ public class EthereumTransactionDecoder {
         String to = ((RlpString)values.getValues().get(5)).asString();
         BigInteger value = ((RlpString)values.getValues().get(6)).asPositiveBigInteger();
         String data = ((RlpString)values.getValues().get(7)).asString();
+
+        var optTo = EthereumTransactionUtils.getToAddressFromString(to);
+        var dataBytes = EthereumTransactionUtils.getDataFromString(data);
+
         if (((RlpList)values.getValues().get(8)).getValues().size() > 0) throw new IllegalArgumentException("Access list is not supported");
         if (values.getValues().size() == 9) {
             return new EthereumTransaction(
                     chainId,
-                    EthereumTransactionUtils.getToAddressFromString(to),
-                    nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, null);
+                    optTo,
+                    nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value,
+                    dataBytes,
+                    null);
         } else {
             byte[] v = Sign.getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(10)).getBytes()), 32);
@@ -58,8 +64,10 @@ public class EthereumTransactionDecoder {
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
             return new EthereumTransaction(
                     chainId,
-                    EthereumTransactionUtils.getToAddressFromString(to),
-                    nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, signatureData);
+                    optTo,
+                    nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value,
+                    dataBytes,
+                    signatureData);
         }
     }
 
@@ -72,27 +80,29 @@ public class EthereumTransactionDecoder {
         String to = ((RlpString)values.getValues().get(3)).asString();
         BigInteger value = ((RlpString)values.getValues().get(4)).asPositiveBigInteger();
         String data = ((RlpString)values.getValues().get(5)).asString();
+
+        var optTo = EthereumTransactionUtils.getToAddressFromString(to);
+        var dataBytes = EthereumTransactionUtils.getDataFromString(data);
+
         if (values.getValues().size() != 6 && (values.getValues().size() != 8 || ((RlpString)values.getValues().get(7)).getBytes().length != 10) && (values.getValues().size() != 9 || ((RlpString)values.getValues().get(8)).getBytes().length != 10)) {
             byte[] v = ((RlpString)values.getValues().get(6)).getBytes();
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(7)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(8)).getBytes()), 32);
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
             Long chainId = decodeEip155ChainId(Numeric.toBigInt(v));
+
             if (chainId != null) {
                 // chainid is encoded into V part, this is an EIP 155
                 return new EthereumTransaction(
-                        chainId,
-                        EthereumTransactionUtils.getToAddressFromString(to),
-                        nonce, gasPrice, gasLimit, value, data, signatureData); //new SignatureSecp256k1(realv, r, s));
+                        chainId, optTo,
+                        nonce, gasPrice, gasLimit, value, dataBytes, signatureData); //new SignatureSecp256k1(realv, r, s));
             } else {
                 return new EthereumTransaction(
-                        EthereumTransactionUtils.getToAddressFromString(to),
-                        nonce, gasPrice, gasLimit, value, data, signatureData);
+                        optTo, nonce, gasPrice, gasLimit, value, dataBytes, signatureData);
             }
         } else {
             return new EthereumTransaction(
-                    EthereumTransactionUtils.getToAddressFromString(to),
-                    nonce, gasPrice, gasLimit, value, data, null);
+                    optTo, nonce, gasPrice, gasLimit, value, dataBytes, null);
         }
     }
 

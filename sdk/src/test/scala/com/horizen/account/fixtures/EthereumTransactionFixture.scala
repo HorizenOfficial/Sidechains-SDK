@@ -21,7 +21,7 @@ trait EthereumTransactionFixture {
                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
     val unsignedTx = new EthereumTransaction(
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
-      nonce, gasPrice, gasLimit, value, "", null)
+      nonce, gasPrice, gasLimit, value, new Array[Byte](0), null)
     createSignedTransaction(unsignedTx, pairOpt)
   }
 
@@ -34,7 +34,7 @@ trait EthereumTransactionFixture {
     val unsignedTx = new EthereumTransaction(
       1997L,
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
-      nonce, gasPrice, gasLimit, value, "", null)
+      nonce, gasPrice, gasLimit, value, new Array[Byte](0), null)
     createSignedLegacyEip155Transaction(unsignedTx, pairOpt)
   }
 
@@ -49,7 +49,7 @@ trait EthereumTransactionFixture {
     val unsignedTx = new EthereumTransaction(
       1997L,
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
-      nonce, gasLimit, priorityGasFee, gasFee, value, "", null)
+      nonce, gasLimit, priorityGasFee, gasFee, value, new Array[Byte](0), null)
     createSignedTransaction(unsignedTx, pairOpt)
   }
 
@@ -82,7 +82,7 @@ trait EthereumTransactionFixture {
       BigInteger.valueOf(3).pow(9), // gasPrice
       GasUtil.TxGas,  // gasLimit
       BigInteger.TEN.pow(19), // value
-      "",
+      new Array[Byte](0),
       new Sign.SignatureData(
         BytesUtils.fromHexString("1c"),
         BytesUtils.fromHexString("2a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5"),
@@ -97,7 +97,7 @@ trait EthereumTransactionFixture {
       BigInteger.valueOf(3).pow(9), // gasPrice
       GasUtil.TxGas,  // gasLimit
       BigInteger.TEN.pow(19), // value
-      "",
+      new Array[Byte](0),
       null
     )
   }
@@ -110,7 +110,7 @@ trait EthereumTransactionFixture {
       new BigInteger(BytesUtils.fromHexString("0a02ffee00")), // gasPrice
       new BigInteger(BytesUtils.fromHexString("0000008877")),  // gasLimit
       BigInteger.ZERO, // value
-      "0xa9059cbb0000000000000000000000000ee513f5366075aa80565f2b0cc2dc0adc76a475000000000000000000000000000000000000000000000000b917d212e0933000",
+      EthereumTransactionUtils.getDataFromString("0xa9059cbb0000000000000000000000000ee513f5366075aa80565f2b0cc2dc0adc76a475000000000000000000000000000000000000000000000000b917d212e0933000"),
       new Sign.SignatureData(
         BytesUtils.fromHexString("25"),
         BytesUtils.fromHexString("b83e51baa9bb20d7b281032f44c1ed75f25f69ac47ac26d97e66859ea80c1295"),
@@ -127,7 +127,7 @@ trait EthereumTransactionFixture {
       new BigInteger(BytesUtils.fromHexString("3b9aca00")),  // maxPriorityFeePerGas
       new BigInteger(BytesUtils.fromHexString("0c6e64e7f7")),  // maxFeePerGas
       BigInteger.ZERO, // value
-      "c7265637420783d223136302220793d22323335222077696474683d2231383022206865696768743d22353022207374796c653d226",
+      EthereumTransactionUtils.getDataFromString("c7265637420783d223136302220793d22323335222077696474683d2231383022206865696768743d22353022207374796c653d226"),
       new Sign.SignatureData(
         BytesUtils.fromHexString("1c"),
         BytesUtils.fromHexString("1f9202e5b7e4d65e381c63b9a6235838e7bc5d6a0ee0f070be40fd3913855d3c"),
@@ -144,7 +144,7 @@ trait EthereumTransactionFixture {
       new BigInteger(BytesUtils.fromHexString("09172ea8")),  // maxPriorityFeePerGas
       new BigInteger(BytesUtils.fromHexString("0390a21a17")),  // maxFeePerGas
       new BigInteger(BytesUtils.fromHexString("320ec7c4e2a000")), // value
-      "",
+      new Array[Byte](0),
       new Sign.SignatureData(
         BytesUtils.fromHexString("1c"),
         BytesUtils.fromHexString("e430ed7a69eb23bd96d543d6acb605af31d3eb6b1967ca4a69f31245527d942e"),
@@ -161,7 +161,7 @@ trait EthereumTransactionFixture {
       new BigInteger(BytesUtils.fromHexString("09172ea8")),  // maxPriorityFeePerGas
       new BigInteger(BytesUtils.fromHexString("0390a21a17")),  // maxFeePerGas
       new BigInteger(BytesUtils.fromHexString("320ec7c4e2a000")), // value
-      "",
+      new Array[Byte](0),
       null
     )
   }
@@ -177,7 +177,7 @@ trait EthereumTransactionFixture {
       new BigInteger(BytesUtils.fromHexString("0a02ffee00")), // gasPrice
       GasUtil.TxGas,  // gasLimit
       BigInteger.TEN.pow(18), // value
-      "",
+      new Array[Byte](0),
       new Sign.SignatureData(
         encodedChainId,
         BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
@@ -194,7 +194,7 @@ trait EthereumTransactionFixture {
       new BigInteger(BytesUtils.fromHexString("0a02ffee00")), // gasPrice
       GasUtil.TxGas,  // gasLimit
       BigInteger.TEN.pow(18), // value
-      "",
+      new Array[Byte](0),
       null
     )
   }
@@ -235,7 +235,9 @@ trait EthereumTransactionFixture {
     new EthereumTransaction(
       chainId,
       EthereumTransactionUtils.getToAddressFromString(to),
-      nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value, data, signatureData)
+      nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value,
+      EthereumTransactionUtils.getDataFromString(data),
+      signatureData)
 
   }
 
@@ -269,7 +271,9 @@ trait EthereumTransactionFixture {
 
     new EthereumTransaction(
       EthereumTransactionUtils.getToAddressFromString(to),
-      nonce, gasPrice, gasLimit, value, data, signatureData)
+      nonce, gasPrice, gasLimit, value,
+      EthereumTransactionUtils.getDataFromString(data),
+      signatureData)
 
   }
 
@@ -316,11 +320,15 @@ trait EthereumTransactionFixture {
       new EthereumTransaction(
         chainId,
         EthereumTransactionUtils.getToAddressFromString(to),
-        nonce, gasPrice, gasLimit, value, data, signatureData)
+        nonce, gasPrice, gasLimit, value,
+        EthereumTransactionUtils.getDataFromString(data),
+        signatureData)
     else
       new EthereumTransaction(
         EthereumTransactionUtils.getToAddressFromString(to),
-        nonce, gasPrice, gasLimit, value, data, signatureData)
+        nonce, gasPrice, gasLimit, value,
+        EthereumTransactionUtils.getDataFromString(data),
+        signatureData)
 
   }
 

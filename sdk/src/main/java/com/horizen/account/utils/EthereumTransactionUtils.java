@@ -66,4 +66,27 @@ public final class EthereumTransactionUtils {
             }
         }
     }
+
+
+    public static byte[] getDataFromString(String dataString) {
+        if (dataString == null) {
+            return new byte[]{};
+        } else {
+            String dataStringClean = Numeric.cleanHexPrefix(dataString);
+            if (dataStringClean.isEmpty()) {
+                return new byte[]{};
+            } else {
+                // sanity check of formatted string.
+                //  Numeric library does not check hex characters' validity, BytesUtils does it
+                var dataBytes = BytesUtils.fromHexString(dataStringClean);
+                if (dataBytes.length == 0) {
+                    throw new IllegalArgumentException("Invalid input to string: " + dataString);
+                } else {
+                    return dataBytes;
+                }
+            }
+        }
+    }
+
+
 }

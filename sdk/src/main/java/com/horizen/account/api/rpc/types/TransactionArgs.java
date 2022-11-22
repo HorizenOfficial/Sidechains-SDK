@@ -65,6 +65,7 @@ public class TransactionArgs {
         var saneType = type == null ? 0 : type.intValueExact();
         var toAddressString = to == null ? null : to.toUTXOString();
         var optionalToAddress = EthereumTransactionUtils.getToAddressFromString(toAddressString);
+        var dataBytes = EthereumTransactionUtils.getDataFromString(this.getDataString());
         switch (saneType) {
             case 0: // LEGACY type
                 if (chainId != null) {
@@ -72,25 +73,18 @@ public class TransactionArgs {
                     return new EthereumTransaction(
                             saneChainId,
                             optionalToAddress,
-                            nonce, gasPrice, gas, value, this.getDataString(), null);
+                            nonce, gasPrice, gas, value, dataBytes, null);
 
                 } else {
                     return new EthereumTransaction(
                             optionalToAddress,
-                            nonce, gasPrice, gas, value, this.getDataString(), null);
+                            nonce, gasPrice, gas, value, dataBytes, null);
                 }
             case 2: // EIP-1559
                 return new EthereumTransaction(
                     saneChainId,
                     optionalToAddress,
-                    nonce,
-                    gas,
-                    maxPriorityFeePerGas,
-                    maxFeePerGas,
-                    value,
-                    this.getDataString(),
-                    null
-                );
+                    nonce, gas, maxPriorityFeePerGas, maxFeePerGas, value, dataBytes,null);
             default:
                 // unsupported type
                 return null;
