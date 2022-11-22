@@ -62,6 +62,15 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
 
   val blockContext = new BlockContext(Array.empty[Byte], 1000, BigInteger.ZERO, FeeUtils.GAS_LIMIT, 11, 2, 3)
 
+
+  /*
+  This method is used for testing what is the impact on forging of getting txs from the mem pool.
+  The txs are no more retrieved from the mem pool already ordered by effective tip and nonce, but an iterator
+  that orders them "on demand" is used instead. With the older implementation, the time needed for getting
+  the txs from the mem pool was entirely spent inside collectTransactionsFromMemPool method, while with the iterator
+  implementation the same time is spent inside computeBlockInfo. So, in order to compare the performance of the 2 solutions,
+   the measurement is taken as the time spent by both methods.
+   */
   @Test
   @Ignore
   def testComputeBlockInfo(): Unit = {
@@ -91,6 +100,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         mempool.put(tx.asInstanceOf[SidechainTypes#SCAT])
       }
 
+      //Sanity check
       assertEquals(numOfTxs, mempool.size)
       val forger = new AccountForgeMessageBuilder(null, null, null, false)
 
@@ -104,7 +114,6 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         100,
         Seq.empty[SidechainTypes#SCAT]
       )
-      val collectTime = System.currentTimeMillis() - startTime
 
       val (_, appliedTxs, _) = forger.computeBlockInfo(stateView, listOfExecTxs, Seq.empty, blockContext, null)
       val totalTime = System.currentTimeMillis() - startTime
@@ -113,7 +122,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
       val expectedNumOfAppliedTxs = if (numOfTxs < maxNumOfTxsInBlock) numOfTxs else maxNumOfTxsInBlock
 
       assertEquals(expectedNumOfAppliedTxs, appliedTxs.size)
-      println(s"Collect time $collectTime ms")
+
       println(s"Total time $totalTime ms")
       out.write(s"\n********************* Test results *********************\n")
       out.write(s"Duration of the test:                      $totalTime ms\n")
