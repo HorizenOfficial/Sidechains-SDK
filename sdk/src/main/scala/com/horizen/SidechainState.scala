@@ -107,6 +107,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
+  def lastCertificateReferencedEpoch(): Option[Int] = {
+    stateStorage.getLastCertificateReferencedEpoch()
+  }
+
   def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
   }
@@ -132,22 +136,30 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
     val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
-    // If SC block has reached the certificate submission window end -> check the top quality certificate
-    // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-    if(WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
-      val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
+    if(params.isNonCeasing) {
+      // For non-ceasing sidechains certificate must be validated just when it has been received.
+      // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
+      // then the whole block is invalid.
+      mod.topQualityCertificates.foreach(cert => validateTopQualityCertificate(cert, cert.epochNumber))
+    } else {
+      // For ceasing sidechains submission window concept is used.
+      // If SC block has reached the certificate submission window end -> check the top quality certificate
+      // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
+      if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+        val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
-      // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-      val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
-        stateStorage.getTopQualityCertificate(certReferencedEpochNumber))
+        // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
+        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificates.lastOption.orElse(
+          stateStorage.getTopQualityCertificate(certReferencedEpochNumber))
 
-      // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
-      topQualityCertificateOpt match {
-        case Some(cert) =>
-          validateTopQualityCertificate(cert, certReferencedEpochNumber)
-        case None =>
-          log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
-            s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
+        // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
+        topQualityCertificateOpt match {
+          case Some(cert) =>
+            validateTopQualityCertificate(cert, certReferencedEpochNumber)
+          case None =>
+            log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
+              s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
+        }
       }
     }
 
@@ -155,16 +167,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     // Verify that Forger assumed the same fees to be paid as the current node does.
     // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
-    if(isWithdrawalEpochFinished) {
+    if (isWithdrawalEpochFinished) {
       // Note: that current block fee info is still not in the state storage, so consider it during result calculation.
       val feePayments = getFeePayments(modWithdrawalEpochInfo.epoch, Some(mod.feeInfo))
       val feePaymentsHash: Array[Byte] = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
-      if(!mod.feePaymentsHash.sameElements(feePaymentsHash))
+      if (!mod.feePaymentsHash.sameElements(feePaymentsHash))
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}")
     } else {
       // No fee payments expected
-      if(!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
+      if (!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
@@ -415,7 +427,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
-          mod.topQualityCertificateOpt,
+          mod.topQualityCertificates.lastOption, // we are interested only in the most recent top quality certificate
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions)
         )
@@ -460,7 +472,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val hasReachedCertificateSubmissionWindowEnd: Boolean = WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(
       withdrawalEpochInfo, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0, 0)), params)
 
-    val scHasCeased: Boolean = hasReachedCertificateSubmissionWindowEnd &&
+    val scHasCeased: Boolean = !params.isNonCeasing && hasReachedCertificateSubmissionWindowEnd &&
       topQualityCertificateOpt.orElse(stateStorage.getTopQualityCertificate(withdrawalEpochInfo.epoch - 1)).isEmpty
 
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)

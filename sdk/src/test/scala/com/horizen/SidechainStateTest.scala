@@ -191,7 +191,7 @@ class SidechainStateTest
     //Test validate(Block)
     val mockedBlock = mock[SidechainBlock]
 
-    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
+    Mockito.when(mockedBlock.topQualityCertificates).thenReturn(Seq())
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -234,7 +234,7 @@ class SidechainStateTest
 
     //test mutuality transaction check
     val mutualityMockedBlock = mock[SidechainBlock]
-    Mockito.when(mutualityMockedBlock.topQualityCertificateOpt).thenReturn(None)
+    Mockito.when(mutualityMockedBlock.topQualityCertificates).thenReturn(Seq())
     Mockito.when(mutualityMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(mutualityMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(mutualityMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
@@ -256,7 +256,7 @@ class SidechainStateTest
 
 
     val doubleSpendTransactionMockedBlock = mock[SidechainBlock]
-    Mockito.when(doubleSpendTransactionMockedBlock.topQualityCertificateOpt).thenReturn(None)
+    Mockito.when(doubleSpendTransactionMockedBlock.topQualityCertificates).thenReturn(Seq())
     Mockito.when(doubleSpendTransactionMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(doubleSpendTransactionMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(doubleSpendTransactionMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
@@ -427,7 +427,7 @@ class SidechainStateTest
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
 
-    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
+    Mockito.when(mockedBlock.topQualityCertificates).thenReturn(Seq())
 
     Mockito.when(mockedBlock.feeInfo).thenReturn(modBlockFeeInfo)
 
@@ -964,10 +964,9 @@ class SidechainStateTest
     //Test validate block with no empty WB slots accumulated, no new mainchain block references and a transaction with 1 WB
     val mockedBlock = mock[SidechainBlock]
 
-    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
+    Mockito.when(mockedBlock.topQualityCertificates).thenReturn(Seq())
 
-    Mockito.when(mockedBlock.transactions)
-      .thenReturn(transactionList.toList)
+    Mockito.when(mockedBlock.transactions).thenReturn(transactionList.toList)
 
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
 
@@ -991,7 +990,7 @@ class SidechainStateTest
 
 
     //Test validate block with no empty WB slots accumulated, 1 new mainchain block reference and a transaction with 10 WBs
-    val emptyRefData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, sidechainRelatedAggregatedTransaction = None, None, None, Seq(), None)
+    val emptyRefData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, sidechainRelatedAggregatedTransaction = None, None, None, Seq(), Seq())
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData))
 
     transactionList.clear()

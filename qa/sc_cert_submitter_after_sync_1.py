@@ -3,7 +3,7 @@ import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_2, SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
@@ -20,6 +20,11 @@ Configuration:
     SC nodes 2 is a certificate submitter.
     SC Nodes altogether have enough keys to produce certificate signatures.
 
+Note:
+    This test can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     - Generate 2000 blocks on SC node 1
     - Connect SC node 2 to SC node 1 and start syncing
@@ -52,8 +57,17 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
             True, True, list([3, 4, 5])  # certificate submitter is enabled, signing is enabled with 3 other schnorr PKs
         )
 
+        is_non_ceasing = self.options.nonceasing
+        # Non ceasing sidechains must be of sidechain version 2
+        sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
+        csw_enabled = False if is_non_ceasing else True
+
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
+            SCCreationInfo(mc_node, self.sc_creation_amount,
+                           self.sc_withdrawal_epoch_length,
+                           sc_creation_version=sc_creation_version,
+                           csw_enabled=csw_enabled,
+                           is_non_ceasing=is_non_ceasing),
             sc_node_1_configuration,
             sc_node_2_configuration)
 

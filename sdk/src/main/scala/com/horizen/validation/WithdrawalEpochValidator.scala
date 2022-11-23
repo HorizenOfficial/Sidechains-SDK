@@ -26,7 +26,7 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
 
 
     val sidechainCreation = BlockUtils.tryGetSidechainCreation(block).get
-    if(sidechainCreation.withdrawalEpochLength() != params.withdrawalEpochLength)
+    if(!params.isNonCeasing && sidechainCreation.withdrawalEpochLength() != params.withdrawalEpochLength)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block contains different withdrawal epoch length than expected in configs.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
     // Check that sidechain declares proper number of custom fields

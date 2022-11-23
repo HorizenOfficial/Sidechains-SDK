@@ -24,7 +24,7 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo", "topQualityCertificates"))
 class SidechainBlock(override val header: SidechainBlockHeader,
                       val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
                       val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
@@ -35,7 +35,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 {
   def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
-  lazy val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificate).lastOption
+  // Note: can be 0 or 1 in case of ceasing sidechain, and 0+ for non-ceasing sidechain
+  lazy val topQualityCertificates: Seq[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificates)
 
   override type M = SidechainBlock
 

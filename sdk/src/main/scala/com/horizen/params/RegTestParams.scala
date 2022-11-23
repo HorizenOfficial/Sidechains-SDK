@@ -32,7 +32,8 @@ case class RegTestParams(
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
-                          override val isCSWEnabled: Boolean = true
+                          override val isCSWEnabled: Boolean = true,
+                          override val isNonCeasing: Boolean = false
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
@@ -44,4 +45,6 @@ case class RegTestParams(
   override val nPowMaxAdjustDown: Int = 0 // Turn off adjustment down
   override val nPowMaxAdjustUp: Int = 0 // Turn off adjustment up
   override val nPowTargetSpacing: Int = 150 // 2.5 * 60
+
+  override val minVirtualWithdrawalEpochLength: Int = 10
 }

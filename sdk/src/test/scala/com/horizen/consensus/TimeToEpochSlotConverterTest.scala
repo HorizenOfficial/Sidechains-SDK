@@ -46,6 +46,8 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val cswVerificationKeyFilePath: String = ""
     override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
     override val isCSWEnabled: Boolean = true
+    override val isNonCeasing: Boolean = false
+    override val minVirtualWithdrawalEpochLength: Int = 10
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,

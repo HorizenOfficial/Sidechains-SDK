@@ -98,7 +98,7 @@ trait SidechainNodeViewHolderFixture
 
   val sidechainSecretStorage = new SidechainSecretStorage(getStorage(), sidechainSecretsCompanion)
   val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
-  val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+  val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
   val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
   val sidechainStateUtxoMerkleTreeProvider: SidechainUtxoMerkleTreeProviderCSWEnabled = SidechainUtxoMerkleTreeProviderCSWEnabled(new SidechainStateUtxoMerkleTreeStorage(getStorage()))
 

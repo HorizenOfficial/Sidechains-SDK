@@ -537,6 +537,8 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val cswVerificationKeyFilePath: String = params.cswVerificationKeyFilePath
       override val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
       override val isCSWEnabled: Boolean = params.isCSWEnabled
+      override val isNonCeasing: Boolean = params.isNonCeasing
+      override val minVirtualWithdrawalEpochLength: Int = 10
     }
   }
 

@@ -6,6 +6,7 @@ LARGE_WITHDRAWAL_EPOCH_LENGTH = 900
 
 SC_CREATION_VERSION_0 = 0
 SC_CREATION_VERSION_1 = 1
+SC_CREATION_VERSION_2 = 2
 
 DEFAULT_API_KEY = "TopSecret"
 
@@ -30,7 +31,7 @@ class SCCreationInfo(object):
     # because of too complex circuit from MC perspective.
     def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
                  btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1,
-                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False):
+                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False, is_non_ceasing=False):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
@@ -39,6 +40,14 @@ class SCCreationInfo(object):
         self.cert_max_keys = cert_max_keys
         self.cert_sig_threshold = cert_sig_threshold
         self.csw_enabled = csw_enabled
+        self.non_ceasing = is_non_ceasing
+
+        if csw_enabled and is_non_ceasing:
+            raise RuntimeError('Cannot enable CSW and Non-ceasing options simultaneously.')
+
+        if sc_creation_version != SC_CREATION_VERSION_2 and is_non_ceasing:
+            raise RuntimeError('Cannot initialize non-ceasing sidechain with version different '
+                               'from ' + SC_CREATION_VERSION_2 + '. Found ' + sc_creation_version)
 
 
 """
@@ -236,7 +245,7 @@ class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
                  sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account,
-                 certificate_proof_info, initial_cumulative_comm_tree_hash, cert_keys_paths, csw_keys_paths):
+                 certificate_proof_info, initial_cumulative_comm_tree_hash, is_non_ceasing, cert_keys_paths, csw_keys_paths):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -244,6 +253,7 @@ class SCBootstrapInfo(object):
         self.sidechain_genesis_block_hex = sidechain_genesis_block_hex
         self.pow_data = pow_data
         self.network = network
+        self.is_non_ceasing = is_non_ceasing
         self.withdrawal_epoch_length = withdrawal_epoch_length
         self.genesis_vrf_account = genesis_vrf_account
         self.certificate_proof_info = certificate_proof_info

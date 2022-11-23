@@ -4,7 +4,7 @@ import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_2, SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
@@ -28,6 +28,11 @@ Configuration:
     
     Network schema:
         N1 <-> N2 <-> N3 <-> N4
+Note:
+    This test can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     For the SC node:
         - generate MC and SC blocks to reach the end of the Withdrawal epoch 0
@@ -87,8 +92,14 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             2  # set max connections to prevent node 3 and node 1 connection
         )
 
+        is_non_ceasing = self.options.nonceasing
+        # Non ceasing sidechains must be of sidechain version 2
+        sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
+
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
+            SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
+                           sc_creation_version=sc_creation_version,
+                           is_non_ceasing=is_non_ceasing),
             sc_node_1_configuration,
             sc_node_2_configuration,
             sc_node_3_configuration,
@@ -167,7 +178,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
         # Verify Certificate quality for epoch 0 on SC side
         mbrefdata = sc_node1.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
-        assert_equal(7, mbrefdata["topQualityCertificate"]["quality"], "Certificate quality is wrong.")
+        assert_equal(7, mbrefdata["topQualityCertificates"][0]["quality"], "Certificate quality is wrong.")
 
         # Exclude SC Node 4 from the network
         logging.info("Disconnecting SC Node 4 from the network.")
@@ -229,7 +240,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
         # Verify Certificate quality for epoch 0 on SC side
         mbrefdata = sc_node1.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
-        assert_equal(7, mbrefdata["topQualityCertificate"]["quality"], "Certificate quality is wrong.")
+        assert_equal(7, mbrefdata["topQualityCertificates"][0]["quality"], "Certificate quality is wrong.")
 
 
 if __name__ == "__main__":

@@ -9,18 +9,19 @@ import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
+import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, CertificateSubmissionStrategy, NonCeasingSidechain, SubmissionWindowStatus}
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.fork.ForkManager
-import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
+import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeCertificateApi, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
+import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
+import com.horizen.websocket.client.MainchainNodeChannel
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -47,7 +48,8 @@ class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            secureEnclaveApiClient: SecureEnclaveApiClient,
                            params: NetworkParams,
-                           mainchainChannel: MainchainNodeChannel)
+                           mainchainChannel: MainchainNodeCertificateApi,
+                           submissionStrategy: CertificateSubmissionStrategy)
                           (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._
@@ -109,16 +111,16 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private[certificatesubmitter] def workingCycle: Receive = {
     onCertificateSubmissionEvent orElse
-    newBlockArrived orElse
-    locallyGeneratedSignature orElse
-    signatureFromRemote orElse
-    tryToScheduleCertificateGeneration orElse
-    tryToGenerateCertificate orElse
-    getCertGenerationState orElse
-    getSignaturesStatus orElse
-    submitterStatus orElse
-    signerStatus orElse
-    reportStrangeInput
+      newBlockArrived orElse
+      locallyGeneratedSignature orElse
+      signatureFromRemote orElse
+      tryToScheduleCertificateGeneration orElse
+      tryToGenerateCertificate orElse
+      getCertGenerationState orElse
+      getSignaturesStatus orElse
+      submitterStatus orElse
+      signerStatus orElse
+      reportStrangeInput
   }
 
   protected def checkSubmitter: Receive = {
@@ -200,9 +202,11 @@ class CertificateSubmitter(settings: SidechainSettings,
         case Success(submissionWindowStatus) =>
           if (submissionWindowStatus.isInWindow) {
             signaturesStatus match {
-              case Some(_) => // do nothing
-              case None =>
-                val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
+              // Nothing changed -> do nothing
+              // Note: applicable only to non-ceasing sidechains
+              case Some(status) if status.referencedEpoch == submissionWindowStatus.referencedWithdrawalEpochNumber => // Nothing changes -> do nothing
+              case _ => // Case None or Some(status) for newer referencedEpoch
+                val referencedWithdrawalEpochNumber = submissionWindowStatus.referencedWithdrawalEpochNumber
                 getMessageToSign(referencedWithdrawalEpochNumber) match {
                   case Success(messageToSign) =>
                     signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
@@ -243,8 +247,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   // but the older block may being applied at the moment.
   private def getSubmissionWindowStatus(block: SidechainBlock): Try[SubmissionWindowStatus] = Try {
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
-      val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
-      SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
+      submissionStrategy.getStatus(sidechainNodeView, block)
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
@@ -391,60 +394,6 @@ class CertificateSubmitter(settings: SidechainSettings,
       }
   }
 
-  private def getCertificateTopQuality(epoch: Int): Try[Long] = {
-    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId)))
-      .map(topQualityCertificates => {
-        (topQualityCertificates.mempoolCertInfo, topQualityCertificates.chainCertInfo) match {
-          // case we have mempool cert for the given epoch return its quality.
-          case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
-          // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
-          case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
-          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
-          // case we have chain cert for the given epoch return its quality.
-          case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
-          // case the chain certificate epoch is a newer than submitter epoch thrown an exception
-          case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
-          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
-          // no known certs
-          case _ => 0
-        }
-      })
-  }
-
-  private def checkQuality(status: SignaturesStatus): Boolean = {
-    if (status.knownSigs.size >= params.signersThreshold) {
-      getCertificateTopQuality(status.referencedEpoch) match {
-        case Success(currentCertificateTopQuality) =>
-          if (status.knownSigs.size > currentCertificateTopQuality)
-            return true
-        case Failure(e) => e match {
-          // May happen if there is a bug on MC side or the SDK code is inconsistent to the MC one.
-          case ex: WebsocketErrorResponseException =>
-            log.error("Mainchain error occurred while processed top quality certificates request(" + ex + ")")
-            // So we don't know the result
-            // Return true to keep submitter going and prevent SC ceasing
-            return true
-          // May happen during node synchronization and node behind for one epoch or more
-          case ex: ObsoleteWithdrawalEpochException =>
-            log.info("Sidechain is behind the Mainchain(" + ex + ")")
-            return false
-          // May happen if MC and SDK websocket protocol is inconsistent.
-          // Should never happen in production.
-          case ex: WebsocketInvalidErrorMessageException =>
-            log.error("Mainchain error message is inconsistent to SC implementation(" + ex + ")")
-            // So we don't know the result
-            // Return true to keep submitter going and prevent SC ceasing
-            return true
-          // Various connection errors
-          case other =>
-            log.error("Unable to retrieve actual top quality certificates from Mainchain(" + other + ")")
-            return false
-        }
-      }
-    }
-    false
-  }
-
   private def tryToScheduleCertificateGeneration: Receive = {
     // Do nothing if submitter is disabled or submission is in progress (scheduled or generating the proof)
     case TryToScheduleCertificateGeneration if !submitterEnabled ||
@@ -454,7 +403,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     case TryToScheduleCertificateGeneration =>
       signaturesStatus match {
         case Some(status) =>
-          if (checkQuality(status)) {
+          if (submissionStrategy.checkQuality(status)) {
             val delay = Random.nextInt(15) + 5 // random delay from 5 to 20 seconds
             log.info(s"Scheduling Certificate generation in $delay seconds")
             timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
@@ -470,7 +419,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       signaturesStatus match {
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
-          if (checkQuality(status)) {
+          if (submissionStrategy.checkQuality(status)) {
             def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = buildDataForProofGeneration(sidechainNodeView, status)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
@@ -650,6 +599,11 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   def submitterStatus: Receive = {
     case EnableSubmitter =>
+      if(!submitterEnabled) {
+        // If previous value was `false` -> try to schedule cert generation
+        // Maybe we have enough signatures at the moment
+        self ! TryToScheduleCertificateGeneration
+      }
       submitterEnabled = true
     case DisableSubmitter =>
       submitterEnabled = false
@@ -697,9 +651,6 @@ object CertificateSubmitter {
   case object InvalidSignature extends SignatureProcessingStatus
 
   case object SubmitterIsOutsideSubmissionWindow extends SignatureProcessingStatus
-
-  // Data
-  private case class SubmissionWindowStatus(withdrawalEpochInfo: WithdrawalEpochInfo, isInWindow: Boolean)
 
   case class SignaturesStatus(referencedEpoch: Int, messageToSign: Array[Byte], knownSigs: ArrayBuffer[CertificateSignatureInfo])
 
@@ -752,10 +703,20 @@ object CertificateSubmitter {
 }
 
 object CertificateSubmitterRef {
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
+  def props(settings: SidechainSettings,
+            sidechainNodeViewHolderRef: ActorRef,
+            secureEnclaveApiClient: SecureEnclaveApiClient,
+            params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit ec: ExecutionContext): Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+           (implicit ec: ExecutionContext): Props = {
+    val submissionStrategy: CertificateSubmissionStrategy = if (params.isNonCeasing) {
+      new NonCeasingSidechain(params)
+    } else {
+      new CeasingSidechain(mainchainChannel, params)
+    }
+
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+  }
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)

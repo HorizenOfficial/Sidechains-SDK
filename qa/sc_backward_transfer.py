@@ -4,7 +4,7 @@ import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
@@ -20,6 +20,11 @@ Check Certificate automatic creation and submission to MC:
 Configuration:
     Start 1 MC node and 1 SC node (with default websocket configuration).
     SC node connected to the first MC node.
+    
+Note:
+    This test can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
 
 Test:
     For the SC node:
@@ -57,9 +62,15 @@ class SCBackwardTransfer(SidechainTestFramework):
             submitter_private_keys_indexes=list(range(cert_max_keys))  # SC node owns all schnorr private keys.
         )
 
+        is_non_ceasing = self.options.nonceasing
+        # Non ceasing sidechains must be of sidechain version 2
+        sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
+
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
                                                         cert_max_keys=cert_max_keys,
-                                                        cert_sig_threshold=cert_sig_threshold), sc_node_configuration)
+                                                        cert_sig_threshold=cert_sig_threshold,
+                                                        sc_creation_version=sc_creation_version,
+                                                        is_non_ceasing=self.options.nonceasing), sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
@@ -168,7 +179,7 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Verify Certificate for epoch 0 on SC side
         mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
-        we0_sc_cert = mbrefdata["topQualityCertificate"]
+        we0_sc_cert = mbrefdata["topQualityCertificates"][0]
         assert_equal(len(mbrefdata["lowerCertificateLeaves"]), 0)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")
@@ -289,7 +300,7 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Verify Certificate for epoch 1 on SC side
         mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
-        we1_sc_cert = mbrefdata["topQualityCertificate"]
+        we1_sc_cert = mbrefdata["topQualityCertificates"][0]
         assert_equal(len(mbrefdata["lowerCertificateLeaves"]), 0)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")

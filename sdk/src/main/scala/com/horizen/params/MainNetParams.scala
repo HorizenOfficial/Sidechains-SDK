@@ -32,7 +32,8 @@ case class MainNetParams(
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
-                          override val isCSWEnabled: Boolean = true
+                          override val isCSWEnabled: Boolean = true,
+                          override val isNonCeasing: Boolean = false
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9
@@ -44,4 +45,6 @@ case class MainNetParams(
   override val nPowMaxAdjustDown: Int = 32 // 32% adjustment down
   override val nPowMaxAdjustUp: Int = 16 // 16% adjustment up
   override val nPowTargetSpacing: Int = 150 // 2.5 * 60
+
+  override val minVirtualWithdrawalEpochLength: Int = 100
 }

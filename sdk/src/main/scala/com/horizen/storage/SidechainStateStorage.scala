@@ -3,12 +3,13 @@ package com.horizen.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
-import com.horizen.backup.{BoxIterator}
+import com.horizen.backup.BoxIterator
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
+import com.horizen.params.NetworkParams
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.ScorexLogging
 
@@ -18,7 +19,7 @@ import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util._
 
-class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
+class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion, params: NetworkParams)
   extends ScorexLogging
     with SidechainStorageInfo
     with SidechainTypes
@@ -50,6 +51,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
   }
+
+  private[horizen] val getLastCertificateEpochNumberKey = Utils.calculateKey("lastCertificateEpochNumber".getBytes)
 
   private val undefinedBlockFeeInfoCounter: Int = -1
   private[horizen] def getBlockFeeInfoCounterKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
@@ -147,6 +150,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     withdrawalRequests
   }
 
+  // Note: For non-ceasing sidechain always `None`, since we don't store the whole certificate.
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
       case Some(baw) =>
@@ -160,10 +164,24 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
+  def getLastCertificateReferencedEpoch(): Option[Int] = {
+    storage.get(getLastCertificateEpochNumberKey).asScala match {
+      case Some(baw) =>
+        Try {
+          Ints.fromByteArray(baw.data)
+        } match {
+          case Success(epoch) => Some(epoch)
+          case Failure(exception) =>
+            log.error("Error while last certificate epoch information parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
+    }
+  }
+
   def getUtxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
     storage.get(getUtxoMerkleTreeRootKey(withdrawalEpoch)).asScala.map(_.data)
   }
-
 
   def hasCeased: Boolean = {
     storage.get(ceasingStateKey).isPresent
@@ -266,15 +284,18 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       case _ => false
     }
     if (isWithdrawalEpochSwitched) {
-      val wrEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
-      for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
-        removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
-      }
-      removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
+      if (!params.isNonCeasing) {
+        // For ceasing sidechain we remove outdated information in the end of the withdrawal epoch
+        val wrEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
+        for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
+          removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
+        }
+        removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
 
-      val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
-      removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
-      removeList.add(getUtxoMerkleTreeRootKey(certEpochNumberToRemove))
+        val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
+        removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
+        removeList.add(getUtxoMerkleTreeRootKey(certEpochNumberToRemove))
+      }
 
       val blockFeeInfoEpochToRemove: Int = withdrawalEpochInfo.epoch - 1
       for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
@@ -283,11 +304,36 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
     }
 
-    // Store the top quality cert for epoch if present
-    topQualityCertificateOpt.foreach(certificate =>
-      updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
-        WithdrawalEpochCertificateSerializer.toBytes(certificate)))
-    )
+
+    if (params.isNonCeasing) {
+      topQualityCertificateOpt.foreach(certificate => {
+        // For non-ceasing sidechain store referenced epoch number of the top certificate
+        // No need to store the whole cert, since it is never used after.
+        updateList.add(new JPair(getLastCertificateEpochNumberKey,
+          new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
+
+        // For non-ceasing sidechain we remove outdated certificate info when we retrieve the new top quality certificate:
+        // remove outdated withdrawal related records and counters from upt to the current cert data;
+        // Note: SC block may contain multiple Certs, so we need to remove data for all of them.
+        val prevCertReferencedEpoch = getLastCertificateReferencedEpoch().getOrElse(-1)
+        for(outdatedEpochNumber <- prevCertReferencedEpoch + 1 to  certificate.epochNumber) {
+          val wrEpochNumberToRemove: Int = outdatedEpochNumber
+          for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
+            removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
+          }
+          removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
+        }
+      })
+    } else {
+      // For ceasing sidechain store referenced epoch number and the top quality cert for epoch if present
+      topQualityCertificateOpt.foreach(certificate => {
+        updateList.add(new JPair(getLastCertificateEpochNumberKey,
+         new ByteArrayWrapper(Ints.toByteArray(topQualityCertificateOpt.get.epochNumber))))
+
+        updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
+          WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+      })
+    }
 
     // Update BlockFeeInfo data
     val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfo.epoch) + 1

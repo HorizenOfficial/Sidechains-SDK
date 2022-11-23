@@ -164,6 +164,8 @@ Parameters:
  - genesis_secret: private key 25519 secret to sign SC block
  - vrf_secret: vrk secret key to check consensus rules SC block
  - block_timestamp_rewind: rewind genesis block timestamp by some value
+ - virtual_withdrawal_epoch_length - actual withdrawal epoch length from SC perspective in case of non-ceasing sidechain
+    Note: must be undefined or 0 in case of ceasing sidechain; >0 in case of non-ceasing sidechain.
  
 Output: a JSON object to be included in the settings file of the sidechain node nth.
 {
@@ -178,9 +180,9 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 """
 
 
-def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind, virtual_withdrawal_epoch_length):
     jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
-                      "regtestBlockTimestampRewind": block_timestamp_rewind}
+                      "regtestBlockTimestampRewind": block_timestamp_rewind, "virtualWithdrawalEpochLength": virtual_withdrawal_epoch_length}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
 
@@ -402,6 +404,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'POW_DATA': bootstrap_info.pow_data,
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
+        'NON_CEASING': ("true" if bootstrap_info.is_non_ceasing else "false"),
         'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
         'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.initial_cumulative_comm_tree_hash,
         'WEBSOCKET_ADDRESS': websocket_config.address,
@@ -869,6 +872,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
+                                                            sc_nodes_bootstrap_info.is_non_ceasing,
                                                             cert_keys_paths,
                                                             csw_keys_paths)
     for i in range(total_number_of_sidechain_nodes):
@@ -917,6 +921,8 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
+    withdrawal_epoch_length = 0 if sc_creation_info.non_ceasing else sc_creation_info.withdrawal_epoch_length
+    virtual_withdrawal_epoch_length = sc_creation_info.withdrawal_epoch_length if sc_creation_info.non_ceasing else 0
     certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys,
                                                              sc_creation_info.cert_sig_threshold, cert_keys_paths,
                                                              sc_creation_info.csw_enabled)
@@ -927,7 +933,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
 
     genesis_info = initialize_new_sidechain_in_mainchain(
         sc_creation_info.mc_node,
-        sc_creation_info.withdrawal_epoch_length,
+        withdrawal_epoch_length,
         genesis_account.publicKey,
         sc_creation_info.forward_amount,
         vrf_key.publicKey,
@@ -938,14 +944,16 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         sc_creation_info.sc_creation_version,
         sc_creation_info.csw_enabled)
 
+
+
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
-                                         block_timestamp_rewind)
+                                         block_timestamp_rewind, virtual_withdrawal_epoch_length)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
+                           genesis_data["initialCumulativeCommTreeHash"], sc_creation_info.non_ceasing, cert_keys_paths, csw_keys_paths)
 
 
 def calculateApiKeyHash(auth_api_key):

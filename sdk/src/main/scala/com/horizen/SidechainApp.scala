@@ -159,7 +159,8 @@ class SidechainApp @Inject()
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
 
     case "testnet" => TestNetParams(
@@ -182,7 +183,8 @@ class SidechainApp @Inject()
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
 
     case "mainnet" => MainNetParams(
@@ -205,9 +207,19 @@ class SidechainApp @Inject()
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
+  }
+
+  if (params.isNonCeasing) {
+    if (params.withdrawalEpochLength < params.minVirtualWithdrawalEpochLength)
+      throw new IllegalArgumentException("Virtual withdrawal epoch length is too short.")
+
+    log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")
+  } else {
+    log.info(s"Sidechain is ceasing, withdrawal epoch length is ${params.withdrawalEpochLength}.")
   }
 
   // Configure Horizen address json serializer specifying proper network type.
@@ -273,7 +285,8 @@ class SidechainApp @Inject()
   protected val sidechainStateStorage = new SidechainStateStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/state")),
     registerStorage(stateStorage),
-    sidechainBoxesCompanion)
+    sidechainBoxesCompanion,
+    params)
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
   protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerStorage(utxoMerkleTreeStorage), params)
 
@@ -360,6 +373,7 @@ class SidechainApp @Inject()
   val secureEnclaveApiClient = new SecureEnclaveApiClient(sidechainSettings.remoteKeysManagerSettings)
 
   // Init Certificate Submitter
+  // Depends on params.isNonCeasing submitter will choose a proper strategy.
   val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 

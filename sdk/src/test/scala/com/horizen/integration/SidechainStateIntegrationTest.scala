@@ -119,7 +119,7 @@ class SidechainStateIntegrationTest
 
     initialVersion = getVersion
 
-    stateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+    stateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
     stateStorage.update(
       initialVersion,
       initialWithdrawalEpochInfo,
@@ -255,7 +255,7 @@ class SidechainStateIntegrationTest
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenReturn(Seq[MainchainBlockReferenceData](mock[MainchainBlockReferenceData]))
 
-    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
+    Mockito.when(mockedBlock.topQualityCertificates).thenReturn(Seq())
 
     val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
     Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
