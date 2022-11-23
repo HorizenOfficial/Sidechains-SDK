@@ -83,6 +83,8 @@ func TestEvmOpCodes(t *testing.T) {
 		Root: test.EmptyHash,
 	})
 	_, statedb := instance.statedbs.Get(stateHandle)
+
+	// deploy "OpCodes" contract
 	_, resultDeploy := instance.EvmApply(EvmParams{
 		HandleParams: HandleParams{Handle: stateHandle},
 		From:         user,
@@ -156,6 +158,126 @@ func TestEvmOpCodes(t *testing.T) {
 			}
 			if expected := common.LeftPadBytes(check.expected.Bytes(), 32); !reflect.DeepEqual(expected, result.ReturnData) {
 				t.Fatalf("test failed for %v:\n%v expected\n%v actual", check.name, expected, result.ReturnData)
+			}
+		})
+	}
+}
+
+func TestEvmErrors(t *testing.T) {
+	var (
+		instance = New()
+		user     = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
+		addr     = common.HexToAddress("0x1234")
+	)
+	dbHandle := instance.OpenMemoryDB()
+	_, stateHandle := instance.StateOpen(StateParams{
+		DatabaseParams: DatabaseParams{
+			dbHandle,
+		},
+		Root: test.EmptyHash,
+	})
+	_, statedb := instance.statedbs.Get(stateHandle)
+
+	// deploy test contract
+	_, resultDeploy := instance.EvmApply(EvmParams{
+		HandleParams: HandleParams{Handle: stateHandle},
+		From:         user,
+		To:           nil,
+		Input:        test.StorageContractDeploy(common.Big0),
+		AvailableGas: 200000,
+	})
+	if resultDeploy.EvmError != "" {
+		t.Fatalf("vm error: %v", resultDeploy.EvmError)
+	}
+
+	// add some test balance
+	statedb.AddBalance(user, big.NewInt(1000))
+
+	checks := []struct {
+		name         string
+		err          string
+		shouldRevert bool
+		params       EvmParams
+	}{
+		{
+			name: "EOA transfer with insufficient balance",
+			err:  "insufficient balance for transfer",
+			params: EvmParams{
+				HandleParams: HandleParams{Handle: stateHandle},
+				From:         user,
+				To:           &addr,
+				Value:        (*hexutil.Big)(big.NewInt(1001)),
+				AvailableGas: 100,
+			},
+		},
+		{
+			name: "contract deployment with insufficient gas for execution",
+			err:  "out of gas",
+			params: EvmParams{
+				HandleParams: HandleParams{Handle: stateHandle},
+				From:         user,
+				Input:        test.StorageContractDeploy(common.Big0),
+				AvailableGas: 123,
+			},
+		},
+		{
+			name: "contract deployment with insufficient gas for code storage",
+			err:  "contract creation code storage out of gas",
+			params: EvmParams{
+				HandleParams: HandleParams{Handle: stateHandle},
+				From:         user,
+				Input:        test.StorageContractDeploy(common.Big0),
+				AvailableGas: 50000,
+			},
+		},
+		{
+			// illegal because the constructor of this contract does not accept funds
+			name:         "contract deployment with illegal value transfer",
+			err:          "execution reverted",
+			shouldRevert: true,
+			params: EvmParams{
+				HandleParams: HandleParams{Handle: stateHandle},
+				From:         user,
+				Value:        (*hexutil.Big)(big.NewInt(100)),
+				Input:        test.StorageContractDeploy(common.Big0),
+				AvailableGas: 200000,
+			},
+		},
+		{
+			name:         "contract call to unknown function",
+			err:          "execution reverted",
+			shouldRevert: true,
+			params: EvmParams{
+				HandleParams: HandleParams{Handle: stateHandle},
+				From:         user,
+				To:           resultDeploy.ContractAddress,
+				Input:        common.FromHex("01020304"),
+				AvailableGas: 200000,
+			},
+		},
+		{
+			name: "contract call with insufficient gas",
+			err:  "out of gas",
+			params: EvmParams{
+				HandleParams: HandleParams{Handle: stateHandle},
+				From:         user,
+				To:           resultDeploy.ContractAddress,
+				Input:        test.StorageContractStore(common.Big3),
+				AvailableGas: 2000,
+			},
+		},
+	}
+
+	for i, check := range checks {
+		t.Run(check.name, func(t *testing.T) {
+			// make sure the nonce is increased between calls, otherwise there might be contract address collisions
+			statedb.SetNonce(user, uint64(i+1))
+			err, result := instance.EvmApply(check.params)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.EvmError != check.err {
+				t.Fatalf("unexpected EvmError: expected \"%v\" actual \"%v\"", check.err, result.EvmError)
 			}
 		})
 	}
