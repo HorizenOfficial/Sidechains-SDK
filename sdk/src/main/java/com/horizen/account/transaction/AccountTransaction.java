@@ -46,7 +46,6 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
     public abstract BigInteger getPriorityFeePerGas(BigInteger base);
 
     public BigInteger maxCost() {
-
             return this.getValue().add(getGasLimit().multiply(getGasPrice()));
     }
 

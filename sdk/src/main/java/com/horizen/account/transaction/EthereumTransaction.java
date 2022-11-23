@@ -59,14 +59,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonProperty("maxFeePerGas")
     private final BigInteger maxFeePerGas;
 
-    //private SignatureData signatureData;
-    private AddressProposition from;
-    private SignatureSecp256k1 signature;
-    private String hashString;
+    private final SignatureSecp256k1 signature;
 
-    private void initSignature(SignatureSecp256k1 inSignature) {
-            this.signature = inSignature;
-    }
+    private AddressProposition from;
+    private String hashString;
+    private BigInteger txCost;
 
     private synchronized String getTxHash() {
         if (this.hashString == null) {
@@ -74,7 +71,14 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             this.hashString = BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
         }
         return this.hashString;
+    }
 
+    @Override
+    public synchronized BigInteger maxCost() {
+        if (this.txCost == null) {
+            this.txCost = super.maxCost();
+        }
+        return this.txCost;
     }
 
     // creates a legacy transaction
@@ -99,7 +103,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
         this.to = to.orElse(null);
         this.data = data;
-        initSignature(inSignature);
+        this.signature = inSignature;
     }
 
 
@@ -126,7 +130,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
         this.to = to.orElse(null);
         this.data = data;
-        initSignature(inSignature);
+        this.signature = inSignature;
     }
 
     // creates an eip1559 transaction
@@ -153,7 +157,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
         this.to = to.orElse(null);
         this.data = data;
-        initSignature(inSignature);
+        this.signature = inSignature;
     }
 
     // creates a signed transaction from an existing one
@@ -173,7 +177,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         this.maxPriorityFeePerGas = txToSign.maxPriorityFeePerGas;
         this.maxFeePerGas = txToSign.maxFeePerGas;
 
-        initSignature(inSignature);
+        this.signature = inSignature;
     }
 
     public boolean isSigned() {
