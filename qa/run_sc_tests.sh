@@ -71,6 +71,7 @@ testScripts=(
     'sc_cert_submitter_after_sync_1.py --nonceasing'
     'sc_cert_submitter_after_sync_2.py'
     'sc_cert_submitter_after_sync_2.py --nonceasing'
+    'sc_cert_submitter_secure_enclave.py'
     'sc_closed_forger.py'
     'sc_csw_ceased_at_epoch_1.py'
     'sc_csw_ceased_at_epoch_1_with_large_epoch_length.py'

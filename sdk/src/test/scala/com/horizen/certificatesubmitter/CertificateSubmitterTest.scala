@@ -4,7 +4,9 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, MainchainTxSidechainCreationCrosschainOutput, SidechainBlock}
+import com.horizen._
+import com.horizen.api.http.client.SecureEnclaveApiClient
+import com.horizen.block._
 import com.horizen.box.Box
 import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, GetSignaturesStatus, IsCertificateSigningEnabled, IsSubmitterEnabled, SignatureFromRemote}
 import com.horizen.params.{CommonParams, NetworkParams, RegTestParams}
@@ -12,7 +14,6 @@ import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
-import com.horizen._
 import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
 import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateGenerationTimer
 import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
@@ -46,7 +47,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, TimeoutException}
+import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Random, Try}
 
@@ -108,7 +109,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -150,7 +151,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -190,7 +191,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -230,7 +231,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -271,7 +272,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -299,7 +300,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -332,7 +333,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -401,9 +402,10 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     // TODO: add cases for NonCeasingStrategy
     val submissionStrategy: CertificateSubmissionStrategy = new CeasingSidechain(mockedMainchainChannel, params)
+    val mockedSecureEnclaveApiClient = mock[SecureEnclaveApiClient]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel, submissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mockedSecureEnclaveApiClient, params, mockedMainchainChannel, submissionStrategy)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -471,8 +473,17 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       when(info.sidechainBlockId).thenReturn(ModifierId @@ "some_block_id")
       Some(info)
     })
+    val secureEnclaveManagedSecret = schnorrSecrets.take(1)
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(true)
+    when(mockedSecureEnclaveApiClient.listPublicKeys()).thenReturn(Future(secureEnclaveManagedSecret.map(_.publicImage)))
+    when(mockedSecureEnclaveApiClient.signWithEnclave(any(), any()))
+      .thenAnswer { request =>
+        val message = request.getArgument(0).asInstanceOf[Array[Byte]]
+        val pk_index = request.getArgument(1).asInstanceOf[(SchnorrProposition, Int)]
+          Future.successful(Some(CertificateSignatureInfo(pk_index._2,secureEnclaveManagedSecret.head.sign(message))))
+      }
 
-    var walletSecrets = schnorrSecrets.take(1)
+    var walletSecrets: Seq[SchnorrSecret] = Seq()
     when(wallet.secret(ArgumentMatchers.any[Proposition])).thenAnswer(answer => {
       val pubKey = answer.getArgument(0).asInstanceOf[SchnorrProposition]
       walletSecrets.find(s => s.owns(pubKey))
@@ -483,11 +494,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     assertTrue("Signature status expected to be defined.", submitter.signaturesStatus.isDefined)
     assertEquals("Different referenced epoch expected.", referencedEpochNumber, submitter.signaturesStatus.get.referencedEpoch)
-    assertEquals("Different signatures number expected.", walletSecrets.size, submitter.signaturesStatus.get.knownSigs.size)
+    assertEquals("Different signatures number expected.", 1, submitter.signaturesStatus.get.knownSigs.size)
     assertTrue("MessageToSign should be defined.", submitter.signaturesStatus.get.messageToSign.nonEmpty)
     assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
     val sigInfo = submitter.signaturesStatus.get.knownSigs.head
-    assertTrue("Signature expected to be valid", sigInfo.signature.isValid(walletSecrets.head.publicImage(), submitter.signaturesStatus.get.messageToSign))
+    assertTrue("Signature expected to be valid", sigInfo.signature.isValid(secureEnclaveManagedSecret.head.publicImage(), submitter.signaturesStatus.get.messageToSign))
 
     // Verify BroadcastLocallyGeneratedSignature event
     broadcastSignatureEventListener.fishForMessage(timeout.duration) { case m =>
@@ -504,7 +515,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       }
     }
 
-
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(false)
     // Test 3: another block inside the window, check that no signatures were generated.
 
     // Add one more known key to the wallet
@@ -726,7 +737,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
     val dustThreshold = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
     val submitter: CertificateSubmitter = TestActorRef(Props(
-        new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[NetworkParams], mock[MainchainNodeChannel], mock[CertificateSubmissionStrategy])
+        new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[SecureEnclaveApiClient], mock[NetworkParams], mock[MainchainNodeChannel], mock[CertificateSubmissionStrategy])
     )).underlyingActor
 
     assertEquals("Before the fork, ftMinAmount should be 0",
@@ -770,7 +781,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -902,7 +913,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -961,7 +972,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, params, mockedMainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 
@@ -1004,7 +1015,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
     val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, params, mockedMainchainChannel, mockedSubmissionStrategy)))
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy)))
 
     val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
 

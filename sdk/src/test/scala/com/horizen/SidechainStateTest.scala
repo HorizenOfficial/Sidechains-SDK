@@ -921,7 +921,7 @@ class SidechainStateTest
     secretList ++= getPrivateKey25519List(10).asScala
     // Set base Box data
     boxList.clear()
-    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    boxList ++= getZenBoxList(secretList.asJava, 599).asScala.toList // Transaction with 1 output and 10 withdrawal requests requires at least 599 coins in the box(54*11+5)
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
@@ -974,8 +974,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     Mockito.when(mockedBlock.timestamp).thenReturn(86401)
 
@@ -1001,11 +999,6 @@ class SidechainStateTest
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
 
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
-
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
       validateTry.isSuccess)
@@ -1016,11 +1009,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
     assertFalse("Block validation must fail.",
@@ -1035,11 +1023,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
     assertFalse("Block validation must fail.",
@@ -1058,11 +1041,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData))
 
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
-
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
       validateTry.isSuccess)
@@ -1074,11 +1052,6 @@ class SidechainStateTest
     }
 
     Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(wbs.asScala.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
@@ -1092,11 +1065,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
     assertFalse("Block validation must fail.",
@@ -1113,15 +1081,11 @@ class SidechainStateTest
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
 
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
-
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
       validateTry.isSuccess)
   }
+
   @Test
   def testCoinBoxFeeBeforeAndAfterFork(): Unit = {
     secretList.clear()
