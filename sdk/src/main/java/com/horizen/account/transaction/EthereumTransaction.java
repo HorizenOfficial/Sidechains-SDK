@@ -19,8 +19,6 @@ import org.web3j.utils.Numeric;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.Optional;
-
-import static com.horizen.account.utils.EthereumTransactionEncoder.encodeUnsignedEip155AsRlpValues;
 import static com.horizen.account.utils.Secp256k1.PUBLIC_KEY_SIZE;
 
 
@@ -76,6 +74,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             this.hashString = BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
         }
         return this.hashString;
+
     }
 
     // creates a legacy transaction
@@ -311,16 +310,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             return this.maxPriorityFeePerGas;
         //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
         return this.gasPrice;
-    }
-
-    @Override
-    @JsonIgnore
-    public BigInteger getMaxCost() {
-        if (isEIP1559()) {
-            return getValue().add(getGasLimit().multiply(getMaxFeePerGas()));
-        } else {
-            return getValue().add(getGasLimit().multiply(getGasPrice()));
-        }
     }
 
     @Override

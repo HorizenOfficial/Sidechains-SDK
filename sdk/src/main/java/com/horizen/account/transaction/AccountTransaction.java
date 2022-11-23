@@ -3,11 +3,15 @@ package com.horizen.account.transaction;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.Transaction;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 
 import java.math.BigInteger;
 import java.util.Optional;
 
 public abstract class AccountTransaction<P extends Proposition, PR extends Proof<P>> extends Transaction {
+
+    public abstract void semanticValidity() throws TransactionSemanticValidityException;
+
 
     public abstract BigInteger getNonce();
 
@@ -37,8 +41,14 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
     max fee - base fee. */
     public abstract BigInteger getMaxPriorityFeePerGas();
 
-    public abstract BigInteger getMaxCost();
+
     public abstract BigInteger getEffectiveGasPrice(BigInteger base);
     public abstract BigInteger getPriorityFeePerGas(BigInteger base);
+
+    public BigInteger maxCost() {
+
+            return this.getValue().add(getGasLimit().multiply(getGasPrice()));
+    }
+
 
 }

@@ -45,7 +45,6 @@ trait EthereumTransactionFixture {
                                priorityGasFee: BigInteger = BigInteger.valueOf(10000),
                                gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
 
-
     val unsignedTx = new EthereumTransaction(
       1997L,
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
@@ -75,6 +74,7 @@ trait EthereumTransactionFixture {
         new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS))
     )
   }
+
 
   def getEoa2EoaLegacyTransaction: EthereumTransaction = {
     new EthereumTransaction(
@@ -342,6 +342,80 @@ trait EthereumTransactionFixture {
         EthereumTransactionUtils.getDataFromString(data),
         signature)
 
+  }
+
+
+
+  /*
+  This method creates a list of txs for different accounts. In case orphanIdx is set, 1 account out of 10 will have a gap
+  in the nonce at index orphanIdx, in order to create orphan txs.
+  Every tx will have the same maxGasFee but different priorityGasFee
+   */
+  def createTransactions(
+                          numOfAccount: Int,
+                          numOfTxsPerAccount: Int,
+                          orphanIdx: Int = -1
+                        ): scala.collection.mutable.ListBuffer[EthereumTransaction] = {
+    val toAddr = "0x00112233445566778899AABBCCDDEEFF01020304"
+    val value = BigInteger.valueOf(12)
+
+    val baseGas = 10000
+    val maxGasFee = BigInteger.valueOf(baseGas + numOfAccount * numOfTxsPerAccount)
+    val listOfAccounts: scala.collection.mutable.ListBuffer[Option[ECKeyPair]] =
+      new scala.collection.mutable.ListBuffer[Option[ECKeyPair]]
+    val listOfTxs = new scala.collection.mutable.ListBuffer[EthereumTransaction]
+
+    // CircularPriorityGasBuilder is used to guarantee the txs with the highest fees
+    // don't come all from the same accounts
+    val gasBuilder = new CircularPriorityGasBuilder(baseGas, 17)
+
+    (1 to numOfAccount).foreach(_ => {
+      listOfAccounts += Some(Keys.createEcKeyPair())
+    })
+
+    (0 until numOfTxsPerAccount).foreach(nonceTx => {
+      val currentNonce = BigInteger.valueOf(nonceTx)
+
+      listOfAccounts.zipWithIndex.foreach {
+        case (pair, idx) => {
+          if (idx % 10 == 0 && orphanIdx >= 0 && nonceTx >= orphanIdx) { // Create orphans
+            listOfTxs += createEIP1559Transaction(
+              value,
+              nonce = BigInteger.valueOf(nonceTx + 1),
+              pairOpt = pair,
+              gasFee = maxGasFee,
+              priorityGasFee = gasBuilder.nextPriorityGas()
+            )
+          } else
+            listOfTxs += createEIP1559Transaction(
+              value,
+              nonce = currentNonce,
+              pairOpt = pair,
+              gasFee = maxGasFee,
+              priorityGasFee = gasBuilder.nextPriorityGas()
+            )
+        }
+      }
+    })
+    listOfTxs
+  }
+
+  /*
+  This class returns an increasing priority gas every time nextPriorityGas is called.
+  When the number of times nextPriorityGas is called is equal to period, the priority gas value returns to its original value.
+
+   */
+  class CircularPriorityGasBuilder(baseGas: Int, period: Int) {
+    var counter: Int = 0
+
+    def nextPriorityGas(): BigInteger = {
+      if (counter == period) {
+        counter = 0
+      }
+      val gas = baseGas + counter
+      counter = counter + 1
+      BigInteger.valueOf(gas)
+    }
   }
 
 }

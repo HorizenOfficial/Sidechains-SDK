@@ -186,7 +186,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               null
           )
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getMaxCost
+            val txCost = signedTx.maxCost
 
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
@@ -229,7 +229,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               null
           )
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getMaxCost
+            val txCost = signedTx.maxCost
 
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
@@ -258,7 +258,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         applyOnNodeView { sidechainNodeView =>
           var signedTx = EthereumTransactionDecoder.decode(body.payload)
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getMaxCost
+            val txCost = signedTx.maxCost
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
             secret match {
@@ -282,8 +282,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         body => {
           applyOnNodeView { sidechainNodeView =>
             var signedTx = EthereumTransactionDecoder.decode(body.payload)
-
-            val txCost = signedTx.getMaxCost
+            val txCost = signedTx.maxCost
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
             secret match {
