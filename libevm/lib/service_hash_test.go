@@ -19,7 +19,7 @@ func generateTransactions(count int) types.Transactions {
 		to       = common.NewMixedcaseAddress(common.HexToAddress("0x1337"))
 		gas      = hexutil.Uint64(21000)
 		gasPrice = (hexutil.Big)(*big.NewInt(2000000000))
-		data     = hexutil.Bytes(common.Hex2Bytes("01020304050607080a"))
+		data     = hexutil.Bytes(common.FromHex("01020304050607080a"))
 	)
 	for v := 0; v < count; v++ {
 		value := (hexutil.Big)(*new(big.Int).Mul(big.NewInt(1e18), big.NewInt(int64(v))))
@@ -61,9 +61,9 @@ func generateReceipts(count int) types.Receipts {
 				{
 					Address: common.HexToAddress("1122334455667788990011223344556677889900"),
 					Topics: []common.Hash{
-						crypto.Keccak256Hash(common.Hex2Bytes("aabbccdd")),
+						crypto.Keccak256Hash(common.FromHex("aabbccdd")),
 					},
-					Data: common.Hex2Bytes("aabbccdd"),
+					Data: common.FromHex("aabbccdd"),
 				},
 			},
 		}
