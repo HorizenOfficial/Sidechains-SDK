@@ -113,37 +113,4 @@ public class EthereumTransactionEncoder {
                 .put(encoded)
                 .array();
     }
-
-    public static byte[] encodeUnsignedEip155AsRlpValues(EthereumTransaction tx) {
-
-        List<RlpType> result = new ArrayList<>();
-
-        result.add(RlpString.create(tx.getNonce()));
-
-        result.add(RlpString.create(tx.getGasPrice()));
-        result.add(RlpString.create(tx.getGasLimit()));
-
-        // an empty to address (contract creation) should not be encoded as a numeric 0 value
-        if (tx.getToAddressString() != null && tx.getToAddressString().length() > 0) {
-            // addresses that start with zeros should be encoded with the zeros included, not
-            // as numeric values
-            result.add(RlpString.create(Numeric.hexStringToByteArray(tx.getToAddressString())));
-        } else {
-            result.add(RlpString.create(""));
-        }
-
-        result.add(RlpString.create(tx.getValue()));
-
-        // value field will already be hex encoded, so we need to convert into binary first
-        byte[] dataBytes = tx.getData();
-        result.add(RlpString.create(dataBytes));
-
-        result.add(RlpString.create(Bytes.trimLeadingZeroes(convertToBytes(tx.getChainId()))));
-        result.add(RlpString.create(Bytes.trimLeadingZeroes(new byte[] {})));
-        result.add(RlpString.create(Bytes.trimLeadingZeroes(new byte[] {})));
-
-        RlpList rlpList = new RlpList(result);
-        return RlpEncoder.encode(rlpList);
-    }
-
 }
