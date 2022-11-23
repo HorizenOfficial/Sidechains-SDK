@@ -151,11 +151,11 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
         val rpcResponse = mapper.readTree(entityAs[String])
         assertEquals(stringFromJsonNode(rpcResponse.get(0).get("result").toString), checkChainId)
         assertEquals(stringFromJsonNode(rpcResponse.get(0).get("id").toString), "8")
-        assertEquals(stringFromJsonNode(rpcResponse.get(1).get("result").toString), checkChainId)
-        assertEquals(stringFromJsonNode(rpcResponse.get(1).get("id").toString), "16")
-        assertEquals(stringFromJsonNode(rpcResponse.get(2).get("error").get("code").toString), "-32600")
-        assertEquals(stringFromJsonNode(rpcResponse.get(2).get("error").get("message").toString), "Invalid request")
-        assertEquals(stringFromJsonNode(rpcResponse.get(2).get("id").toString), "null")
+        assertEquals(stringFromJsonNode(rpcResponse.get(1).get("error").get("code").toString), "-32600")
+        assertEquals(stringFromJsonNode(rpcResponse.get(1).get("error").get("message").toString), "Invalid request")
+        assertEquals(stringFromJsonNode(rpcResponse.get(1).get("id").toString), "null")
+        assertEquals(stringFromJsonNode(rpcResponse.get(2).get("result").toString), checkChainId)
+        assertEquals(stringFromJsonNode(rpcResponse.get(2).get("id").toString), "16")
       }
     }
 
@@ -194,9 +194,6 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
         assertEquals(stringFromJsonNode(rpcResponse.get("id").toString), "null")
       }
     }
-
-
-
   }
 
   private def stringFromJsonNode(jsonString: String): String = {
