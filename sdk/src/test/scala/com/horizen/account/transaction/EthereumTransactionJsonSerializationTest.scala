@@ -13,6 +13,7 @@ import org.web3j.crypto.transaction.`type`.TransactionType
 import sparkz.core.utils.SparkzEncoder
 
 import java.math.BigInteger
+import java.util
 
 class EthereumTransactionJsonSerializationTest
   extends JUnitSuite
@@ -66,24 +67,10 @@ class EthereumTransactionJsonSerializationTest
 
   @Test
   def testPartiallySignedEip155TxToJson(): Unit = {
-    try {
-      val transaction = new EthereumTransaction(
-        EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
-        BigInteger.valueOf(9L),
-        BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
-        BigInteger.valueOf(21000),
-        BigInteger.TEN.pow(18),
-        new Array[Byte](0),
-        new SignatureSecp256k1(Array[Byte](1), Array[Byte](32), Array[Byte](32))
-      )
-      fail("IllegalArgumentException expected")
-    }
-    catch {
-      case e : IllegalArgumentException =>//  expected
-        System.out.println(e)
-      case _: Throwable =>
-        fail("IllegalArgumentException expected")
-    }
+    val transaction = getPartiallySignedEip155LegacyTransaction
+    assertTrue(transaction.isEIP155)
+    assertTrue(transaction.getFromString.equals(""))
+    evalJsonRepr(transaction)
   }
 
   @Test

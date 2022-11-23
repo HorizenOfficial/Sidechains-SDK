@@ -21,7 +21,6 @@ import java.math.BigInteger;
 import java.util.Optional;
 
 import static com.horizen.account.utils.EthereumTransactionEncoder.encodeUnsignedEip155AsRlpValues;
-import static com.horizen.account.utils.EthereumTransactionUtils.*;
 import static com.horizen.account.utils.Secp256k1.PUBLIC_KEY_SIZE;
 
 
@@ -383,33 +382,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public synchronized AddressProposition getFrom() {
-        if (this.from == null) {
-            if (this.signature != null) {
-                try {
-                    byte[] encodedTransaction;
+        if (this.from == null && this.signature != null) {
+            try {
+                byte[] encodedTransaction = encode(null);
 
-                    if (isEIP155()) {
-                        encodedTransaction = encodeUnsignedEip155AsRlpValues(this);
-                    } else {
-                        encodedTransaction = encode(null);
-                    }
-
-                    byte[] realV;
-                    if (isEIP155())
-                        realV = new byte[]{getRealV(Numeric.toBigInt(this.signature.getV()))};
-                    else
-                        realV = this.signature.getV();
-                    byte[] r = this.signature.getR();
-                    byte[] s = this.signature.getS();
-
-                    Sign.SignatureData realSignatureData = new Sign.SignatureData(realV, r, s);
-                    BigInteger pubKey = Sign.signedMessageToKey(encodedTransaction, realSignatureData);
-                    this.from = new AddressProposition(Keys.getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE)));
-                } catch (Exception e) {
-                    // whatever exception may result in processing the signature, we can not tell the from address
-                    LogManager.getLogger().info("Could not find from address, Signature not valid:", e);
-                    this.from = null;
-                }
+                BigInteger pubKey = Sign.signedMessageToKey(encodedTransaction, this.signature.getSignatureData());
+                this.from = new AddressProposition(Keys.getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE)));
+            } catch (Exception e) {
+                // whatever exception may result in processing the signature, we can not tell the from address
+                LogManager.getLogger().info("Could not find from address, Signature not valid:", e);
+                this.from = null;
             }
         }
         return this.from;
@@ -421,7 +403,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             return BytesUtils.toHexString(this.from.address());
         return "";
     }
-
 
     @Override
     public BigInteger getValue() {
@@ -435,7 +416,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @JsonIgnore
     public String getDataString() {
-        return BytesUtils.toHexString(this.data);
+        if (this.data != null)
+          return BytesUtils.toHexString(this.data);
+        return "";
     }
 
     @Override
@@ -482,11 +465,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public byte[] messageToSign() {
-        if (isEIP155()) {
-            return encodeUnsignedEip155AsRlpValues(this);
-        } else {
-            return encode(null);
-        }
+       return encode(null);
     }
 
     public Message asMessage(BigInteger baseFee) {

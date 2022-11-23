@@ -198,6 +198,19 @@ trait EthereumTransactionFixture {
     )
   }
 
+  def getPartiallySignedEip155LegacyTransaction: EthereumTransaction = {
+    new EthereumTransaction(
+      88L,
+      EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
+      BigInteger.valueOf(9L), // nonce
+      new BigInteger(BytesUtils.fromHexString("0a02ffee00")), // gasPrice
+      GasUtil.TxGas,  // gasLimit
+      BigInteger.TEN.pow(18), // value
+      new Array[Byte](0),
+      new SignatureSecp256k1(Array[Byte](88), Array.fill[Byte](32)(0), Array.fill[Byte](32)(0))
+    )
+  }
+
   def copyEip1599EthereumTransaction(
                                       inTx: EthereumTransaction,
                                       inChainId: lang.Long = null,

@@ -1,5 +1,6 @@
 package com.horizen.account.proof;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.secret.PrivateKeySecp256k1;
@@ -93,5 +94,10 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
                 Numeric.toHexString(r),
                 Numeric.toHexString(s)
         );
+    }
+
+    @JsonIgnore
+    public Sign.SignatureData getSignatureData() {
+        return new Sign.SignatureData(v, r, s);
     }
 }
