@@ -26,7 +26,7 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
     // because of here used message length integer needed for decoding
     @Override
     public void serialize(EthereumTransaction tx, Writer writer) {
-        byte[] encodedMessage = tx.encode(tx.getSignatureData());
+        byte[] encodedMessage = tx.encode(tx.getSignature());
 
         writer.putInt(encodedMessage.length);
         writer.putBytes(encodedMessage);

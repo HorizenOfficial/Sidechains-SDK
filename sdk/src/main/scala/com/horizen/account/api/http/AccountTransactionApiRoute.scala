@@ -25,8 +25,6 @@ import com.horizen.params.NetworkParams
 import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Sign.SignatureData
-import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
 import sparkz.core.settings.RESTApiSettings
 
 import java.lang
@@ -83,7 +81,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val msgSignature = secret.sign(messageToSign)
     new EthereumTransaction(
         tx,
-        new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
+        new SignatureSecp256k1(msgSignature.getV, msgSignature.getR, msgSignature.getS)
     )
   }
 
@@ -92,7 +90,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val msgSignature = secret.sign(messageToSign)
     new EthereumTransaction(
         tx,
-        createEip155SignatureData(new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS), params.chainId)
+        new SignatureSecp256k1(msgSignature.getV, msgSignature.getR, msgSignature.getS)
     )
   }
 
@@ -180,7 +178,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             body.value,
             EthereumTransactionUtils.getDataFromString(body.data),
             if (body.signature_v.isDefined)
-              new SignatureData(
+              new SignatureSecp256k1(
                 body.signature_v.get,
                 body.signature_r.get,
                 body.signature_s.get)
@@ -223,7 +221,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             body.value.orNull,
             EthereumTransactionUtils.getDataFromString(body.data),
             if (body.signature_v.isDefined)
-              new SignatureData(
+              new SignatureSecp256k1(
                 body.signature_v.get,
                 body.signature_r.get,
                 body.signature_s.get)
@@ -572,9 +570,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
   val rawTransactionResponseRepresentation: EthereumTransaction => SuccessResponse = {
     transaction =>
-      RawTransactionOutput("0x" + BytesUtils.toHexString(transaction.encode(
-
-        transaction.getSignatureData))
+      RawTransactionOutput("0x" + BytesUtils.toHexString(transaction.encode(transaction.getSignature))
       )
   }
 

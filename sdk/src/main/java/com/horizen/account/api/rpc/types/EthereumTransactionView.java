@@ -49,9 +49,9 @@ public class EthereumTransactionView {
             maxFeePerGas = null;
         }
         chainId = ethTx.getChainId() == null ? null : Numeric.encodeQuantity(BigInteger.valueOf(ethTx.getChainId()));
-        v = (ethTx.getV() != null) ? Numeric.toHexString(ethTx.getV()) : null;
-        r = (ethTx.getR() != null) ? Numeric.toHexString(ethTx.getR()) : null;
-        s = (ethTx.getS() != null) ? Numeric.toHexString(ethTx.getS()) : null;
+        v = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getV()) : null;
+        r = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getR()) : null;
+        s = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getS()) : null;
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
         from = (ethTx.getFrom() != null) ? Numeric.toHexString(ethTx.getFrom().address()) : null;

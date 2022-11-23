@@ -1,6 +1,7 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.fixtures.EthereumTransactionFixture;
+import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.state.GasUtil;
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
@@ -12,6 +13,7 @@ import java.math.BigInteger;
 import java.util.Optional;
 
 import static com.horizen.account.utils.EthereumTransactionUtils.convertToLong;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class EthereumTransactionSemanticValidityTest implements EthereumTransactionFixture {
@@ -50,44 +52,34 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
 
-        // 1. bad chainId
-        // 1.1 null obj
+        // 1. null chainId
+        // 1.1 null obj is ok, this will be a legacy non eip155 tx
+        try {
+            var tx = copyEip155LegacyEthereumTransaction(goodTx, Optional.empty(),
+                        null, null, null, null,
+                        null, null,
+                        null);
+            tx.semanticValidity();
+            assertTrue(!tx.isEIP155());
+        } catch (Throwable e) {
+            fail("Test1: Successful EthereumTransaction creation expected." + e);
+        }
+
+        // 1.2 negative chainId
         assertNotValid(
-                copyEip155LegacyEthereumTransaction(goodTx, Optional.empty(),
+                copyEip155LegacyEthereumTransaction(goodTx, Optional.of(goodTx.getChainId()*(-1)),
                         null, null, null, null,
                         null, null,
                         null)
         );
 
-        var chainId = EthereumTransactionDecoder.getDecodedChainIdFromSignature(goodTx.getSignatureData());
-        // 1.2 chainId different from the one encoded in signature
-        assertNotValid(
-                copyEip155LegacyEthereumTransaction(goodTx, Optional.of(chainId+1),
-                        null, null, null, null,
-                        null, null,
-                        null)
-        );
-
-        // 1.3 negative chainId (and same as value encoded in signature)
-        var goodV = goodTx.getSignatureData().getV();
-        var goodR = goodTx.getSignatureData().getR();
-        var goodS = goodTx.getSignatureData().getS();
-        var encodedChainId = encodeEip155ChainId(chainId*(-1), convertToLong(goodV));
-        assertNotValid(
-                copyEip155LegacyEthereumTransaction(goodTx, Optional.of(chainId*(-1)),
-                        null, null, null, null,
-                        null, null,
-                        Optional.of(new Sign.SignatureData(encodedChainId.toByteArray(), goodR, goodS)))
-        );
-
-        // 1.4 zero chainId
-        var zeroEncodedChainId = encodeEip155ChainId(0L, convertToLong(goodV));
+        // 1.3 zero chainId
 
         assertNotValid(
                 copyEip155LegacyEthereumTransaction(goodTx, Optional.of(0L),
                         null,null, null, null,
                         null, null,
-                        Optional.of(new Sign.SignatureData(zeroEncodedChainId.toByteArray(), goodR, goodS)))
+                        null)
         );
 
 
@@ -144,7 +136,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         // 2.1 - invalid v-value
         // The V header byte should be in the range [27, 34]
         // (practically the only used values in ethereum signature scheme are 27 and 28)
-        var badSignOpt1 = Optional.of(new Sign.SignatureData(
+        var badSignOpt1 = Optional.of(new SignatureSecp256k1(
                 BytesUtils.fromHexString("07"),
                 BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
                 BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
@@ -158,9 +150,9 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         );
 
         // 2.2 - Semantically valid V but not used in ethereum signature scheme
-        var goodR = goodTx.getSignatureData().getR();
-        var goodS = goodTx.getSignatureData().getS();
-        var badSignOpt1B = Optional.of(new Sign.SignatureData(
+        var goodR = goodTx.getSignature().getR();
+        var goodS = goodTx.getSignature().getS();
+        var badSignOpt1B = Optional.of(new SignatureSecp256k1(
                 BytesUtils.fromHexString("1f"),
                 goodR,
                 goodS
@@ -174,12 +166,13 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         );
 
         // 2.3 - null v-value array
-        var badSignOpt2 = Optional.of(new Sign.SignatureData(
-                null,
-                BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
-                BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
-        ));
+
         try {
+            var badSignOpt2 = Optional.of(new SignatureSecp256k1(
+                    null,
+                    BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
+                    BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
+            ));
             copyEip1599EthereumTransaction(goodTx,
                     null, null, null,
                     null, null, null, null, null,
@@ -195,12 +188,14 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         }
 
         // 2.4 - null r-value array
-        var badSignOpt3 = Optional.of(new Sign.SignatureData(
-                BytesUtils.fromHexString("1c"),
-                null,
-                BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
-        ));
         try {
+            var badSignOpt3 = Optional.of(new SignatureSecp256k1(
+                    BytesUtils.fromHexString("1c"),
+                    null,
+                    BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
+            ));
+            fail("IllegalArgumentException expected");
+
             copyEip1599EthereumTransaction(goodTx,
                     null, null, null,
                     null, null, null, null, null,
@@ -216,12 +211,15 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         }
 
         // 2.5 - Short s-value array
-        var badSignOpt4 = Optional.of(new Sign.SignatureData(
-                BytesUtils.fromHexString("1c"),
-                BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
-                BytesUtils.fromHexString("E9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
-        ));
+
         try {
+            var badSignOpt4 = Optional.of(new SignatureSecp256k1(
+                    BytesUtils.fromHexString("1c"),
+                    BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
+                    BytesUtils.fromHexString("E9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
+            ));
+            fail("IllegalArgumentException expected");
+
             copyEip1599EthereumTransaction(goodTx,
                     null,null, null,
                     null, null, null, null, null,

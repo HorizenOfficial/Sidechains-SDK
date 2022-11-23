@@ -2,13 +2,13 @@ package com.horizen.account.transaction
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.utils.EthereumTransactionUtils
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import org.web3j.crypto.Sign
 import org.web3j.crypto.transaction.`type`.TransactionType
 import sparkz.core.utils.SparkzEncoder
 
@@ -74,7 +74,7 @@ class EthereumTransactionJsonSerializationTest
         BigInteger.valueOf(21000),
         BigInteger.TEN.pow(18),
         new Array[Byte](0),
-        new Sign.SignatureData(Array[Byte](1), Array[Byte](0), Array[Byte](0))
+        new SignatureSecp256k1(Array[Byte](1), Array[Byte](32), Array[Byte](32))
       )
       fail("IllegalArgumentException expected")
     }
@@ -257,7 +257,7 @@ class EthereumTransactionJsonSerializationTest
       try {
         val sig_r = node.path("signature").path("r").asText()
         assertEquals("Transaction signature r json value must be the same.",
-          SparkzEncoder.default.encode(transaction.getR), sig_r)
+          SparkzEncoder.default.encode(transaction.getSignature.getR), sig_r)
       } catch {
         case _: Throwable => fail("Transaction signature r not found in json.")
       }
@@ -265,7 +265,7 @@ class EthereumTransactionJsonSerializationTest
       try {
         val sig_s = node.path("signature").path("s").asText()
         assertEquals("Transaction signature s json value must be the same.",
-          SparkzEncoder.default.encode(transaction.getS), sig_s)
+          SparkzEncoder.default.encode(transaction.getSignature.getS), sig_s)
       } catch {
         case _: Throwable => fail("Transaction signature s not found in json.")
       }

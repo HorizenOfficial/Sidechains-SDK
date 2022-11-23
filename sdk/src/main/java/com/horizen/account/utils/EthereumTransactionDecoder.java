@@ -8,10 +8,11 @@ import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import org.web3j.utils.Numeric;
-
 import java.math.BigInteger;
 import java.util.Arrays;
 
+import static com.horizen.account.utils.EthereumTransactionUtils.convertToLong;
+import static com.horizen.account.utils.EthereumTransactionUtils.getRealV;
 import static org.web3j.crypto.Sign.CHAIN_ID_INC;
 import static org.web3j.crypto.Sign.LOWER_REAL_V;
 
@@ -61,13 +62,13 @@ public class EthereumTransactionDecoder {
             byte[] v = Sign.getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(10)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(11)).getBytes()), 32);
-            Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
+            SignatureSecp256k1 signature = new SignatureSecp256k1(v, r, s);
             return new EthereumTransaction(
                     chainId,
                     optTo,
                     nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value,
                     dataBytes,
-                    signatureData);
+                    signature);
         }
     }
 
@@ -88,17 +89,16 @@ public class EthereumTransactionDecoder {
             byte[] v = ((RlpString)values.getValues().get(6)).getBytes();
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(7)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(8)).getBytes()), 32);
-            Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
-            Long chainId = decodeEip155ChainId(Numeric.toBigInt(v));
+            SignatureSecp256k1 realSignature = new SignatureSecp256k1(getRealV(v), r, s);
+            Long chainId = decodeEip155ChainId(v);
 
             if (chainId != null) {
-                // chainid is encoded into V part, this is an EIP 155
+                // chain id is encoded into V part, this is an EIP 155
                 return new EthereumTransaction(
-                        chainId, optTo,
-                        nonce, gasPrice, gasLimit, value, dataBytes, signatureData); //new SignatureSecp256k1(realv, r, s));
+                        chainId, optTo, nonce, gasPrice, gasLimit, value, dataBytes, realSignature);
             } else {
                 return new EthereumTransaction(
-                        optTo, nonce, gasPrice, gasLimit, value, dataBytes, signatureData);
+                        optTo, nonce, gasPrice, gasLimit, value, dataBytes, realSignature);
             }
         } else {
             return new EthereumTransaction(
@@ -106,16 +106,8 @@ public class EthereumTransactionDecoder {
         }
     }
 
-    public static Long getDecodedChainIdFromSignature(Sign.SignatureData inSignatureData) {
-        if (inSignatureData != null && inSignatureData.getV() != null) {
-            BigInteger bv = Numeric.toBigInt(inSignatureData.getV());
-            return decodeEip155ChainId(bv);
-        }
-        return null;
-    }
-
-    public static Long decodeEip155ChainId(BigInteger bv) {
-        long v = bv.longValue();
+    public static Long decodeEip155ChainId(byte[] bv) {
+        long v = convertToLong(bv);
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
             return null;
         }

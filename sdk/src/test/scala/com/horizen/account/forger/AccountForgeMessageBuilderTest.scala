@@ -2,13 +2,13 @@ package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
-import org.web3j.crypto.Sign.SignatureData
 
 import java.math.BigInteger
 
@@ -59,7 +59,7 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentStateAfterRandomException(): Unit = {
 
-    class BuggyTransaction(th: EthereumTransaction, sign : SignatureData)
+    class BuggyTransaction(th: EthereumTransaction, sign : SignatureSecp256k1)
       extends EthereumTransaction(th, sign) {
       override def version(): Byte = throw new Exception()
     }
@@ -68,7 +68,7 @@ class AccountForgeMessageBuilderTest
       BigInteger.TEN,
       gasLimit = BigInteger.valueOf(10000000)
     )
-    val invalidTx = new BuggyTransaction(tmpTx, tmpTx.getSignatureData)
+    val invalidTx = new BuggyTransaction(tmpTx, tmpTx.getSignature)
 
     val blockContext = new BlockContext(
       Array.empty[Byte],
@@ -111,7 +111,7 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentBlockGasAfterRandomException(): Unit = {
 
-    class BuggyTransaction(th: EthereumTransaction, sign : SignatureData)
+    class BuggyTransaction(th: EthereumTransaction, sign : SignatureSecp256k1)
       extends EthereumTransaction(th, sign) {
       override def version(): Byte = throw new Exception()
     }
@@ -122,7 +122,7 @@ class AccountForgeMessageBuilderTest
       gasLimit = gasLimit
     )
     val invalidTx = new BuggyTransaction(
-      tmpTx, tmpTx.getSignatureData
+      tmpTx, tmpTx.getSignature
     )
 
     val validTx = createLegacyTransaction(

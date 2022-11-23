@@ -2,11 +2,11 @@ package com.horizen.account.utils;
 
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.utils.BytesUtils;
-import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Optional;
 
 import static org.web3j.crypto.Sign.LOWER_REAL_V;
@@ -31,6 +31,18 @@ public final class EthereumTransactionUtils {
         return bi.longValueExact();
     }
 
+    public static byte[] getRealV(byte[] bv) {
+        long v = convertToLong(bv);
+        if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
+            return new byte[]{(byte) v};
+        }
+        int inc = 0;
+        if ((int) v % 2 == 0) {
+            inc = 1;
+        }
+        return new byte[]{(byte) (LOWER_REAL_V + inc)};
+    }
+
     public static byte getRealV(BigInteger bv) {
         long v = bv.longValue();
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
@@ -41,10 +53,6 @@ public final class EthereumTransactionUtils {
             inc = 1;
         }
         return (byte) (LOWER_REAL_V + inc);
-    }
-
-    public static Sign.SignatureData createEip155PartialSignatureData(Long chainId) {
-        return new Sign.SignatureData(convertToBytes(chainId), new byte[] {}, new byte[] {});
     }
 
     public static Optional<AddressProposition> getToAddressFromString(String toString) {
@@ -88,5 +96,17 @@ public final class EthereumTransactionUtils {
         }
     }
 
+    public static byte[] trimLeadingBytes(byte[] bytes, byte b) {
+        int offset = 0;
+        for (; offset < bytes.length; offset++) {
+            if (bytes[offset] != b) {
+                break;
+            }
+        }
+        return Arrays.copyOfRange(bytes, offset, bytes.length);
+    }
 
+    public static byte[] trimLeadingZeroes(byte[] bytes) {
+        return trimLeadingBytes(bytes, (byte) 0);
+    }
 }
