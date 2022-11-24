@@ -7,12 +7,9 @@ import com.horizen.account.state.AccountStateReaderProvider
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.transaction.MempoolReader
 
-import java.math.BigInteger
 import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
@@ -93,6 +90,10 @@ class AccountMemoryPool(
     }
   }
 
+  /*
+  This method is required by the Sparkz implementation of memory pool, but for the Account model the performance are too
+  low so the memory pool was changed. In the new implementation this method is no longer required.
+   */
   override def putWithoutCheck(
       txs: Iterable[SidechainTypes#SCAT]
   ): AccountMemoryPool = ???
