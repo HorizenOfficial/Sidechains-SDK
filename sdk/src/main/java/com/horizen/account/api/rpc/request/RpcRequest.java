@@ -23,7 +23,7 @@ public class RpcRequest {
         var iterator = json.fieldNames();
         iterator.forEachRemaining(e -> keys.add(e));
 
-        if (!keys.containsAll(List.of("jsonrpc", "id", "method", "params"))) {
+        if (!keys.containsAll(List.of("jsonrpc", "id", "method"))) {
             throw new RpcException(RpcError.fromCode(RpcCode.ParseError));
         }
 
