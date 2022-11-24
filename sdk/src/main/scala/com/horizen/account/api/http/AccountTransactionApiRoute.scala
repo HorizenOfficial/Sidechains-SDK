@@ -569,7 +569,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
   val rawTransactionResponseRepresentation: EthereumTransaction => SuccessResponse = {
     transaction =>
-      RawTransactionOutput("0x" + BytesUtils.toHexString(transaction.encode(transaction.getSignature))
+      RawTransactionOutput("0x" + BytesUtils.toHexString(transaction.encode(transaction.isSigned))
       )
   }
 

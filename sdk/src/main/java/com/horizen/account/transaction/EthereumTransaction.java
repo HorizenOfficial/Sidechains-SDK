@@ -67,7 +67,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     private synchronized String getTxHash() {
         if (this.hashString == null) {
-            byte[] encodedMessage = encode(this.signature);
+            byte[] encodedMessage = encode(isSigned());
             this.hashString = BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
         }
         return this.hashString;
@@ -377,7 +377,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public synchronized AddressProposition getFrom() {
         if (this.from == null && this.signature != null) {
             try {
-                byte[] encodedTransaction = encode(null);
+                byte[] encodedTransaction = encode(false);
 
                 BigInteger pubKey = Sign.signedMessageToKey(encodedTransaction, this.signature.getSignatureData());
                 this.from = new AddressProposition(Keys.getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE)));
@@ -458,7 +458,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public byte[] messageToSign() {
-       return encode(null);
+       return encode(false);
     }
 
     public Message asMessage(BigInteger baseFee) {
@@ -481,11 +481,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         );
     }
 
-    public byte[] encode(SignatureSecp256k1 inSignature) {
+    public byte[] encode(boolean accountSignature) {
         if (this.isEIP1559()) {
-            return EthereumTransactionEncoder.encodeEip1559AsRlpValues(this, inSignature);
+            return EthereumTransactionEncoder.encodeEip1559AsRlpValues(this, accountSignature);
         } else {
-            return EthereumTransactionEncoder.encodeLegacyAsRlpValues(this, inSignature);
+            return EthereumTransactionEncoder.encodeLegacyAsRlpValues(this, accountSignature);
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.horizen.account.utils;
 
-import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.transaction.EthereumTransaction;
 import org.web3j.crypto.Sign;
 import org.web3j.rlp.*;
@@ -19,7 +18,7 @@ public class EthereumTransactionEncoder {
     public EthereumTransactionEncoder() {
     }
 
-    public static byte[] encodeLegacyAsRlpValues(EthereumTransaction tx, SignatureSecp256k1 signature) {
+    public static byte[] encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
 
         List<RlpType> result = new ArrayList<>();
 
@@ -43,13 +42,14 @@ public class EthereumTransactionEncoder {
         byte[] dataBytes = tx.getData();
         result.add(RlpString.create(dataBytes));
 
-        if (signature != null) {
+        if (accountSignature) {
+            if (!tx.isSigned())
+                throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
             Sign.SignatureData signatureData;
             if (tx.isEIP155()) {
-                signatureData = createEip155SignatureData(
-                        new Sign.SignatureData(signature.getV(), signature.getR(), signature.getS()), tx.getChainId());
+                signatureData = createEip155SignatureData(tx.getSignature().getSignatureData(), tx.getChainId());
             } else {
-                signatureData = new Sign.SignatureData(signature.getV(), signature.getR(), signature.getS());
+                signatureData = tx.getSignature().getSignatureData();
             }
             result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getV())));
             result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getR())));
@@ -66,7 +66,7 @@ public class EthereumTransactionEncoder {
         return RlpEncoder.encode(rlpList);
     }
 
-    public static byte[] encodeEip1559AsRlpValues(EthereumTransaction tx, SignatureSecp256k1 signature) {
+    public static byte[] encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature) {
 
         List<RlpType> result = new ArrayList<>();
 
@@ -98,8 +98,10 @@ public class EthereumTransactionEncoder {
         // access list
         result.add(new RlpList());
 
-        if (signature != null) {
-            Sign.SignatureData signatureData = new Sign.SignatureData(signature.getV(), signature.getR(), signature.getS());
+        if (accountSignature) {
+            if (!tx.isSigned())
+                throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
+            Sign.SignatureData signatureData = tx.getSignature().getSignatureData();
             result.add(RlpString.create(Sign.getRecId(signatureData, tx.getChainId())));
             result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getR())));
             result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getS())));

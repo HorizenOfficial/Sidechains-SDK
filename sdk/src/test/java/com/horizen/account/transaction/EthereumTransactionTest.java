@@ -163,7 +163,9 @@ public class EthereumTransactionTest {
             var nonce = BigInteger.valueOf(i);
             var value = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(18));
 //            if (i % 3 == 0) {
-            txs[i] = new EthereumTransaction(to, nonce, gasPrice, gas, value, data,null);
+
+            // make sure we also have a signature to encode, even if it is empty to make the results comparable to GETH
+            txs[i] = new EthereumTransaction(to, nonce, gasPrice, gas, value, data, new SignatureSecp256k1(new byte[1], new byte[32], new byte[32]));
 //            } else {
 //                txs[i] = RawTransaction.createTransaction(0, nonce, gas, to, value, data, gasPrice, gasPrice);
 //            }
@@ -193,10 +195,7 @@ public class EthereumTransactionTest {
                 );
         for (var testCase : testCases.entrySet()) {
             final var txs = generateTransactions(testCase.getKey());
-            final var rlpTxs = Arrays.stream(txs).map(tx -> tx.encode(
-                    // make sure we also encode a signature, even if it is empty to make the results comparable to GETH
-                    new SignatureSecp256k1(new byte[1], new byte[32], new byte[32])
-            )).toArray(byte[][]::new);
+            final var rlpTxs = Arrays.stream(txs).map(tx -> tx.encode(true)).toArray(byte[][]::new);
             final var actualHash = Numeric.toHexString(TrieHasher.Root(rlpTxs));
             assertEquals("should match transaction root hash", testCase.getValue(), actualHash);
         }
