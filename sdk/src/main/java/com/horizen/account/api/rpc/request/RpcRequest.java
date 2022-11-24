@@ -27,8 +27,13 @@ public class RpcRequest {
             throw new RpcException(RpcError.fromCode(RpcCode.ParseError));
         }
 
+        try {
+            this.id = new RpcId(json.get("id"));
+        } catch (IllegalStateException e) {
+            throw new RpcException(RpcError.fromCode(RpcCode.ParseError));
+        }
+
         this.jsonrpc = json.get("jsonrpc").asText();
-        this.id = new RpcId(json.get("id"));
         this.method = json.get("method").asText();
         this.params = json.get("params");
     }

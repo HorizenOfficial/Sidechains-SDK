@@ -3,7 +3,7 @@ package com.horizen.account.api.http
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
 import akka.http.scaladsl.server.MalformedRequestContentRejection
 import com.horizen.serialization.SerializationUtil
-import org.junit.Assert._
+import org.junit.Assert.{assertEquals, _}
 import org.web3j.utils.Numeric
 
 import java.math.BigInteger
@@ -194,6 +194,39 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
         assertEquals(stringFromJsonNode(rpcResponse.get("id").toString), "null")
       }
     }
+
+    val singleRequestJsonInvalidId = "{\"id\":65465817687165465465,\"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\",\"params\":[]}}"
+    val singleRequestJsonNodeInvalidId = mapper.readTree(singleRequestJsonInvalidId)
+    "reply at /ethv1 - single request - invalid id" in {
+      Post(basePath)
+        .withHeaders(apiTokenHeader)
+        .withEntity(SerializationUtil.serialize(singleRequestJsonNodeInvalidId)) ~> ethRpcRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val rpcResponse = mapper.readTree(entityAs[String])
+        assertEquals(stringFromJsonNode(rpcResponse.get("error").get("code").toString), "-32600")
+        assertEquals(stringFromJsonNode(rpcResponse.get("error").get("message").toString), "Invalid request")
+        assertEquals(stringFromJsonNode(rpcResponse.get("id").toString), "null")
+      }
+    }
+
+    val batchRequestJsonInvalidId = "[{\"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\",\"params\":[],\"id\":-258},{\"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\",\"params\":[],\"id\":16}]"
+    val batchRequestJsonNodeInvalidId = mapper.readTree(batchRequestJsonInvalidId)
+    "reply at /ethv1 - batch request - invalid id" in {
+      Post(basePath)
+        .withHeaders(apiTokenHeader)
+        .withEntity(SerializationUtil.serialize(batchRequestJsonNodeInvalidId)) ~> ethRpcRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val rpcResponse = mapper.readTree(entityAs[String])
+        assertEquals(stringFromJsonNode(rpcResponse.get(0).get("error").get("code").toString), "-32600")
+        assertEquals(stringFromJsonNode(rpcResponse.get(0).get("error").get("message").toString), "Invalid request")
+        assertEquals(stringFromJsonNode(rpcResponse.get(0).get("id").toString), "null")
+        assertEquals(stringFromJsonNode(rpcResponse.get(1).get("result").toString), checkChainId)
+        assertEquals(stringFromJsonNode(rpcResponse.get(1).get("id").toString), "16")
+      }
+    }
+
   }
 
   private def stringFromJsonNode(jsonString: String): String = {
