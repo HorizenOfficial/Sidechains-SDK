@@ -12,25 +12,25 @@ import java.util.ArrayList;
 
 @JsonView(Views.Default.class)
 public class EthereumTransactionView {
-    private final String blockHash;
-    private final String blockNumber;
-    private final String from;
-    private final String hash;
-    private final String transactionIndex;
-    private final String type;
-    private final String nonce;
-    private final String to;
-    private final String gas;
-    private final String value;
-    private final String input;
-    private final String maxPriorityFeePerGas;
-    private final String maxFeePerGas;
-    private final String gasPrice;
-    private final ArrayList<Object> accessList;
-    private final String chainId;
-    private final String v;
-    private final String r;
-    private final String s;
+    public final String blockHash;
+    public final String blockNumber;
+    public final String from;
+    public final String hash;
+    public final String transactionIndex;
+    public final String type;
+    public final String nonce;
+    public final String to;
+    public final String gas;
+    public final String value;
+    public final String input;
+    public final String maxPriorityFeePerGas;
+    public final String maxFeePerGas;
+    public final String gasPrice;
+    public final ArrayList<Object> accessList;
+    public final String chainId;
+    public final String v;
+    public final String r;
+    public final String s;
 
     public EthereumTransactionView(EthereumReceipt receipt, EthereumTransaction ethTx, BigInteger baseFee) {
         type = Numeric.prependHexPrefix((Integer.toHexString(ethTx.transactionTypeId())));
@@ -59,82 +59,6 @@ public class EthereumTransactionView {
         hash = Numeric.toHexString(receipt.transactionHash());
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         accessList = null;
-    }
-
-    public String getType() {
-        return this.type;
-    }
-
-    public String getNonce() {
-        return this.nonce;
-    }
-
-    public String getTo() {
-        return this.to;
-    }
-
-    public String getGas() {
-        return this.gas;
-    }
-
-    public String getValue() {
-        return this.value;
-    }
-
-    public String getInput() {
-        return this.input;
-    }
-
-    public String getMaxPriorityFeePerGas() {
-        return this.maxPriorityFeePerGas;
-    }
-
-    public String getMaxFeePerGas() {
-        return this.maxFeePerGas;
-    }
-
-    public String getGasPrice() {
-        return this.gasPrice;
-    }
-
-    public ArrayList<Object> getAccessList() {
-        return this.accessList;
-    }
-
-    public String getChainId() {
-        return this.chainId;
-    }
-
-    public String getV() {
-        return this.v;
-    }
-
-    public String getR() {
-        return this.r;
-    }
-
-    public String getS() {
-        return this.s;
-    }
-
-    public String getBlockHash() {
-        return this.blockHash;
-    }
-
-    public String getBlockNumber() {
-        return this.blockNumber;
-    }
-
-    public String getFrom() {
-        return this.from;
-    }
-
-    public String getHash() {
-        return this.hash;
-    }
-
-    public String getTransactionIndex() {
-        return this.transactionIndex;
     }
 }
 
