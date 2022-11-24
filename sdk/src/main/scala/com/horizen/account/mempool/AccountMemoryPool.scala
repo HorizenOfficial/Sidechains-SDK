@@ -93,6 +93,10 @@ class AccountMemoryPool(
     }
   }
 
+  /*
+  This method is required by the Sparkz implementation of memory pool, but for the Account model the performance are too
+  low so the memory pool was changed. In the new implementation this method is no longer required.
+   */
   override def putWithoutCheck(
       txs: Iterable[SidechainTypes#SCAT]
   ): AccountMemoryPool = ???
