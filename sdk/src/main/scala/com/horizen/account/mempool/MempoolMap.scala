@@ -78,13 +78,13 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     this
   }
 
-  def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, listOfTxs: TxIdByNonceMap) = {
+  def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap) = {
     val existingTxWithSameNonce = all(existingTxId)
     if (canPayHigherFee(newTx, existingTxWithSameNonce)) {
       log.trace(s"Replacing transaction $existingTxWithSameNonce with $newTx")
       all.remove(existingTxId)
       all.put(newTx.id, newTx)
-      listOfTxs.put(newTx.getNonce, newTx.id)
+      mapOfTxsByNonce.put(newTx.getNonce, newTx.id)
     }
 
   }
@@ -382,8 +382,8 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
       }
 
       val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
-      executableTxs.foreach { case (_, listOfTxsPerAccount) =>
-        val tx = getTransaction(listOfTxsPerAccount.values.head).get
+      executableTxs.foreach { case (_, mapOfTxsPerAccount) =>
+        val tx = getTransaction(mapOfTxsPerAccount.values.head).get
         orderedQueue.enqueue(tx)
       }
 
