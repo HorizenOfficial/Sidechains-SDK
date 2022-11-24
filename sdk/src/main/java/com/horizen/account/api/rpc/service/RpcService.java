@@ -53,15 +53,15 @@ public class RpcService {
         var optionalAnnotation = method.getAnnotation(RpcOptionalParameters.class);
         var optionalParameters = optionalAnnotation == null ? 0 : optionalAnnotation.value();
         var parameters = method.getParameterTypes();
-        if (!args.isArray() ||
-                args.size() > parameters.length ||
-                args.size() < parameters.length - optionalParameters) {
+        var argsCount = args == null ? 0 : args.size();
+        if ((args != null && !args.isArray()) || argsCount > parameters.length ||
+            argsCount < parameters.length - optionalParameters) {
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams));
         }
         try {
             var convertedArgs = new Object[parameters.length];
             for (int i = 0; i < parameters.length; i++) {
-                convertedArgs[i] = mapper.convertValue(args.get(i), parameters[i]);
+                convertedArgs[i] = mapper.convertValue(args == null ? null : args.get(i), parameters[i]);
             }
             return convertedArgs;
         } catch (IllegalArgumentException err) {
