@@ -52,7 +52,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
   // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
-  def checkAndRecoverStorages(restoredData: Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)]):
+  override def checkAndRecoverStorages(restoredData: Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)]):
   Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)] = {
 
     restoredData.flatMap {

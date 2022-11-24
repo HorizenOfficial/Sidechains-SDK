@@ -66,6 +66,7 @@ testScripts=(
     'sc_evm_test_erc721.py'
     'sc_evm_test_contract_contract_deployment_and_interaction.py'
     'sc_evm_test_metamask_related.py'
+    'sc_evm_storage_recovery.py'
     'mc_sc_connected_nodes.py'
     'mc_sc_forging1.py'
     'mc_sc_forging2.py'

@@ -63,6 +63,10 @@ abstract class AbstractSidechainNodeViewHolder[
     new ConsensusValidator(timeProvider)
   )
 
+  // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
+  // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
+  def checkAndRecoverStorages(restoredData: Option[(HIS, MS, VL, MP)]): Option[(HIS, MS, VL, MP)]
+
   def dumpStorages(): Unit
 
   def getStorageVersions: Map[String, String]

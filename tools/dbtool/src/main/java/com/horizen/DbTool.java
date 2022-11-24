@@ -1,5 +1,6 @@
 package com.horizen;
 
+import com.horizen.settings.LogInitializer;
 import com.horizen.tools.utils.ConsolePrinter;
 import com.horizen.tools.utils.MessagePrinter;
 import org.apache.logging.log4j.LogManager;
@@ -22,18 +23,15 @@ public class DbTool {
             "consensusData"
     ));
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
 
         // initialize log properties since this app uses log4j from sdk libraries
         // - no log dir here
-        System.setProperty("logDir", "");
+        String logDir = System.getProperty("java.io.tmpdir");
         // - default name for the log file
-        String logFileName = System.getProperty("java.io.tmpdir") + File.separator + "db_tool.log";
-        System.setProperty("logFilename", logFileName);
+        String logFileName = "db_tool.log";
         // - default levels: all in the file and just errors on console
-        System.setProperty("logFileLevel", "all");
-        System.setProperty("logConsoleLevel", "error");
-
+        LogInitializer.initLogManager(logDir, logFileName, "all", "error");
         Logger log = LogManager.getLogger(com.horizen.DbTool.class);
 
         // read database folder path from input arguments
@@ -48,10 +46,8 @@ public class DbTool {
         String dataDirAbsolutePath = args[0];
 
         // read custom storage names list from input arguments
-        List<String> customStorageNames = Arrays.asList(args[1].split(","));
-        for(String customStorageName: customStorageNames) {
-            storageNames.add(customStorageName);
-        }
+        String[] customStorageNames = args[1].split(",");
+        Collections.addAll(storageNames, customStorageNames);
 
         MessagePrinter printer = new ConsolePrinter();
         DbToolCommandProcessor processor = new DbToolCommandProcessor(printer, dataDirAbsolutePath, log);
