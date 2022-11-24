@@ -103,8 +103,8 @@ public class EthereumTransactionEncoder {
                 throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
             Sign.SignatureData signatureData = tx.getSignature().getSignatureData();
             result.add(RlpString.create(Sign.getRecId(signatureData, tx.getChainId())));
-            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getR())));
-            result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getS())));
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getR())));
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getS())));
         }
 
         RlpList rlpList = new RlpList(result);

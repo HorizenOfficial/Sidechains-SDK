@@ -96,23 +96,20 @@ public class EthereumTransactionTest {
     @Test
     public void ethereumLegacyEIP155TransactionTest() {
         // Test 1: direct constructor test
-        try {
-            Long chainId = 1L;
-            var someTx = new EthereumTransaction(
-                    chainId,
-                    EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
-                    BigInteger.valueOf(9),
-                    BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
-                    BigInteger.valueOf(21000),
-                    BigInteger.TEN.pow(18),
-                    new byte[] {},
-                    null
-            );
-            assertEquals("Chainid was not correct", someTx.getChainId(), chainId);
-            assertEquals("EIP-155 message to sign is incorrect", "0x" + BytesUtils.toHexString(someTx.messageToSign()), "0xec098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a764000080018080");
-        } catch (NullPointerException e) {
-            fail("Test1: Successful EthereumTransaction creation expected.");
-        }
+        Long chainId = 1L;
+        var someTx = new EthereumTransaction(
+                chainId,
+                EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
+                BigInteger.valueOf(9),
+                BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
+                BigInteger.valueOf(21000),
+                BigInteger.TEN.pow(18),
+                new byte[] {},
+                null
+        );
+        assertEquals("Chainid was not correct", someTx.getChainId(), chainId);
+        assertEquals("EIP-155 message to sign is incorrect", "0x" + BytesUtils.toHexString(someTx.messageToSign()), "0xec098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a764000080018080");
+
 
         // metamask eip155 tx:
         // - from address: 0x892278d9f50a1da5b2e98e5056f165b1b2486d97
