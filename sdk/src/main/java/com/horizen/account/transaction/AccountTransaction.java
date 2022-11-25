@@ -6,6 +6,7 @@ import com.horizen.transaction.Transaction;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 
 import java.math.BigInteger;
+import java.util.Optional;
 
 public abstract class AccountTransaction<P extends Proposition, PR extends Proof<P>> extends Transaction {
 
@@ -21,7 +22,7 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
 
     public abstract P getFrom();
 
-    public abstract P getTo();
+    public abstract Optional<P> getTo();
 
     public abstract BigInteger getValue();
 
@@ -45,7 +46,6 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
     public abstract BigInteger getPriorityFeePerGas(BigInteger base);
 
     public BigInteger maxCost() {
-
             return this.getValue().add(getGasLimit().multiply(getGasPrice()));
     }
 

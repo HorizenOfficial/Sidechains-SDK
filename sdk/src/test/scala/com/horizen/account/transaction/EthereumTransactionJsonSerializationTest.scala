@@ -2,16 +2,18 @@ package com.horizen.account.transaction
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.proof.SignatureSecp256k1
+import com.horizen.account.utils.EthereumTransactionUtils
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import org.web3j.crypto.Sign
 import org.web3j.crypto.transaction.`type`.TransactionType
 import sparkz.core.utils.SparkzEncoder
 
 import java.math.BigInteger
+import java.util
 
 class EthereumTransactionJsonSerializationTest
   extends JUnitSuite
@@ -65,15 +67,9 @@ class EthereumTransactionJsonSerializationTest
 
   @Test
   def testPartiallySignedEip155TxToJson(): Unit = {
-    val transaction = new EthereumTransaction(
-      "0x3535353535353535353535353535353535353535",
-      BigInteger.valueOf(9L),
-      BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
-      BigInteger.valueOf(21000),
-      BigInteger.TEN.pow(18),
-      "",
-      new Sign.SignatureData(Array[Byte](1), Array[Byte](0), Array[Byte](0))
-    )
+    val transaction = getPartiallySignedEip155LegacyTransaction
+    assertTrue(transaction.isEIP155)
+    assertTrue(transaction.getFromString.equals(""))
     evalJsonRepr(transaction)
   }
 
@@ -109,11 +105,11 @@ class EthereumTransactionJsonSerializationTest
     }
 
     // optional, can be empty for contract deployment
-    if (!node.path("to").isEmpty) {
+    if (!node.path("to").isMissingNode) {
       try {
         val toAddress = node.path("to").path("address").asText()
         assertEquals("Transaction to address json value must be the same.",
-          SparkzEncoder.default.encode(transaction.getTo.address()), toAddress)
+          SparkzEncoder.default.encode(transaction.getTo.get().address()), toAddress)
       } catch {
         case _: Throwable => fail("Transaction to address not found in json.")
       }
@@ -166,11 +162,11 @@ class EthereumTransactionJsonSerializationTest
       } catch {
         case _: Throwable => fail("Transaction gasPrice not found in json.")
       }
-      assertTrue(node.path("maxFeePerGas").isEmpty)
-      assertTrue(node.path("maxPriorityFeePerGas").isEmpty)
+      assertTrue(node.path("maxFeePerGas").isMissingNode)
+      assertTrue(node.path("maxPriorityFeePerGas").isMissingNode)
     } else
     if (txType == TransactionType.EIP1559.getRlpType) {
-      assertTrue(node.path("gasPrice").isEmpty)
+      assertTrue(node.path("gasPrice").isMissingNode)
 
       try {
         val maxFeePerGas = node.path("maxFeePerGas").bigIntegerValue()
@@ -215,7 +211,7 @@ class EthereumTransactionJsonSerializationTest
 
 
     // optional, can be empty for legacy non eip155 signed tx
-    if (!node.path("chainId").isEmpty) {
+    if (!node.path("chainId").isMissingNode) {
       try {
         val chainId = node.path("chainId").asLong()
         assertEquals("Transaction chainId json value must be the same.",
@@ -248,7 +244,7 @@ class EthereumTransactionJsonSerializationTest
       try {
         val sig_r = node.path("signature").path("r").asText()
         assertEquals("Transaction signature r json value must be the same.",
-          SparkzEncoder.default.encode(transaction.getR), sig_r)
+          SparkzEncoder.default.encode(transaction.getSignature.getR), sig_r)
       } catch {
         case _: Throwable => fail("Transaction signature r not found in json.")
       }
@@ -256,7 +252,7 @@ class EthereumTransactionJsonSerializationTest
       try {
         val sig_s = node.path("signature").path("s").asText()
         assertEquals("Transaction signature s json value must be the same.",
-          SparkzEncoder.default.encode(transaction.getS), sig_s)
+          SparkzEncoder.default.encode(transaction.getSignature.getS), sig_s)
       } catch {
         case _: Throwable => fail("Transaction signature s not found in json.")
       }

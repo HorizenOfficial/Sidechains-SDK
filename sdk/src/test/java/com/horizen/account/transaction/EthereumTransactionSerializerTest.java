@@ -1,85 +1,81 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.fixtures.EthereumTransactionFixture;
+import com.horizen.account.state.GasUtil;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
-import org.web3j.crypto.*;
+import org.web3j.crypto.ECKeyPair;
+import scala.Option;
 import scala.util.Try;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
+
 import static org.junit.Assert.*;
-import static org.junit.Assert.fail;
 
 public class EthereumTransactionSerializerTest implements EthereumTransactionFixture {
 
-    EthereumTransaction ethereumTransaction;
-    EthereumTransaction signedEthereumTransaction;
-
-    private void initSerializationTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        // Create the raw Transaction
-        String payload = "This is string to sign";
-        var message = payload.getBytes(StandardCharsets.UTF_8);
-        var someValue = BigInteger.ONE;
-        var rawTransaction = RawTransaction.createTransaction(someValue,
-                someValue, someValue, "0x", someValue, "");
-
-        // Create a key pair, create tx signature and create ethereum Transaction
-        ECKeyPair pair = Keys.createEcKeyPair();
-        var msgSignature = Sign.signMessage(message, pair, true);
-
-        var signedRawTransaction = new SignedRawTransaction(someValue,
-                someValue, someValue, "0x", someValue, "",
-                msgSignature);
-        ethereumTransaction = new EthereumTransaction(rawTransaction);
-        signedEthereumTransaction = new EthereumTransaction(signedRawTransaction);
-    }
-
+    // Check that using the same key pair for signing two transactions give the same from address
     @Test
-    public void ethereumTransactionSerializeTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        initSerializationTest();
+    public void checkSigningTxTest() {
 
-        // Get transaction serializer and serialize
-        TransactionSerializer serializer = ethereumTransaction.serializer();
-        byte[] bytes = serializer.toBytes(ethereumTransaction);
+        var privKey = new BigInteger("49128115046059273042656529250771669375541382406576940612305697909438063650480");
+        var pubKey = new BigInteger("8198110339830204259458045104072783158824826560452916203793316544691619725076836725487148486981196842344156645049311437356787993166435716250962254331877695");
+        var account1KeyPair = Option.apply(new ECKeyPair(privKey, pubKey));
 
-        // Test 1: Correct bytes deserialization
-        Try<EthereumTransaction> t = serializer.parseBytesTry(bytes);
+        var nonce = BigInteger.valueOf(0);
+        var value = BigInteger.valueOf(11);
+        var gasPrice = BigInteger.valueOf(12);
+        var gasLimit = GasUtil.TxGas();
 
-        assertTrue("Transaction serialization failed.", t.isSuccess());
+        var tx1 = createLegacyTransaction(value, nonce, account1KeyPair, gasPrice, gasLimit);
 
-        assertEquals("Deserialized transactions expected to be equal", ethereumTransaction.toString(), t.get().toString());
+        try {
+            tx1.semanticValidity();
+        } catch (Throwable t) {
+            fail("Expected a valid tx: " + t.getMessage());
+        }
 
-        // Test 2: try to parse broken bytes
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
-        assertTrue("Failure during parsing expected", failureExpected);
-    }
+        var tx2 = createLegacyTransaction(value, nonce.add(BigInteger.ONE), account1KeyPair, gasPrice, gasLimit);
 
-    @Test
-    public void ethereumTransactionSerializeSignedTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        initSerializationTest();
+        try {
+            tx2.semanticValidity();
+        } catch (Throwable t) {
+            fail("Expected a valid tx: " + t.getMessage());
+        }
 
-        // Get transaction serializer and serialize
-        TransactionSerializer serializer = signedEthereumTransaction.serializer();
-        byte[] bytes = serializer.toBytes(signedEthereumTransaction);
+        // different signatures but same from address
+        assertNotEquals(tx1.getSignature(), tx2.getSignature());
+        assertEquals(tx1.getFrom(), tx2.getFrom());
 
-        // Test 1: Correct bytes deserialization
-        Try<EthereumTransaction> t = serializer.parseBytesTry(bytes);
+        var maxFeePerGas = BigInteger.valueOf(15);
+        var maxPriorityFeePerGas = BigInteger.valueOf(15);
+        var tx3 = createEIP1559Transaction(value, nonce.add(BigInteger.ONE), account1KeyPair, maxFeePerGas, maxPriorityFeePerGas, gasLimit);
 
-        assertTrue("Transaction serialization failed.", t.isSuccess());
+        try {
+            tx3.semanticValidity();
+        } catch (Throwable t) {
+            fail("Expected a valid tx: " + t.getMessage());
+        }
 
-        assertEquals("Deserialized transactions expected to be equal", signedEthereumTransaction.toString(), t.get().toString());
+        // different signatures but same from address
+        assertNotEquals(tx1.getSignature(), tx3.getSignature());
+        assertEquals(tx1.getFrom(), tx3.getFrom());
 
-        // Test 2: try to parse broken bytes
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
-        assertTrue("Failure during parsing expected", failureExpected);
+        var tx4 = createLegacyEip155Transaction(value, nonce.add(BigInteger.ONE), account1KeyPair, gasPrice, gasLimit);
+
+        try {
+            tx4.semanticValidity();
+        } catch (Throwable t) {
+            fail("Expected a valid tx: " + t.getMessage());
+        }
+
+        // different signatures but same from address
+        assertNotEquals(tx1.getSignature(), tx4.getSignature());
+        assertEquals(tx1.getFrom(), tx4.getFrom());
     }
 
     @Test
@@ -116,6 +112,12 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
     public void regressionTestUnsignedEip155() {
         EthereumTransaction transaction = getUnsignedEip155LegacyTransaction();
         doTest(transaction, "ethereumtransaction_eoa2eoa_eip155_legacy_unsigned_hex", false);
+    }
+
+    @Test
+    public void regressionTestPartiallySignedEip155() {
+        EthereumTransaction transaction = getPartiallySignedEip155LegacyTransaction();
+        doTest(transaction, "ethereumtransaction_eoa2eoa_eip155_legacy_partially_signed_hex", false);
     }
 
     @Test
@@ -160,6 +162,8 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         assertTrue("Transaction serialization failed.", t.isSuccess());
 
         EthereumTransaction parsedTransaction = t.get();
+        System.out.println(transaction.id());
+        System.out.println(parsedTransaction.id());
         assertEquals("Transaction is different to the origin.", transaction.id(), parsedTransaction.id());
     }
 }

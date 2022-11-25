@@ -2,7 +2,6 @@ package com.horizen.account.transaction;
 
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.transaction.TransactionSerializer;
-import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
@@ -27,10 +26,7 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
     // because of here used message length integer needed for decoding
     @Override
     public void serialize(EthereumTransaction tx, Writer writer) {
-        byte[] encodedMessage;
-        if (tx.isSigned())
-            encodedMessage = TransactionEncoder.encode(tx.getTransaction(), tx.getSignatureData());
-        else encodedMessage = TransactionEncoder.encode(tx.getTransaction());
+        byte[] encodedMessage = tx.encode(tx.isSigned());
 
         writer.putInt(encodedMessage.length);
         writer.putBytes(encodedMessage);
@@ -38,10 +34,8 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
 
     @Override
     public EthereumTransaction parse(Reader reader) {
-        // TODO: remove reliance on length
         var length = reader.getInt();
         var encodedMessage = reader.getBytes(length);
-        var transaction = EthereumTransactionDecoder.decode(Numeric.toHexString(encodedMessage));
-        return new EthereumTransaction(transaction);
+        return EthereumTransactionDecoder.decode(encodedMessage);
     }
 }
