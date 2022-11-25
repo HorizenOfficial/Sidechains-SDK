@@ -1258,22 +1258,6 @@ ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
 # Block gas limit
 BLOCK_GAS_LIMIT = 30000000
 
-def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
-    transactionJson = sc_node.rpc_eth_getTransactionByHash(tx_hash)['result']
-    if (transactionJson is None):
-        raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
-    if tracing_on:
-        logging.info("tx:")
-        logging.info(transactionJson)
-
-    receiptJson = sc_node.rpc_eth_getTransactionReceipt(tx_hash)['result']
-    if (receiptJson is None):
-        raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
-    if tracing_on:
-        logging.info("receipt:")
-        logging.info(receiptJson)
-
-    return int(receiptJson['gasUsed'], 16)
 
 def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
     # make sure the transaction hash prefixed with 0x
