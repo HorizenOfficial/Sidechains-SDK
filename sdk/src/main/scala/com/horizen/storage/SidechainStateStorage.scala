@@ -9,6 +9,7 @@ import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.certificatesubmitter.keys._
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
@@ -343,6 +344,12 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
         removeList.add(getUtxoMerkleTreeRootKey(certEpochNumberToRemove))
         removeList.add(getCertifiersStorageKey(certEpochNumberToRemove))
+        for {
+          indexOfSigner <- params.signersPublicKeys.indices
+          typeOfKey <- 0 until CircuitTypes.maxId
+        } {
+          removeList.add(getKeyRotationProofKey(certEpochNumberToRemove, indexOfSigner, typeOfKey))
+        }
       }
 
       val blockFeeInfoEpochToRemove: Int = withdrawalEpochInfo.epoch - 1
@@ -356,20 +363,31 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     if (params.isNonCeasing) {
       topQualityCertificateOpt.foreach(certificate => {
         // For non-ceasing sidechain store referenced epoch number of the top certificate
-        // No need to store the whole cert, since it is never used after.
         updateList.add(new JPair(getLastCertificateEpochNumberKey,
           new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
+        // TODO: store certificate
+        updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
+          WithdrawalEpochCertificateSerializer.toBytes(certificate)))
 
         // For non-ceasing sidechain we remove outdated certificate info when we retrieve the new top quality certificate:
         // remove outdated withdrawal related records and counters from upt to the current cert data;
         // Note: SC block may contain multiple Certs, so we need to remove data for all of them.
         val prevCertReferencedEpoch = getLastCertificateReferencedEpoch().getOrElse(-1)
-        for(outdatedEpochNumber <- prevCertReferencedEpoch + 1 to  certificate.epochNumber) {
+        for (outdatedEpochNumber <- prevCertReferencedEpoch + 1 until certificate.epochNumber) {
           val wrEpochNumberToRemove: Int = outdatedEpochNumber
           for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
             removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
           }
           removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
+
+          removeList.add(getTopQualityCertificateKey(wrEpochNumberToRemove))
+          removeList.add(getCertifiersStorageKey(wrEpochNumberToRemove))
+          for {
+            indexOfSigner <- params.signersPublicKeys.indices
+            typeOfKey <- 0 until CircuitTypes.maxId
+          } {
+            removeList.add(getKeyRotationProofKey(wrEpochNumberToRemove, indexOfSigner, typeOfKey))
+          }
         }
       })
     } else {
