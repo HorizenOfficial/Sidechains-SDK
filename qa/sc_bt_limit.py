@@ -5,6 +5,7 @@ import pprint
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
@@ -26,6 +27,9 @@ Configuration:
 
 Note:
     This test can be executed in two modes:
+    1. using no key rotation circuit (by default)
+    2. using key rotation circuit (with --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation)
+    With key rotation circuit can be executed in two modes:
     1. ceasing (by default)
     2. non-ceasing (with --nonceasing flag)
 
@@ -93,14 +97,21 @@ class ScBtLimitTest(SidechainTestFramework):
         )
 
         is_non_ceasing = self.options.nonceasing
-        # Non ceasing sidechains must be of sidechain version 2
-        sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
+# Non ceasing sidechains must be of sidechain version 2
+if (self.options.certcircuittype == KEY_ROTATION_CIRCUIT):
+    sc_creation_version = SC_CREATION_VERSION_2
+else:
+    sc_creation_version = SC_CREATION_VERSION_1
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
-                                                        sc_creation_version=sc_creation_version,
-                                                        is_non_ceasing=is_non_ceasing), sc_node_configuration)
-
-        self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720*120*5).sidechain_id
+network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+                                                cert_max_keys=cert_max_keys,
+                                                cert_sig_threshold=cert_sig_threshold,
+                                                sc_creation_version=sc_creation_version,
+                                                is_non_ceasing=self.options.nonceasing,
+                                                circuit_type=self.options.certcircuittype,
+                                                sc_creation_version=sc_creation_version),
+                                 sc_node_configuration)
+        self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 5).sidechain_id
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
@@ -118,7 +129,7 @@ class ScBtLimitTest(SidechainTestFramework):
         # Verify we didn't reach the SC fork1 that includes BT limit
         consensusEpochData = http_block_forging_info(sc_node)
         assert_equal(consensusEpochData["bestEpochNumber"], 1)
-        
+
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
 
         # create 1 FTs in the same MC block to SC
@@ -237,7 +248,7 @@ class ScBtLimitTest(SidechainTestFramework):
         # Generates 1 SC block and verify that it contains only 1 of the two transactions
         sc_block_id = generate_next_blocks(sc_node, "first node", 1)[0]
         block_json = http_block_findById(sc_node, sc_block_id)
-        assert_equal(len(block_json["block"]["sidechainTransactions"]), 1)    
+        assert_equal(len(block_json["block"]["sidechainTransactions"]), 1)
         wbs_mined += 80
         wbs_mined += 80
 
@@ -317,7 +328,7 @@ class ScBtLimitTest(SidechainTestFramework):
         assert_equal(len(http_block_findById(sc_node, sc_block_id)["block"]["sidechainTransactions"]), 1)
         assert_equal(http_block_findById(sc_node, sc_block_id)["block"]["sidechainTransactions"][0]["id"], wbs_txid)
 
-        
+
         # Generate more MC blocks to finish the second withdrawal epoch, then generate 1 more SC block to sync with MC.
         mc_node.generate(3)
         epoch_mc_blocks_left -= 3
@@ -331,7 +342,7 @@ class ScBtLimitTest(SidechainTestFramework):
         print("End cum sc tx cum comm tree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
 
         sc_block_id = generate_next_block(sc_node, "first node")
-        
+
         # We don't include the tx here since this is the last block of the epoch
         assert_equal(len(http_block_findById(sc_node, sc_block_id)["block"]["sidechainTransactions"]), 0)
 
@@ -360,6 +371,6 @@ class ScBtLimitTest(SidechainTestFramework):
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
-        
+
 if __name__ == "__main__":
     ScBtLimitTest().main()

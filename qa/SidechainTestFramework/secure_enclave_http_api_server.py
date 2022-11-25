@@ -12,10 +12,12 @@ class SecureEnclaveApiServer(object):
         # REQUEST
         # {
         #     "message": message,
-        #     "publicKey": publicKey,
+        #     "publicKey": publicKey, (optional)
         #     "privateKey": privateKey, (optional)
         #     "type": "string"["schnorr"]
         # }
+        # Either publicKey or privateKey must be specified.
+        #
         # RESPONSE
         # {
         #     "signature": signature,
@@ -25,11 +27,12 @@ class SecureEnclaveApiServer(object):
         def sign_message():
             content = json.loads(request.data)
             logging.info("SecureEnclaveApiServer /api/v1/createSignature received request " + str(content))
-            pk = content['publicKey']
-            index = self.schnorr_public_keys.index(pk)
-            sk = self.schnorr_secrets[index]
-            content.pop('publicKey', None)
-            content['privateKey'] = sk
+            if ('privateKey' not in content):
+                pk = content['publicKey']
+                index = self.schnorr_public_keys.index(pk)
+                sk = self.schnorr_secrets[index]
+                content['privateKey'] = sk
+                content.pop('publicKey', None)
 
             result = launch_signing_tool(content)
             logging.info("SecureEnclaveApiServer /api/v1/createSignature result " + str(result))

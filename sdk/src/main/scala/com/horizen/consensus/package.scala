@@ -1,7 +1,8 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.vrf.VrfOutput
 import scorex.util.ModifierId

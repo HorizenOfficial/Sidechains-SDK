@@ -3,6 +3,7 @@ from curses import raw
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
     SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -24,6 +25,9 @@ Configuration:
 
 Note:
     This test can be executed in two modes:
+    1. using no key rotation circuit (by default)
+    2. using key rotation circuit (with --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation)
+    With key rotation circuit can be executed in two modes:
     1. ceasing (by default)
     2. non-ceasing (with --nonceasing flag)
     
@@ -56,14 +60,21 @@ class ScBtLimitAcrossForkTest(SidechainTestFramework):
             cert_signing_enabled=True  # enable signer
         )
 
-        is_non_ceasing = self.options.nonceasing
-        # Non ceasing sidechains must be of sidechain version 2
-        sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
+    is_non_ceasing = self.options.nonceasing
+# Non ceasing sidechains must be of sidechain version 2
+if (self.options.certcircuittype == KEY_ROTATION_CIRCUIT):
+    sc_creation_version = SC_CREATION_VERSION_2
+else:
+    sc_creation_version = SC_CREATION_VERSION_1
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
-                                                        sc_creation_version=sc_creation_version,
-                                                        is_non_ceasing=is_non_ceasing), sc_node_configuration)
-
+network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+                                                cert_max_keys=cert_max_keys,
+                                                cert_sig_threshold=cert_sig_threshold,
+                                                sc_creation_version=sc_creation_version,
+                                                is_non_ceasing=self.options.nonceasing,
+                                                circuit_type=self.options.certcircuittype,
+                                                sc_creation_version=sc_creation_version),
+                                 sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720*120*5).sidechain_id
 
     def sc_setup_nodes(self):

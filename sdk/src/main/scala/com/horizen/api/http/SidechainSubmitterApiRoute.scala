@@ -11,14 +11,20 @@ import java.util.{Optional => JOptional}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
-import com.horizen.api.http.SidechainDebugRestScheme.{RespCertGenerationState, RespCertSignerState, RespCertSubmitterState, RespSubmitterOk}
+import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorBadCircuit, ErrorRetrieveCertificateSigners, ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
+import com.horizen.api.http.SidechainDebugRestScheme._
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.schnorrnative.SchnorrPublicKey
+import com.horizen.utils.BytesUtils
+import com.horizen.api.http.JacksonSupport._
 
-case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef)
+case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef,  circuitType: CircuitTypes)
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
   override val route: Route = pathPrefix("submitter") {
     isCertGenerationActive ~ isCertificateSubmitterEnabled ~ enableCertificateSubmitter ~ disableCertificateSubmitter ~
-      isCertificateSignerEnabled ~ enableCertificateSigner ~ disableCertificateSigner
+      isCertificateSignerEnabled ~ enableCertificateSigner ~ disableCertificateSigner~ getSchnorrPublicKeyHash ~ getCertifiersKeys ~ getKeyRotationProof
   }
 
   def isCertGenerationActive: Route = (post & path("isCertGenerationActive")) {
@@ -76,6 +82,56 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
     certSubmitterRef ! DisableCertificateSigner
     ApiResponseUtil.toResponse(RespSubmitterOk)
   }
+
+  def getSchnorrPublicKeyHash: Route = (post & path("getSchnorrPublicKeyHash")) {
+    entity(as[ReqGetSchnorrPublicKeyHash]) { body =>
+      try {
+        val publickKeyToHash = SchnorrPublicKey.deserialize(BytesUtils.fromHexString(body.schnorrPublicKey))
+        ApiResponseUtil.toResponse(
+          RespHashSchnorrPublicKey(
+            BytesUtils.toHexString(publickKeyToHash.getHash.serializeFieldElement())
+          )
+        )
+      } catch {
+        case e: Throwable => SidechainApiError(e)
+      }
+    }
+  }
+
+  def getCertifiersKeys: Route = (post & path("getCertifiersKeys")) {
+    try {
+      entity(as[ReqGetCertificateSigners]) { body =>
+          withView { sidechainNodeView =>
+            sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch -1) match {
+              case Some(certifiersKeys) =>
+                ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys))
+              case None =>
+                ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Impossible to find certificate signer keys!", JOptional.empty()))
+            }
+          }
+      }
+    } catch
+    {
+      case e: Throwable => SidechainApiError(e)
+    }
+  }
+
+  def getKeyRotationProof: Route = (post & path("getKeyRotationProof")) {
+    try {
+      entity(as[ReqKeyRotationProof]) { body =>
+        withView { sidechainNodeView =>
+          circuitType match {
+            case NaiveThresholdSignatureCircuit =>
+              ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation proofs!", JOptional.empty()))
+            case NaiveThresholdSignatureCircuitWithKeyRotation =>
+              ApiResponseUtil.toResponse(RespGetKeyRotationProof(sidechainNodeView.state.keyRotationProof(body.withdrawalEpoch, body.indexOfKey, body.keyType)))
+          }
+        }
+      }
+    } catch {
+      case e: Throwable => SidechainApiError(e)
+    }
+  }
 }
 
 object SidechainDebugRestScheme {
@@ -90,6 +146,34 @@ object SidechainDebugRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] object RespSubmitterOk extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGetSchnorrPublicKeyHash(schnorrPublicKey: String) {
+    require(schnorrPublicKey != null && schnorrPublicKey.nonEmpty, "Null key")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqKeyRotationProof(withdrawalEpoch: Int,
+                                              indexOfKey: Int,
+                                              keyType: Int) {
+    require(withdrawalEpoch >= 0, "Withdrawal epoch is negative")
+    require(indexOfKey >= 0, "Key index is negative")
+    require(keyType >= 0, "Key type is negative")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGetCertificateSigners(withdrawalEpoch: Int) {
+    require(withdrawalEpoch >= 0, "Withdrawal epoch is negative")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGetCertificateSigners(certifiersKeys: CertifiersKeys) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGetKeyRotationProof(keyRotationProof: Option[KeyRotationProof]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespHashSchnorrPublicKey(schnorrPublicKeyHash: String) extends SuccessResponse
 }
 
 object SidechainDebugErrorResponse {
@@ -103,5 +187,13 @@ object SidechainDebugErrorResponse {
 
   case class ErrorRetrievingCertSignerState(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0603"
+  }
+
+  case class ErrorRetrieveCertificateSigners(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0604"
+  }
+
+  case class ErrorBadCircuit(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0605"
   }
 }

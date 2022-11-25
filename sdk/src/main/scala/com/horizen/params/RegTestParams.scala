@@ -1,9 +1,11 @@
 package com.horizen.params
 
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
+
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
+import com.horizen.cryptolibprovider.utils.{CircuitTypes, CumulativeHashFunctions}
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import scorex.util.ModifierId
@@ -21,6 +23,8 @@ case class RegTestParams(
                           override val consensusSecondsInSlot: Int = 120,
                           override val consensusSlotsInEpoch: Int = 720,
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
+                          override val mastersPublicKeys: Seq[SchnorrProposition] = Seq(),
+                          override val circuitType: CircuitTypes = CircuitTypes.NaiveThresholdSignatureCircuit,
                           override val signersThreshold: Int = 0,
                           override val certProvingKeyFilePath: String = "",
                           override val certVerificationKeyFilePath: String = "",

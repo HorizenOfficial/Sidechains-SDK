@@ -14,6 +14,8 @@ import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.csw.CswManagerRef
 import com.horizen.customconfig.CustomAkkaConfiguration
@@ -110,8 +112,9 @@ class SidechainApp @Inject()
     new GetCertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size),
     new CertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size)
   )
+  val circuitType: CircuitTypes = sidechainSettings.withdrawalEpochCertificateSettings.circuitType
 
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, circuitType)
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
@@ -125,7 +128,16 @@ class SidechainApp @Inject()
   val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
     .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
-  val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+  var mastersPublicKeys: Seq[SchnorrProposition] = Seq()
+
+  val calculatedSysDataConstant: Array[Byte] = circuitType match {
+    case NaiveThresholdSignatureCircuit =>
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+    case NaiveThresholdSignatureCircuitWithKeyRotation =>
+      mastersPublicKeys = sidechainSettings.withdrawalEpochCertificateSettings.mastersPublicKeys
+        .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
+      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, mastersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+  }
   log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
   val sidechainCreationOutput: SidechainCreation = BlockUtils.tryGetSidechainCreation(genesisBlock) match {
@@ -133,6 +145,9 @@ class SidechainApp @Inject()
     case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
   }
   val isCSWEnabled: Boolean = sidechainCreationOutput.getScCrOutput.ceasedVkOpt.isDefined
+
+  if (circuitType.equals(CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation) && isCSWEnabled)
+    throw new IllegalArgumentException("Invalid Configuration file: With key rotation circuit CSW feature is not allowed.")
 
   val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
@@ -149,6 +164,8 @@ class SidechainApp @Inject()
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      circuitType = circuitType,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -173,6 +190,8 @@ class SidechainApp @Inject()
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      circuitType = circuitType,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -197,6 +216,8 @@ class SidechainApp @Inject()
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      circuitType = circuitType,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -234,10 +255,25 @@ class SidechainApp @Inject()
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
-    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)) {
-      throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
+    val expectedNumOfCustomFields = circuitType match {
+      case NaiveThresholdSignatureCircuitWithKeyRotation =>
+        CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION
+      case NaiveThresholdSignatureCircuit =>
+        params.isCSWEnabled match {
+          case true =>
+            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW
+          case false =>
+            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION
+        }
     }
+    val result: Boolean = circuitType match {
+      case NaiveThresholdSignatureCircuit =>
+        CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)
+      case NaiveThresholdSignatureCircuitWithKeyRotation =>
+        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath)
+    }
+    if (!result)
+      throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
   }
   if (isCSWEnabled) {
     log.info("Ceased Sidechain Withdrawal (CSW) is enabled")
@@ -399,9 +435,9 @@ class SidechainApp @Inject()
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
+    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
   )

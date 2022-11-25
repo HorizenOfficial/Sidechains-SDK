@@ -5,7 +5,7 @@ import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
 import com.horizen.box.ZenBox;
 import com.horizen.box.data.ZenBoxData;
-import com.horizen.cryptolibprovider.FieldElementUtils;
+import com.horizen.cryptolibprovider.utils.FieldElementUtils;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;

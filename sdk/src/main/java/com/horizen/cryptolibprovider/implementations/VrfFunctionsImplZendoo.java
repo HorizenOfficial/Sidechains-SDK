@@ -1,5 +1,7 @@
-package com.horizen.cryptolibprovider;
+package com.horizen.cryptolibprovider.implementations;
 
+import com.horizen.cryptolibprovider.VrfFunctions;
+import com.horizen.cryptolibprovider.utils.FieldElementUtils;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.vrfnative.*;
 import com.horizen.librustsidechains.Constants;

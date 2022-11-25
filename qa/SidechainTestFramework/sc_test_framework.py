@@ -145,6 +145,9 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="log4j log level for application console")
         parser.add_option("--nonceasing", dest="nonceasing", default=False, action="store_true",
                           help="Specify if sidechain is non-ceasing. By default, it is ceasing.")
+        parser.add_option("--certcircuittype", dest="certcircuittype", default="NaiveThresholdSignatureCircuit", action="store",
+                          help="Type of certificate circuit: NaiveThresholdSignatureCircuit"
+                               "/NaiveThresholdSignatureCircuitWithKeyRotation")
 
         self.add_options(parser)
         self.sc_add_options(parser)

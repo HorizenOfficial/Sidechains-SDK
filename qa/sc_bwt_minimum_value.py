@@ -4,7 +4,7 @@ import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, SC_CREATION_VERSION_2, SC_CREATION_VERSION_1
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_false, start_nodes, \
     websocket_port_by_mc_node_index, COIN
@@ -23,6 +23,9 @@ Configuration:
 
 Note:
     This test can be executed in two modes:
+    1. using no key rotation circuit (by default)
+    2. using key rotation circuit (with --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation)
+    With key rotation circuit can be executed in two modes:
     1. ceasing (by default)
     2. non-ceasing (with --nonceasing flag)
     
@@ -39,31 +42,41 @@ Test:
           and then to MC/SC blocks.
         - verify epoch 0 certificate, verify backward transfers list
 """
-class SCBwtMinValue(SidechainTestFramework):
 
+
+class SCBwtMinValue(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
 
     def setup_nodes(self):
         num_nodes = 1
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
-        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
+        return start_nodes(num_nodes, self.options.tmpdir,
+                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
         sc_creation_zens = 100
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            max_fee=sc_creation_zens*COIN
+            max_fee=sc_creation_zens * COIN
         )
 
-        is_non_ceasing = self.options.nonceasing
-        # Non ceasing sidechains must be of sidechain version 2
-        sc_creation_version = SC_CREATION_VERSION_2 if is_non_ceasing else SC_CREATION_VERSION_1
+is_non_ceasing = self.options.nonceasing
+# Non ceasing sidechains must be of sidechain version 2
+if (self.options.certcircuittype == KEY_ROTATION_CIRCUIT):
+    sc_creation_version = SC_CREATION_VERSION_2
+else:
+    sc_creation_version = SC_CREATION_VERSION_1
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, sc_creation_zens, self.sc_withdrawal_epoch_length,
-                                                        sc_creation_version=sc_creation_version,
-                                                        is_non_ceasing=is_non_ceasing), sc_node_configuration)
+network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+                                                cert_max_keys=cert_max_keys,
+                                                cert_sig_threshold=cert_sig_threshold,
+                                                sc_creation_version=sc_creation_version,
+                                                is_non_ceasing=self.options.nonceasing,
+                                                circuit_type=self.options.certcircuittype,
+                                                sc_creation_version=sc_creation_version),
+                                 sc_node_configuration)
 
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
@@ -89,8 +102,7 @@ class SCBwtMinValue(SidechainTestFramework):
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
         check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, "ForgerBox", 1,
-                                 self.sc_nodes_bootstrap_info.genesis_account_balance)
-
+                          self.sc_nodes_bootstrap_info.genesis_account_balance)
 
         # create FT to SC to withdraw later
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -122,10 +134,10 @@ class SCBwtMinValue(SidechainTestFramework):
         logging.info("First BT MC public key address is {}".format(mc_address1))
         sc_bt_amount0 = 53
         withdrawal_request = {"outputs": [ \
-                               { "mainchainAddress": mc_address1,
-                                 "value": sc_bt_amount0 }
-                              ]
-                             }
+            {"mainchainAddress": mc_address1,
+             "value": sc_bt_amount0}
+        ]
+        }
 
         withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
         if "result" in withdrawCoinsJson:
@@ -134,12 +146,12 @@ class SCBwtMinValue(SidechainTestFramework):
             logging.info("Expected Coins withdrawn fail: " + json.dumps(withdrawCoinsJson))
 
         # Try to withdraw coins from SC to MC: minimum amount to send
-        sc_bt_amount1 = 54 # in Satoshi
+        sc_bt_amount1 = 54  # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "mainchainAddress": mc_address1,
-                                 "value": sc_bt_amount1 }
-                              ]
-                             }
+            {"mainchainAddress": mc_address1,
+             "value": sc_bt_amount1}
+        ]
+        }
         withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
         if "result" not in withdrawCoinsJson:
             fail("Withdraw coins failed: " + json.dumps(withdrawCoinsJson))
@@ -152,10 +164,9 @@ class SCBwtMinValue(SidechainTestFramework):
         # Checking createCoreTransactionSimplified
         mc_address2 = self.nodes[0].getnewaddress()
         logging.info("Second BT MC public key address is {}".format(mc_address2))
-        withdrawal_requests = [{ "mainchainAddress": mc_address2,
-                                 "value": sc_bt_amount0 }
-                              ]
-
+        withdrawal_requests = [{"mainchainAddress": mc_address2,
+                                "value": sc_bt_amount0}
+                               ]
 
         # Try to withdraw coins from SC to MC: amount below the dust threshold
         core_transaction_request = {
@@ -173,12 +184,12 @@ class SCBwtMinValue(SidechainTestFramework):
             logging.info("Expected Core transaction exception: " + json.dumps(coreTransactionJson))
 
         sc_bt_amount2 = 54  # in Satoshi
-        withdrawal_requests = [{ "mainchainAddress": mc_address2,
-                                 "value": sc_bt_amount2 }
-                              ]
+        withdrawal_requests = [{"mainchainAddress": mc_address2,
+                                "value": sc_bt_amount2}
+                               ]
 
         core_transaction_request = {
-            "regularOutputs":[],
+            "regularOutputs": [],
             "withdrawalRequests": withdrawal_requests,
             "forgerOutputs": [],
             "fee": 5
@@ -207,8 +218,8 @@ class SCBwtMinValue(SidechainTestFramework):
         core_transaction_request = {
             "transactionInputs": [{"boxId": forger_box_id}],
             "regularOutputs": [],
-            "withdrawalRequests":  [{ "mainchainAddress": mc_address3,
-                                      "value": sc_bt_amount0 }],
+            "withdrawalRequests": [{"mainchainAddress": mc_address3,
+                                    "value": sc_bt_amount0}],
             "forgerOutputs": []
         }
 
@@ -222,8 +233,8 @@ class SCBwtMinValue(SidechainTestFramework):
         core_transaction_request = {
             "transactionInputs": [{"boxId": forger_box_id}],
             "regularOutputs": [],
-            "withdrawalRequests":  [{ "mainchainAddress": mc_address3,
-                                      "value": sc_bt_amount3 }],
+            "withdrawalRequests": [{"mainchainAddress": mc_address3,
+                                    "value": sc_bt_amount3}],
             "forgerOutputs": []
         }
 
@@ -332,6 +343,7 @@ class SCBwtMinValue(SidechainTestFramework):
         assert_equal(sc_bt_amount3, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")
+
 
 if __name__ == "__main__":
     SCBwtMinValue().main()

@@ -65,8 +65,8 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         sc_node1 = self.sc_nodes[0]
 
         api_server = SecureEnclaveApiServer(
-            self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_secrets[4:],
-            self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_public_keys[4:],
+            self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_signers_secrets[4:],
+            self.sc_nodes_bootstrap_info.certificate_proof_info.public_signing_keys[4:],
         )
 
         api_server_thread = multiprocessing.Process(target=lambda: api_server.start())

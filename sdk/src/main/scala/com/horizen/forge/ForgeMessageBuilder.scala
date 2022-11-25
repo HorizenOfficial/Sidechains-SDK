@@ -12,7 +12,7 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
+import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
@@ -324,7 +324,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           else
             nodeView.pool.take(nodeView.pool.size)
         (mempoolTx
-          .filter(nodeView.state.validateWithFork(_, consensusEpochNumber).isSuccess)
+          .filter( tx => {nodeView.state.validateWithFork(tx, consensusEpochNumber).isSuccess &&
+            nodeView.state.validateWithWithdrawalEpoch(tx,
+              WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainReferenceData.size, parentBlockInfo.withdrawalEpochInfo, params).epoch
+            ).isSuccess})
           ++ forcedTx)
           .filter(tx => {
             val txSize = tx.bytes.length + 4 // placeholder for Tx length
