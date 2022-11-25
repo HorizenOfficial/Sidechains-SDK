@@ -26,7 +26,8 @@ class AccountForgeMessageBuilderTest
       10000000000L,
       11,
       2,
-      3
+      3,
+      1
     )
 
     usingView { stateView =>
@@ -77,7 +78,8 @@ class AccountForgeMessageBuilderTest
       10000000000L,
       11,
       2,
-      3
+      3,
+      1
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -137,7 +139,8 @@ class AccountForgeMessageBuilderTest
       gasLimit.longValueExact(),//Just enough for 1 tx
       11,
       2,
-      3
+      3,
+      1
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -167,7 +170,7 @@ class AccountForgeMessageBuilderTest
         null
       )
       assertEquals(1, appliedTxs.size)
-      assertEquals(validTx.id(), appliedTxs(0).id)
+      assertEquals(validTx.id(), appliedTxs.head.id)
     }
   }
 
