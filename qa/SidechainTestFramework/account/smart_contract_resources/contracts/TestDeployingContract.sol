@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicense
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 contract TestDeployingContract {
@@ -27,7 +27,7 @@ contract TestDeployingContract {
             }
         }
         if (!found)
-            revert("Can only be the child");
+            revert("Can only be called from the child");
         _;
     }
     function getSecret() onlyChild public view returns (string memory) {

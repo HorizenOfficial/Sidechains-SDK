@@ -5,21 +5,14 @@ import math
 
 from eth_utils import add_0x_prefix
 
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
-from SidechainTestFramework.sc_boostrap_info import (
-    MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
-    SCNodeConfiguration,
-)
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
-    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
-    computeForgedTxFee, connect_sc_nodes, convertZenToWei, convertZenToZennies, convertZenniesToWei,
-    generate_account_proposition, generate_next_block, get_account_balance, start_sc_nodes,
-)
+    computeForgedTxFee, convertZenToWei, convertZenToZennies, convertZenniesToWei,
+    generate_account_proposition, generate_next_block, get_account_balance, )
 from test_framework.util import (
-    assert_equal, fail, forward_transfer_to_sidechain, initialize_chain_clean, start_nodes,
-    websocket_port_by_mc_node_index, )
+    assert_equal, fail, forward_transfer_to_sidechain, )
 
 
 class BlockFeeInfo(object):
@@ -29,58 +22,17 @@ class BlockFeeInfo(object):
         self.forgerTips = forgerTips
 
 
-class ScEvmFeePaymentsRpc(SidechainTestFramework):
-    number_of_mc_nodes = 1
-    number_of_sidechain_nodes = 2
-    withdrawal_epoch_length = 20
-    API_KEY = "Horizen"
-
-    def setup_chain(self):
-        initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
-
-    def setup_network(self, split=False):
-        # Setup nodes and connect them
-        self.nodes = self.setup_nodes()
-
-    def setup_nodes(self):
-        # Start MC node
-        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
-
-    def sc_setup_chain(self):
-        # Bootstrap new SC, specify SC nodes connection to MC node
-        mc_node_1 = self.nodes[0]
-        sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
-            api_key=self.API_KEY
-        )
-        sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
-            api_key=self.API_KEY
-        )
-
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 1, self.withdrawal_epoch_length),
-                                         sc_node_1_configuration, sc_node_2_configuration)
-
-        # rewind sc genesis block timestamp for 5 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=720 * 120 * 5,
-                                                                 blockversion=AccountModelBlockVersion)
-
-    def sc_setup_nodes(self):
-        # Start 2 SC nodes
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir,
-                              auth_api_key=self.API_KEY,
-                              binary=[EVM_APP_BINARY] * 2)  # , extra_args=[[], ['-agentlib']])
+class ScEvmFeePaymentsRpc(AccountChainSetup):
+    # rewind sc genesis block timestamp for 5 consensus epochs
+    def __init__(self):
+        super().__init__(number_of_sidechain_nodes=2, withdrawalEpochLength=20, forward_amount=1,
+                         block_timestamp_rewind=720 * 120 * 5)
 
     def run_test(self):
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
 
-        # Connect and sync SC nodes
-        logging.info("Connecting sc nodes...")
-        connect_sc_nodes(self.sc_nodes[0], 1)
-        self.sc_sync_all()
         # Set the genesis SC block fee info
         sc_block_fee_info = [BlockFeeInfo(1, 0, 0)]
 
@@ -205,7 +157,7 @@ class ScEvmFeePaymentsRpc(SidechainTestFramework):
                                              gasLimit=123400, maxPriorityFeePerGas=56700,
                                              maxFeePerGas=baseFeePerGas + 56690,
                                              value=transferred_amount_in_wei_2)
-        self.sc_sync_all()
+        # self.sc_sync_all()
 
         # Generate SC block on SC node 2 for the next consensus epoch
         sc_middle_we_block_id = generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
@@ -217,7 +169,7 @@ class ScEvmFeePaymentsRpc(SidechainTestFramework):
         self.sc_sync_all()
 
         # Generate some MC block to reach the end of the withdrawal epoch
-        mc_node.generate(self.withdrawal_epoch_length - 2)
+        mc_node.generate(self.withdrawalEpochLength - 2)
 
         # balance now is initial (ft) without forgerStake and fee and without transferred amounts and fees
         assert_equal(

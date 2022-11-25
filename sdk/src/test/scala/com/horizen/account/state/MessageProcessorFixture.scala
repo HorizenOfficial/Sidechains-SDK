@@ -22,7 +22,7 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
   val hashNull: Array[Byte] = Array.fill(32)(0)
   val origin: Array[Byte] = randomAddress
-  val defaultBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0)
+  val defaultBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1)
 
   def randomBytes(n: Int): Array[Byte] = {
     val bytes = new Array[Byte](n)

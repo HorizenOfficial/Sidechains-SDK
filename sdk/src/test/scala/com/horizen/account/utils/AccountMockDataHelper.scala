@@ -1,11 +1,14 @@
 package com.horizen.account.utils
 
+import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.params.NetworkParams
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar.mock
 import scorex.util.bytesToId
+
 import java.math.BigInteger
 import java.util.Optional
 
@@ -30,6 +33,15 @@ case class AccountMockDataHelper(genesis: Boolean) {
     Mockito.when(block.header.baseFee).thenReturn(baseFee)
     Mockito.when(block.header.gasUsed).thenReturn(gasUsed)
     Mockito.when(block.header.gasLimit).thenReturn(gasLimit)
+    Mockito.when(block.sidechainTransactions).thenReturn(Seq[SidechainTypes#SCAT]())
+
+    block
+  }
+
+  def getMockedBlock2(txes: Seq[SidechainTypes#SCAT]): AccountBlock = {
+    val block: AccountBlock = mock[AccountBlock]
+    Mockito.when(block.transactions).thenReturn(txes)
+
     block
   }
 

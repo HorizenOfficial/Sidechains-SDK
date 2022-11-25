@@ -10,22 +10,14 @@ import com.horizen.serialization.Views;
 
 @JsonView(Views.Default.class)
 public abstract class RpcResponse implements ApiResponse {
-    protected final String jsonrpc;
+    @JsonProperty("jsonrpc")
+    protected final String jsonrpc = "2.0";
 
     @JsonProperty("id")
     @JsonSerialize(using = RpcIdSerializer.class)
     protected final RpcId id;
 
     public RpcResponse(RpcId id) {
-        this.jsonrpc = "2.0";
         this.id = id;
-    }
-
-    public String getJsonrpc() {
-        return jsonrpc;
-    }
-
-    public RpcId getId() {
-        return id;
     }
 }
