@@ -11,6 +11,7 @@ from SidechainTestFramework.scutil import (
     convertZenToWei, convertZenToZennies, generate_next_block, generate_secrets, generate_vrf_secrets,
     get_account_balance, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
+from httpCalls.transaction.makeForgerStake import makeForgerStake
 from test_framework.util import (
     assert_equal, assert_false, assert_true, )
 
@@ -41,14 +42,8 @@ class SCEvmClosedForgerList(AccountChainSetup):
     def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
         # a transaction with a forger stake info not compliant with the closed forger list will be successfully
         # included in a block but the receipt will then report a 'failed' status.
-        forgerStakes = {"forgerStakeInfo": {
-            "ownerAddress": owner_address,  # SC node 1 is an owner
-            "blockSignPublicKey": blockSignPubKey,
-            "vrfPubKey": vrf_public_key,
-            "value": convertZenToZennies(amount)  # in Satoshi
-        }
-        }
-        makeForgerStakeJsonRes = sc_node.transaction_makeForgerStake(json.dumps(forgerStakes))
+
+        makeForgerStakeJsonRes = makeForgerStake(sc_node, owner_address, blockSignPubKey, vrf_public_key, amount, api_key='Horizen')
         assert_true("result" in makeForgerStakeJsonRes)
         logging.info(json.dumps(makeForgerStakeJsonRes))
         self.sc_sync_all()
@@ -76,7 +71,7 @@ class SCEvmClosedForgerList(AccountChainSetup):
         evm_address_sc_node_1 = remove_0x_prefix(self.evm_address)
 
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(len(stakeList), 1)
+        assert_equal(1, len(stakeList))
 
         # Generate SC block and check that FT appears in SCs node wallet
         generate_next_block(sc_node_1, "first node")

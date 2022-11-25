@@ -12,6 +12,11 @@ cwd = None
 nodeModulesInstalled = False
 
 
+# helper method for EIP155 tx
+def getChainIdFromSignatureV(sigV):
+    return int((sigV - 35) / 2)
+
+
 def get_cwd():
     global cwd
     if cwd is None:

@@ -6,10 +6,12 @@ from decimal import Decimal
 from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_utils import getChainIdFromSignatureV
 from SidechainTestFramework.scutil import (
     ForgerStakeSmartContractAddress,
     WithdrawalReqSmartContractAddress, convertWeiToZen, convertZenToWei,
     convertZenToZennies, generate_next_block, get_account_balance, )
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (
     assert_equal, assert_true, fail, )
 
@@ -23,11 +25,6 @@ Test:
     Test some negative scenario too
      
 """
-
-
-# helper method for EIP155 tx
-def getChainIdFromSignatureV(sigV):
-    return int((sigV - 35) / 2)
 
 
 class SCEvmEOA2EOA(AccountChainSetup):
@@ -62,11 +59,11 @@ class SCEvmEOA2EOA(AccountChainSetup):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = from_sc_node.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(tx_hash in response['result']['transactionIds'])
+        response = allTransactions(from_sc_node, False)
+        assert_true(tx_hash in response['transactionIds'])
 
         if print_json_results:
-            logging.info(from_sc_node.transaction_allTransactions(json.dumps({"format": True})))
+            logging.info(allTransactions(from_sc_node))
 
         generate_next_block(from_sc_node, "first node")
         self.sc_sync_all()
@@ -191,15 +188,6 @@ class SCEvmEOA2EOA(AccountChainSetup):
             fail("EOA2EOA with invalid format from address should not work")
         except Exception as e:
             logging.info("Expected failure: {}".format(e))
-
-        # logging.info("Create an EOA to EOA transaction moving some fund with too high a nonce ==> SHOULD FAIL")
-        # transferred_amount_in_zen = Decimal('33')
-        # ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen,
-        #                             nonce=33)
-        # if not ret:
-        #     logging.info("Expected failure: {}".format(msg))
-        # else:
-        #     fail("EOA2EOA with bad nonce should not work")
 
         logging.info("Create an EOA to EOA transaction moving some fund with too low a nonce ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('33')
