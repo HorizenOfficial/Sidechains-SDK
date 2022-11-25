@@ -70,15 +70,15 @@ class EthService(
           case reverted: ExecutionRevertedException =>
             throw new RpcException(
               new RpcError(
-                RpcCode.ExecutionError.getCode,
+                RpcCode.ExecutionError.code,
                 reverted.getMessage,
                 Numeric.toHexString(reverted.revertReason)
               )
             )
           case err: ExecutionFailedException =>
-            throw new RpcException(new RpcError(RpcCode.ExecutionError.getCode, err.getMessage, null))
+            throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
           case err: TransactionSemanticValidityException =>
-            throw new RpcException(new RpcError(RpcCode.ExecutionError.getCode, err.getMessage, null))
+            throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
           case _ =>
             log.error("unexpected exception", exception)
             throw exception
@@ -87,14 +87,14 @@ class EthService(
   }
 
   @RpcMethod("eth_getBlockByNumber")
-  def getBlockByNumber(tag: String, hydratedTx: Boolean): EthereumBlock = {
+  def getBlockByNumber(tag: String, hydratedTx: Boolean): EthereumBlockView = {
     applyOnAccountView { nodeView =>
       constructEthBlockWithTransactions(nodeView, getBlockIdByTag(nodeView, tag), hydratedTx)
     }
   }
 
   @RpcMethod("eth_getBlockByHash")
-  def getBlockByHash(hash: Hash, hydratedTx: Boolean): EthereumBlock = {
+  def getBlockByHash(hash: Hash, hydratedTx: Boolean): EthereumBlockView = {
     applyOnAccountView { nodeView =>
       constructEthBlockWithTransactions(nodeView, bytesToId(hash.toBytes), hydratedTx)
     }
@@ -104,28 +104,14 @@ class EthService(
       nodeView: NV,
       blockId: ModifierId,
       hydratedTx: Boolean
-  ): EthereumBlock = {
+  ): EthereumBlockView = {
     nodeView.history
       .getStorageBlockById(blockId)
       .map(block => {
-        val transactions = block.transactions.map(_.asInstanceOf[EthereumTransaction])
-        new EthereumBlock(
-          Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
+        new EthereumBlockView(
+          nodeView.history.getBlockHeightById(blockId).get().toLong,
           Numeric.prependHexPrefix(blockId),
-          if (!hydratedTx) {
-            transactions.map(tx => Numeric.prependHexPrefix(tx.id)).toList.asJava
-          } else {
-            using(nodeView.state.getView) { stateView =>
-              transactions
-                .flatMap(tx =>
-                  stateView
-                    .getTransactionReceipt(Numeric.hexStringToByteArray(tx.id))
-                    .map(new EthereumTransactionView(_, tx, block.header.baseFee))
-                )
-                .toList
-                .asJava
-            }
-          },
+          hydratedTx,
           block
         )
       })
@@ -565,11 +551,11 @@ class EthService(
 
   @RpcMethod("eth_getProof")
   @RpcOptionalParameters(1)
-  def getProof(address: Address, keys: Array[Quantity], tag: String): EthereumAccountProof = {
+  def getProof(address: Address, keys: Array[Quantity], tag: String): EthereumAccountProofView = {
     val storageKeys = keys.map(key => Numeric.toBytesPadded(key.toNumber, 32))
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        new EthereumAccountProof(stateView.getProof(address.toBytes, storageKeys))
+        new EthereumAccountProofView(stateView.getProof(address.toBytes, storageKeys))
       }
     }
   }

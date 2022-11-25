@@ -22,12 +22,12 @@ public class RpcResponseError extends RpcResponse implements ErrorResponse {
 
     @Override
     public String code() {
-        return String.valueOf(error.getCode());
+        return String.valueOf(error.code);
     }
 
     @Override
     public String description() {
-        return error.getMessage();
+        return error.message;
     }
 
     @Override

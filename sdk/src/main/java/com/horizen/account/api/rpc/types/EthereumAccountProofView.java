@@ -8,7 +8,7 @@ import org.web3j.utils.Numeric;
 import java.util.Arrays;
 
 @JsonView(Views.Default.class)
-public class EthereumAccountProof {
+public class EthereumAccountProofView {
     public final String address;
     public final String[] accountProof;
     public final String balance;
@@ -30,7 +30,7 @@ public class EthereumAccountProof {
         }
     }
 
-    public EthereumAccountProof(ProofAccountResult result) {
+    public EthereumAccountProofView(ProofAccountResult result) {
         this.address = result.address.toString();
         this.accountProof = result.accountProof;
         this.balance = Numeric.encodeQuantity(result.balance);
