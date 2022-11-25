@@ -23,6 +23,7 @@ import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
 
@@ -36,7 +37,6 @@ import scala.collection.concurrent.TrieMap
  */
 class AccountSidechainNodeViewHolderPerfTest
     extends JUnitSuite
-      with MockedSidechainNodeViewHolderFixture
       with EthereumTransactionFixture
       with StoreFixture
       with sparkz.core.utils.SparkzEncoding {
