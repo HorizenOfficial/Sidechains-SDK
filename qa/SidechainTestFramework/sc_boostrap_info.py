@@ -232,6 +232,7 @@ SCBootstrapInfo: {
     "initial_cumulative_comm_tree_hash": CommTreeHash data for the genesis MC block
     "cert_keys_paths": an instance of ProofKeysPaths for certificate
     "csw_keys_paths": an instance of ProofKeysPaths for ceased sidechain withdrawal
+    "genesis_evm_account": an instance of Account for EVM Sidechain
 }
 """
 class SCBootstrapInfo(object):
