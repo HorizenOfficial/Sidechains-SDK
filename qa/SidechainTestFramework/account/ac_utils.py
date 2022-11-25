@@ -1,9 +1,12 @@
 import logging
 import os
+import random
 import subprocess
 from enum import Enum
 
 from eth_utils import to_checksum_address
+
+from SidechainTestFramework.scutil import assert_equal, generate_next_block
 
 cwd = None
 nodeModulesInstalled = False
@@ -181,3 +184,77 @@ def format_eoa(add: str):
         return add[2:].lower()
     else:
         return add.lower()
+
+
+def eoa_transfer(node, sender, receiver, amount, call_method: CallMethod = CallMethod.RPC_EIP155,
+                 static_call: bool = False, tag: str = 'latest'):
+    if static_call:
+        res = eoa_transaction(node, from_addr=sender, to_addr=receiver, value=amount, static_call=True, tag=tag)
+    else:
+        res = eoa_transaction(node, from_addr=sender, to_addr=receiver, call_method=call_method, value=amount)
+    return res
+
+
+def contract_function_static_call(node, smart_contract_type, smart_contract_address, from_address, method, *args):
+    logging.info("Calling {}: using static call function".format(method))
+    res = smart_contract_type.static_call(node, method, *args, fromAddress=from_address,
+                                          toAddress=smart_contract_address)
+    return res
+
+
+def contract_function_call(node, smart_contract_type, smart_contract_address, from_address, method, *args, value=0,
+                           overrideGas=None):
+    logging.info("Estimating gas for contract call...")
+    estimated_gas = smart_contract_type.estimate_gas(node, method, *args, value=value,
+                                                     fromAddress=from_address, toAddress=smart_contract_address)
+    logging.info("Estimated gas is {}".format(estimated_gas))
+
+    logging.info("Calling {}: using call function".format(method))
+    res = smart_contract_type.call_function(node, method, *args, fromAddress=from_address,
+                                            value=value,
+                                            gasLimit=estimated_gas if overrideGas is None else overrideGas,
+                                            toAddress=smart_contract_address)
+    return res
+
+
+def deploy_smart_contract(node, smart_contract, from_address, *args, call_method: CallMethod = CallMethod.RPC_LEGACY):
+    logging.info("Estimating gas for deployment...")
+    estimated_gas = smart_contract.estimate_gas(node, 'constructor', *args,
+                                                fromAddress=from_address)
+    logging.info("Estimated gas is {}".format(estimated_gas))
+
+    logging.info("Deploying smart contract...")
+    tx_hash, address = smart_contract.deploy(node, *args, call_method=call_method,
+                                             fromAddress=from_address,
+                                             gasLimit=estimated_gas)
+
+    generate_next_block(node, "first node")
+
+    tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
+    assert_equal(tx_receipt['result']['contractAddress'], address.lower())
+    logging.info("Smart contract deployed successfully to address 0x{}".format(address))
+    return address
+
+
+def generate_block_and_get_tx_receipt(node, tx_hash, return_status=False):
+    generate_next_block(node, "first node")
+    tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
+    if return_status:
+        return int(tx_receipt['result']['status'], 0)
+    return tx_receipt
+
+
+def random_byte_string(*, length=20):
+    return '0x' + bytes([random.randrange(0, 256) for _ in range(0, length)]).hex()
+
+
+def estimate_gas(node, from_address=None, to_address=None, data='0x', value='0x0', gasPrice='0x4B9ACA00', nonce=None):
+    request = {
+        "from": from_address,
+        "to": to_address,
+        "data": data,
+        "value": value,
+        "gasPrice": gasPrice,
+        "nonce": nonce
+    }
+    return node.rpc_eth_estimateGas(request)

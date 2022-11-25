@@ -105,15 +105,18 @@ class SmartContract:
         response: Any = ''
         if call_method is CallMethod.RPC_LEGACY:
             response = node.rpc_eth_signTransaction(
-                self.__make_legacy_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress), nonce=nonce, gas_price=gasPrice,
+                self.__make_legacy_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress),
+                                                nonce=nonce, gas_price=gasPrice,
                                                 gas=gasLimit, data=data, value=value))
         elif call_method is CallMethod.RPC_EIP155:
             response = node.rpc_eth_signTransaction(
-                self.__make_eip155_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress), chain_id=chain_id, nonce=nonce,
+                self.__make_eip155_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress),
+                                                chain_id=chain_id, nonce=nonce,
                                                 gas_price=gasPrice, gas=gasLimit, data=data, value=value))
         elif call_method is CallMethod.RPC_EIP1559:
             response = node.rpc_eth_signTransaction(
-                self.__make_eip1559_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress), chain_id=chain_id, nonce=nonce,
+                self.__make_eip1559_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress),
+                                                 chain_id=chain_id, nonce=nonce,
                                                  max_fee_per_gas=maxFeePerGas,
                                                  max_priority_fee_per_gas=maxPriorityFeePerGas, gas=gasLimit, data=data,
                                                  value=value))
@@ -180,13 +183,13 @@ class SmartContract:
             "value": value
         }
         if functionName == 'constructor':
-            request["data"]= self.Bytecode
+            request["data"] = self.Bytecode
             if 'constructor' in self.Functions:
                 request['data'] = request['data'] + self.Functions['constructor'].encode(*args)
         else:
-            request["data"]= self.raw_encode_call(functionName, *args)
+            request["data"] = self.raw_encode_call(functionName, *args)
         if toAddress is not None:
-            request["to"]= format_evm(toAddress)
+            request["to"] = format_evm(toAddress)
         if gasLimit is not None:
             request["gasLimit"] = gasLimit
         if gasPrice is not None:
@@ -406,6 +409,15 @@ class SmartContract:
             raise RuntimeError(
                 "Contract name is not unique, please change the names of the contracts so they are unique")
         return sol_files[0]
+
+    def get_balance(self, node, fromAddress, contractAddress, otherAddress=None):
+        method = 'balanceOf(address)'
+        if otherAddress is None:
+            otherAddress = fromAddress
+        return self.static_call(node, method, otherAddress,
+                                         fromAddress=fromAddress,
+                                         toAddress=contractAddress,
+                                         gasPrice=900000000)
 
 
 if __name__ == '__main__':
