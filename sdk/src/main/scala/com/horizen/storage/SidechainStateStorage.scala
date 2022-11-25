@@ -365,7 +365,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         // For non-ceasing sidechain store referenced epoch number of the top certificate
         updateList.add(new JPair(getLastCertificateEpochNumberKey,
           new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
-        // TODO: store certificate
         updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
           WithdrawalEpochCertificateSerializer.toBytes(certificate)))
 
