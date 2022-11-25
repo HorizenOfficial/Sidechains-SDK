@@ -177,9 +177,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override def dumpStorages: Unit =
     try {
-      val m = getStorageVersions.map { case (k, v) => {
+      val m = getStorageVersions.map { case (k, v) =>
         "%-36s".format(k) + ": " + v
-      }
       }
       m.foreach(x => log.debug(s"${x}"))
       log.trace(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions.slice(0, 3)}")
@@ -188,11 +187,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         // can happen during unit test with mocked objects
         log.warn("Could not print debug info about storages: " + e.getMessage)
     }
-
-  override def getStorageVersions: Map[String, String] =
-    listOfStorageInfo.map(x => {
-      x.getStorageName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
-    }).toMap
 
   override def processLocallyGeneratedTransaction: Receive = {
     case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>

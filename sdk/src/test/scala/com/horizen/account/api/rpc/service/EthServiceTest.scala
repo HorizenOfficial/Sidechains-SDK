@@ -7,7 +7,7 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.types.Quantity
 import com.horizen.account.node.AccountNodeView
-import com.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolderFixture}
+import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.{NetworkParams, RegTestParams}
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
@@ -20,7 +20,7 @@ import scala.concurrent.duration.{FiniteDuration, SECONDS}
 // TODO: we need full coverage of eth rpc service. Every method with both success and fail cases
 class EthServiceTest extends JUnitSuite
   with MockitoSugar
-  with MockedSidechainNodeViewHolderFixture {
+{
   var nodeView: AccountNodeView = _
   var ethService: EthService = _
   var params: NetworkParams = _

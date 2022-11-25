@@ -18,15 +18,13 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
-import com.horizen.utils.BytesUtils
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.RollbackFailed
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.{idToVersion, versionToId}
-
+import sparkz.core.idToVersion
 import scala.util.{Failure, Success}
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -66,16 +64,14 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         dumpStorages()
 
         log.info("Checking state consistency...")
-
         val restoredHistory = dataOpt._1
         val restoredState = dataOpt._2
         val restoredWallet = dataOpt._3
         val restoredMempool = dataOpt._4
 
         // best block id is updated in history storage as very last step
-        val historyVersion = idToVersion(restoredHistory.bestBlockId)
-
-        val checkedStateVersion  = bytesToId(stateMetadataStorage.lastVersionId.get.data())
+        val historyVersion = restoredHistory.bestBlockId
+        val checkedStateVersion = bytesToId(stateMetadataStorage.lastVersionId.get.data())
 
         log.debug(s"history bestBlockId = $historyVersion, stateVersion = $checkedStateVersion")
 
@@ -103,8 +99,11 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
               restoredState.rollbackTo(idToVersion(rollbackTo)) match {
                 case Success(s) =>
-                  log.debug("State and wallet succesfully rolled back")
+                  log.debug("State succesfully rolled back")
                   dumpStorages()
+                  // We are done with the recovery. The evm-state storage does not need to be dealt with. A consistent
+                  // view of it will be built using the db-root got from the metadata state db, that is now consistent
+                  // with history storage
                   Some((restoredHistory, s, restoredWallet, restoredMempool))
                 case Failure(e) =>
                   log.error("State roll back failed: ", e)
@@ -256,16 +255,20 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
   }
 
-  // TODO FOR MERGE
-  override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq()
+  override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
+    historyStorage, consensusDataStorage, stateMetadataStorage, secretStorage)
 
-
-  // TODO FOR MERGE: implement these methods
-  override def dumpStorages(): Unit = log.error("TO BE IMPLEMENTED")
-  override def getStorageVersions: Map[String, String] = {
-    listOfStorageInfo.map(x => {
-      x.getStorageName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
-    }).toMap
+  override def dumpStorages(): Unit = {
+    try {
+      val m = getStorageVersions.map { case (k, v) =>
+        "%-36s".format(k) + ": " + v
+      }
+      m.foreach(x => log.debug(s"$x"))
+    } catch {
+      case e: Exception =>
+        // can happen during unit test with mocked objects
+        log.warn("Could not print debug info about storages: " + e.getMessage)
+    }
   }
 
   override def processLocallyGeneratedTransaction: Receive = {

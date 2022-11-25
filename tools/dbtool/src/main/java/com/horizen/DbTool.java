@@ -11,16 +11,19 @@ import java.util.*;
 
 public class DbTool {
     public static final Set<String> storageNames = new HashSet<>(Arrays.asList(
+            "state",
             "secret",
+            "history",
+            "consensusData",
+            // UTXO model only:
             "wallet",
             "walletTransaction",
             "walletForgingStake",
             "walletCswDataStorage",
-            "state",
             "stateForgerBox",
-            "stateUtxoMerkleTree",
-            "history",
-            "consensusData"
+            "stateUtxoMerkleTree"
+            // Account model only:
+            //, "evm-state" // LevelDb storage: it does not support the VersionedLevelDb interface
     ));
 
     public static void main(String[] args) {
@@ -45,10 +48,11 @@ public class DbTool {
         }
         String dataDirAbsolutePath = args[0];
 
-        // read custom storage names list from input arguments
-        String[] customStorageNames = args[1].split(",");
-        Collections.addAll(storageNames, customStorageNames);
-
+        if (args.length > 1) {
+            // read custom storage names list from input arguments
+            String[] customStorageNames = args[1].split(",");
+            Collections.addAll(storageNames, customStorageNames);
+        }
         MessagePrinter printer = new ConsolePrinter();
         DbToolCommandProcessor processor = new DbToolCommandProcessor(printer, dataDirAbsolutePath, log);
         if(args.length > 2)

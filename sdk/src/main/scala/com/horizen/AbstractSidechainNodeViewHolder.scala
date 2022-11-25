@@ -7,7 +7,7 @@ import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
-import com.horizen.utils.SDKModifiersCache
+import com.horizen.utils.{BytesUtils, SDKModifiersCache}
 import com.horizen.validation._
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.{ModifiersCache, idToVersion}
@@ -69,7 +69,10 @@ abstract class AbstractSidechainNodeViewHolder[
 
   def dumpStorages(): Unit
 
-  def getStorageVersions: Map[String, String]
+  def getStorageVersions: Map[String, String] =
+    listOfStorageInfo.map(x => {
+    x.getStorageName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
+  }).toMap
 
   override def receive: Receive = {
     applyFunctionOnNodeView orElse
@@ -119,19 +122,17 @@ abstract class AbstractSidechainNodeViewHolder[
   }
 
   def applyModifier: Receive = {
-    case AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[PMOD]) => {
+    case AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[PMOD]) =>
       modifiersCache.popCandidate(history()) match {
         case Some(mod) =>
           pmodModify(mod)
           self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
-        case None => {
+        case None =>
           val cleared = modifiersCache.cleanOverfull()
           context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))
           applyingBlock = false
           log.debug(s"Cache size after: ${modifiersCache.size}")
-        }
       }
-    }
   }
 
   def processGetStorageVersions: Receive = {
@@ -202,7 +203,7 @@ abstract class AbstractSidechainNodeViewHolder[
       @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
       val branchingPoint = progressInfo.branchPoint.get //todo: .get
       if (state.version != branchingPoint) {
-        log.debug(s"chain reorg needed, rolling back state and wallet to branching point: ${branchingPoint}")
+        log.debug(s"chain reorg needed, rolling back state and wallet to branching point: $branchingPoint")
         (
           wallet.rollback(idToVersion(branchingPoint)),
           state.rollbackTo(idToVersion(branchingPoint)),
