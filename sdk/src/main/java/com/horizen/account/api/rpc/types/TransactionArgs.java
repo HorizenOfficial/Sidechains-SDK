@@ -9,6 +9,7 @@ import com.horizen.account.state.Message;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.evm.utils.Address;
+import com.horizen.evm.utils.Converter;
 import com.horizen.params.NetworkParams;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
@@ -63,7 +64,7 @@ public class TransactionArgs {
             ));
         }
         var saneType = type == null ? 0 : type.intValueExact();
-        var saneTo = to == null ? null : to.toUTXOString();
+        var saneTo = to == null ? null : Converter.toHexString(to.toBytes());
         switch (saneType) {
             case 0:
                 // Legacy

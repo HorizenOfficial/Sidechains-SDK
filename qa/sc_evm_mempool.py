@@ -4,7 +4,7 @@ import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.scutil import generate_next_block, \
     connect_sc_nodes, disconnect_sc_nodes_bi, sync_sc_blocks, assert_equal, \
     assert_true, convertZenToZennies
@@ -194,6 +194,7 @@ class SCEvmMempool(AccountChainSetup):
                                          maxFeePerGas=900000000, value=1))
             nonce_addr_1 += 1
             nonce_addr_2 += 1
+        self.sc_sync_all()
 
         # Disconnect SC nodes
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)

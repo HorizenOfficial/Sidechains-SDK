@@ -45,6 +45,7 @@ abstract class AbstractForgeMessageBuilder[
 
   type ForgeMessageType = GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult]
 
+
   def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX]): ForgeMessageType = {
     val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout, forcedTx)
 
@@ -293,13 +294,13 @@ abstract class AbstractForgeMessageBuilder[
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
 
-    val transactions: Seq[TX] = if (isWithdrawalEpochLastBlock) {
-      Seq() // no SC Txs allowed
+    val transactions: Iterable[TX] = if (isWithdrawalEpochLastBlock) {
+      Iterable.empty[TX] // no SC Txs allowed
     } else if (parentBlockId != nodeView.history.bestBlockId) {
       // SC block extends the block behind the current tip (for example, in case of ommers).
       // We can't be sure that transactions in the Mempool are valid against the block in the past.
       // For example the ommerred Block contains Tx which output is going to be spent by another Tx in the Mempool.
-      Seq()
+      Iterable.empty[TX]
     } else {
       collectTransactionsFromMemPool(nodeView, blockSize, mainchainReferenceData, timestamp, forcedTx)
     }
@@ -336,7 +337,7 @@ abstract class AbstractForgeMessageBuilder[
                      parentBlockId: Block.BlockId,
                      timestamp: Block.Timestamp,
                      mainchainReferenceData: Seq[MainchainBlockReferenceData],
-                     sidechainTransactions: Seq[TX],
+                     sidechainTransactions: Iterable[TX],
                      mainchainHeaders: Seq[MainchainHeader],
                      ommers: Seq[Ommer[H]],
                      blockSignPrivateKey: PrivateKey25519,
@@ -355,7 +356,10 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
-  def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[TX]): Seq[TX]
+  def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int,
+                                     mainchainBlockReferenceData: Seq[MainchainBlockReferenceData],
+                                     timestamp: Long,
+                                     forcedTx: Iterable[TX]): Iterable[TX]
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 

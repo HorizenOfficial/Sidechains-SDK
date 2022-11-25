@@ -10,6 +10,7 @@ from SidechainTestFramework.scutil import (
     ForgerStakeSmartContractAddress,
     WithdrawalReqSmartContractAddress, convertWeiToZen, convertZenToWei,
     convertZenToZennies, generate_next_block, get_account_balance, )
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (
     assert_equal, assert_true, fail, )
 
@@ -62,11 +63,11 @@ class SCEvmEOA2EOA(AccountChainSetup):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = from_sc_node.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(tx_hash in response['result']['transactionIds'])
+        response = allTransactions(from_sc_node, False)
+        assert_true(tx_hash in response["transactionIds"])
 
         if print_json_results:
-            logging.info(from_sc_node.transaction_allTransactions(json.dumps({"format": True})))
+            logging.info(allTransactions(from_sc_node))
 
         generate_next_block(from_sc_node, "first node")
         self.sc_sync_all()

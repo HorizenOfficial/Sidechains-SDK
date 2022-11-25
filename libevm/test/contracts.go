@@ -6,10 +6,12 @@ import (
 	"math/big"
 )
 
-//go:generate solc --bin --hashes --opcodes --storage-layout --optimize -o compiled --overwrite ../contracts/Storage.sol
+//go:generate solc --bin --bin-runtime --hashes --opcodes --storage-layout --optimize -o compiled --overwrite Storage.sol
 var (
 	//go:embed compiled/Storage.bin
-	storageContractCode string
+	storageContractDeployCode string
+	//go:embed compiled/Storage.bin-runtime
+	storageContractRuntimeCode string
 )
 
 const (
@@ -18,7 +20,11 @@ const (
 )
 
 func StorageContractDeploy(initialValue *big.Int) []byte {
-	return append(common.Hex2Bytes(storageContractCode), common.BigToHash(initialValue).Bytes()...)
+	return append(common.Hex2Bytes(storageContractDeployCode), common.BigToHash(initialValue).Bytes()...)
+}
+
+func StorageContractRuntimeCode() []byte {
+	return common.Hex2Bytes(storageContractRuntimeCode)
 }
 
 func StorageContractStore(value *big.Int) []byte {

@@ -1,9 +1,12 @@
 package lib
 
 import (
+	"errors"
 	"fmt"
 	"math"
 )
+
+var ErrInvalidHandle = errors.New("invalid handle")
 
 type Handles[T comparable] struct {
 	used    map[int]T
@@ -39,7 +42,7 @@ func (h *Handles[T]) Get(handle int) (error, T) {
 	} else {
 		// this gives the default value of type T, i.e. 0 for numbers, false for bool, nil for pointer types, maps, etc.
 		empty := *new(T)
-		return fmt.Errorf("invalid handle: %d", handle), empty
+		return fmt.Errorf("%w: %d", ErrInvalidHandle, handle), empty
 	}
 }
 
