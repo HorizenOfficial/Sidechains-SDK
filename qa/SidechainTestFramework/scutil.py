@@ -566,10 +566,6 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     """
     # Will we have  extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node" + str(i))
-    lib_separator = ":"
-
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
     if binary is None:
         binary = SIMPLE_APP_BINARY
     #        else if platform.system() == 'Linux':
