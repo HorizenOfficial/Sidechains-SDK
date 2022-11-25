@@ -33,26 +33,25 @@ public class EthereumTransactionView {
     public final String s;
 
     public EthereumTransactionView(EthereumReceipt receipt, EthereumTransaction ethTx, BigInteger baseFee) {
-        type = Numeric.prependHexPrefix((Integer.toHexString(ethTx.transactionTypeId())));
+        type = Numeric.prependHexPrefix((Integer.toHexString(ethTx.version())));
         nonce = Numeric.encodeQuantity(ethTx.getNonce());
-        to = Numeric.cleanHexPrefix(ethTx.getToAddress()).length() != 2 * Account.ADDRESS_SIZE ? null : ethTx.getToAddress();
+        to = Numeric.cleanHexPrefix(ethTx.getToAddressString()).length() != 2 * Account.ADDRESS_SIZE ? null : ethTx.getToAddressString();
         gas = Numeric.encodeQuantity(ethTx.getGasLimit());
         value = Numeric.encodeQuantity(ethTx.getValue());
         input = Numeric.toHexString(ethTx.getData());
+        gasPrice = Numeric.encodeQuantity(ethTx.getEffectiveGasPrice(baseFee));
         if (ethTx.isEIP1559()) {
             maxPriorityFeePerGas = Numeric.encodeQuantity(ethTx.getMaxPriorityFeePerGas());
             maxFeePerGas = Numeric.encodeQuantity(ethTx.getMaxFeePerGas());
             // calculate effective gas price
-            gasPrice = Numeric.encodeQuantity(baseFee.add(ethTx.getMaxPriorityFeePerGas()).min(ethTx.getMaxFeePerGas()));
         } else {
             maxPriorityFeePerGas = null;
             maxFeePerGas = null;
-            gasPrice = Numeric.encodeQuantity(ethTx.getGasPrice());
         }
         chainId = ethTx.getChainId() == null ? null : Numeric.encodeQuantity(BigInteger.valueOf(ethTx.getChainId()));
-        v = (ethTx.getV() != null) ? Numeric.toHexString(ethTx.getV()) : null;
-        r = (ethTx.getR() != null) ? Numeric.toHexString(ethTx.getR()) : null;
-        s = (ethTx.getS() != null) ? Numeric.toHexString(ethTx.getS()) : null;
+        v = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getV()) : null;
+        r = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getR()) : null;
+        s = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getS()) : null;
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
         from = (ethTx.getFrom() != null) ? Numeric.toHexString(ethTx.getFrom().address()) : null;

@@ -15,12 +15,12 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, ScorexLogging}
+
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -134,7 +134,7 @@ class AccountState(
             val txHash = BytesUtils.fromHexString(ethTx.id)
 
             // The contract address created, if the transaction was a contract creation
-            val contractAddress = if (ethTx.getTo == null) {
+            val contractAddress = if (ethTx.getTo.isEmpty) {
               // this w3j util method is equivalent to the createAddress() in geth triggered also by CREATE opcode.
               // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
               // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
@@ -410,10 +410,12 @@ class AccountState(
           throw NonceTooLowException(sender, tx.getNonce, stateNonce)
         }
         //Check the balance
+
         val maxTxCost = tx.maxCost()
+
         val currentBalance = stateView.getBalance(sender)
         if (currentBalance.compareTo(maxTxCost) < 0) {
-          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $maxTxCost")
+          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost ${tx.maxCost}")
         }
 
         // Check that the sender is an EOA

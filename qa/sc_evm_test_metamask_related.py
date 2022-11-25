@@ -356,7 +356,9 @@ class SCEvmMetamaskTest(SidechainTestFramework):
     def sc_setup_nodes(self):
         return start_sc_nodes(num_nodes=1, dirname=self.options.tmpdir,
                               auth_api_key=self.API_KEY,
-                              binary=[EVM_APP_BINARY])  # , extra_args=['-agentlib'])
+                              binary=[EVM_APP_BINARY]
+                              #, extra_args=['-agentlib']
+                              )
 
     def run_test(self):
         global global_call_method

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import re
 from decimal import Decimal
 
 from SidechainTestFramework.account.address_util import format_evm
@@ -51,7 +52,7 @@ class SCEvmRPCInvalidTx(SidechainTestFramework):
         return start_sc_nodes(
             self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
             binary=[EVM_APP_BINARY] * 2,
-            # extra_args=[['-agentlib'], []],
+            #extra_args=[['-agentlib'], []],
         )
 
     def run_test(self):
@@ -87,7 +88,7 @@ class SCEvmRPCInvalidTx(SidechainTestFramework):
             logging.error("invalid transaction was accepted via RPC api: {}".format(str(res)))
         except RuntimeError as err:
             logging.debug("invalid transaction was rejected with: {}".format(str(err)))
-            if str(err).find("gas limit is below intrinsic gas") != -1:
+            if re.search("gas limit .* is below intrinsic gas", str(err)):
                 exception_occured = True
         assert_true(exception_occured, "invalid transaction should be rejected by RPC api")
 

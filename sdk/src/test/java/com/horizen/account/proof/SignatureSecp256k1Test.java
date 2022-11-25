@@ -40,14 +40,14 @@ public class SignatureSecp256k1Test {
 
     @Test
     public void signatureSecp256k1Test() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException {
-        // Test 1: Nullpointer Exception while creating new PrivateKeySecp256k1 expected
-        assertThrows(NullPointerException.class, () -> new SignatureSecp256k1(signatureData.getV(), signatureSecp256k1.getR(), null));
+        // Test 1: Illegal Argument Exception while creating new PrivateKeySecp256k1 expected
+        assertThrows(IllegalArgumentException.class, () -> new SignatureSecp256k1(signatureData.getV(), signatureSecp256k1.getR(), null));
 
-        // Test 2: Nullpointer Exception while creating new PrivateKeySecp256k1 expected
-        assertThrows(NullPointerException.class, () -> new SignatureSecp256k1(signatureData.getV(), null, signatureSecp256k1.getS()));
+        // Test 2: Illegal Argument Exception while creating new PrivateKeySecp256k1 expected
+        assertThrows(IllegalArgumentException.class, () -> new SignatureSecp256k1(signatureData.getV(), null, signatureSecp256k1.getS()));
 
-        // Test 3: Nullpointer Exception while creating new PrivateKeySecp256k1 expected
-        assertThrows(NullPointerException.class, () -> new SignatureSecp256k1(null, signatureSecp256k1.getR(), signatureSecp256k1.getS()));
+        // Test 3: Illegal Argument Exception while creating new PrivateKeySecp256k1 expected
+        assertThrows(IllegalArgumentException.class, () -> new SignatureSecp256k1(null, signatureSecp256k1.getR(), signatureSecp256k1.getS()));
 
         // Test 4: Illegal Argument Exception while creating new PrivateKeySecp256k1 expected
         assertThrows(IllegalArgumentException.class, () -> new SignatureSecp256k1(new byte[20], signatureSecp256k1.getR(), signatureSecp256k1.getS()));
