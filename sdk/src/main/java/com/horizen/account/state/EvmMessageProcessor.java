@@ -32,7 +32,6 @@ public class EvmMessageProcessor implements MessageProcessor {
             throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
-        // TODO: set correct ChainID
         context.chainID = BigInteger.valueOf(blockContext.chainID);
         context.coinbase = Address.FromBytes(blockContext.forgerAddress);
         context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);
