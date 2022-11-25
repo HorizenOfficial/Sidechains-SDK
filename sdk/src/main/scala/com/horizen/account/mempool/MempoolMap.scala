@@ -170,7 +170,6 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
       block.transactions.foreach(tx => appliedTxNoncesByAccount.put(tx.getFrom, tx.getNonce))
     })
 
-
     val listOfRejectedBlocksTxs = rejectedBlocks.flatMap(_.transactions)
     val rejectedTransactionsByAccount = listOfRejectedBlocksTxs.groupBy(_.getFrom)
 
@@ -183,6 +182,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     }
     appliedTxNoncesByAccount.foreach { case (account, nonce) =>
       updateAccount(account, nonce)
+
     }
   }
 

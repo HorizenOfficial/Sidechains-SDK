@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import re
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -38,7 +39,7 @@ class SCEvmRPCInvalidTx(AccountChainSetup):
             logging.error("invalid transaction was accepted via RPC api: {}".format(str(res)))
         except RuntimeError as err:
             logging.debug("invalid transaction was rejected with: {}".format(str(err)))
-            if str(err).find("gas limit is below intrinsic gas") != -1:
+            if re.search("gas limit .* is below intrinsic gas", str(err)):
                 exception_occured = True
         assert_true(exception_occured, "invalid transaction should be rejected by RPC api")
 

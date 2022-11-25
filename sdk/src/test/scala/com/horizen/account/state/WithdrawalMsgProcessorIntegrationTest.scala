@@ -45,7 +45,7 @@ class WithdrawalMsgProcessorIntegrationTest
       WithdrawalMsgProcessor.init(view)
 
       val withdrawalEpoch = 102
-      val blockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, withdrawalEpoch)
+      val blockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, withdrawalEpoch, 1)
 
       // GetListOfWithdrawalRequest without withdrawal requests yet
       val msgForListOfWR = listWithdrawalRequestsMessage(withdrawalEpoch)

@@ -8,13 +8,13 @@ import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.Message;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
+import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Converter;
 import com.horizen.params.NetworkParams;
-import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
-
 import java.math.BigInteger;
+
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
@@ -39,7 +39,7 @@ public class TransactionArgs {
     public BigInteger chainId;
 
     public byte[] getData() {
-        var hex = input != null ? input : data;
+        var hex = getDataString();
         if (hex == null) return null;
         return Numeric.hexStringToByteArray(hex);
     }
@@ -64,26 +64,30 @@ public class TransactionArgs {
             ));
         }
         var saneType = type == null ? 0 : type.intValueExact();
-        var saneTo = to == null ? null : Converter.toHexString(to.toBytes());
+
+        var toAddressString = to == null ? null : Converter.toHexString(to.toBytes());
+        var optionalToAddress = EthereumTransactionUtils.getToAddressFromString(toAddressString);
+        var dataBytes = EthereumTransactionUtils.getDataFromString(this.getDataString());
+
         switch (saneType) {
-            case 0:
-                // Legacy
-                var prepared = new Sign.SignatureData(
-                    BigInteger.valueOf(saneChainId).toByteArray(), new byte[] { 0 }, new byte[] { 0 });
-                return new EthereumTransaction(saneTo, nonce, gasPrice, gas, value, this.getDataString(), prepared);
-            case 2:
-                // EIP-1559
+            case 0: // LEGACY type
+                if (chainId != null) {
+                    // eip155
+                    return new EthereumTransaction(
+                            saneChainId,
+                            optionalToAddress,
+                            nonce, gasPrice, gas, value, dataBytes, null);
+
+                } else {
+                    return new EthereumTransaction(
+                            optionalToAddress,
+                            nonce, gasPrice, gas, value, dataBytes, null);
+                }
+            case 2: // EIP-1559
                 return new EthereumTransaction(
                     saneChainId,
-                    saneTo,
-                    nonce,
-                    gas,
-                    maxPriorityFeePerGas,
-                    maxFeePerGas,
-                    value,
-                    this.getDataString(),
-                    null
-                );
+                    optionalToAddress,
+                    nonce, gas, maxPriorityFeePerGas, maxFeePerGas, value, dataBytes,null);
             default:
                 // unsupported type
                 return null;

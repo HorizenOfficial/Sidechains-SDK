@@ -103,7 +103,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     withdraw(ZenWeiConverter.convertZenniesToWei(1300), ZenWeiConverter.convertZenniesToWei(13), defaultBlockContext)
     // Withdrawal request processing when max number of wt was already reached should result in ExecutionFailed
     val epochNum = 102
-    val testEpochBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epochNum)
+    val testEpochBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epochNum, 1)
     val key = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
     val numOfWithdrawalReqs = Bytes.concat(
       new Array[Byte](32 - Ints.BYTES),

@@ -158,11 +158,9 @@ class SCEvmEOA2EOA(AccountChainSetup):
                                             isEIP155=True, print_json_results=False)
         assert_true(ret, msg)
 
-        # moreover, check we have consistent chainId and ser/deser signature v value in tx json, as per EIP155
+        # moreover, check we have the chainId in tx json, as per EIP155
         txJsonResult = sc_node_1.rpc_eth_getTransactionByHash(add_0x_prefix(txHash))['result']
-        chainId = int(txJsonResult['chainId'], 16)
-        sigV = int(txJsonResult['v'], 16)
-        assert_equal(chainId, getChainIdFromSignatureV(sigV))
+        assert_true("chainId" in txJsonResult)
 
         # negative cases
 
