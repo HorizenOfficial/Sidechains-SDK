@@ -60,7 +60,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
   Mockito.when(nodeView.pool).thenReturn(mempool)
 
-  val blockContext = new BlockContext(Array.empty[Byte], 1000, BigInteger.ZERO, FeeUtils.GAS_LIMIT, 11, 2, 3)
+  val blockContext = new BlockContext(Array.empty[Byte], 1000, BigInteger.ZERO, FeeUtils.GAS_LIMIT, 11, 2, 3, 1L)
 
 
   /*
