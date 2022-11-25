@@ -71,7 +71,9 @@ class SCEvmEOA2EOA(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY]*2)#, extra_args=[['-agentlib'], []])
+                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY]*2
+                              #, extra_args=[['-agentlib'], []]
+                              )
 
     def makeEoa2Eoa(self, from_sc_node, to_sc_node, from_addr, to_addr, amount_in_zen, *,
                     nonce = None, isEIP155 = False, print_json_results = False):
@@ -201,11 +203,9 @@ class SCEvmEOA2EOA(SidechainTestFramework):
                                     isEIP155=True, print_json_results=False)
         assert_true(ret, msg)
 
-        # moreover, check we have consistent chainId and ser/deser signature v value in tx json, as per EIP155
+        # moreover, check we have the chainId in tx json, as per EIP155
         txJsonResult = sc_node_1.rpc_eth_getTransactionByHash(add_0x_prefix(txHash))['result']
-        chainId = int(txJsonResult['chainId'], 16)
-        sigV = int(txJsonResult['v'], 16)
-        assert_equal(chainId, getChainIdFromSignatureV(sigV))
+        assert_true("chainId" in txJsonResult)
 
         #negative cases
 

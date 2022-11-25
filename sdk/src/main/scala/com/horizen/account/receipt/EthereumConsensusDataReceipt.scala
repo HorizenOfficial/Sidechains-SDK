@@ -2,7 +2,7 @@ package com.horizen.account.receipt
 
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import com.horizen.account.receipt.ReceiptTxType.ReceiptTxType
+import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import org.web3j.rlp._
@@ -46,20 +46,20 @@ case class EthereumConsensusDataReceipt(
   }
 
   require(
-    transactionType >= 0 && transactionType <= ReceiptTxType.DynamicFeeTxType.id
+    transactionType >= 0 && transactionType <= EthereumTransactionType.DynamicFeeTxType.ordinal()
   )
   require(
     status == ReceiptStatus.SUCCESSFUL.id || status == ReceiptStatus.FAILED.id
   )
 
-  def getTxType: ReceiptTxType = {
+  def getTxType: EthereumTransactionType = {
     transactionType match {
       case 0 =>
-        ReceiptTxType.LegacyTxType
+        EthereumTransactionType.LegacyTxType
       case 1 =>
-        ReceiptTxType.AccessListTxType
+        EthereumTransactionType.AccessListTxType
       case 2 =>
-        ReceiptTxType.DynamicFeeTxType
+        EthereumTransactionType.DynamicFeeTxType
     }
   }
 
@@ -109,15 +109,6 @@ case class EthereumConsensusDataReceipt(
   }
 }
 
-// TODO check this:
-//  The 3 versions of ReceiptTxType are supported by go eth and we have test vectors generated using all of them
-//  We are using elsewhere the enum from w3j, which just supports 0 and 2:
-//   org/web3j/crypto/transaction/type/TransactionType.java
-object ReceiptTxType extends Enumeration {
-  type ReceiptTxType = Value
-  val LegacyTxType, AccessListTxType, DynamicFeeTxType = Value
-}
-
 object EthereumConsensusDataReceipt {
 
   object ReceiptStatus extends Enumeration {
@@ -152,7 +143,7 @@ object EthereumConsensusDataReceipt {
       }
     }
     EthereumConsensusDataReceipt(
-      ReceiptTxType.LegacyTxType.id,
+      EthereumTransactionType.LegacyTxType.ordinal(),
       status,
       cumulativeGasUsed,
       logs,
@@ -181,8 +172,7 @@ object EthereumConsensusDataReceipt {
     // handle tx type
     val b0 = rlpData(0)
     if (b0 == 1 || b0 == 2) {
-      val rt = ReceiptTxType(b0).id
-      decodeTyped(rt, util.Arrays.copyOfRange(rlpData, 1, rlpData.length))
+      decodeTyped(b0, util.Arrays.copyOfRange(rlpData, 1, rlpData.length))
     } else decodeLegacy(rlpData)
   }
 
@@ -190,11 +180,11 @@ object EthereumConsensusDataReceipt {
     val values = asRlpValues(r)
     val rlpList = new RlpList(values)
     val encoded = RlpEncoder.encode(rlpList)
-    if (!(r.getTxType == ReceiptTxType.LegacyTxType)) {
+    if (!(r.getTxType == EthereumTransactionType.LegacyTxType)) {
       // add byte for versioned type support
       ByteBuffer
         .allocate(encoded.length + 1)
-        .put(r.getTxType.id.toByte)
+        .put(r.getTxType.ordinal().toByte)
         .put(encoded)
         .array
     } else {
