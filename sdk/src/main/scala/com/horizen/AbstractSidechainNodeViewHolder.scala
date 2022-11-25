@@ -67,7 +67,18 @@ abstract class AbstractSidechainNodeViewHolder[
   // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
   def checkAndRecoverStorages(restoredData: Option[(HIS, MS, VL, MP)]): Option[(HIS, MS, VL, MP)]
 
-  def dumpStorages(): Unit
+  def dumpStorages(): Unit = {
+    try {
+      val m = getStorageVersions.map { case (k, v) =>
+        "%-36s".format(k) + ": " + v
+      }
+      m.foreach(x => log.debug(s"$x"))
+    } catch {
+      case e: Exception =>
+        // can happen during unit test with mocked objects
+        log.warn("Could not print debug info about storages: " + e.getMessage)
+    }
+  }
 
   def getStorageVersions: Map[String, String] =
     listOfStorageInfo.map(x => {

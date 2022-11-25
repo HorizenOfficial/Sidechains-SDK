@@ -12,7 +12,6 @@ import com.horizen.storage._
 import com.horizen.wallet.ApplicationWallet
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
-import com.horizen.utils.BytesUtils
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.transaction.Transaction
@@ -57,7 +56,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     restoredData.flatMap {
       dataOpt => {
-        dumpStorages
+        dumpStorages()
 
         log.info("Checking state consistency...")
 
@@ -174,19 +173,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     val result = checkAndRecoverStorages(restoredData)
     result
   }
-
-  override def dumpStorages: Unit =
-    try {
-      val m = getStorageVersions.map { case (k, v) =>
-        "%-36s".format(k) + ": " + v
-      }
-      m.foreach(x => log.debug(s"${x}"))
-      log.trace(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions.slice(0, 3)}")
-    } catch {
-      case e: Exception =>
-        // can happen during unit test with mocked objects
-        log.warn("Could not print debug info about storages: " + e.getMessage)
-    }
 
   override def processLocallyGeneratedTransaction: Receive = {
     case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>

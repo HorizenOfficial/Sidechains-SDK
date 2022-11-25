@@ -258,18 +258,6 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage, stateMetadataStorage, secretStorage)
 
-  override def dumpStorages(): Unit = {
-    try {
-      val m = getStorageVersions.map { case (k, v) =>
-        "%-36s".format(k) + ": " + v
-      }
-      m.foreach(x => log.debug(s"$x"))
-    } catch {
-      case e: Exception =>
-        // can happen during unit test with mocked objects
-        log.warn("Could not print debug info about storages: " + e.getMessage)
-    }
-  }
 
   override def processLocallyGeneratedTransaction: Receive = {
     case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCAT] =>
