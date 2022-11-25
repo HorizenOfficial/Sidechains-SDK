@@ -13,8 +13,9 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
     connect_sc_nodes, convertZenToWei, convertZenToZennies, generate_next_block, generate_secrets, generate_vrf_secrets,
-    get_account_balance, start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
+    start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
+from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from test_framework.util import (
     assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,
@@ -137,7 +138,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
-        initial_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        initial_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(ft_amount_in_wei, initial_balance)
 
         # generate publick keys not contained in the closed forger list

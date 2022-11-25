@@ -1258,10 +1258,6 @@ ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
 # Block gas limit
 BLOCK_GAS_LIMIT = 30000000
 
-def get_account_balance(sc_node, address):
-    return sc_node.wallet_getBalance(
-        json.dumps({"address": str(address)}))["result"]["balance"]
-
 def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
     transactionJson = sc_node.rpc_eth_getTransactionByHash(tx_hash)['result']
     if (transactionJson is None):

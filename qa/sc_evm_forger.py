@@ -17,9 +17,10 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, ForgerStakeSmartContractAddress,
     WithdrawalReqSmartContractAddress, bootstrap_sidechain_nodes, computeForgedTxFee, connect_sc_nodes, convertWeiToZen,
-    convertZenToWei, convertZenToZennies, convertZenniesToWei, generate_next_block, get_account_balance, start_sc_nodes,
+    convertZenToWei, convertZenToZennies, convertZenniesToWei, generate_next_block, start_sc_nodes,
     SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
+from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, hex_str_to_bytes,
@@ -167,8 +168,8 @@ class SCEvmForger(SidechainTestFramework):
             sc_node_1.transaction_allForgingStakes()["result"],
             sc_node_2.transaction_allForgingStakes()["result"])
         assert_equal(
-            get_account_balance(sc_node_1, ForgerStakeSmartContractAddress),
-            get_account_balance(sc_node_2, ForgerStakeSmartContractAddress))
+            http_wallet_balance(sc_node_1, ForgerStakeSmartContractAddress),
+            http_wallet_balance(sc_node_2, ForgerStakeSmartContractAddress))
 
         # get owner pub key from the node stake list (we have only 1 item)
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
@@ -182,7 +183,7 @@ class SCEvmForger(SidechainTestFramework):
         assert_equal(stakeOwnerProposition, sc_cr_owner_proposition, "Forging stake owner proposition is wrong.")
 
         # the balance of the smart contract is as expected
-        assert_equal(convertZenniesToWei(stakeAmount), get_account_balance(sc_node_1, ForgerStakeSmartContractAddress),
+        assert_equal(convertZenniesToWei(stakeAmount), http_wallet_balance(sc_node_1, ForgerStakeSmartContractAddress),
                      "Contract address balance is wrong.")
 
         stake_id_genesis = stakeList[0]['stakeId']
@@ -225,10 +226,10 @@ class SCEvmForger(SidechainTestFramework):
         print_current_epoch_and_slot(sc_node_1)
 
         # balance is in wei
-        initial_balance_2 = get_account_balance(sc_node_2, evm_address_sc_node_2)
+        initial_balance_2 = http_wallet_balance(sc_node_2, evm_address_sc_node_2)
         assert_equal(ft_amount_in_wei_2, initial_balance_2)
 
-        initial_balance_1 = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        initial_balance_1 = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(ft_amount_in_wei, initial_balance_1)
 
         # try spending the stake by a sc node which does not own it
@@ -269,7 +270,7 @@ class SCEvmForger(SidechainTestFramework):
 
         # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
-        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
@@ -288,7 +289,7 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
-        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
@@ -315,7 +316,7 @@ class SCEvmForger(SidechainTestFramework):
 
         # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
-        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
@@ -355,7 +356,7 @@ class SCEvmForger(SidechainTestFramework):
 
         #Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
-        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - convertZenToWei(forgerStake1_amount) - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
@@ -397,7 +398,7 @@ class SCEvmForger(SidechainTestFramework):
 
         #Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
-        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - convertZenToWei(forgerStake2_amount) - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
@@ -447,7 +448,7 @@ class SCEvmForger(SidechainTestFramework):
             convertZenToWei(forgerStake1_amount) +
             convertZenToWei(forgerStake2_amount) +
             convertZenniesToWei(stakeAmount),
-            get_account_balance(sc_node_1, ForgerStakeSmartContractAddress))
+            http_wallet_balance(sc_node_1, ForgerStakeSmartContractAddress))
 
         # spend the genesis stake
         logging.info("SC1 spends genesis stake...")
@@ -466,15 +467,15 @@ class SCEvmForger(SidechainTestFramework):
         print_current_epoch_and_slot(sc_node_1)
 
         # check the genesis staked amount has been transferred from contract to owner address
-        assert_equal(convertZenniesToWei(stakeAmount), get_account_balance(sc_node_1, sc_cr_owner_proposition))
+        assert_equal(convertZenniesToWei(stakeAmount), http_wallet_balance(sc_node_1, sc_cr_owner_proposition))
         assert_equal(
             convertZenToWei(forgerStake1_amount) +
             convertZenToWei(forgerStake2_amount),
-            get_account_balance(sc_node_1, ForgerStakeSmartContractAddress))
+            http_wallet_balance(sc_node_1, ForgerStakeSmartContractAddress))
 
         #Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
-        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
@@ -506,16 +507,16 @@ class SCEvmForger(SidechainTestFramework):
         stakeId_2 = stakeList[1]['stakeId']
 
         # balance is in wei
-        final_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        final_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1, final_balance)
         initial_balance_1 = final_balance
 
-        bal_sc_cr_prop = get_account_balance(sc_node_1, sc_cr_owner_proposition)
+        bal_sc_cr_prop = http_wallet_balance(sc_node_1, sc_cr_owner_proposition)
         assert_equal(convertZenniesToWei(stakeAmount), bal_sc_cr_prop)
         assert_equal(
             convertZenToWei(forgerStake1_amount) +
             convertZenToWei(forgerStake2_amount),
-            get_account_balance(sc_node_1, ForgerStakeSmartContractAddress), "Contract address balance is wrong.")
+            http_wallet_balance(sc_node_1, ForgerStakeSmartContractAddress), "Contract address balance is wrong.")
 
         # SC1 remove all the remaining stakes
         spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
@@ -547,7 +548,7 @@ class SCEvmForger(SidechainTestFramework):
         assert_equal(len(stakeList), 1)
 
         #Check balance
-        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 + convertZenToWei(forgerStake1_amount), account_1_balance)
         initial_balance_1 = account_1_balance
 
@@ -584,7 +585,7 @@ class SCEvmForger(SidechainTestFramework):
         check_spend_forger_stake_event(event, evm_address_sc_node_1, stakeId_2)
 
         #Check balance
-        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 + convertZenToWei(forgerStake2_amount), account_1_balance)
 
         # Generate SC block on SC node keeping current epoch

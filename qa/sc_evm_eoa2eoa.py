@@ -13,10 +13,11 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, ForgerStakeSmartContractAddress,
     WithdrawalReqSmartContractAddress, bootstrap_sidechain_nodes, connect_sc_nodes, convertWeiToZen, convertZenToWei,
-    convertZenToZennies, generate_next_block, get_account_balance, start_sc_nodes,
+    convertZenToZennies, generate_next_block, start_sc_nodes,
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
 from httpCalls.transaction.allTransactions import allTransactions
+from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,
@@ -75,8 +76,8 @@ class SCEvmEOA2EOA(SidechainTestFramework):
 
     def makeEoa2Eoa(self, from_sc_node, to_sc_node, from_addr, to_addr, amount_in_zen, *,
                     nonce = None, isEIP155 = False, print_json_results = False):
-        initial_balance_from = get_account_balance(from_sc_node, from_addr)
-        initial_balance_to = get_account_balance(to_sc_node, to_addr)
+        initial_balance_from = http_wallet_balance(from_sc_node, from_addr)
+        initial_balance_to = http_wallet_balance(to_sc_node, to_addr)
 
         # Create an EOA to EOA transaction.
         # Amount should be expressed in zennies
@@ -110,8 +111,8 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         generate_next_block(from_sc_node, "first node")
         self.sc_sync_all()
 
-        final_balance_from = get_account_balance(from_sc_node, from_addr)
-        final_balance_to = get_account_balance(to_sc_node, to_addr)
+        final_balance_from = http_wallet_balance(from_sc_node, from_addr)
+        final_balance_to = http_wallet_balance(to_sc_node, to_addr)
 
         # check receipt, meanwhile do some check on amounts
         receipt = from_sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
@@ -210,7 +211,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         #negative cases
 
         logging.info("Create an EOA to EOA transaction moving all the from balance")
-        transferred_amount_in_zen = convertWeiToZen(get_account_balance(sc_node_1, evm_address_sc1))
+        transferred_amount_in_zen = convertWeiToZen(http_wallet_balance(sc_node_1, evm_address_sc1))
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
                                     transferred_amount_in_zen)
         if not ret:

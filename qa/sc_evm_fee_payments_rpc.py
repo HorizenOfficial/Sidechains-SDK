@@ -15,8 +15,9 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
     computeForgedTxFee, connect_sc_nodes, convertZenToWei, convertZenToZennies, convertZenniesToWei,
-    generate_account_proposition, generate_next_block, get_account_balance, start_sc_nodes,
+    generate_account_proposition, generate_next_block, start_sc_nodes,
 )
+from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain, initialize_chain_clean, start_nodes,
     websocket_port_by_mc_node_index, )
@@ -111,9 +112,9 @@ class ScEvmFeePaymentsRpc(SidechainTestFramework):
         self.sc_sync_all()
 
         # balance is in wei
-        initial_balance_2 = get_account_balance(sc_node_2, evm_address_sc_node_2)
+        initial_balance_2 = http_wallet_balance(sc_node_2, evm_address_sc_node_2)
         assert_equal(ft_amount_in_wei, initial_balance_2)
-        logging.info(get_account_balance(sc_node_2, evm_address_sc_node_2))
+        logging.info(http_wallet_balance(sc_node_2, evm_address_sc_node_2))
         logging.info(sc_node_2.wallet_getTotalBalance())
 
         # Create forger stake with some Zen for SC node 2
