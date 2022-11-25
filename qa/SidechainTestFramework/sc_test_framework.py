@@ -19,7 +19,7 @@ import shutil
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 
-from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG, LEVEL_TRACE
+from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG
 
 
 '''
