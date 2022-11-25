@@ -8,11 +8,12 @@ from SidechainTestFramework.account.address_util import format_evm, format_eoa
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.account.utils import convertZenToZennies, computeForgedTxFee
 from test_framework.util import assert_equal, assert_true, start_nodes, websocket_port_by_mc_node_index, \
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxFee, convertZenToZennies, \
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block, \
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 
 """

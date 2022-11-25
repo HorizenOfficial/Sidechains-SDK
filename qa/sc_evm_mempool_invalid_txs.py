@@ -9,8 +9,9 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_block, \
     EVM_APP_BINARY, AccountModelBlockVersion, assert_equal, \
-    assert_true, BLOCK_GAS_LIMIT, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
+    assert_true, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 from httpCalls.transaction.allTransactions import allTransactions
+from SidechainTestFramework.account.utils import BLOCK_GAS_LIMIT
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 
@@ -58,7 +59,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
+            api_key=self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration)
@@ -196,7 +197,6 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
         assert_true(exception_occurs, "Adding a transaction that creates a smart contract with empty data should fail")
         response = allTransactions(sc_node_1, False)
         assert_equal(0, len(response["transactionIds"]), "Transaction that creates a smart contract with empty data added to node 1 mempool")
-
 
         #Test that a transaction with gas limit < intrinsic gas is rejected by the mem pool
         exception_occurs = False

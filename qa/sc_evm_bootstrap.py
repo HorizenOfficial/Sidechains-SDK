@@ -11,14 +11,14 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from httpCalls.wallet.createPrivateKeySecp256k1 import http_wallet_createPrivateKeySec256k1
 from httpCalls.transaction.allTransactions import allTransactions
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, computeForgedTxFee
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, \
     check_mainchain_block_reference_info, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, computeForgedTxFee, \
-    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
+    connect_sc_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 
 """
@@ -34,6 +34,8 @@ Test:
     For the SC node:
         - verify the MC block is included
 """
+
+
 class SCEvmBootstrap(SidechainTestFramework):
 
     sc_nodes_bootstrap_info=None

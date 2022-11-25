@@ -12,10 +12,11 @@ from SidechainTestFramework.sc_boostrap_info import (
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
-    connect_sc_nodes, convertZenToWei, convertZenToZennies, generate_next_block, generate_secrets, generate_vrf_secrets,
+    connect_sc_nodes, generate_next_block, generate_secrets, generate_vrf_secrets,
     start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei
 from test_framework.util import (
     assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,

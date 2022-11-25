@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import json
 import logging
-import pprint
-
 from decimal import Decimal
+
 from SidechainTestFramework.sc_boostrap_info import (
     LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
     SCNetworkConfiguration, SCNodeConfiguration
@@ -11,8 +10,9 @@ from SidechainTestFramework.sc_boostrap_info import (
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes, connect_sc_nodes,
-    convertZenToZennies, generate_next_block, start_sc_nodes, convertZenniesToWei
+    generate_next_block, start_sc_nodes
 )
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain, start_nodes, websocket_port_by_mc_node_index
 )

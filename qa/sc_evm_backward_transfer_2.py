@@ -16,10 +16,11 @@ from SidechainTestFramework.sc_forging_util import check_mcreference_presence, c
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
-    bootstrap_sidechain_nodes, check_mainchain_block_reference_info, computeForgedTxFee, convertZenToZennies,
-    convertZenniesToWei, generate_next_block, generate_next_blocks, is_mainchain_block_included_in_sc_block,
+    bootstrap_sidechain_nodes, check_mainchain_block_reference_info, generate_next_block, generate_next_blocks,
+    is_mainchain_block_included_in_sc_block,
     start_sc_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, computeForgedTxFee
 from test_framework.util import (
     assert_equal, assert_false, fail, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,

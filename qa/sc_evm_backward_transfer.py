@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import json
 import logging
 import time
 
@@ -18,12 +17,13 @@ from SidechainTestFramework.sc_forging_util import check_mcreference_presence, c
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
-    bootstrap_sidechain_nodes, check_mainchain_block_reference_info, computeForgedTxFee, convertZenToZennies,
-    convertZenniesToWei, generate_next_block, generate_next_blocks, is_mainchain_block_included_in_sc_block,
+    bootstrap_sidechain_nodes, check_mainchain_block_reference_info, generate_next_block, generate_next_blocks,
+    is_mainchain_block_included_in_sc_block,
     start_sc_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
+from SidechainTestFramework.account.utils import convertZenniesToWei, convertZenToZennies, computeForgedTxFee
 from test_framework.util import (
-    assert_equal, assert_false, fail, forward_transfer_to_sidechain, hex_str_to_bytes,
+    assert_equal, assert_false, forward_transfer_to_sidechain, hex_str_to_bytes,
     start_nodes, websocket_port_by_mc_node_index,
 )
 
@@ -240,7 +240,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
-        #Check the receipt
+        # Check the receipt
         receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
         logging.info(receipt)
         status = int(receipt['result']['status'], 16)
@@ -248,7 +248,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         # Check the logs
         assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
         wr_event = receipt['result']['logs'][0]
-        check_withdrawal_event(wr_event,evm_address, mc_address1,sc_bt_amount_in_zennies_1, 1)
+        check_withdrawal_event(wr_event, evm_address, mc_address1, sc_bt_amount_in_zennies_1, 1)
 
         # Check the balance has changed
         # Retrieve how much gas was spent
@@ -275,7 +275,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         generate_next_blocks(sc_node, "first node", 1)
 
         tx_id = add_0x_prefix(res["result"]["transactionId"])
-        #Check the receipt
+        # Check the receipt
         receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
 
         status = int(receipt['result']['status'], 16)

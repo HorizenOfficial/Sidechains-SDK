@@ -13,13 +13,14 @@ from SidechainTestFramework.sc_boostrap_info import (
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
-    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
-    computeForgedTxFee, connect_sc_nodes, convertZenToWei, convertZenToZennies, convertZenniesToWei,
+    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes, connect_sc_nodes,
     generate_account_proposition, generate_next_block, start_sc_nodes,
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
 from httpCalls.block.getFeePayments import http_block_getFeePayments
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
+    computeForgedTxFee
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain, initialize_chain_clean, start_nodes,
     websocket_port_by_mc_node_index,

@@ -15,12 +15,12 @@ from SidechainTestFramework.sc_boostrap_info import (
 )
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
-    AccountModelBlockVersion, EVM_APP_BINARY, ForgerStakeSmartContractAddress,
-    WithdrawalReqSmartContractAddress, bootstrap_sidechain_nodes, computeForgedTxFee, connect_sc_nodes, convertWeiToZen,
-    convertZenToWei, convertZenToZennies, convertZenniesToWei, generate_next_block, start_sc_nodes,
-    SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
+    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes, connect_sc_nodes,
+    generate_next_block, start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToWei, ForgerStakeSmartContractAddress, \
+    convertZenToZennies, convertZenniesToWei, WithdrawalReqSmartContractAddress, computeForgedTxFee, convertWeiToZen
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, hex_str_to_bytes,
@@ -65,6 +65,7 @@ def print_current_epoch_and_slot(sc_node):
     ret = sc_node.block_forgingInfo()["result"]
     logging.info("Epoch={}, Slot={}".format(ret['bestEpochNumber'], ret['bestSlotNumber']))
 
+
 def check_make_forger_stake_event(event, source_addr, owner, amount):
     assert_equal(3, len(event['topics']), "Wrong number of topics in event")
     event_id = remove_0x_prefix(event['topics'][0])
@@ -78,8 +79,9 @@ def check_make_forger_stake_event(event, source_addr, owner, amount):
     owner_addr = decode(['address'], hex_str_to_bytes(event['topics'][2][2:]))[0][2:]
     assert_equal(owner, owner_addr, "Wrong owner address in topics")
 
-    (stake_id, value) = decode(['bytes32' ,'uint256'], hex_str_to_bytes(event['data'][2:]))
+    (stake_id, value) = decode(['bytes32', 'uint256'], hex_str_to_bytes(event['data'][2:]))
     assert_equal(convertZenToWei(amount), value, "Wrong amount in event")
+
 
 def check_spend_forger_stake_event(event, owner, stake_id):
     assert_equal(2, len(event['topics']), "Wrong number of topics in event")

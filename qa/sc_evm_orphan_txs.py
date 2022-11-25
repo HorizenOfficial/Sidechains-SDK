@@ -8,9 +8,10 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenToZennies, connect_sc_nodes, \
+    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, connect_sc_nodes, \
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 from httpCalls.transaction.allTransactions import allTransactions
+from SidechainTestFramework.account.utils import convertZenToZennies
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, assert_false
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction

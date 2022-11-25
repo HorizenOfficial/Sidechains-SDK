@@ -13,9 +13,9 @@ from SidechainTestFramework.sc_boostrap_info import (
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
-    computeForgedTxFee, convertZenToZennies, convertZenniesToWei, generate_next_block, generate_next_blocks,
-    start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME, assert_true,
+    generate_next_block, generate_next_blocks, start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME, assert_true,
 )
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, computeForgedTxFee
 from test_framework.util import (
     assert_equal, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,

@@ -11,9 +11,10 @@ from SidechainTestFramework.sc_boostrap_info import (
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
     AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
-    bootstrap_sidechain_nodes, convertZenToWei, generate_next_block, start_sc_nodes,
+    bootstrap_sidechain_nodes, generate_next_block, start_sc_nodes,
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
+from SidechainTestFramework.account.utils import convertZenToWei
 from test_framework.util import forward_transfer_to_sidechain, start_nodes, websocket_port_by_mc_node_index
 
 """
@@ -78,7 +79,7 @@ class SCEvmRPCInvalidTx(SidechainTestFramework):
 
         # test that sending an invalid transaction to eth_sendRawTransaction fails with an error
         # the tx is semantically invalid because the supplied gas limit is below the required intrinsic gas
-        exception_occured = False
+        exception_occurred = False
         try:
             res = eoa_transaction(
                 sc_node_1, gas=20000,
@@ -88,8 +89,8 @@ class SCEvmRPCInvalidTx(SidechainTestFramework):
         except RuntimeError as err:
             logging.debug("invalid transaction was rejected with: {}".format(str(err)))
             if str(err).find("gas limit is below intrinsic gas") != -1:
-                exception_occured = True
-        assert_true(exception_occured, "invalid transaction should be rejected by RPC api")
+                exception_occurred = True
+        assert_true(exception_occurred, "invalid transaction should be rejected by RPC api")
 
 
 if __name__ == "__main__":

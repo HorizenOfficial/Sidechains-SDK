@@ -8,11 +8,12 @@ from SidechainTestFramework.account.evm_util import CallMethod
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.account.utils import computeForgedTxFee
 from test_framework.util import assert_equal, assert_true, start_nodes, websocket_port_by_mc_node_index, \
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxFee, \
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block, \
     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 from SidechainTestFramework.account.eoa_util import eoa_transaction
 
@@ -345,7 +346,7 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
+            api_key=self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_configuration)
@@ -482,7 +483,7 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
                               evm_address)
-        (gas_used,_,_) = computeForgedTxFee(sc_node, tx_hash)
+        (gas_used, _, _) = computeForgedTxFee(sc_node, tx_hash)
         last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_used)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)

@@ -11,13 +11,13 @@ from SidechainTestFramework.sc_boostrap_info import (
 )
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import (
-    AccountModelBlockVersion, EVM_APP_BINARY, ForgerStakeSmartContractAddress,
-    WithdrawalReqSmartContractAddress, bootstrap_sidechain_nodes, connect_sc_nodes, convertWeiToZen, convertZenToWei,
-    convertZenToZennies, generate_next_block, start_sc_nodes,
-    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
+    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes, connect_sc_nodes, generate_next_block,
+    start_sc_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
 )
 from httpCalls.transaction.allTransactions import allTransactions
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei, convertWeiToZen, \
+    ForgerStakeSmartContractAddress, WithdrawalReqSmartContractAddress
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, start_nodes,
     websocket_port_by_mc_node_index,
