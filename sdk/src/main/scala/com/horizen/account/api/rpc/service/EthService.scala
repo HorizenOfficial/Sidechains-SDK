@@ -342,7 +342,8 @@ class EthService(
       block.header,
       blockInfo.height,
       TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
-      blockInfo.withdrawalEpochInfo.epoch
+      blockInfo.withdrawalEpochInfo.epoch,
+      networkParams.chainId
     )
     using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
   }

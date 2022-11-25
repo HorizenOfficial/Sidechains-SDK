@@ -121,7 +121,8 @@ class AccountState(
       var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
       val blockGasPool = new GasPool(BigInteger.valueOf(mod.header.gasLimit))
-      val blockContext = new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch)
+      val blockContext =
+        new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch, params.chainId)
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
         stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
