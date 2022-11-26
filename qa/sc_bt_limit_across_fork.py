@@ -4,7 +4,6 @@ import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
-    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
@@ -41,8 +40,9 @@ Test:
         - Mine a new MC block in order to open up more slots
         - Generate a SC block and verify that now it includes the transaction.
 """
-class ScBtLimitAcrossForkTest(SidechainTestFramework):
 
+
+class ScBtLimitAcrossForkTest(SidechainTestFramework):
     sidechain_id = None
     sc_withdrawal_epoch_length = 11
     FEE = 5
@@ -50,32 +50,32 @@ class ScBtLimitAcrossForkTest(SidechainTestFramework):
     def setup_nodes(self):
         num_nodes = 1
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
-        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws',  '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
+        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws', '-logtimemicros=1',
+                                                                        '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
+        cert_max_keys = 10
+        cert_sig_threshold = 6
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             cert_submitter_enabled=True,  # enable submitter
             cert_signing_enabled=True  # enable signer
         )
 
-    is_non_ceasing = self.options.nonceasing
-# Non ceasing sidechains must be of sidechain version 2
-if (self.options.certcircuittype == KEY_ROTATION_CIRCUIT):
-    sc_creation_version = SC_CREATION_VERSION_2
-else:
-    sc_creation_version = SC_CREATION_VERSION_1
+        if self.options.certcircuittype == KEY_ROTATION_CIRCUIT:
+            sc_creation_version = SC_CREATION_VERSION_2  # non-ceasing could be only SC_CREATION_VERSION_2>=2
+        else:
+            sc_creation_version = SC_CREATION_VERSION_1
 
-network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
-                                                cert_max_keys=cert_max_keys,
-                                                cert_sig_threshold=cert_sig_threshold,
-                                                sc_creation_version=sc_creation_version,
-                                                is_non_ceasing=self.options.nonceasing,
-                                                circuit_type=self.options.certcircuittype,
-                                                sc_creation_version=sc_creation_version),
-                                 sc_node_configuration)
-        self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720*120*5).sidechain_id
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+                                                        cert_max_keys=cert_max_keys,
+                                                        cert_sig_threshold=cert_sig_threshold,
+                                                        sc_creation_version=sc_creation_version,
+                                                        is_non_ceasing=self.options.nonceasing,
+                                                        circuit_type=self.options.certcircuittype),
+                                         sc_node_configuration)
+        self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 5).sidechain_id
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
@@ -89,10 +89,10 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
         # ******************** WITHDRAWAL EPOCH 0 START ********************
         print("******************** WITHDRAWAL EPOCH 0 START ********************")
 
-        #Verify we didn't reach the SC fork1 that includes BT limit
+        # Verify we didn't reach the SC fork1 that includes BT limit
         consensusEpochData = http_block_forging_info(sc_node)
         assert_equal(consensusEpochData["bestEpochNumber"], 1)
-        
+
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
 
         # create 1 FTs in the same MC block to SC
@@ -119,21 +119,22 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
         assert_equal(consensusEpochData["bestEpochNumber"], 2)
 
         # Reach the SC fork 1
-        sc_block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch = True)
+        sc_block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         consensusEpochData = http_block_forging_info(sc_node)
         assert_equal(consensusEpochData["bestEpochNumber"], 3)
         block_json = http_block_findById(sc_node, sc_block_id)
 
-        #Verify that we didn't include the transaction since we still don't have enough open WB slots (2 MC block 799 slots)
-        assert_equal(len(block_json["block"]["sidechainTransactions"]),0)
+        # Verify that we didn't include the transaction since we still don't have enough open WB slots (2 MC block 799 slots)
+        assert_equal(len(block_json["block"]["sidechainTransactions"]), 0)
 
-        #Mine a new MC block
+        # Mine a new MC block
         mc_node.generate(1)
 
-        #Forge a new SC block and verify that now it includes the transaction with the WBs. 
+        # Forge a new SC block and verify that now it includes the transaction with the WBs.
         sc_block_id = generate_next_block(sc_node, "first node")
         block_json = http_block_findById(sc_node, sc_block_id)
-        assert_equal(len(block_json["block"]["sidechainTransactions"]),1)
-        
+        assert_equal(len(block_json["block"]["sidechainTransactions"]), 1)
+
+
 if __name__ == "__main__":
     ScBtLimitAcrossForkTest().main()

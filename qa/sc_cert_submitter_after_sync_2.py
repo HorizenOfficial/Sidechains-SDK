@@ -55,6 +55,8 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
+        cert_max_keys = 10
+        cert_sig_threshold = 6
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             True,  # certificate submitter is enabled
@@ -68,22 +70,19 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
             list([4, 5, 6])  # with 3 schnorr PKs
         )
 
-        is_non_ceasing = self.options.nonceasing
-        # Non ceasing sidechains must be of sidechain version 2
-        if (self.options.certcircuittype == KEY_ROTATION_CIRCUIT):
-            sc_creation_version = SC_CREATION_VERSION_2
+        if self.options.certcircuittype == KEY_ROTATION_CIRCUIT:
+            sc_creation_version = SC_CREATION_VERSION_2  # non-ceasing could be only SC_CREATION_VERSION_2>=2
         else:
             sc_creation_version = SC_CREATION_VERSION_1
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
-                                                cert_max_keys=cert_max_keys,
-                                                cert_sig_threshold=cert_sig_threshold,
-                                                sc_creation_version=sc_creation_version,
-                                                is_non_ceasing=self.options.nonceasing,
-                                                circuit_type=self.options.certcircuittype,
-                                                sc_creation_version=sc_creation_version),
-                                 sc_node_1_configuration,
-            sc_node_2_configuration)
+                                                        cert_max_keys=cert_max_keys,
+                                                        cert_sig_threshold=cert_sig_threshold,
+                                                        sc_creation_version=sc_creation_version,
+                                                        is_non_ceasing=self.options.nonceasing,
+                                                        circuit_type=self.options.certcircuittype),
+                                         sc_node_1_configuration,
+                                         sc_node_2_configuration)
 
         # rewind sc genesis block timestamp for 10 consensus epochs
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
@@ -116,7 +115,8 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         while not sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
             time.sleep(1)
 
-        while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
+        while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"][
+            "state"]:
             logging.info("Wait for certificates in the MC mempool...")
             if sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
                 logging.info("sc_node generating certificate now.")

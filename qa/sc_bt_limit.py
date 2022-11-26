@@ -4,7 +4,6 @@ import time
 import pprint
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2
     SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -77,8 +76,9 @@ Test:
         - Wait for certificate submission.
 
 """
-class ScBtLimitTest(SidechainTestFramework):
 
+
+class ScBtLimitTest(SidechainTestFramework):
     sidechain_id = None
     sc_withdrawal_epoch_length = 11
     FEE = 5
@@ -86,31 +86,31 @@ class ScBtLimitTest(SidechainTestFramework):
     def setup_nodes(self):
         num_nodes = 1
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
-        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws',  '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
+        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws', '-logtimemicros=1',
+                                                                        '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
+        cert_max_keys = 10
+        cert_sig_threshold = 6
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             cert_submitter_enabled=True,  # enable submitter
             cert_signing_enabled=True  # enable signer
         )
 
-        is_non_ceasing = self.options.nonceasing
-# Non ceasing sidechains must be of sidechain version 2
-if (self.options.certcircuittype == KEY_ROTATION_CIRCUIT):
-    sc_creation_version = SC_CREATION_VERSION_2
-else:
-    sc_creation_version = SC_CREATION_VERSION_1
+        if self.options.certcircuittype == KEY_ROTATION_CIRCUIT:
+            sc_creation_version = SC_CREATION_VERSION_2  # non-ceasing could be only SC_CREATION_VERSION_2>=2
+        else:
+            sc_creation_version = SC_CREATION_VERSION_1
 
-network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
-                                                cert_max_keys=cert_max_keys,
-                                                cert_sig_threshold=cert_sig_threshold,
-                                                sc_creation_version=sc_creation_version,
-                                                is_non_ceasing=self.options.nonceasing,
-                                                circuit_type=self.options.certcircuittype,
-                                                sc_creation_version=sc_creation_version),
-                                 sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+                                                        cert_max_keys=cert_max_keys,
+                                                        cert_sig_threshold=cert_sig_threshold,
+                                                        sc_creation_version=sc_creation_version,
+                                                        is_non_ceasing=self.options.nonceasing,
+                                                        circuit_type=self.options.certcircuittype),
+                                         sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 5).sidechain_id
 
     def sc_setup_nodes(self):
@@ -147,8 +147,8 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
         # Generate 1 SC block to include FTs.
         generate_next_blocks(sc_node, "first node", 1)[0]
 
-        #Split the UTXO
-        sendCointsToMultipleAddress(sc_node, [sc_address_1 for _ in range (10)], [10 * 1e8 for _ in range(10)], 0)
+        # Split the UTXO
+        sendCointsToMultipleAddress(sc_node, [sc_address_1 for _ in range(10)], [10 * 1e8 for _ in range(10)], 0)
         generate_next_blocks(sc_node, "first node", 1)[0]
 
         # Create a transaction that generates 999 WBs 
@@ -198,7 +198,7 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
         epoch_mc_blocks_left -= 1
 
         # Reach the SC fork 1
-        generate_next_block(sc_node, "first node", force_switch_to_next_epoch = True)
+        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         consensusEpochData = http_block_forging_info(sc_node)
         print(consensusEpochData)
         assert_equal(consensusEpochData["bestEpochNumber"], 3)
@@ -221,7 +221,7 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
         block_json = http_block_findById(sc_node, sc_block_id)
         assert_equal(block_json["block"]["sidechainTransactions"], [])
 
-        #Open another 399 slots buy mining a new MC block
+        # Open another 399 slots buy mining a new MC block
         mc_node.generate(1)[0]
         epoch_mc_blocks_left -= 1
         # Try to Generate 1 SC block to include Tx.
@@ -266,19 +266,20 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
 
         assert_equal(len(block_json["block"]["sidechainTransactions"]), 3)
 
-        #744
+        # 744
         remaining_wbs = MAX_WBS_PER_EPOCH - wbs_mined
-        wbs_left_txid = withdrawMultiCoins(sc_node, bt_addresses[:remaining_wbs], amounts[:remaining_wbs])["result"]["transactionId"]
+        wbs_left_txid = withdrawMultiCoins(sc_node, bt_addresses[:remaining_wbs], amounts[:remaining_wbs])["result"][
+            "transactionId"]
 
         # Generate 1 MC block. Now all the slots should be opened
         we0_end_mcblock_hash = mc_node.generate(1)[0]
 
-        #We should be able to include the remaining WBs inside the current epoch
+        # We should be able to include the remaining WBs inside the current epoch
         sc_block_id = generate_next_block(sc_node, "first node")
         block_json = http_block_findById(sc_node, sc_block_id)
-        assert_equal(block_json["block"]["sidechainTransactions"][0]["id"],wbs_left_txid)
+        assert_equal(block_json["block"]["sidechainTransactions"][0]["id"], wbs_left_txid)
 
-        #Create another transaction that generate some WBs.
+        # Create another transaction that generate some WBs.
         not_included_tx_id = withdrawMultiCoins(sc_node, bt_addresses, amounts)["result"]["transactionId"]
 
         # Generate 1 MC block to reach the end of the epoch
@@ -291,7 +292,6 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
         sc_block_id = generate_next_block(sc_node, "first node")
         block_json = http_block_findById(sc_node, sc_block_id)
         check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
-
 
         # ******************** WITHDRAWAL EPOCH 2 START ********************
         print("******************** WITHDRAWAL EPOCH 2 START ********************")
@@ -328,12 +328,12 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
         assert_equal(len(http_block_findById(sc_node, sc_block_id)["block"]["sidechainTransactions"]), 1)
         assert_equal(http_block_findById(sc_node, sc_block_id)["block"]["sidechainTransactions"][0]["id"], wbs_txid)
 
-
         # Generate more MC blocks to finish the second withdrawal epoch, then generate 1 more SC block to sync with MC.
         mc_node.generate(3)
         epoch_mc_blocks_left -= 3
         sc_block_id = generate_next_block(sc_node, "first node")
-        assert_equal(not_included_tx_id, http_block_findById(sc_node, sc_block_id)["block"]["sidechainTransactions"][0]["id"])
+        assert_equal(not_included_tx_id,
+                     http_block_findById(sc_node, sc_block_id)["block"]["sidechainTransactions"][0]["id"])
 
         we1_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[-1]
         print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
@@ -371,6 +371,7 @@ network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawa
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+
 
 if __name__ == "__main__":
     ScBtLimitTest().main()
