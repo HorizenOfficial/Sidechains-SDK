@@ -37,8 +37,8 @@ class SCCreationInfo(object):
     # because of too complex circuit from MC perspective.
     def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
                  btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1,
-                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False, is_non_ceasing=False):
-                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False, circuit_type=NO_KEY_ROTATION_CIRCUIT):
+                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False, is_non_ceasing=False,
+                 circuit_type=NO_KEY_ROTATION_CIRCUIT):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length

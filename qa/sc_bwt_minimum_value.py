@@ -132,11 +132,10 @@ class SCBwtMinValue(SidechainTestFramework):
         mc_address1 = self.nodes[0].getnewaddress()
         logging.info("First BT MC public key address is {}".format(mc_address1))
         sc_bt_amount0 = 53
-        withdrawal_request = {"outputs": [ \
+        withdrawal_request = {"outputs": [
             {"mainchainAddress": mc_address1,
              "value": sc_bt_amount0}
-        ]
-        }
+        ]}
 
         withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
         if "result" in withdrawCoinsJson:
@@ -146,11 +145,10 @@ class SCBwtMinValue(SidechainTestFramework):
 
         # Try to withdraw coins from SC to MC: minimum amount to send
         sc_bt_amount1 = 54  # in Satoshi
-        withdrawal_request = {"outputs": [ \
+        withdrawal_request = {"outputs": [
             {"mainchainAddress": mc_address1,
              "value": sc_bt_amount1}
-        ]
-        }
+        ]}
         withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
         if "result" not in withdrawCoinsJson:
             fail("Withdraw coins failed: " + json.dumps(withdrawCoinsJson))
@@ -242,12 +240,6 @@ class SCBwtMinValue(SidechainTestFramework):
             fail("Coins withdraw failed: " + json.dumps(withdrawCoinsJson))
         else:
             logging.info("Coins withdrawal transaction: " + json.dumps(withdrawCoinsJson))
-
-        transactionJson = sc_node.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
-        if not "result" in transactionJson:
-            fail("Coins withdraw failed: " + json.dumps(transactionJson))
-        else:
-            logging.info("Coins withdrawal transaction: " + json.dumps(transactionJson))
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
