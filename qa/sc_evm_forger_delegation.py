@@ -4,6 +4,7 @@ import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.scutil import (
     convertZenToZennies, generate_next_block, convertZenniesToWei
 )
@@ -94,16 +95,9 @@ class SCEvmForgerDelegation(AccountChainSetup):
 
         # SC1 delegates 50 zen to SC2
         forgerStake12_amount = 50
-        forgerStakes = {
-            "forgerStakeInfo": {
-                "ownerAddress": evm_address_sc_node_1,
-                "blockSignPublicKey": sc2_blockSignPubKey,
-                "vrfPubKey": sc2_vrfPubKey,
-                "value": convertZenToZennies(forgerStake12_amount)
-            }
-        }
 
-        result = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
+        result = ac_makeForgerStake(sc_node_1, evm_address_sc_node_1, sc2_blockSignPubKey, sc2_vrfPubKey,
+                                    convertZenToZennies(forgerStake12_amount))
         if "result" not in result:
             fail("make forger stake failed: " + json.dumps(result))
         else:
@@ -125,7 +119,9 @@ class SCEvmForgerDelegation(AccountChainSetup):
             "nonce": 1  # second tx from this evm address
         }
 
-        result = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
+        result = ac_makeForgerStake(sc_node_1, evm_address_sc_node_1, sc3_blockSignPubKey, sc3_vrfPubKey,
+                                    convertZenToZennies(forgerStake13_amount), 1)
+        # result = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
         if "result" not in result:
             fail("make forger stake failed: " + json.dumps(result))
         else:
@@ -134,16 +130,9 @@ class SCEvmForgerDelegation(AccountChainSetup):
 
         # SC3 delegates 60 zen to SC2
         forgerStake32_amount = 60  # Zen
-        forgerStakes = {
-            "forgerStakeInfo": {
-                "ownerAddress": evm_address_sc_node_3,  # SC node 3 is an owner
-                "blockSignPublicKey": sc2_blockSignPubKey,  # SC node 1 is a block signer
-                "vrfPubKey": sc2_vrfPubKey,
-                "value": convertZenToZennies(forgerStake32_amount)  # in Satoshi
-            }
-        }
 
-        result = sc_node_3.transaction_makeForgerStake(json.dumps(forgerStakes))
+        result = ac_makeForgerStake(sc_node_3, evm_address_sc_node_3, sc2_blockSignPubKey, sc2_vrfPubKey,
+                                    convertZenToZennies(forgerStake32_amount))
         if "result" not in result:
             fail("make forger stake failed: " + json.dumps(result))
         else:
@@ -152,16 +141,9 @@ class SCEvmForgerDelegation(AccountChainSetup):
 
         # SC2 delegates 33 zen to itself
         forgerStake22_amount = 33  # Zen
-        forgerStakes = {
-            "forgerStakeInfo": {
-                "ownerAddress": evm_address_sc_node_2,  # SC node 1 is an owner
-                "blockSignPublicKey": sc2_blockSignPubKey,  # SC node 1 is a block signer
-                "vrfPubKey": sc2_vrfPubKey,
-                "value": convertZenToZennies(forgerStake22_amount)  # in Satoshi
-            }
-        }
 
-        result = sc_node_2.transaction_makeForgerStake(json.dumps(forgerStakes))
+        result = ac_makeForgerStake(sc_node_2, evm_address_sc_node_2, sc2_blockSignPubKey, sc2_vrfPubKey,
+                                    convertZenToZennies(forgerStake22_amount))
         if "result" not in result:
             fail("make forger stake failed: " + json.dumps(result))
         else:

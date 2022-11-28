@@ -6,6 +6,7 @@ import math
 from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
@@ -75,15 +76,8 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
         forger_stake_amount = 0.015  # Zen
         forger_stake_amount_in_wei = convertZenToWei(forger_stake_amount)
 
-        forgerStakes = {
-            "forgerStakeInfo": {
-                "ownerAddress": evm_address_sc_node_2,
-                "blockSignPublicKey": sc2_blockSignPubKey,
-                "vrfPubKey": sc2_vrfPubKey,
-                "value": convertZenToZennies(forger_stake_amount)  # in Satoshi
-            }
-        }
-        makeForgerStakeJsonRes = sc_node_2.transaction_makeForgerStake(json.dumps(forgerStakes))
+        makeForgerStakeJsonRes = ac_makeForgerStake(sc_node_2, evm_address_sc_node_2, sc2_blockSignPubKey,
+                                                    sc2_vrfPubKey, convertZenToZennies(forger_stake_amount))
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:

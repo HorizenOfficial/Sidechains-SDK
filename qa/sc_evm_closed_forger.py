@@ -6,12 +6,12 @@ from decimal import Decimal
 from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration
 from SidechainTestFramework.scutil import (
-    convertZenToWei, convertZenToZennies, generate_next_block, generate_secrets, generate_vrf_secrets,
+    convertZenToWei, generate_next_block, generate_secrets, generate_vrf_secrets,
     get_account_balance, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
 )
-from httpCalls.transaction.makeForgerStake import makeForgerStake
 from test_framework.util import (
     assert_equal, assert_false, assert_true, )
 
@@ -37,13 +37,15 @@ class SCEvmClosedForgerList(AccountChainSetup):
         forger_configuration = SCForgerConfiguration(True, [
             [self.allowed_forger_block_signer_public_key, self.allowed_forger_vrf_public_key]])
         super().__init__(number_of_sidechain_nodes=2, forward_amount=100,
-                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10,forger_options=forger_configuration)
+                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10,
+                         forger_options=forger_configuration)
 
-    def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
+    def tryMakeForgerStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
         # a transaction with a forger stake info not compliant with the closed forger list will be successfully
         # included in a block but the receipt will then report a 'failed' status.
 
-        makeForgerStakeJsonRes = makeForgerStake(sc_node, owner_address, blockSignPubKey, vrf_public_key, amount, api_key='Horizen')
+        makeForgerStakeJsonRes = ac_makeForgerStake(sc_node, owner_address, blockSignPubKey, vrf_public_key, amount)
+
         assert_true("result" in makeForgerStakeJsonRes)
         logging.info(json.dumps(makeForgerStakeJsonRes))
         self.sc_sync_all()
@@ -86,28 +88,28 @@ class SCEvmClosedForgerList(AccountChainSetup):
 
         # Try to stake to an invalid blockSignProposition
         logging.info("Try to stake to an invalid blockSignProposition...")
-        result = self.tryMakeForgetStake(
+        result = self.tryMakeForgerStake(
             sc_node_1, evm_address_sc_node_1, outlaw_blockSignPubKey,
             self.allowed_forger_vrf_public_key, amount=33)
         assert_false(result)
 
         # Try to stake to an invalid vrfPublicKey
         logging.info("Try to stake to an invalid vrfPublicKey...")
-        result = self.tryMakeForgetStake(
+        result = self.tryMakeForgerStake(
             sc_node_1, evm_address_sc_node_1, self.allowed_forger_block_signer_public_key,
             outlaw_vrfPubKey, amount=33)
         assert_false(result)
 
         # Try to stake with an invalid blockSignProposition and an invalid vrfPublicKey
         logging.info("Try to stake to an invalid blockSignProposition and an invalid vrfPublicKey...")
-        result = self.tryMakeForgetStake(
+        result = self.tryMakeForgerStake(
             sc_node_1, evm_address_sc_node_1, outlaw_blockSignPubKey,
             outlaw_vrfPubKey, amount=33)
         assert_false(result)
 
         # Try to stake with a valid blockSignProposition and valid vrfPublicKey
         logging.info("Try to stake to a valid blockSignProposition and valid vrfPublicKey...")
-        result = self.tryMakeForgetStake(
+        result = self.tryMakeForgerStake(
             sc_node_1, evm_address_sc_node_1, self.allowed_forger_block_signer_public_key,
             self.allowed_forger_vrf_public_key, amount=33)
         assert_true(result)

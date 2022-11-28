@@ -54,6 +54,7 @@ testScriptsEvm=(
     'sc_evm_forward_transfer.py'
     'sc_evm_backward_transfer.py'
     'sc_evm_backward_transfer_2.py'
+    'sc_evm_base_fee.py'
     'sc_evm_bwt_corner_cases.py'
     'sc_evm_contract_deployment_create2.py'
     'sc_evm_forger.py'
@@ -136,7 +137,7 @@ if [ ! -z "$EVM_ONLY" ] && [ "${EVM_ONLY}" = "true" ]; then
   testScripts+=( "${testScriptsEvm[@]}" )
 else
   testScripts+=( "${testScriptsEvm[@]}" )
-  testScripts+=( "${testScriptsUtxo[@]}")
+  #testScripts+=( "${testScriptsUtxo[@]}")
 fi
 
 # include extended tests
