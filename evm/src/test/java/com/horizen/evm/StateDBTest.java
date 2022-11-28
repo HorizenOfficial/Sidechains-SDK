@@ -109,7 +109,13 @@ public class StateDBTest extends LibEvmTestBase {
         final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
         final var fakeCodeHash = bytes("abcdef00000000000000000000000000000000ff010101010101010102020202");
-        final byte[][] values = {bytes("aa"), bytes("ffff"), bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"), bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffabcd001122"), bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"), bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffaa"),};
+        final byte[][] values = {
+                bytes("aa"), bytes("ffff"),
+                bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
+                bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffabcd001122"),
+                bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
+                bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffaa")
+        };
 
         byte[] initialRoot;
         var roots = new ArrayList<byte[]>();
@@ -182,8 +188,12 @@ public class StateDBTest extends LibEvmTestBase {
 
         try (var db = new MemoryDatabase()) {
             try (var statedb = new StateDB(db, hashNull)) {
-                statedb.setStorage(address, (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000000")), pad(RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))), paddingByte, paddingLength), StateStorageStrategy.RAW);
-                statedb.setStorage(address, (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000001")), pad(RlpEncoder.encode(RlpString.create(bytes("02"))), paddingByte, paddingLength), StateStorageStrategy.RAW);
+                statedb.setStorage(address, (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000000")),
+                        pad(RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))), paddingByte, paddingLength),
+                        StateStorageStrategy.RAW);
+                statedb.setStorage(address, (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000001")),
+                        pad(RlpEncoder.encode(RlpString.create(bytes("02"))), paddingByte, paddingLength), StateStorageStrategy.RAW);
+
                 statedb.commit();
 
                 // this should return the proof for the 0th slot in smart contract identified by address
