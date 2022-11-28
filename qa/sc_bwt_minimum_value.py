@@ -241,6 +241,12 @@ class SCBwtMinValue(SidechainTestFramework):
         else:
             logging.info("Coins withdrawal transaction: " + json.dumps(withdrawCoinsJson))
 
+        transactionJson = sc_node.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
+        if not "result" in transactionJson:
+            fail("Coins withdraw failed: " + json.dumps(transactionJson))
+        else:
+            logging.info("Coins withdrawal transaction: " + json.dumps(transactionJson))
+
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
