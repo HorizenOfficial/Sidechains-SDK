@@ -2,14 +2,14 @@ package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.mempool.{MempoolMap, TransactionsByPriceAndNonceIter}
+import com.horizen.account.proof.SignatureSecp256k1
+import com.horizen.account.mempool.TransactionsByPriceAndNonceIter
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
-
 import java.math.BigInteger
 
 class AccountForgeMessageBuilderTest
@@ -26,7 +26,8 @@ class AccountForgeMessageBuilderTest
       10000000000L,
       11,
       2,
-      3
+      3,
+      1
     )
 
     usingView { stateView =>
@@ -59,17 +60,16 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentStateAfterRandomException(): Unit = {
 
-    class BuggyTransaction(th: EthereumTransaction)
-      extends EthereumTransaction(th.getTransaction) {
+    class BuggyTransaction(th: EthereumTransaction, sign : SignatureSecp256k1)
+      extends EthereumTransaction(th, sign) {
       override def version(): Byte = throw new Exception()
     }
 
-    val invalidTx = new BuggyTransaction(
-      createLegacyTransaction(
-        BigInteger.TEN,
-        gasLimit = BigInteger.valueOf(10000000)
-      )
+    val tmpTx = createLegacyTransaction(
+      BigInteger.TEN,
+      gasLimit = BigInteger.valueOf(10000000)
     )
+    val invalidTx = new BuggyTransaction(tmpTx, tmpTx.getSignature)
 
     val blockContext = new BlockContext(
       Array.empty[Byte],
@@ -78,7 +78,8 @@ class AccountForgeMessageBuilderTest
       10000000000L,
       11,
       2,
-      3
+      3,
+      1
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -112,17 +113,18 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentBlockGasAfterRandomException(): Unit = {
 
-    class BuggyTransaction(th: EthereumTransaction)
-      extends EthereumTransaction(th.getTransaction) {
+    class BuggyTransaction(th: EthereumTransaction, sign : SignatureSecp256k1)
+      extends EthereumTransaction(th, sign) {
       override def version(): Byte = throw new Exception()
     }
 
     val gasLimit = GasUtil.intrinsicGas(Array.empty[Byte], isContractCreation = true).add(BigInteger.TEN)
+    val tmpTx = createLegacyTransaction(
+      BigInteger.TEN,
+      gasLimit = gasLimit
+    )
     val invalidTx = new BuggyTransaction(
-      createLegacyTransaction(
-        BigInteger.TEN,
-        gasLimit = gasLimit
-      )
+      tmpTx, tmpTx.getSignature
     )
 
     val validTx = createLegacyTransaction(
@@ -137,7 +139,8 @@ class AccountForgeMessageBuilderTest
       gasLimit.longValueExact(),//Just enough for 1 tx
       11,
       2,
-      3
+      3,
+      1
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -167,7 +170,7 @@ class AccountForgeMessageBuilderTest
         null
       )
       assertEquals(1, appliedTxs.size)
-      assertEquals(validTx.id(), appliedTxs(0).id)
+      assertEquals(validTx.id(), appliedTxs.head.id)
     }
   }
 

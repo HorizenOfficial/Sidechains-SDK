@@ -7,7 +7,6 @@ import com.horizen.api.http.SuccessResponse;
 
 public class RpcResponseSuccess extends RpcResponse implements SuccessResponse {
     @JsonProperty("result")
-    @JsonInclude()
     protected final Object result;
 
     public RpcResponseSuccess(RpcId id, Object result) {

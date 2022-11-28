@@ -7,24 +7,18 @@ from decimal import Decimal
 from eth_abi import decode
 from eth_utils import add_0x_prefix, encode_hex, event_signature_to_log_topic, remove_0x_prefix, to_hex
 
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.address_util import format_eoa, format_evm
-from SidechainTestFramework.sc_boostrap_info import (
-    LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
-    SCNetworkConfiguration, SCNodeConfiguration,
-)
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import (
-    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes, connect_sc_nodes,
-    generate_next_block, start_sc_nodes, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
-)
+from SidechainTestFramework.account.ac_utils import format_eoa, format_evm
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToWei, ForgerStakeSmartContractAddress, \
     convertZenToZennies, convertZenniesToWei, WithdrawalReqSmartContractAddress, computeForgedTxFee, convertWeiToZen
+from SidechainTestFramework.scutil import (
+    generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
+)
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, hex_str_to_bytes,
-    start_nodes, websocket_port_by_mc_node_index,
 )
 
 """
@@ -94,45 +88,13 @@ def check_spend_forger_stake_event(event, owner, stake_id):
     assert_equal(owner, owner_addr, "Wrong owner address in topics")
 
     (stake,) = decode(['bytes32'], hex_str_to_bytes(event['data'][2:]))
-    assert_equal(stake_id, to_hex(stake)[2:],"Wrong stake id in data")
+    assert_equal(stake_id, to_hex(stake)[2:], "Wrong stake id in data")
 
 
-class SCEvmForger(SidechainTestFramework):
-    sc_nodes_bootstrap_info = None
-    number_of_mc_nodes = 1
-    number_of_sidechain_nodes = 2
-    sc_creation_amount = 100
-    API_KEY = "Horizen"
-
-    def setup_nodes(self):
-        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
-
-    def sc_setup_network(self, split=False):
-        self.sc_nodes = self.sc_setup_nodes()
-        logging.info("Connecting sc nodes...")
-        connect_sc_nodes(self.sc_nodes[0], 1)
-        self.sc_sync_all()
-
-    def sc_setup_chain(self):
-        mc_node = self.nodes[0]
-        sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
-        )
-        sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
-        )
-        network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, LARGE_WITHDRAWAL_EPOCH_LENGTH),
-            sc_node_1_configuration, sc_node_2_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10,
-                                                                 blockversion=AccountModelBlockVersion)
-
-    def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY] * 2)#, extra_args=[[], ['-agentlib']])
+class SCEvmForger(AccountChainSetup):
+    def __init__(self):
+        super().__init__(number_of_sidechain_nodes=2, forward_amount=100,
+                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10)
 
     def run_test(self):
 
@@ -140,7 +102,8 @@ class SCEvmForger(SidechainTestFramework):
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
 
-        # blocksign and vrf pub keys are concatenated in custom data param in sc creation (33+32 bytes), get them from mc cmd
+        # blocksign and vrf pub keys are concatenated in custom data param in sc creation (33+32 bytes),
+        # get them from mc cmd
         sc_info = mc_node.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)['items'][0]
         sc_cr_txhash = sc_info['creatingTxHash']
         sc_cr_tx = mc_node.getrawtransaction(str(sc_cr_txhash), 1)
@@ -179,7 +142,7 @@ class SCEvmForger(SidechainTestFramework):
         stakeOwnerProposition = stakeList[0]['forgerStakeData']["ownerPublicKey"]["address"]
 
         # check stake info are as expected
-        assert_equal(stakeAmount, convertZenToZennies(self.sc_creation_amount), "Forging stake amount is wrong.")
+        assert_equal(stakeAmount, convertZenToZennies(self.forward_amount), "Forging stake amount is wrong.")
         assert_equal(stakeSignPubKey, sc_cr_sign_pub_key, "Forging stake block sign key is wrong.")
         assert_equal(stakeVrfPublicKey, sc_cr_vrf_pub_key, "Forging stake vrf key is wrong.")
         assert_equal(stakeOwnerProposition, sc_cr_owner_proposition, "Forging stake owner proposition is wrong.")
@@ -255,7 +218,8 @@ class SCEvmForger(SidechainTestFramework):
 
         makeForgerStakeJsonRes = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
         if "result" not in makeForgerStakeJsonRes:
-            fail("make forger stake with fake smart contract as owner should create a tx: " + json.dumps(makeForgerStakeJsonRes))
+            fail("make forger stake with fake smart contract as owner should create a tx: " + json.dumps(
+                makeForgerStakeJsonRes))
         else:
             logging.info("Transaction created as expected")
         generate_next_block(sc_node_1, "first node")
@@ -269,7 +233,6 @@ class SCEvmForger(SidechainTestFramework):
         # Check the logs
         assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")
 
-
         # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
@@ -282,9 +245,9 @@ class SCEvmForger(SidechainTestFramework):
         smart_contract_type = SmartContract(smart_contract_type)
 
         tx_hash, smart_contract_address = smart_contract_type.deploy(sc_node_1, initial_secret,
-                                                      fromAddress=format_evm(evm_address_sc_node_1),
-                                                      gasLimit=10000000,
-                                                      gasPrice=900000000)
+                                                                     fromAddress=format_evm(evm_address_sc_node_1),
+                                                                     gasLimit=10000000,
+                                                                     gasPrice=900000000)
         self.sc_sync_all()
         generate_next_block(sc_node_1, "first node")
 
@@ -356,7 +319,7 @@ class SCEvmForger(SidechainTestFramework):
         # reserve a small amount for fee payments
         amount_for_fees_zen = Decimal('0.01')
 
-        #Check balance
+        # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - convertZenToWei(forgerStake1_amount) - gas_fee_paid, account_1_balance)
@@ -398,7 +361,7 @@ class SCEvmForger(SidechainTestFramework):
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(3, len(stakeList))
 
-        #Check balance
+        # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - convertZenToWei(forgerStake2_amount) - gas_fee_paid, account_1_balance)
@@ -475,7 +438,7 @@ class SCEvmForger(SidechainTestFramework):
             convertZenToWei(forgerStake2_amount),
             http_wallet_balance(sc_node_1, ForgerStakeSmartContractAddress))
 
-        #Check balance
+        # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
@@ -545,15 +508,13 @@ class SCEvmForger(SidechainTestFramework):
         event = receipt['result']['logs'][0]
         check_spend_forger_stake_event(event, evm_address_sc_node_1, stakeId_1)
 
-
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 1)
 
-        #Check balance
+        # Check balance
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 + convertZenToWei(forgerStake1_amount), account_1_balance)
         initial_balance_1 = account_1_balance
-
 
         # TODO when we have no more ForgerStakes the SC is dead!!!
         # proposal: prevent spending of last stake (a minimal stake must be added beforehand)
@@ -586,7 +547,7 @@ class SCEvmForger(SidechainTestFramework):
         event = receipt['result']['logs'][0]
         check_spend_forger_stake_event(event, evm_address_sc_node_1, stakeId_2)
 
-        #Check balance
+        # Check balance
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 + convertZenToWei(forgerStake2_amount), account_1_balance)
 

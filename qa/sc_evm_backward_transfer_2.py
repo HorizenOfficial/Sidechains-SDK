@@ -3,28 +3,20 @@ import json
 import logging
 import time
 
-from eth_utils import add_0x_prefix
+from eth_utils import add_0x_prefix, remove_0x_prefix
 
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_utils import generate_block_and_get_tx_receipt
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.sc_boostrap_info import (
-    MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
-    SCNodeConfiguration,
-)
-from SidechainTestFramework.sc_forging_util import check_mcreference_presence, check_mcreferencedata_presence
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import (
-    AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
-    bootstrap_sidechain_nodes, check_mainchain_block_reference_info, generate_next_block, generate_next_blocks,
-    is_mainchain_block_included_in_sc_block,
-    start_sc_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
-)
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, computeForgedTxFee
-from test_framework.util import (
-    assert_equal, assert_false, fail, forward_transfer_to_sidechain, start_nodes,
-    websocket_port_by_mc_node_index,
+from SidechainTestFramework.sc_forging_util import check_mcreference_presence, check_mcreferencedata_presence
+from SidechainTestFramework.scutil import (
+    generate_next_block, generate_next_blocks
 )
+from test_framework.util import (
+    assert_equal, assert_false, fail)
 
 """
 This is similar to sc_evm_backward_transfer.py, but uses a longer withdrawal epoch length.
@@ -58,87 +50,40 @@ Test:
 """
 
 
-class SCEvmBackwardTransfer2(SidechainTestFramework):
-    sc_nodes_bootstrap_info = None
-    sc_withdrawal_epoch_length = 50
-    number_of_sidechain_nodes = 1
-
-    def setup_nodes(self):
-        num_nodes = 1
-        # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
-        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws', '-logtimemicros=1',
-                                                                        '-scproofqueuesize=0']] * num_nodes)
-
-    def sc_setup_chain(self):
-        mc_node = self.nodes[0]
-        sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
-        )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
-                                         sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
-                                                                 blockversion=AccountModelBlockVersion)
-
-    def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, binary=[EVM_APP_BINARY] * 2)
+class SCEvmBackwardTransfer2(AccountChainSetup):
+    def __init__(self):
+        super().__init__(withdrawalEpochLength=50)
 
     def run_test(self):
         time.sleep(0.1)
-        self.sync_all()
+
+        ft_amount_in_zen = 10
+        ft_amount_in_zennies = convertZenToZennies(ft_amount_in_zen)
+        ft_amount_in_wei = convertZenniesToWei(ft_amount_in_zennies)
+
+        self.sc_ac_setup(ft_amount_in_zen=ft_amount_in_zen)
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
-
-        # Checks that MC block with sc creation tx is referenced in the genesis sc block
-        mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
-
-        sc_best_block = sc_node.block_best()["result"]
-        assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
-
-        # verifies MC block reference's inclusion
-        res = is_mainchain_block_included_in_sc_block(sc_best_block["block"], mc_block)
-        assert_true(res, "The mainchain block is not included in SC node.")
-
-        sc_mc_best_block_ref_info = sc_node.mainchain_bestBlockReferenceInfo()["result"]
-        assert_true(
-            check_mainchain_block_reference_info(sc_mc_best_block_ref_info, mc_block),
-            "The mainchain block is not included inside SC block reference info.")
+        evm_hex_addr = remove_0x_prefix(self.evm_address)
 
         # verifies that there are no withdrawal requests yet
         current_epoch_number = 0
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(0, len(list_of_WR))
 
-        # creates FT to SC to withdraw later
-
-        mc_return_address = mc_node.getnewaddress()
-        ret = sc_node.wallet_createPrivateKeySecp256k1()
-        evm_address = ret["result"]["proposition"]["address"]
-
-        ft_amount_in_zen = 10
-        ft_amount_in_zennies = convertZenToZennies(ft_amount_in_zen)
-        ft_amount_in_wei = convertZenniesToWei(ft_amount_in_zennies)
-
-        # transfers some fund from MC to SC using the evm address created before
-        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
-                                      mc_node,
-                                      evm_address,
-                                      ft_amount_in_zen,
-                                      mc_return_address)
-
-        # Generates SC block and checks that FT appears in SC account balance
-        generate_next_blocks(sc_node, "first node", 1)
-        new_balance = http_wallet_balance(sc_node, evm_address)
+        new_balance = http_wallet_balance(sc_node, evm_hex_addr)
         assert_equal(new_balance, ft_amount_in_wei, "wrong balance")
 
         # Generate more MC blocks to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
-        we0_end_mcblock_hash = mc_node.generate(self.sc_withdrawal_epoch_length-2)[self.sc_withdrawal_epoch_length-3]
+        we0_end_mcblock_hash = mc_node.generate(self.withdrawalEpochLength - 2)[
+            self.withdrawalEpochLength - 3]
         time.sleep(10)
 
         logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        logging.info("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info(
+            "End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         scblock_id2 = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
 
@@ -219,7 +164,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         tx_id = add_0x_prefix(res["result"]["transactionId"])
 
         # Check the balance hasn't changed yet
-        new_balance = http_wallet_balance(sc_node, evm_address)
+        new_balance = http_wallet_balance(sc_node, evm_hex_addr)
         assert_equal(ft_amount_in_wei, new_balance, "wrong balance")
 
         # verifies that there are no withdrawal requests yet
@@ -227,20 +172,16 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(0, len(list_of_WR))
 
-        # Generate SC block
-        generate_next_blocks(sc_node, "first node", 1)
-
-        #Check the receipt
-        receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
-        status = int(receipt['result']['status'], 16)
-        assert_equal(1, status, "Wrong tx status in receipt")
+        # Check the tx status
+        tx_status = generate_block_and_get_tx_receipt(sc_node, tx_id, True)
+        assert_equal(1, tx_status, "Wrong tx status in receipt")
 
         # Check the balance has changed
         # Retrieve how much gas was spent
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node, tx_id)
         expected_new_balance = ft_amount_in_wei - convertZenniesToWei(sc_bt_amount_in_zennies_1) - gas_fee_paid
-        new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")
+        new_balance = http_wallet_balance(sc_node, evm_hex_addr)
+        assert_equal(expected_new_balance, new_balance, "wrong balance after first withdrawal request")
 
         # verifies that there is one withdrawal request
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
@@ -261,18 +202,15 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
 
         tx_id = add_0x_prefix(res["result"]["transactionId"])
 
-        # Generate SC block
-        generate_next_blocks(sc_node, "first node", 1)
-        #Check the receipt
-        receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
-        status = int(receipt['result']['status'], 16)
-        assert_equal(1, status, "Wrong tx status in receipt")
+        # Check the tx status
+        tx_status = generate_block_and_get_tx_receipt(sc_node, tx_id, True)
+        assert_equal(1, tx_status, "Wrong tx status in receipt")
 
         # Check the balance has changed
         gas_fee_paid, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_id)
         expected_new_balance = new_balance - convertZenniesToWei(sc_bt_amount_in_zennies_2) - gas_fee_paid
-        new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")
+        new_balance = http_wallet_balance(sc_node, evm_hex_addr)
+        assert_equal(expected_new_balance, new_balance, "wrong balance after first withdrawal request")
 
         # verifies that there are 2 withdrawal requests
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
@@ -286,13 +224,14 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_2), list_of_WR[1]["value"])
         assert_equal(sc_bt_amount_in_zennies_2, list_of_WR[1]["valueInZennies"])
 
-
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
-        we1_end_mcblock_hash = mc_node.generate(self.sc_withdrawal_epoch_length-2)[self.sc_withdrawal_epoch_length-3]
+        we1_end_mcblock_hash = mc_node.generate(self.withdrawalEpochLength - 2)[
+            self.withdrawalEpochLength - 3]
         logging.info("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
         we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
-        logging.info("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info(
+            "End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
         we1_end_scblock_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, we1_end_scblock_id, sc_node)
 
@@ -372,11 +311,13 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
 
         sc_pub_key_1 = we1_sc_cert["backwardTransferOutputs"][0]["address"]
         assert_equal(mc_address1, sc_pub_key_1, "First BT address is wrong.")
-        assert_equal(sc_bt_amount_in_zennies_1, we1_sc_cert["backwardTransferOutputs"][0]["amount"], "First BT amount is wrong.")
+        assert_equal(sc_bt_amount_in_zennies_1, we1_sc_cert["backwardTransferOutputs"][0]["amount"],
+                     "First BT amount is wrong.")
 
         sc_pub_key_2 = we1_sc_cert["backwardTransferOutputs"][1]["address"]
         assert_equal(mc_address2, sc_pub_key_2, "Second BT address is wrong.")
-        assert_equal(sc_bt_amount_in_zennies_2, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
+        assert_equal(sc_bt_amount_in_zennies_2, we1_sc_cert["backwardTransferOutputs"][1]["amount"],
+                     "Second BT amount is wrong.")
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 

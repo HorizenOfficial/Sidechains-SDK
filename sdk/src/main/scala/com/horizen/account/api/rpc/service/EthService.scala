@@ -11,11 +11,12 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.{EthereumTransactionDecoder}
+import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
@@ -25,8 +26,6 @@ import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
-import org.web3j.crypto.Sign.SignatureData
-import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.NodeViewHolder.CurrentView
@@ -165,7 +164,7 @@ class EthService(
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value)
         .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
-        .map(tx => Numeric.toHexString(TransactionEncoder.encode(tx.getTransaction, tx.getSignatureData)))
+        .map(tx => Numeric.toHexString(tx.encode(tx.isSigned)))
         .orNull
     }
   }
@@ -206,11 +205,7 @@ class EthService(
 
   private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
     val signature = secret.sign(tx.messageToSign())
-    var signatureData = new SignatureData(signature.getV, signature.getR, signature.getS)
-    if (!tx.isEIP1559 && tx.isSigned && tx.getChainId != null) {
-      signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getChainId)
-    }
-    new EthereumTransaction(new SignedRawTransaction(tx.getTransaction.getTransaction, signatureData))
+    new EthereumTransaction(tx, new SignatureSecp256k1(signature.getV, signature.getR, signature.getS))
   }
 
   private def binarySearch(lowBound: BigInteger, highBound: BigInteger)(fun: BigInteger => Boolean): BigInteger = {
@@ -347,7 +342,8 @@ class EthService(
       block.header,
       blockInfo.height,
       TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
-      blockInfo.withdrawalEpochInfo.epoch
+      blockInfo.withdrawalEpochInfo.epoch,
+      networkParams.chainId
     )
     using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
   }
@@ -439,7 +435,7 @@ class EthService(
 
   @RpcMethod("eth_sendRawTransaction")
   def sendRawTransaction(signedTxData: String): String = {
-    val tx = new EthereumTransaction(EthereumTransactionDecoder.decode(signedTxData))
+    val tx = EthereumTransactionDecoder.decode(signedTxData)
     implicit val timeout: Timeout = new Timeout(5, SECONDS)
     // submit tx to sidechain transaction actor
     val submit = (sidechainTransactionActorRef ? BroadcastTransaction(tx)).asInstanceOf[Future[Future[ModifierId]]]

@@ -3,18 +3,11 @@ import json
 import logging
 from decimal import Decimal
 
-from SidechainTestFramework.sc_boostrap_info import (
-    LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
-    SCNetworkConfiguration, SCNodeConfiguration
-)
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import (
-    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes, connect_sc_nodes,
-    generate_next_block, start_sc_nodes
-)
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.scutil import generate_next_block
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei
 from test_framework.util import (
-    assert_equal, fail, forward_transfer_to_sidechain, start_nodes, websocket_port_by_mc_node_index
+    assert_equal, fail, forward_transfer_to_sidechain
 )
 
 """
@@ -36,56 +29,21 @@ Test:
 """
 
 
-class SCEvmForgerDelegation(SidechainTestFramework):
-    sc_nodes_bootstrap_info = None
-    number_of_mc_nodes = 1
-    number_of_sidechain_nodes = 3
-    sc_creation_amount = 99
+def getSignerStakeAmount(myInfoList, inSignerAddress):
+    sum = 0
+    for entry in myInfoList:
+        signerAddress = entry['forgerStakeData']['forgerPublicKeys']['blockSignPublicKey']['publicKey']
+        if signerAddress == inSignerAddress:
+            sum += entry['forgerStakeData']['stakedAmount']
+    # print("Sum = {}, address={}".format(sum, inSignerAddress))
+    return sum
 
-    def setup_nodes(self):
-        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
 
-    def sc_setup_network(self, split=False):
-        self.sc_nodes = self.sc_setup_nodes()
-        logging.info("Connecting sc nodes...")
-        connect_sc_nodes(self.sc_nodes[0], 1)
-        connect_sc_nodes(self.sc_nodes[1], 2)
-        connect_sc_nodes(self.sc_nodes[2], 0)
-        self.sc_sync_all()
-
-    def sc_setup_chain(self):
-        mc_node = self.nodes[0]
-        sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
-        )
-        sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
-        )
-        sc_node_3_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
-        )
-        network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, LARGE_WITHDRAWAL_EPOCH_LENGTH),
-            sc_node_1_configuration, sc_node_2_configuration, sc_node_3_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=720 * 120 * 10,
-                                                                 blockversion=AccountModelBlockVersion)
-
-    def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              binary=[EVM_APP_BINARY] * self.number_of_sidechain_nodes)#, extra_args=[['-agentlib'], [], []])
+class SCEvmForgerDelegation(AccountChainSetup):
+    def __init__(self):
+        super().__init__(number_of_sidechain_nodes=3, forward_amount=99, block_timestamp_rewind=720 * 120 * 10)
 
     def run_test(self):
-
-        def getSignerStakeAmount(myInfoList, inSignerAddress):
-            sum = 0
-            for entry in myInfoList:
-                signerAddress = entry['forgerStakeData']['forgerPublicKeys']['blockSignPublicKey']['publicKey']
-                if signerAddress == inSignerAddress:
-                    sum += entry['forgerStakeData']['stakedAmount']
-            #print("Sum = {}, address={}".format(sum, inSignerAddress))
-            return sum
-
 
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
@@ -231,7 +189,7 @@ class SCEvmForgerDelegation(SidechainTestFramework):
 
         # we have a total of 5 stake ids, the genesis creation and the 4 txes just forged
         stakeList = sc_node_1.transaction_allForgingStakes()['result']['stakes']
-        #pprint.pprint(stakeList)
+        # pprint.pprint(stakeList)
         assert_equal(5, len(stakeList))
 
         # take amounts of forger block signers
@@ -243,7 +201,7 @@ class SCEvmForgerDelegation(SidechainTestFramework):
         stake_gen_to_1 = genStakeAmount
 
         # delegation made by SC1/2/3 to SC2 (total of 143 zen)
-        stake_123_to_2 = convertZenToZennies(forgerStake12_amount+forgerStake22_amount+forgerStake32_amount)
+        stake_123_to_2 = convertZenToZennies(forgerStake12_amount + forgerStake22_amount + forgerStake32_amount)
 
         # delegation made by SC1 to SC3 (total of 4 zen)
         stake_1_to_3 = convertZenToZennies(forgerStake13_amount)

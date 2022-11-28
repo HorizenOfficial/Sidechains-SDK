@@ -1,6 +1,7 @@
 package com.horizen.account.receipt
 
 
+import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.evm.TrieHasher
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
@@ -10,14 +11,11 @@ import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.utils.Numeric
-import scorex.crypto.hash.Keccak256
-
 import java.math.BigInteger
 import java.util
 import java.util.Map.entry
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 
 class EthereumReceiptTest
@@ -33,7 +31,7 @@ class EthereumReceiptTest
 
   @Test
   def receiptSimpleSerDeser(): Unit = {
-    val receipt: EthereumReceipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id)
+    val receipt: EthereumReceipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal())
     assertEquals(receipt.contractAddress.length, Address.LENGTH)
     val r1: String = receipt.toString
     //println(r1)
@@ -53,7 +51,7 @@ class EthereumReceiptTest
 
   @Test
   def receiptSimpleSerDeserWithoutContractAddress(): Unit = {
-    val receipt: EthereumReceipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id, contractAddressPresence = false)
+    val receipt: EthereumReceipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal(), contractAddressPresence = false)
     assertEquals(receipt.contractAddress.length, 0)
     val r1: String = receipt.toString
     //println(r1)
@@ -71,7 +69,7 @@ class EthereumReceiptTest
   }
 
   @Test def receiptSimpleEncodeDecodeType0Test(): Unit = {
-    val receipt = createTestEthereumReceipt(ReceiptTxType.LegacyTxType.id)
+    val receipt = createTestEthereumReceipt(EthereumTransactionType.LegacyTxType.ordinal)
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(receipt.consensusDataReceipt)
     //println(BytesUtils.toHexString(encodedReceipt))
     // read what you write
@@ -83,7 +81,7 @@ class EthereumReceiptTest
 
 
   @Test def receiptSimpleEncodeDecodeType1Test(): Unit = {
-    val receipt = createTestEthereumReceipt(ReceiptTxType.AccessListTxType.id)
+    val receipt = createTestEthereumReceipt(EthereumTransactionType.AccessListTxType.ordinal)
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(receipt.consensusDataReceipt)
     //println(BytesUtils.toHexString(encodedReceipt))
     // read what you write
@@ -94,7 +92,7 @@ class EthereumReceiptTest
   }
 
   @Test def receiptSimpleEncodeDecodeType2Test(): Unit = {
-    val receipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id)
+    val receipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal)
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(receipt.consensusDataReceipt)
     //println(BytesUtils.toHexString(encodedReceipt))
     // read what you write
@@ -109,7 +107,7 @@ class EthereumReceiptTest
     val dataBytes = BytesUtils.fromHexString(dataStrType0)
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(dataBytes)
     //println(decodedReceipt)
-    assertEquals(decodedReceipt.getTxType, ReceiptTxType.LegacyTxType)
+    assertEquals(decodedReceipt.getTxType, EthereumTransactionType.LegacyTxType)
     // encode and check we are the same as the original
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(decodedReceipt)
     //println(BytesUtils.toHexString(encodedReceipt))
@@ -121,7 +119,7 @@ class EthereumReceiptTest
     val dataBytes = BytesUtils.fromHexString(dataStrType1)
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(dataBytes)
     //println(decodedReceipt)
-    assertEquals(decodedReceipt.getTxType, ReceiptTxType.AccessListTxType)
+    assertEquals(decodedReceipt.getTxType, EthereumTransactionType.AccessListTxType)
     // encode and check we are the same as the original
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(decodedReceipt)
     //println(BytesUtils.toHexString(encodedReceipt))
@@ -133,7 +131,7 @@ class EthereumReceiptTest
     val dataBytes = BytesUtils.fromHexString(dataStrType2)
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(dataBytes)
     //println(decodedReceipt)
-    assertEquals(decodedReceipt.getTxType, ReceiptTxType.DynamicFeeTxType)
+    assertEquals(decodedReceipt.getTxType, EthereumTransactionType.DynamicFeeTxType)
     // encode and check we are the same as the original
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(decodedReceipt)
     //println(BytesUtils.toHexString(encodedReceipt))

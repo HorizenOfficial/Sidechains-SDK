@@ -3,18 +3,14 @@ import json
 import logging
 from decimal import Decimal
 
-
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_block, \
-    EVM_APP_BINARY, connect_sc_nodes, AccountModelBlockVersion, disconnect_sc_nodes_bi, sync_sc_blocks, assert_equal, \
-    assert_true, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
-from httpCalls.transaction.allTransactions import allTransactions
 from SidechainTestFramework.account.utils import convertZenToZennies
-from test_framework.util import start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
+from SidechainTestFramework.scutil import generate_next_block, \
+    connect_sc_nodes, disconnect_sc_nodes_bi, sync_sc_blocks, assert_equal, \
+    assert_true
+from httpCalls.transaction.allTransactions import allTransactions
+from test_framework.util import forward_transfer_to_sidechain, fail
 
 """
 Check Mem Pool is correctly updated after:
@@ -42,43 +38,10 @@ Test:
 """
 
 
-class SCEvmMempool(SidechainTestFramework):
+class SCEvmMempool(AccountChainSetup):
 
-    sc_nodes_bootstrap_info = None
-    number_of_mc_nodes = 1
-    number_of_sidechain_nodes = 2
-    API_KEY = "Horizen"
-
-    def setup_nodes(self):
-        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
-
-    def sc_setup_network(self, split=False):
-        self.sc_nodes = self.sc_setup_nodes()
-        logging.info("Connecting sc nodes...")
-        connect_sc_nodes(self.sc_nodes[0], 1)
-        self.sc_sync_all()
-
-    def sc_setup_chain(self):
-        mc_node = self.nodes[0]
-        sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key=self.API_KEY
-        )
-        sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key=self.API_KEY
-        )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
-                                         sc_node_1_configuration, sc_node_2_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
-                                                                 blockversion=AccountModelBlockVersion)
-
-    def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              auth_api_key=self.API_KEY,
-                              binary=[EVM_APP_BINARY] * 2)  # , extra_args=[['-agentlib'], []])
-
+    def __init__(self):
+        super().__init__(number_of_sidechain_nodes=2)
 
     def run_test(self):
         # Synchronize mc_node1, mc_node2 and mc_node3, then disconnect them.
@@ -141,18 +104,26 @@ class SCEvmMempool(SidechainTestFramework):
 
         common_tx_list = []
         for i in range(4):
-            common_tx_list.append(createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
-                                          nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1))
-            common_tx_list.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
-                                          nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1))
+            common_tx_list.append(
+                createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
+                                         nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                         maxFeePerGas=900000000, value=1))
+            common_tx_list.append(
+                createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
+                                         nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                         maxFeePerGas=900000000, value=1))
             nonce_addr_1 += 1
             nonce_addr_2 += 1
 
         self.sc_sync_all()
         logging.info("Mempool node 1")
-        logging.info(allTransactions(sc_node_1, False))
+        response = allTransactions(sc_node_1, False)
+        logging.info(response)
+        assert_true(len(response['transactionIds']) == 8)
         logging.info("Mempool node 2")
-        logging.info(allTransactions(sc_node_2, False))
+        response = allTransactions(sc_node_2, False)
+        logging.info(response)
+        assert_true(len(response['transactionIds']) == 8)
 
         # Disconnect SC nodes
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
@@ -160,25 +131,32 @@ class SCEvmMempool(SidechainTestFramework):
         # Create txs on node 1
         for i in range(3):
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
-                                          nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1)
+                                     nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                     maxFeePerGas=900000000, value=1)
             nonce_addr_1 += 1
 
         # Create txs on node 2
         node_2_tx_list = []
         for i in range(5):
-           node_2_tx_list.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
-                                          nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1))
-           nonce_addr_2 += 1
+            node_2_tx_list.append(
+                createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
+                                         nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                         maxFeePerGas=900000000, value=1))
+            nonce_addr_2 += 1
 
         logging.info("Mempool node 1 after disconnection")
-        logging.info(allTransactions(sc_node_1, False))
+        response = allTransactions(sc_node_1, False)
+        logging.info(response)
+        assert_true(len(response['transactionIds']) == 11)
         logging.info("Mempool node 2 after disconnection")
-        logging.info(allTransactions(sc_node_2, False))
+        response = allTransactions(sc_node_2, False)
+        logging.info(response)
+        assert_true(len(response['transactionIds']) == 13)
 
         # Create a block on node 1
         generate_next_block(sc_node_1, "first node")
         response = allTransactions(sc_node_1, False)
-        assert_equal(0, len(response["transactionIds"]), "Wrong number of transactions in node 1 mempool")
+        assert_equal(0, len(response['transactionIds']), "Wrong number of transactions in node 1 mempool")
 
         # Connect SC nodes
         connect_sc_nodes(sc_node_1, 1)
@@ -186,15 +164,19 @@ class SCEvmMempool(SidechainTestFramework):
         sync_sc_blocks(self.sc_nodes)
 
         logging.info("Mempool node 1 after nodes reconnection")
-        logging.info(allTransactions(sc_node_1, False))
+        response = allTransactions(sc_node_1, False)
+        logging.info(response)
+        assert_true(len(response['transactionIds']) == 0)
         logging.info("Mempool node 2 after nodes reconnection")
         response = allTransactions(sc_node_2, False)
         logging.info(response)
+        assert_true(len(response['transactionIds']) == 5)
 
         # Check that node 2 mem pool doesn't contain common txs anymore but still contains its own txs
-        assert_equal(len(node_2_tx_list), len(response["transactionIds"]), "Wrong number of transactions in node 2 mempool")
+        assert_equal(len(node_2_tx_list), len(response['transactionIds']),
+                     "Wrong number of transactions in node 2 mempool")
         for i in range(len(node_2_tx_list)):
-            assert_true(node_2_tx_list[i] in response["transactionIds"])
+            assert_true(node_2_tx_list[i] in response['transactionIds'])
 
         # Create a block on node 2 to reset the mem pool
         generate_next_block(sc_node_2, "second node")
@@ -203,10 +185,14 @@ class SCEvmMempool(SidechainTestFramework):
         # Create new common txs
         common_tx_list = []
         for i in range(4):
-            common_tx_list.append(createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
-                                          nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1))
-            common_tx_list.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
-                                          nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1))
+            common_tx_list.append(
+                createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
+                                         nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                         maxFeePerGas=900000000, value=1))
+            common_tx_list.append(
+                createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
+                                         nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                         maxFeePerGas=900000000, value=1))
             nonce_addr_1 += 1
             nonce_addr_2 += 1
         self.sc_sync_all()
@@ -217,8 +203,10 @@ class SCEvmMempool(SidechainTestFramework):
         # Create txs on node 1
         node_1_tx_list = []
         for i in range(3):
-            node_1_tx_list.append(createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
-                                          nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1))
+            node_1_tx_list.append(
+                createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
+                                         nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                         maxFeePerGas=900000000, value=1))
             nonce_addr_1 += 1
 
         # Create a block on node 1
@@ -226,29 +214,31 @@ class SCEvmMempool(SidechainTestFramework):
 
         # Check that node 1 mem pool is empty
         response = allTransactions(sc_node_1, False)
-        assert_equal(0, len(response["transactionIds"]), "Wrong number of transactions in node 1 mempool")
+        assert_equal(0, len(response['transactionIds']), "Wrong number of transactions in node 1 mempool")
 
         # Create a block on node 2
         node_2_tx_list = []
         for i in range(3):
-            node_2_tx_list.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc2,
-                                          nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1))
+            node_2_tx_list.append(
+                createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc2,
+                                         nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                         maxFeePerGas=900000000, value=1))
             nonce_addr_2 += 1
-
         generate_next_block(sc_node_2, "second node")
 
         # Create additional txs on node 2
         node_2_tx_list_2 = []
         for i in range(5):
-           node_2_tx_list_2.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
-                                          nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1))
-           nonce_addr_2 += 1
+            node_2_tx_list_2.append(
+                createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
+                                         nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                         maxFeePerGas=900000000, value=1))
+            nonce_addr_2 += 1
 
         # Create another block on node 2
-
         generate_next_block(sc_node_2, "second node")
 
-       # Connect SC nodes
+        # Connect SC nodes
         connect_sc_nodes(sc_node_1, 1)
         # Sync SC nodes
         sync_sc_blocks(self.sc_nodes)
@@ -261,9 +251,10 @@ class SCEvmMempool(SidechainTestFramework):
 
         # Check that node 1 mem pool contains only its own txs
         response = allTransactions(sc_node_1, False)
-        assert_equal(len(node_1_tx_list), len(response["transactionIds"]), "Wrong number of transactions in node 1 mempool")
+        assert_equal(len(node_1_tx_list), len(response['transactionIds']),
+                     "Wrong number of transactions in node 1 mempool")
         for i in range(len(node_1_tx_list)):
-            assert_true(node_1_tx_list[i] in response["transactionIds"])
+            assert_true(node_1_tx_list[i] in response['transactionIds'])
 
 
 if __name__ == "__main__":

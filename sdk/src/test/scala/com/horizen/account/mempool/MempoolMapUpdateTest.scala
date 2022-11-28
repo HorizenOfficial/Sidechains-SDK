@@ -330,11 +330,10 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
         listOfTxs += createEIP1559Transaction(
           value,
           nonce = BigInteger.valueOf(nonceTx + 1),
-          pairOpt = Some(keys),
-          to = toAddr
+          pairOpt = Some(keys)
         )
       } else
-        listOfTxs += createEIP1559Transaction(value, nonce = currentNonce, pairOpt = Some(keys), to = toAddr)
+        listOfTxs += createEIP1559Transaction(value, nonce = currentNonce, pairOpt = Some(keys))
     })
     listOfTxs
   }

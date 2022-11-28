@@ -1,7 +1,6 @@
 package com.horizen.account.state;
 
 import com.horizen.account.block.AccountBlockHeader;
-import com.horizen.evm.interop.EvmContext;
 import com.horizen.evm.interop.EvmResult;
 import com.horizen.evm.interop.TraceParams;
 
@@ -15,17 +14,19 @@ public class BlockContext {
     public final int blockNumber;
     public final int consensusEpochNumber;
     public final int withdrawalEpochNumber;
+    public final long chainID;
     private TraceParams traceParams;
     private EvmResult evmResult;
 
     public BlockContext(
-            byte[] forgerAddress,
-            long timestamp,
-            BigInteger baseFee,
-            long blockGasLimit,
-            int blockNumber,
-            int consensusEpochNumber,
-            int withdrawalEpochNumber
+        byte[] forgerAddress,
+        long timestamp,
+        BigInteger baseFee,
+        long blockGasLimit,
+        int blockNumber,
+        int consensusEpochNumber,
+        int withdrawalEpochNumber,
+        long chainID
     ) {
         this.forgerAddress = forgerAddress;
         this.timestamp = timestamp;
@@ -34,22 +35,25 @@ public class BlockContext {
         this.blockNumber = blockNumber;
         this.consensusEpochNumber = consensusEpochNumber;
         this.withdrawalEpochNumber = withdrawalEpochNumber;
+        this.chainID = chainID;
     }
 
     public BlockContext(
-            AccountBlockHeader blockHeader,
-            int blockNumber,
-            int consensusEpochNumber,
-            int withdrawalEpochNumber
+        AccountBlockHeader blockHeader,
+        int blockNumber,
+        int consensusEpochNumber,
+        int withdrawalEpochNumber,
+        long chainID
     ) {
         this(
-                blockHeader.forgerAddress().address(),
-                blockHeader.timestamp(),
-                blockHeader.baseFee(),
-                blockHeader.gasLimit(),
-                blockNumber,
-                consensusEpochNumber,
-                withdrawalEpochNumber
+            blockHeader.forgerAddress().address(),
+            blockHeader.timestamp(),
+            blockHeader.baseFee(),
+            blockHeader.gasLimit(),
+            blockNumber,
+            consensusEpochNumber,
+            withdrawalEpochNumber,
+            chainID
         );
     }
 
@@ -68,5 +72,4 @@ public class BlockContext {
     public void setEvmResult(EvmResult evmResult) {
         this.evmResult = evmResult;
     }
-
 }
