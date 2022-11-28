@@ -1,6 +1,7 @@
 package com.horizen.account.state;
 
 import com.horizen.utils.BytesUtils;
+import scala.Option;
 import scala.collection.JavaConverters;
 
 import com.horizen.account.block.AccountBlock;
@@ -30,7 +31,7 @@ public class AccountBlockTest implements ReceiptFixture {
             var numLogs = 3;
             var contractAddressPresence = false;
 
-            return createTestEthereumReceipt(txType, numLogs, contractAddressPresence, BytesUtils.fromHexString(d[0]), BytesUtils.fromHexString(d[1])).consensusDataReceipt();
+            return createTestEthereumReceipt(txType, numLogs, contractAddressPresence, Option.apply(BytesUtils.fromHexString(d[0])), BytesUtils.fromHexString(d[1])).consensusDataReceipt();
         }).collect(Collectors.toList());
 
         var precalculatedRoot = BytesUtils.fromHexString("895fd6302535b35fc2f4c903c4ea919e367587b72c98ee8a976af069d1794ce9");

@@ -12,10 +12,16 @@ import scala.util.Random
 
 
 trait ReceiptFixture {
+    def getRandomHash(): Array[Byte] = {
+      val hashBuffer = new Array[Byte](Hash.LENGTH)
+      Random.nextBytes(hashBuffer)
+
+      hashBuffer
+    }
 
     def createTestEvmLog(addressBytes: Option[Array[Byte]]): EvmLog = {
       // random address and fixed topics/data
-      val addressBytesTemp: Array[Byte] = addressBytes.getOrElse(Random.nextBytes(new Array[Byte](Address.LENGTH)))
+      val addressBytesTemp: Array[Byte] = addressBytes.getOrElse(getRandomHash())
       val address = Address.fromBytes(addressBytesTemp)
 
       val topics = new Array[Hash](4)
@@ -28,15 +34,8 @@ trait ReceiptFixture {
       new EvmLog(address, topics, data)
     }
 
-  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Array[Byte] = null, address: Array[Byte] = null): EthereumReceipt = {
-    var txHashTemp: Array[Byte] = new Array[Byte](32)
-
-    if(txHash != null) {
-      txHashTemp = txHash
-    }
-    else {
-      Random.nextBytes(txHashTemp)
-    }
+  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]], address: Array[Byte] = null): EthereumReceipt = {
+    val txHashTemp: Array[Byte] = txHash.getOrElse(getRandomHash())
 
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
