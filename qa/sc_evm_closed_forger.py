@@ -7,11 +7,12 @@ from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
+from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToWei
 from SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration
-from SidechainTestFramework.scutil import (
-    convertZenToWei, generate_next_block, generate_secrets, generate_vrf_secrets,
-    get_account_balance, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
-)
+from SidechainTestFramework.scutil import (generate_next_block, generate_secrets, generate_vrf_secrets,
+                                           SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
+                                           )
 from test_framework.util import (
     assert_equal, assert_false, assert_true, )
 
@@ -79,7 +80,7 @@ class SCEvmClosedForgerList(AccountChainSetup):
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
-        initial_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        initial_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(ft_amount_in_wei, initial_balance)
 
         # generate publick keys not contained in the closed forger list

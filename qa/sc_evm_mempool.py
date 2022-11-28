@@ -6,9 +6,10 @@ from decimal import Decimal
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.utils import convertZenToZennies
 from SidechainTestFramework.scutil import generate_next_block, \
     connect_sc_nodes, disconnect_sc_nodes_bi, sync_sc_blocks, assert_equal, \
-    assert_true, convertZenToZennies
+    assert_true
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import forward_transfer_to_sidechain, fail
 

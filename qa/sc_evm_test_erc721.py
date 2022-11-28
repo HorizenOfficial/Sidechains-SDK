@@ -7,8 +7,8 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
 from SidechainTestFramework.account.ac_utils import format_evm, format_eoa, contract_function_static_call, \
     contract_function_call, generate_block_and_get_tx_receipt, deploy_smart_contract, CallMethod
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, computeForgedTxFee, \
-    convertZenToZennies
+from SidechainTestFramework.account.utils import convertZenToZennies, computeForgedTxFee
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
 from test_framework.util import assert_equal, assert_true
 
 """

@@ -137,7 +137,7 @@ if [ ! -z "$EVM_ONLY" ] && [ "${EVM_ONLY}" = "true" ]; then
   testScripts+=( "${testScriptsEvm[@]}" )
 else
   testScripts+=( "${testScriptsEvm[@]}" )
-  #testScripts+=( "${testScriptsUtxo[@]}")
+  testScripts+=( "${testScriptsUtxo[@]}")
 fi
 
 # include extended tests

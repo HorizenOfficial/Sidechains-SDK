@@ -10,9 +10,9 @@ from SidechainTestFramework.account.ac_utils import generate_block_and_get_tx_re
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.scutil import (
-    computeForgedTxFee, convertZenToZennies, convertZenniesToWei, generate_next_block, convertWeiToZen,
-)
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, computeForgedTxFee, \
+    convertWeiToZen
+from SidechainTestFramework.scutil import generate_next_block
 from test_framework.util import (
     assert_equal, assert_true, fail, )
 
@@ -45,7 +45,7 @@ Test:
 
 class SCEvmBWTCornerCases(AccountChainSetup):
     def __init__(self):
-        super().__init__()
+        super().__init__(withdrawalEpochLength=10)
 
     def run_test(self):
         time.sleep(0.1)
@@ -95,7 +95,8 @@ class SCEvmBWTCornerCases(AccountChainSetup):
         assert_equal(initial_balance_in_wei, new_balance, "wrong balance")
 
         # *************** Test 2: Withdrawal amount under dust threshold *****************
-        # Try a withdrawal request with amount under dust threshold (54 zennies), wr should not be created but the tx should be created
+        # Try a withdrawal request
+        # with amount under dust threshold (54 zennies), wr should not be created but the tx should be created
         bt_amount_in_zennies = 53
         res = withdrawcoins(sc_node, mc_address1, bt_amount_in_zennies)
         tx_id = add_0x_prefix(res["result"]["transactionId"])

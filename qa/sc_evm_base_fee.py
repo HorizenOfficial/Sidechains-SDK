@@ -6,8 +6,8 @@ from decimal import Decimal
 from eth_utils import remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenToZennies
+from SidechainTestFramework.account.utils import convertZenToZennies
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_account_proposition
 from test_framework.util import assert_equal, assert_true
 
 """

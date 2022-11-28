@@ -566,10 +566,6 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     """
     # Will we have  extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node" + str(i))
-    lib_separator = ":"
-
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
     if binary is None:
         binary = SIMPLE_APP_BINARY
     #        else if platform.system() == 'Linux':
@@ -1079,7 +1075,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
         if ("ForgerStakes list can't be empty" in forge_result["error"]["description"]):
             raise AssertionError("Empty forger stakes list")
         if ("top quality certificate" in forge_result["error"]["description"]):
-            raise AssertionError("Inconsistent top quality ceritificate")
+            raise AssertionError("Inconsistent top quality certificate")
         if ("the sidechain has ceased" in forge_result["error"]["description"]):
             raise AssertionError("Sidechain has ceased")
         if ("semantically invalid" in forge_result["error"]["description"]):
@@ -1223,129 +1219,6 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
     assert_equal(True, cert in mc_node.getrawmempool())
     return cert
 
-# 10 ^ 10
-ZENNY_TO_WEI_MULTIPLIER = 10 ** 10
-
-# 10^8
-from test_framework.util import COIN
-
-
-def convertZenToZennies(valueInZen):
-    return int(round(valueInZen * COIN))
-
-
-def convertZenniesToWei(valueInZennies):
-    return int(round(ZENNY_TO_WEI_MULTIPLIER * valueInZennies))
-
-
-def convertZenToWei(valueInZen):
-    return convertZenniesToWei(convertZenToZennies(valueInZen))
-
-
-def convertWeiToZen(valueInWei):
-    valueInZen = (valueInWei / ZENNY_TO_WEI_MULTIPLIER) / COIN
-    if valueInZen < 1 / COIN:
-        return 0
-    else:
-        return valueInZen
-
-
-def convertZenniesToZen(valueInZennies):
-    return (valueInZennies / COIN)
-
-
-# Account model: smart contract address for handling forger stakes
-# (see definition at SDK src code: WithdrawalMsgProcessor.scala, ForgerStakeMsgProcessor.scala)
-WithdrawalReqSmartContractAddress = "0000000000000000000011111111111111111111"
-ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
-
-# Block gas limit
-BLOCK_GAS_LIMIT = 30000000
-
-def get_account_balance(sc_node, address):
-    return sc_node.wallet_getBalance(
-        json.dumps({"address": str(address)}))["result"]["balance"]
-
-def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
-    transactionJson = sc_node.rpc_eth_getTransactionByHash(tx_hash)['result']
-    if (transactionJson is None):
-        raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
-    if tracing_on:
-        logging.info("tx:")
-        logging.info(transactionJson)
-
-    receiptJson = sc_node.rpc_eth_getTransactionReceipt(tx_hash)['result']
-    if (receiptJson is None):
-        raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
-    if tracing_on:
-        logging.info("receipt:")
-        logging.info(receiptJson)
-
-    return int(receiptJson['gasUsed'], 16)
-
-def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
-    # make sure the transaction hash prefixed with 0x
-    tx_hash = add_0x_prefix(tx_hash)
-    resp = sc_node.rpc_eth_getTransactionByHash(tx_hash)
-    if not 'result' in resp:
-        raise Exception('Rpc eth_getTransactionByHash cmd failed: {}'.format(json.dumps(resp, indent=2)))
-
-    transactionJson = resp['result']
-    if (transactionJson is None):
-        raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
-    if tracing_on:
-        logging.info("tx:")
-        logging.info(transactionJson)
-
-    resp = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
-    if not 'result' in resp:
-        raise Exception('Rpc eth_getTransactionReceipt cmd failed:{}'.format(json.dumps(resp, indent=2)))
-
-    receiptJson = resp['result']
-    if (receiptJson is None):
-        raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
-    if tracing_on:
-        logging.info("receipt:")
-        logging.info(receiptJson)
-
-    gasUsed = int(receiptJson['gasUsed'], 16)
-
-    block_hash = receiptJson['blockHash']
-    resp = sc_node.rpc_eth_getBlockByHash(block_hash, False)
-    if not 'result' in resp:
-        raise Exception('Rpc eth_getBlockByHash cmd failed:{}'.format(json.dumps(resp, indent=2)))
-
-    blockJson = resp['result']
-    if (blockJson is None):
-        raise Exception('Unexpected error: block not found {}'.format(block_hash))
-    if tracing_on:
-        logging.info("block:")
-        logging.info(blockJson)
-
-    baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
-
-    if not 'gasPrice' in transactionJson:
-      # eip1559 transaction
-      forgerTipPerGas = int(transactionJson['maxPriorityFeePerGas'], 16)
-      maxFeePerGas = int(transactionJson['maxFeePerGas'], 16)
-
-      # if the Base Fee plus the Max Priority Fee exceeds the Max Fee, the Max Priority Fee will be reduced
-      # in order to maintain the upper bound of the Max Fee.
-      if baseFeePerGas+forgerTipPerGas > maxFeePerGas:
-          forgerTipPerGas = maxFeePerGas - baseFeePerGas
-    else:
-      # legacy transaction
-      gasPrice = int(transactionJson['gasPrice'], 16)
-      assert_true(gasPrice >= baseFeePerGas)
-      forgerTipPerGas = gasPrice - baseFeePerGas
-
-    totalTxFee = (baseFeePerGas+forgerTipPerGas)*gasUsed
-    forgersPoolFee = baseFeePerGas*gasUsed
-    forgerTip = forgerTipPerGas*gasUsed
-    if tracing_on:
-        logging.info("totalFee = {} (forgersPoolFee = {}, forgerTip = {}".format(totalTxFee, forgersPoolFee, forgerTip))
-
-    return totalTxFee, forgersPoolFee, forgerTip
 
 def get_resources_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'resources'))
