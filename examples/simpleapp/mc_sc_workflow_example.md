@@ -286,6 +286,9 @@ genesisinfo -f "~/dev/genesis_info_data.txt"
 ```
 where `genesis_info_data.txt` file contains proper json data `{"info":...}`.
 
+Note: For non ceasing sidechains forth parameter must be specified:
+
+`"virtualWithdrawalEpochLength": 100` is artificial withdrawal epoch length used only on the sidechain side
 
 Output example:
 ```
