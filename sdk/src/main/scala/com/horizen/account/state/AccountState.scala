@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.utils.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.{EthereumReceipt, LogsBloom}
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
@@ -180,9 +180,8 @@ class AccountState(
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
       evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
 
-      val logsBloom = LogsBloom.fromEthereumReceipt(receiptList)
-
-      require(logsBloom.equals(mod.header.logsBloom), "Provided logs bloom doesn't match the calculated one")
+      // check logs bloom consistency with block header
+      mod.verifyLogsBloomConsistency(receiptList)
 
       // check stateRoot and receiptRoot against block header
       mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
@@ -273,23 +272,6 @@ class AccountState(
           )
         }
     }
-
-    // TODO: no CSW support expected for the Eth sidechain
-    /*if(topQualityCertificate.fieldElementCertificateFields.size != 2)
-      throw new IllegalArgumentException(s"Top quality certificate should contain exactly 2 custom fields.")
-
-    utxoMerkleTreeRoot(certReferencedEpochNumber) match {
-      case Some(expectedMerkleTreeRoot) =>
-        val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
-          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes(params.sidechainCreationVersion),
-          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes(params.sidechainCreationVersion)
-        )
-        if(!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
-          throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
-            s"data is different than expected. Node's active chain is the fork from MC perspective.")
-      case None =>
-        throw new IllegalArgumentException(s"There is no utxo merkle tree root stored for the referenced epoch $certReferencedEpochNumber.")
-    }*/
   }
 
   // Note: Equal to SidechainState.isSwitchingConsensusEpoch
