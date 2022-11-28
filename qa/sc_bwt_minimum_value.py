@@ -209,12 +209,12 @@ class SCBwtMinValue(SidechainTestFramework):
 
         # Checking createCoreTransaction
         mc_address3 = self.nodes[0].getnewaddress()
-        forger_box_id = sc_node.wallet_allBoxes()["result"]["boxes"][0]["id"]
+        forger_box = sc_node.wallet_allBoxes()["result"]["boxes"][0]
 
         # Try to withdraw coins from SC to MC: amount below the dust threshold
         core_transaction_request = {
-            "transactionInputs": [{"boxId": forger_box_id}],
-            "regularOutputs": [],
+            "transactionInputs": [{"boxId": forger_box["id"]}],
+            "regularOutputs": [{"publicKey": sc_address, "value": forger_box["value"] - 100}],
             "withdrawalRequests": [{"mainchainAddress": mc_address3,
                                     "value": sc_bt_amount0}],
             "forgerOutputs": []
@@ -228,8 +228,8 @@ class SCBwtMinValue(SidechainTestFramework):
 
         sc_bt_amount3 = 54  # in Satoshi
         core_transaction_request = {
-            "transactionInputs": [{"boxId": forger_box_id}],
-            "regularOutputs": [],
+            "transactionInputs": [{"boxId": forger_box["id"]}],
+            "regularOutputs": [{"publicKey": sc_address, "value": forger_box["value"] - 100}],
             "withdrawalRequests": [{"mainchainAddress": mc_address3,
                                     "value": sc_bt_amount3}],
             "forgerOutputs": []
