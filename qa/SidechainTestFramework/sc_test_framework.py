@@ -10,7 +10,7 @@ from test_framework.util import check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, LEVEL_INFO
 import os
 import tempfile
 import traceback
@@ -141,7 +141,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="timeout in seconds for rest API execution, might be useful when debugging")
         parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_DEBUG, action="store",
                           help="log4j log level for application log file")
-        parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
+        parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_INFO, action="store",
                           help="log4j log level for application console")
 
         self.add_options(parser)
