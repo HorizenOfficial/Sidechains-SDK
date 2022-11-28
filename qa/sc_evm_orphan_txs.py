@@ -5,7 +5,8 @@ from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
-from SidechainTestFramework.scutil import generate_next_block, convertZenToZennies
+from SidechainTestFramework.account.utils import convertZenToZennies
+from SidechainTestFramework.scutil import generate_next_block
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, fail, assert_false
 

@@ -5,9 +5,10 @@ from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import eoa_transaction
+from SidechainTestFramework.account.utils import convertZenToWei
 from SidechainTestFramework.scutil import (
     assert_true,
-    convertZenToWei)
+)
 
 """
 Check that sending an invalid transaction to the RPC method eth_sendRawTransaction returns an error
@@ -30,7 +31,7 @@ class SCEvmRPCInvalidTx(AccountChainSetup):
 
         # test that sending an invalid transaction to eth_sendRawTransaction fails with an error
         # the tx is semantically invalid because the supplied gas limit is below the required intrinsic gas
-        exception_occured = False
+        exception_occurred = False
         try:
             res = eoa_transaction(
                 sc_node_1, gas=20000,
@@ -40,8 +41,8 @@ class SCEvmRPCInvalidTx(AccountChainSetup):
         except RuntimeError as err:
             logging.debug("invalid transaction was rejected with: {}".format(str(err)))
             if re.search("gas limit .* is below intrinsic gas", str(err)):
-                exception_occured = True
-        assert_true(exception_occured, "invalid transaction should be rejected by RPC api")
+                exception_occurred = True
+        assert_true(exception_occurred, "invalid transaction should be rejected by RPC api")
 
 
 if __name__ == "__main__":

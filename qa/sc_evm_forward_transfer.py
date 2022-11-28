@@ -5,9 +5,9 @@ import logging
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_eoa
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, convertZenToZennies, \
-    convertZenniesToWei
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
 from httpCalls.transaction.allTransactions import allTransactions
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei
 from test_framework.util import assert_equal, forward_transfer_to_sidechain
 
 """

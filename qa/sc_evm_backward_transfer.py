@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import json
 import logging
 import time
 
@@ -12,12 +11,14 @@ from SidechainTestFramework.account.ac_utils import generate_block_and_get_tx_re
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import (computeForgedTxFee,
+                                                  convertZenToZennies, convertZenniesToWei)
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence, check_mcreferencedata_presence
 from SidechainTestFramework.scutil import (
-    computeForgedTxFee, convertZenToZennies,
-    convertZenniesToWei, generate_next_block, generate_next_blocks, )
+    generate_next_block, generate_next_blocks
+)
 from test_framework.util import (
-    assert_equal, assert_false, fail, hex_str_to_bytes,
+    assert_equal, assert_false, hex_str_to_bytes,
 )
 
 """
