@@ -6,14 +6,12 @@ from decimal import Decimal
 from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.scutil import (
-    FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, convertWeiToZen, convertZenToWei,
-    convertZenToZennies, generate_next_block)
+from SidechainTestFramework.scutil import generate_next_block
 
 from httpCalls.transaction.allTransactions import allTransactions
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei, convertWeiToZen
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei, convertWeiToZen, \
+    FORGER_STAKE_SMART_CONTRACT_ADDRESS, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 from test_framework.util import (
     assert_equal, assert_true, fail, )
 

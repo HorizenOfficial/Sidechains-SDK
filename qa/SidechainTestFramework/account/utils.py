@@ -32,10 +32,12 @@ def convertZenniesToZen(valueInZennies):
     return valueInZennies / COIN
 
 
-# Account model: smart contract address for handling forger stakes
-# (see definition at SDK src code: WithdrawalMsgProcessor.scala, ForgerStakeMsgProcessor.scala)
-WithdrawalReqSmartContractAddress = "0000000000000000000011111111111111111111"
-ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
+# Account model constants: (see definition at SDK src code: WellknownAddresses.scala)
+#   smart contract address for handling forger stakes
+WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS = "0000000000000000000011111111111111111111"
+FORGER_STAKE_SMART_CONTRACT_ADDRESS = "0000000000000000000022222222222222222222"
+#   address used for burning coins
+DEAD_ADDRESS = "000000000000000000000000000000000000dead"
 
 # Block gas limit
 BLOCK_GAS_LIMIT = 30000000

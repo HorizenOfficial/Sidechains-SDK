@@ -35,6 +35,8 @@ You can run all tests by running the following command from the qa directory:
 ./run_sc_tests.sh
 ```
 
+You can use _-evm_only_ or _-utxo_only_ options for running only a subset of the tests.
+
 The log output for this test run can be found in the qa directory with the name "sc_test.log".
 
 It is possible to run an individual test using command:

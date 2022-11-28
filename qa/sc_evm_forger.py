@@ -12,13 +12,10 @@ from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_eoa, format_evm
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToWei, \
-    convertZenToZennies, convertZenniesToWei, computeForgedTxFee, convertWeiToZen
-from SidechainTestFramework.scutil import (
-    FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, computeForgedTxFee, convertWeiToZen,
-    convertZenToWei, convertZenToZennies, convertZenniesToWei, generate_next_block, SLOTS_IN_EPOCH,
-    EVM_APP_SLOT_TIME,
-)
+    convertZenToZennies, convertZenniesToWei, computeForgedTxFee, convertWeiToZen, FORGER_STAKE_SMART_CONTRACT_ADDRESS, \
+    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.scutil import  generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
+
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, hex_str_to_bytes,
