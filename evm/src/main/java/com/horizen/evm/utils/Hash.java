@@ -23,6 +23,9 @@ public class Hash {
     }
 
     public static Hash fromBytes(byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
         return new Hash(bytes);
     }
 
