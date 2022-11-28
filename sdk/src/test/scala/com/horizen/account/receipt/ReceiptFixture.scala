@@ -13,16 +13,9 @@ import scala.util.Random
 
 trait ReceiptFixture {
 
-    def createTestEvmLog(addressBytes: Array[Byte] = null): EvmLog = {
+    def createTestEvmLog(addressBytes: Option[Array[Byte]]): EvmLog = {
       // random address and fixed topics/data
-      var addressBytesTemp = new Array[Byte](Address.LENGTH)
-      if(addressBytes == null) {
-        Random.nextBytes(addressBytesTemp)
-      }
-      else {
-        addressBytesTemp = addressBytes
-      }
-
+      val addressBytesTemp: Array[Byte] = addressBytes.getOrElse(Random.nextBytes(new Array[Byte](Address.LENGTH)))
       val address = Address.fromBytes(addressBytesTemp)
 
       val topics = new Array[Hash](4)
@@ -47,7 +40,7 @@ trait ReceiptFixture {
 
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
-      logs += createTestEvmLog(address)
+      logs += createTestEvmLog(Some(address))
 
     val contractAddress = if (contractAddressPresence) {
       BytesUtils.fromHexString("1122334455667788990011223344556677889900")
@@ -68,7 +61,7 @@ trait ReceiptFixture {
     Random.nextBytes(txHash)
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
-      logs += createTestEvmLog(address)
+      logs += createTestEvmLog(Some(address))
     new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs)
   }
 

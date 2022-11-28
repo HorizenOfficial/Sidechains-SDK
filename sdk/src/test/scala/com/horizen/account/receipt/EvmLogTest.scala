@@ -14,7 +14,7 @@ class EvmLogTest
 {
 
   @Test def receiptSimpleEncodeDecodeTest(): Unit = {
-    val evmLog = createTestEvmLog(null)
+    val evmLog = createTestEvmLog(None)
     //println(ethereumLog)
     val encodedLog = EvmLogUtils.rlpEncode(evmLog)
     //println(BytesUtils.toHexString(encodedLog))
