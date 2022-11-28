@@ -35,6 +35,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val nPowMaxAdjustUp: Int = 16 // 16% adjustment up
     override val nPowTargetSpacing: Int = 150 // 2.5 * 60
     override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
+    override val masterPublicKeys: Seq[SchnorrProposition] = Seq()
     override val signersThreshold: Int = 0
     override val certProvingKeyFilePath: String = ""
     override val certVerificationKeyFilePath: String = ""

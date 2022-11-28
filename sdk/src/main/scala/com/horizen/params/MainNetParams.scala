@@ -21,6 +21,7 @@ case class MainNetParams(
                           override val consensusSecondsInSlot: Int = 120,
                           override val consensusSlotsInEpoch: Int = 720,
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
+                          override val masterPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val signersThreshold: Int = 0,
                           override val certProvingKeyFilePath: String = "",
                           override val certVerificationKeyFilePath: String = "",

@@ -32,6 +32,7 @@ case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               maxPks: Long,
                                               certProvingKeyFilePath: String,
                                               certVerificationKeyFilePath: String,
+                                              typeOfCircuitNumber: Int,
                                               certificateSigningIsEnabled: Boolean = true,
                                               certificateAutomaticFeeComputation: Boolean = true,
                                               certificateFee: String = "0.0001"

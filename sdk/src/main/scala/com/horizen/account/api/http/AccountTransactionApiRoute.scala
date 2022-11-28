@@ -19,10 +19,14 @@ import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainNodeErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.proof.SchnorrSignatureSerializer
+import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, SchnorrPropositionSerializer, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
@@ -38,7 +42,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                                       sidechainNodeViewHolderRef: ActorRef,
                                       sidechainTransactionActorRef: ActorRef,
                                       companion: SidechainAccountTransactionsCompanion,
-                                      params: NetworkParams)
+                                      params: NetworkParams,
+                                      circuitType: Int)
                                      (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
   extends TransactionBaseApiRoute[
     SidechainTypes#SCAT,
@@ -544,6 +549,58 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def createKeyRotationTransaction: Route = (post & path("createKeyRotationTransaction")) {
+    withAuth {
+      entity(as[ReqCreateKeyRotationTransaction]) { body =>
+        TypeOfCircuit(circuitType) match {
+          case NaiveThresholdSignatureCircuit =>
+            ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
+          case NaiveThresholdSignatureCircuitWithKeyRotation =>
+            applyOnNodeView { sidechainNodeView =>
+              val to = BytesUtils.toHexString(CertificateKeyRotationMsgProcessor.CertificateKeyRotationContractAddress)
+              checkKeyRotationProofValidity(body)
+              val data = encodeSubmitKeyRotationRequestCmd(body)
+              val gasInfo = body.gasInfo
+
+              // default gas related params
+              val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+              var maxPriorityFeePerGas = BigInteger.valueOf(120)
+              var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+              var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+
+              if (gasInfo.isDefined) {
+                maxFeePerGas = gasInfo.get.maxFeePerGas
+                maxPriorityFeePerGas = gasInfo.get.maxPriorityFeePerGas
+                gasLimit = gasInfo.get.gasLimit
+              }
+
+              val txCost = maxFeePerGas.multiply(gasLimit)
+              val secret = getFittingSecret(sidechainNodeView, None, txCost)
+              secret match {
+                case Some(secret) =>
+
+                  val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                  val tmpTx: EthereumTransaction = new EthereumTransaction(
+                    params.chainId,
+                    EthereumTransactionUtils.getToAddressFromString(to),
+                    nonce,
+                    gasLimit,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas,
+                    BigInteger.ZERO,
+                    EthereumTransactionUtils.getDataFromString(data),
+                    null
+                  )
+                  validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                case None =>
+                  ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+              }
+            }
+        }
+      }
+    }
+  }
+
 
   def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
@@ -573,8 +630,22 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       )
   }
 
-}
+  private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction): Unit = {
+    val index = body.keyIndex
+    val keyType = body.keyType
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newValueOfKey))
+    val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature))
+    if (index < 0 || index >= params.signersPublicKeys.length)
+      throw new IllegalArgumentException(s"Key rotation proof - key index out for range: $index")
 
+    if (keyType < 0 || keyType >= KeyRotationProofType.maxId)
+      throw new IllegalArgumentException("Key type enumeration value should be valid!")
+
+    if (!newKeySignature.isValid(newKey, newKey.bytes()))
+      throw new IllegalArgumentException(s"Key rotation proof - self signature is invalid: $index")
+  }
+
+}
 
 object AccountTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
@@ -629,6 +700,25 @@ object AccountTransactionRestScheme {
     require(epochNum >= 0, "Epoch number must be positive")
   }
 
+  def encodeSubmitKeyRotationRequestCmd(request: ReqCreateKeyRotationTransaction): String = {
+    val keyType = KeyRotationProofType(request.keyType)
+    val index = request.keyIndex
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newValueOfKey))
+    val signingSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.signingKeySignature))
+    val masterSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.masterKeySignature))
+    val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newKeySignature))
+    val keyRotationProof = KeyRotationProof(
+      keyType,
+      index,
+      newKey,
+      signingSignature,
+      masterSignature
+    )
+    BytesUtils.toHexString(Bytes.concat(
+      BytesUtils.fromHexString(CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig),
+      SubmitKeyRotationCmdInput(keyRotationProof, newKeySignature).encode()
+    ))
+  }
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateForgerStake(
@@ -647,6 +737,21 @@ object AccountTransactionRestScheme {
     require(contractCode.nonEmpty, "Contract code must be provided")
   }
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateKeyRotationTransaction(keyType: Int,
+                                                          keyIndex: Int,
+                                                          newValueOfKey: String,
+                                                          signingKeySignature: String,
+                                                          masterKeySignature: String,
+                                                          newKeySignature: String,
+                                                          nonce: Option[BigInteger],
+                                                          gasInfo: Option[EIP1559GasInfo]) {
+    require(keyIndex >= 0, "Key index negative")
+    require(newValueOfKey.nonEmpty, "newValueOfKey is empty")
+    require(signingKeySignature.nonEmpty, "signingKeySignature is empty")
+    require(masterKeySignature.nonEmpty, "masterKeySignature is empty")
+    require(newKeySignature.nonEmpty, "newKeySignature is empty")
+  }
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
