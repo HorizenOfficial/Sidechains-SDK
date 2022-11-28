@@ -5,9 +5,10 @@ from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.utils import BLOCK_GAS_LIMIT
 from SidechainTestFramework.scutil import generate_next_block, \
     assert_equal, \
-    assert_true, BLOCK_GAS_LIMIT
+    assert_true
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import forward_transfer_to_sidechain
 
@@ -174,7 +175,6 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         response = allTransactions(sc_node_1, False)
         assert_equal(0, len(response["transactionIds"]),
                      "Transaction that creates a smart contract with empty data added to node 1 mempool")
-
         # Test that a transaction with gas limit < intrinsic gas is rejected by the mem pool
         exception_occurs = False
         try:

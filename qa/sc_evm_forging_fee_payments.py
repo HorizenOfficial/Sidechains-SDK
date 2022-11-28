@@ -7,10 +7,12 @@ from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
+    computeForgedTxFee
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
-    computeForgedTxFee, connect_sc_nodes, convertZenToWei, convertZenToZennies, convertZenniesToWei,
-    generate_account_proposition, generate_next_block, get_account_balance, )
+    connect_sc_nodes, generate_account_proposition, generate_next_block, )
 from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain, )
@@ -87,9 +89,9 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         self.sc_sync_all()
 
         # balance is in wei
-        initial_balance_2 = get_account_balance(sc_node_2, evm_address_sc_node_2)
+        initial_balance_2 = http_wallet_balance(sc_node_2, evm_address_sc_node_2)
         assert_equal(ft_amount_in_wei, initial_balance_2)
-        logging.info(get_account_balance(sc_node_2, evm_address_sc_node_2))
+        logging.info(http_wallet_balance(sc_node_2, evm_address_sc_node_2))
         logging.info(sc_node_2.wallet_getTotalBalance())
 
         # Create forger stake with some Zen for SC node 2

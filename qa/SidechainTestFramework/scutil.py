@@ -566,10 +566,6 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     """
     # Will we have  extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node" + str(i))
-    lib_separator = ":"
-
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
     if binary is None:
         binary = SIMPLE_APP_BINARY
     #        else if platform.system() == 'Linux':
@@ -1079,7 +1075,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
         if ("ForgerStakes list can't be empty" in forge_result["error"]["description"]):
             raise AssertionError("Empty forger stakes list")
         if ("top quality certificate" in forge_result["error"]["description"]):
-            raise AssertionError("Inconsistent top quality ceritificate")
+            raise AssertionError("Inconsistent top quality certificate")
         if ("the sidechain has ceased" in forge_result["error"]["description"]):
             raise AssertionError("Sidechain has ceased")
         if ("semantically invalid" in forge_result["error"]["description"]):
@@ -1349,6 +1345,7 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
         logging.info("totalFee = {} (forgersPoolFee = {}, forgerTip = {}".format(totalTxFee, forgersPoolFee, forgerTip))
 
     return totalTxFee, forgersPoolFee, forgerTip
+
 
 def get_resources_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'resources'))

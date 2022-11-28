@@ -10,12 +10,13 @@ from SidechainTestFramework.account.ac_utils import generate_block_and_get_tx_re
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, computeForgedTxFee
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence, check_mcreferencedata_presence
 from SidechainTestFramework.scutil import (
-    computeForgedTxFee, convertZenToZennies,
-    convertZenniesToWei, generate_next_block, generate_next_blocks, )
+    generate_next_block, generate_next_blocks
+)
 from test_framework.util import (
-    assert_equal, assert_false, fail, )
+    assert_equal, assert_false, fail)
 
 """
 This is similar to sc_evm_backward_transfer.py, but uses a longer withdrawal epoch length.
