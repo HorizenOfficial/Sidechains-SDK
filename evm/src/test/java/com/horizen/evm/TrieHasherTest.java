@@ -19,9 +19,9 @@ public class TrieHasherTest extends LibEvmTestBase {
         // - we get the well-known empty root hash for anything that results in an empty trie
         // - we get something different from the empty root hash for non-empty lists
         // - same root hashes for same inputs
-        // - differnet root hashes for different inputs
-        var hashEmpty = TrieHasher.Root(null);
-        var hashEmpty2 = TrieHasher.Root(new byte[0][0]);
+        // - different root hashes for different inputs
+        var hashEmptyTest = TrieHasher.Root(null);
+        var hashEmptyTest2 = TrieHasher.Root(new byte[0][0]);
         var hashA = TrieHasher.Root(new byte[][]{{1}, {2}, {3}});
         var hashA2 = TrieHasher.Root(new byte[][]{{1}, {2}, {3}});
         var hashB = TrieHasher.Root(new byte[][]{{1, 2, 3}});
@@ -31,9 +31,9 @@ public class TrieHasherTest extends LibEvmTestBase {
         var hashF = TrieHasher.Root(new byte[200][1]);
         var hashG = TrieHasher.Root(new byte[1000][67]);
 
-        assertArrayEquals("should return well-known empty root hash", hashEmpty, hashEmpty);
-        assertArrayEquals("should return well-known empty root hash", hashEmpty, hashEmpty2);
-        assertArrayNotEquals("should not give empty root hash", hashEmpty, hashA);
+        assertArrayEquals("should return well-known empty root hash", hashEmpty, hashEmptyTest);
+        assertArrayEquals("should return well-known empty root hash", hashEmptyTest, hashEmptyTest2);
+        assertArrayNotEquals("should not give empty root hash", hashEmptyTest, hashA);
         assertArrayEquals("should return same root hash for same input", hashA, hashA2);
         assertArrayNotEquals("should return different root hash for different input", hashA, hashB);
         assertArrayNotEquals("should return different root hash for different input", hashB, hashC);
