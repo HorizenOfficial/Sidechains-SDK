@@ -2,7 +2,6 @@ package com.horizen.account.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.google.common.primitives.Bytes
@@ -20,35 +19,28 @@ import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
+import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
-import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Sign.SignatureData
-import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
 import sparkz.core.settings.RESTApiSettings
-import org.web3j.crypto._
+
 import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
-import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success}
 
 case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                                       sidechainNodeViewHolderRef: ActorRef,
                                       sidechainTransactionActorRef: ActorRef,
                                       companion: SidechainAccountTransactionsCompanion,
                                       params: NetworkParams)
-                                     (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute[
+                                     (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends TransactionBaseApiRoute[
     SidechainTypes#SCAT,
     AccountBlockHeader,
     AccountBlock,
@@ -57,30 +49,15 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     NodeAccountState,
     NodeWalletBase,
     NodeAccountMemoryPool,
-    AccountNodeView] with SidechainTypes {
+    AccountNodeView](sidechainTransactionActorRef, companion) with SidechainTypes {
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
 
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
-      signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~ allForgingStakes
-  }
-
-  /**
-   * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
-   */
-  def allTransactions: Route = (post & path("allTransactions")) {
-    entity(as[ReqAllTransactions]) { body =>
-      withNodeView { sidechainNodeView =>
-        val unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
-        if (body.format.getOrElse(true)) {
-          ApiResponseUtil.toResponse(RespAllTransactions(unconfirmedTxs.asScala.toList))
-        } else {
-          ApiResponseUtil.toResponse(RespAllTransactionIds(unconfirmedTxs.asScala.toList.map(_.id)))
-        }
-      }
-    }
+      signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
+      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes
   }
 
   def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -103,10 +80,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val messageToSign = tx.messageToSign()
     val msgSignature = secret.sign(messageToSign)
     new EthereumTransaction(
-      new SignedRawTransaction(
-        tx.getTransaction.getTransaction,
-        new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
-      )
+        tx,
+        new SignatureSecp256k1(msgSignature.getV, msgSignature.getR, msgSignature.getS)
     )
   }
 
@@ -114,10 +89,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val messageToSign = tx.messageToSign()
     val msgSignature = secret.sign(messageToSign)
     new EthereumTransaction(
-      new SignedRawTransaction(
-        tx.getTransaction.getTransaction,
-        createEip155SignatureData(new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS), params.chainId)
-      )
+        tx,
+        new SignatureSecp256k1(msgSignature.getV, msgSignature.getR, msgSignature.getS)
     )
   }
 
@@ -145,31 +118,31 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val txCost = valueInWei.add(gasPrice.multiply(gasLimit))
 
           val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+          val dataBytes = Array[Byte]()
           secret match {
             case Some(secret) =>
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val isEIP155 = body.EIP155.getOrElse(false)
               val response = if (isEIP155) {
                 val tmpTx = new EthereumTransaction(
-                  destAddress,
+                  params.chainId,
+                  EthereumTransactionUtils.getToAddressFromString(destAddress),
                   nonce,
                   gasPrice,
                   gasLimit,
                   valueInWei,
-                  "",
-                  new SignatureData(
-                    EthereumTransactionUtils.convertToBytes(params.chainId),
-                    Array[Byte](0),
-                    Array[Byte](0)))
+                  dataBytes,
+                  null
+                )
                 validateAndSendTransaction(signTransactionEIP155WithSecret(secret, tmpTx))
               } else {
                 val tmpTx = new EthereumTransaction(
-                  destAddress,
+                  EthereumTransactionUtils.getToAddressFromString(destAddress),
                   nonce,
                   gasPrice,
                   gasLimit,
                   valueInWei,
-                  "",
+                  dataBytes,
                   null)
                 validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
               }
@@ -197,15 +170,15 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
           var signedTx: EthereumTransaction = new EthereumTransaction(
             params.chainId,
-            body.to.orNull,
+            EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
             nonce,
             body.gasLimit,
             body.maxPriorityFeePerGas,
             body.maxFeePerGas,
             body.value,
-            body.data,
+            EthereumTransactionUtils.getDataFromString(body.data),
             if (body.signature_v.isDefined)
-              new SignatureData(
+              new SignatureSecp256k1(
                 body.signature_v.get,
                 body.signature_r.get,
                 body.signature_s.get)
@@ -213,7 +186,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               null
           )
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+            val txCost = signedTx.maxCost
 
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
@@ -241,14 +214,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         // lock the view and try to send the tx
         applyOnNodeView { sidechainNodeView =>
           var signedTx = new EthereumTransaction(
-            body.to.orNull,
+            EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
             body.nonce,
             body.gasPrice,
             body.gasLimit,
             body.value.orNull,
-            body.data,
+            EthereumTransactionUtils.getDataFromString(body.data),
             if (body.signature_v.isDefined)
-              new SignatureData(
+              new SignatureSecp256k1(
                 body.signature_v.get,
                 body.signature_r.get,
                 body.signature_s.get)
@@ -256,7 +229,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               null
           )
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+            val txCost = signedTx.maxCost
 
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
@@ -283,10 +256,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       entity(as[ReqRawTransaction]) { body =>
         // lock the view and try to create CoreTransaction
         applyOnNodeView { sidechainNodeView =>
-          var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
+          var signedTx = EthereumTransactionDecoder.decode(body.payload)
           if (!signedTx.isSigned) {
-            val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
-
+            val txCost = signedTx.maxCost
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
             secret match {
@@ -309,8 +281,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       entity(as[ReqRawTransaction]) {
         body => {
           applyOnNodeView { sidechainNodeView =>
-            var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
-            val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+            var signedTx = EthereumTransactionDecoder.decode(body.payload)
+            val txCost = signedTx.maxCost
             val secret =
               getFittingSecret(sidechainNodeView, body.from, txCost)
             secret match {
@@ -356,16 +328,16 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
               val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-              val data = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
+              val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                to,
+                EthereumTransactionUtils.getToAddressFromString(to),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
                 maxFeePerGas,
                 valueInWei,
-                data,
+                dataBytes,
                 null
               )
               validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
@@ -414,16 +386,16 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
                     val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
                     val signature = stakeOwnerSecret.sign(msgToSign)
-                    val data = encodeSpendStakeCmdRequest(signature, body.stakeId)
+                    val dataBytes = encodeSpendStakeCmdRequest(signature, body.stakeId)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
                       params.chainId,
-                      to,
+                      EthereumTransactionUtils.getToAddressFromString(to),
                       nonce,
                       gasLimit,
                       maxPriorityFeePerGas,
                       maxFeePerGas,
                       valueInWei,
-                      data,
+                      dataBytes,
                       null
                     )
 
@@ -443,11 +415,31 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def allForgingStakes: Route = (post & path("allForgingStakes")) {
     withNodeView { sidechainNodeView =>
       val accountState = sidechainNodeView.getNodeState
-      val listOfWithdrawalRequests = accountState.getListOfForgerStakes
-      ApiResponseUtil.toResponse(RespAllForgerStakes(listOfWithdrawalRequests.toList))
+      val listOfForgerStakes = accountState.getListOfForgerStakes
+      ApiResponseUtil.toResponse(RespForgerStakes(listOfForgerStakes.toList))
     }
   }
 
+  def myForgingStakes: Route = (post & path("myForgingStakes")) {
+    withAuth {
+      withNodeView { sidechainNodeView =>
+          val accountState = sidechainNodeView.getNodeState
+          val listOfForgerStakes = accountState.getListOfForgerStakes
+
+          if (listOfForgerStakes.nonEmpty) {
+            val wallet = sidechainNodeView.getNodeWallet
+            val walletPubKeys = wallet.allSecrets().map(_.publicImage).toSeq
+            val ownedStakes = listOfForgerStakes.view.filter(stake => {
+                walletPubKeys.contains(stake.forgerStakeData.ownerPublicKey)
+            })
+            ApiResponseUtil.toResponse(RespForgerStakes(ownedStakes.toList))
+          } else {
+            ApiResponseUtil.toResponse(RespForgerStakes(Seq().toList))
+          }
+        }
+
+    }
+  }
 
   def withdrawCoins: Route = (post & path("withdrawCoins")) {
     withAuth {
@@ -455,7 +447,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         // lock the view and try to create CoreTransaction
         applyOnNodeView { sidechainNodeView =>
           val to = BytesUtils.toHexString(WithdrawalMsgProcessor.contractAddress)
-          val data = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
+          val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
           val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
           val gasInfo = body.gasInfo
 
@@ -479,13 +471,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                to,
+                EthereumTransactionUtils.getToAddressFromString(to),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
                 maxFeePerGas,
                 valueInWei,
-                data,
+                dataBytes,
                 null
               )
               validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
@@ -533,13 +525,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val data = body.contractCode
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                to,
+                EthereumTransactionUtils.getToAddressFromString(to),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
                 maxFeePerGas,
                 valueInWei,
-                data,
+                EthereumTransactionUtils.getDataFromString(data),
                 null
               )
               validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
@@ -553,58 +545,32 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
 
-  def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): String = {
+  def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
     val vrfPubKey = new VrfPublicKey(BytesUtils.fromHexString(forgerStakeInfo.vrfPubKey))
     val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), new AddressProposition(BytesUtils.fromHexString(forgerStakeInfo.ownerAddress)))
-    val data = BytesUtils.toHexString(Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd), addForgerStakeInput.encode()))
-    data
+
+    Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd), addForgerStakeInput.encode())
   }
 
-  def encodeSpendStakeCmdRequest(signatureSecp256k1: SignatureSecp256k1, stakeId: String): String = {
+  def encodeSpendStakeCmdRequest(signatureSecp256k1: SignatureSecp256k1, stakeId: String): Array[Byte] = {
     val spendForgerStakeInput = RemoveStakeCmdInput(BytesUtils.fromHexString(stakeId), signatureSecp256k1)
-    val data = BytesUtils.toHexString(Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.RemoveStakeCmd), spendForgerStakeInput.encode()))
-    data
+    Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.RemoveStakeCmd), spendForgerStakeInput.encode())
   }
 
-
-  def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): String = {
+  def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): Array[Byte] = {
     // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
     // different to `getnewaddress "" true` hash that is in BE endianness.
     val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(withdrawal.mainchainAddress, params))
     val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
-    val data = BytesUtils.toHexString(Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode()))
-    data
+    Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
   }
 
-
-  //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val defaultTransactionResponseRepresentation: Transaction => SuccessResponse = {
-    transaction => TransactionIdDTO(transaction.id)
-  }
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
   val rawTransactionResponseRepresentation: EthereumTransaction => SuccessResponse = {
     transaction =>
-      RawTransactionOutput("0x" + BytesUtils.toHexString(TransactionEncoder.encode(
-        transaction.getTransaction,
-        transaction.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
+      RawTransactionOutput("0x" + BytesUtils.toHexString(transaction.encode(transaction.isSigned))
       )
-  }
-
-
-  private def validateAndSendTransaction(transaction: SidechainTypes#SCAT,
-                                         transactionResponseRepresentation: SidechainTypes#SCAT => SuccessResponse = defaultTransactionResponseRepresentation) = {
-
-    val barrier = Await.result(
-      sidechainTransactionActorRef ? BroadcastTransaction(transaction),
-      settings.timeout).asInstanceOf[Future[Unit]]
-    onComplete(barrier) {
-      case Success(_) =>
-        ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-      case Failure(exp) =>
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp)))
-    }
-
   }
 
 }
@@ -624,7 +590,7 @@ object AccountTransactionRestScheme {
   private[api] case class RespAllWithdrawalRequests(listOfWR: List[WithdrawalRequest]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
+  private[api] case class RespForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionWithdrawalRequest(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)

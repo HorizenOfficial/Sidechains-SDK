@@ -7,6 +7,7 @@ from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_eoa
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, convertZenToZennies, \
     convertZenniesToWei
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, forward_transfer_to_sidechain
 
 """
@@ -71,13 +72,11 @@ class SCEvmForwardTransfer(AccountChainSetup):
                                                                 gasPrice=900000000)
 
         logging.info("Mempool node before")
-        response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
-        logging.info(response)
+        logging.info(allTransactions(sc_node))
 
         generate_next_blocks(sc_node, "first node", 1)
         logging.info("Mempool node after")
-        response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
-        logging.info(response)
+        logging.info(allTransactions(sc_node))
 
         # verify smart contract has a balance of zero
         balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")

@@ -4,8 +4,9 @@ import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.scutil import generate_next_block, convertZenToZennies
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, fail, assert_false
 
 """
@@ -74,8 +75,8 @@ class SCEvmOrphanTXS(AccountChainSetup):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(orphan_tx_hash in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_true(orphan_tx_hash in response["transactionIds"])
 
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
@@ -83,8 +84,8 @@ class SCEvmOrphanTXS(AccountChainSetup):
         txs_in_block = sc_node_1.block_best()["result"]["block"]["sidechainTransactions"]
         assert_equal(0, len(txs_in_block), "Orphan transaction shouldn't be included in the block")
         # Check it is still in the mempool
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(orphan_tx_hash in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_true(orphan_tx_hash in response["transactionIds"])
 
         logging.info("Create the missing transaction and check that now both are included in a block...")
         j["nonce"] = 0
@@ -98,8 +99,8 @@ class SCEvmOrphanTXS(AccountChainSetup):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(tx_hash_nonce_0 in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_true(tx_hash_nonce_0 in response["transactionIds"])
 
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
@@ -110,8 +111,8 @@ class SCEvmOrphanTXS(AccountChainSetup):
         assert_equal(orphan_tx_hash, txs_in_block[1]['id'], "Wrong second tx")
 
         # Check the mempool is empty
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']))
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]))
 
         # Check that the transactions with the highest effective gas tip are included first in the block
         # The expected order is: txC_0, txC_1, txC_2, txB_0, txA_0, txB_1, txB_2, txA_1, txA_2
@@ -235,8 +236,8 @@ class SCEvmOrphanTXS(AccountChainSetup):
         oldTxId = response['result']['transactionId']
 
         # check mempool contains oldTxId
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(oldTxId in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_true(oldTxId in response["transactionIds"])
 
         j["gasInfo"]["maxFeePerGas"] = 900000500
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
@@ -245,9 +246,9 @@ class SCEvmOrphanTXS(AccountChainSetup):
         newTxId = response['result']['transactionId']
 
         # check mempool contains newTxId
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_false(oldTxId in response['result']['transactionIds'])
-        assert_true(newTxId in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_false(oldTxId in response["transactionIds"])
+        assert_true(newTxId in response["transactionIds"])
 
         self.sc_sync_all()
 

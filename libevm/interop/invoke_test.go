@@ -2,11 +2,14 @@ package interop
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"libevm/lib"
 	"libevm/test"
 	"math/big"
+	"reflect"
 	"testing"
 )
 
@@ -19,12 +22,12 @@ func call(t *testing.T, instance *lib.Service, method string, args interface{}) 
 		}
 		jsonArgs = string(jsonBytes)
 	}
-	t.Log("invoke", method, jsonArgs)
+	//t.Log("invoke", method, jsonArgs)
 	err, result := callMethod(instance, method, jsonArgs)
 	if err != nil {
 		t.Errorf("invocation failed: %v", err)
 	}
-	t.Log("response", toJsonResponse(err, result))
+	//t.Log("response", toJsonResponse(err, result))
 	return result
 }
 
@@ -72,10 +75,8 @@ func TestInvoke(t *testing.T) {
 		HandleParams: lib.HandleParams{Handle: handle},
 		Address:      *result.ContractAddress,
 	}).([]byte)
-	const expectedCode = "60806040526004361060305760003560e01c80632e64cec1146035578063371303c01460565780636057361d14606a575b600080fd5b348015604057600080fd5b5060005460405190815260200160405180910390f35b348015606157600080fd5b506068607a565b005b606860753660046086565b600055565b6000546075906001609e565b600060208284031215609757600080fd5b5035919050565b8082018082111560be57634e487b7160e01b600052601160045260246000fd5b9291505056fea26469706673582212205b989fe38f3c1c7022e6705c5e79a5d2fc589594d6a6075c784b1d171f60832c64736f6c63430008100033"
-	if expectedCode != common.Bytes2Hex(getCodeResult) {
-		// note: this depends on the version of the currently installed Solidity compiler, skip this for now
-		//t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getCodeResult))
+	if common.Bytes2Hex(test.StorageContractRuntimeCode()) != common.Bytes2Hex(getCodeResult) {
+		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getCodeResult))
 	}
 	// call function to store value
 	call(t, instance, "EvmApply", lib.EvmParams{
@@ -114,4 +115,111 @@ func TestInvoke(t *testing.T) {
 	call(t, instance, "CloseDatabase", lib.DatabaseParams{
 		DatabaseHandle: dbHandle,
 	})
+}
+
+type MockLibrary struct{}
+
+var MockError = errors.New("mock error")
+
+type MockParams struct {
+	Foo    int         `json:"foo"`
+	Bar    string      `json:"bar"`
+	Nested *MockParams `json:"nested"`
+}
+
+func (m *MockLibrary) NoParam()                                   {}
+func (m *MockLibrary) NoParamResult() string                      { return "toot gaya" }
+func (m *MockLibrary) NoParamNilError() error                     { return nil }
+func (m *MockLibrary) NoParamError() error                        { return fmt.Errorf("%w: kaputt", MockError) }
+func (m *MockLibrary) NoParamBadErrorReturn() (string, error)     { return "", nil /* invalid */ }
+func (m *MockLibrary) NoParamTwoResults() (string, string)        { return "", "" /* invalid */ }
+func (m *MockLibrary) OneParam(a int)                             {}
+func (m *MockLibrary) OneParamEcho(str string) string             { return str }
+func (m *MockLibrary) TwoParams(a int, b int)                     { /* invalid: more than one parameter */ }
+func (m *MockLibrary) ComplexParam(params MockParams) *MockParams { return params.Nested }
+func (m *MockLibrary) ArrayParam(params []int) int                { return len(params) }
+func (m *MockLibrary) ConditionalErrorNoResult(fail int) error {
+	if fail != 0 {
+		return fmt.Errorf("%w: kaputt %v", MockError, fail)
+	}
+	return nil
+}
+func (m *MockLibrary) ConditionalErrorWithResult(nr int) (error, string) {
+	if nr == 7 {
+		return fmt.Errorf("%w: oh noes", MockError), ""
+	}
+	return nil, "success"
+}
+
+func TestCallMethod(t *testing.T) {
+	m := new(MockLibrary)
+	checks := []struct {
+		method string
+		args   string
+		err    error
+		result interface{}
+	}{
+		{method: "ThisDoesNotExist", err: ErrMethodNotFound},
+
+		{method: "NoParam"},
+		{method: "NoParam", args: "123", err: ErrInvalidArguments},
+		{method: "NoParamResult", result: "toot gaya"},
+		{method: "NoParamResult", args: "123", err: ErrInvalidArguments},
+		{method: "NoParamNilError"},
+		{method: "NoParamNilError", args: "123", err: ErrInvalidArguments},
+		{method: "NoParamError", err: MockError},
+		{method: "NoParamError", args: "123", err: ErrInvalidArguments},
+		{method: "NoParamBadErrorReturn", err: ErrInvocationError},
+		{method: "NoParamTwoResults", err: ErrInvocationError},
+
+		{method: "OneParam", err: ErrInvalidArguments},
+		{method: "OneParam", args: "123"},
+		{method: "OneParam", args: "false", err: ErrInvalidArguments},
+		{method: "OneParamEcho", err: ErrInvalidArguments},
+		{method: "OneParamEcho", args: "123", err: ErrInvalidArguments},
+		{method: "OneParamEcho", args: "\"foo\"", result: "foo"},
+		{method: "OneParamEcho", args: "\"bar\"", result: "bar"},
+
+		{method: "TwoParams", err: ErrInvocationError},
+		{method: "TwoParams", args: "123", err: ErrInvocationError},
+
+		{method: "ComplexParam", err: ErrInvalidArguments},
+		{method: "ComplexParam", args: "123", err: ErrInvalidArguments},
+		{method: "ComplexParam", args: "{\"foo\":42}", result: (*MockParams)(nil)},
+		{method: "ComplexParam", args: "{\"foo\":42,\"breakit\":true}", err: ErrInvalidArguments},
+		{method: "ComplexParam", args: "{\"foo\":42,\"nested\":{\"bar\":\"baz\"}}", result: &MockParams{Bar: "baz"}},
+		{method: "ComplexParam", args: "null", err: ErrInvalidArguments},
+
+		{method: "ArrayParam", args: "[4,8,15,16,23,42]", result: 6},
+		{method: "ArrayParam", args: "[]", result: 0},
+		{method: "ArrayParam", args: "null", err: ErrInvalidArguments},
+		{method: "ArrayParam", args: "1,2,3,4", err: ErrInvalidArguments},
+		{method: "ArrayParam", args: "", err: ErrInvalidArguments},
+		{method: "ArrayParam", args: "{\"args\":[1,2,3]}", err: ErrInvalidArguments},
+
+		{method: "ConditionalErrorNoResult", err: ErrInvalidArguments},
+		{method: "ConditionalErrorNoResult", args: "0"},
+		{method: "ConditionalErrorNoResult", args: "1", err: MockError},
+
+		{method: "ConditionalErrorWithResult", err: ErrInvalidArguments},
+		{method: "ConditionalErrorWithResult", args: " null  ", err: ErrInvalidArguments},
+		{method: "ConditionalErrorWithResult", args: "\"null\"", err: ErrInvalidArguments},
+		{method: "ConditionalErrorWithResult", args: "  0", result: "success"},
+		{method: "ConditionalErrorWithResult", args: "6  ", result: "success"},
+		{method: "ConditionalErrorWithResult", args: " 7 ", err: MockError},
+		{method: "ConditionalErrorWithResult", args: "8", result: "success"},
+	}
+	for _, check := range checks {
+		t.Run(check.method, func(t *testing.T) {
+			err, result := callMethod(m, check.method, check.args)
+			if !errors.Is(err, check.err) {
+				t.Errorf("unexpected error: want %v got %v", check.err, err)
+			} else {
+				//t.Logf("got correct error: %v", err)
+			}
+			if !reflect.DeepEqual(result, check.result) {
+				t.Errorf("unexpected result: want %v got %v", check.result, result)
+			}
+		})
+	}
 }

@@ -4,7 +4,7 @@ import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.utils.AccountBlockFeeInfo
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.storage.Storage
+import com.horizen.storage.{SidechainStorageInfo, Storage}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import scorex.util.ScorexLogging
 
@@ -13,7 +13,9 @@ import scala.compat.java8.OptionConverters._
 import scala.util.Try
 
 // expect this storage to be passed by the app during SidechainApp initialization
-class AccountStateMetadataStorage(storage: Storage) extends AccountStateMetadataStorageReader with ScorexLogging {
+class AccountStateMetadataStorage(storage: Storage)
+  extends AccountStateMetadataStorageReader with SidechainStorageInfo with ScorexLogging
+{
   def getView: AccountStateMetadataStorageView = new AccountStateMetadataStorageView(storage)
 
   def lastVersionId: Option[ByteArrayWrapper] = {

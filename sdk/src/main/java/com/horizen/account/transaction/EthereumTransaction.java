@@ -6,123 +6,200 @@ import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.GasUintOverflowException;
 import com.horizen.account.state.GasUtil;
 import com.horizen.account.state.Message;
-import com.horizen.account.utils.Account;
 import com.horizen.account.utils.BigIntegerUtil;
-import com.horizen.account.utils.EthereumTransactionUtils;
+import com.horizen.account.utils.EthereumTransactionEncoder;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
+import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.crypto.*;
-import org.web3j.crypto.Sign.SignatureData;
-import org.web3j.crypto.transaction.type.LegacyTransaction;
-import org.web3j.crypto.transaction.type.Transaction1559;
-import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
-
 import javax.annotation.Nullable;
 import java.math.BigInteger;
-import java.security.SignatureException;
-import java.util.Objects;
+import java.util.Optional;
+import static com.horizen.account.utils.Secp256k1.PUBLIC_KEY_SIZE;
 
 
-// TODO ensure that the json parameters are fitting for the use case
-@JsonPropertyOrder({"from", "gasPrice", "nonce", "to", "value", "signature"})
-@JsonIgnoreProperties({"transaction", "gasLimit"})
+@JsonPropertyOrder({
+        "id", "from", "to", "value", "nonce", "data",
+        "gasPrice", "gasLimit", "maxFeePerGas", "maxPriorityFeePerGas",
+        "eip1559", "version", "chainId", "signed", "signature"
+})
+@JsonIgnoreProperties({"transaction", "encoder", "modifierTypeId"})
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
 
-    private final RawTransaction transaction;
+    //  The 3 versions of tx are supported by go eth and we have test vectors generated using all of them
+    //  We are using elsewhere the enum from w3j, which just supports 0 and 2:
+    //   org/web3j/crypto/transaction/type/TransactionType.java
+    public enum EthereumTransactionType {
+        LegacyTxType,     // Legacy
+        AccessListTxType, // - not supported
+        DynamicFeeTxType  // eip1559
+    }
 
-    // depends on the transaction
-    public EthereumTransaction(
-            RawTransaction transaction
-    ) throws NullPointerException {
-        Objects.requireNonNull(transaction);
-        if (transaction instanceof SignedRawTransaction)
-            Objects.requireNonNull(((SignedRawTransaction) transaction).getSignatureData());
-        this.transaction = transaction;
+    private final EthereumTransactionType type;
+    private final BigInteger nonce;
+
+    @JsonProperty("to")
+    private final AddressProposition to;
+
+    @JsonProperty("gasPrice")
+    private final BigInteger gasPrice;
+
+    private final BigInteger gasLimit;
+    private final BigInteger value;
+    private final Long chainId;
+    private final byte[] data;
+
+    @JsonProperty("maxPriorityFeePerGas")
+    private final BigInteger maxPriorityFeePerGas;
+    @JsonProperty("maxFeePerGas")
+    private final BigInteger maxFeePerGas;
+
+    private final SignatureSecp256k1 signature;
+
+    private AddressProposition from;
+    private String hashString;
+    private BigInteger txCost;
+
+    private synchronized String getTxHash() {
+        if (this.hashString == null) {
+            byte[] encodedMessage = encode(isSigned());
+            this.hashString = BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
+        }
+        return this.hashString;
+    }
+
+    @Override
+    public synchronized BigInteger maxCost() {
+        if (this.txCost == null) {
+            this.txCost = super.maxCost();
+        }
+        return this.txCost;
     }
 
     // creates a legacy transaction
     public EthereumTransaction(
-            @Nullable String to,
+            @NotNull Optional<AddressProposition> to,
             @NotNull BigInteger nonce,
             @NotNull BigInteger gasPrice,
             @NotNull BigInteger gasLimit,
-            @Nullable BigInteger value,
-            @Nullable String data,
-            @Nullable SignatureData signature
+            @NotNull BigInteger value,
+            @NotNull byte[] data,
+            @Nullable SignatureSecp256k1 inSignature
     ) {
-        this(signature != null ?
-                new SignedRawTransaction(
-                        RawTransaction.createTransaction(
-                                nonce,
-                                gasPrice,
-                                gasLimit,
-                                to != null ? to : "",
-                                value != null ? value :
-                                        BigInteger.ZERO,
-                                data
-                        ).getTransaction(),
-                        signature) :
-                RawTransaction.createTransaction(nonce, gasPrice, gasLimit, to, value, data)
-        );
+        this.type = EthereumTransactionType.LegacyTxType;
+        this.nonce = nonce;
+        this.gasPrice = gasPrice;
+        this.gasLimit = gasLimit;
+        this.value = value;
+
+        this.chainId = null;
+        this.maxPriorityFeePerGas = null;
+        this.maxFeePerGas = null;
+
+        this.to = to.orElse(null);
+        this.data = data;
+        this.signature = inSignature;
+    }
+
+
+    // creates a legacy eip155 transaction
+    public EthereumTransaction(
+            @NotNull Long chainId,
+            @NotNull Optional<AddressProposition> to,
+            @NotNull BigInteger nonce,
+            @NotNull BigInteger gasPrice,
+            @NotNull BigInteger gasLimit,
+            @NotNull BigInteger value,
+            @NotNull byte[] data,
+            @Nullable SignatureSecp256k1 inSignature
+    ) {
+        this.type = EthereumTransactionType.LegacyTxType;
+        this.nonce = nonce;
+        this.gasPrice = gasPrice;
+        this.gasLimit = gasLimit;
+        this.value = value;
+        this.chainId = chainId;
+
+        this.maxPriorityFeePerGas = null;
+        this.maxFeePerGas = null;
+
+        this.to = to.orElse(null);
+        this.data = data;
+        this.signature = inSignature;
     }
 
     // creates an eip1559 transaction
     public EthereumTransaction(
-            long chainId,
-            @Nullable String to,
+            @NotNull Long chainId,
+            @NotNull Optional<AddressProposition> to,
             @NotNull BigInteger nonce,
             @NotNull BigInteger gasLimit,
             @NotNull BigInteger maxPriorityFeePerGas,
             @NotNull BigInteger maxFeePerGas,
-            @Nullable BigInteger value,
-            @Nullable String data,
-            @Nullable SignatureData signature
+            @NotNull BigInteger value,
+            @NotNull byte[] data,
+            @Nullable SignatureSecp256k1 inSignature
     ) {
-        this(
-                signature != null ?
-                        new SignedRawTransaction(
-                                RawTransaction.createTransaction(chainId, nonce, gasLimit, to != null ? to : "", value != null ? value :
-                                        BigInteger.ZERO, data, maxPriorityFeePerGas, maxFeePerGas).getTransaction(), signature)
-                        : RawTransaction.createTransaction(chainId, nonce, gasLimit, to != null ? to : "", value != null ? value :
-                        BigInteger.ZERO, data, maxPriorityFeePerGas, maxFeePerGas)
-        );
+        this.type = EthereumTransactionType.DynamicFeeTxType;
+        this.nonce = nonce;
+        this.gasPrice = null;
+        this.gasLimit = gasLimit;
+        this.value = value;
+
+        this.chainId = chainId;
+        this.maxPriorityFeePerGas = maxPriorityFeePerGas;
+        this.maxFeePerGas = maxFeePerGas;
+
+        this.to = to.orElse(null);
+        this.data = data;
+        this.signature = inSignature;
     }
 
-    public RawTransaction getTransaction() {
-        return this.transaction;
+    // creates a signed transaction from an existing one
+    public EthereumTransaction(
+            EthereumTransaction txToSign,
+            @Nullable SignatureSecp256k1 inSignature
+    ) {
+        this.type = txToSign.type;
+        this.nonce = txToSign.nonce;
+        this.gasPrice = txToSign.gasPrice;
+        this.gasLimit = txToSign.gasLimit;
+        this.to = txToSign.to;
+        this.value = txToSign.value;
+        this.data = txToSign.data;
+
+        this.chainId = txToSign.chainId;
+        this.maxPriorityFeePerGas = txToSign.maxPriorityFeePerGas;
+        this.maxFeePerGas = txToSign.maxFeePerGas;
+
+        this.signature = inSignature;
     }
 
     public boolean isSigned() {
-        return this.transaction instanceof SignedRawTransaction;
+        return (signature != null);
     }
 
     @Override
     public byte transactionTypeId() {
-        return AccountTransactionsIdsEnum.EthereumTransaction.id();
+        return AccountTransactionsIdsEnum.EthereumTransactionId.id();
     }
 
     @Override
     @JsonProperty("id")
     public String id() {
-        byte[] encodedMessage;
-        if (this.isSigned()) {
-            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
-            encodedMessage = TransactionEncoder.encode(this.getTransaction(),
-                    stx.getSignatureData());
-        } else encodedMessage = TransactionEncoder.encode(this.getTransaction());
-        return BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
+        return getTxHash();
     }
 
+
     @Override
+    @JsonProperty("version")
     public byte version() {
-        if (transaction.getType() == TransactionType.LEGACY)
-            return 0x0;
-        return 0x2;
+        return (byte)this.type.ordinal();
     }
 
     @Override
@@ -132,6 +209,23 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public void semanticValidity() throws TransactionSemanticValidityException {
+
+        if (!isSigned()) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is not signed", id()));
+        }
+
+        if (getChainId() != null && getChainId() < 1L) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] has invalid chainId set: %d", id(), getChainId()));
+        }
+
+        // for 'to' address, all checks have been performed during obj initialization
+        if (this.getTo().isEmpty()) {
+            // contract creation
+            if (this.getData().length == 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "smart contract declaration transaction without data", id()));
+        }
+
         if (getValue().signum() < 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "negative value", id()));
@@ -141,46 +235,47 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));
-        if (!BigIntegerUtil.isUint64(getGasLimit())) throw new GasUintOverflowException();
-        //TODO why this check is not in Geth (maybe)?
-        if (getTo() == null && getData().length == 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "smart contract declaration transaction without data", id()));
+        if (!BigIntegerUtil.isUint64(getGasLimit()))
+            throw new GasUintOverflowException();
 
-        if (getMaxFeePerGas().signum() < 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "eip1559 transaction with negative maxFeePerGas", id()));
-        if (getMaxPriorityFeePerGas().signum() < 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "eip1559 transaction with negative maxPriorityFeePerGas", id()));
-        if (getMaxFeePerGas().bitLength() > 256)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
-
-        if (getMaxPriorityFeePerGas().bitLength() > 256)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
-
-        if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                            "eip1559 transaction max priority fee per gas [%s] higher than max fee per gas [%s]",
-                    id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
-
-        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo() == null)) < 0) {
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "gas limit is below intrinsic gas", id()));
+        if (isEIP1559()) {
+            if (getMaxFeePerGas().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction with negative maxFeePerGas", id()));
+            if (getMaxPriorityFeePerGas().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction with negative maxPriorityFeePerGas", id()));
+            if (!BigIntegerUtil.isUint256(getMaxFeePerGas()))
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
+            if (!BigIntegerUtil.isUint256(getMaxPriorityFeePerGas()))
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
+            if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                                "eip1559 transaction maxPriorityFeePerGas [%s] higher than maxFeePerGas [%s]",
+                        id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
+        } else {
+            if (getGasPrice().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "legacy transaction with negative gasPrice", id()));
+            if (!BigIntegerUtil.isUint256(getGasPrice()))
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "legacy transaction gasPrice bit length [%d] is too high", id(), getGasPrice().bitLength()));
         }
-
+        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo().isEmpty())) < 0) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "gas limit %s is below intrinsic gas %s",
+                    id(), getGasLimit(), GasUtil.intrinsicGas(getData(), getTo().isEmpty())));
+        }
         try {
-            if (this.getFrom() == null || this.getFrom().address().length != Account.ADDRESS_SIZE)
-                throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
-        } catch (org.web3j.crypto.exception.CryptoWeb3jException e) {
-            // for instance badly constructed tx having wrong type
-            throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address: " + e.getMessage());
+            if (!getSignature().isValid(getFrom(), messageToSign()))
+                throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
+                        "signature");
+        } catch (Throwable t) {
+            // in case of really malformed signature we can not even compute the id()
+            throw new TransactionSemanticValidityException(String.format("Transaction signature not readable: %s", t.getMessage()));
         }
-        if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
-            throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
-                    "signature");
 
     }
 
@@ -191,214 +286,190 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public BigInteger getNonce() {
-        return this.transaction.getNonce();
+        return this.nonce;
     }
 
     @Override
+    @JsonIgnore
     public BigInteger getGasPrice() {
-        if (!this.isEIP1559())
-            return this.legacyTx().getGasPrice();
+        if (isLegacy())
+            return this.gasPrice;
         //in Geth for EIP1559 tx gasPrice returns gasFeeCap
-        return getMaxFeePerGas();
+        return this.maxFeePerGas;
     }
 
     @Override
+    @JsonIgnore
     public BigInteger getMaxFeePerGas() {
-        if (this.isEIP1559())
-            return this.eip1559Tx().getMaxFeePerGas();
-        else
-            //in Geth for Legacy tx gasFeeCap is equal to gasPrice
-            return this.legacyTx().getGasPrice();
+        if (isEIP1559())
+            return this.maxFeePerGas;
+        //in Geth for Legacy tx gasFeeCap is equal to gasPrice
+        return this.gasPrice;
     }
 
+    @Override
+    @JsonIgnore
     public BigInteger getMaxPriorityFeePerGas() {
-        if (this.isEIP1559())
-            return this.eip1559Tx().getMaxPriorityFeePerGas();
+        if (isEIP1559())
+            return this.maxPriorityFeePerGas;
+        //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
+        return this.gasPrice;
+    }
+
+    @Override
+    @JsonIgnore
+    public BigInteger getPriorityFeePerGas(BigInteger base) {
+        if (isEIP1559()) {
+            return getMaxFeePerGas().subtract(base).min(getMaxPriorityFeePerGas());
+        } else {
+            return getGasPrice().subtract(base);
+        }
+    }
+
+    @Override
+    @JsonIgnore
+    public BigInteger getEffectiveGasPrice(BigInteger base) {
+        if (isEIP1559())
+            return base.add(getMaxPriorityFeePerGas()).min(getMaxFeePerGas());
         else
-            //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
-            return this.legacyTx().getGasPrice();
+            return getGasPrice();
     }
 
     public Long getChainId() {
-        if (this.isEIP1559())
-            return this.eip1559Tx().getChainId();
-        else if (this.isSigned()) {
-            var signedTx = (SignedRawTransaction) this.transaction;
-            var sigData = signedTx.getSignatureData();
-            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0 && sigData.getS().length == 1 && sigData.getR().length == 1) {
-                // for a not-really signed legacy tx implementing EIP155, here the chainid is the V itself
-                // the caller needs it for encoding the tx properly
-                return EthereumTransactionUtils.convertToLong(sigData.getV());
-            } else {
-                // for a fully signed legacy tx implementing EIP155
-                return ((SignedRawTransaction) this.transaction).getChainId();
-            }
+        if (isEIP1559() || isEIP155())
+            return this.chainId;
+        else {
+            return null;
         }
-
-        return null;
     }
 
     public boolean isEIP1559() {
-        return this.transaction.getTransaction() instanceof Transaction1559;
+        return this.type == EthereumTransactionType.DynamicFeeTxType;
     }
 
-    private Transaction1559 eip1559Tx() {
-        return (Transaction1559) this.transaction.getTransaction();
+    public boolean isLegacy() {
+        return this.type == EthereumTransactionType.LegacyTxType;
     }
 
-    private LegacyTransaction legacyTx() {
-        return (LegacyTransaction) this.transaction.getTransaction();
+    public boolean isEIP155() {
+        return (isLegacy() && this.chainId != null);
     }
 
     @Override
     public BigInteger getGasLimit() {
-        return this.transaction.getGasLimit();
+        return this.gasLimit;
     }
 
     @Override
     @JsonIgnore
-    public AddressProposition getFrom() {
-        if (this.isSigned())
-            return new AddressProposition(Numeric.hexStringToByteArray(getFromAddress()));
-        return null;
-    }
-
-    @Override
-    public AddressProposition getTo() {
-        String address = getToAddress();
-        // In case of smart contract declaration
-        if (address == null)
-            return null;
-
-        // TODO: do we really need the checks below? can we have address of different length? Add more UTs for this tx type.
-        // TODO: proabaly we need more checks in semantic validity method
-        var to = Numeric.hexStringToByteArray(address);
-        if (to.length == 0)
-            return null;
-
-        if (to.length == Account.ADDRESS_SIZE)
-            return new AddressProposition(to);
-
-        throw new RuntimeException(String.format("Invalid to address length %d", to.length));
+    public Optional<AddressProposition> getTo() {
+        return Optional.ofNullable(this.to);
     }
 
     @JsonIgnore
-    public String getToAddress() {
-        // TODO currently we have a bug that removes 0x prefix during the serialization
-        // as a consequence we might have different json strings on different sc network nodes
-        return this.transaction.getTo();
+    public String getToAddressString() {
+        if (this.to != null)
+            return BytesUtils.toHexString(this.to.address());
+        return "";
     }
 
-    @JsonProperty("from")
-    public String getFromAddress() {
-        if (this.isSigned()) try {
-            return ((SignedRawTransaction) this.transaction).getFrom();
-        } catch (SignatureException ignored) {
+    @Override
+    public synchronized AddressProposition getFrom() {
+        if (this.from == null && this.signature != null) {
+            try {
+                byte[] encodedTransaction = encode(false);
+
+                BigInteger pubKey = Sign.signedMessageToKey(encodedTransaction, this.signature.getSignatureData());
+                this.from = new AddressProposition(Keys.getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE)));
+            } catch (Exception e) {
+                // whatever exception may result in processing the signature, we can not tell the from address
+                LogManager.getLogger().info("Could not find from address, Signature not valid:", e);
+                this.from = null;
+            }
         }
+        return this.from;
+    }
+
+    @JsonIgnore
+    public String getFromString() {
+        if (this.getFrom() != null)
+            return BytesUtils.toHexString(this.from.address());
         return "";
     }
 
     @Override
     public BigInteger getValue() {
-        return this.transaction.getValue();
+        return this.value;
     }
 
-    //TODO: getData was defined as byte array before, if we want to change to String, please look at all other usages
     @Override
     public byte[] getData() {
-        return Numeric.hexStringToByteArray(transaction.getData());
+        return this.data;
     }
 
     @JsonIgnore
+    public String getDataString() {
+        if (this.data != null)
+          return BytesUtils.toHexString(this.data);
+        return "";
+    }
+
     @Override
     public SignatureSecp256k1 getSignature() {
-        if (this.isSigned()) {
-            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
-            return new SignatureSecp256k1(
-                    new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},
-                    stx.getSignatureData().getR(),
-                    stx.getSignatureData().getS());
-        }
-        return null;
-    }
-
-
-    @JsonIgnore
-    public Sign.SignatureData getSignatureData() {
-        if (this.isSigned()) {
-            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
-            return new Sign.SignatureData(
-                    stx.getSignatureData().getV(),
-                    stx.getSignatureData().getR(),
-                    stx.getSignatureData().getS());
-        }
-        return null;
-    }
-
-    // used in json representation of signature fields. In case of EIP155 tx getV() returns the value carrying the chainId
-    public byte[] getV() {
-        return (getSignatureData() != null) ? getSignatureData().getV() : null;
-    }
-
-    public byte[] getR() {
-        return (getSignatureData() != null) ? getSignatureData().getR() : null;
-    }
-
-    public byte[] getS() {
-        return (getSignatureData() != null) ? getSignatureData().getS() : null;
+        return this.signature;
     }
 
     @Override
     public String toString() {
-        if (this.isEIP1559())
+        if (isEIP1559())
             return String.format(
-                    "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
-                            "maxFeePerGas=%s, maxPriorityFeePerGas=%s, Signature=%s}",
-                    id(),
-                    getFromAddress(),
-                    Numeric.toHexStringWithPrefix(this.getNonce()),
-                    Numeric.toHexStringWithPrefix(this.getGasLimit()),
-                    this.getTo() != null ? this.getTo() : "0x",
-                    Numeric.toHexStringWithPrefix(this.getValue()),
-                    this.getData() != null ? Numeric.toHexString(this.getData()) : "",
-                    Numeric.toHexStringWithPrefix(this.getMaxFeePerGas()),
-                    Numeric.toHexStringWithPrefix(this.getMaxPriorityFeePerGas()),
-                    isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
-            );
-        else return String.format(
-                "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
-                        "Signature=%s}",
+                "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
+                        "maxFeePerGas=%s, maxPriorityFeePerGas=%s, chainId=%s, version=%d, Signature=%s}",
                 id(),
-                getFromAddress(),
-                Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),
-                Numeric.toHexStringWithPrefix(this.getGasPrice() != null ? this.getGasPrice() : BigInteger.ZERO),
-                Numeric.toHexStringWithPrefix(this.getGasLimit() != null ? this.getGasLimit() : BigInteger.ZERO),
-                this.getToAddress() != null ? this.getToAddress() : "0x",
-                Numeric.toHexStringWithPrefix(this.getValue() != null ? this.getValue() : BigInteger.ZERO),
-                this.getData() != null ? Numeric.toHexString(this.getData()) : "",
-                isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
+                getFromString(),
+                Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
+                Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
+                getToAddressString(),
+                Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
+                getDataString(),
+                Numeric.toHexStringWithPrefix(getMaxFeePerGas() != null ? getMaxFeePerGas() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(getMaxPriorityFeePerGas() != null ? getMaxPriorityFeePerGas() : BigInteger.ZERO),
+                getChainId() != null ? getChainId() : "",
+                (int)version(),
+                isSigned() ? this.signature.toString() : ""
+            );
+        else
+            return String.format(
+                "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
+                        "chainId=%s, version=%d, Signature=%s}",
+                id(),
+                getFromString(),
+                Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
+                Numeric.toHexStringWithPrefix(getGasPrice() != null ? getGasPrice() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
+                getToAddressString(),
+                Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
+                getDataString(),
+                getChainId() != null ? getChainId() : "",
+                (int)version(),
+                isSigned() ? this.signature.toString() : ""
         );
     }
 
     @Override
     public byte[] messageToSign() {
-        if (this.transaction.getType().isLegacy() && this.isSigned()) {
-            // the chainid might be set also in legacy case due to EIP155
-            return ((SignedRawTransaction) this.transaction).getEncodedTransaction(this.getChainId());
-        }
-        return TransactionEncoder.encode(this.transaction);
+       return encode(false);
     }
 
     public Message asMessage(BigInteger baseFee) {
-        var is1559 = isEIP1559();
-        var gasFeeCap = !is1559 ? getGasPrice() : getMaxFeePerGas();
-        var gasTipCap = !is1559 ? getGasPrice() : getMaxPriorityFeePerGas();
+        var gasFeeCap = isEIP1559() ? getMaxFeePerGas() : getGasPrice();
+        var gasTipCap = isEIP1559() ? getMaxPriorityFeePerGas() : getGasPrice();
         // calculate effective gas price as baseFee + tip capped at the fee cap
         // this will default to gasPrice if the transaction is not EIP-1559
-        var effectiveGasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
+        var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
                 getFrom(),
-                getTo(),
+                getTo().orElse(null),
                 effectiveGasPrice,
                 gasFeeCap,
                 gasTipCap,
@@ -408,5 +479,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 getData(),
                 false
         );
+    }
+
+    public byte[] encode(boolean accountSignature) {
+        if (this.isEIP1559()) {
+            return EthereumTransactionEncoder.encodeEip1559AsRlpValues(this, accountSignature);
+        } else {
+            return EthereumTransactionEncoder.encodeLegacyAsRlpValues(this, accountSignature);
+        }
     }
 }

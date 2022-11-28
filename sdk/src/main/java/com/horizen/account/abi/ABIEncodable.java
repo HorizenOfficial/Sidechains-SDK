@@ -11,7 +11,7 @@ public interface  ABIEncodable<T extends Type> {
 
     default byte[] encode() {
         DefaultFunctionEncoder encoder = new DefaultFunctionEncoder();
-        List listOfABIObjs = Arrays.asList(asABIType());
+        List<Type> listOfABIObjs = List.of(asABIType());
         String encodedString = encoder.encodeParameters(listOfABIObjs);
         return Numeric.hexStringToByteArray(encodedString);
 

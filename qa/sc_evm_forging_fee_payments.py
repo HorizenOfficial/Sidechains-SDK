@@ -6,7 +6,7 @@ import math
 from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     computeForgedTxFee, connect_sc_nodes, convertZenToWei, convertZenToZennies, convertZenniesToWei,

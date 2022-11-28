@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import json
 import time
 
 from eth_utils import add_0x_prefix, remove_0x_prefix
@@ -12,7 +11,7 @@ from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_
 from SidechainTestFramework.scutil import (
     computeForgedTxFee, convertZenToZennies, convertZenniesToWei, generate_next_block, )
 from test_framework.util import (
-    assert_equal, fail, )
+    assert_equal, assert_true, )
 
 """
 Checks withdrawal requests creation in special cases:
@@ -60,7 +59,7 @@ class SCEvmBWTCornerCases(AccountChainSetup):
 
         # verifies that there are no withdrawal requests yet
         current_epoch_number = 0
-        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(0, len(list_of_wr))
 
         new_balance = http_wallet_balance(sc_node, evm_hex_addr)
@@ -73,15 +72,19 @@ class SCEvmBWTCornerCases(AccountChainSetup):
         mc_address1 = mc_node.getnewaddress()
         bt_amount = ft_amount_in_zen + 3
         sc_bt_amount1 = convertZenToZennies(bt_amount)
-        response = withdrawcoins(sc_node, mc_address1, sc_bt_amount1)
-        if "error" not in response:
-            fail("Withdrawal request with insufficient balance should fail " + json.dumps(response))
+        error_occur = False
+        try:
+            withdrawcoins(sc_node, mc_address1, sc_bt_amount1)
+        except RuntimeError as e:
+            error_occur = True
+
+        assert_true(error_occur, "Withdrawal request with insufficient balance should fail")
 
         generate_next_block(sc_node, "first node")
 
         # verifies that there are no withdrawal requests
         current_epoch_number = 0
-        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(0, len(list_of_wr))
 
         # verifies that the balance didn't change
@@ -92,8 +95,6 @@ class SCEvmBWTCornerCases(AccountChainSetup):
         # Try a withdrawal request with amount under dust threshold (54 zennies), wr should not be created but the tx should be created
         bt_amount_in_zennies = 53
         res = withdrawcoins(sc_node, mc_address1, bt_amount_in_zennies)
-        if "error" in res:
-            fail(f"Creating Withdrawal request failed: " + json.dumps(res))
         tx_id = add_0x_prefix(res["result"]["transactionId"])
 
         # Checking the receipt
@@ -104,7 +105,7 @@ class SCEvmBWTCornerCases(AccountChainSetup):
         assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")
 
         # verifies that there are no withdrawal requests
-        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(0, len(list_of_wr))
 
         # verifies that the balance didn't change except for the consumed gas

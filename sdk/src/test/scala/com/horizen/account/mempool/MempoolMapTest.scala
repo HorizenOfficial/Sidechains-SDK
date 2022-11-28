@@ -2,7 +2,7 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.state.AccountStateReader
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import org.junit.Assert._
 import org.junit._
@@ -22,10 +22,11 @@ class MempoolMapTest
     with MockitoSugar {
 
   val stateViewMock: AccountStateReader = mock[AccountStateReader]
+  val stateProvider: AccountStateReaderProvider = () => stateViewMock
 
   @Before
   def setUp(): Unit = {
-    Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
 
     Mockito
       .when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
@@ -35,7 +36,7 @@ class MempoolMapTest
 
   @Test
   def testCanPayHigherFee(): Unit = {
-    val mempoolMap = new MempoolMap(stateViewMock)
+    val mempoolMap = new MempoolMap(stateProvider)
 
     val nonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -76,7 +77,7 @@ class MempoolMapTest
 
   @Test
   def testAddExecutableTx(): Unit = {
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
 
     var expectedNumOfTxs = 0
     assertEquals(
@@ -116,7 +117,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
@@ -168,16 +169,17 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
       executableTxs.size
     )
+
     assertEquals(
       "Added transaction is not executable",
       account1ExecTransaction1.id(),
-      executableTxs(1).id
+      executableTxs.last.id
     )
 
     val account2KeyPair = Keys.createEcKeyPair
@@ -213,7 +215,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
@@ -228,7 +230,7 @@ class MempoolMapTest
   @Test
   def testAddNonExecutableTx(): Unit = {
 
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
     var expectedNumOfTxs = 0
     var expectedNumOfExecutableTxs = 0
     assertEquals(
@@ -265,7 +267,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfExecutableTxs,
@@ -302,7 +304,7 @@ class MempoolMapTest
         .getTransaction(ModifierId @@ account1NonExecTransaction1.id)
         .nonEmpty
     )
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfExecutableTxs,
@@ -336,7 +338,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
 
     assertEquals(
       "Wrong number of executable transactions",
@@ -344,20 +346,21 @@ class MempoolMapTest
       executableTxs.size
     )
 
+    val iter = executableTxs.iterator
     assertEquals(
       "Wrong first tx",
       account1ExecTransaction0.id(),
-      executableTxs.head.id
+      iter.next().id
     )
     assertEquals(
       "Wrong second tx",
       account1NonExecTransaction1.id(),
-      executableTxs(1).id
+      iter.next().id
     )
     assertEquals(
       "Wrong third tx",
       account1NonExecTransaction0.id(),
-      executableTxs(2).id
+      iter.next().id
     )
 
     val account1ExecTransaction1 = createEIP1559Transaction(
@@ -388,7 +391,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
 
     assertEquals(
       "Wrong number of executable transactions",
@@ -423,7 +426,7 @@ class MempoolMapTest
         .nonEmpty
     )
 
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
 
     assertEquals(
       "Wrong number of executable transactions",
@@ -437,7 +440,7 @@ class MempoolMapTest
   def testAddSameNonce(): Unit = {
     val account1KeyPairOpt = Some(Keys.createEcKeyPair)
 
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
 
@@ -601,7 +604,7 @@ class MempoolMapTest
 
   @Test
   def testRemove(): Unit = {
-    var mempoolMap = new MempoolMap(stateViewMock)
+    var mempoolMap = new MempoolMap(stateProvider)
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -631,7 +634,7 @@ class MempoolMapTest
       "Transaction is still in the mempool",
       mempoolMap.contains(ModifierId @@ account1NonExecTransaction0.id)
     )
-    var executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
@@ -659,7 +662,7 @@ class MempoolMapTest
       "Transaction is still in the mempool",
       mempoolMap.contains(ModifierId @@ account1ExecTransaction0.id)
     )
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       expectedNumOfTxs,
@@ -692,7 +695,7 @@ class MempoolMapTest
       "Transaction is still in the mempool",
       mempoolMap.contains(ModifierId @@ txToRemove.id)
     )
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       3,
@@ -700,7 +703,7 @@ class MempoolMapTest
     )
 
     res = mempoolMap.add(txToRemove)
-    executableTxs = mempoolMap.takeExecutableTxs(10).toSeq
+    executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals(
       "Wrong number of executable transactions",
       6,
@@ -713,14 +716,20 @@ class MempoolMapTest
   def testTakeExecutableTxs(): Unit = {
 
     val initialStateNonce = BigInteger.ZERO
-    Mockito.when(stateViewMock.baseFee).thenReturn(BigInteger.TEN)
-    var mempoolMap = new MempoolMap(stateViewMock)
+    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.TEN)
+    var mempoolMap = new MempoolMap(stateProvider)
 
-    assertEquals(
+    var listOfExecTxs = mempoolMap.takeExecutableTxs()
+    assertTrue(
       "Wrong tx list size ",
-      0,
-      mempoolMap.takeExecutableTxs(10).size
+      listOfExecTxs.isEmpty
     )
+
+    var iter =  listOfExecTxs.iterator
+    assertFalse(iter.hasNext)
+    assertThrows[NoSuchElementException](iter.peek)
+    assertThrows[NoSuchElementException](iter.removeAndSkipAccount())
+    assertThrows[NoSuchElementException](iter.next())
 
     //Adding some txs in the mempool
 
@@ -738,13 +747,31 @@ class MempoolMapTest
     assertTrue(res.isSuccess)
     mempoolMap = res.get
 
-    var listOfExecTxs = mempoolMap.takeExecutableTxs(10).toList
+    listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      listOfExecTxs.head.id
     )
+
+    iter =  listOfExecTxs.iterator
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Peek should return always the same element ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.removeAndSkipAccount().id
+    )
+    assertThrows[NoSuchElementException]("Pop should modify the iterator", iter.removeAndSkipAccount())
 
     val account1NonExecTransaction0 = createEIP1559Transaction(
       value,
@@ -756,13 +783,31 @@ class MempoolMapTest
     res = mempoolMap.add(account1NonExecTransaction0)
     assertTrue(res.isSuccess)
     mempoolMap = res.get
-    listOfExecTxs = mempoolMap.takeExecutableTxs(10).toList
+    listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      listOfExecTxs.head.id
     )
+
+    iter = listOfExecTxs.iterator
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Peek should return always the same element ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Wrong tx ",
+      account1ExecTransaction0.id(),
+      iter.removeAndSkipAccount().id
+    )
+    assertThrows[NoSuchElementException]("Pop should modify the iterator", iter.removeAndSkipAccount())
 
     //Adding other Txs to the same account and verify they are returned ordered by nonce and not by gas price
 
@@ -787,36 +832,49 @@ class MempoolMapTest
     assertTrue(res.isSuccess)
     mempoolMap = res.get
 
-    listOfExecTxs = mempoolMap.takeExecutableTxs(10).toList
+    listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 3, listOfExecTxs.size)
+    iter = listOfExecTxs.iterator
+    assertEquals(
+      "Wrong tx by peek ",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      iter.next().id
+    )
+    assertEquals(
+      "Wrong tx by peek ",
+      account1ExecTransaction1.id(),
+      iter.peek.id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction1.id(),
-      listOfExecTxs(1).id
+      iter.next().id
+    )
+    assertEquals(
+      "Wrong tx by peek ",
+      account1ExecTransaction2.id(),
+      iter.peek.id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction2.id(),
-      listOfExecTxs(2).id
+      iter.next().id
     )
+    assertFalse("Iterator still finds txs", iter.hasNext)
 
-    listOfExecTxs = mempoolMap.takeExecutableTxs(2).toList
-    assertEquals("Wrong tx list size ", 2, listOfExecTxs.size)
+    iter = listOfExecTxs.iterator
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      iter.removeAndSkipAccount.id
     )
-    assertEquals(
-      "Wrong tx ",
-      account1ExecTransaction1.id(),
-      listOfExecTxs(1).id
-    )
+    assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.removeAndSkipAccount())
+
 
     //Create txs for other accounts and verify that the list is ordered by nonce and gas price
     //The expected order is: tx3_0, tx3_1, tx3_2, tx2_0, tx1_0, tx2_1, tx2_2, tx1_1, tx1_2
@@ -886,78 +944,92 @@ class MempoolMapTest
     assertTrue(res.isSuccess)
     mempoolMap = res.get
 
-    listOfExecTxs = mempoolMap.takeExecutableTxs(10).toList
+    listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 9, listOfExecTxs.size)
+    iter = listOfExecTxs.iterator
     assertEquals(
       "Wrong tx ",
       account3ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account3ExecTransaction1.id(),
-      listOfExecTxs(1).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account3ExecTransaction2.id(),
-      listOfExecTxs(2).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction0.id(),
-      listOfExecTxs(3).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction0.id(),
-      listOfExecTxs(4).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction1.id(),
-      listOfExecTxs(5).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction2.id(),
-      listOfExecTxs(6).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction1.id(),
-      listOfExecTxs(7).id
+      iter.next().id
     )
     assertEquals(
       "Wrong tx ",
       account1ExecTransaction2.id(),
-      listOfExecTxs(8).id
+      iter.next().id
     )
 
-    listOfExecTxs = mempoolMap.takeExecutableTxs(4).toList
-    assertEquals("Wrong tx list size ", 4, listOfExecTxs.size)
+    assertFalse(iter.hasNext)
+
+
+    iter = listOfExecTxs.iterator
     assertEquals(
       "Wrong tx ",
       account3ExecTransaction0.id(),
-      listOfExecTxs(0).id
+      iter.removeAndSkipAccount().id
     )
+
     assertEquals(
-      "Wrong tx ",
-      account3ExecTransaction1.id(),
-      listOfExecTxs(1).id
-    )
-    assertEquals(
-      "Wrong tx ",
-      account3ExecTransaction2.id(),
-      listOfExecTxs(2).id
+      "Wrong tx by peek after pop",
+      account2ExecTransaction0.id(),
+      iter.peek.id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction0.id(),
-      listOfExecTxs(3).id
+      iter.next.id
     )
+    assertEquals(
+      "Wrong tx by peek after next",
+      account1ExecTransaction0.id(),
+      iter.peek.id
+    )
+    assertEquals(
+      "Wrong tx",
+      account1ExecTransaction0.id(),
+      iter.removeAndSkipAccount.id
+    )
+    assertEquals(
+      "Wrong tx ",
+      account2ExecTransaction1.id(),
+      iter.removeAndSkipAccount.id
+    )
+    assertFalse(iter.hasNext)
+    assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.removeAndSkipAccount())
 
   }
-
-
 }

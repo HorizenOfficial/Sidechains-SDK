@@ -7,7 +7,7 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.types.Quantity
 import com.horizen.account.node.AccountNodeView
-import com.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolderFixture}
+import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.{NetworkParams, RegTestParams}
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
@@ -20,7 +20,7 @@ import scala.concurrent.duration.{FiniteDuration, SECONDS}
 // TODO: we need full coverage of eth rpc service. Every method with both success and fail cases
 class EthServiceTest extends JUnitSuite
   with MockitoSugar
-  with MockedSidechainNodeViewHolderFixture {
+{
   var nodeView: AccountNodeView = _
   var ethService: EthService = _
   var params: NetworkParams = _
@@ -70,6 +70,26 @@ class EthServiceTest extends JUnitSuite
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\", \"params\":[]}}"
     request = mapper.readTree(json)
     rpcRequest = new RpcRequest(request)
-    assertEquals(Numeric.toHexStringWithPrefix(BigInteger.valueOf(params.chainId)), ethService.execute(rpcRequest).asInstanceOf[Quantity].getValue)
+    assertEquals(Numeric.toHexStringWithPrefix(BigInteger.valueOf(params.chainId)), ethService.execute(rpcRequest).asInstanceOf[Quantity].value)
+
+    // Test 4: Trigger IllegalArgumentException rpc call
+    json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":[-1]}}"
+    request = mapper.readTree(json)
+    rpcRequest = new RpcRequest(request)
+    assertThrows[RpcException] {
+      ethService.execute(rpcRequest)
+    }
+  }
+
+  @Test
+  def invalidJsonRpcData(): Unit = {
+    val mapper = new ObjectMapper
+
+    // Try to read json request with missing data
+    val json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"params\":[]}}"
+    val request = mapper.readTree(json)
+    assertThrows[RpcException] {
+      val rpcRequest = new RpcRequest(request)
+    }
   }
 }

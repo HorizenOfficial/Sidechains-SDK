@@ -30,6 +30,10 @@ for i in "$@"; do
       EXCLUDE="${i#*=}"
       shift
       ;;
+    -evm_only)
+      EVM_ONLY="true"
+      shift
+      ;;
     -split=*)
       SPLIT="${i#*=}"
       shift
@@ -42,7 +46,9 @@ for i in "$@"; do
 done
 
 #Run the tests
-testScripts=(
+testScripts=();
+
+testScriptsEvm=(
     'sc_evm_bootstrap.py'
     'sc_evm_eoa2eoa.py'
     'sc_evm_forward_transfer.py'
@@ -51,6 +57,7 @@ testScripts=(
     'sc_evm_bwt_corner_cases.py'
     'sc_evm_contract_deployment_create2.py'
     'sc_evm_forger.py'
+    'sc_evm_forger_delegation.py'
     'sc_evm_closed_forger.py'
     'sc_evm_forging_fee_payments.py'
     'sc_evm_fee_payments_rpc.py'
@@ -66,6 +73,10 @@ testScripts=(
     'sc_evm_test_erc721.py'
     'sc_evm_test_contract_contract_deployment_and_interaction.py'
     'sc_evm_test_metamask_related.py'
+    'sc_evm_storage_recovery.py'
+);
+
+testScriptsUtxo=(
     'mc_sc_connected_nodes.py'
     'mc_sc_forging1.py'
     'mc_sc_forging2.py'
@@ -118,6 +129,15 @@ testScripts=(
     'sc_fork_one_forced_tx.py'
     'sc_big_block.py'
 );
+
+
+# decide whether to have only evm tests or the whole set
+if [ ! -z "$EVM_ONLY" ] && [ "${EVM_ONLY}" = "true" ]; then
+  testScripts+=( "${testScriptsEvm[@]}" )
+else
+  testScripts+=( "${testScriptsEvm[@]}" )
+  testScripts+=( "${testScriptsUtxo[@]}")
+fi
 
 # include extended tests
 if [ ! -z "$EXTENDED" ] && [ "${EXTENDED}" = "true" ]; then

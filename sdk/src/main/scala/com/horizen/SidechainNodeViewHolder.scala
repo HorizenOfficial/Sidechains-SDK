@@ -12,7 +12,6 @@ import com.horizen.storage._
 import com.horizen.wallet.ApplicationWallet
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
-import com.horizen.utils.BytesUtils
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.transaction.Transaction
@@ -52,12 +51,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
   // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
-  def checkAndRecoverStorages(restoredData: Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)]):
+  override def checkAndRecoverStorages(restoredData: Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)]):
   Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)] = {
 
     restoredData.flatMap {
       dataOpt => {
-        dumpStorages
+        dumpStorages()
 
         log.info("Checking state consistency...")
 
@@ -174,25 +173,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     val result = checkAndRecoverStorages(restoredData)
     result
   }
-
-  override def dumpStorages: Unit =
-    try {
-      val m = getStorageVersions.map { case (k, v) => {
-        "%-36s".format(k) + ": " + v
-      }
-      }
-      m.foreach(x => log.debug(s"${x}"))
-      log.trace(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions.slice(0, 3)}")
-    } catch {
-      case e: Exception =>
-        // can happen during unit test with mocked objects
-        log.warn("Could not print debug info about storages: " + e.getMessage)
-    }
-
-  override def getStorageVersions: Map[String, String] =
-    listOfStorageInfo.map(x => {
-      x.getStorageName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
-    }).toMap
 
   override def processLocallyGeneratedTransaction: Receive = {
     case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>
