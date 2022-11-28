@@ -215,9 +215,9 @@ final class LibEvm {
             BigInteger gasLimit,
             BigInteger gasPrice,
             EvmContext context,
-            TraceOptions traceParams
+            TraceOptions traceOptions
     ) {
-        var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context, traceParams);
+        var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions);
         return invoke("EvmApply", params, EvmResult.class);
     }
 

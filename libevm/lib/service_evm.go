@@ -41,7 +41,7 @@ type EvmParams struct {
 	GasPrice      *hexutil.Big     `json:"gasPrice"`
 	AccessList    types.AccessList `json:"accessList"`
 	Context       EvmContext       `json:"context"`
-	TxTraceParams *TraceParams     `json:"traceParams"`
+	TxTraceParams *TraceParams     `json:"traceOptions"`
 }
 
 // setDefaults for parameters that were omitted

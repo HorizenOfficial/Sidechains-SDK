@@ -14,7 +14,7 @@ public class BlockContext {
     public final int blockNumber;
     public final int consensusEpochNumber;
     public final int withdrawalEpochNumber;
-    private TraceOptions traceParams;
+    private TraceOptions traceOptions;
     private EvmResult evmResult;
 
     public BlockContext(
@@ -53,11 +53,11 @@ public class BlockContext {
     }
 
     public TraceOptions getTraceParams() {
-        return this.traceParams;
+        return this.traceOptions;
     }
 
     public void setTraceParams(TraceOptions tracer) {
-        this.traceParams = tracer;
+        this.traceOptions = tracer;
     }
 
     public EvmResult getEvmResult() {

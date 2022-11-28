@@ -477,7 +477,7 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
-  def traceBlockByNumber(tag: String, traceParams: TraceOptions): DebugTraceBlockView = {
+  def traceBlockByNumber(tag: String, traceOptions: TraceOptions): DebugTraceBlockView = {
     applyOnAccountView { nodeView =>
       // get block to trace
       val (block, blockInfo) = getBlockByTag(nodeView, tag)
@@ -485,7 +485,7 @@ class EthService(
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceOptions(true, false, false, true) else traceParams)
+        blockContext.setTraceParams(if (traceOptions == null) new TraceOptions() else traceOptions)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
@@ -507,7 +507,7 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, traceParams: TraceOptions): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: Hash, traceOptions: TraceOptions): DebugTraceTransactionView = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -535,7 +535,7 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceOptions(true, false, false, true) else traceParams)
+        blockContext.setTraceParams(if (traceOptions == null) new TraceOptions() else traceOptions)
 
         // apply requested transaction with tracing enabled
         blockContext.setEvmResult(null)

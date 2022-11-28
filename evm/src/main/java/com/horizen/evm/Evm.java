@@ -19,8 +19,8 @@ public final class Evm {
             BigInteger gasLimit,
             BigInteger gasPrice,
             EvmContext context,
-            TraceOptions traceParams
+            TraceOptions traceOptions
     ) {
-        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceParams);
+        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions);
     }
 }

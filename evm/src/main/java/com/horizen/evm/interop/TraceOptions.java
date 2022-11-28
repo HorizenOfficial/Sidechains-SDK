@@ -9,15 +9,10 @@ public class TraceOptions {
     public final boolean disableStorage;
     public final boolean enableReturnData;
 
-    //    Default values:
-    //    enableMemory = true;
-    //    disableStack = false;
-    //    disableStorage = false;
-    //    enableReturnData = true;
-    public TraceOptions(boolean enableMemory, boolean disableStack, boolean disableStorage, boolean enableReturnData) {
-        this.enableMemory = enableMemory;
-        this.disableStack = disableStack;
-        this.disableStorage = disableStorage;
-        this.enableReturnData = enableReturnData;
+    public TraceOptions() {
+        enableMemory = true;
+        disableStack = false;
+        disableStorage = false;
+        enableReturnData = true;
     }
 }
