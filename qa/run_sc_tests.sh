@@ -65,7 +65,7 @@ testScripts=(
     'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_bwt_minimum_value.py'
     'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_bwt_minimum_value.py --nonceasing'
+    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_ceased.py'
     'sc_cert_fee_conf.py'
     'sc_cert_no_coin_record.py'
