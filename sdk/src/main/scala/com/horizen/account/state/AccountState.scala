@@ -275,7 +275,7 @@ class AccountState(
   }
 
   // Note: Equal to SidechainState.isSwitchingConsensusEpoch
-  def isSwitchingConsensusEpoch(blockTimeStamp: Long): Boolean = {
+  override def isSwitchingConsensusEpoch(blockTimeStamp: Long): Boolean = {
     val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, blockTimeStamp)
     val currentConsensusEpoch: ConsensusEpochNumber = getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
@@ -321,15 +321,15 @@ class AccountState(
     AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq)
   }
 
-  def getWithdrawalEpochInfo: WithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo
 
-  def getConsensusEpochNumber: Option[ConsensusEpochNumber] = stateMetadataStorage.getConsensusEpochNumber
+  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = stateMetadataStorage.getConsensusEpochNumber
 
-  def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakesInfoSeq)
+  override def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakesInfoSeq)
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   // TODO this is common code with SidechainState
-  def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
+  override def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
     val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq
     if (forgingStakes.isEmpty) {
       throw new IllegalStateException("ForgerStakes list can't be empty.")
@@ -360,11 +360,11 @@ class AccountState(
 
   override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgerStakes)
 
-  def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
+  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = using(getView)(_.getLogs(txHash))
 
-  def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
+  override def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
@@ -419,7 +419,7 @@ class AccountState(
   }
 
   // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
-  def isWithdrawalEpochLastIndex: Boolean = {
+  override def isWithdrawalEpochLastIndex: Boolean = {
     WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
   }
 
