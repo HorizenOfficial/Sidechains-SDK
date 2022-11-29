@@ -109,12 +109,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         generate_next_block(sc_forger_node, "second node")  # 1 MC block to trigger Submitter logic
 
         # Wait for Certificates appearance
-        time.sleep(5)
-        logging.info("Waiting to start certificate generation.")
-        # The following line also checks Certificate Submitter Api during the node synchronization
-        while not sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
-            time.sleep(1)
-
+        time.sleep(10)
         while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"][
             "state"]:
             logging.info("Wait for certificates in the MC mempool...")
