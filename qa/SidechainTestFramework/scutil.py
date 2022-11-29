@@ -907,7 +907,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
 def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False, circuit_type = NO_KEY_ROTATION_CIRCUIT):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
     if (circuit_type == NO_KEY_ROTATION_CIRCUIT):
-        if (not isCSWEnabled):
+        if isCSWEnabled:
             pk = "cert_marlin_snark_pk"
             vk = "cert_marlin_snark_vk"
         else:
