@@ -9,6 +9,6 @@ object WellKnownAddresses {
   val FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES: Array[Byte] = BytesUtils.fromHexString("0000000000000000000022222222222222222222")
 
   // used to burn coins
-  val DEAD_ADDRESS_BYTES: Array[Byte] = BytesUtils.fromHexString("000000000000000000000000000000000000dead")
+  val NULL_ADDRESS_BYTES: Array[Byte] = BytesUtils.fromHexString("0000000000000000000000000000000000000000")
 
 }
