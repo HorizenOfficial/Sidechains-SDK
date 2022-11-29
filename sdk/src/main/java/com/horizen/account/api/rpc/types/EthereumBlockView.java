@@ -30,8 +30,6 @@ public class EthereumBlockView {
     public final String timestamp;
     public final List<?> transactions;
     public String author;
-    public String difficulty;
-    public String totalDifficulty;
     public List<String> uncles = new ArrayList<>();
     public List<String> sealFields = new ArrayList<>();
     public String baseFeePerGas;
