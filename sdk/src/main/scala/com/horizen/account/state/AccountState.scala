@@ -303,6 +303,7 @@ class AccountState(
     new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
   }
 
+  // get a view over state db which is built with the given state root
   def getStateDbViewFromRoot(stateRoot: Array[Byte]): StateDbAccountStateView =
     new StateDbAccountStateView(new StateDB(stateDbStorage, stateRoot), messageProcessors)
 
@@ -369,6 +370,20 @@ class AccountState(
 
   override def getNextBaseFee: BigInteger = using(getView)(_.getNextBaseFee)
 
+  override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = using(getView)(_.getTransactionReceipt(txHash))
+
+  override def getStateDbHandle: ResourceHandle = using(getView)(_.getStateDbHandle)
+
+  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorage(address, key))
+
+  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorageBytes(address, key))
+
+  override def accountExists(address: Array[Byte]): Boolean = using(getView)(_.accountExists(address))
+
+  override def isEoaAccount(address: Array[Byte]): Boolean = using(getView)(_.isEoaAccount(address))
+
+  override def isSmartContractAccount(address: Array[Byte]): Boolean = using(getView)(_.isSmartContractAccount(address))
+
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
@@ -407,6 +422,7 @@ class AccountState(
   def isWithdrawalEpochLastIndex: Boolean = {
     WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
   }
+
 }
 
 object AccountState extends ScorexLogging {

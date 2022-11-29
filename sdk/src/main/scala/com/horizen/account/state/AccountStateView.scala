@@ -14,6 +14,12 @@ import scorex.util.ScorexLogging
 import java.math.BigInteger
 import scala.util.Try
 
+
+// this class extends 2 main hierarchies, which are kept separate:
+//  - StateView (trait): metadata read/write
+//      Implements the methods via metadataStorageView
+//  - StateDbAccountStateView (concrete class) : evm stateDb read/write
+//      Inherits its methods
 class AccountStateView(
   metadataStorageView: AccountStateMetadataStorageView,
   stateDb: StateDB,
@@ -65,8 +71,6 @@ class AccountStateView(
   }
 
   // getters
-
-
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
 
@@ -82,13 +86,6 @@ class AccountStateView(
     AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq)
   }
 
-
-
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
-
-
-
-
-
 
 }

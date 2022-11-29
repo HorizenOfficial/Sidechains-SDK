@@ -16,84 +16,30 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
 import scorex.util.ScorexLogging
-
 import java.math.BigInteger
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 
-class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessageProcessor])
-  extends BaseAccountStateView with AutoCloseable with ScorexLogging {
-
+class StateDbAccountStateView(
+               stateDb: StateDB,
+               messageProcessors: Seq[MessageProcessor])
+  extends BaseAccountStateView
+    with AutoCloseable
+    with ScorexLogging {
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
+  override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
+    withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
 
-  @throws(classOf[InvalidMessageException])
-  @throws(classOf[ExecutionFailedException])
-  def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
-    new StateTransition(this, messageProcessors, blockGasPool, blockContext).transition(msg)
-  }
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] =
+    forgerStakesProvider.getListOfForgers(this)
 
-  /**
-   * Possible outcomes:
-   *  - tx applied succesfully => Receipt with status success
-   *  - tx execution failed => Receipt with status failed
-   *    - if any ExecutionFailedException was thrown, including but not limited to:
-   *    - OutOfGasException (not intrinsic gas, see below!)
-   *    - EvmException (EVM reverted) / fake contract exception
-   *  - tx could not be applied => throws an exception (this will lead to an invalid block)
-   *    - any of the preChecks fail
-   *    - not enough gas for intrinsic gas
-   *    - block gas limit reached
-   */
-  def applyTransaction(
-                        tx: SidechainTypes#SCAT,
-                        txIndex: Int,
-                        blockGasPool: GasPool,
-                        blockContext: BlockContext,
-                        finalizeChanges: Boolean = true
-                      ): Try[EthereumConsensusDataReceipt] = Try {
-    if (!tx.isInstanceOf[EthereumTransaction])
-      throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
-
-    val ethTx = tx.asInstanceOf[EthereumTransaction]
-    val txHash = BytesUtils.fromHexString(ethTx.id)
-    val msg = ethTx.asMessage(blockContext.baseFee)
-
-    // Tx context for stateDB, to know where to keep EvmLogs
-    setupTxContext(txHash, txIndex)
-
-    log.debug(s"applying msg: used pool gas ${blockGasPool.getUsedGas}")
-    // apply message to state
-    val status = try {
-      applyMessage(msg, blockGasPool, blockContext)
-      ReceiptStatus.SUCCESSFUL
-    } catch {
-      // any other exception will bubble up and invalidate the block
-      case err: ExecutionFailedException =>
-        log.error(s"applying message failed, tx.id=${ethTx.id}", err)
-        ReceiptStatus.FAILED
-    } finally {
-      // finalize pending changes, clear the journal and reset refund counter
-      if (finalizeChanges)
-        stateDb.finalizeChanges()
-    }
-    val consensusDataReceipt = new EthereumConsensusDataReceipt(
-      ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
-    log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
-    log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}")
-
-    consensusDataReceipt
-  }
-
-  def snapshot: Int = stateDb.snapshot()
-
-  def revertToSnapshot(revisionId: Int): Unit = stateDb.revertToSnapshot(revisionId)
-
+  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
+    forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
-
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -153,39 +99,6 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
     })
   }
 
-
-
-  def getProof(address: Array[Byte], keys: Array[Array[Byte]]): ProofAccountResult =
-    stateDb.getProof(address, keys)
-
-
-  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] =
-    stateDb.getStorage(address, key, StateStorageStrategy.RAW)
-
-  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] =
-    stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
-
-  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
-    stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
-
-  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
-    stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
-
-  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
-    stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
-
-  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit =
-    stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
-
-  override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
-    withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
-
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] =
-    forgerStakesProvider.getListOfForgers(this)
-
-  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
-    forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
-
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     // get forger stakes list view (scala lazy collection)
     getListOfForgerStakes.view
@@ -210,30 +123,77 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
       .sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
+  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = {
+    // set context for the created events/logs assignment
+    stateDb.setTxContext(txHash, idx)
+  }
 
-  def finalizeChanges(): Unit =  stateDb.finalizeChanges()
+  @throws(classOf[InvalidMessageException])
+  @throws(classOf[ExecutionFailedException])
+  def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
+    new StateTransition(this, messageProcessors, blockGasPool, blockContext).transition(msg)
+  }
 
-  def getRefund: BigInteger = stateDb.getRefund
+  /**
+   * Possible outcomes:
+   *  - tx applied succesfully => Receipt with status success
+   *  - tx execution failed => Receipt with status failed
+   *    - if any ExecutionFailedException was thrown, including but not limited to:
+   *    - OutOfGasException (not intrinsic gas, see below!)
+   *    - EvmException (EVM reverted) / fake contract exception
+   *  - tx could not be applied => throws an exception (this will lead to an invalid block)
+   *    - any of the preChecks fail
+   *    - not enough gas for intrinsic gas
+   *    - block gas limit reached
+   */
+  def applyTransaction(
+                        tx: SidechainTypes#SCAT,
+                        txIndex: Int,
+                        blockGasPool: GasPool,
+                        blockContext: BlockContext,
+                        finalizeChanges: Boolean = true
+                      ): Try[EthereumConsensusDataReceipt] = Try {
+    if (!tx.isInstanceOf[EthereumTransaction])
+      throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
+    val ethTx = tx.asInstanceOf[EthereumTransaction]
+    val txHash = BytesUtils.fromHexString(ethTx.id)
+    val msg = ethTx.asMessage(blockContext.baseFee)
 
-  override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
+    // Tx context for stateDB, to know where to keep EvmLogs
+    setupTxContext(txHash, txIndex)
 
-  // when a method is called on a closed handle, LibEvm throws an exception
-  override def close(): Unit = stateDb.close()
+    log.debug(s"applying msg: used pool gas ${blockGasPool.getUsedGas}")
+    // apply message to state
+    val status = try {
+      applyMessage(msg, blockGasPool, blockContext)
+      ReceiptStatus.SUCCESSFUL
+    } catch {
+      // any other exception will bubble up and invalidate the block
+      case err: ExecutionFailedException =>
+        log.error(s"applying message failed, tx.id=${ethTx.id}", err)
+        ReceiptStatus.FAILED
+    } finally {
+      // finalize pending changes, clear the journal and reset refund counter
+      if (finalizeChanges)
+        stateDb.finalizeChanges()
+    }
+    val consensusDataReceipt = new EthereumConsensusDataReceipt(
+      ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
+    log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
+    log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}")
 
-  override def getStateDbHandle: ResourceHandle = stateDb
+    consensusDataReceipt
+  }
 
-  override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
+  override def isEoaAccount(address: Array[Byte]): Boolean =
+    stateDb.isEoaAccount(address)
 
-  // account specific getters
-  override def getNonce(address: Array[Byte]): BigInteger = stateDb.getNonce(address)
+  override def isSmartContractAccount(address: Array[Byte]): Boolean =
+    stateDb.isSmartContractAccount(address)
 
-  override def getBalance(address: Array[Byte]): BigInteger = stateDb.getBalance(address)
-
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = stateDb.getCodeHash(address)
-
-  override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
+  override def accountExists(address: Array[Byte]): Boolean =
+    !stateDb.isEmpty(address)
 
   // account modifiers:
   override def addAccount(address: Array[Byte], code: Array[Byte]): Unit =
@@ -254,7 +214,6 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
     }
   }
 
-
   @throws(classOf[ExecutionFailedException])
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
@@ -271,19 +230,54 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
     }
   }
 
+  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] =
+    stateDb.getStorage(address, key, StateStorageStrategy.RAW)
 
+  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] =
+    stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
 
-  override def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
+  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
+    stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
 
-  override def isSmartContractAccount(address: Array[Byte]): Boolean = stateDb.isSmartContractAccount(address)
+  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
+    stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
 
-  override def accountExists(address: Array[Byte]): Boolean = !stateDb.isEmpty(address)
+  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
+    stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
 
-  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = {
-    // set context for the created events/logs assignment
-    stateDb.setTxContext(txHash, idx)
-  }
+  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit =
+    stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
 
+  def getProof(address: Array[Byte], keys: Array[Array[Byte]]): ProofAccountResult =
+    stateDb.getProof(address, keys)
+
+  // account specific getters
+  override def getNonce(address: Array[Byte]): BigInteger = stateDb.getNonce(address)
+
+  override def getBalance(address: Array[Byte]): BigInteger = stateDb.getBalance(address)
+
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = stateDb.getCodeHash(address)
+
+  override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
+
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
+
+  override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
+
+  // when a method is called on a closed handle, LibEvm throws an exception
+  override def close(): Unit = stateDb.close()
+
+  override def getStateDbHandle: ResourceHandle = stateDb
+
+  override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
+
+  def getRefund: BigInteger = stateDb.getRefund
+
+  def snapshot: Int = stateDb.snapshot()
+
+  def finalizeChanges(): Unit =  stateDb.finalizeChanges()
+
+  def revertToSnapshot(revisionId: Int): Unit = stateDb.revertToSnapshot(revisionId)
 }
 
 
