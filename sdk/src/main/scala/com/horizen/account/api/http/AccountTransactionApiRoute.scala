@@ -494,7 +494,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqAllWithdrawalRequests]) { body =>
       withNodeView { sidechainNodeView =>
         val accountState = sidechainNodeView.getNodeState
-        val listOfWithdrawalRequests = accountState.withdrawalRequests(body.epochNum)
+        val listOfWithdrawalRequests = accountState.getWithdrawalRequests(body.epochNum)
         ApiResponseUtil.toResponse(RespAllWithdrawalRequests(listOfWithdrawalRequests.toList))
       }
     }

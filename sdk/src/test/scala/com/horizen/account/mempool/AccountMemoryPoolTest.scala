@@ -3,6 +3,7 @@ package com.horizen.account.mempool
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.state.AccountStateReader
+import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -26,11 +27,12 @@ class AccountMemoryPoolTest
   def testTakeExecutableTxs(): Unit = {
 
     val initialStateNonce = BigInteger.ZERO
-    val stateViewMock = mock[AccountStateReader]
-    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
-    Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(initialStateNonce)
+    val accountStateViewMock = mock[AccountStateReader]
+    val baseStateViewMock = mock[BaseStateReader]
+    Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(initialStateNonce)
 
-    val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => stateViewMock)
+    val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock, () => baseStateViewMock)
 
     assertTrue("Wrong tx list size ", accountMemoryPool.takeExecutableTxs.isEmpty)
 

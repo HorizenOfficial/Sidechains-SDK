@@ -111,8 +111,6 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
     view.addLog(evmLog)
   }
 
-  override def getAccountStateRoot: Array[Byte] = view.getAccountStateRoot
-
   override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = view.getListOfForgerStakes
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = view.getForgerStakeData(stakeId)
@@ -121,7 +119,5 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
 
   override def getIntermediateRoot: Array[Byte] = view.getIntermediateRoot
 
-  override def nextBaseFee: BigInteger = view.nextBaseFee
-
-
+  override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] = view.getWithdrawalRequests(withdrawalEpoch)
 }

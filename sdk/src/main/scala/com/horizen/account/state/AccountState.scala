@@ -86,7 +86,7 @@ class AccountState(
 
         // Top quality certificate may be present in the current SC block or in the previous blocks or can be absent.
         val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] =
-          mod.topQualityCertificateOpt.orElse(stateView.certificate(certReferencedEpochNumber))
+          mod.topQualityCertificateOpt.orElse(stateView.getTopQualityCertificate(certReferencedEpochNumber))
 
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
         topQualityCertificateOpt match {
@@ -106,8 +106,8 @@ class AccountState(
       val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
       stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
-
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
+        stateView.addTopQualityCertificates(mcBlockRefData).get
         stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
       }
 
@@ -175,7 +175,7 @@ class AccountState(
       // - base -> forgers pool, weighted by number of blocks forged
       // - tip -> block forger
       // Note: store also entries with zero values, which can arise in sc blocks without any tx
-      stateView.addFeeInfo(AccountBlockFeeInfo(cumBaseFee, cumForgerTips, mod.header.forgerAddress))
+      stateView.updateFeePaymentInfo(AccountBlockFeeInfo(cumBaseFee, cumForgerTips, mod.header.forgerAddress))
 
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
       evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
@@ -215,7 +215,7 @@ class AccountState(
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
     if (isWithdrawalEpochFinished) {
       // current block fee info is already in the view therefore we pass None as second param
-      val feePayments = stateView.getFeePayments(modWithdrawalEpochInfo.epoch, None)
+      val feePayments = stateView.getFeePaymentsInfo(modWithdrawalEpochInfo.epoch, None)
 
       // Verify that Forger assumed the same fees to be paid as the current node does.
       val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
@@ -248,7 +248,7 @@ class AccountState(
     // Check that the top quality certificate data is relevant to the SC active chain cert data.
     // There is no need to check endEpochBlockHash, epoch number and Snark proof, because SC trusts MC consensus.
     // Currently we need to check only the consistency of backward transfers and utxoMerkleRoot
-    val expectedWithdrawalRequests = stateView.withdrawalRequests(certReferencedEpochNumber)
+    val expectedWithdrawalRequests = stateView.getWithdrawalRequests(certReferencedEpochNumber)
 
     // Simple size check
     if (topQualityCertificate.backwardTransferOutputs.size != expectedWithdrawalRequests.size) {
@@ -303,27 +303,19 @@ class AccountState(
     new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
   }
 
-  // TODO: stateMetadataStorage is kept as is.
-  def getStateDbViewFromRoot(stateRoot: Array[Byte]): AccountStateView =
-    new AccountStateView(stateMetadataStorage.getView, new StateDB(stateDbStorage, stateRoot), messageProcessors)
+  def getStateDbViewFromRoot(stateRoot: Array[Byte]): StateDbAccountStateView =
+    new StateDbAccountStateView(new StateDB(stateDbStorage, stateRoot), messageProcessors)
 
   // Base getters
-  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
-    using(getView)(_.withdrawalRequests(withdrawalEpoch))
+  override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
+    using(getView)(_.getWithdrawalRequests(withdrawalEpoch))
 
-  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
+  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
-
-  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
-    stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch) match {
-      case Some(certificate) => certificate.quality
-      case None => 0
-    }
-  }
 
   override def hasCeased: Boolean = stateMetadataStorage.hasCeased
 
-  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+  override def getFeePaymentsInfo(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
     val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
     AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq)
   }
@@ -375,7 +367,7 @@ class AccountState(
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
-  override def nextBaseFee: BigInteger = using(getView)(_.nextBaseFee)
+  override def getNextBaseFee: BigInteger = using(getView)(_.getNextBaseFee)
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()

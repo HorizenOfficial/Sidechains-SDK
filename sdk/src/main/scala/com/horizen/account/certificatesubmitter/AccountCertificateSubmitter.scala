@@ -42,7 +42,7 @@ class AccountCertificateSubmitter(settings: SidechainSettings,
   override def getUtxoMerkleTreeRoot(referencedEpoch: Int, state: AccountState): Optional[Array[Byte]] = Optional.empty()
 
   override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[BackwardTransfer] =
-    state.withdrawalRequests(referencedEpochNumber).map(request => new BackwardTransfer(request.proposition.bytes, request.valueInZennies))
+    state.getWithdrawalRequests(referencedEpochNumber).map(request => new BackwardTransfer(request.proposition.bytes, request.valueInZennies))
 
 }
 

@@ -6,7 +6,7 @@ import scorex.util.ScorexLogging
 import java.math.BigInteger
 
 class StateTransition(
-    view: AccountStateView,
+    view: StateDbAccountStateView,
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
     blockContext: BlockContext

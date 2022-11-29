@@ -77,7 +77,9 @@ class AccountForgeMessageBuilder(
       blockContext: BlockContext
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
+
     for (mcBlockRefData <- mainchainBlockReferencesData) {
+      stateView.addTopQualityCertificates(mcBlockRefData).get
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
@@ -223,7 +225,7 @@ class AccountForgeMessageBuilder(
               val withdrawalEpochNumber: Int = dummyView.getWithdrawalEpochInfo.epoch
 
               // get all previous payments for current ending epoch and append the one of the current block
-              val feePayments = dummyView.getFeePayments(withdrawalEpochNumber, Some(currentBlockPayments))
+              val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
 
               // add rewards to forgers balance
               feePayments.foreach(payment => dummyView.addBalance(payment.addressBytes, payment.value))

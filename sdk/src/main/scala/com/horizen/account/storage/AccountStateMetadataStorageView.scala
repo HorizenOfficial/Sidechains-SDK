@@ -171,7 +171,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     receiptsOpt = Some(receipts)
   }
 
-  def addFeePayment(blockFeeInfo: AccountBlockFeeInfo): Unit = {
+  def updateFeePaymentInfo(blockFeeInfo: AccountBlockFeeInfo): Unit = {
     blockFeeInfoOpt = Some(blockFeeInfo)
   }
 

@@ -2,8 +2,9 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider}
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -21,22 +22,24 @@ class MempoolMapTest
     with SidechainTypes
     with MockitoSugar {
 
-  val stateViewMock: AccountStateReader = mock[AccountStateReader]
-  val stateProvider: AccountStateReaderProvider = () => stateViewMock
+  val accountStateViewMock: AccountStateReader = mock[AccountStateReader]
+  val accountStateProvider: AccountStateReaderProvider = () => accountStateViewMock
+  val baseStateViewMock: BaseStateReader = mock[BaseStateReader]
+  val baseStateProvider: BaseStateReaderProvider = () => baseStateViewMock
 
   @Before
   def setUp(): Unit = {
-    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
     Mockito
-      .when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
       .thenReturn(BigInteger.ZERO)
 
   }
 
   @Test
   def testCanPayHigherFee(): Unit = {
-    val mempoolMap = new MempoolMap(stateProvider)
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     val nonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -77,7 +80,7 @@ class MempoolMapTest
 
   @Test
   def testAddExecutableTx(): Unit = {
-    var mempoolMap = new MempoolMap(stateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     var expectedNumOfTxs = 0
     assertEquals(
@@ -191,7 +194,7 @@ class MempoolMapTest
     )
 
     Mockito
-      .when(stateViewMock.getNonce(account2ExecTransaction0.getFrom.address()))
+      .when(accountStateViewMock.getNonce(account2ExecTransaction0.getFrom.address()))
       .thenReturn(account2InitialStateNonce)
     expectedNumOfTxs += 1
     res = mempoolMap.add(account2ExecTransaction0)
@@ -230,7 +233,7 @@ class MempoolMapTest
   @Test
   def testAddNonExecutableTx(): Unit = {
 
-    var mempoolMap = new MempoolMap(stateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
     var expectedNumOfTxs = 0
     var expectedNumOfExecutableTxs = 0
     assertEquals(
@@ -440,7 +443,7 @@ class MempoolMapTest
   def testAddSameNonce(): Unit = {
     val account1KeyPairOpt = Some(Keys.createEcKeyPair)
 
-    var mempoolMap = new MempoolMap(stateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
 
@@ -604,7 +607,7 @@ class MempoolMapTest
 
   @Test
   def testRemove(): Unit = {
-    var mempoolMap = new MempoolMap(stateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -716,8 +719,8 @@ class MempoolMapTest
   def testTakeExecutableTxs(): Unit = {
 
     val initialStateNonce = BigInteger.ZERO
-    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.TEN)
-    var mempoolMap = new MempoolMap(stateProvider)
+    Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.TEN)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     var listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertTrue(
