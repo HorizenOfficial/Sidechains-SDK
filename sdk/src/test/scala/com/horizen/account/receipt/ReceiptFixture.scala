@@ -21,7 +21,7 @@ trait ReceiptFixture {
 
     def createTestEvmLog(addressBytes: Option[Array[Byte]]): EvmLog = {
       // random address and fixed topics/data
-      val addressBytesTemp: Array[Byte] = addressBytes.getOrElse(getRandomHash())
+      val addressBytesTemp: Array[Byte] = addressBytes.getOrElse(getRandomHash().slice(0, 20))
       val address = Address.fromBytes(addressBytesTemp)
 
       val topics = new Array[Hash](4)
@@ -34,7 +34,7 @@ trait ReceiptFixture {
       new EvmLog(address, topics, data)
     }
 
-  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]], address: Array[Byte] = null): EthereumReceipt = {
+  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]], address: Array[Byte] = Address.addressZero().toBytes): EthereumReceipt = {
     val txHashTemp: Array[Byte] = txHash.getOrElse(getRandomHash())
 
     val logs = new ListBuffer[EvmLog]
