@@ -35,7 +35,7 @@ class EthServiceTest extends JUnitSuite
     transactionActorRef = mock[ActorRef]
     NodeViewHolderRef = mock[ActorRef]
 
-    ethService = new EthService(NodeViewHolderRef, new FiniteDuration(10, SECONDS), params, settings, transactionActorRef)
+    ethService = new EthService(NodeViewHolderRef, new FiniteDuration(10, SECONDS), params, transactionActorRef)
   }
 
   @Test
