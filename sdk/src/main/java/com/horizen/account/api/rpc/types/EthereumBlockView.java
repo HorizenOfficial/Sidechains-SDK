@@ -6,6 +6,7 @@ import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,8 +32,8 @@ public class EthereumBlockView {
     public String author;
     public String difficulty;
     public String totalDifficulty;
-    public List<String> uncles;
-    public List<String> sealFields;
+    public List<String> uncles = new ArrayList<>();
+    public List<String> sealFields = new ArrayList<>();
     public String baseFeePerGas;
 
     public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block) {
