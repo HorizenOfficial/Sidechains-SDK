@@ -431,7 +431,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_signing_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
-        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_master_keys), # This should be NON empty only in case of Key Rotation Circtui
+        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_master_keys), # This should be NON empty only in case of Key Rotation Circuit
         "MAX_PKS": len(bootstrap_info.certificate_proof_info.public_signing_keys),
         "CERT_PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
         "CERT_VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
@@ -1154,7 +1154,7 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray, prev_
         end_cum_comm_tree_root=epoch_cum_tree_hash_1, constant=constant,
         pks=[], amounts=[], custom_fields=feList, prev_cert_hash=prev_cert_hash)
 
-    #logging.info("cum =", str(epoch_cum_tree_hash_1))
+    logging.info("cum =", str(epoch_cum_tree_hash_1))
     params = {
         'scid': scid,
         'quality': 10,

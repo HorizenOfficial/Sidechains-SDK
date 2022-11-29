@@ -368,7 +368,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
 
         if (!json.has("mastersPublicKeys") || !json.get("mastersPublicKeys").isArray()) {
-            printGenerateCertProofInfoUsageMsg("wrong public keys");
+            printGenerateCertProofInfoUsageMsg("wrong mastersPublicKeys");
             return;
         }
 

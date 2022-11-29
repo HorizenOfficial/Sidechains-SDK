@@ -59,8 +59,6 @@ def convertSecretToPrivateKey(secret):
 class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
-    cert_max_keys = 10
-    cert_sig_threshold = 6
 
     def setup_nodes(self):
         num_nodes = 1
@@ -69,18 +67,13 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
                                                                         '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
-        # After bug spotted in 0.3.4 we test certificate generation with max keys number > 8
-        
         mc_node = self.nodes[0]
 
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            submitter_private_keys_indexes=list(range(self.cert_max_keys))  # SC node owns all schnorr private keys.
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )            
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
-                                                        cert_max_keys=self.cert_max_keys,
-                                                        cert_sig_threshold=self.cert_sig_threshold,
                                                         circuit_type = KEY_ROTATION_CIRCUIT,
                                                         sc_creation_version = SC_CREATION_VERSION_2,
                                                         csw_enabled=False), sc_node_configuration)

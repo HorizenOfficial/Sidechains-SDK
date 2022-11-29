@@ -39,19 +39,14 @@ class SCFTLimitFork(SidechainTestFramework):
                                                                         '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
-        # After bug spotted in 0.3.4 we test certificate generation with max keys number > 8
-        cert_max_keys = 10
-        cert_sig_threshold = 6
 
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            submitter_private_keys_indexes=list(range(cert_max_keys))  # SC node owns all schnorr private keys.
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
-                                                        cert_max_keys=cert_max_keys,
-                                                        cert_sig_threshold=cert_sig_threshold), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
+                                         sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
 
     def sc_setup_nodes(self):

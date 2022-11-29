@@ -66,8 +66,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
-        cert_max_keys = 10
-        cert_sig_threshold = 6
+
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             True,  # Certificate submission is enabled
@@ -105,8 +104,6 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             sc_creation_version = SC_CREATION_VERSION_1
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
-                                                cert_max_keys=cert_max_keys,
-                                                cert_sig_threshold=cert_sig_threshold,
                                                 sc_creation_version=sc_creation_version,
                                                 is_non_ceasing=self.options.nonceasing,
                                                 circuit_type=self.options.certcircuittype),
