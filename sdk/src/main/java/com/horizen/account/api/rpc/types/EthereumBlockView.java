@@ -2,7 +2,11 @@ package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.block.AccountBlock;
+import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.serialization.Views;
+import com.horizen.utils.BytesUtils;
+import org.web3j.crypto.Sign;
+import org.web3j.utils.Bytes;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
@@ -59,9 +63,8 @@ public class EthereumBlockView {
 
         if (!hydratedTx) {
             this.transactions = transactions.stream().map(t -> Numeric.prependHexPrefix((String) t.id())).collect(Collectors.toList());
-        }
-        else {
-            this.transactions = transactions;
+        } else {
+            this.transactions = transactions.stream().map(t -> new EthereumTransactionView(null, new EthereumTransaction(BytesUtils.toHexString(t.getTo().bytes()), t.getNonce(), t.getGasPrice(), t.getGasLimit(), t.getValue(), BytesUtils.toHexString(t.getData()), (Sign.SignatureData) t.getSignature()), block.header().baseFee())).collect(Collectors.toList());
         }
     }
 }
