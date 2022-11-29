@@ -59,6 +59,7 @@ def convertSecretToPrivateKey(secret):
 class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
+    cert_max_keys = 7
 
     def setup_nodes(self):
         num_nodes = 1
@@ -75,6 +76,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
                                                         circuit_type = KEY_ROTATION_CIRCUIT,
+                                                        cert_max_keys=self.cert_max_keys,
                                                         sc_creation_version = SC_CREATION_VERSION_2,
                                                         csw_enabled=False), sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
