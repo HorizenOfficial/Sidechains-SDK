@@ -9,6 +9,7 @@ import com.horizen.account.utils.Secp256k1;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.serialization.Views;
+import com.horizen.utils.BytesUtils;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
@@ -65,7 +66,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             // verify signature validity for the given message
             final var signingAddress = Keys.getAddress(Sign.signedMessageToKey(message, signature));
             // verify that the signature was created with the expected address
-            return Objects.equals(signingAddress, Numeric.toHexStringNoPrefix(proposition.address()));
+            return Objects.equals(signingAddress, BytesUtils.toHexString(proposition.address()));
         } catch (SignatureException e) {
             return false;
         }
@@ -92,9 +93,9 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     public String toString() {
         return String.format(
                 "SignatureSecp256k1{v=%s, r=%s, s=%s}",
-                Numeric.toHexString(v),
-                Numeric.toHexString(r),
-                Numeric.toHexString(s)
+                BytesUtils.toHexString(v),
+                BytesUtils.toHexString(r),
+                BytesUtils.toHexString(s)
         );
     }
 
