@@ -60,7 +60,7 @@ public final class AddressProposition
     }
 
     public String checksumAddress() {
-        return Keys.toChecksumAddress(Numeric.toHexString(address()));
+        return Keys.toChecksumAddress(BytesUtils.toHexString(address()));
     }
 
     @Override
