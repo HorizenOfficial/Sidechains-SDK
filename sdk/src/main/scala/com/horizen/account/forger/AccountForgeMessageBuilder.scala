@@ -79,8 +79,8 @@ class AccountForgeMessageBuilder(
 
 
     for (mcBlockRefData <- mainchainBlockReferencesData) {
-      stateView.addTopQualityCertificates(mcBlockRefData).get
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+      stateView.addTopQualityCertificates(mcBlockRefData)
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData)
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()

@@ -39,7 +39,7 @@ class StateDbAccountStateView(
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
 
-  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>

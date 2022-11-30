@@ -843,7 +843,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             // apply sc creation output, this will call forger stake msg processor
             for(MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
-                view.applyMainchainBlockReferenceData(mcBlockRefData).get();
+                view.applyMainchainBlockReferenceData(mcBlockRefData);
             }
 
             // get the state root after all state-changing operations

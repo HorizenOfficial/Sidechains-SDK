@@ -19,5 +19,5 @@ trait StateView[TX <: Transaction] extends BaseStateReader {
   def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit
   def updateNextBaseFee(baseFee: BigInteger): Unit
   def setCeased(): Unit
-  def commit(version: VersionTag): Try[Unit]
+  def commit(version: VersionTag): Unit
 }

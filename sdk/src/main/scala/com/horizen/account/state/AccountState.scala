@@ -50,14 +50,16 @@ class AccountState(
       for (processor <- messageProcessors) {
         processor.init(view)
       }
-      view.commit(initialVersion) match {
-        case Success(_) =>
-          this
-        case Failure(f) =>
+
+      try {
+        view.commit(initialVersion)
+      } catch {
+        case t: Throwable =>
           val errMsg = s"Could not commit view with initial version: $initialVersion"
-          log.error(errMsg, f)
-          throw new IllegalStateException(errMsg)
+          log.error(errMsg, t)
+          throw t
       }
+      this
     }
   }
 
@@ -114,8 +116,8 @@ class AccountState(
       stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
-        stateView.addTopQualityCertificates(mcBlockRefData).get
-        stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+        stateView.addTopQualityCertificates(mcBlockRefData)
+        stateView.applyMainchainBlockReferenceData(mcBlockRefData)
       }
 
       // get also list of receipts, useful for computing the receiptRoot hash
@@ -202,7 +204,7 @@ class AccountState(
       // update next base fee
       stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod))
 
-      stateView.commit(idToVersion(mod.id)).get
+      stateView.commit(idToVersion(mod.id))
 
       new AccountState(
         params,

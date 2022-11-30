@@ -30,7 +30,7 @@ class AccountStateView(
     with ScorexLogging {
 
 
-  def addTopQualityCertificates(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+  def addTopQualityCertificates(refData: MainchainBlockReferenceData): Unit = {
     refData.topQualityCertificate.foreach(cert => {
       log.debug(s"adding top quality cert to state: $cert.")
       updateTopQualityCertificate(cert)
@@ -63,7 +63,7 @@ class AccountStateView(
 
   override def setCeased(): Unit = metadataStorageView.setCeased()
 
-  override def commit(version: VersionTag): Try[Unit] = Try {
+  override def commit(version: VersionTag): Unit = {
     // Update StateDB without version, then set the rootHash and commit metadataStorageView
     val rootHash = stateDb.commit()
     metadataStorageView.updateAccountStateRoot(rootHash)
