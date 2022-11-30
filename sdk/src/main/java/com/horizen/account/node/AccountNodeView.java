@@ -20,13 +20,13 @@ public class AccountNodeView implements
                 NodeWalletBase,
                 NodeAccountMemoryPool> {
 
-    private NodeAccountHistory nodeHistory;
+    private final NodeAccountHistory nodeHistory;
 
-    private NodeAccountState nodeState;
+    private final NodeAccountState nodeState;
 
-    private NodeWalletBase nodeWallet;
+    private final NodeWalletBase nodeWallet;
 
-    private NodeAccountMemoryPool nodeMemoryPool;
+    private final NodeAccountMemoryPool nodeMemoryPool;
 
     public AccountNodeView(NodeAccountHistory nodeHistory,
                            NodeAccountState nodeState,
