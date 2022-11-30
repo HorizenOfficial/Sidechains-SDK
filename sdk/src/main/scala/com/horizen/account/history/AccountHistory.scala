@@ -53,29 +53,6 @@ extends com.horizen.AbstractHistory[
     }
   }
 
-  override def searchTransactionInsideBlockchain(transactionId: String): JOptional[SidechainTypes#SCAT] = {
-    var startingBlock = JOptional.ofNullable(getBestBlock)
-    var transaction : JOptional[SidechainTypes#SCAT] = JOptional.empty()
-    var found = false
-    while(!found && startingBlock.isPresent){
-      val tx = findTransactionInsideBlock(transactionId, startingBlock.get())
-      if(tx.isPresent){
-        found = true
-        transaction = JOptional.ofNullable(tx.get())
-      }else{
-        startingBlock = storage.parentBlockId(startingBlock.get().id) match {
-          case Some(id) => storage.blockById(id) match {
-            case Some(block) => JOptional.ofNullable(block)
-            case None => JOptional.empty()
-          }
-          case None => JOptional.empty()
-        }
-      }
-    }
-
-    transaction
-  }
-
   override def makeNewHistory(storage: AccountHistoryStorage, consensusDataStorage: ConsensusDataStorage): AccountHistory =
     new AccountHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 
