@@ -44,5 +44,5 @@ case class AccountMockDataHelper(genesis: Boolean) {
 
     block
   }
-
+  
 }

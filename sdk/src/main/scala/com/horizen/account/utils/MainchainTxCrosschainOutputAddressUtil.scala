@@ -8,7 +8,7 @@ object MainchainTxCrosschainOutputAddressUtil {
   // MC prepends a padding of "0 bytes" (if needed) in the ccout address up to the length of 32 bytes.
   // After reversing the bytes, the padding is trailed to the correct 20 bytes proposition
   def getAccountAddress(inputAddress: Array[Byte]): Array[Byte] = {
-    require(inputAddress.length == 32)
+    require(inputAddress.length == 32, s"byte array length ${inputAddress.length} != 32")
     BytesUtils.reverseBytes(inputAddress.take(com.horizen.account.utils.Account.ADDRESS_SIZE))
   }
 }
