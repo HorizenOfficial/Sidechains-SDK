@@ -5,8 +5,9 @@ import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
+import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
 import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import com.horizen.consensus.ForgingStakeInfo
@@ -16,6 +17,7 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
 import scorex.util.ScorexLogging
+
 import java.math.BigInteger
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
@@ -65,7 +67,7 @@ class StateDbAccountStateView(
 
           val message = new Message(
             ownerAddressProposition,
-            new AddressProposition(ForgerStakeSmartContractAddress),
+            new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES),
             BigInteger.ZERO, // gasPrice
             BigInteger.ZERO, // gasFeeCap
             BigInteger.ZERO, // gasTipCap
