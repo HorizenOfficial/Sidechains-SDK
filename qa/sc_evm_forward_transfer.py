@@ -2,12 +2,13 @@
 import json
 import logging
 
+from eth_utils import to_checksum_address
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_eoa
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
 from httpCalls.transaction.allTransactions import allTransactions
-from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, NULL_ADDRESS
 from test_framework.util import assert_equal, forward_transfer_to_sidechain
 
 """
@@ -92,10 +93,15 @@ class SCEvmForwardTransfer(AccountChainSetup):
 
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
 
-        # verify that the balance has not changed, FT to smart contract account should be rejected
+        # verify that the smart contract account balance has not changed
         balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
         logging.info(balance)
         assert_equal("0x0", balance["result"], "smart contract has non-zero balance")
+
+        # verify that such amount has been burned, that means credited to 0xdead address
+        balance = sc_node.rpc_eth_getBalance(to_checksum_address(NULL_ADDRESS), "latest")
+        logging.info(balance)
+        assert_equal(hex(int(forward_transfer['value'])), balance["result"], "dead address has zero balance")
 
 
 if __name__ == "__main__":

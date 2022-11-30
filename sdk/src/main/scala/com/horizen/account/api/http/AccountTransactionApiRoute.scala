@@ -17,6 +17,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
 import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorBadCircuit
@@ -331,7 +332,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           secret match {
             case Some(secret) =>
 
-              val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
+              val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
               val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -377,7 +378,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val secret = getFittingSecret(sidechainNodeView, None, txCost)
           secret match {
             case Some(txCreatorSecret) =>
-              val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
+              val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
               val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
               stakeDataOpt match {
