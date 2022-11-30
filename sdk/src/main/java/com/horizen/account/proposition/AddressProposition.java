@@ -2,7 +2,6 @@ package com.horizen.account.proposition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.SparkzEncoding;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Account;
 import com.horizen.proposition.*;
@@ -10,10 +9,11 @@ import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import org.web3j.crypto.Keys;
 import org.web3j.utils.Numeric;
+
 import java.util.Arrays;
 
 @JsonView(Views.Default.class)
-public final class AddressProposition extends SparkzEncoding
+public final class AddressProposition
         implements AbstractSingleSecretProofOfKnowledgeProposition<PrivateKeySecp256k1> {
 
     @JsonProperty("address")
