@@ -28,6 +28,25 @@ class EthServiceTest extends JUnitSuite
   var NodeViewHolderRef: ActorRef = _
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
 
+  private[this] def buildRpcRequest(method: String, params: Array[String], paramValues: Array[Any]): RpcRequest = {
+    var json = s"""{"id":"1","jsonrpc":"2.0","method":"$method""""
+    val mapper = new ObjectMapper
+    if (params != null) {
+      json = json + """, "params":{"""
+      if (params.length != paramValues.length) throw new IllegalArgumentException("Number of params given must be equal to number of values given")
+      for ((arg, value) <- params.dropRight(1) zip paramValues.dropRight(1)) json = json + s""""$arg":"$value", """
+      json = json + s""""${params(params.size - 1)}":"${paramValues(paramValues.size - 1)}"}}"""
+    } else {
+      if (paramValues != null) {
+        json = json + """, "params":["""
+        for (value <- paramValues.dropRight(1)) json = json + s""""$value", """
+        json = json + s""""${paramValues(paramValues.size - 1)}"]"""
+      }
+      json = json + "}"
+    }
+    new RpcRequest(mapper.readTree(json))
+  }
+
   @Before
   def setUp(): Unit = {
     val settings = mock[SidechainSettings]
@@ -39,57 +58,39 @@ class EthServiceTest extends JUnitSuite
   }
 
   @Test
-  def testEthService(): Unit = {
-    val mapper = new ObjectMapper
-
-    // Test 1: Parameters are of wrong type
-    var json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":{\"tx\":\"test\", \"tx2\":\"test2\"}}"
-    var request = mapper.readTree(json)
-    var rpcRequest = new RpcRequest(request)
-    assertThrows[RpcException] {
-      ethService.execute(rpcRequest)
-    }
-
-    // Test 1: Parameters are of wrong type
-    json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":{\"tx\":\"test\", \"tx2\":\"test2\"}}"
-    request = mapper.readTree(json)
-    rpcRequest = new RpcRequest(request)
-    assertThrows[RpcException] {
-      ethService.execute(rpcRequest)
-    }
-
-    // Test 2: Wrong number of parameters
-    json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":[5, 10, 20]}}"
-    request = mapper.readTree(json)
-    rpcRequest = new RpcRequest(request)
-    assertThrows[RpcException] {
-      ethService.execute(rpcRequest)
-    }
-
-    // Test 3: Request execution calls correct function and returns value correctly
-    json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\", \"params\":[]}}"
-    request = mapper.readTree(json)
-    rpcRequest = new RpcRequest(request)
+  def eth_chainId(): Unit = {
+    // Test 1: Request execution calls correct function and returns value correctly
+    val rpcRequest = buildRpcRequest("eth_chainId", null, null)
     assertEquals(Numeric.toHexStringWithPrefix(BigInteger.valueOf(params.chainId)), ethService.execute(rpcRequest).asInstanceOf[Quantity].value)
-
-    // Test 4: Trigger IllegalArgumentException rpc call
-    json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":[-1]}}"
-    request = mapper.readTree(json)
-    rpcRequest = new RpcRequest(request)
-    assertThrows[RpcException] {
-      ethService.execute(rpcRequest)
-    }
   }
 
   @Test
   def invalidJsonRpcData(): Unit = {
     val mapper = new ObjectMapper
 
-    // Try to read json request with missing data
-    val json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"params\":[]}}"
+    // Test 1: Try to read json request with missing data
+    val json = """{"id":"1", "jsonrpc":"2.0", "params":[]}}"""
     val request = mapper.readTree(json)
     assertThrows[RpcException] {
-      val rpcRequest = new RpcRequest(request)
+      new RpcRequest(request)
+    }
+
+    // Test 2: Parameters are of wrong type
+    var rpcRequest = buildRpcRequest("eth_estimateGas", Array("tx", "tx2"), Array("test", "test2"))
+    assertThrows[RpcException] {
+      ethService.execute(rpcRequest)
+    }
+
+    // Test 3: Wrong number of parameters
+    rpcRequest = buildRpcRequest("eth_estimateGas", null, Array(5, 10, 20))
+    assertThrows[RpcException] {
+      ethService.execute(rpcRequest)
+    }
+
+    // Test 44 Trigger IllegalArgumentException rpc call
+    rpcRequest = buildRpcRequest("eth_estimateGas", null, Array(-1))
+    assertThrows[RpcException] {
+      ethService.execute(rpcRequest)
     }
   }
 }
