@@ -38,7 +38,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             throw new IllegalArgumentException("Null v/r/s obj passed in signature data");
         if  (!checkSignatureDataSizes(v, r, s)) {
             throw new IllegalArgumentException(String.format(
-                    "Incorrect signature data obj size: v=%d (expected 0<v<=%d); r/s==%d/%d (expected %d/%d)",
+                    "Incorrect signature length: v=%d (expected 0<v<=%d); r/s==%d/%d (expected %d/%d)",
                     v.length, Secp256k1.SIGNATURE_V_MAXSIZE,
                     r.length, s.length,
                     Secp256k1.SIGNATURE_RS_SIZE, Secp256k1.SIGNATURE_RS_SIZE
