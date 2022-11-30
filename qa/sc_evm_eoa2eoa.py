@@ -7,10 +7,11 @@ from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.scutil import generate_next_block
+
 from httpCalls.transaction.allTransactions import allTransactions
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei, convertWeiToZen, \
-    ForgerStakeSmartContractAddress, WithdrawalReqSmartContractAddress
+    FORGER_STAKE_SMART_CONTRACT_ADDRESS, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 from test_framework.util import (
     assert_equal, assert_true, fail, )
 
@@ -221,7 +222,7 @@ class SCEvmEOA2EOA(AccountChainSetup):
         logging.info(
             "Create an EOA to EOA transaction moving a fund to a fake contract address (forger stakes)  ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('1')
-        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, ForgerStakeSmartContractAddress,
+        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
                                        transferred_amount_in_zen)
         if not ret:
             logging.info("Expected failure: {}".format(msg))
@@ -232,7 +233,7 @@ class SCEvmEOA2EOA(AccountChainSetup):
             "Create an EOA to EOA transaction moving a fund to a fake contract address (withdrawal reqs) ==> SHOULD "
             "FAIL")
         transferred_amount_in_zen = Decimal('1')
-        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, WithdrawalReqSmartContractAddress,
+        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
                                        transferred_amount_in_zen)
         if not ret:
             logging.info("Expected failure: {}".format(msg))

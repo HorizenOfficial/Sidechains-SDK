@@ -5,9 +5,10 @@ import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
+import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.WellKnownAddresses.{NULL_ADDRESS_BYTES, FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES}
 import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
@@ -69,7 +70,7 @@ class AccountStateView(
 
           val message = new Message(
             ownerAddressProposition,
-            new AddressProposition(ForgerStakeSmartContractAddress),
+            new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES),
             BigInteger.ZERO, // gasPrice
             BigInteger.ZERO, // gasFeeCap
             BigInteger.ZERO, // gasTipCap
@@ -96,7 +97,8 @@ class AccountStateView(
             addBalance(recipientProposition.address(), value)
             log.debug(s"added FT amount = $value to address=$recipientProposition")
           } else {
-            log.warn(s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was effectively burned)")
+            log.warn(s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was burned by sending balance to ${BytesUtils.toHexString(NULL_ADDRESS_BYTES)} address)")
+            addBalance(NULL_ADDRESS_BYTES, value)
             // TODO: we should return the amount back to mcReturnAddress instead of just burning it
           }
       }
