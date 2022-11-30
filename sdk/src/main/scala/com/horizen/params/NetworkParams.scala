@@ -1,6 +1,7 @@
 package com.horizen.params
 
 
+import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
@@ -31,7 +32,7 @@ trait NetworkParams {
   val zeroHashBytes: Array[Byte] = new Array[Byte](32)
   val sidechainId: Array[Byte] // Note: we expect to have sidechain id in LittleEndian as in the MC
   val sidechainGenesisBlockId: ModifierId
-  val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
+  val sidechainGenesisBlockParentId: ModifierId = bytesToId(GENESIS_BLOCK_PARENT_ID)
   val signersPublicKeys: Seq[SchnorrProposition]
   val signersThreshold: Int
   val certProvingKeyFilePath: String

@@ -209,7 +209,6 @@ class StateDbAccountStateView(
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot add negative amount to balance")
       case _ =>
-        log.debug(s"Adding $amount to addr ${BytesUtils.toHexString(address)}")
         stateDb.addBalance(address, amount)
     }
   }
@@ -217,15 +216,13 @@ class StateDbAccountStateView(
   @throws(classOf[ExecutionFailedException])
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
-    // TODO: for the time being do the checks here, later they will be done in the caller stack
     amount.signum() match {
-      case x if x == 0 => // amount is zero
+      case x if x == 0 => // amount is zero, do nothing
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot subtract negative amount from balance")
-      case x if x > 0 && stateDb.getBalance(address).compareTo(amount) < 0 =>
-        throw new ExecutionFailedException("insufficient balance")
       case _ =>
-        log.debug(s"Subtracting $amount to addr ${BytesUtils.toHexString(address)}")
+        // The check on the address balance to be sufficient to pay the amount at this point has already been
+        // done by the state while validating the origin tx
         stateDb.subBalance(address, amount)
     }
   }

@@ -412,60 +412,9 @@ class ForgerStakeMsgProcessorTest
   }
 
   @Test
-  def testAddStakeFromEmptyBalanceAccount(): Unit = {
-
-    // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
-    usingView(forgerStakeMessageProcessor) { view =>
-
-      // create private/public key pair
-      val pair = Keys.createEcKeyPair
-
-      val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
-      val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
-
-      val blockSignerProposition2 = new PublicKey25519Proposition(BytesUtils.fromHexString("2200000000000000000000000000000000000000000000000000000000000022")) // 32 bytes
-      val vrfPublicKey2 = new VrfPublicKey(BytesUtils.fromHexString("220000000000000000000000000000000000000000000000000000000000000022")) // 33 bytes
-
-      val ownerAddressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)))
-
-      forgerStakeMessageProcessor.init(view)
-
-      Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
-      Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
-        (blockSignerProposition1, vrfPublicKey1),
-        (blockSignerProposition2, vrfPublicKey2)
-      ))
-
-      createSenderAccount(view, BigInteger.ZERO)
-
-      val cmdInput = AddNewStakeCmdInput(
-        ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
-        ownerAddressProposition
-      )
-      val data: Array[Byte] = cmdInput.encode()
-
-      val msg = getDefaultMessage(
-        BytesUtils.fromHexString(AddNewStakeCmd),
-        data, randomNonce, validWeiAmount)
-
-      // should fail because staked amount is not a zat amount
-      assertGas(4850) { gas =>
-        assertThrows[ExecutionFailedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
-      }
-      view.commit(bytesToVersion(getVersion.data()))
-    }
-  }
-
-  @Test
   def testAddStakeWithSmartContractAsOwner(): Unit = {
 
-    // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
     usingView(forgerStakeMessageProcessor) { view =>
-
-      // create private/public key pair
-      val pair = Keys.createEcKeyPair
 
       val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
       val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
@@ -483,7 +432,9 @@ class ForgerStakeMsgProcessorTest
         (blockSignerProposition2, vrfPublicKey2)
       ))
 
-      createSenderAccount(view, BigInteger.ZERO)
+      // create sender account with some fund in it
+      val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
+      createSenderAccount(view, initialAmount)
 
       val cmdInput = AddNewStakeCmdInput(
         ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
@@ -495,6 +446,7 @@ class ForgerStakeMsgProcessorTest
         BytesUtils.fromHexString(AddNewStakeCmd),
         data, randomNonce, validWeiAmount)
 
+       // should fail because recipient is a smart contract
        assertGas(1400) { gas =>
         assertThrows[ExecutionRevertedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)

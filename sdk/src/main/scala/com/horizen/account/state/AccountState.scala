@@ -8,6 +8,7 @@ import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
+import com.horizen.account.validation.InvalidTransactionChainIdException
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
@@ -49,8 +50,14 @@ class AccountState(
       for (processor <- messageProcessors) {
         processor.init(view)
       }
-      view.commit(initialVersion)
-      this
+      view.commit(initialVersion) match {
+        case Success(_) =>
+          this
+        case Failure(f) =>
+          val errMsg = s"Could not commit view with initial version: $initialVersion"
+          log.error(errMsg, f)
+          throw new IllegalStateException(errMsg)
+      }
     }
   }
 
@@ -385,27 +392,41 @@ class AccountState(
   override def isSmartContractAccount(address: Array[Byte]): Boolean = using(getView)(_.isSmartContractAccount(address))
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
-    tx.semanticValidity()
 
-    if (!tx.isInstanceOf[EthereumTransaction]) return Success()
+    if (!tx.isInstanceOf[EthereumTransaction]) {
+      val errMsg = s"Transaction ${tx.id}: instance of class ${tx.getClass.getName}, not of type ${classOf[EthereumTransaction].getName}"
+      log.error(errMsg)
+      throw new IllegalArgumentException(errMsg)
+    }
+    val ethTx = tx.asInstanceOf[EthereumTransaction]
 
-    if (BigInteger.valueOf(FeeUtils.GAS_LIMIT).compareTo(tx.getGasLimit) < 0)
-      throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${tx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")
+    if (ethTx.isEIP155 || ethTx.isEIP1559) {
+      if (ethTx.getChainId != params.chainId) {
+        val errMsg = s"Transaction ${ethTx.id}: chainId=${ethTx.getChainId} is different from expected SC chainId ${params.chainId}"
+        log.error(errMsg)
+        throw new InvalidTransactionChainIdException(errMsg)
+      }
+    }
+
+    ethTx.semanticValidity()
+
+    if (BigInteger.valueOf(FeeUtils.GAS_LIMIT).compareTo(ethTx.getGasLimit) < 0)
+      throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")
+
     using(getView) { stateView =>
         //Check the nonce
-        val ethTx = tx.asInstanceOf[EthereumTransaction]
         val sender = ethTx.getFrom.address()
         val stateNonce = stateView.getNonce(sender)
-        if (stateNonce.compareTo(tx.getNonce) > 0) {
-          throw NonceTooLowException(sender, tx.getNonce, stateNonce)
+        if (stateNonce.compareTo(ethTx.getNonce) > 0) {
+          throw NonceTooLowException(sender, ethTx.getNonce, stateNonce)
         }
         //Check the balance
 
-        val maxTxCost = tx.maxCost()
+        val maxTxCost = ethTx.maxCost()
 
         val currentBalance = stateView.getBalance(sender)
         if (currentBalance.compareTo(maxTxCost) < 0) {
-          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost ${tx.maxCost}")
+          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost ${ethTx.maxCost}")
         }
 
         // Check that the sender is an EOA

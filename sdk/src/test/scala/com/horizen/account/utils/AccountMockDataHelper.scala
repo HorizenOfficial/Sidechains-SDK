@@ -3,7 +3,7 @@ package com.horizen.account.utils
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
-import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import com.horizen.params.NetworkParams
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -18,7 +18,7 @@ case class AccountMockDataHelper(genesis: Boolean) {
     val history: AccountHistory = mock[AccountHistory]
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
     if (genesis) {
-      Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(new Array[Byte](32)))
+      Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
     }
     Mockito.when(history.getBlockById(block.get.id)).thenReturn(block)
     history
