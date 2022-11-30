@@ -7,7 +7,7 @@ import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, NULL_ADDRESS_BYTES}
 import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import com.horizen.consensus.ForgingStakeInfo
@@ -94,7 +94,8 @@ class StateDbAccountStateView(
             addBalance(recipientProposition.address(), value)
             log.debug(s"added FT amount = $value to address=$recipientProposition")
           } else {
-            log.warn(s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was effectively burned)")
+            log.warn(s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was burned by sending balance to ${BytesUtils.toHexString(NULL_ADDRESS_BYTES)} address)")
+            addBalance(NULL_ADDRESS_BYTES, value)
             // TODO: we should return the amount back to mcReturnAddress instead of just burning it
           }
       }
