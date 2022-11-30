@@ -134,6 +134,8 @@ class SCFTLimitFork(SidechainTestFramework):
             "scid": self.sc_nodes_bootstrap_info.sidechain_id,
             "mcReturnAddress": mc_return_address
         }]
+        # Sleep for 1 second to let MC synchronize wallet
+        time.sleep(1)
         mc_node.sc_send(ft_args)
         assert_equal(mempool_size_init + 1, mc_node.getmempoolinfo()["size"],
                      "Forward Transfer expected to be added to mempool.")
