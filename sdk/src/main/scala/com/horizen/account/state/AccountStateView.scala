@@ -12,7 +12,6 @@ import com.horizen.utils.WithdrawalEpochInfo
 import sparkz.core.VersionTag
 import scorex.util.ScorexLogging
 import java.math.BigInteger
-import scala.util.Try
 
 
 // this class extends 2 main hierarchies, which are kept separate:

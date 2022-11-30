@@ -8,6 +8,7 @@ import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
@@ -36,7 +37,7 @@ trait ForgerStakesProvider {
 
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with ForgerStakesProvider {
 
-  override val contractAddress: Array[Byte] = ForgerStakeSmartContractAddress
+  override val contractAddress: Array[Byte] = FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
   override val contractCode: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCode")
 
   val networkParams: NetworkParams = params
@@ -392,8 +393,6 @@ object ForgerStakeMsgProcessor {
       AddNewStakeCmd.length == 2 * METHOD_CODE_LENGTH &&
       RemoveStakeCmd.length == 2 * METHOD_CODE_LENGTH
   )
-
-  val ForgerStakeSmartContractAddress: Array[Byte] = BytesUtils.fromHexString("0000000000000000000022222222222222222222")
 
   def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
     Bytes.concat(from, nonce, stakeId)

@@ -34,6 +34,10 @@ for i in "$@"; do
       EVM_ONLY="true"
       shift
       ;;
+    -utxo_only)
+      UTXO_ONLY="true"
+      shift
+      ;;
     -split=*)
       SPLIT="${i#*=}"
       shift
@@ -131,15 +135,22 @@ testScriptsUtxo=(
 );
 
 
-# decide whether to have only evm tests or the whole set
+# decide whether to have only evm tests or only utxo tests or the whole set
+if [ ! -z "$EVM_ONLY" ] && [ ! -z "$UTXO_ONLY" ]; then
+    echo -e "\nCan not have both options '-evm_only' and '-utxo_only'" | tee /dev/fd/3
+    exit 1
+fi
+
 if [ ! -z "$EVM_ONLY" ] && [ "${EVM_ONLY}" = "true" ]; then
   testScripts+=( "${testScriptsEvm[@]}" )
+elif [ ! -z "$UTXO_ONLY" ] && [ "${UTXO_ONLY}" = "true" ]; then
+  testScripts+=( "${testScriptsUtxo[@]}" )
 else
   testScripts+=( "${testScriptsEvm[@]}" )
   testScripts+=( "${testScriptsUtxo[@]}")
 fi
 
-# include extended tests
+# include extended tests (not used as of now)
 if [ ! -z "$EXTENDED" ] && [ "${EXTENDED}" = "true" ]; then
   testScripts+=( "${testScriptsExt[@]}" )
 fi
