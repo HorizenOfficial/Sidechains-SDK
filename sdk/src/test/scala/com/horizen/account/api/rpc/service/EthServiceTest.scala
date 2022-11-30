@@ -79,7 +79,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def eth_chainId(): Unit = {
-    val rpcRequest = buildRpcRequest("eth_chainId", null, null)
+    val rpcRequest = getRpcRequest("eth_chainId")
     assertEquals(
       Numeric.toHexStringWithPrefix(BigInteger.valueOf(params.chainId)),
       ethService.execute(rpcRequest).asInstanceOf[Quantity].value
@@ -88,57 +88,66 @@ class EthServiceTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def eth_blockNumber(): Unit = {
-    val rpcRequest = buildRpcRequest("eth_blockNumber", null, null)
+    val rpcRequest = getRpcRequest("eth_blockNumber")
     assertEquals("0x1", ethService.execute(rpcRequest).asInstanceOf[Quantity].value)
   }
 
   @Test
-  def invalidJsonRpcData(): Unit = {
-    val mapper = new ObjectMapper
+  def net_version(): Unit = {
+    val rpcRequest = getRpcRequest("net_version")
+    assertEquals(String.valueOf(params.chainId), ethService.execute(rpcRequest))
+  }
 
+  @Test
+  def invalidJsonRpcData(): Unit = {
     // Test 1: Try to read json request with missing data
     val json = """{"id":"1", "jsonrpc":"2.0", "params":[]}}"""
-    val request = mapper.readTree(json)
+    val request = (new ObjectMapper).readTree(json)
     assertThrows[RpcException] {
       new RpcRequest(request)
     }
 
     // Test 2: Parameters are of wrong type
-    var rpcRequest = buildRpcRequest("eth_estimateGas", Array("tx", "tx2"), Array("test", "test2"))
+    var rpcRequest = getRpcRequest("eth_estimateGas", Array("tx", "tx2"), Array("test", "test2"))
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
     }
 
     // Test 3: Wrong number of parameters
-    rpcRequest = buildRpcRequest("eth_estimateGas", null, Array(5, 10, 20))
+    rpcRequest = getRpcRequest("eth_estimateGas", Array(5, 10, 20))
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
     }
 
     // Test 44 Trigger IllegalArgumentException rpc call
-    rpcRequest = buildRpcRequest("eth_estimateGas", null, Array(-1))
+    rpcRequest = getRpcRequest("eth_estimateGas", Array(-1))
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
     }
   }
 
-  private[this] def buildRpcRequest(method: String, params: Array[String], paramValues: Array[Any]): RpcRequest = {
+  private[this] def getRpcRequest(method: String, params: Array[String], paramValues: Array[Any]): RpcRequest = {
+    if (params == null) throw new IllegalArgumentException("Parameters are undefined")
+    if (params.length != paramValues.length)
+      throw new IllegalArgumentException("Number of parameters given must be equal to number of values given")
     var json = s"""{"id":"1","jsonrpc":"2.0","method":"$method""""
-    val mapper = new ObjectMapper
-    if (params != null) {
-      json = json + """, "params":{"""
-      if (params.length != paramValues.length)
-        throw new IllegalArgumentException("Number of params given must be equal to number of values given")
-      for ((arg, value) <- params.dropRight(1) zip paramValues.dropRight(1)) json = json + s""""$arg":"$value", """
-      json = json + s""""${params(params.size - 1)}":"${paramValues(paramValues.size - 1)}"}}"""
-    } else {
-      if (paramValues != null) {
-        json = json + """, "params":["""
-        for (value <- paramValues.dropRight(1)) json = json + s""""$value", """
-        json = json + s""""${paramValues(paramValues.size - 1)}"]"""
-      }
-      json = json + "}"
-    }
-    new RpcRequest(mapper.readTree(json))
+    json = json + """, "params":{"""
+    for ((arg, value) <- params.dropRight(1) zip paramValues.dropRight(1)) json = json + s""""$arg":"$value", """
+    json = json + s""""${params(params.size - 1)}":"${paramValues(paramValues.size - 1)}"}}"""
+    new RpcRequest((new ObjectMapper).readTree(json))
+  }
+
+  private[this] def getRpcRequest(method: String, paramValues: Array[Any]): RpcRequest = {
+    if (paramValues == null) throw new IllegalArgumentException("Parameter values are undefined")
+    var json = s"""{"id":"1","jsonrpc":"2.0","method":"$method""""
+    json = json + """, "params":["""
+    for (value <- paramValues.dropRight(1)) json = json + s""""$value", """
+    json = json + s""""${paramValues(paramValues.size - 1)}"]}"""
+    new RpcRequest((new ObjectMapper).readTree(json))
+  }
+
+  private[this] def getRpcRequest(method: String): RpcRequest = {
+    val json = s"""{"id":"1","jsonrpc":"2.0","method":"$method", "params":[]}"""
+    new RpcRequest((new ObjectMapper).readTree(json))
   }
 }
