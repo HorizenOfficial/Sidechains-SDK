@@ -2,12 +2,13 @@ package com.horizen.account.proof;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
-import org.apache.logging.log4j.LogManager;
+import com.horizen.serialization.Views;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
@@ -15,6 +16,7 @@ import org.web3j.utils.Numeric;
 import java.security.SignatureException;
 import java.util.Objects;
 
+@JsonView(Views.Default.class)
 public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp256k1, AddressProposition> {
 
     @JsonProperty("v")
