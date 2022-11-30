@@ -20,6 +20,7 @@ public final class PrivateKeySecp256k1 implements Secret {
     private static final byte privateKeySecp256k1SecretId = PrivateKeySecp256k1SecretId.id();
 
     private final byte[] privateKey;
+    private final byte[] publicKey;
 
     public PrivateKeySecp256k1(byte[] privateKey) {
         if (privateKey.length != Secp256k1.PRIVATE_KEY_SIZE) {
@@ -30,6 +31,7 @@ public final class PrivateKeySecp256k1 implements Secret {
             ));
         }
         this.privateKey = Arrays.copyOf(privateKey, Secp256k1.PRIVATE_KEY_SIZE);
+        this.publicKey = Numeric.toBytesPadded(ECKeyPair.create(privateKey).getPublicKey(), Secp256k1.PUBLIC_KEY_SIZE);
     }
 
     @Override
@@ -44,8 +46,7 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public AddressProposition publicImage() {
-        var publicKey = ECKeyPair.create(privateKey).getPublicKey();
-        var hashedKey = Hash.sha3(Numeric.toBytesPadded(publicKey, Secp256k1.PUBLIC_KEY_SIZE));
+        var hashedKey = Hash.sha3(this.publicKey);
         return new AddressProposition(Arrays.copyOfRange(hashedKey, hashedKey.length - Account.ADDRESS_SIZE, hashedKey.length));
     }
 
