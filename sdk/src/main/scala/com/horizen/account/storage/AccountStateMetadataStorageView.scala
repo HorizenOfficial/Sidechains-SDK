@@ -38,7 +38,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
   private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
-  private[horizen] var baseFeeOpt: Option[BigInteger] = None
+  //Contains the base fee to be used when forging the next block
+  private[horizen] var nextBaseFeeOpt: Option[BigInteger] = None
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
@@ -182,17 +183,17 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     accountStateRootOpt = Some(accountStateRoot)
   }
 
-  def updateBaseFee(baseFee: BigInteger): Unit = {
-    baseFeeOpt = Some(baseFee)
+  def updateNextBaseFee(baseFee: BigInteger): Unit = {
+    nextBaseFeeOpt = Some(baseFee)
   }
 
-  def getBaseFromFromStorage: Option[BigInteger] = {
+  def getNextBaseFromFromStorage: Option[BigInteger] = {
     storage.get(baseFeeKey).asScala.map(wrapper => new BigInteger(wrapper.data))
   }
 
-  def getBaseFee: BigInteger = {
+  def getNextBaseFee: BigInteger = {
     // TODO: default to initial base fee, not zero
-    baseFeeOpt.orElse(getBaseFromFromStorage).getOrElse(BigInteger.ZERO)
+    nextBaseFeeOpt.orElse(getNextBaseFromFromStorage).getOrElse(BigInteger.ZERO)
   }
 
   def setCeased(): Unit = hasCeasedOpt = Some(true)
@@ -219,7 +220,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     consensusEpochOpt = None
     accountStateRootOpt = None
     receiptsOpt = None
-    baseFeeOpt = None
+    nextBaseFeeOpt = None
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
@@ -304,7 +305,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         }
     })
 
-    baseFeeOpt.foreach(baseFee => updateList.add(new JPair(baseFeeKey, new ByteArrayWrapper(baseFee.toByteArray))))
+    nextBaseFeeOpt.foreach(baseFee => updateList.add(new JPair(baseFeeKey, new ByteArrayWrapper(baseFee.toByteArray))))
 
     storage.update(version, updateList, removeList)
 

@@ -1,10 +1,12 @@
 package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
+import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountMemoryPool
-import sparkz.core.transaction.MempoolReader
+import com.horizen.account.state.AccountStateReaderProvider
 import scorex.util.{ModifierId, ScorexLogging}
-import com.horizen.account.state.AccountStateReader
+import sparkz.core.transaction.MempoolReader
+
 import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -12,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
                          unconfirmed: MempoolMap,
-                         stateReader: AccountStateReader
+                         stateReaderProvider: AccountStateReaderProvider
                        ) extends sparkz.core.transaction.MemoryPool[
   SidechainTypes#SCAT,
   AccountMemoryPool
@@ -42,7 +44,11 @@ class AccountMemoryPool(
   }
 
   override def take(limit: Int): Iterable[SidechainTypes#SCAT] = {
-    unconfirmed.takeExecutableTxs(limit)
+    unconfirmed.takeExecutableTxs().take(limit)
+  }
+
+  def takeExecutableTxs(): MempoolMap#TransactionsByPriceAndNonce = {
+    unconfirmed.takeExecutableTxs()
   }
 
   override def filter(txs: Seq[SidechainTypes#SCAT]): AccountMemoryPool = {
@@ -54,7 +60,7 @@ class AccountMemoryPool(
   ): AccountMemoryPool = {
     val filteredTxs = unconfirmed.values.filter(tx => condition(tx))
     //Reset everything
-    val newMemPool = AccountMemoryPool.createEmptyMempool(stateReader)
+    val newMemPool = AccountMemoryPool.createEmptyMempool(stateReaderProvider)
     filteredTxs.foreach(tx => newMemPool.put(tx))
     newMemPool
   }
@@ -69,17 +75,7 @@ class AccountMemoryPool(
 
   override def put(tx: SidechainTypes#SCAT): Try[AccountMemoryPool] = {
     Try {
-//      if (tx.isInstanceOf[EthereumTransaction]) {
-////        val ethTx = tx.asInstanceOf[EthereumTransaction]
-////        if (!unconfirmed.containsAccountInfo(ethTx.getFrom)) {
-////          val stateNonce = stateReader.getNonce(ethTx.getFrom.address())
-////          unconfirmed.initializeAccount(stateNonce, ethTx.getFrom)
-////        }
-//        new AccountMemoryPool(unconfirmed.add(tx).get, stateReader)
-//      }
-//      else
-//        this
-      new AccountMemoryPool(unconfirmed.add(tx).get, stateReader)
+      new AccountMemoryPool(unconfirmed.add(tx).get, stateReaderProvider)
     }
   }
 
@@ -94,19 +90,17 @@ class AccountMemoryPool(
     }
   }
 
+  /*
+  This method is required by the Sparkz implementation of memory pool, but for the Account model the performance are too
+  low so the memory pool was changed. In the new implementation this method is no longer required.
+   */
   override def putWithoutCheck(
       txs: Iterable[SidechainTypes#SCAT]
   ): AccountMemoryPool = ???
-//  {
-//    for (t <- txs)
-//      unconfirmed.all.put(t.id, t)
-//
-//    this
-//  }
 
   override def remove(tx: SidechainTypes#SCAT): AccountMemoryPool = {
     unconfirmed.remove(tx) match {
-      case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, stateReader)
+      case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, stateReaderProvider)
       case Failure(e) =>
         log.error(s"Exception while removing transaction $tx from MemPool", e)
         throw e
@@ -134,10 +128,15 @@ class AccountMemoryPool(
       unconfirmed.getTransaction(ModifierId @@ transactionId).orNull
     )
   }
+
+  def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): AccountMemoryPool = {
+    unconfirmed.updateMemPool(removedBlocks, appliedBlocks)
+    new AccountMemoryPool(unconfirmed, stateReaderProvider)
+  }
 }
 
 object AccountMemoryPool {
-  def createEmptyMempool(stateReader: AccountStateReader): AccountMemoryPool = {
-    new AccountMemoryPool(new MempoolMap(stateReader), stateReader)
+  def createEmptyMempool(stateReaderProvider: AccountStateReaderProvider): AccountMemoryPool = {
+    new AccountMemoryPool(new MempoolMap(stateReaderProvider), stateReaderProvider)
   }
 }

@@ -12,7 +12,7 @@ public class RpcResponseSuccess extends RpcResponse implements SuccessResponse {
         this.result = result;
     }
 
-    @JsonInclude()
+    @JsonInclude
     public Object getResult() {
         return result;
     }

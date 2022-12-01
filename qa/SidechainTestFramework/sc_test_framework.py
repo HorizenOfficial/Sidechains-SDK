@@ -10,7 +10,7 @@ from test_framework.util import check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, LEVEL_INFO
 import os
 import tempfile
 import traceback
@@ -19,7 +19,7 @@ import shutil
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 
-from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG, LEVEL_TRACE
+from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG
 
 
 '''
@@ -120,6 +120,22 @@ class SidechainTestFramework(BitcoinTestFramework):
                             level=logging.DEBUG
                             )
 
+    def handle_debug_option(self):
+        if self.options.debugnode is None:
+            self.debug_extra_args = None
+        else:
+            sc_node_index = int(self.options.debugnode)
+            if not (0 <= sc_node_index < self.number_of_sidechain_nodes):
+                raise RuntimeError("\n===> Error: could not handle --debugnode option. Index {} out of range [{}, {}]"
+                                   .format(sc_node_index, 0, self.number_of_sidechain_nodes-1))
+            self.debug_extra_args = []
+            for i in range(0, self.number_of_sidechain_nodes):
+                if i == sc_node_index:
+                    self.debug_extra_args.append(['-agentlib'])
+                else:
+                    self.debug_extra_args.append([''])
+
+
     def main(self):
         import optparse
 
@@ -141,8 +157,10 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="timeout in seconds for rest API execution, might be useful when debugging")
         parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_DEBUG, action="store",
                           help="log4j log level for application log file")
-        parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
+        parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_INFO, action="store",
                           help="log4j log level for application console")
+        parser.add_option("--debugnode", dest="debugnode", default=None, action="store",
+                          help="Index of the SC node to debug. Adds -agentlib option to java VM")
 
         self.add_options(parser)
         self.sc_add_options(parser)
@@ -152,6 +170,8 @@ class SidechainTestFramework(BitcoinTestFramework):
         os.environ['PATH'] = self.options.zendir+":"+os.environ['PATH']
 
         check_json_precision()
+
+        self.handle_debug_option()
 
         success = False
         try:

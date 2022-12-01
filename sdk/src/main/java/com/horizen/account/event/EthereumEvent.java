@@ -1,5 +1,8 @@
 package com.horizen.account.event;
 
+import com.horizen.account.event.annotation.Anonymous;
+import com.horizen.account.event.annotation.Indexed;
+import com.horizen.account.event.annotation.Parameter;
 import com.horizen.evm.interop.EvmLog;
 import com.horizen.evm.utils.Hash;
 import org.web3j.abi.EventEncoder;
@@ -33,7 +36,7 @@ public class EthereumEvent {
      * @throws IllegalAccessException
      * @throws InvocationTargetException
      */
-    private static TreeMap<Integer, EventParameterData> getEventParameterData(Object eventInstance) throws IllegalAccessException, InvocationTargetException {
+    private static ArrayList<EventParameterData> getEventParameterData(Object eventInstance) throws IllegalAccessException, InvocationTargetException {
         var annotatedParams = new TreeMap<Integer, EventParameterData>();
         var parameterCandidates = new ArrayList<AccessibleObject>();
 
@@ -61,7 +64,7 @@ public class EthereumEvent {
                 annotatedParams.put(acObj.getAnnotation(Parameter.class).value(), new EventParameterData(indexed, method.getReturnType(), (Type) method.invoke(eventInstance)));
             }
         }
-        return annotatedParams;
+        return new ArrayList<>(annotatedParams.values());
     }
 
     /**
@@ -84,15 +87,17 @@ public class EthereumEvent {
         for (var i = 0; i < outputParameters.size(); i++) {
             var encodedValue = Numeric.hexStringToByteArray(TypeEncoder.encode(eventFunction.getInputParameters().get(i)));
             if (outputParameters.get(i).isIndexed()) {
+                if (topics.size() > 3)
+                    throw new IllegalArgumentException("Error: More than four topics defined - defined topics: " + topics.size());
                 // values <= 32 byte will be used as is
                 if (encodedValue.length > 32) encodedValue = (byte[]) Keccak256.hash(encodedValue);
                 topics.add(Hash.fromBytes(encodedValue));
+
             } else {
                 dataOutputStream.write(encodedValue);
             }
         }
-        if (topics.size() > 4)
-            throw new IllegalArgumentException("Error: More than four topics defined - defined topics: " + topics.size());
+
         return new EvmLog(address, topics.toArray(new Hash[topics.size()]), dataOutputStream.toByteArray());
     }
 
@@ -110,7 +115,7 @@ public class EthereumEvent {
         List<Type> convertedParams = new ArrayList<>();
         var annotatedParameters = getEventParameterData(eventInstance);
 
-        for (var parameterData : annotatedParameters.values()) {
+        for (var parameterData : annotatedParameters) {
             convertedParams.add(parameterData.value);
             parametersTypeRef.add(TypeReference.makeTypeReference(parameterData.value.getTypeAsString(), parameterData.indexed, false));
         }

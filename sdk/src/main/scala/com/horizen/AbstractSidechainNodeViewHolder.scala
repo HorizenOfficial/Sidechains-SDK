@@ -7,7 +7,7 @@ import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
-import com.horizen.utils.SDKModifiersCache
+import com.horizen.utils.{BytesUtils, SDKModifiersCache}
 import com.horizen.validation._
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.{ModifiersCache, idToVersion}
@@ -63,9 +63,27 @@ abstract class AbstractSidechainNodeViewHolder[
     new ConsensusValidator(timeProvider)
   )
 
-  def dumpStorages(): Unit
+  // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
+  // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
+  def checkAndRecoverStorages(restoredData: Option[(HIS, MS, VL, MP)]): Option[(HIS, MS, VL, MP)]
 
-  def getStorageVersions: Map[String, String]
+  def dumpStorages(): Unit = {
+    try {
+      val m = getStorageVersions.map { case (k, v) =>
+        "%-36s".format(k) + ": " + v
+      }
+      m.foreach(x => log.debug(s"$x"))
+    } catch {
+      case e: Exception =>
+        // can happen during unit test with mocked objects
+        log.warn("Could not print debug info about storages: " + e.getMessage)
+    }
+  }
+
+  def getStorageVersions: Map[String, String] =
+    listOfStorageInfo.map(x => {
+    x.getStorageName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
+  }).toMap
 
   override def receive: Receive = {
     applyFunctionOnNodeView orElse
@@ -115,19 +133,17 @@ abstract class AbstractSidechainNodeViewHolder[
   }
 
   def applyModifier: Receive = {
-    case AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[PMOD]) => {
+    case AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[PMOD]) =>
       modifiersCache.popCandidate(history()) match {
         case Some(mod) =>
           pmodModify(mod)
           self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
-        case None => {
+        case None =>
           val cleared = modifiersCache.cleanOverfull()
           context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))
           applyingBlock = false
           log.debug(s"Cache size after: ${modifiersCache.size}")
-        }
       }
-    }
   }
 
   def processGetStorageVersions: Receive = {
@@ -198,7 +214,7 @@ abstract class AbstractSidechainNodeViewHolder[
       @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
       val branchingPoint = progressInfo.branchPoint.get //todo: .get
       if (state.version != branchingPoint) {
-        log.debug(s"chain reorg needed, rolling back state and wallet to branching point: ${branchingPoint}")
+        log.debug(s"chain reorg needed, rolling back state and wallet to branching point: $branchingPoint")
         (
           wallet.rollback(idToVersion(branchingPoint)),
           state.rollbackTo(idToVersion(branchingPoint)),

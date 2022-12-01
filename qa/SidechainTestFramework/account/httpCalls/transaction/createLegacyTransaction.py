@@ -4,7 +4,7 @@ import json
 # execute a transaction/createLegacyTransaction call
 def createLegacyTransaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce, gasLimit,
                             gasPrice, value=0, data='', signature_v=None, signature_r=None,
-                            signature_s=None):
+                            signature_s=None, api_key=None):
     j = {
         "from": fromAddress,
         "to": toAddress,
@@ -18,11 +18,13 @@ def createLegacyTransaction(sidechainNode, *, fromAddress=None, toAddress=None, 
         "signature_s": signature_s
     }
     request = json.dumps(j)
-    response = sidechainNode.transaction_createLegacyTransaction(request)
+    if api_key is not None:
+        response = sidechainNode.transaction_createLegacyTransaction(request, api_key)
+    else:
+        response = sidechainNode.transaction_createLegacyTransaction(request)
 
     if "result" in response:
         if "transactionId" in response["result"]:
             return response["result"]["transactionId"]
 
     raise RuntimeError("Something went wrong, see {}".format(str(response)))
-

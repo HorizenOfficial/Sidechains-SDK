@@ -5,9 +5,10 @@ import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
+import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.WellKnownAddresses.{NULL_ADDRESS_BYTES, FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES}
 import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
@@ -69,7 +70,7 @@ class AccountStateView(
 
           val message = new Message(
             ownerAddressProposition,
-            new AddressProposition(ForgerStakeSmartContractAddress),
+            new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES),
             BigInteger.ZERO, // gasPrice
             BigInteger.ZERO, // gasFeeCap
             BigInteger.ZERO, // gasTipCap
@@ -96,7 +97,8 @@ class AccountStateView(
             addBalance(recipientProposition.address(), value)
             log.debug(s"added FT amount = $value to address=$recipientProposition")
           } else {
-            log.warn(s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was effectively burned)")
+            log.warn(s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was burned by sending balance to ${BytesUtils.toHexString(NULL_ADDRESS_BYTES)} address)")
+            addBalance(NULL_ADDRESS_BYTES, value)
             // TODO: we should return the amount back to mcReturnAddress instead of just burning it
           }
       }
@@ -110,12 +112,27 @@ class AccountStateView(
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
 
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
-    forgerStakesProvider.getListOfForgers(this).map { item =>
-      ForgingStakeInfo(
-        item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
-        item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
-        ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
-    }.sorted(Ordering[ForgingStakeInfo].reverse)
+    // get forger stakes list view (scala lazy collection)
+    getListOfForgerStakes.view
+
+       // group delegation stakes by blockSignPublicKey/vrfPublicKey pairs
+      .groupBy(stake => (stake.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
+                         stake.forgerStakeData.forgerPublicKeys.vrfPublicKey))
+
+      // create a seq of forging stake info for every group entry summing all the delegation amounts.
+      // Note: ForgingStakeInfo amount is a long and contains a Zennies amount converted from a BigInteger wei amount
+      //       That is safe since the stakedAmount is checked in creation phase to be an exact zennies amount
+      .map { case ((blockSignKey, vrfKey), stakes) =>
+          ForgingStakeInfo(
+            blockSignKey,
+            vrfKey,
+            stakes.map(
+              stake =>
+                ZenWeiConverter.convertWeiToZennies(stake.forgerStakeData.stakedAmount)).sum) }
+      .toSeq
+
+      // sort the resulting sequence by decreasing stake amount
+      .sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
   def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = {
@@ -263,9 +280,9 @@ class AccountStateView(
   def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] =
     metadataStorageView.getTransactionReceipt(txHash)
 
-  def updateBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateBaseFee(baseFee)
+  def updateNextBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateNextBaseFee(baseFee)
 
-  def baseFee: BigInteger = metadataStorageView.getBaseFee
+  def nextBaseFee: BigInteger = metadataStorageView.getNextBaseFee
 
   override def setCeased(): Unit = metadataStorageView.setCeased()
 

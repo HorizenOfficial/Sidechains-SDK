@@ -32,11 +32,15 @@ public class EvmMessageProcessor implements MessageProcessor {
             throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
+
+        context.chainID = BigInteger.valueOf(blockContext.chainID);
         context.coinbase = Address.fromBytes(blockContext.forgerAddress);
-        context.time = BigInteger.valueOf(blockContext.timestamp);
-        context.baseFee = blockContext.baseFee;
         context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);
         context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
+        context.time = BigInteger.valueOf(blockContext.timestamp);
+        context.baseFee = blockContext.baseFee;
+        // TODO: add 32 bytes of random from VRF to support the "PREVRANDAO" (ex "DIFFICULTY") EVM-opcode
+//        context.random = null;
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),
@@ -57,7 +61,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         // and ExecutionFailedException is thrown if the EVM reported "out of gas"
         gas.subGas(result.usedGas);
         if (result.reverted) throw new ExecutionRevertedException(returnData);
-        if(!result.evmError.isEmpty()) throw new ExecutionFailedException(result.evmError);
+        if (!result.evmError.isEmpty()) throw new ExecutionFailedException(result.evmError);
         return returnData;
     }
 }

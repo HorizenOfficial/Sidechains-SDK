@@ -1,26 +1,24 @@
 package com.horizen.account.api.rpc.handler;
 
-import com.google.inject.Inject;
 import com.horizen.account.api.rpc.request.RpcRequest;
 import com.horizen.account.api.rpc.response.RpcResponseError;
 import com.horizen.account.api.rpc.response.RpcResponseSuccess;
-import com.horizen.account.api.rpc.service.EthService;
+import com.horizen.account.api.rpc.service.RpcService;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
 import com.horizen.api.http.ApiResponse;
 
 public class RpcHandler {
-    private final EthService ethService;
+    private final RpcService rpcService;
 
-    @Inject
-    public RpcHandler(EthService ethService) {
-        this.ethService = ethService;
+    public RpcHandler(RpcService rpcService) {
+        this.rpcService = rpcService;
     }
 
     public ApiResponse apply(RpcRequest request) {
         try {
-            if (ethService.hasMethod(request.getMethod())) {
-                var result = ethService.execute(request);
+            if (rpcService.hasMethod(request.getMethod())) {
+                var result = rpcService.execute(request);
                 return new RpcResponseSuccess(request.getId(), result);
             }
             return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.MethodNotFound));
@@ -30,4 +28,5 @@ public class RpcHandler {
             return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.InternalError, e.getMessage()));
         }
     }
+
 }
