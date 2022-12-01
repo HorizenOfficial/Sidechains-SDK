@@ -36,7 +36,7 @@ public class EthereumReceiptView {
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
         from = (tx.getFrom() != null) ? Numeric.toHexString(tx.getFrom().address()) : null;
-        to = (tx.getTo() != null) ? Numeric.toHexString(tx.getTo().address()) : null;
+        to = (tx.getTo().isPresent()) ? Numeric.toHexString(tx.getTo().get().address()) : null;
         cumulativeGasUsed = Numeric.encodeQuantity(receipt.consensusDataReceipt().cumulativeGasUsed());
         gasUsed = Numeric.encodeQuantity(receipt.gasUsed());
         contractAddress = receipt.contractAddress().length != Account.ADDRESS_SIZE ? null : Numeric.toHexString(receipt.contractAddress());
@@ -48,6 +48,7 @@ public class EthereumReceiptView {
         logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom().getBloomFilter());
         status = Numeric.prependHexPrefix(Integer.toHexString(receipt.consensusDataReceipt().status()));
         // calculate effective gas price, this will work for both legacy and EIP1559 TXs
-        effectiveGasPrice = Numeric.encodeQuantity(baseFee.add(tx.getMaxPriorityFeePerGas()).min(tx.getMaxFeePerGas()));
+        effectiveGasPrice = Numeric.encodeQuantity(tx.getEffectiveGasPrice(baseFee));
+
     }
 }

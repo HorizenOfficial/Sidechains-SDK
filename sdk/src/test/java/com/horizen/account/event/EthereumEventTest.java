@@ -1,5 +1,8 @@
 package com.horizen.account.event;
 
+import com.horizen.account.event.annotation.Anonymous;
+import com.horizen.account.event.annotation.Indexed;
+import com.horizen.account.event.annotation.Parameter;
 import com.horizen.evm.interop.EvmLog;
 import org.junit.Test;
 import org.web3j.abi.TypeEncoder;

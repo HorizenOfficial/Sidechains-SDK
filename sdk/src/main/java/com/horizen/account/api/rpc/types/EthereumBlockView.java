@@ -2,16 +2,21 @@ package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.block.AccountBlock;
+import com.horizen.account.proof.SignatureSecp256k1;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.proof.ProofSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Bytes;
 import org.web3j.utils.Numeric;
+import scala.collection.Seq;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @JsonView(Views.Default.class)
@@ -59,12 +64,12 @@ public class EthereumBlockView {
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
         this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
 
-        var transactions = scala.collection.JavaConverters.seqAsJavaList(block.transactions());
+        var transactions = (List<EthereumTransaction>) scala.collection.JavaConverters.seqAsJavaList((block.transactions()));
 
         if (!hydratedTx) {
             this.transactions = transactions.stream().map(t -> Numeric.prependHexPrefix((String) t.id())).collect(Collectors.toList());
         } else {
-            this.transactions = transactions.stream().map(t -> new EthereumTransactionView(null, new EthereumTransaction(BytesUtils.toHexString(t.getTo().bytes()), t.getNonce(), t.getGasPrice(), t.getGasLimit(), t.getValue(), BytesUtils.toHexString(t.getData()), (Sign.SignatureData) t.getSignature()), block.header().baseFee())).collect(Collectors.toList());
+            this.transactions = transactions.stream().map(t -> new EthereumTransactionView(null, t, block.header().baseFee())).collect(Collectors.toList());
         }
     }
 }

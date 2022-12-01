@@ -11,7 +11,7 @@ It is possible to test a SC node or nodes with or without real MC node connectio
 - Install requirements via `pip3 install -r ./SidechainTestFramework/account/requirements.txt` or a similar way.
     - You can also manually install the requirements listed
 
-- Install node >= 16.13.2 and npm >= 8.1.2
+- Install node >= 14.0.0 and npm >= 7.0.0
     - eg. by using nvm (node version manager)
 - Install yarn globally (eg. via `npm -i -g yarn`)
 
@@ -35,13 +35,24 @@ You can run all tests by running the following command from the qa directory:
 ./run_sc_tests.sh
 ```
 
+You can use _-evm_only_ or _-utxo_only_ options for running only a subset of the tests.
+
 The log output for this test run can be found in the qa directory with the name "sc_test.log".
 
-Or run individual test using command:
+It is possible to run an individual test using command:
 
 ```
-python3 <test.py> --logconsolelevel=info
+python3 <test.py> 
 ```
+
+The following command-line options can be used in addition:
+- `--nocleanup`: Do not remove sc_test.* datadirs on exit or error
+- `--noshutdown`: Don't stop Mainchain and Sidechain nodes after the test execution
+- `--restapitimeout=<timeout>`: Timeout in seconds for rest API execution
+- `--logfilelevel=<log level>`: log4j log level for logging on log file.  
+- `--logconsolelevel=<log level>`: log4j log level for logging on console
+
+Additional options can be found in sc_test_framework.py file.
 
 **Template configuration files**
 
@@ -50,6 +61,21 @@ Template configuration files located in resources directory.
 File template.conf is the template for testing SC node(s) connected to MC node(s).
 
 File template_predefined_genesis.conf is the template for testing SC node(s) standalone mode (without any connections to MC node(s)).
+
+**UTXO vs EVM Sidechain**
+
+STF can be used for testing both Sidechain models, i.e UTXO or EVM Sidechains. 
+In order to select an EVM sc node in the py test, specify the corresponding binary in '_start_sc_nodes_' API
+   call, for example:
+   ```
+   start_sc_nodes(1, self.options.tmpdir, binary=[EVM_APP_BINARY])
+   ```
+
+   For UTXO Sidechain, '_binary_'  value is SIMPLE_APP_BINARY, e.g.:
+  ```
+   start_sc_nodes(1, self.options.tmpdir, binary=[SIMPLE_APP_BINARY])
+  ```
+However, in case of UTXO Sidechain, '_binary_' argument could be omitted because it is the default.  
 
 **Debugging**
 
@@ -62,6 +88,8 @@ In order to run a python test for debugging SDK application, the following proce
    ```
    This will cause the simpleApp process to start with the debug agent acting as a server. The process will wait until
    the debugger has been connected.
+   
+   As an alternative, the optional argument _--debugnode=\<i\>_ can be used for the same purpose, where _i_ is the index of the node to be debugged
 
 
 2) Run the py test.

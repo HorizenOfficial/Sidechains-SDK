@@ -18,8 +18,7 @@ class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) e
 
   private val sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCAT] =
     new ListSerializer[SidechainTypes#SCAT](
-      companion,
-      SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER
+      companion
     )
 
   private val mainchainHeadersSerializer: ListSerializer[MainchainHeader] = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)

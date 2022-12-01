@@ -23,12 +23,17 @@ public class RpcRequest {
         var iterator = json.fieldNames();
         iterator.forEachRemaining(e -> keys.add(e));
 
-        if (!keys.containsAll(List.of("jsonrpc", "id", "method", "params"))) {
+        if (!keys.containsAll(List.of("jsonrpc", "id", "method"))) {
+            throw new RpcException(RpcError.fromCode(RpcCode.ParseError));
+        }
+
+        try {
+            this.id = new RpcId(json.get("id"));
+        } catch (IllegalStateException e) {
             throw new RpcException(RpcError.fromCode(RpcCode.ParseError));
         }
 
         this.jsonrpc = json.get("jsonrpc").asText();
-        this.id = new RpcId(json.get("id"));
         this.method = json.get("method").asText();
         this.params = json.get("params");
     }
@@ -36,10 +41,6 @@ public class RpcRequest {
     @JsonGetter
     public String getJsonrpc() {
         return jsonrpc;
-    }
-
-    public void setJsonrpc(String jsonrpc) {
-        this.jsonrpc = jsonrpc;
     }
 
     @JsonGetter
@@ -65,6 +66,6 @@ public class RpcRequest {
 
     @Override
     public String toString() {
-        return String.format("RpcRequest{jsonrpc='%s', id='%s', method='%s', params=%s}", jsonrpc, id.toString(), method, params);
+        return String.format("RpcRequest={jsonrpc='%s', id='%s', method='%s', params=%s}", jsonrpc, id.toString(), method, params);
     }
 }

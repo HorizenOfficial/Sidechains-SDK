@@ -28,4 +28,5 @@ public class RpcHandler {
             return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.InternalError, e.getMessage()));
         }
     }
+
 }

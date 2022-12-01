@@ -3,16 +3,12 @@ import json
 import logging
 from decimal import Decimal
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenToZennies, connect_sc_nodes, \
-    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, assert_false
-from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.utils import convertZenToZennies
+from SidechainTestFramework.scutil import generate_next_block
+from httpCalls.transaction.allTransactions import allTransactions
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, fail, assert_false
 
 """
 Test that the Sidechain can manage orphan transactions correctly
@@ -30,41 +26,9 @@ Test:
 """
 
 
-class SCEvmOrphanTXS(SidechainTestFramework):
-    sc_nodes_bootstrap_info = None
-    number_of_mc_nodes = 1
-    number_of_sidechain_nodes = 2
-    API_KEY = "Horizen"
-
-    def setup_nodes(self):
-        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
-
-    def sc_setup_network(self, split=False):
-        self.sc_nodes = self.sc_setup_nodes()
-        logging.info("Connecting sc nodes...")
-        connect_sc_nodes(self.sc_nodes[0], 1)
-        self.sc_sync_all()
-
-    def sc_setup_chain(self):
-        mc_node = self.nodes[0]
-        sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
-        )
-        sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
-        )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
-                                         sc_node_1_configuration, sc_node_2_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
-                                                                 blockversion=AccountModelBlockVersion)
-
-    def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              auth_api_key=self.API_KEY,
-                              binary=[EVM_APP_BINARY] * 2)  # , extra_args=[['-agentlib'], []])
+class SCEvmOrphanTXS(AccountChainSetup):
+    def __init__(self):
+        super().__init__(number_of_sidechain_nodes=2)
 
     def run_test(self):
 
@@ -112,8 +76,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(orphan_tx_hash in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_true(orphan_tx_hash in response["transactionIds"])
 
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
@@ -121,8 +85,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         txs_in_block = sc_node_1.block_best()["result"]["block"]["sidechainTransactions"]
         assert_equal(0, len(txs_in_block), "Orphan transaction shouldn't be included in the block")
         # Check it is still in the mempool
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(orphan_tx_hash in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_true(orphan_tx_hash in response["transactionIds"])
 
         logging.info("Create the missing transaction and check that now both are included in a block...")
         j["nonce"] = 0
@@ -136,8 +100,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(tx_hash_nonce_0 in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_true(tx_hash_nonce_0 in response["transactionIds"])
 
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
@@ -148,8 +112,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         assert_equal(orphan_tx_hash, txs_in_block[1]['id'], "Wrong second tx")
 
         # Check the mempool is empty
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_equal(0, len(response['result']['transactionIds']))
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]))
 
         # Check that the transactions with the highest effective gas tip are included first in the block
         # The expected order is: txC_0, txC_1, txC_2, txB_0, txA_0, txB_1, txB_2, txA_1, txA_2
@@ -207,7 +171,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         txA_1 = response['result']['transactionId']
 
         txA_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scA, toAddress=evm_address_sc2,
-                                          nonce = 2, gasLimit = 230000, maxPriorityFeePerGas = 900000110, maxFeePerGas = 900001100, value=1)
+                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=900000110,
+                                         maxFeePerGas=900001100, value=1)
 
         j["from"] = evm_address_scB
         j["nonce"] = 0
@@ -219,8 +184,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         txB_0 = response['result']['transactionId']
 
         txB_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scB, toAddress=evm_address_sc2,
-                                          nonce = 1, gasLimit = 230000, maxPriorityFeePerGas = 900000002, maxFeePerGas = 900000002, value=1)
-
+                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=900000002,
+                                         maxFeePerGas=900000002, value=1)
 
         j["nonce"] = 2
         j["gasInfo"]["maxFeePerGas"] = 900000190
@@ -231,13 +196,15 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         txB_2 = response['result']['transactionId']
 
         txC_0 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                          nonce = 0, gasLimit = 230000, maxPriorityFeePerGas = 900000010, maxFeePerGas = 900000100, value=1)
+                                         nonce=0, gasLimit=230000, maxPriorityFeePerGas=900000010,
+                                         maxFeePerGas=900000100, value=1)
 
         txC_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=900000200, maxFeePerGas=900002000, value=1)
+                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=900000200,
+                                         maxFeePerGas=900002000, value=1)
         txC_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=900000006, maxFeePerGas=900000060, value=1)
-
+                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=900000006,
+                                         maxFeePerGas=900000060, value=1)
 
         self.sc_sync_all()
 
@@ -270,8 +237,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         oldTxId = response['result']['transactionId']
 
         # check mempool contains oldTxId
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_true(oldTxId in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_true(oldTxId in response["transactionIds"])
 
         j["gasInfo"]["maxFeePerGas"] = 900000500
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
@@ -280,9 +247,9 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         newTxId = response['result']['transactionId']
 
         # check mempool contains newTxId
-        response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        assert_false(oldTxId in response['result']['transactionIds'])
-        assert_true(newTxId in response['result']['transactionIds'])
+        response = allTransactions(sc_node_1, False)
+        assert_false(oldTxId in response["transactionIds"])
+        assert_true(newTxId in response["transactionIds"])
 
         self.sc_sync_all()
 

@@ -15,7 +15,6 @@ import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Propos
 import com.horizen.utils.BytesUtils
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
-import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
 
 import java.math.BigInteger
 import java.util

@@ -18,7 +18,6 @@ abstract class AbstractState[
 
   // abstract methods
   def isSwitchingConsensusEpoch(blockTimestamp: Long): Boolean
-  def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo]
   def isWithdrawalEpochLastIndex: Boolean
   def getWithdrawalEpochInfo: WithdrawalEpochInfo
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo)

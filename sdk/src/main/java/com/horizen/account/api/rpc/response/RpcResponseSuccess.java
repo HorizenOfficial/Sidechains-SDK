@@ -14,6 +14,11 @@ public class RpcResponseSuccess extends RpcResponse implements SuccessResponse {
         this.result = result;
     }
 
+    @JsonInclude
+    public Object getResult() {
+        return result;
+    }
+
     @Override
     public String toString() {
         return String.format("RpcResponseSuccess{jsonrpc='%s', id='%s', result=%s}", jsonrpc, id, result);

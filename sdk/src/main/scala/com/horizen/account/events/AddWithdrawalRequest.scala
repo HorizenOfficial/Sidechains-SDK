@@ -1,6 +1,6 @@
 package com.horizen.account.events
 
-import com.horizen.account.event.{Indexed, Parameter}
+import com.horizen.account.event.annotation.{Indexed, Parameter}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.BytesUtils

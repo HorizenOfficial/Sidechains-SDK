@@ -29,9 +29,9 @@ func (s *Service) open(storage ethdb.Database) int {
 	return s.databases.Add(db)
 }
 
-func (s *Service) OpenMemoryDB() (error, int) {
+func (s *Service) OpenMemoryDB() int {
 	log.Info("initializing memorydb")
-	return nil, s.open(rawdb.NewMemoryDatabase())
+	return s.open(rawdb.NewMemoryDatabase())
 }
 
 func (s *Service) OpenLevelDB(params LevelDBParams) (error, int) {
