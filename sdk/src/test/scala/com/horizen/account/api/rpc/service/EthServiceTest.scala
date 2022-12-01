@@ -79,7 +79,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def eth_chainId(): Unit = {
-    val rpcRequest = getRpcRequest("eth_chainId")
+    val rpcRequest = getRpcRequest()
     assertEquals(
       Numeric.toHexStringWithPrefix(BigInteger.valueOf(params.chainId)),
       ethService.execute(rpcRequest).asInstanceOf[Quantity].value
@@ -88,13 +88,13 @@ class EthServiceTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def eth_blockNumber(): Unit = {
-    val rpcRequest = getRpcRequest("eth_blockNumber")
+    val rpcRequest = getRpcRequest()
     assertEquals("0x1", ethService.execute(rpcRequest).asInstanceOf[Quantity].value)
   }
 
   @Test
   def net_version(): Unit = {
-    val rpcRequest = getRpcRequest("net_version")
+    val rpcRequest = getRpcRequest()
     assertEquals(String.valueOf(params.chainId), ethService.execute(rpcRequest))
   }
 
@@ -108,46 +108,53 @@ class EthServiceTest extends JUnitSuite with MockitoSugar {
     }
 
     // Test 2: Parameters are of wrong type
-    var rpcRequest = getRpcRequest("eth_estimateGas", Array("tx", "tx2"), Array("test", "test2"))
+    var rpcRequest = getRpcRequest(Array("tx", "tx2"), Array("test", "test2"), "eth_estimateGas")
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
     }
 
     // Test 3: Wrong number of parameters
-    rpcRequest = getRpcRequest("eth_estimateGas", Array(5, 10, 20))
+    rpcRequest = getRpcRequest(paramValues = Array(5, 10, 20), method = "eth_estimateGas")
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
     }
 
     // Test 44 Trigger IllegalArgumentException rpc call
-    rpcRequest = getRpcRequest("eth_estimateGas", Array(-1))
+    rpcRequest = getRpcRequest(paramValues = Array(-1), method = "eth_estimateGas")
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
     }
   }
 
-  private[this] def getRpcRequest(method: String, params: Array[String], paramValues: Array[Any]): RpcRequest = {
-    if (params == null) throw new IllegalArgumentException("Parameters are undefined")
-    if (params.length != paramValues.length)
-      throw new IllegalArgumentException("Number of parameters given must be equal to number of values given")
-    var json = s"""{"id":"1","jsonrpc":"2.0","method":"$method""""
-    json = json + """, "params":{"""
-    for ((arg, value) <- params.dropRight(1) zip paramValues.dropRight(1)) json = json + s""""$arg":"$value", """
-    json = json + s""""${params(params.size - 1)}":"${paramValues(paramValues.size - 1)}"}}"""
-    new RpcRequest((new ObjectMapper).readTree(json))
-  }
-
-  private[this] def getRpcRequest(method: String, paramValues: Array[Any]): RpcRequest = {
-    if (paramValues == null) throw new IllegalArgumentException("Parameter values are undefined")
-    var json = s"""{"id":"1","jsonrpc":"2.0","method":"$method""""
-    json = json + """, "params":["""
-    for (value <- paramValues.dropRight(1)) json = json + s""""$value", """
-    json = json + s""""${paramValues(paramValues.size - 1)}"]}"""
-    new RpcRequest((new ObjectMapper).readTree(json))
-  }
-
-  private[this] def getRpcRequest(method: String): RpcRequest = {
-    val json = s"""{"id":"1","jsonrpc":"2.0","method":"$method", "params":[]}"""
+  /**
+   * Helper for constructing a rpc request takes up to two Arrays containing the parameter names, values and the method
+   * name
+   * @param params
+   *   default is null
+   * @param paramValues
+   *   default is null
+   * @param method
+   *   RPC method, default is calling function name
+   * @return
+   *   RpcRequest instance
+   */
+  private[this] def getRpcRequest(
+      params: Array[String] = null,
+      paramValues: Array[Any] = null,
+      method: String = Thread.currentThread.getStackTrace()(2).getMethodName
+  ): RpcRequest = {
+    var json: String = s"""{"id":"1","jsonrpc":"2.0","method":"$method""""
+    if (params == null && paramValues == null) {
+      json = json + """, "params":[]}"""
+    } else if (params == null && paramValues != null) {
+      json = json + paramValues.mkString(""", "params":[""", ", ", "]}")
+    } else {
+      if (params.length != paramValues.length)
+        throw new IllegalArgumentException("Number of parameters given must be equal to number of values given")
+      json = json + (params zip paramValues)
+        .map(param => s""""${param._1}":"${param._2}"""")
+        .mkString(""", "params":{""", ", ", "}}")
+    }
     new RpcRequest((new ObjectMapper).readTree(json))
   }
 }
