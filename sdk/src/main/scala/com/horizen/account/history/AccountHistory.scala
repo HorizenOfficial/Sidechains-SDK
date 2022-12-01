@@ -43,8 +43,12 @@ extends com.horizen.AbstractHistory[
 
   override type NVCT = AccountHistory
 
-  // TODO check this
-  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCAT] = ???
+  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCAT] = {
+    storage.blockById(ModifierId(blockId)) match {
+      case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
+      case None => JOptional.empty()
+    }
+  }
 
   private def findTransactionInsideBlock(transactionId : String, block : AccountBlock) : JOptional[SidechainTypes#SCAT] = {
     block.transactions.find(tx => tx.id.equals(ModifierId(transactionId))) match {
