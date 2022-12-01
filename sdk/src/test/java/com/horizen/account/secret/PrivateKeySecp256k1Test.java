@@ -14,7 +14,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-import static com.horizen.account.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
+import static com.horizen.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
 import static org.junit.Assert.*;
 
 public class PrivateKeySecp256k1Test {
