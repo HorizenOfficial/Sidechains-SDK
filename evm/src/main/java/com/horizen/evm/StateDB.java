@@ -212,6 +212,8 @@ public class StateDB extends ResourceHandle {
 
     /**
      * Write to storage trie of given account.
+     * Note: Do not mix RAW and CHUNKED strategies for the same key,
+     * this can potentially lead to dangling nodes in the storage Trie and de facto infinite-loops.
      *
      * @param address account address
      * @param key storage key

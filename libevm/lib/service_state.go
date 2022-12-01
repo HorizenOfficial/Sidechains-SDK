@@ -13,7 +13,11 @@ import (
 	"math/big"
 )
 
+// random data used to salt chunk keys in the storage trie when accessed via Get/SetStorageBytes, see getChunkKey
 var chunkKeySalt = common.HexToHash("fa09428dd8121ea57327c9f21af74ffad8bfd5e6e39dc3dc6c53241a85ec5b0d").Bytes()
+
+// ErrEmptyAccount is thrown when attempting to write to a storage trie of an otherwise "empty" account
+// to prevent potential data loss, because empty accounts will be pruned, regardless of data in the storage trie
 var ErrEmptyAccount = errors.New("account is empty, cannot modify storage trie")
 
 type StateParams struct {
@@ -314,6 +318,8 @@ func (s *Service) StateGetStorageBytes(params StorageParams) (error, []byte) {
 }
 
 // StateSetStorageBytes writes values of arbitrary length to the storage trie of given account
+// note: do not mix StateSetStorage and StateSetStorageBytes for the same key,
+// this can potentially lead to dangling nodes in the storage Trie and de facto infinite-loops
 func (s *Service) StateSetStorageBytes(params SetStorageBytesParams) error {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
