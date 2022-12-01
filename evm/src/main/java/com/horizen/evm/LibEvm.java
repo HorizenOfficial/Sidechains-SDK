@@ -136,10 +136,6 @@ final class LibEvm {
         return invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class).toBytes();
     }
 
-    public static void stateSetCodeHash(int handle, byte[] address, byte[] codeHash) {
-        invoke("StateSetCodeHash", new CodeHashParams(handle, address, codeHash));
-    }
-
     public static byte[] stateGetCode(int handle, byte[] address) {
         return invoke("StateGetCode", new AccountParams(handle, address), byte[].class);
     }

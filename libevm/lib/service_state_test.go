@@ -42,9 +42,9 @@ func testStorageSetCommitWrite(t *testing.T, instance *Service, dbHandle int, ad
 		Key:           key,
 	}
 	// make sure the account is not "empty"
-	_ = instance.StateSetCodeHash(CodeHashParams{
+	_ = instance.StateSetCode(CodeParams{
 		AccountParams: account,
-		CodeHash:      crypto.Keccak256Hash(addr.Bytes()),
+		Code:          crypto.Keccak256Hash(addr.Bytes()).Bytes(),
 	})
 	err, initialRoot := instance.StateIntermediateRoot(handle)
 	err = instance.StateSetStorage(SetStorageParams{
@@ -121,9 +121,9 @@ func testStorageBytesSetCommitWrite(t *testing.T, instance *Service, dbHandle in
 		Key:           key,
 	}
 	// make sure the account is not "empty"
-	_ = instance.StateSetCodeHash(CodeHashParams{
+	_ = instance.StateSetCode(CodeParams{
 		AccountParams: account,
-		CodeHash:      crypto.Keccak256Hash(addr.Bytes()),
+		Code:          crypto.Keccak256Hash(addr.Bytes()).Bytes(),
 	})
 	err, initialRoot := instance.StateIntermediateRoot(handle)
 	err = instance.StateSetStorageBytes(SetStorageBytesParams{

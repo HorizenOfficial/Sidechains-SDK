@@ -40,11 +40,6 @@ type NonceParams struct {
 	Nonce hexutil.Uint64 `json:"nonce"`
 }
 
-type CodeHashParams struct {
-	AccountParams
-	CodeHash common.Hash `json:"codeHash"`
-}
-
 type CodeParams struct {
 	AccountParams
 	Code []byte `json:"code"`
@@ -215,17 +210,6 @@ func (s *Service) StateGetCodeHash(params AccountParams) (error, common.Hash) {
 		return err, common.Hash{}
 	}
 	return nil, statedb.GetCodeHash(params.Address)
-}
-
-// StateSetCodeHash sets just the code hash, the code itself is set to nil
-func (s *Service) StateSetCodeHash(params CodeHashParams) error {
-	err, statedb := s.statedbs.Get(params.Handle)
-	if err != nil {
-		return err
-	}
-	obj := statedb.GetOrNewStateObject(params.Address)
-	obj.SetCode(params.CodeHash, nil)
-	return nil
 }
 
 func (s *Service) StateGetCode(params AccountParams) (error, []byte) {

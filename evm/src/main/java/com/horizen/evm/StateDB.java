@@ -164,16 +164,6 @@ public class StateDB extends ResourceHandle {
     }
 
     /**
-     * Set account code hash, without actually adding any code.
-     *
-     * @param address account address
-     * @param codeHash code hash to set
-     */
-    public void setCodeHash(byte[] address, byte[] codeHash) {
-        LibEvm.stateSetCodeHash(handle, address, codeHash);
-    }
-
-    /**
      * Get code for the given account.
      *
      * @param address account address
