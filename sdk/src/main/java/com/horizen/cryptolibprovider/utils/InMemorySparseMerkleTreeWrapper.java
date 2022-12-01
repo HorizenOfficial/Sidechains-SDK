@@ -1,4 +1,4 @@
-package com.horizen.cryptolibprovider;
+package com.horizen.cryptolibprovider.utils;
 
 import com.google.common.collect.*;
 import com.horizen.librustsidechains.FieldElement;

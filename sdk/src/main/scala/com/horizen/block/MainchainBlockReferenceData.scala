@@ -3,10 +3,11 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.google.inject.Singleton
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.serialization.Views
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
+import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.transaction.MC2SCAggregatedTransactionSerializer
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 

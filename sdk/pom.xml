@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.horizen</groupId>
   <artifactId>sidechains-sdk</artifactId>
-  <version>0.5.0</version>
+  <version>0.6.0-SNAPSHOT</version>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo ${project.artifactId} is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain.</description>
   <url>https://github.com/${project.github.organization}/${project.artifactId}</url>
@@ -55,7 +55,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>zendoo-sc-cryptolib</artifactId>
-      <version>0.5.0</version>
+      <version>0.6.0-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.sparkzfoundation/sparkz-core -->
@@ -264,6 +264,14 @@
       <id>softmotions_repository</id>
       <name>Softmotions Public Repository</name>
       <url>https://repo.softmotions.com/repository/softmotions-public</url>
+    </repository>
+    <repository>
+      <id>oss-sonatype</id>
+      <name>oss-sonatype</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
     </repository>
   </repositories>
   <build>

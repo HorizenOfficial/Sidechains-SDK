@@ -4,7 +4,8 @@ import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, Si
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.TimeToEpochUtils
@@ -36,6 +37,8 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val nPowMaxAdjustUp: Int = 16 // 16% adjustment up
     override val nPowTargetSpacing: Int = 150 // 2.5 * 60
     override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
+    override val mastersPublicKeys: Seq[SchnorrProposition] = Seq()
+    override val circuitType: CircuitTypes = CircuitTypes.NaiveThresholdSignatureCircuit
     override val signersThreshold: Int = 0
     override val certProvingKeyFilePath: String = ""
     override val certVerificationKeyFilePath: String = ""

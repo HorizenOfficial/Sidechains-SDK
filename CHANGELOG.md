@@ -1,7 +1,9 @@
 **0.6.0**
 1. Sidechain version 2 support
-2. Non ceasing Sidechain support
-3. Added virtualWithdrawalEpochLength parameter to genesisinfo command of the bootstrapping tool
+2. Non ceasing Sidechain support 
+3. Certificate submittion signing/master keys rotation support 
+4. Added virtualWithdrawalEpochLength parameter to genesisinfo command of the bootstrapping tool
+5. Added generateCertWithKeyRotationProofInfo command to the bootstrapping tool
 
 **0.5.0**
 1. Scorex dependency has been updated from Scorex 2.0.0-RC6 to Sparkz 2.0.0-RC9 (package name has been changed to sparkz).
