@@ -64,10 +64,10 @@ public class EthereumBlockView {
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
         this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
 
-        var transactions = (List<EthereumTransaction>) scala.collection.JavaConverters.seqAsJavaList((block.transactions()));
+        var transactions = scala.collection.JavaConverters.seqAsJavaList(block.ethereumTransactions());
 
         if (!hydratedTx) {
-            this.transactions = transactions.stream().map(t -> Numeric.prependHexPrefix((String) t.id())).collect(Collectors.toList());
+            this.transactions = transactions.stream().map(t -> Numeric.prependHexPrefix(t.id())).collect(Collectors.toList());
         } else {
             this.transactions = transactions.stream().map(t -> new EthereumTransactionView(null, t, block.header().baseFee())).collect(Collectors.toList());
         }

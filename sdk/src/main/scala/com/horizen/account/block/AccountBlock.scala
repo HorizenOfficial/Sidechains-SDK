@@ -5,6 +5,7 @@ import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, LogsBloom}
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
@@ -17,6 +18,7 @@ import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
 import scorex.util.ScorexLogging
 import sparkz.core.utils.SparkzEncoding
+
 import java.math.BigInteger
 import scala.util.Try
 
@@ -34,6 +36,8 @@ class AccountBlock(override val header: AccountBlockHeader,
   override lazy val serializer = new AccountBlockSerializer(companion)
 
   override lazy val transactions: Seq[SidechainTypes#SCAT] = sidechainTransactions
+
+  def ethereumTransactions: Seq[EthereumTransaction] = sidechainTransactions.map(_.asInstanceOf[EthereumTransaction])
 
   def forgerPublicKey: AddressProposition = header.forgerAddress
 
@@ -188,5 +192,4 @@ object AccountBlock extends SparkzEncoding {
     // 2. compute hash
     TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
   }
-
 }
