@@ -42,10 +42,16 @@ func testStorageSetCommitWrite(t *testing.T, instance *Service, dbHandle int, ad
 		Key:           key,
 	}
 	// make sure the account is not "empty"
+	if _, empty := instance.StateEmpty(account); !empty {
+		t.Errorf("expected account to be empty: %v", err)
+	}
 	_ = instance.StateSetCode(CodeParams{
 		AccountParams: account,
 		Code:          crypto.Keccak256Hash(addr.Bytes()).Bytes(),
 	})
+	if _, empty := instance.StateEmpty(account); empty {
+		t.Errorf("expected account to be non-empty: %v", err)
+	}
 	err, initialRoot := instance.StateIntermediateRoot(handle)
 	err = instance.StateSetStorage(SetStorageParams{
 		StorageParams: storage,
@@ -193,9 +199,6 @@ func TestStateStorage(t *testing.T) {
 		}
 	)
 	dbHandle := instance.OpenMemoryDB()
-	defer func() {
-		_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
-	}()
 	for _, value := range values {
 		testStorageSetCommitWrite(t, instance, dbHandle, addr, key, value)
 	}
@@ -226,13 +229,7 @@ func TestRawStateDB(t *testing.T) {
 		key      = common.BytesToHash(crypto.Keccak256(common.FromHex("00112233")))
 		value    = common.HexToHash("0x1234")
 	)
-	err, dbHandle := instance.OpenLevelDB(LevelDBParams{Path: t.TempDir()})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
-	}()
+	dbHandle := instance.OpenMemoryDB()
 	_, db := instance.databases.Get(dbHandle)
 	statedb, _ := state.New(test.ZeroHash, db.database, nil)
 	initialCodeHash := statedb.GetCodeHash(addr)
