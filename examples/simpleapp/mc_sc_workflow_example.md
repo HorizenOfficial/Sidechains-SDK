@@ -97,14 +97,14 @@ Note:
 
 *If circuit with key rotation:*
 
-`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [pk1, pk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk", "isCSWEnabled": true}`
+`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [signerPk1, signerPk2, ...], "mastersPublicKeys": [masterPk1, masterPk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk", "isCSWEnabled": true}`
 
 Note:
 - `signersPublicKeys` - list of Schnorr public signing keys of certificate Signers generated on step 5;
-- `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated on step 5;
+- `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey;
 - `threshold` - the minimum set of the participants required for a valid proof creation;
 - `isCSWEnabled` - Its value should be true if the Ceased Sidechain Withdrawal is enabled, false otherwise.
-
+  Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys.
 
 Example of output is:
 ```
