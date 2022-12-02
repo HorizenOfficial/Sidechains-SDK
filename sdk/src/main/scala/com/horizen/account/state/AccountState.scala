@@ -383,7 +383,7 @@ class AccountState(
 
   override def getNonce(address: Array[Byte]): BigInteger = using(getView)(_.getNonce(address))
 
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgerStakes)
+  override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgersStakes)
 
   def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
@@ -433,6 +433,8 @@ class AccountState(
   def isWithdrawalEpochLastIndex: Boolean = {
     WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
   }
+
+  override def isForgingOpen(): Boolean = using(getView)(_.isForgingOpen)
 }
 
 object AccountState extends ScorexLogging {

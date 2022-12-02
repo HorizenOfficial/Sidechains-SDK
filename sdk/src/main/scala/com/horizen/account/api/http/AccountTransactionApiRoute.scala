@@ -23,10 +23,12 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
+import com.horizen.proof.Signature25519
 import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
+import com.horizen.secret.PrivateKey25519
 
 import java.lang
 import java.math.BigInteger
@@ -34,6 +36,7 @@ import java.util.{Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
 
 case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                                       sidechainNodeViewHolderRef: ActorRef,
@@ -58,7 +61,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes
+      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openStakeForgerList
   }
 
   def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -299,6 +302,89 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def openStakeForgerList: Route = (post & path("openStakeForgerList")) {
+    withAuth {
+      entity(as[ReqOpenStakeForgerList]) { body =>
+
+        // first of all reject the command if we do not have closed forger list
+        if (!params.restrictForgers) {
+          return ApiResponseUtil.toResponse(ErrorOpenForgersList(
+            s"Ther list of forger is not restricted (see configuration)",
+            JOptional.empty()))
+        }
+
+        // lock the view and try to create CoreTransaction
+        applyOnNodeView { sidechainNodeView =>
+          val valueInWei = BigInteger.ZERO
+          // default gas related params
+          val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+          var maxPriorityFeePerGas = BigInteger.valueOf(120)
+          var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+          var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+
+          if (body.gasInfo.isDefined) {
+            maxFeePerGas = body.gasInfo.get.maxFeePerGas
+            maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+            gasLimit = body.gasInfo.get.gasLimit
+          }
+
+          val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+          val blockSignSecret : PrivateKey25519 = getBlockSignSecret(body.forgerIndex, sidechainNodeView.getNodeWallet) match {
+            case Failure(e) =>
+              return ApiResponseUtil.toResponse(ErrorOpenForgersList(
+                s"Could not get proposition for forgerIndex=${body.forgerIndex}",
+                JOptional.of(e)))
+            case Success(s) => s
+          }
+
+          val secret = getFittingSecret(sidechainNodeView, None, txCost)
+
+          secret match {
+            case Some(txCreatorSecret) =>
+              val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
+              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
+
+              val msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
+                body.forgerIndex, txCreatorSecret.publicImage().address(), nonce.toByteArray)
+
+              val signature = blockSignSecret.sign(msgToSign)
+
+              val dataBytes = encodeOpenStakeCmdRequest(body.forgerIndex, signature)
+              val tmpTx: EthereumTransaction = new EthereumTransaction(
+                params.chainId,
+                EthereumTransactionUtils.getToAddressFromString(to),
+                nonce,
+                gasLimit,
+                maxPriorityFeePerGas,
+                maxFeePerGas,
+                valueInWei,
+                dataBytes,
+                null
+              )
+
+              validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx))
+
+            case None =>
+              ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+
+          }
+        }
+      }
+    }
+  }
+
+  private def getBlockSignSecret(forgerIndex: Int, wallet: NodeWalletBase): Try[PrivateKey25519] = Try {
+    val blockSignProposition = Try[PublicKey25519Proposition] {
+      params.allowedForgersList(forgerIndex)._1
+    }
+    blockSignProposition match {
+      case scala.util.Failure(e) =>
+        throw new IllegalArgumentException(s"Could not get proposition for forgerIndex=$forgerIndex" + e.getMessage)
+      case Success(prop) =>
+        wallet.secretByPublicKey(prop).get().asInstanceOf[PrivateKey25519]
+    }
+  }
 
   def makeForgerStake: Route = (post & path("makeForgerStake")) {
     withAuth {
@@ -385,7 +471,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   else {
                     val stakeOwnerSecret = stakeOwnerSecretOpt.get().asInstanceOf[PrivateKeySecp256k1]
 
-                    val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
+                    val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
                     val signature = stakeOwnerSecret.sign(msgToSign)
                     val dataBytes = encodeSpendStakeCmdRequest(signature, body.stakeId)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -407,7 +493,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             case None =>
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
           }
-
         }
       }
     }
@@ -416,7 +501,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def allForgingStakes: Route = (post & path("allForgingStakes")) {
     withNodeView { sidechainNodeView =>
       val accountState = sidechainNodeView.getNodeState
-      val listOfForgerStakes = accountState.getListOfForgerStakes
+      val listOfForgerStakes = accountState.getListOfForgersStakes
       ApiResponseUtil.toResponse(RespForgerStakes(listOfForgerStakes.toList))
     }
   }
@@ -425,7 +510,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     withAuth {
       withNodeView { sidechainNodeView =>
           val accountState = sidechainNodeView.getNodeState
-          val listOfForgerStakes = accountState.getListOfForgerStakes
+          val listOfForgerStakes = accountState.getListOfForgersStakes
 
           if (listOfForgerStakes.nonEmpty) {
             val wallet = sidechainNodeView.getNodeWallet
@@ -554,6 +639,12 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd), addForgerStakeInput.encode())
   }
 
+  def encodeOpenStakeCmdRequest(forgerIndex: Int, signature: Signature25519): Array[Byte] = {
+    val openStakeForgerListInput = OpenStakeForgerListCmdInput(forgerIndex, signature)
+    Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.OpenStakeForgerListCmd),
+      openStakeForgerListInput.encode())
+  }
+
   def encodeSpendStakeCmdRequest(signatureSecp256k1: SignatureSecp256k1, stakeId: String): Array[Byte] = {
     val spendForgerStakeInput = RemoveStakeCmdInput(BytesUtils.fromHexString(stakeId), signatureSecp256k1)
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.RemoveStakeCmd), spendForgerStakeInput.encode())
@@ -641,6 +732,14 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqOpenStakeForgerList(
+                                                  nonce: Option[BigInteger],
+                                                  forgerIndex: Int,
+                                                  gasInfo: Option[EIP1559GasInfo]) {
+  }
+
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateContract(
                                              nonce: Option[BigInteger],
                                              contractCode: String,
@@ -718,18 +817,6 @@ object AccountTransactionRestScheme {
 
 object AccountTransactionErrorResponse {
 
-  case class ErrorNotFoundTransactionId(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0201"
-  }
-
-  case class ErrorNotFoundTransactionInput(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0202"
-  }
-
-  case class ErrorByteTransactionParsing(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0203"
-  }
-
   case class GenericTransactionError(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0204"
   }
@@ -746,6 +833,10 @@ object AccountTransactionErrorResponse {
   case class ErrorForgerStakeOwnerNotFound(description: String) extends ErrorResponse {
     override val code: String = "0207"
     override val exception: JOptional[Throwable] = JOptional.empty()
+  }
+
+  case class ErrorOpenForgersList(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0208"
   }
 
 }

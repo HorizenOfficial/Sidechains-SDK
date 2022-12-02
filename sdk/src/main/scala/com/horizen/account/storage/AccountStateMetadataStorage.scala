@@ -49,4 +49,6 @@ class AccountStateMetadataStorage(storage: Storage)
   override def getAccountStateRoot: Array[Byte] = getView.getAccountStateRoot
 
   override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = getView.getTransactionReceipt(txHash)
+
+  override def isForgingOpen: Boolean = getView.isForgingOpen  // TODO move it in message processor logic
 }

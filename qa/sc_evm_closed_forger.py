@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import logging
+import pprint
 from decimal import Decimal
 
 from eth_utils import add_0x_prefix, remove_0x_prefix
@@ -25,29 +26,42 @@ Configuration:
 Test:
     - Try to stake money with invalid forger info and verify that we are not allowed to stake
     - Try the same with forger info pubkeys contained in the closed list, should be succesful
+    - Open the stake to the world using the openStakeTransaction and verify that a generic proposition (not included in the forger list) 
+    is allowed to forge.
 
 
 """
 
 
 class SCEvmClosedForgerList(AccountChainSetup):
+
+    number_of_sidechain_nodes = 1
+    number_of_forgers = 5
+    allowed_forger_propositions = generate_secrets("seed", number_of_forgers)
+    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed", number_of_forgers)
+
+
     def __init__(self):
-        self.allowed_forger_block_signer_public_key = generate_secrets("seed_new", 1)[0].publicKey
-        self.allowed_forger_vrf_public_key = generate_vrf_secrets("seed_new", 1)[0].publicKey
-        forger_configuration = SCForgerConfiguration(True, [
-            [self.allowed_forger_block_signer_public_key, self.allowed_forger_vrf_public_key]])
-        super().__init__(number_of_sidechain_nodes=2, forward_amount=100,
-                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10,forger_options=forger_configuration)
+        allowedForgers = []
+        for i in range (0, self.number_of_forgers):
+            allowedForgers += [[self.allowed_forger_propositions[i].publicKey, self.allowed_forger_vrf_public_keys[i].publicKey]]
+
+        forger_configuration  = SCForgerConfiguration(True, allowedForgers)
+
+        super().__init__(number_of_sidechain_nodes=self.number_of_sidechain_nodes, forward_amount=100,
+                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10,
+                         forger_options=forger_configuration)
 
     def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
         # a transaction with a forger stake info not compliant with the closed forger list will be successfully
         # included in a block but the receipt will then report a 'failed' status.
-        forgerStakes = {"forgerStakeInfo": {
-            "ownerAddress": owner_address,  # SC node 1 is an owner
-            "blockSignPublicKey": blockSignPubKey,
-            "vrfPubKey": vrf_public_key,
-            "value": convertZenToZennies(amount)  # in Satoshi
-        }
+        forgerStakes = {
+            "forgerStakeInfo": {
+                "ownerAddress": owner_address,  # SC node 1 is an owner
+                "blockSignPublicKey": blockSignPubKey,
+                "vrfPubKey": vrf_public_key,
+                "value": convertZenToZennies(amount)  # in Satoshi
+            }
         }
         makeForgerStakeJsonRes = sc_node.transaction_makeForgerStake(json.dumps(forgerStakes))
         assert_true("result" in makeForgerStakeJsonRes)
@@ -94,13 +108,13 @@ class SCEvmClosedForgerList(AccountChainSetup):
         logging.info("Try to stake to an invalid blockSignProposition...")
         result = self.tryMakeForgetStake(
             sc_node_1, evm_address_sc_node_1, outlaw_blockSignPubKey,
-            self.allowed_forger_vrf_public_key, amount=33)
+            self.allowed_forger_vrf_public_keys[0].publicKey, amount=33)
         assert_false(result)
 
         # Try to stake to an invalid vrfPublicKey
         logging.info("Try to stake to an invalid vrfPublicKey...")
         result = self.tryMakeForgetStake(
-            sc_node_1, evm_address_sc_node_1, self.allowed_forger_block_signer_public_key,
+            sc_node_1, evm_address_sc_node_1, self.allowed_forger_propositions[0].publicKey,
             outlaw_vrfPubKey, amount=33)
         assert_false(result)
 
@@ -114,10 +128,26 @@ class SCEvmClosedForgerList(AccountChainSetup):
         # Try to stake with a valid blockSignProposition and valid vrfPublicKey
         logging.info("Try to stake to a valid blockSignProposition and valid vrfPublicKey...")
         result = self.tryMakeForgetStake(
-            sc_node_1, evm_address_sc_node_1, self.allowed_forger_block_signer_public_key,
-            self.allowed_forger_vrf_public_key, amount=33)
+            sc_node_1, evm_address_sc_node_1, self.allowed_forger_propositions[0].publicKey,
+            self.allowed_forger_vrf_public_keys[0].publicKey, amount=33)
         assert_true(result)
 
+        #Forger 0 opens the stake
+        logging.info("Forger 0 opens the stake")
+        j = {
+            "forgerIndex": 0,
+        }
+        request = json.dumps(j)
+        response = sc_node_1.transaction_openStakeForgerList(request)
+        pprint.pprint(response)
+
+        assert_true("error" not in response)
+        self.sc_sync_all()
+        logging.info("Ok!")
+
+        # Generate SC block and check that FT appears in SCs node wallet
+        generate_next_block(sc_node_1, "first node")
+        self.sc_sync_all()
 
 if __name__ == "__main__":
     SCEvmClosedForgerList().main()

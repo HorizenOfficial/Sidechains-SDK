@@ -10,7 +10,7 @@ trait AccountStateReader {
   def getCode(address: Array[Byte]): Array[Byte]
   def getAccountStateRoot: Array[Byte] // 32 bytes, keccak hash
 
-  def getListOfForgerStakes: Seq[AccountForgingStakeInfo]
+  def getListOfForgersStakes: Seq[AccountForgingStakeInfo]
   def getForgerStakeData(stakeId: String): Option[ForgerStakeData]
 
   def getLogs(txHash: Array[Byte]): Array[EvmLog]

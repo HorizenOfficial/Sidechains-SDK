@@ -12,15 +12,20 @@ abstract class AbstractState[
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
   MS <: AbstractState[TX, H, PM, MS]
-] extends MinimalState[PM, MS]
-{
+] extends MinimalState[PM, MS] {
   self: MS =>
 
   // abstract methods
   def isSwitchingConsensusEpoch(blockTimestamp: Long): Boolean
+
   def isWithdrawalEpochLastIndex: Boolean
+
   def getWithdrawalEpochInfo: WithdrawalEpochInfo
+
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo)
+
+  //Check if the majority of the allowed forgers opened the stake to everyone
+  def isForgingOpen(): Boolean
 }
 
 

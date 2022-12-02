@@ -23,6 +23,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   require(storage != null, "Storage must be NOT NULL.")
 
   private[horizen] val ceasingStateKey = calculateKey("ceasingStateKey".getBytes)
+  private[horizen] val isForgersListOpenKey = calculateKey("isForgingOpenKey".getBytes) // TODO move in message proc logic
+
   private[horizen] val heightKey = calculateKey("heightKey".getBytes)
   private[horizen] val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes)
   private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
@@ -32,6 +34,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private val undefinedBlockFeeInfoCounter: Int = -1
 
   private[horizen] var hasCeasedOpt: Option[Boolean] = None
+  private[horizen] var isForgersListOpenOpt: Option[Boolean] = None
+
   private[horizen] var withdrawalEpochInfoOpt: Option[WithdrawalEpochInfo] = None
   private[horizen] var topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = None
   private[horizen] var blockFeeInfoOpt: Option[AccountBlockFeeInfo] = None
@@ -128,6 +132,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   override def hasCeased: Boolean = hasCeasedOpt.getOrElse(storage.get(ceasingStateKey).isPresent)
 
+  override def isForgingOpen: Boolean = isForgersListOpenOpt.getOrElse(storage.get(isForgersListOpenKey).isPresent)
+
   override def getHeight: Int = {
     storage.get(heightKey).asScala.map(baw => Ints.fromByteArray(baw.data)).getOrElse(0)
   }
@@ -197,6 +203,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   def setCeased(): Unit = hasCeasedOpt = Some(true)
+  def setForgerListOpen(flag: Boolean): Unit = isForgersListOpenOpt = Some(flag)
+
 
   // update the database with "dirty" records new values
   // also increment the height value directly
@@ -214,6 +222,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   private[horizen] def cleanUpCache(): Unit = {
     hasCeasedOpt = None
+    isForgersListOpenOpt = None
     withdrawalEpochInfoOpt = None
     topQualityCertificateOpt = None
     blockFeeInfoOpt = None
@@ -264,6 +273,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
     // If sidechain has ceased set the flag
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
+
+    // If the forgers list has been open set the flag
+    isForgersListOpenOpt.foreach(_ => updateList.add(new JPair(isForgersListOpenKey, new ByteArrayWrapper(Array.emptyByteArray))))
+
 
     // update the height unless we have the very first version of the db
     // TODO improve this: we are assuming that the saveToStorage() is call on a per-block base, this is an exception, is it the only one?

@@ -113,7 +113,7 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
 
   override def getAccountStateRoot: Array[Byte] = view.getAccountStateRoot
 
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = view.getListOfForgerStakes
+  override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] = view.getListOfForgersStakes
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = view.getForgerStakeData(stakeId)
 

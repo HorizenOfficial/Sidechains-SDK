@@ -77,7 +77,7 @@ class ForgerStakeMsgProcessorTest
 
   def removeForgerStake(stateView: AccountStateView, stakeId: Array[Byte]): Unit = {
     val nonce = randomNonce
-    val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(stakeId, origin, nonce.toByteArray)
+    val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(stakeId, origin, nonce.toByteArray)
     val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
     val msgSignature = new SignatureSecp256k1(msgSignatureData)
 
@@ -264,7 +264,7 @@ class ForgerStakeMsgProcessorTest
       // remove first stake id
       val stakeId = forgerStakeMessageProcessor.getStakeId(msg)
       val nonce3 = randomNonce
-      val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(stakeId, origin, nonce3.toByteArray)
+      val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(stakeId, origin, nonce3.toByteArray)
       val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
       val msgSignature = new SignatureSecp256k1(msgSignatureData)
 
@@ -583,7 +583,7 @@ class ForgerStakeMsgProcessorTest
       }
 
       //Check getListOfForgers
-      val forgerList = forgerStakeMessageProcessor.getListOfForgers(view)
+      val forgerList = forgerStakeMessageProcessor.getListOfForgersStakes(view)
       assertEquals(listOfExpectedForgerStakes, forgerList.asJava)
 
       view.commit(bytesToVersion(getVersion.data()))
@@ -692,7 +692,7 @@ class ForgerStakeMsgProcessorTest
 
 
       val nonce = randomNonce
-      val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(forgingStakeInfo.stakeId, origin, nonce.toByteArray)
+      val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(forgingStakeInfo.stakeId, origin, nonce.toByteArray)
       val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
       val msgSignature = new SignatureSecp256k1(msgSignatureData)
 

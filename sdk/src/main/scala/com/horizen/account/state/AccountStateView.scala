@@ -105,15 +105,15 @@ class AccountStateView(
     })
   }
 
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] =
-    forgerStakesProvider.getListOfForgers(this)
+  override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] =
+    forgerStakesProvider.getListOfForgersStakes(this)
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
 
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     // get forger stakes list view (scala lazy collection)
-    getListOfForgerStakes.view
+    getListOfForgersStakes.view
 
        // group delegation stakes by blockSignPublicKey/vrfPublicKey pairs
       .groupBy(stake => (stake.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
@@ -285,6 +285,11 @@ class AccountStateView(
   def nextBaseFee: BigInteger = metadataStorageView.getNextBaseFee
 
   override def setCeased(): Unit = metadataStorageView.setCeased()
+
+  def isForgingOpen: Boolean = {
+    metadataStorageView.isForgingOpen // TODO get it from message processor logic
+  }
+
 
   override def commit(version: VersionTag): Try[Unit] = Try {
     // Update StateDB without version, then set the rootHash and commit metadataStorageView

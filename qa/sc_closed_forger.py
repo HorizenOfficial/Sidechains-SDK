@@ -60,7 +60,9 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         # Start 1 SC node
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir
+                              #, extra_args=['-agentlib']
+                              )
 
     def find_box(self, boxes, proposition):
         for box in boxes:
