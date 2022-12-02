@@ -2,6 +2,7 @@ package lib
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
 	gethParams "github.com/ethereum/go-ethereum/params"
 )
@@ -60,4 +61,12 @@ func setStateRefunds(statedb *state.StateDB, address common.Address, key, value 
 func (s *Service) setStateWithRefund(statedb *state.StateDB, address common.Address, key, value common.Hash) {
 	setStateRefunds(statedb, address, key, value)
 	statedb.SetState(address, key, value)
+}
+
+func (s *Service) StateGetRefund(params HandleParams) (error, hexutil.Uint64) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, 0
+	}
+	return nil, (hexutil.Uint64)(statedb.GetRefund())
 }
