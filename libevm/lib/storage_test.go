@@ -40,16 +40,10 @@ func testStorageSetCommitWrite(t *testing.T, instance *Service, dbHandle int, ad
 		Key:           key,
 	}
 	// make sure the account is not "empty"
-	if _, empty := instance.StateEmpty(account); !empty {
-		t.Errorf("expected account to be empty: %v", err)
-	}
 	_ = instance.StateSetCode(CodeParams{
 		AccountParams: account,
 		Code:          crypto.Keccak256Hash(addr.Bytes()).Bytes(),
 	})
-	if _, empty := instance.StateEmpty(account); empty {
-		t.Errorf("expected account to be non-empty: %v", err)
-	}
 	err, initialRoot := instance.StateIntermediateRoot(handle)
 	err = instance.StateSetStorage(SetStorageParams{
 		StorageParams: storage,
