@@ -1,6 +1,7 @@
 package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorSystem}
+import akka.http.javadsl.model.headers.HttpCredentials
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
@@ -122,12 +123,17 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val listOfStorageVersions = utilMocks.listOfNodeStorageVersion
   val sidechainId = utilMocks.sidechainId
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
+<<<<<<< HEAD
   val keyRotationProof = utilMocks.keyRotationProof
   val certifiersKeys = utilMocks.certifiersKeys
+=======
+  val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
+  val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
+>>>>>>> Added basic authentication inside HTTP interface
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
-  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"))
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("password"))
 
   val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
   Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
@@ -370,8 +376,6 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]] = new JHashMap()
   val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
-  val apiTokenHeader = new ApiTokenHeader("api_key", "Horizen")
-  val badApiTokenHeader = new ApiTokenHeader("api_key", "Harizen")
 
   implicit def default() = RouteTestTimeout(3.second)
 

@@ -1,6 +1,7 @@
 package com.horizen.account.api.http
 
 import akka.actor.{ActorRef, ActorSystem}
+import akka.http.javadsl.model.headers.HttpCredentials
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
@@ -17,6 +18,7 @@ import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.Broadca
 import com.horizen.api.http._
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.api.http.{SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.forge.AbstractForger
 import com.horizen.params.MainNetParams
@@ -44,9 +46,6 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
   val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
-  val apiTokenHeader = new ApiTokenHeader("api_key", "Horizen")
-  val badApiTokenHeader = new ApiTokenHeader("api_key", "Harizen")
-  val genesisBlock: AccountBlock = mock[AccountBlock]
 
   val jsonChecker = new SidechainJSONBOChecker
 
@@ -62,7 +61,10 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
-  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"))
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("password"))
+
+  val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
+  val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")
 
