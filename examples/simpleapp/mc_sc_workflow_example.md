@@ -68,7 +68,7 @@ Note: `withdrawalEpochLen` - expected to be in a range between 100 and 900 and i
 
 **Step 5: Generate Schnorr keypairs for certificate signers**
 
-As a next step we need schnorr keypairs, those keys will be used by certificate Signers
+As a next step we need schnorr keypairs, those keys will be used by certificate Signers (for both Signers Keys and Master Keys)
 
 For generating Schnorr key use command:
 `generateCertificateSignerKey {"seed":"my seed"}`
