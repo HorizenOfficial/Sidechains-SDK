@@ -104,7 +104,8 @@ Note:
 - `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey;
 - `threshold` - the minimum set of the participants required for a valid proof creation;
 - `isCSWEnabled` - Its value should be true if the Ceased Sidechain Withdrawal is enabled, false otherwise.
-  Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys.
+  Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys,
+- signersPublicKeys and mastersPublicKeys size should be equal.
 
 Example of output is:
 ```

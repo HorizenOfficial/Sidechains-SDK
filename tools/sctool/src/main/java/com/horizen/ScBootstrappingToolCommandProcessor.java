@@ -347,9 +347,19 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         printer.print(res);
     }
 
+    private void printGenerateCertWithKeyRotationProofInfoUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateCertProofInfo\":\"signersPublicKeys\": [signerPk1, signerPk2, ...], \"mastersPublicKeys\": [masterPk1, masterPk2, ...],\", \"threshold\":5, signersPublicKeys and mastersPublicKeys size should be equal," +
+                "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
+                "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\", "+
+                "\"isCSWEnabled\": true}" +
+                "\n\t - threshold parameter should be less or equal to keyCount." +
+                "\n\t - isCSWEnabled parameter could be true or false."  );
+    }
     private void processGenerateCertWithKeyRotationProofInfo(JsonNode json) throws Exception {
         if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
-            printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys");
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong signersPublicKeys");
             return;
         }
 
@@ -360,7 +370,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             JsonNode pkNode = pksIterator.next();
 
             if (!pkNode.isTextual()) {
-                printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys format");
+                printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong signersPublicKeys format");
                 return;
             }
 
@@ -368,7 +378,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
 
         if (!json.has("mastersPublicKeys") || !json.get("mastersPublicKeys").isArray()) {
-            printGenerateCertProofInfoUsageMsg("wrong mastersPublicKeys");
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong mastersPublicKeys");
             return;
         }
 
@@ -379,7 +389,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             JsonNode pkNode = mastersPublicKeysIterator.next();
 
             if (!pkNode.isTextual()) {
-                printGenerateCertProofInfoUsageMsg("wrong mastersPublicKeys format");
+                printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong mastersPublicKeys format");
                 return;
             }
 
@@ -389,25 +399,25 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         assert mastersPublicKeys.size() == signersPublicKeys.size() : "mastersPublicKeys and signersPublicKeys must have the same size";
 
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
-            printGenerateCertProofInfoUsageMsg("wrong threshold");
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong threshold");
             return;
         }
 
         int threshold = json.get("threshold").asInt();
 
         if (threshold <= 0 || threshold > signersPublicKeys.size()) {
-            printGenerateCertProofInfoUsageMsg("wrong threshold: " + threshold);
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong threshold: " + threshold);
             return;
         }
 
         if (!json.has("provingKeyPath") || !json.get("provingKeyPath").isTextual()) {
-            printGenerateCertProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
             return;
         }
         String provingKeyPath = json.get("provingKeyPath").asText();
 
         if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
-            printGenerateCertProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
             return;
         }
         String verificationKeyPath = json.get("verificationKeyPath").asText();
