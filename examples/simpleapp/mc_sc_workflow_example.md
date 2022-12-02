@@ -97,13 +97,13 @@ Note:
 
 *If circuit with key rotation:*
 
-`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [signerPk1, signerPk2, ...], "mastersPublicKeys": [masterPk1, masterPk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk", "isCSWEnabled": true}`
+`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [signerPk1, signerPk2, ...], "mastersPublicKeys": [masterPk1, masterPk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk", "isCSWEnabled": false}`
 
 Note:
 - `signersPublicKeys` - list of Schnorr public signing keys of certificate Signers generated on step 5;
 - `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey;
 - `threshold` - the minimum set of the participants required for a valid proof creation;
-- `isCSWEnabled` - Its value should be true if the Ceased Sidechain Withdrawal is enabled, false otherwise.
+- `isCSWEnabled` - Its value should be always false.
   Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys,
 - signersPublicKeys and mastersPublicKeys size should be equal.
 
@@ -318,6 +318,7 @@ Output example:
 **Step 13: Update Sidechain configuration file**
 
 Use `examples/simpleapp/src/main/resources/settings_basic.conf` file and append it with the result from `genesisinfo` in the following structure:
+For key rotation circuit use `examples/simpleapp/src/main/resources/sc_settings_with_key_rotation.conf` configuration.
 
 ```
 sparkz {
@@ -360,6 +361,18 @@ signersPublicKeys = [
 7. `certProvingKeyFilePath` - path to the certificate proving key file.
 8. `certVerificationKeyFilePath` - path to the certificate verification key.
 9. `certificateAutomaticFeeComputation` - let certificates define the optimal fee size to speed up their inclusion into MC blocks.
+10. For key rotation circuit
+```
+mastersPublicKeys = [
+    "f93e1efc1ba4c52545e538ba1596771ad0f0970bb60ed75a868a41dae28ead0d80", 
+    "5f58e0a0bed4ae2cdd01ba36e625d4683affb73823be739e2c2d9aaa87b0390b80", 
+    "8c6a3cba15ccaa643d40589d901cbc1c580ba45768a47b8d02be16d8a318691800", 
+    "9f75135fa8833922c2ecb9b20f196d177f52ca1a3fc413b951a644a5ad0a8d0500", 
+    "170ca25511f0b4fb703c00a32ed14a43ccc17c655f9d65b7cec93630d2dc093100", 
+    "78687a3070a45875b66c798e62e9521bc7c03be202bf0ff280141b3ae828ca1e00", 
+    "c15cd0a8ad2856c7b811c268adbbcfe4a0235ce43b7421ccf9f2c31b0b0b370180"
+]
+```
 
 Example of additional data for config file
 ```	
