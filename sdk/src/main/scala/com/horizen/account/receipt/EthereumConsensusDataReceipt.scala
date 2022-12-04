@@ -46,7 +46,7 @@ case class EthereumConsensusDataReceipt(
   }
 
   require(
-    transactionType >= 0 && transactionType <= EthereumTransactionType.DynamicFeeTxType.ordinal()
+    transactionType >= EthereumTransactionType.LegacyTxType.ordinal() && transactionType <= EthereumTransactionType.DynamicFeeTxType.ordinal()
   )
   require(
     status == ReceiptStatus.SUCCESSFUL.id || status == ReceiptStatus.FAILED.id
