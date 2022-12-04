@@ -100,8 +100,7 @@ case class EthereumConsensusDataReceipt(
     }
     logsString = logsString.concat("}")
 
-    var logsBloomStr = "null"
-    logsBloomStr = BytesUtils.toHexString(logsBloom.getBloomFilter())
+    val logsBloomStr = BytesUtils.toHexString(logsBloom.getBloomFilter())
 
     String.format(
       s"EthereumReceipt (receipt consensus data) { txType=$getTxType, status=$getStatus, cumGasUsed=$cumulativeGasUsed, logs=$logsString, logsBloom=$logsBloomStr}"
