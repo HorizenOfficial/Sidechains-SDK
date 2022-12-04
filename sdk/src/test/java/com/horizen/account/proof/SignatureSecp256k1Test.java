@@ -56,7 +56,7 @@ public class SignatureSecp256k1Test {
         assertNotNull(new SignatureSecp256k1(signatureData.getV(), signatureSecp256k1.getR(), signatureSecp256k1.getS()));
 
         // Test 6: Returns signature data string correctly
-        assertEquals(String.format("SignatureSecp256k1{v=%s, r=%s, s=%s}", Numeric.toHexString(signatureData.getV()), Numeric.toHexString(signatureData.getR()), Numeric.toHexString(signatureData.getS())), signatureSecp256k1.toString());
+        assertEquals(String.format("SignatureSecp256k1{v=%s, r=%s, s=%s}", Numeric.toHexStringNoPrefix(signatureData.getV()), Numeric.toHexStringNoPrefix(signatureData.getR()), Numeric.toHexStringNoPrefix(signatureData.getS())), signatureSecp256k1.toString());
 
         // Test 7: Returns false because of invalid signature
         AddressProposition newAddressProposition = new AddressProposition(Keys.getAddress(Keys.createEcKeyPair().getPublicKey().toByteArray()));
