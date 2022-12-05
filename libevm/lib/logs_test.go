@@ -8,6 +8,24 @@ import (
 	"testing"
 )
 
+// generate the given number of random logs
+func randomLogs(n int) []*Log {
+	logs := make([]*Log, n)
+	for j := range logs {
+		log := Log{
+			Address: test.RandomAddress(),
+			// generate 0 to 4 random topics
+			Topics: make([]common.Hash, rand.Intn(5)),
+			Data:   test.RandomBytes(rand.Intn(100)),
+		}
+		for k := range log.Topics {
+			log.Topics[k] = test.RandomHash()
+		}
+		logs[j] = &log
+	}
+	return logs
+}
+
 func TestLogs(t *testing.T) {
 	instance, _, stateHandle := setup()
 
@@ -22,23 +40,10 @@ func TestLogs(t *testing.T) {
 	// generate test data
 	txs := make([]*txLogs, 100)
 	for i := range txs {
-		tx := txLogs{
+		txs[i] = &txLogs{
 			txHash: test.RandomHash(),
-			logs:   make([]*Log, rand.Intn(25)),
+			logs:   randomLogs(i),
 		}
-		for j := range tx.logs {
-			log := Log{
-				Address: test.RandomAddress(),
-				// generate 0 to 4 random topics
-				Topics: make([]common.Hash, rand.Intn(5)),
-				Data:   test.RandomBytes(rand.Intn(100)),
-			}
-			for k := range log.Topics {
-				log.Topics[k] = test.RandomHash()
-			}
-			tx.logs[j] = &log
-		}
-		txs[i] = &tx
 	}
 
 	for i, tx := range txs {
