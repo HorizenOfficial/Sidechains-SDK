@@ -337,7 +337,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ethService.execute(rpcRequest)
     }
 
-    // Test 44 Trigger IllegalArgumentException rpc call
+    // Test 4: Trigger IllegalArgumentException rpc call
     rpcRequest = getRpcRequest(paramValues = Array(-1), method = "eth_estimateGas")
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
