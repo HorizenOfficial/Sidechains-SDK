@@ -148,7 +148,7 @@ class AccountState(
 
             // get a receipt obj with non consensus data (logs updated too)
             val fullReceipt =
-              EthereumReceipt(consensusDataReceipt, txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+              EthereumReceipt(consensusDataReceipt, txHash, txIndex, blockHash, blockNumber, txGasUsed, Option(contractAddress))
 
             log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 

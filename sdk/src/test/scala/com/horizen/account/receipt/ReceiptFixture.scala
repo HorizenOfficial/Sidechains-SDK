@@ -46,7 +46,7 @@ trait ReceiptFixture {
     val receipt = EthereumReceipt(consensusDataReceipt,
       txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
       BigInteger.valueOf(1234567),
-      contractAddress
+      Option(contractAddress)
       )
     receipt
   }

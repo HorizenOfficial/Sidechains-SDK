@@ -39,7 +39,7 @@ public class EthereumReceiptView {
         to = (tx.getTo().isPresent()) ? Numeric.toHexString(tx.getTo().get().address()) : null;
         cumulativeGasUsed = Numeric.encodeQuantity(receipt.consensusDataReceipt().cumulativeGasUsed());
         gasUsed = Numeric.encodeQuantity(receipt.gasUsed());
-        contractAddress = receipt.contractAddress().length != Account.ADDRESS_SIZE ? null : Numeric.toHexString(receipt.contractAddress());
+        contractAddress = receipt.contractAddress().get().length != Account.ADDRESS_SIZE ? null : Numeric.toHexString(receipt.contractAddress().get());
         var consensusLogs = JavaConverters.seqAsJavaList(receipt.consensusDataReceipt().logs());
         logs = new ArrayList<>(consensusLogs.size());
         for (var i = 0; i < consensusLogs.size(); i++) {
