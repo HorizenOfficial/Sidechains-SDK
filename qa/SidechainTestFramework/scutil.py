@@ -404,6 +404,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
     genesis_secrets += sc_node_config.initial_private_keys
 
+    if (sc_node_config.forger_options.restrict_forgers and
+        bootstrap_info.genesis_vrf_account is not None and
+        bootstrap_info.genesis_account is not None):
+        sc_node_config.forger_options.allowed_forgers.append(
+            '{ blockSignProposition = "' + bootstrap_info.genesis_account.publicKey + '" NEW_LINE vrfPublicKey = "' + bootstrap_info.genesis_vrf_account.publicKey + '" }')
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,

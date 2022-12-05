@@ -34,6 +34,10 @@ trait ForgerStakesProvider {
   private[horizen] def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): Array[Byte]
 
   private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData]
+
+  private[horizen] def isForgerListOpen(view: BaseAccountStateView): Boolean
+
+  private[horizen] def getAllowedForgerListIndexes(view: BaseAccountStateView): Seq[Int]
 }
 
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with ForgerStakesProvider {
@@ -264,10 +268,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     }
 
     // TODO decide whether we need to check also genesis case (also UTXO model)
-    if (!isGenesisScCreation && networkParams.restrictForgers) {
-      // check that the delegation arguments satisfy the restricted list of forgers.
-      if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
-        throw new ExecutionRevertedException("Forger is not in the allowed list")
+    if (!isGenesisScCreation) {
+      // check that the delegation arguments satisfy the restricted list of forgers if we have any.
+      if (!isForgerListOpen(view)) {
+        if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
+          throw new ExecutionRevertedException("Forger is not in the allowed list")
+        }
       }
     }
 
@@ -385,9 +391,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     // get the forger list. Lazy init
     val restrictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
     if (restrictForgerList.sameElements(NULL_HEX_STRING_32)) {
-      // We assume that the list is configured as restricted, otherwise the command should have been prevented
-      // by upper layers
+      // it is the first time we access this item, do the init now
       require(networkParams.restrictForgers)
+      require(networkParams.allowedForgersList.size > 0)
 
       val forgersIndexesArray = new Array[Byte](networkParams.allowedForgersList.size)
       view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, forgersIndexesArray)
@@ -432,8 +438,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     restrictForgerList(forgerIndex) = 1
     view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, restrictForgerList)
 
-    // TODO: open the list if majority has been reached
-
     restrictForgerList
 
   }
@@ -449,6 +453,24 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       case opCodeHex => throw new ExecutionRevertedException(s"op code $opCodeHex not supported")
     }
   }
+
+  override private[horizen] def isForgerListOpen(view: BaseAccountStateView) = {
+    if (params.restrictForgers) {
+      val restrictForgerList = getAllowedForgersIndexList(view)
+      val isOpen : Boolean = (restrictForgerList.sum > restrictForgerList.length/2)
+      isOpen
+    } else {
+      true
+    }
+  }
+
+  override private[horizen] def getAllowedForgerListIndexes(view: BaseAccountStateView): Seq[Int] =
+    if (params.restrictForgers) {
+      val restrictForgerList = getAllowedForgersIndexList(view)
+      restrictForgerList.map(_.toInt)
+    } else {
+      Seq()
+    }
 }
 
 object ForgerStakeMsgProcessor {

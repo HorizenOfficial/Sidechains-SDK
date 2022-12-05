@@ -123,5 +123,7 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
 
   override def nextBaseFee: BigInteger = view.nextBaseFee
 
+  override def isForgingOpen: Boolean = view.isForgingOpen
 
+  override def getAllowedForgerList: Seq[Int] = view.getAllowedForgerList
 }

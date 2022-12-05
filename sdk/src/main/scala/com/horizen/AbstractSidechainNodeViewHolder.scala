@@ -348,7 +348,7 @@ abstract class AbstractSidechainNodeViewHolder[
               }
 
             case Failure(e) =>
-              log.error(s"Could not apply modifier ${modToApply.id}, exception:" + e)
+              log.error(s"Could not apply modifier ${modToApply.id}, exception:", e)
               newHistory.reportModifierIsInvalid(modToApply, progressInfo).map {
                 case (historyAfterApply, newProgressInfo) =>
                   context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))

@@ -61,7 +61,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openStakeForgerList
+      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openStakeForgerList ~ allowedForgerList
   }
 
   def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -382,7 +382,12 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       case scala.util.Failure(e) =>
         throw new IllegalArgumentException(s"Could not get proposition for forgerIndex=$forgerIndex" + e.getMessage)
       case Success(prop) =>
-        wallet.secretByPublicKey(prop).get().asInstanceOf[PrivateKey25519]
+        val secret = wallet.secretByPublicKey(prop)
+        if (secret.isEmpty) {
+          throw new IllegalArgumentException(s"Could not get secret in wallet for proposition for prop=$prop")
+        } else {
+          secret.get().asInstanceOf[PrivateKey25519]
+        }
     }
   }
 
@@ -504,6 +509,23 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       val listOfForgerStakes = accountState.getListOfForgersStakes
       ApiResponseUtil.toResponse(RespForgerStakes(listOfForgerStakes.toList))
     }
+  }
+
+  def allowedForgerList: Route = (post & path("allowedForgerList")) {
+    params.restrictForgers match {
+      case true =>
+        val allowedForgerKeysList = params.allowedForgersList
+        withNodeView { sidechainNodeView =>
+          val accountState = sidechainNodeView.getNodeState
+          val forgerList = accountState.getAllowedForgerList
+          val resultList = forgerList.zip(allowedForgerKeysList)
+          ApiResponseUtil.toResponse(RespAllowedForgerList(resultList.toList))
+        }
+      case false =>
+        ApiResponseUtil.toResponse(RespAllowedForgerList(Seq().toList))
+
+    }
+
   }
 
   def myForgingStakes: Route = (post & path("myForgingStakes")) {
@@ -683,6 +705,10 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
+
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllowedForgerList(allowedForgers: List[(Int, (PublicKey25519Proposition, VrfPublicKey))]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionWithdrawalRequest(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)

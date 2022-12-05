@@ -111,6 +111,12 @@ class AccountStateView(
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
 
+  override def isForgingOpen: Boolean =
+    forgerStakesProvider.isForgerListOpen(this)
+
+  override def getAllowedForgerList: Seq[Int] =
+    forgerStakesProvider.getAllowedForgerListIndexes(this)
+
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     // get forger stakes list view (scala lazy collection)
     getListOfForgersStakes.view
@@ -285,11 +291,6 @@ class AccountStateView(
   def nextBaseFee: BigInteger = metadataStorageView.getNextBaseFee
 
   override def setCeased(): Unit = metadataStorageView.setCeased()
-
-  def isForgingOpen: Boolean = {
-    metadataStorageView.isForgingOpen // TODO get it from message processor logic
-  }
-
 
   override def commit(version: VersionTag): Try[Unit] = Try {
     // Update StateDB without version, then set the rootHash and commit metadataStorageView

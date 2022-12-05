@@ -13,13 +13,14 @@ import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingS
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 
 import java.math.BigInteger
 import java.util
@@ -66,6 +67,17 @@ class AccountState(
         val errMsg = s"Can't apply Block ${mod.id}, because the sidechain has ceased."
         log.error(errMsg)
         throw new IllegalStateException(errMsg)
+      }
+
+      // TODO check this
+      if (!isForgingOpen()) {
+        // only a restricted list of forgers are allowed to forge, check that the block has been forged
+        // by one of them
+        val vrfPublicKey: VrfPublicKey = mod.header.forgingStakeInfo.vrfPublicKey
+        val blockSignProposition: PublicKey25519Proposition = mod.header.forgingStakeInfo.blockSignPublicKey
+        if (!params.allowedForgersList.contains((blockSignProposition, vrfPublicKey))) {
+          throw new Exception("This forger is not allowed to forge!")
+        }
       }
 
       // Check Txs semantic validity first
@@ -385,6 +397,8 @@ class AccountState(
 
   override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgersStakes)
 
+  override def getAllowedForgerList: Seq[Int] = using(getView)(_.getAllowedForgerList)
+
   def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = using(getView)(_.getLogs(txHash))
@@ -434,7 +448,12 @@ class AccountState(
     WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
   }
 
-  override def isForgingOpen(): Boolean = using(getView)(_.isForgingOpen)
+  override def isForgingOpen(): Boolean = {
+    if (params.restrictForgers)
+        using(getView)(_.isForgingOpen)
+    else
+      true
+  }
 }
 
 object AccountState extends ScorexLogging {

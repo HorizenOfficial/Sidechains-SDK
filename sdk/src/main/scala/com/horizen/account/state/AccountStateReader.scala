@@ -12,6 +12,8 @@ trait AccountStateReader {
 
   def getListOfForgersStakes: Seq[AccountForgingStakeInfo]
   def getForgerStakeData(stakeId: String): Option[ForgerStakeData]
+  def isForgingOpen: Boolean
+  def getAllowedForgerList: Seq[Int]
 
   def getLogs(txHash: Array[Byte]): Array[EvmLog]
   def getIntermediateRoot: Array[Byte]
