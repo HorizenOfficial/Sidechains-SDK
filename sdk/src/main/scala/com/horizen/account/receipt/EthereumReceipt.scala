@@ -11,13 +11,14 @@ import java.util
 import scala.collection.mutable.ListBuffer
 
 case class EthereumReceipt(
-                             consensusDataReceipt: EthereumConsensusDataReceipt,
-                             transactionHash: Array[Byte],
-                             transactionIndex: Int,
-                             blockHash: Array[Byte],
-                             blockNumber: Int,
-                             gasUsed: BigInteger,
-                             contractAddress: Array[Byte]) extends BytesSerializable  {
+    consensusDataReceipt: EthereumConsensusDataReceipt,
+    transactionHash: Array[Byte],
+    transactionIndex: Int,
+    blockHash: Array[Byte],
+    blockNumber: Int,
+    gasUsed: BigInteger,
+    contractAddress: Array[Byte]
+) extends BytesSerializable {
   override type M = EthereumReceipt
 
   // optional field
@@ -27,41 +28,56 @@ case class EthereumReceipt(
 
   override def toString: String = {
 
-    var txHashStr : String = "null"
+    var txHashStr: String = "null"
     var blockHashStr: String = "null"
     var contractAddressStr = "null"
 
-    if (transactionHash != null)
-      txHashStr = BytesUtils.toHexString(transactionHash)
+    txHashStr = BytesUtils.toHexString(transactionHash)
 
-    if (blockHash != null)
-      blockHashStr = BytesUtils.toHexString(blockHash)
+    blockHashStr = BytesUtils.toHexString(blockHash)
 
     if (contractAddress != null)
       contractAddressStr = BytesUtils.toHexString(contractAddress)
 
-    val infoNonConsensusStr : String =
-      String.format(s" - (receipt non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, gasUsed=${gasUsed.toString()}, contractAddress=$contractAddressStr}")
+    val infoNonConsensusStr: String =
+      String.format(
+        s" - (receipt non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, gasUsed=${gasUsed
+            .toString()}, contractAddress=$contractAddressStr}"
+      )
 
-     consensusDataReceipt.toString.concat(infoNonConsensusStr)
+    consensusDataReceipt.toString.concat(infoNonConsensusStr)
   }
 
   override def equals(obj: Any): Boolean = {
     obj match {
       case other: EthereumReceipt =>
         consensusDataReceipt.equals(other.consensusDataReceipt) &&
-          util.Arrays.equals(transactionHash, 0, transactionHash.length - 1, other.transactionHash, 0, other.transactionHash.length - 1) &&
-          transactionIndex.equals(other.transactionIndex) &&
-          util.Arrays.equals(blockHash, 0, blockHash.length - 1, other.blockHash, 0, other.blockHash.length - 1) &&
-          blockNumber.equals(other.blockNumber) &&
-          gasUsed.equals(other.gasUsed) &&
-          util.Arrays.equals(contractAddress, 0, contractAddress.length - 1, other.contractAddress, 0, other.contractAddress.length - 1)
+        util.Arrays.equals(
+          transactionHash,
+          0,
+          transactionHash.length - 1,
+          other.transactionHash,
+          0,
+          other.transactionHash.length - 1
+        ) &&
+        transactionIndex.equals(other.transactionIndex) &&
+        util.Arrays.equals(blockHash, 0, blockHash.length - 1, other.blockHash, 0, other.blockHash.length - 1) &&
+        blockNumber.equals(other.blockNumber) &&
+        gasUsed.equals(other.gasUsed) &&
+        util.Arrays.equals(
+          contractAddress,
+          0,
+          contractAddress.length - 1,
+          other.contractAddress,
+          0,
+          other.contractAddress.length - 1
+        )
 
       case _ => false
     }
   }
 
-  override def hashCode: Int =  {
+  override def hashCode: Int = {
     var result = consensusDataReceipt.hashCode()
     result = 31 * result + util.Arrays.hashCode(transactionHash)
     result = 31 * result + Integer.hashCode(transactionIndex)
@@ -74,7 +90,7 @@ case class EthereumReceipt(
   }
 }
 
-object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
+object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
 
   override def serialize(receipt: EthereumReceipt, writer: Writer): Unit = {
     // consensus data
@@ -101,7 +117,7 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
     writer.putInt(gasUsedBytes.length)
     writer.putBytes(gasUsedBytes)
 
-    //optional field
+    // optional field
     writer.putInt(receipt.contractAddress.length)
     writer.putBytes(receipt.contractAddress)
   }
@@ -118,7 +134,8 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
     for (_ <- 0 until numberOfLogs)
       logs += EvmLogUtils.parse(reader)
 
-    val receipt: EthereumConsensusDataReceipt = new EthereumConsensusDataReceipt(transactionType, status, cumGasUsed, logs)
+    val receipt: EthereumConsensusDataReceipt =
+      new EthereumConsensusDataReceipt(transactionType, status, cumGasUsed, logs)
 
     val txHash: Array[Byte] = reader.getBytes(32)
     val txIndex: Int = reader.getInt
@@ -128,7 +145,7 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
     val gasUsedLength: Int = reader.getInt
     val gasUsed: BigInteger = new BigInteger(reader.getBytes(gasUsedLength))
 
-    //optional field
+    // optional field
     val contractAddressLength = reader.getInt
     val contractAddress: Array[Byte] = reader.getBytes(contractAddressLength)
 
