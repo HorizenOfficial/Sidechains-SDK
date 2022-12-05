@@ -80,7 +80,7 @@ class LogsBloom() extends BytesSerializable {
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case l: LogsBloom => (this.bloomFilter diff l.getBloomFilter()).isEmpty
+      case l: LogsBloom => this.bloomFilter.sameElements(l.getBloomFilter())
       case _ => false
     }
   }
