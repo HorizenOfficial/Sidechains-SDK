@@ -4,7 +4,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -40,24 +39,6 @@ type CodeParams struct {
 type SnapshotParams struct {
 	HandleParams
 	RevisionId int `json:"revisionId"`
-}
-
-type GetLogsParams struct {
-	AccountParams
-	TxHash common.Hash `json:"txHash"`
-}
-
-type AddLogParams struct {
-	HandleParams
-	Address common.Address `json:"address"`
-	Topics  []common.Hash  `json:"topics"`
-	Data    []byte         `json:"data"`
-}
-
-type SetTxContextParams struct {
-	HandleParams
-	TxHash  common.Hash `json:"txHash"`
-	TxIndex int         `json:"txIndex"`
 }
 
 // StateOpen will create a new state at the given root hash.
@@ -216,35 +197,5 @@ func (s *Service) StateRevertToSnapshot(params SnapshotParams) error {
 		return err
 	}
 	statedb.RevertToSnapshot(params.RevisionId)
-	return nil
-}
-
-func (s *Service) StateGetLogs(params GetLogsParams) (error, []*Log) {
-	err, statedb := s.statedbs.Get(params.Handle)
-	if err != nil {
-		return err, nil
-	}
-	return nil, getLogs(statedb, params.TxHash)
-}
-
-func (s *Service) StateAddLog(params AddLogParams) error {
-	err, statedb := s.statedbs.Get(params.Handle)
-	if err != nil {
-		return err
-	}
-	statedb.AddLog(&types.Log{
-		Address: params.Address,
-		Topics:  params.Topics,
-		Data:    params.Data,
-	})
-	return nil
-}
-
-func (s *Service) StateSetTxContext(params SetTxContextParams) error {
-	err, statedb := s.statedbs.Get(params.Handle)
-	if err != nil {
-		return err
-	}
-	statedb.Prepare(params.TxHash, params.TxIndex)
 	return nil
 }

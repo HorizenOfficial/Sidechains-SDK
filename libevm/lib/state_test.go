@@ -241,6 +241,7 @@ func TestSnapshot(t *testing.T) {
 		instance, _, stateHandle = setup()
 		addr                     = common.HexToAddress("0x0011223344556677889900112233445566778899")
 		key                      = common.BytesToHash(crypto.Keccak256(common.FromHex("00112233")))
+		txHash                   = common.BytesToHash(crypto.Keccak256(common.FromHex("4321")))
 		account                  = AccountParams{
 			HandleParams: HandleParams{Handle: stateHandle},
 			Address:      addr,
@@ -254,6 +255,12 @@ func TestSnapshot(t *testing.T) {
 	// use constant seed to have reproducable results
 	rand.Seed(42)
 
+	_ = instance.StateSetTxContext(SetTxContextParams{
+		HandleParams: HandleParams{Handle: stateHandle},
+		TxHash:       txHash,
+		TxIndex:      0,
+	})
+
 	type snapState struct {
 		revid        int
 		nonce        uint64
@@ -261,6 +268,7 @@ func TestSnapshot(t *testing.T) {
 		code         []byte
 		codeHash     common.Hash
 		storageValue common.Hash
+		logs         int
 	}
 	var stack []snapState
 
@@ -273,6 +281,10 @@ func TestSnapshot(t *testing.T) {
 		_, code := instance.StateGetCode(account)
 		_, codeHash := instance.StateGetCodeHash(account)
 		_, storageValue := instance.StateGetStorage(storageKey)
+		_, logs := instance.StateGetLogs(GetLogsParams{
+			HandleParams: account.HandleParams,
+			TxHash:       txHash,
+		})
 		check := snapState{
 			revid,
 			uint64(nonce),
@@ -280,6 +292,7 @@ func TestSnapshot(t *testing.T) {
 			code,
 			codeHash,
 			storageValue,
+			len(logs),
 		}
 		stack = append(stack, check)
 		t.Logf("pushed snapshot: %v storage: %v", check.revid, check.storageValue.TerminalString())
@@ -292,17 +305,18 @@ func TestSnapshot(t *testing.T) {
 			AccountParams: account,
 			Amount:        (*hexutil.Big)(big.NewInt(rand.Int63())),
 		})
-		newCode := make([]byte, 1234)
-		rand.Read(newCode)
 		_ = instance.StateSetCode(CodeParams{
 			AccountParams: account,
-			Code:          newCode,
+			Code:          test.RandomBytes(rand.Intn(25000)),
 		})
-		newStorage := make([]byte, common.HashLength)
-		rand.Read(newStorage)
 		_ = instance.StateSetStorage(SetStorageParams{
 			StorageParams: storageKey,
-			Value:         common.BytesToHash(newStorage),
+			Value:         test.RandomHash(),
+		})
+		_ = instance.StateAddLog(AddLogParams{
+			AccountParams: account,
+			Topics:        []common.Hash{test.RandomHash()},
+			Data:          test.RandomBytes(rand.Intn(100)),
 		})
 	}
 
@@ -336,6 +350,9 @@ func TestSnapshot(t *testing.T) {
 		}
 		if _, storageValue := instance.StateGetStorage(storageKey); check.storageValue != storageValue {
 			t.Fatalf("unexpected value for nonce: want %v got %v", check.storageValue, storageValue)
+		}
+		if _, logs := instance.StateGetLogs(GetLogsParams{HandleParams: account.HandleParams, TxHash: txHash}); check.logs != len(logs) {
+			t.Fatalf("unexpected number of logs: want %v got %v", check.logs, len(logs))
 		}
 		t.Logf("popped and validated snapshot: %v storage: %v", check.revid, check.storageValue.TerminalString())
 	}
