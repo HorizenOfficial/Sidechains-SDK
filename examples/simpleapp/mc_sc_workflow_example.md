@@ -15,11 +15,11 @@ There are 3 versions of sidechains supported by the mainchain at this moment: al
 | 2       | Uses Threshold Signature Circuit with Key Rotation. Ceasing and non-ceasing sidechain support      | 480              |
 
 
-_Ceasing Sidechain_ - a type of sidechain which is obliged to submit the certificate to Mainchain after each epoch. Otherwise, the sidechain will be considered as ceased. The sidechain can send several certificates per epoch, and the certificate with the maximum quality will be chosen.
-_Non-ceasing Sidechain_ - a type of sidechain which is not submitting a certificate at a certain period of time. Certificate submission can be postponed, however, certificates should be submitted in consecutive order. Only one certificate per epoch will be accepted.
-_Threshold Signature Circuit_ - base certificate signature circuit. Allows using CSW(Ceased Sidechain Withdrawal).
-_CSW(Ceased Sidechain Withdrawal)_ - This circuit allows retrieval coins to Mainchain from Sidechain that was already ceased.
-_Threshold Signature Circuit with Key Rotation_ - certificate signature circuit that allows replacing lost or compromised signing keys. Cannot be used along with the CSW.
+_Ceasing Sidechain_ - a type of sidechain which is obliged to submit the certificate to Mainchain after each epoch. Otherwise, the sidechain will be considered as ceased. The sidechain can send several certificates per epoch, and the certificate with the maximum quality will be chosen.  
+_Non-ceasing Sidechain_ - a type of sidechain which is not submitting a certificate at a certain period of time. Certificate submission can be postponed, however, certificates should be submitted in consecutive order. Only one certificate per epoch will be accepted.  
+_Threshold Signature Circuit_ - base certificate signature circuit. Allows using CSW(Ceased Sidechain Withdrawal).  
+_CSW(Ceased Sidechain Withdrawal)_ - This circuit allows retrieval coins to Mainchain from Sidechain that was already ceased.  
+_Threshold Signature Circuit with Key Rotation_ - certificate signature circuit that allows replacing lost or compromised signing keys. Cannot be used along with the CSW.  
 
 The following example is made for ceasing sidechain version 1 with a simple Threshold Signature Circuit. The differences with version 2, non ceasing sidechain, and key rotation circuit will be noted.
 
@@ -39,12 +39,12 @@ For any help, you could use the command `help`, for the exit just print `exit`
 
 **Step 3: Generate keypairs for the first Forger box in Sidechain**
 
-As a next step we need Vrf keypair and ed25519 key pair, those keys will be used as inputs for the first Forger box in the newly created Sidechain, i.e. output for Mainchain to Sidechain transaction
+As a next step we need Vrf keypair and ed25519 keypair, those keys will be used as inputs for the first Forger box in the newly created Sidechain, i.e. output for Mainchain to Sidechain transaction
 
 For generating ed25519 key use the command:  
 `generatekey {"seed":"my seed"}` 
 
-Example output of newly created key pair is:
+Example output of newly created keypair is:
 ```
 {
     "publicKey": "a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac"
@@ -88,7 +88,7 @@ Note: CSW is not supported in version 2.
 
 As a next step we need schnorr keypairs, those keys will be used by certificate Signers (for both Signers Keys and Master Keys)
 
-For generating Schnorr key use the command:
+For generating Schnorr key use the command:  
 `generateCertificateSignerKey {"seed":"my seed"}`
 
 Example output of newly created key pair is:
@@ -155,11 +155,11 @@ Compile MC sources with SC support code:
 Run zen node for regtest network:  
 `./zend -regtest -websocket`
 
-Generate 480 blocks to enable Sidechain logic with version support. Otherwise, a sidechain can't be created.
+Generate 480 blocks to enable Sidechain logic with version support. Otherwise, a sidechain can't be created.  
 `./zen-cli -regtest generate 480`
 
 
-As a result, the id of generated blocks is printed:
+As a result, the ids of generated blocks are printed:
 ```
 [
     "08371bc5df88176872c58d9b4318b247801a736d0c13a33c6e09cf70cb91d5de",
@@ -195,7 +195,7 @@ As a result id of the transaction and id of the sidechain will be printed:
 ```
 
 Parameters for `sc_create` are:
-1. **"version"**: the version of the sidechain. Versions `0`, `1`, and `2` are allowed by Zendoo. Version `2` is recommended to be used, older versions are used by older sidechains, created before.
+1. **"version"**: the version of the sidechain. Versions `0`, `1` and `2` are allowed by Zendoo. Version `1` or `2` is recommended to be used.
 2. **"withdrawalEpochLength"**: Length of the withdrawal epoch (`900`) - how often (in Mainchain blocks size) backward transfers from sidechain to mainchain could be done. The current maximum value is 900. For non ceasing sidechains must be set to 0.
 3. **"toaddress"**: Address to transfer initial coins amount (`"a5b...ac"`) - Its public key was generated by `generatekey` command on step 3
 4. **"amount"**: Initial coins amount (`600`)
@@ -212,7 +212,7 @@ _Note: The Sidechain id is generated automatically._
 _Creation command of non ceasing sidechains(Sidechains which certificate submission can be postponed without ceasing) is similar to ceasing sidechains. The version must be set to 2 and withdrawalEpochLength to 0, all other parameters remain the same._
 
 **Step 10: Apply Sidechain declaration in a Mainchain node**
-Sidechain creation transaction is now in the memory pool of the Mainchain node, thus Sidechain is prepared, but not created yet. For creating a new Sidechain, the Sidechain creation transaction shall be put into the Mainchain block. To do it generate 1 more block:
+Sidechain creation transaction is now in the memory pool of the Mainchain node, thus Sidechain is prepared, but not created yet. For creating a new Sidechain, the Sidechain creation transaction shall be put into the Mainchain block. To do it generate 1 more block:  
 `./zen-cli -regtest generate 1`
 
 As a result id of the block with the Sidechain transaction will be printed:
@@ -315,7 +315,7 @@ genesisinfo -f "~/dev/genesis_info_data.txt"
 ```
 where `genesis_info_data.txt` file contains proper json data `{"info":...}`.
 
-Note: For non ceasing sidechains fifth parameter must be specified:
+Note: For non ceasing sidechains forth parameter must be specified:  
 `"virtualWithdrawalEpochLength": 100` is the artificial withdrawal epoch length used only on the sidechain side
 
 Output example:
