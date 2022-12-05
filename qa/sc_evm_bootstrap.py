@@ -7,10 +7,10 @@ from eth_utils import to_checksum_address
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, computeForgedTxFee
 from SidechainTestFramework.scutil import is_mainchain_block_included_in_sc_block, \
     check_mainchain_block_reference_info, \
-    generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies, computeForgedTxFee
+    generate_next_blocks, generate_next_block, generate_account_proposition
 from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from httpCalls.wallet.createPrivateKeySecp256k1 import http_wallet_createPrivateKeySec256k1

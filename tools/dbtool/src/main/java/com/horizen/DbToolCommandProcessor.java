@@ -8,21 +8,18 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horizen.storage.Storage;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import com.horizen.tools.utils.Command;
-
 import com.horizen.tools.utils.CommandProcessor;
 import com.horizen.tools.utils.MessagePrinter;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.Logger;
-
 import java.io.*;
-import java.util.ArrayList;
 import java.util.List;
 
 public class DbToolCommandProcessor extends CommandProcessor {
 
-    private String dataDirAbsolutePath;
-    private Logger log;
+    private final String  dataDirAbsolutePath;
+    private final Logger log;
 
 
     public DbToolCommandProcessor(MessagePrinter printer, String dataDirAbsolutePath, Logger log) {
@@ -164,7 +161,7 @@ public class DbToolCommandProcessor extends CommandProcessor {
             printer.print(res);
 
         } catch (IllegalArgumentException e) {
-            // for instance when trying to rollback to an not-existing version
+            // for instance when trying to roll back to a not-existing version
             printRollbackUsageMsg("Error in processing the command: " + e);
         }  catch (Exception e) {
             log.error("Error in processing the command: " + e);
@@ -197,7 +194,6 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
             ArrayNode keyArrayNode = resJson.putArray("versionsList");
 
-            List<String> storageVersionsList = new ArrayList<>();
             for (ByteArrayWrapper e : bawList) {
                 keyArrayNode.add(BytesUtils.toHexString(e.data()));
                 if (numOfVersions > 0 && keyArrayNode.size() >= numOfVersions) {
@@ -225,8 +221,11 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
         // storage extends autocloseable
         try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
+            var optLastVer = storage.lastVersionID();
+            if (optLastVer.isEmpty())
+                throw new IllegalArgumentException("Selected DB is not versioned: " + getStorageFile(json));
 
-            String storageVersion = BytesUtils.toHexString(storage.lastVersionID().get().data());
+            String storageVersion  = BytesUtils.toHexString(optLastVer.get().data());
             log.info(storageVersion);
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();

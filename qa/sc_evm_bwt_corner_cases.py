@@ -8,8 +8,10 @@ from SidechainTestFramework.account.ac_utils import generate_block_and_get_tx_re
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, computeForgedTxFee
 from SidechainTestFramework.scutil import (
-    computeForgedTxFee, convertZenToZennies, convertZenniesToWei, generate_next_block, )
+    generate_next_block, assert_true,
+)
 from test_framework.util import (
     assert_equal, assert_true, )
 

@@ -8,7 +8,7 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import contract_function_static_call, contract_function_call, \
     generate_block_and_get_tx_receipt, eoa_transfer
-from SidechainTestFramework.scutil import convertZenToZennies, convertZenniesToWei
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei
 from sc_evm_test_contract_contract_deployment_and_interaction import deploy_smart_contract
 from sc_evm_test_erc721 import compare_and_return_nat_balance
 from test_framework.util import assert_equal, assert_true

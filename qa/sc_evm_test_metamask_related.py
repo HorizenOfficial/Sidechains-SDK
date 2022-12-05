@@ -5,7 +5,8 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_evm, CallMethod, eoa_transfer, \
     deploy_smart_contract, contract_function_static_call, generate_block_and_get_tx_receipt, contract_function_call
-from SidechainTestFramework.scutil import generate_next_blocks, computeForgedTxFee
+from SidechainTestFramework.account.utils import computeForgedTxFee
+from SidechainTestFramework.scutil import generate_next_blocks
 from sc_evm_test_erc721 import get_native_balance, compare_and_return_balance, compare_total_supply, mint_payable, \
     compare_ownerof, compare_and_return_nat_balance
 from test_framework.util import assert_equal, assert_true

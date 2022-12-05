@@ -20,11 +20,12 @@ import com.horizen.proposition.Proposition
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.RollbackFailed
 import sparkz.core.utils.NetworkTimeProvider
-
-import scala.util.Success
+import sparkz.core.idToVersion
+import scala.util.{Failure, Success}
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      params: NetworkParams,
@@ -57,12 +58,80 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     BaseFeeBlockValidator() +: super.historyBlockValidators(params)
   }
 
-  override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
-    history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-    state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
-    wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-    pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState()))
-  } yield (history, state, wallet, pool)
+  override def checkAndRecoverStorages(restoredData: Option[(AccountHistory, AccountState, AccountWallet, AccountMemoryPool)]): Option[(AccountHistory, AccountState, AccountWallet, AccountMemoryPool)] = {
+    restoredData.flatMap {
+      dataOpt => {
+        dumpStorages()
+
+        log.info("Checking state consistency...")
+        val restoredHistory = dataOpt._1
+        val restoredState = dataOpt._2
+        val restoredWallet = dataOpt._3
+        val restoredMempool = dataOpt._4
+
+        // best block id is updated in history storage as very last step
+        val historyVersion = restoredHistory.bestBlockId
+        val checkedStateVersion = bytesToId(stateMetadataStorage.lastVersionId.get.data())
+
+        log.debug(s"history bestBlockId = $historyVersion, stateVersion = $checkedStateVersion")
+
+        val height_h = restoredHistory.blockInfoById(restoredHistory.bestBlockId).height
+        val height_s = restoredHistory.blockInfoById(checkedStateVersion).height
+        log.debug(s"history height = $height_h, state height = $height_s")
+
+        if (historyVersion == checkedStateVersion) {
+          log.info("state and history storages are consistent")
+          Some(restoredHistory, restoredState, restoredWallet, restoredMempool)
+        } else {
+          log.warn("Inconsistent state and history storages, trying to recover...")
+
+          // this is the sequence of blocks starting from active chain up to input block, unless a None is returned in case of errors
+          restoredHistory.chainBack(checkedStateVersion, restoredHistory.storage.isInActiveChain, Int.MaxValue) match {
+            case Some(nonChainSuffix) =>
+              log.info(s"sequence of blocks not in active chain (root included) = $nonChainSuffix")
+              val rollbackTo = nonChainSuffix.head
+              nonChainSuffix.tail.headOption.foreach(childBlock => {
+                log.debug(s"Child $childBlock is in history")
+                log.debug(s"Child info ${restoredHistory.blockInfoById(childBlock)}")
+              })
+
+              log.warn(s"Inconsistent storage and history, rolling back state to history best block id = $rollbackTo")
+
+              restoredState.rollbackTo(idToVersion(rollbackTo)) match {
+                case Success(s) =>
+                  log.debug("State succesfully rolled back")
+                  dumpStorages()
+                  // We are done with the recovery. The evm-state storage does not need to be dealt with. A consistent
+                  // view of it will be built using the db-root got from the metadata state db, that is now consistent
+                  // with history storage
+                  Some((restoredHistory, s, restoredWallet, restoredMempool))
+                case Failure(e) =>
+                  log.error("State roll back failed: ", e)
+                  context.system.eventStream.publish(RollbackFailed)
+                  None
+              }
+            case None =>
+              log.error("Could not recover storages inconsistency, could not find a rollback point in history")
+              None
+          }
+        }
+      }
+    }
+  }
+
+  override def restoreState(): Option[(HIS, MS, VL, MP)] = {
+    log.info("Restoring persistent state from storage...")
+
+    val restoredData = for {
+      history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
+      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
+      wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
+      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState()))
+    } yield (history, state, wallet, pool)
+
+    val result = checkAndRecoverStorages(restoredData)
+    result
+  }
 
   override def postStop(): Unit = {
     log.info("AccountSidechainNodeViewHolder actor is stopping...")
@@ -186,13 +255,9 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
   }
 
-  // TODO FOR MERGE
-  override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq()
+  override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
+    historyStorage, consensusDataStorage, stateMetadataStorage, secretStorage)
 
-
-  // TODO FOR MERGE: implement these methods
-  override def dumpStorages(): Unit = ???
-  override def getStorageVersions: Map[String, String] = ???
 
   override def processLocallyGeneratedTransaction: Receive = {
     case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCAT] =>

@@ -30,6 +30,14 @@ for i in "$@"; do
       EXCLUDE="${i#*=}"
       shift
       ;;
+    -evm_only)
+      EVM_ONLY="true"
+      shift
+      ;;
+    -utxo_only)
+      UTXO_ONLY="true"
+      shift
+      ;;
     -split=*)
       SPLIT="${i#*=}"
       shift
@@ -42,7 +50,9 @@ for i in "$@"; do
 done
 
 #Run the tests
-testScripts=(
+testScripts=();
+
+testScriptsEvm=(
     'sc_evm_bootstrap.py'
     'sc_evm_eoa2eoa.py'
     'sc_evm_forward_transfer.py'
@@ -67,6 +77,10 @@ testScripts=(
     'sc_evm_test_erc721.py'
     'sc_evm_test_contract_contract_deployment_and_interaction.py'
     'sc_evm_test_metamask_related.py'
+    'sc_evm_storage_recovery.py'
+);
+
+testScriptsUtxo=(
     'mc_sc_connected_nodes.py'
     'mc_sc_forging1.py'
     'mc_sc_forging2.py'
@@ -120,7 +134,23 @@ testScripts=(
     'sc_big_block.py'
 );
 
-# include extended tests
+
+# decide whether to have only evm tests or only utxo tests or the whole set
+if [ ! -z "$EVM_ONLY" ] && [ ! -z "$UTXO_ONLY" ]; then
+    echo -e "\nCan not have both options '-evm_only' and '-utxo_only'" | tee /dev/fd/3
+    exit 1
+fi
+
+if [ ! -z "$EVM_ONLY" ] && [ "${EVM_ONLY}" = "true" ]; then
+  testScripts+=( "${testScriptsEvm[@]}" )
+elif [ ! -z "$UTXO_ONLY" ] && [ "${UTXO_ONLY}" = "true" ]; then
+  testScripts+=( "${testScriptsUtxo[@]}" )
+else
+  testScripts+=( "${testScriptsEvm[@]}" )
+  testScripts+=( "${testScriptsUtxo[@]}")
+fi
+
+# include extended tests (not used as of now)
 if [ ! -z "$EXTENDED" ] && [ "${EXTENDED}" = "true" ]; then
   testScripts+=( "${testScriptsExt[@]}" )
 fi

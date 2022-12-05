@@ -4,9 +4,8 @@ import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.scutil import (
-    convertZenToZennies, generate_next_block, convertZenniesToWei
-)
+from SidechainTestFramework.scutil import generate_next_block
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain
 )
