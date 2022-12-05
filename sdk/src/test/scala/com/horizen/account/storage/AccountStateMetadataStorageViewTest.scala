@@ -89,8 +89,8 @@ class AccountStateMetadataStorageViewTest
     assertTrue("Consensus epoch number should be empty in storage", stateMetadataStorage.getConsensusEpochNumber.isEmpty)
 
     val receipts = new ListBuffer[EthereumReceipt]()
-    val receipt1 = createTestEthereumReceipt(0, txHash = None)
-    val receipt2 = createTestEthereumReceipt(1, txHash = None)
+    val receipt1 = createTestEthereumReceipt(0)
+    val receipt2 = createTestEthereumReceipt(1)
 
     receipts += receipt1
     receipts += receipt2
