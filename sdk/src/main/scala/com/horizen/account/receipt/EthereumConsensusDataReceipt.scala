@@ -17,7 +17,6 @@ case class EthereumConsensusDataReceipt(
     status: Int,
     cumulativeGasUsed: BigInteger,
     logs: Seq[EvmLog],
-    logsBloom: LogsBloom
 ) {
 
   /*  From yellow paper
@@ -28,22 +27,7 @@ case class EthereumConsensusDataReceipt(
       the set of logs created through execution of the transaction, Rl
       and the Bloom filter composed from information in those logs, Rb
    */
-
-  def this(
-      transactionType: Int,
-      status: Int,
-      cumulativeGasUsed: BigInteger,
-      logs: Seq[EvmLog]
-  ) {
-
-    this(
-      transactionType,
-      status,
-      cumulativeGasUsed,
-      logs,
-      LogsBloom.fromEvmLog(logs)
-    )
-  }
+  lazy val logsBloom: LogsBloom = LogsBloom.fromEvmLog(logs)
 
   require(
     transactionType >= EthereumTransactionType.LegacyTxType.ordinal() && transactionType <= EthereumTransactionType.DynamicFeeTxType.ordinal()
@@ -146,7 +130,6 @@ object EthereumConsensusDataReceipt {
       status,
       cumulativeGasUsed,
       logs,
-      new LogsBloom(logsBloom)
     )
   }
 
@@ -160,7 +143,6 @@ object EthereumConsensusDataReceipt {
       r.status,
       r.cumulativeGasUsed,
       r.logs,
-      r.logsBloom
     )
   }
 
