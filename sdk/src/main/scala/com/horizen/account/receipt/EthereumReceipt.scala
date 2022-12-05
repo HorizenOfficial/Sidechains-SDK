@@ -50,12 +50,12 @@ case class EthereumReceipt(
     obj match {
       case other: EthereumReceipt =>
         consensusDataReceipt.equals(other.consensusDataReceipt) &&
-          new ByteArrayWrapper(transactionHash).equals(new ByteArrayWrapper(other.transactionHash)) &&
+          util.Arrays.equals(transactionHash, 0, transactionHash.length - 1, other.transactionHash, 0, other.transactionHash.length - 1) &&
           transactionIndex.equals(other.transactionIndex) &&
-          new ByteArrayWrapper(blockHash).equals(new ByteArrayWrapper(other.blockHash)) &&
+          util.Arrays.equals(blockHash, 0, blockHash.length - 1, other.blockHash, 0, other.blockHash.length - 1) &&
           blockNumber.equals(other.blockNumber) &&
           gasUsed.equals(other.gasUsed) &&
-          new ByteArrayWrapper(contractAddress).equals(new ByteArrayWrapper(other.contractAddress))
+          util.Arrays.equals(contractAddress, 0, contractAddress.length - 1, other.contractAddress, 0, other.contractAddress.length - 1)
 
       case _ => false
     }
