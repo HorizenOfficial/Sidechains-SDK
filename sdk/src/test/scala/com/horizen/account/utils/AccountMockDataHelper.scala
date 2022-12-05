@@ -1,35 +1,70 @@
 package com.horizen.account.utils
 
-import cats.instances.byte
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
-import com.horizen.account.receipt.{EthereumReceipt, ReceiptFixture}
+import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.state.{AccountState, AccountStateView}
-import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
+import com.horizen.block.MainchainBlockReference
+import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
+import com.horizen.fixtures.SidechainBlockFixture.generateMainchainBlockReference
+import com.horizen.fixtures.{FieldElementFixture, VrfGenerator}
 import com.horizen.params.NetworkParams
-import com.horizen.utils.BytesUtils
-import org.mockito.ArgumentMatchers.{any, anyByte, anyInt}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar.mock
 import scorex.util.bytesToId
+import sparkz.core.consensus.ModifierSemanticValidity
 
 import java.math.BigInteger
 import java.util.Optional
 
 case class AccountMockDataHelper(genesis: Boolean) {
 
-  def getMockedAccountHistory(block: Optional[AccountBlock]): AccountHistory = {
+  def getMockedAccountHistory(
+      block: Optional[AccountBlock],
+      parentBlock: Optional[AccountBlock] = null,
+      genesisBlockId: Option[String] = Option.empty
+  ): AccountHistory = {
     val history: AccountHistory = mock[AccountHistory]
+    val blockId = block.get.id
+    val parentId = parentBlock.get().id
+    val height = if (genesis) 2 else 1
+    val blockInfo = new SidechainBlockInfo(
+      height,
+      0,
+      parentId,
+      86400L * 2,
+      ModifierSemanticValidity.Unknown,
+      MainchainHeaderBaseInfo
+        .getMainchainHeaderBaseInfoSeqFromBlock(block.get(), FieldElementFixture.generateFieldElement()),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block.get()),
+      WithdrawalEpochInfo(0, 0),
+      Option(VrfGenerator.generateVrfOutput(0)),
+      parentId
+    )
+
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
+
+    Mockito.when(history.blockIdByHeight(any())).thenReturn(Option.empty[String])
+    Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))
+
     if (genesis) {
       Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(new Array[Byte](32)))
+      Mockito.when(history.blockIdByHeight(1)).thenReturn(genesisBlockId)
     }
-    Mockito.when(history.getCurrentHeight).thenReturn(1)
-    Mockito.when(history.getBlockById(block.get.id)).thenReturn(block)
-    val x = Option(block.get.id)
-    Mockito.when(history.blockIdByHeight(anyInt())).thenReturn(x)
-    Mockito.when(history.getStorageBlockById(x.get)).thenReturn(Option(block.get()))
+    Mockito.when(history.getCurrentHeight).thenReturn(height)
+
+    Mockito.when(history.getBlockById(any())).thenReturn(Optional.empty[AccountBlock])
+    Mockito.when(history.getBlockById(blockId)).thenReturn(block)
+    Mockito.when(history.getBlockById(parentId)).thenReturn(parentBlock)
+
+    Mockito.when(history.getStorageBlockById(any())).thenReturn(Option.empty[AccountBlock])
+    Mockito.when(history.getStorageBlockById(blockId)).thenReturn(Option(block.get()))
+    Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Option(parentBlock.get()))
+    Mockito.when(history.blockInfoById(blockId)).thenReturn(blockInfo)
     history
   }
 
@@ -39,17 +74,23 @@ case class AccountMockDataHelper(genesis: Boolean) {
       gasLimit: Long = FeeUtils.GAS_LIMIT,
       blockId: scorex.util.ModifierId = null,
       parentBlockId: scorex.util.ModifierId = null,
-      txs: Seq[SidechainTypes#SCAT] = null
+      txs: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
   ): AccountBlock = {
     val block: AccountBlock = mock[AccountBlock]
+    val mcBlockRef: MainchainBlockReference = generateMainchainBlockReference()
     Mockito.when(block.header).thenReturn(mock[AccountBlockHeader])
     Mockito.when(block.header.parentId).thenReturn(parentBlockId)
     Mockito.when(block.id).thenReturn(blockId)
     Mockito.when(block.header.baseFee).thenReturn(baseFee)
     Mockito.when(block.header.gasUsed).thenReturn(gasUsed)
     Mockito.when(block.header.gasLimit).thenReturn(gasLimit)
+    Mockito
+      .when(block.header.forgerAddress)
+      .thenReturn(new AddressProposition(BytesUtils.fromHexString("1234567891011121314112345678910111213141")))
     Mockito.when(block.sidechainTransactions).thenReturn(Seq[SidechainTypes#SCAT]())
     Mockito.when(block.transactions).thenReturn(txs)
+    Mockito.when(block.mainchainHeaders).thenReturn(Seq(mcBlockRef.header))
+    Mockito.when(block.mainchainBlockReferencesData).thenReturn(Seq(mcBlockRef.data))
 
     block
   }

@@ -18,7 +18,8 @@ trait ReceiptFixture {
       transactionIndex: Int = 33,
       blockNumber: Int = 22,
       logAddress: Array[Byte] = new Array[Byte](Address.LENGTH),
-      txHash: Array[Byte] = new Array[Byte](32)
+      txHash: Array[Byte] = new Array[Byte](32),
+      blockHash: String = "blockhash"
   ): EthereumReceipt = {
     if (BytesUtils.toHexString(txHash).equals(BytesUtils.toHexString(new Array[Byte](32)))) {
       Random.nextBytes(txHash)
@@ -38,7 +39,7 @@ trait ReceiptFixture {
       consensusDataReceipt,
       txHash,
       transactionIndex,
-      Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]],
+      Keccak256.hash(blockHash.getBytes).asInstanceOf[Array[Byte]],
       blockNumber,
       BigInteger.valueOf(1234567),
       contractAddress
