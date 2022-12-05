@@ -62,7 +62,7 @@ case class EthereumConsensusDataReceipt(
         transactionType == other.transactionType &&
           status == other.status &&
           cumulativeGasUsed.equals(other.cumulativeGasUsed) &&
-          logs.toSet == other.logs.toSet
+          logs.toSet.equals(other.logs.toSet)
 
       case _ => false
     }
