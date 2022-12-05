@@ -3,8 +3,8 @@ package com.horizen
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
-import com.horizen.proposition.Proposition
-import com.horizen.secret.Secret
+import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
+import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import scorex.util.ScorexLogging
@@ -101,6 +101,43 @@ abstract class AbstractWallet[
   override def walletSeed(): Array[Byte] = seed
 
   def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): W
+
+
+  override def secretByPublicKey25519Proposition(publicKey: PublicKey25519Proposition): JOptional[PrivateKey25519] = {
+    secretStorage.get(publicKey) match {
+      case Some(secret) => JOptional.of(secret.asInstanceOf[PrivateKey25519])
+      case None => JOptional.empty()
+    }
+  }
+
+
+  override def secretBySchnorrProposition(publicKey: SchnorrProposition): JOptional[SchnorrSecret] = {
+    secretStorage.get(publicKey) match {
+      case Some(secret) => JOptional.of(secret.asInstanceOf[SchnorrSecret])
+      case None => JOptional.empty()
+    }
+  }
+
+
+  override def secretByVrfPublicKey(publicKey: VrfPublicKey): JOptional[VrfSecretKey] = {
+    secretStorage.get(publicKey) match {
+      case Some(secret) => JOptional.of(secret.asInstanceOf[VrfSecretKey])
+      case None => JOptional.empty()
+    }
+  }
+
+
+  override def secretsByProposition[S <: SidechainTypes#SCS](proposition: ProofOfKnowledgeProposition[S]): JList[S] = {
+    proposition.canBeProvedBy(secretStorage.getAll.asJava).secretsNeeded()
+  }
+
+  override def secretByPublicKeyBytes[S <: SidechainTypes#SCS](proposition: Array[Byte]): JOptional[S] = {
+    secretStorage.getAll.find(secret => java.util.Arrays.equals(secret.publicImage().pubKeyBytes(), proposition)) match {
+      case Some(s) => JOptional.of(s.asInstanceOf[S])
+      case None => JOptional.empty()
+    }
+  }
+
 
 }
 
