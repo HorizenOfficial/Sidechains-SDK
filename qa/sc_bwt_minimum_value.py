@@ -51,8 +51,7 @@ class SCBwtMinValue(SidechainTestFramework):
     def setup_nodes(self):
         num_nodes = 1
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
-        return start_nodes(num_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
+        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
         sc_creation_zens = 100
@@ -67,7 +66,7 @@ class SCBwtMinValue(SidechainTestFramework):
         else:
             sc_creation_version = SC_CREATION_VERSION_1
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, sc_creation_zens, self.sc_withdrawal_epoch_length,
                                                         sc_creation_version=sc_creation_version,
                                                         is_non_ceasing=self.options.nonceasing,
                                                         circuit_type=self.options.certcircuittype),
