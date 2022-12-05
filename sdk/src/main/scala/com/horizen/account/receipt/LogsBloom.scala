@@ -84,6 +84,10 @@ class LogsBloom() extends BytesSerializable {
       case _ => false
     }
   }
+
+  override def hashCode(): Int = {
+    31.hashCode() * this.bloomFilter.hashCode()
+  }
 }
 
 object LogsBloom {
