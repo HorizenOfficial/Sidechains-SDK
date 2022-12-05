@@ -128,7 +128,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         }
 
         // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
-        else if (!blockHash.isEmpty) {
+        else if (blockHash.nonEmpty) {
           transaction = searchTransactionInBlock(txId, blockHash)
           if (transaction.isEmpty)
             error = s"Transaction $txId not found in specified block"

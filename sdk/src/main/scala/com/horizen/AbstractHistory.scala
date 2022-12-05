@@ -548,6 +548,45 @@ abstract class AbstractHistory[
     consensusDataStorage.addNonceConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.nonceConsensusEpochInfo)
     makeNewHistory(storage, consensusDataStorage)
   }
+
+
+  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): Optional[TX] = {
+    storage.blockById(ModifierId(blockId)) match {
+      case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
+      case None => Optional.empty()
+    }
+  }
+
+  protected def findTransactionInsideBlock(transactionId: String, block: PM): Optional[TX] = {
+    block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
+      case Some(tx) => Optional.ofNullable(tx)
+      case None => Optional.empty()
+    }
+  }
+
+  override def searchTransactionInsideBlockchain(transactionId: String): Optional[TX] = {
+    var startingBlock = Optional.ofNullable(getBestBlock)
+    var transaction: Optional[TX] = Optional.empty()
+    var found = false
+    while (!found && startingBlock.isPresent) {
+      val tx = findTransactionInsideBlock(transactionId, startingBlock.get())
+      if (tx.isPresent) {
+        found = true
+        transaction = Optional.ofNullable(tx.get())
+      } else {
+        startingBlock = storage.parentBlockId(startingBlock.get().id) match {
+          case Some(id) => storage.blockById(id) match {
+            case Some(block) => Optional.ofNullable(block)
+            case None => Optional.empty()
+          }
+          case None => Optional.empty()
+        }
+      }
+    }
+
+    transaction
+  }
+
 }
 
 object AbstractHistory {
