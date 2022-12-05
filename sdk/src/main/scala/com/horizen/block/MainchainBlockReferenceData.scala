@@ -1,11 +1,13 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.google.inject.Singleton
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.serialization.Views
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
+import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.transaction.MC2SCAggregatedTransactionSerializer
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
@@ -19,7 +21,7 @@ case class MainchainBlockReferenceData(
                                         existenceProof: Option[Array[Byte]],
                                         absenceProof: Option[Array[Byte]],
                                         lowerCertificateLeaves: Seq[Array[Byte]],
-                                        topQualityCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
+                                        topQualityCertificates: Seq[WithdrawalEpochCertificate]) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
   override def serializer: SparkzSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
@@ -42,7 +44,7 @@ case class MainchainBlockReferenceData(
     })
 
     lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId, leaf))
-    topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert, version))
+    topQualityCertificates.foreach(cert => commitmentTree.addCertificate(cert, version))
 
     commitmentTree
   }
@@ -78,14 +80,24 @@ object MainchainBlockReferenceDataSerializer extends SparkzSerializer[MainchainB
     w.putInt(obj.lowerCertificateLeaves.size)
     obj.lowerCertificateLeaves.foreach(leaf => w.putBytes(leaf))
 
-    obj.topQualityCertificate match {
-      case Some(certificate) =>
-        val cb = WithdrawalEpochCertificateSerializer.toBytes(certificate)
+    if(obj.topQualityCertificates.size <= 1) {
+      // ceasing sidechain backward compatible serialization
+      obj.topQualityCertificates.headOption match {
+        case Some(certificate) =>
+          val cb = WithdrawalEpochCertificateSerializer.toBytes(certificate)
+          w.putInt(cb.length)
+          w.putBytes(cb)
+        case _ => w.putInt(0)
+      }
+    } else {
+      // non-ceasing sidechain case when we may have multiple top quality certificates
+      w.putInt(obj.topQualityCertificates.size)
+      obj.topQualityCertificates.foreach(cert => {
+        val cb = WithdrawalEpochCertificateSerializer.toBytes(cert)
         w.putInt(cb.length)
         w.putBytes(cb)
-      case _ => w.putInt(0)
+      })
     }
-
   }
 
   override def parse(r: Reader): MainchainBlockReferenceData = {
@@ -114,14 +126,22 @@ object MainchainBlockReferenceDataSerializer extends SparkzSerializer[MainchainB
     val lowerCertificateLeavesSize: Int = r.getInt()
     val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize).map(_ => r.getBytes(FieldElementUtils.fieldElementLength()))
 
-    val topQualityCertificateSize: Int = r.getInt()
-    val topQualityCertificate: Option[WithdrawalEpochCertificate] = {
-      if (topQualityCertificateSize > 0)
-        Some(WithdrawalEpochCertificateSerializer.parseBytes(r.getBytes(topQualityCertificateSize)))
-      else
-        None
+    val topQualityCertificateNumOrSize: Int = r.getInt()
+
+    val topQualityCertificates: Seq[WithdrawalEpochCertificate] = topQualityCertificateNumOrSize match {
+      case 0 => Seq() // ceasing sidechain backward compatible case
+      case num if num < WithdrawalEpochCertificate.MIN_CERT_SIZE => // ceasing sidechain backward compatible case
+        // Note: we rely on fact that SDK based sidechain can't reach the case
+        // when we put more than MIN_CERT_SIZE certs into a single block mc block.
+        (0 until num).map(_ => {
+          val certSize: Int = r.getInt()
+          WithdrawalEpochCertificateSerializer.parseBytes(r.getBytes(certSize))
+        })
+      case size => // otherwise it always represent the size of single top quality certificate
+        Seq(WithdrawalEpochCertificateSerializer.parseBytes(r.getBytes(size)))
+
     }
 
-    MainchainBlockReferenceData(headerHash, mc2scTx, existenceProof, absenceProof, lowerCertificateLeaves, topQualityCertificate)
+    MainchainBlockReferenceData(headerHash, mc2scTx, existenceProof, absenceProof, lowerCertificateLeaves, topQualityCertificates)
   }
 }

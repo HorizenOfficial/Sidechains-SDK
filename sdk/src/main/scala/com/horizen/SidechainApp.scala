@@ -1,48 +1,71 @@
 package com.horizen
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import akka.stream.ActorMaterializer
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen.api.http._
-import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeader, SidechainBlockSerializer}
+import com.horizen.api.http.client.SecureEnclaveApiClient
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
+import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
-import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import java.lang.{Byte => JByte}
-import java.nio.file.{Files, Paths}
-import java.util.{HashMap => JHashMap, List => JList}
-import com.horizen.backup.BoxIterator
-import com.horizen.chain.SidechainFeePaymentsInfo
+import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.csw.CswManagerRef
-import com.horizen.forge.ForgerRef
+import com.horizen.customconfig.CustomAkkaConfiguration
+import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
+import com.horizen.fork.{ForkConfigurator, ForkManager}
 import com.horizen.helper._
 import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.node._
 import com.horizen.params._
+import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
+import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
+import com.horizen.websocket.client._
 import com.horizen.websocket.server.WebSocketServerRef
-import scala.collection.JavaConverters._
-import com.horizen.fork.ForkConfigurator
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.impl.Log4jContextFactory
+import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry
+import scorex.util.ScorexLogging
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
+
+import java.lang.{Byte => JByte}
+import java.nio.file.{Files, Paths}
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.{HashMap => JHashMap, List => JList}
+import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import scala.io.{Codec, Source}
+import scala.util.{Failure, Success, Try}
 
 class SidechainApp @Inject()
-  (@Named("SidechainSettings") sidechainSettings: SidechainSettings,
+  (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
    @Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
-   @Named("CustomSecretSerializers") customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+   @Named("CustomSecretSerializers") val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    @Named("CustomTransactionSerializers") val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
-   @Named("ApplicationWallet") applicationWallet: ApplicationWallet,
-   @Named("ApplicationState") applicationState: ApplicationState,
+   @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
+   @Named("ApplicationState") val applicationState: ApplicationState,
    @Named("SecretStorage") val secretStorage: Storage,
    @Named("WalletBoxStorage") val walletBoxStorage: Storage,
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
@@ -54,10 +77,10 @@ class SidechainApp @Inject()
    @Named("WalletCswDataStorage") val walletCswDataStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("BackupStorage") val backUpStorage: Storage,
-   @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
-   @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
-   @Named("ForkConfiguration") forkConfigurator : ForkConfigurator
+   @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
+   @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
+   @Named("ApplicationStopper") val applicationStopper : SidechainAppStopper,
+   @Named("ForkConfiguration") val forkConfigurator : ForkConfigurator
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -67,8 +90,8 @@ class SidechainApp @Inject()
     applicationStopper,
     forkConfigurator,
     ChainInfo(
-      regtestId = 111, 
-      testnetId = 222, 
+      regtestId = 111,
+      testnetId = 222,
       mainnetId = 333)
     )
 {
@@ -127,7 +150,8 @@ class SidechainApp @Inject()
   protected val sidechainStateStorage = new SidechainStateStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/state")),
     registerStorage(stateStorage),
-    sidechainBoxesCompanion)
+    sidechainBoxesCompanion,
+    params)
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
   protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerStorage(utxoMerkleTreeStorage), params)
 
@@ -187,8 +211,12 @@ class SidechainApp @Inject()
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, SidechainHistory]("SidechainBlock", sidechainSettings, sidechainBlockForgerActorRef)
 
+  // Init Secure Enclave Api Client
+  val secureEnclaveApiClient = new SecureEnclaveApiClient(sidechainSettings.remoteKeysManagerSettings)
+
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  // Depends on params.isNonCeasing submitter will choose a proper strategy.
+  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init CSW manager
@@ -212,9 +240,9 @@ class SidechainApp @Inject()
       SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
+    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
   )

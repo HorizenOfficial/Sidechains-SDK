@@ -24,12 +24,14 @@ import time
 import re
 
 from test_framework.authproxy import AuthServiceProxy
+from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, NO_KEY_ROTATION_CIRCUIT
 
 COIN = 100000000 # 1 zen in zatoshis, aka zennies
 
 certificate_field_config_csw_enabled = [255, 255]
 
 certificate_field_config_csw_disabled = []
+certificate_with_key_rotation_field_config = [255]
 
 
 def p2p_port(n):
@@ -504,8 +506,7 @@ Output: an array of two information:
 """
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
                                           vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
-                                          sc_creation_version, is_csw_enabled, account_public_key=None):
-
+                                          sc_creation_version, is_csw_enabled, account_public_key=None, circuit_type):
     number_of_blocks_to_enable_sc_logic = 479
 
     number_of_blocks = mainchain_node.getblockcount()
@@ -526,6 +527,17 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     fe_certificate_field_configs = certificate_field_config_csw_disabled
     if is_csw_enabled:
         fe_certificate_field_configs = certificate_field_config_csw_enabled
+    if (circuit_type == KEY_ROTATION_CIRCUIT):
+        assert sc_creation_version >= 2, "With key rotation circuit sc creation version should be >= 2"
+        assert not is_csw_enabled, "With key rotation circuit csw must be disabled"
+        fe_certificate_field_configs = certificate_with_key_rotation_field_config
+    else:
+        if (is_csw_enabled):
+            fe_certificate_field_configs = certificate_field_config_csw_enabled
+        else:
+             fe_certificate_field_configs = certificate_field_config_csw_disabled
+
+    custom_creation_data = vrf_public_key
 
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
     ft_min_amount = 0
@@ -546,6 +558,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         "mainchainBackwardTransferScFee": btr_fee,
         "mainchainBackwardTransferRequestDataLength": btr_data_length
     }
+
     sc_create_res = mainchain_node.sc_create(sc_create_args)
     transaction_id = sc_create_res["txid"]
     sidechain_id = sc_create_res["scid"]
@@ -613,3 +626,47 @@ def get_spendable(mc_node, min_amount):
 
     assert_equal(utx!=False, True)
     return utx, change
+
+"""
+    This function gets a Field Element hex string (typically shorter than 32 bytes)
+    and adds padding zeros to reach the length of 32 bytes.
+
+    Padding is prepended or appended depending on the sidechain version specified
+    (see fork 9 for more details).
+"""
+def get_field_element_with_padding(field_element, sidechain_version):
+    FIELD_ELEMENT_STRING_SIZE = 32 * 2
+
+    if sidechain_version == 0:
+        return field_element.rjust(FIELD_ELEMENT_STRING_SIZE, "0")
+    elif (sidechain_version == 1) | (sidechain_version == 2):
+        return field_element.ljust(FIELD_ELEMENT_STRING_SIZE, "0")
+    else:
+        assert(False)
+
+def get_epoch_data(scid, node, epochLen, is_non_ceasing = False, reference_height = None):
+    sc_info = node.getscinfo(scid)['items'][0]
+    last_cert_data_hash = 'PHANTOM_PREV_CERT_HASH'
+    if sc_info['state'] == 'UNCONFIRMED':
+        return 0, '', last_cert_data_hash
+
+    if is_non_ceasing:
+        # For non-ceasing sidechains
+        epoch_number = sc_info['unconfTopQualityCertificateEpoch'] + 1 if 'unconfTopQualityCertificateEpoch' in sc_info else sc_info['epoch']
+        current_reference_height = node.getblockcount() if reference_height is None else reference_height
+        epoch_cum_tree_hash = node.getblock(str(current_reference_height))['scCumTreeHash']
+        if 'unconfTopQualityCertificateDataHash' in sc_info and sc_info['unconfTopQualityCertificateDataHash'] != '':
+            last_cert_data_hash = sc_info['unconfTopQualityCertificateDataHash']
+        elif 'lastCertificateDataHash' in sc_info and sc_info['lastCertificateDataHash'] != '':
+            last_cert_data_hash = sc_info['lastCertificateDataHash']
+    else:
+        # For ceasing sidechains
+        sc_creating_height = sc_info['createdAtBlockHeight']
+        current_height = node.getblockcount()
+        epoch_number = (current_height - sc_creating_height + 1) // epochLen - 1
+        end_epoch_block_hash = node.getblockhash(sc_creating_height - 1 + ((epoch_number + 1) * epochLen))
+        epoch_cum_tree_hash = node.getblock(end_epoch_block_hash)['scCumTreeHash']
+        if 'lastCertificateDataHash' in sc_info and sc_info['lastCertificateDataHash'] != '':
+            last_cert_data_hash = sc_info['lastCertificateDataHash']
+
+    return epoch_number, epoch_cum_tree_hash, last_cert_data_hash

@@ -17,8 +17,11 @@ import scala.language.postfixOps
 
 class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
+                           secureEnclaveApiClient: SecureEnclaveApiClient,
                            params: NetworkParams,
-                           mainchainChannel: MainchainNodeChannel)
+                           mainchainChannel: MainchainNodeChannel,
+                           submissionStrategy: CertificateSubmissionStrategy,
+                           keyRotationStrategy: CircuitStrategy[T])
                           (implicit ec: ExecutionContext)
   extends AbstractCertificateSubmitter[
     SidechainTypes#SCBT,
@@ -55,20 +58,38 @@ class CertificateSubmitter(settings: SidechainSettings,
 
 
 object CertificateSubmitterRef {
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+  def props(settings: SidechainSettings,
+            sidechainNodeViewHolderRef: ActorRef,
+            secureEnclaveApiClient: SecureEnclaveApiClient,
+            params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props =
 
     Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+           (implicit ec: ExecutionContext): Props = {
+    val submissionStrategy: CertificateSubmissionStrategy = if (params.isNonCeasing) {
+      new NonCeasingSidechain(params)
+    } else {
+      new CeasingSidechain(mainchainChannel, params)
+    }
+    val keyRotationStrategy = if (params.circuitType.equals(CircuitTypes.NaiveThresholdSignatureCircuit)) {
+      new WithoutKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    } else {
+      new WithKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation)
+    }
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy))
+      .withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+  }
 
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
 
-  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
 }
