@@ -192,6 +192,8 @@ class SidechainStateStorageTest
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateEpochNumberKey),
       new ByteArrayWrapper(new ByteArrayWrapper(Ints.toByteArray(referenceEpochNumber)))))
 
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getTopQualityCertificateKey(referenceEpochNumber)),
+      new ByteArrayWrapper(WithdrawalEpochCertificateSerializer.toBytes(cert))))
     // block fee info
     val nextBlockFeeInfoCounter: Int = 0
     val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
@@ -206,8 +208,6 @@ class SidechainStateStorageTest
 
     //forger list indexes
     toUpdate.add(new Pair(stateStorage.forgerListIndexKey, new ByteArrayWrapper(Array[Byte](0.toByte))))
-
-    toRemove.add(stateStorage.getWithdrawalEpochCounterKey(0))
 
     Mockito.when(mockedPhysicalStorage.update(
       ArgumentMatchers.any[ByteArrayWrapper](),

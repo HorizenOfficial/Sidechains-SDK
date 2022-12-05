@@ -4,7 +4,7 @@ import time
 
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, SC_CREATION_VERSION_2
+    SCNetworkConfiguration, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_false, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
@@ -137,7 +137,8 @@ class SCMultiplePendingCertsNonCeasing(SidechainTestFramework):
                            self.sc_creation_amount,
                            self.sc_withdrawal_epoch_length,
                            sc_creation_version=SC_CREATION_VERSION_2,
-                           is_non_ceasing=True),
+                           is_non_ceasing=True,
+                           circuit_type=KEY_ROTATION_CIRCUIT),
             sc_node_1_configuration,
             sc_node_2_configuration
         )

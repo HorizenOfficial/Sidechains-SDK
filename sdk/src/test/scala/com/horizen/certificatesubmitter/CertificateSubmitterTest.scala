@@ -16,14 +16,20 @@ import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMai
 import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
 import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
 import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateGenerationTimer
+import com.horizen.certificatesubmitter.CertificateSubmitter._
+import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
+import com.horizen.certificatesubmitter.keys.CertifiersKeys
+import com.horizen.certificatesubmitter.strategies.WithoutKeyRotationCircuitStrategy
 import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, CertificateSubmissionStrategy}
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.fixtures.FieldElementFixture
-import com.horizen.fork.{ForkConfigurator, ForkManager, ForkManagerUtil, SimpleForkConfigurator}
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.{CommonParams, NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
+import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -37,11 +43,11 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, when}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
+import scorex.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
-import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -108,8 +114,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -150,8 +157,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -190,8 +198,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -230,8 +239,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -271,8 +281,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy)))
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -297,12 +308,13 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+    val params: NetworkParams = mock[NetworkParams]
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy)))
-
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
@@ -331,11 +343,12 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
+    val params: NetworkParams = mock[NetworkParams]
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy)))
-
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
@@ -401,13 +414,13 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
     // TODO: add cases for NonCeasingStrategy
+    val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
     val submissionStrategy: CertificateSubmissionStrategy = new CeasingSidechain(mockedMainchainChannel, params)
-    val mockedSecureEnclaveApiClient = mock[SecureEnclaveApiClient]
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mainchainChannel, submissionStrategy, keyRotationStrategy)))
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mockedSecureEnclaveApiClient, params, mockedMainchainChannel, submissionStrategy)))
-
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     val watch = TestProbe()
     watch.watch(certificateSubmitterRef)
@@ -436,7 +449,6 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertEquals("Signature status expected to be not defined.", None, submitter.signaturesStatus)
     assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
 
-
     // Test 2: block inside the epoch first time with 1 Sig out of 2
     val epochInfoInsideWindow = WithdrawalEpochInfo(epochNumber, lastEpochIndex = 0)
     reset(state)
@@ -447,6 +459,12 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     when(state.utxoMerkleTreeRoot(ArgumentMatchers.any[Int])).thenAnswer(answer => {
       assertEquals("Invalid referenced epoch number retrieved for state.withdrawalRequests.", referencedEpochNumber, answer.getArgument(0).asInstanceOf[Int])
      Some(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
+    })
+    var walletSecrets: Seq[SchnorrSecret] = schnorrSecrets.take(1)
+    when(state.certifiersKeys(ArgumentMatchers.any[Int])).thenAnswer(answer => {
+      assert(answer.getArgument(0).asInstanceOf[Int] >= 0)
+      val sp: Vector[SchnorrProposition] = walletSecrets.map(ws => new SchnorrProposition(ws.getPublicBytes)).toVector
+      Option[CertifiersKeys](CertifiersKeys(sp, Vector[SchnorrProposition]()))
     })
 
     reset(history)
@@ -474,6 +492,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       Some(info)
     })
     val secureEnclaveManagedSecret = schnorrSecrets.take(1)
+    val mockedSecureEnclaveApiClient = mock[SecureEnclaveApiClient]
     when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(true)
     when(mockedSecureEnclaveApiClient.listPublicKeys()).thenReturn(Future(secureEnclaveManagedSecret.map(_.publicImage)))
     when(mockedSecureEnclaveApiClient.signWithEnclave(any(), any()))
@@ -483,7 +502,6 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
           Future.successful(Some(CertificateSignatureInfo(pk_index._2,secureEnclaveManagedSecret.head.sign(message))))
       }
 
-    var walletSecrets: Seq[SchnorrSecret] = Seq()
     when(wallet.secret(ArgumentMatchers.any[Proposition])).thenAnswer(answer => {
       val pubKey = answer.getArgument(0).asInstanceOf[SchnorrProposition]
       walletSecrets.find(s => s.owns(pubKey))
@@ -736,8 +754,12 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   def getFtMinAmount(): Unit = {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
     val dustThreshold = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
-    val submitter: CertificateSubmitter = TestActorRef(Props(
-        new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[SecureEnclaveApiClient], mock[NetworkParams], mock[MainchainNodeChannel], mock[CertificateSubmissionStrategy])
+    val params: NetworkParams = mock[NetworkParams]
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
+
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = TestActorRef(Props(
+      new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[SecureEnclaveApiClient], mock[NetworkParams], mock[MainchainNodeChannel], mockedSubmissionStrategy, keyRotationStrategy)
     )).underlyingActor
 
     assertEquals("Before the fork, ftMinAmount should be 0",
@@ -778,12 +800,13 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     })
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy)))
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
@@ -910,12 +933,13 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     })
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy)))
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
 
     val certSubmissionEventListener = TestProbe()
@@ -971,10 +995,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSidechainNodeViewHolder = TestProbe()
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy)))
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
@@ -1014,10 +1039,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSidechainNodeViewHolder = TestProbe()
     val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy)))
+    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, mock[SecureEnclaveApiClient], params, mockedMainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
 
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)

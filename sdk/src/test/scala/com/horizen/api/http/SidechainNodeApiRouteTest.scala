@@ -220,7 +220,6 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertTrue(result.get("sidechainId").isTextual)
         assertEquals(sidechainId, result.get("sidechainId").asText())
       }
-
     }
 
   }

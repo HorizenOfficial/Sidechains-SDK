@@ -147,7 +147,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       ModifierSemanticValidity.Unknown,
       blockMainchainHeaderBaseInfoSeq,
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, parentBlockInfo.withdrawalEpochInfo, params),
       vrfOutputOpt, //technically block is not correct from consensus point of view if vrfOutput is None
       lastBlockInPreviousConsensusEpoch
     )
@@ -612,7 +612,7 @@ object SidechainHistory
       // First MC header Cumulative CommTree hash is provided by genesis info
       Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(0,0), params),
       None,
       block.id,
     )

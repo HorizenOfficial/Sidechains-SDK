@@ -1,5 +1,7 @@
 package com.horizen
 
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
 import sparkz.core.settings.SparkzSettings
 
 import scala.concurrent.duration.FiniteDuration
@@ -30,9 +32,11 @@ case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               signersPublicKeys: Seq[String],
                                               signersThreshold: Int,
                                               signersSecrets: Seq[String],
+                                              mastersPublicKeys: Seq[String] = Seq(),
                                               maxPks: Long,
                                               certProvingKeyFilePath: String,
                                               certVerificationKeyFilePath: String,
+                                              circuitType: CircuitTypes = CircuitTypes.NaiveThresholdSignatureCircuit,
                                               certificateSigningIsEnabled: Boolean = true,
                                               certificateAutomaticFeeComputation: Boolean = true,
                                               certificateFee: String = "0.0001"

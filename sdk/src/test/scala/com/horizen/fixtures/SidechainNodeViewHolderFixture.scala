@@ -10,6 +10,7 @@ import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSer
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -142,7 +143,7 @@ trait SidechainNodeViewHolderFixture
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
     SidechainTransactionApiRoute(sidechainSettings.sparkzSettings.restApi, nodeViewHolderRef,
-      sidechainTransactionActorRef, sidechainTransactionsCompanion, params)
+      sidechainTransactionActorRef, sidechainTransactionsCompanion, params, CircuitTypes.NaiveThresholdSignatureCircuit)
   }
 
 }
