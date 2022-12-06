@@ -21,21 +21,22 @@ fi
 
 # parse args
 for i in "$@"; do
+
   case "${i}" in
-    -extended)
-      EXTENDED="true"
-      shift
-      ;;
-    -exclude=*)
-      EXCLUDE="${i#*=}"
-      shift
-      ;;
-    -split=*)
-      SPLIT="${i#*=}"
-      shift
-      ;;
-    -parallel=*)
-      PARALLEL="${i#*=}"
+      -extended)
+        EXTENDED="true"
+        shift
+        ;;
+      -exclude=*)
+        EXCLUDE="${i#*=}"
+        shift
+        ;;
+      -split=*)
+        SPLIT="${i#*=}"
+        shift
+        ;;
+      -parallel=*)
+        PARALLEL="${i#*=}"
       shift
       ;;
     *)
@@ -168,7 +169,7 @@ function checkFileExists
     local TestScriptFile="$(echo $1 | cut -d' ' -f1)"
     # get filepath relative to the source bash script (e.g. this file)
     local TestScriptFileAndPath="${BASH_SOURCE%/*}/${TestScriptFile}"
-
+    echo "dksaldksalkdasld"
     if [ ! -f "${TestScriptFileAndPath}" ]; then
       echo -e "\nWARNING: file not found [ ${TestScriptFileAndPath} ]" | tee /dev/fd/3
       failures[${#failures[@]}]="(#-NotFound-$1-#)"
@@ -199,20 +200,48 @@ function runTestScript
     echo | tee /dev/fd/3
 }
 
-if [ ! -z "$PARALLEL" ]; then
-  testScripts+=( "${testScriptsExt[@]}" )
-else
-  for (( i = 0; i < ${#testScripts[@]}; i++ )); do
-    if checkFileExists "${testScripts[$i]}"; then
-          if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1" = "${testScripts[$i]}" ] || [ "$1.py" = "${testScripts[$i]}" ]; then
-          echo "Running $((i +1)) Of ${#testScripts[@]} Tests" | tee /dev/fd/3
+function runTests
+{
+  testsToRun=("$@")
+  for (( i = 0; i < ${#testsToRun[@]}; i++ )); do
+    if checkFileExists "${testsToRun[$i]}"; then
+          if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1" = "${testsToRun[$i]}" ] || [ "$1.py" = "${testsToRun[$i]}" ]; then
+          echo "Running $((i +1)) Of ${#testsToRun[@]} Tests" | tee /dev/fd/3
           runTestScript \
-                "${testScripts[$i]}" \
-                "${BASH_SOURCE%/*}/${testScripts[$i]}"
+                "${testsToRun[$i]}" \
+                "${BASH_SOURCE%/*}/${testsToRun[$i]}"
           fi
     fi
   done
+}
+
+if [ ! -z "$PARALLEL" ]; then
+
+  TESTS_TO_RUN_IN_PARALLEL=$((("${#testScripts[@]}" / "$PARALLEL") + 1))
+  TEST_GROUP=1
+
+  for((i=0; i < ${#testScripts[@]}; i+=TESTS_TO_RUN_IN_PARALLEL))
+  do
+    part=( "${testScripts[@]:i:TESTS_TO_RUN_IN_PARALLEL}" )
+    echo "TEST GROUP IS: ${TEST_GROUP}" | tee /dev/fd/3
+    declare testScripts_${TEST_GROUP}="${part[*]}"
+
+    TEST_GROUP=$((TEST_GROUP + 1))
+  done
+
+  for arg in $(seq "$PARALLEL"); do
+    testGroup="testScripts_$arg"
+    echo "RUNNING1: ${!testGroup}" | tee /dev/fd/3
+#      echo "${#testScripts_2[@]}" | tee /dev/fd/3
+#      runTests "${testScripts_$arg[@]}"
+  done
+else
+  runTests testScripts
 fi
+
+
+
+
 
 
 
@@ -232,3 +261,4 @@ if [ ${#failures[@]} -gt 0 ]; then
   else
     exit 0
 fi
+
