@@ -34,6 +34,10 @@ for i in "$@"; do
       SPLIT="${i#*=}"
       shift
       ;;
+    -parallel=*)
+      PARALLEL="${i#*=}"
+      shift
+      ;;
     *)
       # unknown option/passOn
       passOn+="${i} "
@@ -195,16 +199,22 @@ function runTestScript
     echo | tee /dev/fd/3
 }
 
-for (( i = 0; i < ${#testScripts[@]}; i++ )); do
-  if checkFileExists "${testScripts[$i]}"; then
-        if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1" = "${testScripts[$i]}" ] || [ "$1.py" = "${testScripts[$i]}" ]; then
-        echo "Running $((i +1)) Of ${#testScripts[@]} Tests" | tee /dev/fd/3
-        runTestScript \
-              "${testScripts[$i]}" \
-              "${BASH_SOURCE%/*}/${testScripts[$i]}"
-        fi
-  fi
-done
+if [ ! -z "$PARALLEL" ]; then
+  testScripts+=( "${testScriptsExt[@]}" )
+else
+  for (( i = 0; i < ${#testScripts[@]}; i++ )); do
+    if checkFileExists "${testScripts[$i]}"; then
+          if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1" = "${testScripts[$i]}" ] || [ "$1.py" = "${testScripts[$i]}" ]; then
+          echo "Running $((i +1)) Of ${#testScripts[@]} Tests" | tee /dev/fd/3
+          runTestScript \
+                "${testScripts[$i]}" \
+                "${BASH_SOURCE%/*}/${testScripts[$i]}"
+          fi
+    fi
+  done
+fi
+
+
 
 total=$((successCount + failureCount))
 echo -e "\n\nTests Run: $total" | tee /dev/fd/3
@@ -222,4 +232,3 @@ if [ ${#failures[@]} -gt 0 ]; then
   else
     exit 0
 fi
-
