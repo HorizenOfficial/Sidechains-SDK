@@ -227,6 +227,63 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
       }
     }
 
+    // Uncle Blocks RPCs tests
+    val batchRequestJsonGetUncleCountByBlockHash = "{\"id\":\"8\",\"jsonrpc\":\"2.0\",\"method\":\"eth_getUncleCountByBlockHash\",\"params\":[\"0x518637c0ac365cdc5fc7e632aebc386ccea10dddd5e58cdf127b2d48d085f5a5\"]}}"
+    val batchRequestJsonNodeGetUncleCountByBlockHash = mapper.readTree(batchRequestJsonGetUncleCountByBlockHash)
+    "reply at /ethv1 - uncle block - eth_getUncleCountByBlockHash" in {
+      Post(basePath)
+        .withHeaders(apiTokenHeader)
+        .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleCountByBlockHash)) ~> ethRpcRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val rpcResponse = mapper.readTree(entityAs[String])
+        assertEquals(stringFromJsonNode(rpcResponse.get("result").toString), "0x0")
+        assertEquals(stringFromJsonNode(rpcResponse.get("id").toString), "8")
+      }
+    }
+
+    val batchRequestJsonGetUncleCountByBlockNumber = "{\"id\":\"16\",\"jsonrpc\":\"2.0\",\"method\":\"eth_getUncleCountByBlockNumber\",\"params\":[\"0xf8\"]}}"
+    val batchRequestJsonNodeGetUncleCountByBlockNumber = mapper.readTree(batchRequestJsonGetUncleCountByBlockNumber)
+    "reply at /ethv1 - uncle block - eth_getUncleCountByBlockNumber" in {
+      Post(basePath)
+        .withHeaders(apiTokenHeader)
+        .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleCountByBlockNumber)) ~> ethRpcRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val rpcResponse = mapper.readTree(entityAs[String])
+        assertEquals(stringFromJsonNode(rpcResponse.get("result").toString), "0x0")
+        assertEquals(stringFromJsonNode(rpcResponse.get("id").toString), "16")
+      }
+    }
+
+    val batchRequestJsonGetUncleByBlockHashAndIndex = "{\"id\":\"24\",\"jsonrpc\":\"2.0\",\"method\":\"eth_getUncleByBlockHashAndIndex\",\"params\":[\"0x518637c0ac365cdc5fc7e632aebc386ccea10dddd5e58cdf127b2d48d085f5a5\",\"0x0\"]}}"
+    val batchRequestJsonNodeGetUncleByBlockHashAndIndex = mapper.readTree(batchRequestJsonGetUncleByBlockHashAndIndex)
+    "reply at /ethv1 - uncle block - eth_getUncleByBlockHashAndIndex" in {
+      Post(basePath)
+        .withHeaders(apiTokenHeader)
+        .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleByBlockHashAndIndex)) ~> ethRpcRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val rpcResponse = mapper.readTree(entityAs[String])
+        assertEquals(stringFromJsonNode(rpcResponse.get("result").toString), "null")
+        assertEquals(stringFromJsonNode(rpcResponse.get("id").toString), "24")
+      }
+    }
+
+    val batchRequestJsonGetUncleByBlockNumberAndIndex = "{\"id\":\"32\",\"jsonrpc\":\"2.0\",\"method\":\"eth_getUncleByBlockNumberAndIndex\",\"params\":[\"0xf8\",\"0x0\"]}}"
+    val batchRequestJsonNodeGetUncleByBlockNumberAndIndex = mapper.readTree(batchRequestJsonGetUncleByBlockNumberAndIndex)
+    "reply at /ethv1 - uncle block - eth_getUncleByBlockNumberAndIndex" in {
+      Post(basePath)
+        .withHeaders(apiTokenHeader)
+        .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleByBlockNumberAndIndex)) ~> ethRpcRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val rpcResponse = mapper.readTree(entityAs[String])
+        assertEquals(stringFromJsonNode(rpcResponse.get("result").toString), "null")
+        assertEquals(stringFromJsonNode(rpcResponse.get("id").toString), "32")
+      }
+    }
+
   }
 
   private def stringFromJsonNode(jsonString: String): String = {
