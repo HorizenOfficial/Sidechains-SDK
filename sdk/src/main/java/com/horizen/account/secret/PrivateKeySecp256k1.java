@@ -14,7 +14,7 @@ import org.web3j.utils.Numeric;
 
 import java.util.Arrays;
 
-import static com.horizen.account.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
+import static com.horizen.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
 
 public final class PrivateKeySecp256k1 implements Secret {
     private static final byte privateKeySecp256k1SecretId = PrivateKeySecp256k1SecretId.id();
