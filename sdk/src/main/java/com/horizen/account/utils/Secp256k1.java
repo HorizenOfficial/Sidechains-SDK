@@ -1,19 +1,16 @@
 package com.horizen.account.utils;
 
-import com.google.common.primitives.Bytes;
+import com.horizen.account.proof.SignatureSecp256k1;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
-import org.glassfish.grizzly.http.util.HexUtils;
-import org.web3j.crypto.ECDSASignature;
-import org.web3j.crypto.ECKeyPair;
-import org.web3j.crypto.CryptoUtils;
-import org.web3j.crypto.Sign;
+import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
-
-import static org.web3j.crypto.Hash.sha256;
-import static org.web3j.crypto.Sign.CHAIN_ID_INC;
+import java.security.SecureRandom;
+import java.security.SignatureException;
+import java.util.Objects;
 
 public final class Secp256k1 {
     private static final int COORD_SIZE = 32;
@@ -29,29 +26,55 @@ public final class Secp256k1 {
     }
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
-        ECKeyPair keyPair = ECKeyPair.create(sha256(seed));
-
-        return new Pair<>(keyPair.getPrivateKey().toByteArray(), keyPair.getPublicKey().toByteArray());
+        try {
+            ECKeyPair keyPair = Keys.createEcKeyPair(new SecureRandom(seed));
+            return new Pair<>(keyPair.getPrivateKey().toByteArray(), keyPair.getPublicKey().toByteArray());
+        } catch (Exception e) {
+            // TODO handle it
+            System.out.println("Exception: " + e.getMessage());
+            return null;
+        }
     }
 
-    public static boolean verify(byte[] signature, byte[] message, byte[] publicKey) {
-        BigInteger publicKeyNumeric = Numeric.toBigInt(publicKey);
-        ECDSASignature ecdsaSignature = CryptoUtils.fromDerFormat(signature);
-        Sign.SignatureData signatureData = Sign.createSignatureData(ecdsaSignature, publicKeyNumeric, message);
+    public static boolean verify(byte[] v, byte[] r, byte[] s, byte[] message, byte[] address) {
+        try {
+            var signature = new Sign.SignatureData(v, r, s);
+            var signingAddress = Keys.getAddress(Sign.signedMessageToKey(message, signature));
 
-        int chainId = (BytesUtils.getInt(signatureData.getV(), 0) - CHAIN_ID_INC) / 2;
-        int recId = Sign.getRecId(signatureData, chainId);
-
-        BigInteger recoveredPublicKey = Sign.recoverFromSignature(recId, ecdsaSignature, message);
-
-        return recoveredPublicKey.equals(publicKeyNumeric);
+            return Objects.equals(signingAddress, BytesUtils.toHexString(address));
+        } catch (SignatureException e) {
+            return false;
+        }
     }
 
-    public static byte[] sign(byte[] privateKey, byte[] message) {
+    public static SignatureSecp256k1 sign(byte[] privateKey, byte[] message) {
         ECKeyPair keyPair = ECKeyPair.create(privateKey);
-        Sign.SignatureData signatureData = Sign.signMessage(message, keyPair);
-        byte[] signature = Bytes.concat(signatureData.getR(),signatureData.getS(),signatureData.getV());
+        var signature = Sign.signMessage(message, keyPair, true);
 
-        return signature;
+        return new SignatureSecp256k1(signature.getV(), signature.getR(), signature.getS());
+    }
+
+    public static String checksumAddress(byte[] address) {
+        return Keys.toChecksumAddress(BytesUtils.toHexString(address));
+    }
+
+    public static byte[] getPublicKey(byte[] privateKey) {
+        return Numeric.toBytesPadded(ECKeyPair.create(privateKey).getPublicKey(), Secp256k1.PUBLIC_KEY_SIZE);
+    }
+
+    public static byte[] sha3(byte[] input) {
+        return Hash.sha3(input);
+    }
+
+    public static byte[] sha3(byte[] input, int offset, int length) {
+        return Hash.sha3(input, offset, length);
+    }
+
+    public static BigInteger signedMessageToKey(byte[] message, Sign.SignatureData signatureData) throws SignatureException {
+        return Sign.signedMessageToKey(message, signatureData);
+    }
+
+    public static AddressProposition getAddressFromPublicKey(BigInteger publicKey) {
+        return new AddressProposition(Keys.getAddress(Numeric.toBytesPadded(publicKey, PUBLIC_KEY_SIZE)));
     }
 }

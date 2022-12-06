@@ -7,9 +7,6 @@ import com.horizen.account.utils.Secp256k1;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
-import org.web3j.crypto.ECKeyPair;
-import org.web3j.crypto.Hash;
-import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
 import java.util.Arrays;
@@ -32,7 +29,7 @@ public final class PrivateKeySecp256k1 implements Secret {
             ));
         }
         this.privateKey = Arrays.copyOf(privateKey, Secp256k1.PRIVATE_KEY_SIZE);
-        this.publicKey = Numeric.toBytesPadded(ECKeyPair.create(privateKey).getPublicKey(), Secp256k1.PUBLIC_KEY_SIZE);
+        this.publicKey = Secp256k1.getPublicKey(privateKey);
     }
 
     @Override
@@ -47,7 +44,7 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public AddressProposition publicImage() {
-        var hashedKey = Hash.sha3(this.publicKey);
+        var hashedKey = Secp256k1.sha3(this.publicKey);
         return new AddressProposition(Arrays.copyOfRange(hashedKey, hashedKey.length - Account.ADDRESS_SIZE, hashedKey.length));
     }
 
@@ -72,8 +69,7 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public SignatureSecp256k1 sign(byte[] message) {
-        var pair = ECKeyPair.create(privateKey);
-        return new SignatureSecp256k1(Sign.signMessage(message, pair, true));
+        return Secp256k1.sign(privateKey, message);
     }
 
     public byte[] privateKeyBytes() {

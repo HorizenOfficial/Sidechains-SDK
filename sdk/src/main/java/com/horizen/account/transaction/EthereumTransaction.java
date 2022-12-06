@@ -8,13 +8,15 @@ import com.horizen.account.state.GasUtil;
 import com.horizen.account.state.Message;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionEncoder;
+import com.horizen.account.utils.Secp256k1;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
-import org.web3j.crypto.*;
+import org.web3j.crypto.Hash;
+import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
@@ -379,8 +381,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             try {
                 byte[] encodedTransaction = encode(false);
 
-                BigInteger pubKey = Sign.signedMessageToKey(encodedTransaction, this.signature.getSignatureData());
-                this.from = new AddressProposition(Keys.getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE)));
+                BigInteger pubKey = Secp256k1.signedMessageToKey(encodedTransaction, this.signature.getSignatureData());
+                this.from = Secp256k1.getAddressFromPublicKey(pubKey);
             } catch (Exception e) {
                 // whatever exception may result in processing the signature, we can not tell the from address
                 LogManager.getLogger().info("Could not find from address, Signature not valid:", e);

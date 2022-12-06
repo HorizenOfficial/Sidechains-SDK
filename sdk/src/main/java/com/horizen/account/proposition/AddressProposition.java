@@ -4,11 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.Secp256k1;
 import com.horizen.proposition.*;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
-import org.web3j.crypto.Keys;
-import org.web3j.utils.Numeric;
 
 import java.util.Arrays;
 
@@ -60,7 +59,7 @@ public final class AddressProposition
     }
 
     public String checksumAddress() {
-        return Keys.toChecksumAddress(BytesUtils.toHexString(address()));
+        return Secp256k1.checksumAddress(address());
     }
 
     @Override
