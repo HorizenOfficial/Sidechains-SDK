@@ -27,11 +27,6 @@ Test:
 """
 
 
-# helper method for EIP155 tx
-def getChainIdFromSignatureV(sigV):
-    return int((sigV - 35) / 2)
-
-
 class SCEvmEOA2EOA(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=2)
@@ -65,7 +60,7 @@ class SCEvmEOA2EOA(AccountChainSetup):
 
         # get mempool contents and check contents are as expected
         response = allTransactions(from_sc_node, False)
-        assert_true(tx_hash in response["transactionIds"])
+        assert_true(tx_hash in response['transactionIds'])
 
         if print_json_results:
             logging.info(allTransactions(from_sc_node))
@@ -191,15 +186,6 @@ class SCEvmEOA2EOA(AccountChainSetup):
             fail("EOA2EOA with invalid format from address should not work")
         except Exception as e:
             logging.info("Expected failure: {}".format(e))
-
-        # logging.info("Create an EOA to EOA transaction moving some fund with too high a nonce ==> SHOULD FAIL")
-        # transferred_amount_in_zen = Decimal('33')
-        # ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen,
-        #                             nonce=33)
-        # if not ret:
-        #     logging.info("Expected failure: {}".format(msg))
-        # else:
-        #     fail("EOA2EOA with bad nonce should not work")
 
         logging.info("Create an EOA to EOA transaction moving some fund with too low a nonce ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('33')
