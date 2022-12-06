@@ -14,7 +14,7 @@ import java.util.Arrays;
 
 @JsonView(Views.Default.class)
 public final class AddressProposition extends SparkzEncoding
-        implements AbstractSingleSecretProofOfKnowledgeProposition<PrivateKeySecp256k1> {
+        implements SingleSecretProofOfKnowledgeProposition<PrivateKeySecp256k1> {
 
     @JsonProperty("address")
     private final byte[] address;
