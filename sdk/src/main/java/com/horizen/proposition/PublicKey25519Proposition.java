@@ -21,7 +21,7 @@ public final class PublicKey25519Proposition
     public static final int ADDRESS_LENGTH = 1 + KEY_LENGTH + CHECKSUM_LENGTH;
 
     @JsonProperty("publicKey")
-    private byte[] _pubKeyBytes;
+    private final byte[] _pubKeyBytes;
 
     public PublicKey25519Proposition(byte[] pubKeyBytes)
     {
