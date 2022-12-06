@@ -42,7 +42,8 @@ public class PrivateKeySecp256k1Test {
         // Test 2: Returns correct signature for message
         String payload = "This is string to sign";
         var message = payload.getBytes(StandardCharsets.UTF_8);
-        assertEquals(privateKeySecp256k1.sign(message).toString(), new SignatureSecp256k1(Sign.signMessage(message, pair, true)).toString());
+        var signatureData = Sign.signMessage(message, pair, true);
+        assertEquals(privateKeySecp256k1.sign(message).toString(), new SignatureSecp256k1(signatureData.getV(), signatureData.getR(), signatureData.getS()).toString());
 
         // Test 3: Must return true as it owns here created address proposition
         assertTrue(privateKeySecp256k1.owns(addressProposition));

@@ -15,14 +15,10 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
-import org.web3j.crypto.Hash;
-import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.Optional;
-import static com.horizen.account.utils.Secp256k1.PUBLIC_KEY_SIZE;
-
 
 @JsonPropertyOrder({
         "id", "from", "to", "value", "nonce", "data",
@@ -70,7 +66,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private synchronized String getTxHash() {
         if (this.hashString == null) {
             byte[] encodedMessage = encode(isSigned());
-            this.hashString = BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
+            this.hashString = BytesUtils.toHexString(Secp256k1.sha3(encodedMessage, 0, encodedMessage.length));
         }
         return this.hashString;
     }

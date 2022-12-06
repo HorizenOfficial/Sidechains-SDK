@@ -1,8 +1,8 @@
 package com.horizen.account.abi
 
 import com.horizen.account.state.ExecutionFailedException
+import com.horizen.account.utils.Secp256k1
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 
 import java.util
@@ -17,7 +17,7 @@ object ABIUtil {
   @throws(classOf[ExecutionFailedException])
   def getFunctionSignature(data: Array[Byte]): String = BytesUtils.toHexString(getSlice(data, 0, METHOD_CODE_LENGTH))
 
-  def getABIMethodId(methodSig: String): String = Numeric.toHexStringNoPrefix(Hash.sha3(methodSig.getBytes).take(4))
+  def getABIMethodId(methodSig: String): String = Numeric.toHexStringNoPrefix(Secp256k1.sha3(methodSig.getBytes).take(4))
 
   @throws(classOf[ExecutionFailedException])
   private def getSlice(data: Array[Byte], from: Int, to: Int) = {

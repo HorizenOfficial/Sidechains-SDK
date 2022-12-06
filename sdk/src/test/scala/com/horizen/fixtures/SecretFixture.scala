@@ -126,7 +126,8 @@ trait SecretFixture {
     val payload = "This is string to sign"
     val message = payload.getBytes(StandardCharsets.UTF_8)
     val pair = Keys.createEcKeyPair
-    new SignatureSecp256k1(Sign.signMessage(message, pair, true))
+    val signatureData = Sign.signMessage(message, pair, true)
+    new SignatureSecp256k1(signatureData.getV, signatureData.getR, signatureData.getS)
   }
 
   def getAddressProposition(seed: Long): AddressProposition = {

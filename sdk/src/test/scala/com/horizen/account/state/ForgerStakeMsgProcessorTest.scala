@@ -79,7 +79,7 @@ class ForgerStakeMsgProcessorTest
     val nonce = randomNonce
     val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(stakeId, origin, nonce.toByteArray)
     val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
-    val msgSignature = new SignatureSecp256k1(msgSignatureData)
+    val msgSignature = new SignatureSecp256k1(msgSignatureData.getV, msgSignatureData.getR, msgSignatureData.getS)
 
     // create command arguments
     val removeCmdInput = RemoveStakeCmdInput(stakeId, msgSignature)
@@ -266,7 +266,7 @@ class ForgerStakeMsgProcessorTest
       val nonce3 = randomNonce
       val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(stakeId, origin, nonce3.toByteArray)
       val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
-      val msgSignature = new SignatureSecp256k1(msgSignatureData)
+      val msgSignature = new SignatureSecp256k1(msgSignatureData.getV, msgSignatureData.getR, msgSignatureData.getS)
 
       // create command arguments
       val removeCmdInput = RemoveStakeCmdInput(stakeId, msgSignature)
@@ -694,7 +694,7 @@ class ForgerStakeMsgProcessorTest
       val nonce = randomNonce
       val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(forgingStakeInfo.stakeId, origin, nonce.toByteArray)
       val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
-      val msgSignature = new SignatureSecp256k1(msgSignatureData)
+      val msgSignature = new SignatureSecp256k1(msgSignatureData.getV, msgSignatureData.getR, msgSignatureData.getS)
 
       // create command arguments
       val removeCmdInput = RemoveStakeCmdInput(forgingStakeInfo.stakeId, msgSignature)

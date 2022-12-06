@@ -34,7 +34,7 @@ public class SignatureSecp256k1Test {
         // Create a key pair and create the signature
         ECKeyPair pair = Keys.createEcKeyPair();
         signatureData = Sign.signMessage(message, pair, true);
-        signatureSecp256k1 = new SignatureSecp256k1(signatureData);
+        signatureSecp256k1 = new SignatureSecp256k1(signatureData.getV(), signatureData.getR(), signatureData.getS());
         addressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)));
     }
 

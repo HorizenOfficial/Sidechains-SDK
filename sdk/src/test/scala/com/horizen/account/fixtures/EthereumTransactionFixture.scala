@@ -71,7 +71,7 @@ trait EthereumTransactionFixture {
     val msgSignature = Sign.signMessage(message, pair, true)
     new EthereumTransaction(unsignedTx,
       new SignatureSecp256k1(
-        new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS))
+        msgSignature.getV, msgSignature.getR, msgSignature.getS)
     )
   }
 

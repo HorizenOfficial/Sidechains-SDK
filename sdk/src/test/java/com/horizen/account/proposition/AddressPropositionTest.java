@@ -51,7 +51,8 @@ public class AddressPropositionTest {
         // Test 4: Returns false as the object is not an instance of AddressProposition
         String payload = "This is string to sign";
         var message = payload.getBytes(StandardCharsets.UTF_8);
-        assertFalse(addressProposition.equals(new SignatureSecp256k1(Sign.signMessage(message, pair, true))));
+        var signatureData = Sign.signMessage(message, pair, true);
+        assertFalse(addressProposition.equals(new SignatureSecp256k1(signatureData.getV(), signatureData.getR(), signatureData.getS())));
 
         // Test 5: Returns false as the object does not contain the same address
         AddressProposition anotherAddressProposition = new AddressProposition(Arrays.copyOf(new BigInteger("1234567890437499837987386266872312011773540175446618547506457344").toByteArray(), Address.LENGTH));

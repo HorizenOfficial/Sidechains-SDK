@@ -33,7 +33,7 @@ public class SignatureSecp256k1SerializerTest {
         // Create a key pair and create the signature
         ECKeyPair pair = Keys.createEcKeyPair();
         var msgSignature = Sign.signMessage(message, pair, true);
-        signatureSecp256k1 = new SignatureSecp256k1(msgSignature);
+        signatureSecp256k1 = new SignatureSecp256k1(msgSignature.getV(), msgSignature.getR(), msgSignature.getS());
     }
 
     @Test

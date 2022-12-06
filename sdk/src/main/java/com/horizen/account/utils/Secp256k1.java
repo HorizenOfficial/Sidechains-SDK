@@ -6,6 +6,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
+import static org.web3j.crypto.TransactionEncoder.createEip155SignatureData;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -21,11 +22,18 @@ public final class Secp256k1 {
     public static final int SIGNATURE_V_MAXSIZE = Long.BYTES;
     public static final int SIGNATURE_RS_SIZE = 32;
 
+    public static final int ADDRESS_LENGTH_IN_HEX = 40;
+
+    public static final int CHAIN_ID_INC = Sign.CHAIN_ID_INC;
+
+    public static final int LOWER_REAL_V = Sign.LOWER_REAL_V;
+
     private Secp256k1() {
         // prevent instantiation
     }
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
+        // Check why is this failing
         try {
             ECKeyPair keyPair = Keys.createEcKeyPair(new SecureRandom(seed));
             return new Pair<>(keyPair.getPrivateKey().toByteArray(), keyPair.getPublicKey().toByteArray());
@@ -76,5 +84,48 @@ public final class Secp256k1 {
 
     public static AddressProposition getAddressFromPublicKey(BigInteger publicKey) {
         return new AddressProposition(Keys.getAddress(Numeric.toBytesPadded(publicKey, PUBLIC_KEY_SIZE)));
+    }
+
+    public static Sign.SignatureData getSignatureData(byte[] v, byte[] r, byte[] s) {
+        return new Sign.SignatureData(v, r, s);
+    }
+
+    public static byte[] generateContractAddress(byte[] address, BigInteger nonce) {
+        return ContractUtils.generateContractAddress(address, nonce);
+    }
+
+    public static byte[] getVFromRecId(int recId) {
+        return Sign.getVFromRecId(recId);
+    }
+
+    public static Sign.SignatureData createEip155SignatureData(Sign.SignatureData signatureData, long chainId) {
+        return TransactionEncoder.createEip155SignatureData(signatureData, chainId);
+    }
+
+    public static int getRecId(Sign.SignatureData signatureData, long chainId) {
+        return Sign.getRecId(signatureData, chainId);
+    }
+
+    public enum TransactionType {
+        LEGACY((Byte)null),
+        EIP1559((byte)2);
+
+        Byte type;
+
+        private TransactionType(Byte type) {
+            this.type = type;
+        }
+
+        public Byte getRlpType() {
+            return this.type;
+        }
+
+        public boolean isLegacy() {
+            return this.equals(LEGACY);
+        }
+
+        public boolean isEip1559() {
+            return this.equals(EIP1559);
+        }
     }
 }

@@ -3,7 +3,6 @@ package com.horizen.account.utils;
 import com.horizen.account.transaction.EthereumTransaction;
 import org.web3j.crypto.Sign;
 import org.web3j.rlp.*;
-import org.web3j.utils.Bytes;
 import org.web3j.utils.Numeric;
 
 import java.nio.ByteBuffer;
@@ -11,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.horizen.account.utils.EthereumTransactionUtils.convertToBytes;
-import static org.web3j.crypto.TransactionEncoder.createEip155SignatureData;
+import static com.horizen.account.utils.Secp256k1.createEip155SignatureData;
 
 public class EthereumTransactionEncoder {
 
@@ -102,7 +101,7 @@ public class EthereumTransactionEncoder {
             if (!tx.isSigned())
                 throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
             Sign.SignatureData signatureData = tx.getSignature().getSignatureData();
-            result.add(RlpString.create(Sign.getRecId(signatureData, tx.getChainId())));
+            result.add(RlpString.create(Secp256k1.getRecId(signatureData, tx.getChainId())));
             result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getR())));
             result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getS())));
         }

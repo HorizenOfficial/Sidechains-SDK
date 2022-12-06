@@ -2,8 +2,6 @@ package com.horizen.account.utils;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.transaction.EthereumTransaction;
-import org.web3j.crypto.Sign;
-import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
@@ -13,8 +11,8 @@ import java.util.Arrays;
 
 import static com.horizen.account.utils.EthereumTransactionUtils.convertToLong;
 import static com.horizen.account.utils.EthereumTransactionUtils.getRealV;
-import static org.web3j.crypto.Sign.CHAIN_ID_INC;
-import static org.web3j.crypto.Sign.LOWER_REAL_V;
+import static com.horizen.account.utils.Secp256k1.*;
+
 
 public class EthereumTransactionDecoder {
 
@@ -59,7 +57,7 @@ public class EthereumTransactionDecoder {
                     dataBytes,
                     null);
         } else {
-            byte[] v = Sign.getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
+            byte[] v = getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(10)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(11)).getBytes()), 32);
             SignatureSecp256k1 signature = new SignatureSecp256k1(v, r, s);

@@ -82,6 +82,6 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     }
 
     public Sign.SignatureData getSignatureData() {
-        return new Sign.SignatureData(v, r, s);
+        return Secp256k1.getSignatureData(this.v, this.r, this.s);
     }
 }

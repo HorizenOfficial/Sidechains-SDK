@@ -247,14 +247,15 @@ public class EthereumTransactionTest {
         assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
 
         // similar test adding the real signature (taken from original tx) and comparing ids
+        var signatureData = new Sign.SignatureData(
+                new byte[]{0x1c},
+                BytesUtils.fromHexString("a4e306691e16bbaa67faafeb00d81431b13194dcb39d97cf7dde47a6874d92d8"),
+                BytesUtils.fromHexString("3b3b6a4500ff90d25022616d237de8559ab79cb294905cf79cadcdf076b50a2a")
+            );
         var expectedTx2 = new EthereumTransaction(expectedTx,
             new SignatureSecp256k1(
-                new Sign.SignatureData(
-                    new byte[]{0x1c},
-                    BytesUtils.fromHexString("a4e306691e16bbaa67faafeb00d81431b13194dcb39d97cf7dde47a6874d92d8"),
-                    BytesUtils.fromHexString("3b3b6a4500ff90d25022616d237de8559ab79cb294905cf79cadcdf076b50a2a"))
-            )
-        );
+          signatureData.getV(), signatureData.getR(), signatureData.getS()
+        ));
 
         assertEquals(expectedTx2.id(), actualTx.id());
     }
