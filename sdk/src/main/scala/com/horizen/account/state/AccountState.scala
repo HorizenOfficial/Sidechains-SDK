@@ -69,17 +69,6 @@ class AccountState(
         throw new IllegalStateException(errMsg)
       }
 
-      // TODO check this
-      if (!isForgingOpen()) {
-        // only a restricted list of forgers are allowed to forge, check that the block has been forged
-        // by one of them
-        val vrfPublicKey: VrfPublicKey = mod.header.forgingStakeInfo.vrfPublicKey
-        val blockSignProposition: PublicKey25519Proposition = mod.header.forgingStakeInfo.blockSignPublicKey
-        if (!params.allowedForgersList.contains((blockSignProposition, vrfPublicKey))) {
-          throw new Exception("This forger is not allowed to forge!")
-        }
-      }
-
       // Check Txs semantic validity first
       for (tx <- mod.sidechainTransactions)
         tx.semanticValidity()
