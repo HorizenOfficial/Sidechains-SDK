@@ -281,6 +281,14 @@ class ForgerStakeMsgProcessorTest
         }
       }
 
+      // negative test: use a wrong index (negative value)
+      forgerIndex = -1
+      nonce = 1
+      assertThrows[IllegalArgumentException] {
+        msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
+          forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+      }
+
       // use a good index
       forgerIndex = 1
       nonce = 1

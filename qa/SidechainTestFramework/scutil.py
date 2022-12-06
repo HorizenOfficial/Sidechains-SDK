@@ -402,7 +402,10 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     api_key_hash = ""
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
-    genesis_secrets += sc_node_config.initial_private_keys
+
+    if bootstrap_info.genesis_account is not None:
+        # we choose to tell the secrtes only to bootstrapped node 0
+        genesis_secrets += sc_node_config.initial_private_keys
 
     if (sc_node_config.forger_options.restrict_forgers and
         bootstrap_info.genesis_vrf_account is not None and

@@ -308,66 +308,76 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
         // first of all reject the command if we do not have closed forger list
         if (!params.restrictForgers) {
-          return ApiResponseUtil.toResponse(ErrorOpenForgersList(
+          ApiResponseUtil.toResponse(ErrorOpenForgersList(
             s"Ther list of forger is not restricted (see configuration)",
             JOptional.empty()))
-        }
+        } else
+        if (body.forgerIndex <0) {
+          ApiResponseUtil.toResponse(ErrorOpenForgersList(
+            s"forger index=${body.forgerIndex} is negative",
+            JOptional.empty()))
+        } else {
 
-        // lock the view and try to create CoreTransaction
-        applyOnNodeView { sidechainNodeView =>
-          val valueInWei = BigInteger.ZERO
-          // default gas related params
-          val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
-          var maxPriorityFeePerGas = BigInteger.valueOf(120)
-          var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-          var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val valueInWei = BigInteger.ZERO
+            // default gas related params
+            val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+            var maxPriorityFeePerGas = BigInteger.valueOf(120)
+            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+            var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
 
-          if (body.gasInfo.isDefined) {
-            maxFeePerGas = body.gasInfo.get.maxFeePerGas
-            maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
-            gasLimit = body.gasInfo.get.gasLimit
-          }
+            if (body.gasInfo.isDefined) {
+              maxFeePerGas = body.gasInfo.get.maxFeePerGas
+              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+              gasLimit = body.gasInfo.get.gasLimit
+            }
 
-          val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
 
-          val blockSignSecret : PrivateKey25519 = getBlockSignSecret(body.forgerIndex, sidechainNodeView.getNodeWallet) match {
-            case Failure(e) =>
-              return ApiResponseUtil.toResponse(ErrorOpenForgersList(
-                s"Could not get proposition for forgerIndex=${body.forgerIndex}",
-                JOptional.of(e)))
-            case Success(s) => s
-          }
+            getBlockSignSecret(body.forgerIndex, sidechainNodeView.getNodeWallet) match {
 
-          val secret = getFittingSecret(sidechainNodeView, None, txCost)
+              case Failure(e) =>
+                ApiResponseUtil.toResponse(ErrorOpenForgersList(
+                  s"Could not get proposition for forgerIndex=${body.forgerIndex}",
+                  JOptional.of(e)))
 
-          secret match {
-            case Some(txCreatorSecret) =>
-              val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
-              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
+              case Success(blockSignSecret) =>
 
-              val msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-                body.forgerIndex, txCreatorSecret.publicImage().address(), nonce.toByteArray)
 
-              val signature = blockSignSecret.sign(msgToSign)
+                val secret = getFittingSecret(sidechainNodeView, None, txCost)
 
-              val dataBytes = encodeOpenStakeCmdRequest(body.forgerIndex, signature)
-              val tmpTx: EthereumTransaction = new EthereumTransaction(
-                params.chainId,
-                EthereumTransactionUtils.getToAddressFromString(to),
-                nonce,
-                gasLimit,
-                maxPriorityFeePerGas,
-                maxFeePerGas,
-                valueInWei,
-                dataBytes,
-                null
-              )
+                secret match {
+                  case Some(txCreatorSecret) =>
+                    val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
+                    val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
 
-              validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx))
+                    val msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
+                      body.forgerIndex, txCreatorSecret.publicImage().address(), nonce.toByteArray)
 
-            case None =>
-              ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+                    val signature = blockSignSecret.sign(msgToSign)
 
+                    val dataBytes = encodeOpenStakeCmdRequest(body.forgerIndex, signature)
+                    val tmpTx: EthereumTransaction = new EthereumTransaction(
+                      params.chainId,
+                      EthereumTransactionUtils.getToAddressFromString(to),
+                      nonce,
+                      gasLimit,
+                      maxPriorityFeePerGas,
+                      maxFeePerGas,
+                      valueInWei,
+                      dataBytes,
+                      null
+                    )
+
+                    validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx))
+
+                  case None =>
+                    ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+
+                }
+
+            }
           }
         }
       }
@@ -380,7 +390,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
     blockSignProposition match {
       case scala.util.Failure(e) =>
-        throw new IllegalArgumentException(s"Could not get proposition for forgerIndex=$forgerIndex" + e.getMessage)
+        throw new IllegalArgumentException(s"Could not get proposition for forgerIndex=$forgerIndex; error: " + e.getMessage)
       case Success(prop) =>
         val secret = wallet.secretByPublicKey(prop)
         if (secret.isEmpty) {
@@ -512,18 +522,16 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   def allowedForgerList: Route = (post & path("allowedForgerList")) {
-    params.restrictForgers match {
-      case true =>
-        val allowedForgerKeysList = params.allowedForgersList
-        withNodeView { sidechainNodeView =>
-          val accountState = sidechainNodeView.getNodeState
-          val forgerList = accountState.getAllowedForgerList
-          val resultList = forgerList.zip(allowedForgerKeysList)
-          ApiResponseUtil.toResponse(RespAllowedForgerList(resultList.toList))
-        }
-      case false =>
-        ApiResponseUtil.toResponse(RespAllowedForgerList(Seq().toList))
-
+    if (params.restrictForgers) {
+      val allowedForgerKeysList = params.allowedForgersList
+      withNodeView { sidechainNodeView =>
+        val accountState = sidechainNodeView.getNodeState
+        val forgerList = accountState.getAllowedForgerList
+        val resultList = forgerList.zip(allowedForgerKeysList)
+        ApiResponseUtil.toResponse(RespAllowedForgerList(resultList.toList))
+      }
+    } else {
+      ApiResponseUtil.toResponse(RespAllowedForgerList(Seq().toList))
     }
 
   }

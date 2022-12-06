@@ -525,6 +525,7 @@ object ForgerStakeMsgProcessor {
   }
 
   def getOpenStakeForgerListCmdMessageToSign(forgerIndex: Int, from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
+    require(!(forgerIndex <0))
     Bytes.concat(Ints.toByteArray(forgerIndex), from, nonce)
   }
 }
@@ -725,6 +726,7 @@ object RemoveStakeCmdInputDecoder extends ABIDecoder[RemoveStakeCmdInput] {
 case class OpenStakeForgerListCmdInput(
           forgerIndex: Int, signature: Signature25519) extends ABIEncodable[StaticStruct] {
 
+  require(!(forgerIndex <0))
 
   override def asABIType(): StaticStruct = {
     val signatureBytes = signature.bytes
