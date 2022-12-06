@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import random
@@ -10,6 +11,11 @@ from SidechainTestFramework.scutil import assert_equal, generate_next_block
 
 cwd = None
 nodeModulesInstalled = False
+
+
+# helper method for EIP155 tx
+def getChainIdFromSignatureV(sigV):
+    return int((sigV - 35) / 2)
 
 
 def get_cwd():
@@ -258,3 +264,16 @@ def estimate_gas(node, from_address=None, to_address=None, data='0x', value='0x0
         "nonce": nonce
     }
     return node.rpc_eth_estimateGas(request)
+
+
+def ac_makeForgerStake(sc_node, owner_address, blockSignPubKey, vrf_public_key, amount, nonce=None):
+    forgerStakes = {"forgerStakeInfo": {
+        "ownerAddress": owner_address,
+        "blockSignPublicKey": blockSignPubKey,
+        "vrfPubKey": vrf_public_key,
+        "value": amount # in Satoshi
+    },
+        "nonce": nonce
+    }
+
+    return sc_node.transaction_makeForgerStake(json.dumps(forgerStakes))

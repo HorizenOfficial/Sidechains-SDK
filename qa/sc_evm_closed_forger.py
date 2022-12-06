@@ -6,14 +6,14 @@ import time
 from decimal import Decimal
 
 from eth_utils import add_0x_prefix, remove_0x_prefix
-
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei, convertZenniesToWei
+from SidechainTestFramework.account.utils import convertZenToWei
 from SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration
 from SidechainTestFramework.scutil import (generate_next_block, generate_secrets, generate_vrf_secrets,
-    SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
-)
+                                           SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
+                                           )
 from test_framework.util import (
     assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, )
 
@@ -58,18 +58,12 @@ class SCEvmClosedForgerList(AccountChainSetup):
                          initial_private_keys=list(map(lambda forger: forger.secret, self.allowed_forger_propositions))
                          )
 
+
     def tryMakeForgerStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
         # a transaction with a forger stake info not compliant with the closed forger list will be successfully
         # included in a block but the receipt will then report a 'failed' status.
-        forgerStakes = {
-            "forgerStakeInfo": {
-                "ownerAddress": owner_address,  # SC node 1 is an owner
-                "blockSignPublicKey": blockSignPubKey,
-                "vrfPubKey": vrf_public_key,
-                "value": convertZenToZennies(amount)  # in Satoshi
-            }
-        }
-        makeForgerStakeJsonRes = sc_node.transaction_makeForgerStake(json.dumps(forgerStakes))
+        makeForgerStakeJsonRes = ac_makeForgerStake(sc_node, owner_address, blockSignPubKey, vrf_public_key, amount)
+
         assert_true("result" in makeForgerStakeJsonRes)
         logging.info(json.dumps(makeForgerStakeJsonRes))
         self.sc_sync_all()
@@ -130,7 +124,7 @@ class SCEvmClosedForgerList(AccountChainSetup):
         evm_address_sc_node_1 = remove_0x_prefix(self.evm_address)
 
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(len(stakeList), 1)
+        assert_equal(1, len(stakeList))
 
         # check we have the expected content of the close forger list
         allowedForgerList = sc_node_1.transaction_allowedForgerList()["result"]
