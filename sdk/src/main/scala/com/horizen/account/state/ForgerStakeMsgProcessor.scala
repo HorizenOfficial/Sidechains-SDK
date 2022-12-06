@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
-import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake}
+import com.horizen.account.events.{DelegateForgerStake, OpenForgerStakeList, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
@@ -388,13 +388,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   }
 
   private def getAllowedForgersIndexList(view: BaseAccountStateView): Array[Byte] = {
+
+    if (networkParams.allowedForgersList.isEmpty){
+      throw new IllegalStateException("Illegal call when list of forger is empty")
+    }
+
     // get the forger list. Lazy init
     val restrictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
     if (restrictForgerList.sameElements(NULL_HEX_STRING_32)) {
       // it is the first time we access this item, do the init now
-      require(networkParams.restrictForgers)
-      require(networkParams.allowedForgersList.size > 0)
-
       val forgersIndexesArray = new Array[Byte](networkParams.allowedForgersList.size)
       view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, forgersIndexesArray)
     }
@@ -403,7 +405,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   }
 
   def doOpenStakeForgerListCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
-    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
+
+    if (!networkParams.restrictForgers) {
+      throw new ExecutionRevertedException("Illegal call when list of forger is not restricted")
+    }
+
+    if (networkParams.allowedForgersList.isEmpty){
+      throw new ExecutionRevertedException("Illegal call when list of forger is empty")
+    }
+
     if (msg.getNonce == null) {
       throw new ExecutionRevertedException("Call must include a nonce")
     }
@@ -434,12 +444,25 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException(s"Invalid signature, could not validate against blockSignerProposition=$blockSignerProposition")
     }
 
+    // check that the forger list is not already open
+    if (isForgerListOpenUnchecked(restrictForgerList)) {
+      throw new ExecutionRevertedException("Forger list already open")
+    }
+
+    // check that the index has not been already processed
+    if (restrictForgerList(forgerIndex) == 1) {
+      throw new ExecutionRevertedException("Forger index already processed")
+    }
+
     // modify the list
     restrictForgerList(forgerIndex) = 1
     view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, restrictForgerList)
 
-    restrictForgerList
+    val addOpenStakeForgerListEvt = OpenForgerStakeList(msg.getFrom, forgerIndex, blockSignerProposition)
+    val evmLog = getEvmLog(addOpenStakeForgerListEvt)
+    view.addLog(evmLog)
 
+    restrictForgerList
   }
 
   @throws(classOf[ExecutionFailedException])
@@ -457,11 +480,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   override private[horizen] def isForgerListOpen(view: BaseAccountStateView) = {
     if (params.restrictForgers) {
       val restrictForgerList = getAllowedForgersIndexList(view)
-      val isOpen : Boolean = (restrictForgerList.sum > restrictForgerList.length/2)
-      isOpen
+      isForgerListOpenUnchecked(restrictForgerList)
     } else {
       true
     }
+  }
+
+  // length is not checked, useful when the list has already been fetched and the gas paid
+  private def isForgerListOpenUnchecked(list: Array[Byte]) : Boolean = {
+    list.sum > list.length/2
   }
 
   override private[horizen] def getAllowedForgerListIndexes(view: BaseAccountStateView): Seq[Int] =

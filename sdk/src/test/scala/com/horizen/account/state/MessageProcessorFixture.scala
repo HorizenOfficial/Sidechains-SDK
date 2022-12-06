@@ -55,14 +55,15 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
       to: Array[Byte],
       value: BigInteger = BigInteger.ZERO,
       data: Array[Byte] = Array.emptyByteArray,
-      nonce: BigInteger = BigInteger.ZERO
+      nonce: BigInteger = BigInteger.ZERO,
+      from: Array[Byte] = null
   ): Message = {
     val gasPrice = BigInteger.ZERO
     val gasFeeCap = BigInteger.valueOf(1000001)
     val gasTipCap = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     new Message(
-      new AddressProposition(origin),
+      if (from == null) new AddressProposition(origin) else new AddressProposition(from),
       if (to == null) null else new AddressProposition(to),
       gasPrice,
       gasFeeCap,

@@ -100,9 +100,9 @@ class SCEvmClosedForgerList(AccountChainSetup):
 
 
         allowedForgerList = sc_node_1.transaction_allowedForgerList()["result"]
-        assert_equal(allowedForgerList['allowedForger'][0][0], 0)
-        assert_equal(allowedForgerList['allowedForger'][1][0], 0)
-        assert_equal(allowedForgerList['allowedForger'][2][0], 0)
+        assert_equal(allowedForgerList['allowedForgers'][0][0], 0)
+        assert_equal(allowedForgerList['allowedForgers'][1][0], 0)
+        assert_equal(allowedForgerList['allowedForgers'][2][0], 0)
 
         # Generate SC block and check that FT appears in SCs node wallet
         generate_next_block(sc_node_1, "first node")
@@ -161,9 +161,9 @@ class SCEvmClosedForgerList(AccountChainSetup):
         self.sc_sync_all()
 
         allowedForgerList = sc_node_1.transaction_allowedForgerList()["result"]
-        assert_equal(allowedForgerList['allowedForger'][0][0], 1)
-        assert_equal(allowedForgerList['allowedForger'][1][0], 0)
-        assert_equal(allowedForgerList['allowedForger'][2][0], 0)
+        assert_equal(allowedForgerList['allowedForgers'][0][0], 1)
+        assert_equal(allowedForgerList['allowedForgers'][1][0], 0)
+        assert_equal(allowedForgerList['allowedForgers'][2][0], 0)
 
         # Try to stake to an invalid blockSignProposition
         logging.info("Try to stake to an invalid blockSignProposition...")
@@ -191,9 +191,9 @@ class SCEvmClosedForgerList(AccountChainSetup):
         self.sc_sync_all()
 
         allowedForgerList = sc_node_1.transaction_allowedForgerList()["result"]
-        assert_equal(allowedForgerList['allowedForger'][0][0], 1)
-        assert_equal(allowedForgerList['allowedForger'][1][0], 1)
-        assert_equal(allowedForgerList['allowedForger'][2][0], 0)
+        assert_equal(allowedForgerList['allowedForgers'][0][0], 1)
+        assert_equal(allowedForgerList['allowedForgers'][1][0], 1)
+        assert_equal(allowedForgerList['allowedForgers'][2][0], 0)
 
         # Try to stake to a blockSignProposition not in the allowed forger list. This time must succeed since we just
         # open the forger list
