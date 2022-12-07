@@ -60,7 +60,7 @@ final class LibEvm {
         InteropResult<R> response = json.deserialize(type);
         if (response.isError()) {
             var message = String.format(
-                    "InvokeException{error='%s', method='%s', args=%s}",
+                    "Error: \"%s\" occurred for method %s, with arguments %s",
                     response.error,
                     method,
                     args == null ? null : args.toNative()
