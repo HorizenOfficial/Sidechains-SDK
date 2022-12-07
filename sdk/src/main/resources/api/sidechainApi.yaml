@@ -1016,18 +1016,44 @@ paths:
               properties:
                 keyType:
                   type: integer
-                  format: int64
+                  format: int32
+                  minimum: 0
+                  maximum: 1
                 keyIndex:
                   type: integer
-                  format: int64
+                  format: int32
+                  minimum: 0
+                  maximum: 500
                 newKey:
                   type: string
+                  format: byte
+                  minLength: 66
+                  maxLength: 66
                 signingKeySignature:
                   type: string
+                  format: byte
+                  minLength: 140
+                  maxLength: 140
                 masterKeySignature:
                   type: string
+                  format: byte
+                  minLength: 140
+                  maxLength: 140
                 newKeySignature:
                   type: string
+                  format: byte
+                  minLength: 140
+                  maxLength: 140
+                format:
+                  type: boolean
+                  nullable: true
+                automaticSend:
+                  type: boolean
+                  nullable: true
+                fee:
+                  type: integer
+                  format: int64
+                  nullable: true
       responses:
         '200':
           description: successful operation
