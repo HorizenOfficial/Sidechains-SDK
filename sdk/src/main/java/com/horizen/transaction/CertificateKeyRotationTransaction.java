@@ -115,7 +115,7 @@ public class CertificateKeyRotationTransaction extends SidechainNoncedTransactio
 
         if (keyRotationProof.newKey() == null) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "no newValueOfKey data present.", id()));
+                    "no newKey data present.", id()));
         }
 
         if (keyRotationProof.signingKeySignature() == null) {
@@ -180,7 +180,7 @@ public class CertificateKeyRotationTransaction extends SidechainNoncedTransactio
                                                            long fee,
                                                            int keyTypeEnumerationNumber,
                                                            int indexOfKey,
-                                                           SchnorrProposition newValueOfKey,
+                                                           SchnorrProposition newKey,
                                                            SchnorrProof signingKeySignature,
                                                            SchnorrProof masterKeySignature,
                                                            SchnorrProof newKeySignature
@@ -199,7 +199,7 @@ public class CertificateKeyRotationTransaction extends SidechainNoncedTransactio
             throw new IllegalArgumentException("Key type enumeration value should be valid!");
         }
         Enumeration.Value keyRotationProofType = KeyRotationProofTypes.apply(keyTypeEnumerationNumber);
-        KeyRotationProof keyRotationProof = new KeyRotationProof(keyRotationProofType, indexOfKey, newValueOfKey, signingKeySignature, masterKeySignature);
+        KeyRotationProof keyRotationProof = new KeyRotationProof(keyRotationProofType, indexOfKey, newKey, signingKeySignature, masterKeySignature);
 
         CertificateKeyRotationTransaction unsignedTransaction = new CertificateKeyRotationTransaction(from.getKey().id(), output, null, fee, CERTIFICATE_KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof, newKeySignature);
 

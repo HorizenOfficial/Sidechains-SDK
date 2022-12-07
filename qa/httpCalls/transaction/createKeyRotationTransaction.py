@@ -5,7 +5,7 @@ def http_create_key_rotation_transaction(sidechainNode, key_type, key_index, new
     j = {
         "keyType": key_type,
         "keyIndex": key_index,
-        "newValueOfKey": new_value_of_key,
+        "newKey": new_value_of_key,
         "signingKeySignature": signing_key_signature,
         "masterKeySignature": master_key_signature,
         "newKeySignature": new_key_signature,

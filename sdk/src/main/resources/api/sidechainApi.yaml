@@ -1007,34 +1007,27 @@ paths:
             schema:
               type: object
               required:
-                -transactionInputs
+                - keyType
+                - keyIndex
+                - newKey
+                - signingKeySignature
+                - masterKeySignature
+                - newKeySignature
               properties:
-                transactionInputs:
-                  type: array
-                  items:
-                    type: object
-                    required:
-                      - keyType
-                      - keyIndex
-                      - newKey
-                      - signingKeySignature
-                      - masterKeySignature
-                      - newKeySignature
-                    properties:
-                      keyType:
-                        type: integer
-                        format: int64
-                      keyIndex:
-                        type: integer
-                        format: int64
-                      newKey:
-                        type: string
-                      signingKeySignature:
-                        type: string
-                      masterKeySignature:
-                        type: string
-                      newKeySignature:
-                        type: string
+                keyType:
+                  type: integer
+                  format: int64
+                keyIndex:
+                  type: integer
+                  format: int64
+                newKey:
+                  type: string
+                signingKeySignature:
+                  type: string
+                masterKeySignature:
+                  type: string
+                newKeySignature:
+                  type: string
       responses:
         '200':
           description: successful operation
