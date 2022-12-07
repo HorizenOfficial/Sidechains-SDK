@@ -69,11 +69,7 @@ class EthService(
           case err: RpcException => throw err
           case reverted: ExecutionRevertedException =>
             throw new RpcException(
-              new RpcError(
-                RpcCode.ExecutionError.code,
-                reverted.getMessage,
-                Numeric.toHexString(reverted.revertReason)
-              )
+              new RpcError(RpcCode.ExecutionError.code, reverted.getMessage, Numeric.toHexString(reverted.revertReason))
             )
           case err: ExecutionFailedException =>
             throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
@@ -348,18 +344,21 @@ class EthService(
     using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
   }
 
-  private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
-    val history = nodeView.history
-    val blockId = tag match {
-      case "earliest" => history.blockIdByHeight(1)
+  private def parseBlockTag(nodeView: NV, tag: String): Int = {
+    tag match {
+      case "earliest" => 1
       case "finalized" | "safe" => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
-      case "latest" | "pending" | null => history.blockIdByHeight(history.getCurrentHeight)
-      case height => Try.apply(Numeric.decodeQuantity(height).intValueExact()).toOption.flatMap(history.blockIdByHeight)
+      case "latest" | "pending" | null => nodeView.history.getCurrentHeight
+      case height =>
+        Try
+          .apply(Numeric.decodeQuantity(height).intValueExact())
+          .filter(_ <= nodeView.history.getCurrentHeight)
+          .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null)))
     }
-    ModifierId(
-      blockId
-        .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null)))
-    )
+  }
+
+  private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
+    ModifierId(nodeView.history.blockIdByHeight(parseBlockTag(nodeView, tag)).get)
   }
 
   @RpcMethod("net_version")
@@ -709,5 +708,48 @@ class EthService(
     if (baseFee == null) tx.getMaxPriorityFeePerGas
     // we do not need to check if MaxFeePerGas is higher than baseFee, because the tx is already included in the block
     else tx.getMaxPriorityFeePerGas.min(tx.getMaxFeePerGas.subtract(baseFee))
+  }
+
+  @RpcMethod("eth_getLogs")
+  def getLogs(query: FilterQuery): Seq[EthereumLogView] = {
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        if (query.blockHash != null) {
+          // we currently need to get the block by blockhash and then retrieve the receipt for each tx via tx-hash
+          // geth retrieves all logs of a block by blockhash
+          val block = nodeView.history
+            .getStorageBlockById(bytesToId(query.blockHash.toBytes))
+            .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash")))
+          getBlockLogs(stateView, block)
+        } else {
+          val start = parseBlockTag(nodeView, query.fromBlock)
+          val end = parseBlockTag(nodeView, query.toBlock)
+          if (start > end) {
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
+          }
+          // get the logs from all blocks in the range into one flat list
+          (start to end).flatMap(blockNumber => {
+            nodeView.history
+              .blockIdByHeight(blockNumber)
+              .map(ModifierId(_))
+              .flatMap(nodeView.history.getStorageBlockById)
+              .map(getBlockLogs(stateView, _))
+              .get
+          })
+        }
+      }
+    }
+  }
+
+  def getBlockLogs(stateView: AccountStateView, block: AccountBlock): Seq[EthereumLogView] = {
+    block.sidechainTransactions
+      .map(_.id.toBytes)
+      .flatMap(stateView.getTransactionReceipt)
+      .flatMap(receipt =>
+        receipt.consensusDataReceipt.logs.zipWithIndex.map({ case (log, i) =>
+          // TODO: this sets logIndex to the index within the receipt, but it should be index within the block
+          new EthereumLogView(receipt, log, i)
+        })
+      )
   }
 }
