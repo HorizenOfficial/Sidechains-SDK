@@ -994,6 +994,71 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /transaction/createKeyRotationTransaction:
+    post:
+      tags:
+        - transaction
+      summary: creates and signs sidechain transaction for key rotation
+      description: Creates and signs sidechain transaction for signers or masters certificate submitter key rotation
+      operationId: createKeyRotationTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                -transactionInputs
+              properties:
+                transactionInputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - keyType
+                      - keyIndex
+                      - newKey
+                      - signingKeySignature
+                      - masterKeySignature
+                      - newKeySignature
+                    properties:
+                      keyType:
+                        type: integer
+                        format: int64
+                      keyIndex:
+                        type: integer
+                        format: int64
+                      newKey:
+                        type: string
+                      signingKeySignature:
+                        type: string
+                      masterKeySignature:
+                        type: string
+                      newKeySignature:
+                        type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /transaction/sendTransaction:
     post:
       tags:
