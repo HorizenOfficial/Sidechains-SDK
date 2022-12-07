@@ -10,7 +10,7 @@ import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.receipt.LogsBloom;
+import com.horizen.account.receipt.Bloom;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.state.*;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
@@ -717,7 +717,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 ForgingStakeInfo forgingStakeInfo = sidechainCreation.getAccountForgerStakeInfo();
 
-                LogsBloom logsBloom = new LogsBloom();
+                Bloom logsBloom = new Bloom();
 
                 AccountBlock accountBlock = AccountBlock.create(
                         params.sidechainGenesisBlockParentId(),
