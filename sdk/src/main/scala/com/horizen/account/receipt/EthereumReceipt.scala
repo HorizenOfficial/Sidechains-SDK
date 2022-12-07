@@ -66,10 +66,10 @@ case class EthereumReceipt(
         util.Arrays.equals(
           contractAddress.get,
           0,
-          contractAddress.get.length - 1,
+          if (contractAddress.get.length > 0) contractAddress.get.length - 1 else 0,
           other.contractAddress.get,
           0,
-          other.contractAddress.get.length - 1
+          if (other.contractAddress.get.length > 0) other.contractAddress.get.length - 1 else 0
         )
 
       case _ => false
