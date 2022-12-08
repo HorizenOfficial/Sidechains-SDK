@@ -43,6 +43,7 @@ public class EthereumReceiptView {
         var consensusLogs = JavaConverters.seqAsJavaList(receipt.consensusDataReceipt().logs());
         logs = new ArrayList<>(consensusLogs.size());
         for (var i = 0; i < consensusLogs.size(); i++) {
+            // TODO: the logIndex should refer to the index within the block, but this assigns it based on the index within the receipt
             logs.add(new EthereumLogView(receipt, consensusLogs.get(i), i));
         }
         logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom().getBytes());
