@@ -1930,7 +1930,7 @@ paths:
     post:
       tags:
         - submitter
-      summary: Returns certificate signer keys
+      summary: returns certificate signer keys
       description: Accepts number of withdrawal epoch and returns signer keys of certificate signers
       operationId: getCertifiersKeys
       requestBody:
@@ -2692,3 +2692,51 @@ components:
       properties:
         bytes:
           type: string
+
+    SchnorrProposition:
+      type: object
+      properties:
+        publicBytes:
+          type: array
+          items:
+            type: string
+            format: byte
+
+    SchnorrProof:
+      type: object
+      properties:
+        signature:
+          type: array
+          items:
+            type: string
+            format: byte
+
+    CertifiersKeys:
+      type: object
+      properties:
+        signingKeys:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchnorrProposition'
+        masterKeys:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchnorrProposition'
+
+    KeyRotationProof:
+      type: object
+      properties:
+        keyType:
+          type: string
+          enum:
+            - SigningKeyRotationProofType
+            - MasterKeyRotationProofType
+        index:
+          type: integer
+          format: int32
+        newKey:
+          $ref: '#/components/schemas/SchnorrProposition'
+        signingKeySignature:
+          $ref: '#/components/schemas/SchnorrProof'
+        masterKeySignature:
+          $ref: '#/components/schemas/SchnorrProof'
