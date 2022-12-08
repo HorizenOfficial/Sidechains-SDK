@@ -93,7 +93,7 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
 
         logging.info("Starting synchronization...")
-        sync_sc_blocks(self.sc_nodes, 100, True)
+        sync_sc_blocks(self.sc_nodes, 300, True)
         logging.info("Synchronization finished.")
 
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
