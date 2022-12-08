@@ -6,6 +6,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
+
 import static org.web3j.crypto.TransactionEncoder.createEip155SignatureData;
 
 import java.math.BigInteger;
@@ -44,6 +45,17 @@ public final class Secp256k1 {
         }
     }
 
+    public static Pair<byte[], byte[]> createKeyPair() {
+        try {
+            ECKeyPair keyPair = Keys.createEcKeyPair();
+            return new Pair<>(keyPair.getPrivateKey().toByteArray(), keyPair.getPublicKey().toByteArray());
+        } catch (Exception e) {
+            // TODO handle it
+            System.out.println("Exception: " + e.getMessage());
+            return null;
+        }
+    }
+
     public static boolean verify(byte[] v, byte[] r, byte[] s, byte[] message, byte[] address) {
         try {
             var signature = new Sign.SignatureData(v, r, s);
@@ -60,6 +72,11 @@ public final class Secp256k1 {
         var signature = Sign.signMessage(message, keyPair, true);
 
         return new SignatureSecp256k1(signature.getV(), signature.getR(), signature.getS());
+    }
+
+    public static Sign.SignatureData signMessage(byte[] message, Pair<byte[], byte[]> keyPair, boolean needToHash) {
+        ECKeyPair ecKeyPair = ECKeyPair.create(keyPair.getKey());
+        return Sign.signMessage(message, ecKeyPair, needToHash);
     }
 
     public static String checksumAddress(byte[] address) {
@@ -107,8 +124,8 @@ public final class Secp256k1 {
     }
 
     public enum TransactionType {
-        LEGACY((Byte)null),
-        EIP1559((byte)2);
+        LEGACY((Byte) null),
+        EIP1559((byte) 2);
 
         Byte type;
 
