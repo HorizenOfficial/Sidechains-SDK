@@ -713,6 +713,7 @@ class EthService(
 
   @RpcMethod("eth_getLogs")
   def getLogs(query: FilterQuery): Seq[EthereumLogView] = {
+    query.sanitize()
     applyOnAccountView { nodeView =>
       using(nodeView.state.getView) { stateView =>
         if (query.blockHash != null) {
@@ -747,8 +748,8 @@ class EthService(
    * github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:227
    */
   private def getBlockLogs(stateView: AccountStateView, block: AccountBlock, query: FilterQuery): Seq[EthereumLogView] = {
-    val filtered = query.addresses.length > 0 || query.topics.length > 0
-    if (filtered && !testBloom(block.header.logsBloom, query.addresses, query.topics)) {
+    val filtered = query.address.length > 0 || query.topics.length > 0
+    if (filtered && !testBloom(block.header.logsBloom, query.address, query.topics)) {
         // bail out if address or topic queries are given, but they fail the bloom filter test
         return Seq.empty
     }
@@ -766,7 +767,7 @@ class EthService(
       )
     if (filtered) {
       // return filtered logs
-      logs.filter(testLog(query.addresses, query.topics))
+      logs.filter(testLog(query.address, query.topics))
     } else {
       // return all logs
       logs
