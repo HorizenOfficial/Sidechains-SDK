@@ -12,6 +12,7 @@ import static org.web3j.crypto.TransactionEncoder.createEip155SignatureData;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.security.SignatureException;
+import java.util.Arrays;
 import java.util.Objects;
 
 public final class Secp256k1 {
@@ -121,6 +122,11 @@ public final class Secp256k1 {
 
     public static int getRecId(Sign.SignatureData signatureData, long chainId) {
         return Sign.getRecId(signatureData, chainId);
+    }
+
+    public static AddressProposition getAddress(byte[] publicKey) {
+        var hashedKey = Secp256k1.sha3(publicKey);
+        return new AddressProposition(Arrays.copyOfRange(hashedKey, hashedKey.length - Account.ADDRESS_SIZE, hashedKey.length));
     }
 
     public enum TransactionType {
