@@ -316,7 +316,7 @@ genesisinfo -f "~/dev/genesis_info_data.txt"
 where `genesis_info_data.txt` file contains proper json data `{"info":...}`.
 
 Note: For non ceasing sidechains forth parameter must be specified:  
-`"virtualWithdrawalEpochLength": 100` is the artificial withdrawal epoch length used only on the sidechain side
+`"virtualWithdrawalEpochLength": 100` is the artificial withdrawal epoch length used only on the sidechain side. The minimum value of virtualWithdrawalEpochLength for the RegTest network is 10 and for the MainNet and the TesNet is 100.   
 
 Output example:
 ```
