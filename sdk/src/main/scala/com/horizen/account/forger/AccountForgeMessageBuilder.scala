@@ -8,7 +8,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, LogsBloom}
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, Bloom}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
@@ -246,10 +246,8 @@ class AccountForgeMessageBuilder(
     // 8. set the fee payments hash
     val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
-    val logsBloom = new LogsBloom()
-    val logsBloomSeq = receiptList.map(r => r.logsBloom)
-
-    logsBloomSeq.foreach(l => logsBloom.addBloomFilter(l))
+    val logsBloom = new Bloom()
+    receiptList.map(_.logsBloom).foreach(logsBloom.merge)
 
     val block = AccountBlock.create(
       parentId,
@@ -306,7 +304,7 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),
-      new LogsBloom(),
+      new Bloom(),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 

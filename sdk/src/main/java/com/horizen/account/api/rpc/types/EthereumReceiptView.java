@@ -45,7 +45,7 @@ public class EthereumReceiptView {
         for (var i = 0; i < consensusLogs.size(); i++) {
             logs.add(new EthereumLogView(receipt, consensusLogs.get(i), i));
         }
-        logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom().getBloomFilter());
+        logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom().getBytes());
         status = Numeric.prependHexPrefix(Integer.toHexString(receipt.consensusDataReceipt().status()));
         // calculate effective gas price, this will work for both legacy and EIP1559 TXs
         effectiveGasPrice = Numeric.encodeQuantity(tx.getEffectiveGasPrice(baseFee));

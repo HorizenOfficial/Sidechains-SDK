@@ -1,7 +1,7 @@
 package com.horizen.account.receipt
 
-import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
@@ -17,7 +17,7 @@ case class EthereumConsensusDataReceipt(
     status: Int,
     cumulativeGasUsed: BigInteger,
     logs: Seq[EvmLog],
-    logsBloom: LogsBloom
+    logsBloom: Bloom
 ) {
 
   /*  From yellow paper
@@ -41,7 +41,7 @@ case class EthereumConsensusDataReceipt(
       status,
       cumulativeGasUsed,
       logs,
-      LogsBloom.fromEvmLog(logs)
+      Bloom.fromLogs(logs)
     )
   }
 
@@ -101,7 +101,7 @@ case class EthereumConsensusDataReceipt(
     logsString = logsString.concat("}")
 
     var logsBloomStr = "null"
-    logsBloomStr = BytesUtils.toHexString(logsBloom.getBloomFilter())
+    logsBloomStr = BytesUtils.toHexString(logsBloom.getBytes)
 
     String.format(
       s"EthereumReceipt (receipt consensus data) { txType=$getTxType, status=$getStatus, cumGasUsed=$cumulativeGasUsed, logs=$logsString, logsBloom=$logsBloomStr}"
@@ -147,7 +147,7 @@ object EthereumConsensusDataReceipt {
       status,
       cumulativeGasUsed,
       logs,
-      new LogsBloom(logsBloom)
+      new Bloom(logsBloom),
     )
   }
 
@@ -199,8 +199,8 @@ object EthereumConsensusDataReceipt {
       else new Array[Byte](0)
     result.add(RlpString.create(postTxState))
     result.add(RlpString.create(r.cumulativeGasUsed))
-    //bloom filters
-    result.add(RlpString.create(r.logsBloom.getBloomFilter()))
+    // bloom filter
+    result.add(RlpString.create(r.logsBloom.getBytes))
     // logs
     val rlpLogs = new util.ArrayList[RlpType]
     for (log <- r.logs) {
