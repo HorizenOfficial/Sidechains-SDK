@@ -37,8 +37,6 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override lazy val transactions: Seq[SidechainTypes#SCAT] = sidechainTransactions
 
-  def ethereumTransactions: Seq[EthereumTransaction] = sidechainTransactions.map(_.asInstanceOf[EthereumTransaction])
-
   def forgerPublicKey: AddressProposition = header.forgerAddress
 
   @throws(classOf[InconsistentSidechainBlockDataException])

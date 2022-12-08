@@ -5,6 +5,7 @@ import com.horizen.account.block.AccountBlock;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.account.utils.AccountBlockUtil;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
@@ -64,7 +65,7 @@ public class EthereumBlockView {
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
         this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
 
-        var transactions = scala.collection.JavaConverters.seqAsJavaList(block.ethereumTransactions());
+        var transactions = scala.collection.JavaConverters.seqAsJavaList(AccountBlockUtil.ethereumTransactions(block.transactions()));
 
         if (!hydratedTx) {
             this.transactions = transactions.stream().map(t -> Numeric.prependHexPrefix(t.id())).collect(Collectors.toList());
