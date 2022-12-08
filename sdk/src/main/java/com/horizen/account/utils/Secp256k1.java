@@ -46,17 +46,6 @@ public final class Secp256k1 {
         }
     }
 
-    public static Pair<byte[], byte[]> createKeyPair() {
-        try {
-            ECKeyPair keyPair = Keys.createEcKeyPair();
-            return new Pair<>(keyPair.getPrivateKey().toByteArray(), keyPair.getPublicKey().toByteArray());
-        } catch (Exception e) {
-            // TODO handle it
-            System.out.println("Exception: " + e.getMessage());
-            return null;
-        }
-    }
-
     public static boolean verify(byte[] v, byte[] r, byte[] s, byte[] message, byte[] address) {
         try {
             var signature = new Sign.SignatureData(v, r, s);

@@ -120,14 +120,6 @@ trait SecretFixture {
     new PrivateKeySecp256k1(privateKey)
   }
 
-  def getRandomSignatureSecp256k1: SignatureSecp256k1 = {
-    val payload = "This is string to sign"
-    val message = payload.getBytes(StandardCharsets.UTF_8)
-    val pair = Secp256k1.createKeyPair();
-    val signatureData = Secp256k1.signMessage(message, pair, true)
-    new SignatureSecp256k1(signatureData.getV, signatureData.getR, signatureData.getS)
-  }
-
   def getAddressProposition(seed: Long): AddressProposition = {
     getPrivateKeySecp256k1(seed).publicImage()
   }
