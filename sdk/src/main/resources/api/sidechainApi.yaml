@@ -1885,6 +1885,142 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /submitter/getSchnorrPublicKeyHash:
+    post:
+      tags:
+        - submitter
+      summary: returns hash of public key
+      description: Accepts public key and returns hash of the public key
+      operationId: getSchnorrPublicKeyHash
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - schnorrPublicKey
+              properties:
+                schnorrPublicKey:
+                  type: string
+                  description: public key of certificate signer
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      schnorrPublicKeyHash:
+                        type: string
+                        description: Hash of public key of certificate signer
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/getCertifiersKeys:
+    post:
+      tags:
+        - submitter
+      summary: Returns certificate signer keys
+      description: Accepts number of withdrawal epoch and returns signer keys of certificate signers
+      operationId: getCertifiersKeys
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - withdrawalEpoch
+              properties:
+                withdrawalEpoch:
+                  type: integer
+                  format: int32
+                  description: Withdrawal epoch of certificate signer keys
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      certifiersKeys:
+                        $ref: '#/components/schemas/CertifiersKeys'
+                        description: Signer and master certificate submitter keys
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/getKeyRotationProof:
+    post:
+      tags:
+        - submitter
+      summary: returns key rotation proof
+      description: Returns key rotation proof (key type, index of key, new key value and 2 signatures proving key rotation) if type of circuit is NaiveThresholdSignatureCircuitWithKeyRotation
+      operationId: getKeyRotationProof
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - withdrawalEpoch
+                - indexOfKey
+                - keyType
+              properties:
+                withdrawalEpoch:
+                  type: integer
+                  format: int32
+                indexOfKey:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                keyType:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  maximum: 1
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      keyRotationProof:
+                        $ref: '#/components/schemas/KeyRotationProof'
+                        description: Key rotation proof (key type, index of key, new key value and 2 signatures proving key rotation)
+                        nullable: true
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /submitter/isCertificateSubmitterEnabled:
     post:
       tags:
