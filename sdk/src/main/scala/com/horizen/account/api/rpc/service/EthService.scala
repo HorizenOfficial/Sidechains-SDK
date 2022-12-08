@@ -459,15 +459,15 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
-  def traceBlockByNumber(tag: String, traceOptions: TraceOptions): DebugTraceBlockView = {
+  def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
     applyOnAccountView { nodeView =>
       // get block to trace
-      val (block, blockInfo) = getBlockByTag(nodeView, tag)
+      val (block, blockInfo) = getBlockByTag(nodeView, number)
 
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceOptions == null) new TraceOptions() else traceOptions)
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {

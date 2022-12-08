@@ -25,7 +25,7 @@ type EvmParams struct {
 	GasPrice      *hexutil.Big     `json:"gasPrice"`
 	AccessList    types.AccessList `json:"accessList"`
 	Context       EvmContext       `json:"context"`
-	TxTraceParams *TraceParams     `json:"traceOptions"`
+	TraceOptions *TraceOptions     `json:"traceOptions"`
 }
 
 type EvmContext struct {
@@ -38,7 +38,7 @@ type EvmContext struct {
 	Random      *common.Hash   `json:"random"`
 }
 
-type TraceParams struct {
+type TraceOptions struct {
 	EnableMemory     bool `json:"enableMemory"`
 	DisableStack     bool `json:"disableStack"`
 	DisableStorage   bool `json:"disableStorage"`
@@ -112,7 +112,7 @@ func (c *EvmContext) getChainConfig() *params.ChainConfig {
 	}
 }
 
-func (t *TraceParams) getTracer() *logger.StructLogger {
+func (t *TraceOptions) getTracer() *logger.StructLogger {
 	if t == nil {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		blockContext = params.Context.getBlockContext()
 		chainConfig  = params.Context.getChainConfig()
-		tracer       = params.TxTraceParams.getTracer()
+		tracer       = params.TraceOptions.getTracer()
 		evmConfig    = vm.Config{
 			Debug:                   tracer != nil,
 			Tracer:                  tracer,
