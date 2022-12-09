@@ -86,10 +86,10 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
   def getSchnorrPublicKeyHash: Route = (post & path("getSchnorrPublicKeyHash")) {
     entity(as[ReqGetSchnorrPublicKeyHash]) { body =>
       try {
-        val publickKeyToHash = SchnorrPublicKey.deserialize(BytesUtils.fromHexString(body.schnorrPublicKey))
+        val schnorrPublicKey = SchnorrPublicKey.deserialize(BytesUtils.fromHexString(body.schnorrPublicKey))
         ApiResponseUtil.toResponse(
           RespHashSchnorrPublicKey(
-            BytesUtils.toHexString(publickKeyToHash.getHash.serializeFieldElement())
+            BytesUtils.toHexString(schnorrPublicKey.getHash.serializeFieldElement())
           )
         )
       } catch {

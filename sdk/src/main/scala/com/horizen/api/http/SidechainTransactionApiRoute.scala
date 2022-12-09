@@ -551,7 +551,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                     fee,
                     body.keyType,
                     body.keyIndex,
-                    SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newValueOfKey)),
+                    SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey)),
                     SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.signingKeySignature)),
                     SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.masterKeySignature)),
                     SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature)),
@@ -851,7 +851,7 @@ object SidechainTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateKeyRotationTransaction(keyType: Int,
                                                           keyIndex: Int,
-                                                          newValueOfKey: String,
+                                                          newKey: String,
                                                           signingKeySignature: String,
                                                           masterKeySignature: String,
                                                           newKeySignature: String,
@@ -859,7 +859,7 @@ object SidechainTransactionRestScheme {
                                                           automaticSend: Option[Boolean],
                                                  @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(keyIndex >= 0, "Key index negative")
-    require(newValueOfKey.nonEmpty, "newValueOfKey is empty")
+    require(newKey.nonEmpty, "newKey is empty")
     require(signingKeySignature.nonEmpty, "signingKeySignature is empty")
     require(masterKeySignature.nonEmpty, "masterKeySignature is empty")
     require(newKeySignature.nonEmpty, "newKeySignature is empty")

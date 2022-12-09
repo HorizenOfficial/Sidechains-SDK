@@ -398,6 +398,13 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         assert mastersPublicKeys.size() == signersPublicKeys.size() : "mastersPublicKeys and signersPublicKeys must have the same size";
 
+        for(int i = 0; i < mastersPublicKeys.size(); i++) {
+            if(Objects.equals(mastersPublicKeys.get(i), signersPublicKeys.get(i))) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("signersKey with index %d equals to mastersKey with index %d", i, i));
+                return;
+            }
+        }
+
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
             printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong threshold");
             return;

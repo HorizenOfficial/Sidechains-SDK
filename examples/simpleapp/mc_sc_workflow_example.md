@@ -119,7 +119,7 @@ Note:
 
 Note:
 - `signersPublicKeys` - list of Schnorr public signing keys of certificate Signers generated on step 5;
-- `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey;
+- `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey, mastersKeys have to be different from signersKeys;
 - `threshold` - the minimum set of participants required for a valid proof creation;
 - `isCSWEnabled` - Its value should be always false.
   Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys,
