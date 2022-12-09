@@ -1,12 +1,18 @@
 package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.horizen.account.api.rpc.handler.RpcException;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -54,7 +60,57 @@ public class FilterQuery {
      * <li>{{A, B}, {C, D}}   matches topic (A OR B) in first position AND (C OR D) in second position</li>
      * </ul>
      */
+    @JsonDeserialize(using = TopicsDeserializer.class)
     public Hash[][] topics;
+
+    public static class TopicsDeserializer extends JsonDeserializer<Hash[][]> {
+        @Override
+        public Hash[][] deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException {
+            JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+            if (!node.isArray()) {
+                throw new IOException("invalid topic filter, expected an array");
+            }
+            if (node.size() == 0) {
+                return new Hash[0][0];
+            }
+            var topics = new Hash[node.size()][];
+            for (int i = 0; i < node.size(); i++) {
+                var topic = node.get(i);
+                switch (topic.getNodeType()) {
+                    case NULL:
+                        // ignore topic when matching logs
+                        topics[i] = new Hash[0];
+                        break;
+                    case STRING: {
+                        // match specific topic
+                        topics[i] = new Hash[] { context.readTreeAsValue(topic, Hash.class) };
+                        break;
+                    }
+                    case ARRAY: {
+                        // or case e.g. [null, "topic0", "topic1"]
+                        topics[i] = new Hash[topic.size()];
+                        for (var j = 0; j < topic.size(); j++) {
+                            var subTopic = topic.get(j);
+                            if (subTopic.isNull()) {
+                                // null component, match all
+                                topics[i] = new Hash[0];
+                                break;
+                            }
+                            if (subTopic.isTextual()) {
+                                topics[i][j] = context.readTreeAsValue(subTopic, Hash.class);
+                                continue;
+                            }
+                            throw new IOException("invalid topic(s)");
+                        }
+                        break;
+                    }
+                    default:
+                        throw new IOException("invalid topic(s)");
+                }
+            }
+            return topics;
+        }
+    }
 
     public void sanitize() throws RpcException {
         if (blockHash != null) {
@@ -71,18 +127,9 @@ public class FilterQuery {
         if (address == null) {
             address = new Address[0];
         }
-        // TODO: sanitize topics
         if (topics == null) {
             topics = new Hash[0][0];
         }
-//        else if (topics.length > 0) {
-//            for (int i = 0; i < topics.length; i++) {
-//                Hash[] sub = topics[i];
-//                if (sub == null) {
-//                    topics[i] = new Hash[0];
-//                }
-//            }
-//        }
     }
 
     @Override

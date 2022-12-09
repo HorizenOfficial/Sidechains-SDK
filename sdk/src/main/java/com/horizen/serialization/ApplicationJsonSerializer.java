@@ -51,7 +51,6 @@ public class ApplicationJsonSerializer {
     public void setDefaultConfiguration() {
         objectMapper.registerModule(new DefaultScalaModule());
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        objectMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
         objectMapper.disable(MapperFeature.DEFAULT_VIEW_INCLUSION);
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
