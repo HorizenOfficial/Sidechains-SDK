@@ -3,6 +3,7 @@ package lib
 import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -82,4 +83,61 @@ func BenchmarkDatabaseTrieCache(b *testing.B) {
 
 func BenchmarkDatabaseCache(b *testing.B) {
 	benchDatabase(b, 64, 64)
+}
+
+// verifies that LevelDB properly persists data to disk on close
+func TestService_OpenLevelDB(t *testing.T) {
+	var (
+		instance = New()
+		addr     = common.HexToAddress("0x0011223344556677889900112233445566778899")
+		rootHash = common.Hash{}
+	)
+	dbPath := t.TempDir()
+	for i := 1; i < 10; i++ {
+		previous := big.NewInt(int64(i - 1))
+		next := big.NewInt(int64(i))
+		// open database
+		err, dbHandle := instance.OpenLevelDB(LevelDBParams{Path: dbPath})
+		if err != nil {
+			t.Fatalf("failed to open database: %v", err)
+		}
+		err, stateHandle := instance.StateOpen(StateParams{
+			DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+			Root:           rootHash,
+		})
+		if err != nil {
+			t.Fatalf("failed to open state: %v", err)
+		}
+		err, current := instance.StateGetBalance(AccountParams{
+			HandleParams: HandleParams{Handle: stateHandle},
+			Address:      addr,
+		})
+		if err != nil {
+			t.Fatalf("failed to get balance: %v", err)
+		}
+		// verify current state
+		if current.ToInt().Cmp(previous) != 0 {
+			t.Fatalf("invalid state: want %v got %v", previous, current.ToInt())
+		}
+		// update state
+		err = instance.StateSetBalance(BalanceParams{
+			AccountParams: AccountParams{
+				HandleParams: HandleParams{Handle: stateHandle},
+				Address:      addr,
+			},
+			Amount: (*hexutil.Big)(next),
+		})
+		if err != nil {
+			t.Fatalf("failed to set balance: %v", err)
+		}
+		err, rootHash = instance.StateCommit(HandleParams{Handle: stateHandle})
+		if err != nil {
+			t.Fatalf("failed to commit state: %v", err)
+		}
+		instance.StateClose(HandleParams{Handle: stateHandle})
+		err = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
+		if err != nil {
+			t.Fatalf("failed to close database: %v", err)
+		}
+	}
 }

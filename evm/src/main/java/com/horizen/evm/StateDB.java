@@ -164,16 +164,6 @@ public class StateDB extends ResourceHandle {
     }
 
     /**
-     * Set account code hash, without actually adding any code.
-     *
-     * @param address account address
-     * @param codeHash code hash to set
-     */
-    public void setCodeHash(byte[] address, byte[] codeHash) {
-        LibEvm.stateSetCodeHash(handle, address, codeHash);
-    }
-
-    /**
      * Get code for the given account.
      *
      * @param address account address
@@ -222,6 +212,8 @@ public class StateDB extends ResourceHandle {
 
     /**
      * Write to storage trie of given account.
+     * Note: Do not mix RAW and CHUNKED strategies for the same key,
+     * this can potentially lead to dangling nodes in the storage Trie and de facto infinite-loops.
      *
      * @param address account address
      * @param key storage key
