@@ -1,6 +1,5 @@
 package com.horizen.account.api.rpc.types;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -21,7 +20,6 @@ import java.util.Arrays;
  * github.com/ethereum/go-ethereum@v1.10.26/eth/filters/api.go:447
  * github.com/ethereum/go-ethereum@v1.10.26/ethclient/ethclient.go:390
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class FilterQuery {
     /**
      * used by eth_getLogs, return logs only from block with this hash
@@ -45,7 +43,7 @@ public class FilterQuery {
      * Deserialization is configured in a way to accept single values and parse them as an array with a single value.
      * </p>
      */
-    @JsonDeserialize(using = AddressesDeserializer.class)
+    @JsonDeserialize(using = AddressFiltereserializer.class)
     public Address[] address;
 
     /**
@@ -62,10 +60,10 @@ public class FilterQuery {
      * <li>{{A, B}, {C, D}}   matches topic (A OR B) in first position AND (C OR D) in second position</li>
      * </ul>
      */
-    @JsonDeserialize(using = TopicsDeserializer.class)
+    @JsonDeserialize(using = TopicFilterDeserializer.class)
     public Hash[][] topics;
 
-    public static class AddressesDeserializer extends JsonDeserializer<Address[]> {
+    private static class AddressFiltereserializer extends JsonDeserializer<Address[]> {
         @Override
         public Address[] deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException {
             JsonNode node = jsonParser.getCodec().readTree(jsonParser);
@@ -97,7 +95,7 @@ public class FilterQuery {
         }
     }
 
-    public static class TopicsDeserializer extends JsonDeserializer<Hash[][]> {
+    private static class TopicFilterDeserializer extends JsonDeserializer<Hash[][]> {
         @Override
         public Hash[][] deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException {
             JsonNode node = jsonParser.getCodec().readTree(jsonParser);
