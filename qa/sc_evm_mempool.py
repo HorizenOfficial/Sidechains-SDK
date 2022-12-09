@@ -4,6 +4,7 @@ import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.utils import convertZenToZennies
 from SidechainTestFramework.scutil import generate_next_block, \
@@ -79,14 +80,10 @@ class SCEvmMempool(AccountChainSetup):
         sc2_vrfPubKey = sc_node_2.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
 
         forgerStake_amount = 300  # Zen
-        forgerStakes = {"forgerStakeInfo": {
-            "ownerAddress": evm_address_sc1,  # SC node 1 is an owner
-            "blockSignPublicKey": sc2_blockSignPubKey,  # SC node 2 is a block signer
-            "vrfPubKey": sc2_vrfPubKey,
-            "value": convertZenToZennies(forgerStake_amount)  # in Satoshi
-        }
-        }
-        makeForgerStakeJsonRes = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
+
+        makeForgerStakeJsonRes = ac_makeForgerStake(sc_node_1, evm_address_sc1, sc2_blockSignPubKey,
+                                                    sc2_vrfPubKey,
+                                                    convertZenToZennies(forgerStake_amount))
         nonce_addr_1 += 1
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
