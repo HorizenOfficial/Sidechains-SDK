@@ -43,7 +43,7 @@ public class FilterQuery {
      * Deserialization is configured in a way to accept single values and parse them as an array with a single value.
      * </p>
      */
-    @JsonDeserialize(using = AddressFiltereserializer.class)
+    @JsonDeserialize(using = AddressFilterDeserializer.class)
     public Address[] address;
 
     /**
@@ -63,7 +63,7 @@ public class FilterQuery {
     @JsonDeserialize(using = TopicFilterDeserializer.class)
     public Hash[][] topics;
 
-    private static class AddressFiltereserializer extends JsonDeserializer<Address[]> {
+    private static class AddressFilterDeserializer extends JsonDeserializer<Address[]> {
         @Override
         public Address[] deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException {
             JsonNode node = jsonParser.getCodec().readTree(jsonParser);
