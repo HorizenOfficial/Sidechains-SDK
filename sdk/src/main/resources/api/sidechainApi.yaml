@@ -2714,15 +2714,6 @@ components:
             type: string
             format: byte
 
-    SchnorrProof:
-      type: object
-      properties:
-        signature:
-          type: array
-          items:
-            type: string
-            format: byte
-
     CertifiersKeys:
       type: object
       properties:
@@ -2747,8 +2738,8 @@ components:
           type: integer
           format: int32
         newKey:
-          $ref: '#/components/schemas/SchnorrProposition'
+          type: string
         signingKeySignature:
-          $ref: '#/components/schemas/SchnorrProof'
+          type: string
         masterKeySignature:
-          $ref: '#/components/schemas/SchnorrProof'
+          type: string
