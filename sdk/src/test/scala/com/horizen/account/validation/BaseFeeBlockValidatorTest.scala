@@ -15,7 +15,7 @@ import scala.util.Random
 
 class BaseFeeBlockValidatorTest extends JUnitSuite {
   val mockedGenesisBlock = AccountMockDataHelper(true).getMockedBlock(FeeUtils.INITIAL_BASE_FEE, 0,
-    FeeUtils.GAS_LIMIT, bytesToId(Numeric.hexStringToByteArray("123")) ,bytesToId(new Array[Byte](32)))
+    FeeUtils.GAS_LIMIT, bytesToId(Numeric.hexStringToByteArray("123")), bytesToId(new Array[Byte](32)))
 
   @Test
   def genesisBlockCheck(): Unit = {

@@ -26,25 +26,11 @@ case class AccountMockDataHelper(genesis: Boolean) {
   def getMockedAccountHistory(
       block: Optional[AccountBlock],
       parentBlock: Optional[AccountBlock] = null,
-      genesisBlockId: Option[String] = Option.empty
+      genesisBlockId: Option[String] = Option.empty[String]
   ): AccountHistory = {
     val history: AccountHistory = mock[AccountHistory]
     val blockId = block.get.id
-    val parentId = parentBlock.get().id
     val height = if (genesis) 2 else 1
-    val blockInfo = new SidechainBlockInfo(
-      height,
-      0,
-      parentId,
-      86400L * 2,
-      ModifierSemanticValidity.Unknown,
-      MainchainHeaderBaseInfo
-        .getMainchainHeaderBaseInfoSeqFromBlock(block.get(), FieldElementFixture.generateFieldElement()),
-      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block.get()),
-      WithdrawalEpochInfo(0, 0),
-      Option(VrfGenerator.generateVrfOutput(0)),
-      parentId
-    )
 
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
 
@@ -59,12 +45,28 @@ case class AccountMockDataHelper(genesis: Boolean) {
 
     Mockito.when(history.getBlockById(any())).thenReturn(Optional.empty[AccountBlock])
     Mockito.when(history.getBlockById(blockId)).thenReturn(block)
-    Mockito.when(history.getBlockById(parentId)).thenReturn(parentBlock)
 
     Mockito.when(history.getStorageBlockById(any())).thenReturn(Option.empty[AccountBlock])
     Mockito.when(history.getStorageBlockById(blockId)).thenReturn(Option(block.get()))
-    Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Option(parentBlock.get()))
-    Mockito.when(history.blockInfoById(blockId)).thenReturn(blockInfo)
+    if (parentBlock != null) {
+      val parentId = parentBlock.get().id
+      val blockInfo = new SidechainBlockInfo(
+        height,
+        0,
+        parentId,
+        86400L * 2,
+        ModifierSemanticValidity.Unknown,
+        MainchainHeaderBaseInfo
+          .getMainchainHeaderBaseInfoSeqFromBlock(block.get(), FieldElementFixture.generateFieldElement()),
+        SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block.get()),
+        WithdrawalEpochInfo(0, 0),
+        Option(VrfGenerator.generateVrfOutput(0)),
+        parentId
+      )
+      Mockito.when(history.getBlockById(parentId)).thenReturn(parentBlock)
+      Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Option(parentBlock.get()))
+      Mockito.when(history.blockInfoById(blockId)).thenReturn(blockInfo)
+    }
     history
   }
 
@@ -78,6 +80,7 @@ case class AccountMockDataHelper(genesis: Boolean) {
   ): AccountBlock = {
     val block: AccountBlock = mock[AccountBlock]
     val mcBlockRef: MainchainBlockReference = generateMainchainBlockReference()
+    val forgerAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))
     Mockito.when(block.header).thenReturn(mock[AccountBlockHeader])
     Mockito.when(block.header.parentId).thenReturn(parentBlockId)
     Mockito.when(block.id).thenReturn(blockId)
@@ -86,11 +89,12 @@ case class AccountMockDataHelper(genesis: Boolean) {
     Mockito.when(block.header.gasLimit).thenReturn(gasLimit)
     Mockito
       .when(block.header.forgerAddress)
-      .thenReturn(new AddressProposition(BytesUtils.fromHexString("1234567891011121314112345678910111213141")))
+      .thenReturn(forgerAddress)
     Mockito.when(block.sidechainTransactions).thenReturn(Seq[SidechainTypes#SCAT]())
     Mockito.when(block.transactions).thenReturn(txs)
     Mockito.when(block.mainchainHeaders).thenReturn(Seq(mcBlockRef.header))
     Mockito.when(block.mainchainBlockReferencesData).thenReturn(Seq(mcBlockRef.data))
+    Mockito.when(block.header.stateRoot).thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))
 
     block
   }
@@ -100,7 +104,10 @@ case class AccountMockDataHelper(genesis: Boolean) {
     Mockito.when(state.getView).thenReturn(mock[AccountStateView])
     Mockito.when(state.getView.getTransactionReceipt(any())).thenReturn(None)
     Mockito.when(state.getView.getTransactionReceipt(txHash)).thenReturn(Option(receipt))
+//    Mockito.when(state.getStateDbViewFromRoot(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))).thenReturn(state.getView)
+//    Mockito.when(state.getView.getCode(any())).thenReturn(null)
+//    Mockito.when(state.getView.getCode(BytesUtils.fromHexString("1234567890123456789012345678901234567890"))).thenReturn(BytesUtils.fromHexString("abcdef"))
+
     state
   }
-
 }
