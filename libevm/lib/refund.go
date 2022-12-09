@@ -11,6 +11,8 @@ import (
 // Original implementation can be found in go-ethereum, function "gasSStoreEIP2200":
 // github.com/ethereum/go-ethereum@v1.10.26/core/vm/gas_table.go:178
 //
+// This replicates gas refund logic including EIP3529.
+//
 // 0. If *gasleft* is less than or equal to 2300, fail the current call.
 // 1. If current value equals new value (this is a no-op), SLOAD_GAS is deducted.
 // 2. If current value does not equal new value:
