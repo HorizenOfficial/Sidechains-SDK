@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.horizen.account.secret.PrivateKeySecp256k1Creator;
 import com.horizen.account.utils.FeeUtils;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
@@ -248,11 +249,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         String accountPropositionStr;
 
         try {
-            ECKeyPair pair = Keys.createEcKeyPair(new SecureRandom(json.get("seed").asText().getBytes()));
 
             // private key
-            byte[] accountSecretBytes = Arrays.copyOf(pair.getPrivateKey().toByteArray(), Secp256k1.PRIVATE_KEY_SIZE);
-            PrivateKeySecp256k1 privKey = new PrivateKeySecp256k1(accountSecretBytes);
+            PrivateKeySecp256k1 privKey = PrivateKeySecp256k1Creator.getInstance().generateSecret(json.get("seed").asText().getBytes());
             SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
             accountSecretStr = BytesUtils.toHexString(secretsCompanion.toBytes(privKey));
 
@@ -261,7 +260,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             accountPropositionStr = BytesUtils.toHexString(addressProposition.address());
 
         } catch (Exception e) {
-            // throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException
             printGenerateAccountKeyUsageMsg("exception thrown: " + e.getMessage());
             return;
         }
@@ -506,12 +504,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                       "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
                       "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
                       "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
-                      "\t\t\"blockversion\": int - Optional, default = 1. UTXO model block version=1, Account model block version=2.\n" +
+                      "\t\t\"model\": String - Optional, default = 'utxo', 'account' model.\n" +
                 "\t}"
         );
         printer.print("Examples:\n" +
                       "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\"}\n\n" +
-                      "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \"blockversion\":2}\n\n" +
+                      "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \"model\":\"account\"}\n\n" +
                       "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \n" +
                       "\t\"updateconfig\": true, \"sourceconfig\":\"./template.conf\", \"resultconfig\":\"./result.conf\"}");
     }
@@ -524,18 +522,18 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        byte block_version;
-        if (json.has("blockversion"))
+        String model;
+        if (json.has("model"))
         {
-            block_version = (byte)json.get("blockversion").asInt();
-            if ( block_version != SidechainBlock.BLOCK_VERSION() &&
-                 block_version != AccountBlock.ACCOUNT_BLOCK_VERSION())
+            model = json.get("model").asText();
+            if ( !model.equals("account") &&
+                    !model.equals("utxo"))
             {
-                printGenesisInfoUsageMsg(String.format("Optional 'blockversion' integer field expected to be %d or %d.", SidechainBlock.BLOCK_VERSION(), AccountBlock.ACCOUNT_BLOCK_VERSION()));
+                printGenesisInfoUsageMsg("Optional 'model' string field expected to be 'utxo' or 'account'.");
                 return;
             }
         } else {
-            block_version = SidechainBlock.BLOCK_VERSION();
+            model = "utxo";
         }
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
@@ -683,11 +681,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             int withdrawalEpochLength;
             String sidechainBlockHex;
-
+            byte block_version;
 
             // are we building a utxo or account model based block?
-            if (block_version == AccountBlock.ACCOUNT_BLOCK_VERSION()) {
-
+            if (model.equals("account")) {
+                block_version = AccountBlock.ACCOUNT_BLOCK_VERSION();
                 // no fee payments expected for the genesis block
                 byte[] feePaymentsHash = AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH();
 
@@ -754,6 +752,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
             } else {
+                block_version = SidechainBlock.BLOCK_VERSION();
                 // no fee payments expected for the genesis block
                 byte[] feePaymentsHash = FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH();
 
