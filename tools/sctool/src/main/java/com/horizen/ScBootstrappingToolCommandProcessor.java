@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.horizen.account.secret.PrivateKeySecp256k1Creator;
 import com.horizen.account.utils.FeeUtils;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
@@ -17,7 +18,6 @@ import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.account.utils.AccountFeePaymentsUtils;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
-import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
 import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
@@ -43,9 +43,7 @@ import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
-import org.web3j.crypto.Keys;
 import scala.Enumeration;
-import org.web3j.crypto.ECKeyPair;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
 
@@ -219,7 +217,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     }
 
     private  void processGenerateVrfKey(JsonNode json) {
-
         if(!json.has("seed") || !json.get("seed").isTextual()) {
             printGenerateVrfKeyUsageMsg("seed is not specified or has invalid format.");
             return;
@@ -238,37 +235,17 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     }
 
     private void processGenerateAccountKey(JsonNode json) {
-
         if(!json.has("seed") || !json.get("seed").isTextual()) {
             printGenerateAccountKeyUsageMsg("seed is not specified or has invalid format.");
             return;
         }
 
-        String accountSecretStr;
-        String accountPropositionStr;
-
-        try {
-            ECKeyPair pair = Keys.createEcKeyPair(new SecureRandom(json.get("seed").asText().getBytes()));
-
-            // private key
-            byte[] accountSecretBytes = Arrays.copyOf(pair.getPrivateKey().toByteArray(), Secp256k1.PRIVATE_KEY_SIZE);
-            PrivateKeySecp256k1 privKey = new PrivateKeySecp256k1(accountSecretBytes);
-            SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
-            accountSecretStr = BytesUtils.toHexString(secretsCompanion.toBytes(privKey));
-
-            // public key
-            AddressProposition addressProposition = privKey.publicImage();
-            accountPropositionStr = BytesUtils.toHexString(addressProposition.address());
-
-        } catch (Exception e) {
-            // throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException
-            printGenerateAccountKeyUsageMsg("exception thrown: " + e.getMessage());
-            return;
-        }
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+        PrivateKeySecp256k1 secret = PrivateKeySecp256k1Creator.getInstance().generateSecret(json.get("seed").asText().getBytes());
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
-        resJson.put("accountSecret", accountSecretStr);
-        resJson.put("accountProposition", accountPropositionStr);
+        resJson.put("accountSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secret)));
+        resJson.put("accountProposition", BytesUtils.toHexString(secret.publicImage().pubKeyBytes()));
 
         String res = resJson.toString();
         printer.print(res);

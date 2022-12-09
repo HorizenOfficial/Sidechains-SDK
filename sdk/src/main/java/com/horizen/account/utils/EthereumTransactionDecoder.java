@@ -16,7 +16,33 @@ import static com.horizen.account.utils.Secp256k1.*;
 
 public class EthereumTransactionDecoder {
 
-    public EthereumTransactionDecoder() {
+    private EthereumTransactionDecoder() {
+        // prevent instantiation
+    }
+
+    // TODO: replace with EthereumTransaction.EthereumTransactionType
+    // TODO: detect AccessListTxType during decode -> throw exception
+    public enum TransactionType {
+        LEGACY(null),
+        EIP1559((byte) 2);
+
+        final Byte type;
+
+        TransactionType(Byte type) {
+            this.type = type;
+        }
+
+        public Byte getRlpType() {
+            return this.type;
+        }
+
+        public boolean isLegacy() {
+            return this.equals(LEGACY);
+        }
+
+        public boolean isEip1559() {
+            return this.equals(EIP1559);
+        }
     }
 
     public static EthereumTransaction decode(String hexTransaction) {
@@ -104,11 +130,15 @@ public class EthereumTransactionDecoder {
         }
     }
 
-    public static Long decodeEip155ChainId(byte[] bv) {
+    private static Long decodeEip155ChainId(byte[] bv) {
         long v = convertToLong(bv);
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
             return null;
         }
         return (v - CHAIN_ID_INC) / 2;
+    }
+
+    private static byte[] getVFromRecId(int recId) {
+        return new byte[]{(byte)(27 + recId)};
     }
 }

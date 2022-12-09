@@ -1,46 +1,49 @@
 package com.horizen.account.fixtures
 
+import com.google.common.primitives.Ints
 import com.horizen.account.proof.SignatureSecp256k1
+import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.GasUtil
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.EthereumTransactionUtils
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Sign.SignatureData
-import org.web3j.crypto._
+
 import java.lang
 import java.math.BigInteger
 import java.util.Optional
+import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
 trait EthereumTransactionFixture {
 
 
   def createLegacyTransaction(value: BigInteger,
                               nonce: BigInteger = BigInteger.ZERO,
-                              pairOpt: Option[ECKeyPair] = None,
+                              keyOpt: Option[PrivateKeySecp256k1] = None,
                               gasPrice: BigInteger = BigInteger.valueOf(10000),
                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
     val unsignedTx = new EthereumTransaction(
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
       nonce, gasPrice, gasLimit, value, new Array[Byte](0), null)
-    createSignedTransaction(unsignedTx, pairOpt)
+    createSignedTransaction(unsignedTx, keyOpt)
   }
 
   def createLegacyEip155Transaction(value: BigInteger,
-                              nonce: BigInteger = BigInteger.ZERO,
-                              pairOpt: Option[ECKeyPair] = None,
-                              gasPrice: BigInteger = BigInteger.valueOf(10000),
-                              gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
+                                    nonce: BigInteger = BigInteger.ZERO,
+                                    keyOpt: Option[PrivateKeySecp256k1] = None,
+                                    gasPrice: BigInteger = BigInteger.valueOf(10000),
+                                    gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
 
     val unsignedTx = new EthereumTransaction(
       1997L,
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
       nonce, gasPrice, gasLimit, value, new Array[Byte](0), null)
-    createSignedLegacyEip155Transaction(unsignedTx, pairOpt)
+    createSignedTransaction(unsignedTx, keyOpt)
   }
 
   def createEIP1559Transaction(value: BigInteger,
                                nonce: BigInteger = BigInteger.ZERO,
-                               pairOpt: Option[ECKeyPair] = None,
+                               keyOpt: Option[PrivateKeySecp256k1] = None,
                                gasFee: BigInteger = BigInteger.valueOf(10000),
                                priorityGasFee: BigInteger = BigInteger.valueOf(10000),
                                gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
@@ -49,32 +52,22 @@ trait EthereumTransactionFixture {
       1997L,
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
       nonce, gasLimit, priorityGasFee, gasFee, value, new Array[Byte](0), null)
-    createSignedTransaction(unsignedTx, pairOpt)
+    createSignedTransaction(unsignedTx, keyOpt)
   }
 
-  private def createSignedTransaction(unsignedTx: EthereumTransaction, pairOpt: Option[ECKeyPair]): EthereumTransaction = {
+  private def createSignedTransaction(unsignedTx: EthereumTransaction, keyOpt: Option[PrivateKeySecp256k1]): EthereumTransaction = {
+    // Create a key if not present, create tx signature and create ethereum Transaction
+    val key = keyOpt.getOrElse( {
+      val seed = new Array[Byte](10)
+      Random.nextBytes(seed)
+      PrivateKeySecp256k1Creator.getInstance().generateSecret(seed)
+    })
+
     val message = unsignedTx.messageToSign()
+    val signature: SignatureSecp256k1 = key.sign(message)
 
-    // Create a key pair, create tx signature and create ethereum Transaction
-    val pair = pairOpt.getOrElse(Keys.createEcKeyPair)
-    val msgSignature = Sign.signMessage(message, pair, true)
-    new EthereumTransaction(unsignedTx,
-      new SignatureSecp256k1(msgSignature.getV, msgSignature.getR, msgSignature.getS)
-    )
+    new EthereumTransaction(unsignedTx, signature)
   }
-
-  private def createSignedLegacyEip155Transaction(unsignedTx: EthereumTransaction, pairOpt: Option[ECKeyPair]): EthereumTransaction = {
-    val message = unsignedTx.messageToSign()
-
-    // Create a key pair, create tx signature and create ethereum Transaction
-    val pair = pairOpt.getOrElse(Keys.createEcKeyPair)
-    val msgSignature = Sign.signMessage(message, pair, true)
-    new EthereumTransaction(unsignedTx,
-      new SignatureSecp256k1(
-        msgSignature.getV, msgSignature.getR, msgSignature.getS)
-    )
-  }
-
 
   def getEoa2EoaLegacyTransaction: EthereumTransaction = {
     new EthereumTransaction(
@@ -356,33 +349,31 @@ trait EthereumTransactionFixture {
                           numOfTxsPerAccount: Int,
                           orphanIdx: Int = -1
                         ): scala.collection.mutable.ListBuffer[EthereumTransaction] = {
-    val toAddr = "0x00112233445566778899AABBCCDDEEFF01020304"
     val value = BigInteger.valueOf(12)
 
     val baseGas = 10000
     val maxGasFee = BigInteger.valueOf(baseGas + numOfAccount * numOfTxsPerAccount)
-    val listOfAccounts: scala.collection.mutable.ListBuffer[Option[ECKeyPair]] =
-      new scala.collection.mutable.ListBuffer[Option[ECKeyPair]]
+    val listOfAccounts: ListBuffer[Option[PrivateKeySecp256k1]] = ListBuffer[Option[PrivateKeySecp256k1]]()
     val listOfTxs = new scala.collection.mutable.ListBuffer[EthereumTransaction]
 
     // CircularPriorityGasBuilder is used to guarantee the txs with the highest fees
     // don't come all from the same accounts
     val gasBuilder = new CircularPriorityGasBuilder(baseGas, 17)
 
-    (1 to numOfAccount).foreach(_ => {
-      listOfAccounts += Some(Keys.createEcKeyPair())
+    (1 to numOfAccount).foreach(idx => {
+      listOfAccounts += Some(PrivateKeySecp256k1Creator.getInstance().generateSecret(Ints.toByteArray(idx)))
     })
 
     (0 until numOfTxsPerAccount).foreach(nonceTx => {
       val currentNonce = BigInteger.valueOf(nonceTx)
 
       listOfAccounts.zipWithIndex.foreach {
-        case (pair, idx) => {
+        case (keyOpt, idx) => {
           if (idx % 10 == 0 && orphanIdx >= 0 && nonceTx >= orphanIdx) { // Create orphans
             listOfTxs += createEIP1559Transaction(
               value,
               nonce = BigInteger.valueOf(nonceTx + 1),
-              pairOpt = pair,
+              keyOpt = keyOpt,
               gasFee = maxGasFee,
               priorityGasFee = gasBuilder.nextPriorityGas()
             )
@@ -390,7 +381,7 @@ trait EthereumTransactionFixture {
             listOfTxs += createEIP1559Transaction(
               value,
               nonce = currentNonce,
-              pairOpt = pair,
+              keyOpt = keyOpt,
               gasFee = maxGasFee,
               priorityGasFee = gasBuilder.nextPriorityGas()
             )

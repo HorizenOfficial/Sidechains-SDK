@@ -1,19 +1,11 @@
 package com.horizen.account.proposition;
 
-import com.horizen.account.utils.Account;
+import com.horizen.account.secret.PrivateKeySecp256k1;
+import com.horizen.account.secret.PrivateKeySecp256k1Creator;
 import com.horizen.proposition.PropositionSerializer;
-import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
-import org.web3j.crypto.ECKeyPair;
-import org.web3j.crypto.Keys;
 import scala.util.Try;
-
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.util.Arrays;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -21,11 +13,10 @@ public class AddressPropositionSerializerTest {
     AddressProposition addressProposition;
 
     @Before
-    public void BeforeEachTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
+    public void BeforeEachTest() {
         // Create a key pair and create proposition
-        ECKeyPair pair = Keys.createEcKeyPair();
-        byte[] address = Arrays.copyOf(BytesUtils.fromHexString(Keys.getAddress(pair)), Account.ADDRESS_SIZE);
-        addressProposition = new AddressProposition(address);
+        PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("addressproptest".getBytes());
+        addressProposition = privateKey.publicImage();
     }
 
     @Test

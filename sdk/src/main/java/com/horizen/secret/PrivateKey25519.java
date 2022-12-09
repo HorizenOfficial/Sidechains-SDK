@@ -79,10 +79,8 @@ public final class PrivateKey25519 implements Secret
 
     @Override
     public String toString() {
-        return "PrivateKey25519{" +
-                "privateKeyBytes=" + BytesUtils.toHexString(privateKeyBytes) +
-                ", publicKeyBytes=" + BytesUtils.toHexString(publicKeyBytes) +
-                '}';
+        // Show only the first 4 bytes to protect the key
+        return String.format("PrivateKey25519{privateKey=%s}", BytesUtils.toHexString(privateKeyBytes).substring(0, 8));
     }
 
     @Override

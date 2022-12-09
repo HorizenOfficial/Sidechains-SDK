@@ -2,18 +2,13 @@ package com.horizen.account.transaction
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.utils.EthereumTransactionUtils
+import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import org.web3j.crypto.transaction.`type`.TransactionType
 import sparkz.core.utils.SparkzEncoder
-
-import java.math.BigInteger
-import java.util
 
 class EthereumTransactionJsonSerializationTest
   extends JUnitSuite
@@ -165,7 +160,7 @@ class EthereumTransactionJsonSerializationTest
       assertTrue(node.path("maxFeePerGas").isMissingNode)
       assertTrue(node.path("maxPriorityFeePerGas").isMissingNode)
     } else
-    if (txType == TransactionType.EIP1559.getRlpType) {
+    if (txType == EthereumTransactionDecoder.TransactionType.EIP1559.getRlpType) {
       assertTrue(node.path("gasPrice").isMissingNode)
 
       try {

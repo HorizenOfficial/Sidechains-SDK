@@ -1,19 +1,15 @@
 package com.horizen.account.utils;
 
-import com.horizen.account.proof.SignatureSecp256k1;
-import com.horizen.account.proposition.AddressProposition;
-import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
-
-import static org.web3j.crypto.TransactionEncoder.createEip155SignatureData;
+import scorex.crypto.hash.Keccak256;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.util.Arrays;
-import java.util.Objects;
+import java.security.*;
 
 public final class Secp256k1 {
     private static final int COORD_SIZE = 32;
@@ -30,114 +26,69 @@ public final class Secp256k1 {
 
     public static final int LOWER_REAL_V = Sign.LOWER_REAL_V;
 
+    public static class Signature {
+        public final byte[] v;
+        public final byte[] r;
+        public final byte[] s;
+
+        public Signature(byte[] v, byte[] r, byte[] s) {
+            this.v = v;
+            this.r = r;
+            this.s = s;
+        }
+    }
+
     private Secp256k1() {
         // prevent instantiation
     }
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
-        // Check why is this failing
         try {
             ECKeyPair keyPair = Keys.createEcKeyPair(new SecureRandom(seed));
-            return new Pair<>(keyPair.getPrivateKey().toByteArray(), keyPair.getPublicKey().toByteArray());
-        } catch (Exception e) {
-            // TODO handle it
-            System.out.println("Exception: " + e.getMessage());
+            byte[] privateKey = Numeric.toBytesPadded(keyPair.getPrivateKey(), PRIVATE_KEY_SIZE);
+            byte[] publicKey = Numeric.toBytesPadded(keyPair.getPublicKey(), PUBLIC_KEY_SIZE);
+            return new Pair<>(privateKey, publicKey);
+        } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException e) {
+            // Should never happen
             return null;
         }
     }
 
-    public static boolean verify(byte[] v, byte[] r, byte[] s, byte[] message, byte[] address) {
-        try {
-            var signature = new Sign.SignatureData(v, r, s);
-            var signingAddress = Keys.getAddress(Sign.signedMessageToKey(message, signature));
+    public static byte[] signedMessageToAddress(byte[] message, byte[] v, byte[] r, byte[] s) throws SignatureException {
+        Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
+        BigInteger pubKey = Sign.signedMessageToKey(message, signatureData);
+        return getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE));
+    }
 
-            return Objects.equals(signingAddress, BytesUtils.toHexString(address));
+    public static boolean verify(byte[] message, byte[] v, byte[] r, byte[] s, byte[] address) {
+        try {
+            byte[] signingAddress = signedMessageToAddress(message, v, r, s);
+            return Arrays.equals(signingAddress, address);
         } catch (SignatureException e) {
+            // invalid signature or could not recover public key from signature
             return false;
         }
     }
 
-    public static SignatureSecp256k1 sign(byte[] privateKey, byte[] message) {
+    public static Signature sign(byte[] privateKey, byte[] message) {
         ECKeyPair keyPair = ECKeyPair.create(privateKey);
-        var signature = Sign.signMessage(message, keyPair, true);
+        Sign.SignatureData signatureData = Sign.signMessage(message, keyPair, true);
 
-        return new SignatureSecp256k1(signature.getV(), signature.getR(), signature.getS());
-    }
-
-    public static Sign.SignatureData signMessage(byte[] message, Pair<byte[], byte[]> keyPair, boolean needToHash) {
-        ECKeyPair ecKeyPair = ECKeyPair.create(keyPair.getKey());
-        return Sign.signMessage(message, ecKeyPair, needToHash);
-    }
-
-    public static String checksumAddress(byte[] address) {
-        return Keys.toChecksumAddress(BytesUtils.toHexString(address));
+        return new Signature(signatureData.getV(), signatureData.getR(), signatureData.getS());
     }
 
     public static byte[] getPublicKey(byte[] privateKey) {
         return Numeric.toBytesPadded(ECKeyPair.create(privateKey).getPublicKey(), Secp256k1.PUBLIC_KEY_SIZE);
     }
 
-    public static byte[] sha3(byte[] input) {
-        return Hash.sha3(input);
+    public static byte[] getAddress(byte[] publicKey) {
+        // Address is the last Account.ADDRESS_SIZE bytes of public key Keccak256 hash
+        byte[] hashedKey = (byte[]) Keccak256.hash(publicKey);
+
+        return Arrays.copyOfRange(hashedKey, hashedKey.length - Account.ADDRESS_SIZE, hashedKey.length);
     }
 
-    public static byte[] sha3(byte[] input, int offset, int length) {
-        return Hash.sha3(input, offset, length);
-    }
-
-    public static BigInteger signedMessageToKey(byte[] message, Sign.SignatureData signatureData) throws SignatureException {
-        return Sign.signedMessageToKey(message, signatureData);
-    }
-
-    public static AddressProposition getAddressFromPublicKey(BigInteger publicKey) {
-        return new AddressProposition(Keys.getAddress(Numeric.toBytesPadded(publicKey, PUBLIC_KEY_SIZE)));
-    }
-
-    public static Sign.SignatureData getSignatureData(byte[] v, byte[] r, byte[] s) {
-        return new Sign.SignatureData(v, r, s);
-    }
-
-    public static byte[] generateContractAddress(byte[] address, BigInteger nonce) {
-        return ContractUtils.generateContractAddress(address, nonce);
-    }
-
-    public static byte[] getVFromRecId(int recId) {
-        return Sign.getVFromRecId(recId);
-    }
-
-    public static Sign.SignatureData createEip155SignatureData(Sign.SignatureData signatureData, long chainId) {
-        return TransactionEncoder.createEip155SignatureData(signatureData, chainId);
-    }
-
-    public static int getRecId(Sign.SignatureData signatureData, long chainId) {
-        return Sign.getRecId(signatureData, chainId);
-    }
-
-    public static AddressProposition getAddress(byte[] publicKey) {
-        var hashedKey = Secp256k1.sha3(publicKey);
-        return new AddressProposition(Arrays.copyOfRange(hashedKey, hashedKey.length - Account.ADDRESS_SIZE, hashedKey.length));
-    }
-
-    public enum TransactionType {
-        LEGACY((Byte) null),
-        EIP1559((byte) 2);
-
-        Byte type;
-
-        private TransactionType(Byte type) {
-            this.type = type;
-        }
-
-        public Byte getRlpType() {
-            return this.type;
-        }
-
-        public boolean isLegacy() {
-            return this.equals(LEGACY);
-        }
-
-        public boolean isEip1559() {
-            return this.equals(EIP1559);
-        }
+    public static String checksumAddress(byte[] address) {
+        return Keys.toChecksumAddress(Numeric.toHexString(address));
     }
 }

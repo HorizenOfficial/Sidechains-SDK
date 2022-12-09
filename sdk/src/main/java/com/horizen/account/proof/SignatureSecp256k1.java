@@ -9,7 +9,6 @@ import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
-import org.web3j.crypto.Sign;
 
 @JsonView(Views.Default.class)
 public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp256k1, AddressProposition> {
@@ -51,7 +50,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
 
     @Override
     public boolean isValid(AddressProposition proposition, byte[] message) {
-        return Secp256k1.verify(this.v, this.r, this.s, message, proposition.address());
+        return Secp256k1.verify(message, this.v, this.r, this.s, proposition.address());
     }
 
     @Override
@@ -79,9 +78,5 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
                 BytesUtils.toHexString(r),
                 BytesUtils.toHexString(s)
         );
-    }
-
-    public Sign.SignatureData getSignatureData() {
-        return Secp256k1.getSignatureData(this.v, this.r, this.s);
     }
 }

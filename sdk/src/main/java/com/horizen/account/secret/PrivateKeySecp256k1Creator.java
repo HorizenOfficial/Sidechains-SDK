@@ -35,7 +35,7 @@ public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKe
     public PrivateKeySecp256k1 generateNextSecret(NodeWalletBase wallet) {
         List<Secret> prevSecrets = wallet.secretsOfType(PrivateKeySecp256k1.class);
         byte[] nonce = Ints.toByteArray(prevSecrets.size());
-        byte[] seed = Keccak256.hash(Bytes.concat(wallet.walletSeed(), nonce));
+        byte[] seed = (byte[]) Keccak256.hash(Bytes.concat(wallet.walletSeed(), nonce));
 
         return generateSecret(seed);
     }

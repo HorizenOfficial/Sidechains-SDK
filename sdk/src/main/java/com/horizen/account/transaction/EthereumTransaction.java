@@ -16,6 +16,8 @@ import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
+import scorex.crypto.hash.Keccak256;
+
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.Optional;
@@ -66,7 +68,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private synchronized String getTxHash() {
         if (this.hashString == null) {
             byte[] encodedMessage = encode(isSigned());
-            this.hashString = BytesUtils.toHexString(Secp256k1.sha3(encodedMessage, 0, encodedMessage.length));
+            this.hashString = BytesUtils.toHexString((byte[]) Keccak256.hash(encodedMessage));
         }
         return this.hashString;
     }
@@ -376,9 +378,14 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (this.from == null && this.signature != null) {
             try {
                 byte[] encodedTransaction = encode(false);
-
-                BigInteger pubKey = Secp256k1.signedMessageToKey(encodedTransaction, this.signature.getSignatureData());
-                this.from = Secp256k1.getAddressFromPublicKey(pubKey);
+                this.from = new AddressProposition(
+                        Secp256k1.signedMessageToAddress(
+                                encodedTransaction,
+                                signature.getV(),
+                                signature.getR(),
+                                signature.getS()
+                        )
+                );
             } catch (Exception e) {
                 // whatever exception may result in processing the signature, we can not tell the from address
                 LogManager.getLogger().info("Could not find from address, Signature not valid:", e);
@@ -480,10 +487,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public byte[] encode(boolean accountSignature) {
-        if (this.isEIP1559()) {
-            return EthereumTransactionEncoder.encodeEip1559AsRlpValues(this, accountSignature);
-        } else {
-            return EthereumTransactionEncoder.encodeLegacyAsRlpValues(this, accountSignature);
-        }
+        return EthereumTransactionEncoder.encodeAsRlpValues(this, accountSignature);
     }
 }

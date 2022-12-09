@@ -2,12 +2,11 @@ package com.horizen.account.secret;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.utils.Account;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
-import org.web3j.utils.Numeric;
+import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
@@ -18,7 +17,6 @@ public final class PrivateKeySecp256k1 implements Secret {
     private static final byte privateKeySecp256k1SecretId = PrivateKeySecp256k1SecretId.id();
 
     private final byte[] privateKey;
-    private final byte[] publicKey;
 
     private final AddressProposition address;
 
@@ -31,8 +29,7 @@ public final class PrivateKeySecp256k1 implements Secret {
             ));
         }
         this.privateKey = Arrays.copyOf(privateKey, Secp256k1.PRIVATE_KEY_SIZE);
-        this.publicKey = Secp256k1.getPublicKey(privateKey);
-        this.address = Secp256k1.getAddress(this.publicKey);
+        this.address = new AddressProposition(Secp256k1.getAddress(Secp256k1.getPublicKey(privateKey)));
     }
 
     @Override
@@ -71,7 +68,8 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public SignatureSecp256k1 sign(byte[] message) {
-        return Secp256k1.sign(privateKey, message);
+        Secp256k1.Signature signature = Secp256k1.sign(privateKey, message);
+        return new SignatureSecp256k1(signature.v, signature.r, signature.s);
     }
 
     public byte[] privateKeyBytes() {
@@ -80,6 +78,7 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public String toString() {
-        return String.format("PrivateKeySecp256k1{privateKey=%s}", Numeric.toHexString(privateKey));
+        // Show only the first 4 bytes to protect the key
+        return String.format("PrivateKeySecp256k1{privateKey=%s}", BytesUtils.toHexString(privateKey).substring(0, 8));
     }
 }
