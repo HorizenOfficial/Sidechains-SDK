@@ -50,77 +50,77 @@ done
 testScripts=(
     'mc_sc_connected_nodes.py'
     'mc_sc_forging1.py'
-    'mc_sc_forging2.py'
-    'mc_sc_forging3.py'
-    'mc_sc_forging4.py'
-    'mc_sc_forging5.py'
-    'mc_sc_forging_delegation.py'
-    'mc_sc_forging_fee_payments.py'
-    'mc_sc_nodes_alive.py'
-    'sc_backward_transfer.py'
-    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-    'sc_blockid_for_backup.py'
-    'sc_bootstrap.py'
-    'sc_bt_limit.py'
-    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-    'sc_bt_limit_across_fork.py'
-    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-    'sc_bwt_minimum_value.py'
-    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-    'sc_ceased.py'
-    'sc_cert_fee_conf.py'
-    'sc_cert_no_coin_record.py'
-    'sc_cert_submission_decentralization.py'
-    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-    'sc_cert_submitter_after_sync_1.py'
-    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-    'sc_cert_submitter_after_sync_2.py'
-    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-    'sc_cert_key_rotation_old_circuit.py'
-    'sc_cert_key_rotation.py'
-    'sc_cert_key_rotation.py --nonceasing'
-    'sc_cert_key_rotation_across_epoch.py'
-    'sc_cert_key_rotation_across_epoch.py --nonceasing'
-    'sc_cert_submitter_secure_enclave.py'
-    'sc_closed_forger.py'
-    'sc_csw_ceased_at_epoch_1.py'
-    'sc_csw_ceased_at_epoch_1_with_large_epoch_length.py'
-    'sc_csw_ceased_at_epoch_2.py'
-    'sc_csw_ceased_at_epoch_3.py'
-    'sc_csw_disabled.py'
-    'sc_csw_in_fee_payment.py'
-    'sc_cum_comm_tree_hash.py'
-    'sc_forger_feerate.py'
-    'sc_forward_transfer.py'
-    'sc_genesisinfo_sc_versions.py'
-    'sc_import_export_keys.py'
-    'sc_mempool_max_fee.py'
-    'sc_mempool_max_size.py'
-    'sc_mempool_min_fee_rate.py'
-    'sc_multiple_certs.py'
-    'sc_multiple_certs.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-    'sc_multiple_pending_certs_non_ceasing.py'
-    'sc_node_api_test.py'
-    'sc_node_response_along_sync.py'
-    'sc_nodes_initialize.py'
-    'sc_storage_recovery_with_csw.py'
-    'sc_storage_recovery_without_csw.py'
-    'sc_versions_and_mc_certs.py'
-    'sc_withdrawal_epoch_last_block.py'
-    'websocket_server.py'
-    'websocket_server_fee_payments.py'
-    'sc_sync_after_fork.py'
-    'sc_dust_threshold_fork.py'
-    'sc_ft_limit_fork.py'
-    'sc_fork_one_forced_tx.py'
-    'sc_big_block.py'
+#    'mc_sc_forging2.py'
+#    'mc_sc_forging3.py'
+#    'mc_sc_forging4.py'
+#    'mc_sc_forging5.py'
+#    'mc_sc_forging_delegation.py'
+#    'mc_sc_forging_fee_payments.py'
+#    'mc_sc_nodes_alive.py'
+#    'sc_backward_transfer.py'
+#    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+#    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+#    'sc_blockid_for_backup.py'
+#    'sc_bootstrap.py'
+#    'sc_bt_limit.py'
+#    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+#    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+#    'sc_bt_limit_across_fork.py'
+#    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+#    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+#    'sc_bwt_minimum_value.py'
+#    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+#    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+#    'sc_ceased.py'
+#    'sc_cert_fee_conf.py'
+#    'sc_cert_no_coin_record.py'
+#    'sc_cert_submission_decentralization.py'
+#    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+#    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+#    'sc_cert_submitter_after_sync_1.py'
+#    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+#    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+#    'sc_cert_submitter_after_sync_2.py'
+#    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+#    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+#    'sc_cert_key_rotation_old_circuit.py'
+#    'sc_cert_key_rotation.py'
+#    'sc_cert_key_rotation.py --nonceasing'
+#    'sc_cert_key_rotation_across_epoch.py'
+#    'sc_cert_key_rotation_across_epoch.py --nonceasing'
+#    'sc_cert_submitter_secure_enclave.py'
+#    'sc_closed_forger.py'
+#    'sc_csw_ceased_at_epoch_1.py'
+#    'sc_csw_ceased_at_epoch_1_with_large_epoch_length.py'
+#    'sc_csw_ceased_at_epoch_2.py'
+#    'sc_csw_ceased_at_epoch_3.py'
+#    'sc_csw_disabled.py'
+#    'sc_csw_in_fee_payment.py'
+#    'sc_cum_comm_tree_hash.py'
+#    'sc_forger_feerate.py'
+#    'sc_forward_transfer.py'
+#    'sc_genesisinfo_sc_versions.py'
+#    'sc_import_export_keys.py'
+#    'sc_mempool_max_fee.py'
+#    'sc_mempool_max_size.py'
+#    'sc_mempool_min_fee_rate.py'
+#    'sc_multiple_certs.py'
+#    'sc_multiple_certs.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+#    'sc_multiple_pending_certs_non_ceasing.py'
+#    'sc_node_api_test.py'
+#    'sc_node_response_along_sync.py'
+#    'sc_nodes_initialize.py'
+#    'sc_storage_recovery_with_csw.py'
+#    'sc_storage_recovery_without_csw.py'
+#    'sc_versions_and_mc_certs.py'
+#    'sc_withdrawal_epoch_last_block.py'
+#    'websocket_server.py'
+#    'websocket_server_fee_payments.py'
+#    'sc_sync_after_fork.py'
+#    'sc_dust_threshold_fork.py'
+#    'sc_ft_limit_fork.py'
+#    'sc_fork_one_forced_tx.py'
+#    'sc_big_block.py'
 );
 
 # include extended tests
@@ -223,14 +223,12 @@ function runTests
 }
 
 if [ ! -z "$PARALLEL" ]; then
-
-  TESTS_TO_RUN_IN_PARALLEL=$((("${#testScripts[@]}" / "$PARALLEL") + 1))
+  TESTS_TO_RUN_IN_PARALLEL=$((("${#testScripts[@]}" + (PARALLEL - 1)) / "$PARALLEL"))
   TEST_GROUP=1
 
   for((i = 0; i < ${#testScripts[@]}; i+=TESTS_TO_RUN_IN_PARALLEL))
   do
     part=( "${testScripts[@]:i:TESTS_TO_RUN_IN_PARALLEL}" )
-    echo "TEST GROUP IS: ${TEST_GROUP}" | tee /dev/fd/3
     declare testScripts_${TEST_GROUP}="${part[*]}"
 
     TEST_GROUP=$((TEST_GROUP + 1))
@@ -238,9 +236,9 @@ if [ ! -z "$PARALLEL" ]; then
 
   for arg in $(seq "$PARALLEL"); do
     testGroup="testScripts_$arg"
-    echo "RUNNING1: ${!testGroup}" | tee /dev/fd/3
-#      echo "${#testScripts_2[@]}" | tee /dev/fd/3
-#      runTests "${testScripts_$arg[@]}"
+    runTests  \
+        "$1"  \
+        "${!testGroup}"
   done
 else
   # Pass main script arg to function first (could be null or -PARALLLEL etc) followed by array.
@@ -248,7 +246,6 @@ else
       "$1"  \
       "${testScripts[@]}"
 fi
-
 
 total=$((successCount + failureCount))
 echo -e "\n\nTests Run: $total" | tee /dev/fd/3
@@ -266,4 +263,3 @@ if [ ${#failures[@]} -gt 0 ]; then
   else
     exit 0
 fi
-
