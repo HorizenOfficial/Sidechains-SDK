@@ -52,6 +52,7 @@ import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
 import sparkz.crypto.hash.Blake2b256;
 import sparkz.util.encode.Base16;
+import org.mindrot.jbcrypt.BCrypt;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -601,9 +602,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
         String toEncode = json.get("string").asText();
-
-        String encoded = Base16.encode((byte[]) Blake2b256.apply(toEncode));
-
+        String salt = BCrypt.gensalt();
+        String encoded = BCrypt.hashpw(toEncode, salt);
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("encodedString", encoded);
 

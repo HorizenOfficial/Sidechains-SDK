@@ -51,7 +51,7 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
-  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("password"))
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("$2a$10$O5FAloC/gNuwpeoVKiV41.EcIlpOlk5hzsqYpleSmOEEKgj0j7BX6"))
   val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
   val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")

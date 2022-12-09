@@ -133,7 +133,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
-  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("password"))
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("$2a$10$O5FAloC/gNuwpeoVKiV41.EcIlpOlk5hzsqYpleSmOEEKgj0j7BX6"))
 
   val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
   Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
