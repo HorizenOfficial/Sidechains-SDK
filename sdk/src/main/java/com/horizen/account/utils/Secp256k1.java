@@ -20,8 +20,6 @@ public final class Secp256k1 {
     public static final int SIGNATURE_V_MAXSIZE = Long.BYTES;
     public static final int SIGNATURE_RS_SIZE = 32;
 
-    public static final int ADDRESS_LENGTH_IN_HEX = 40;
-
     public static final int CHAIN_ID_INC = Sign.CHAIN_ID_INC;
 
     public static final int LOWER_REAL_V = Sign.LOWER_REAL_V;

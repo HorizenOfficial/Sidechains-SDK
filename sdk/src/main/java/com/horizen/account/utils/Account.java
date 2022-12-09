@@ -6,10 +6,9 @@ import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 
-import static com.horizen.account.utils.Secp256k1.ADDRESS_LENGTH_IN_HEX;
-
 public final class Account {
 
+    public static final int ADDRESS_LENGTH_IN_HEX = 40;
     public static final int ADDRESS_SIZE = ADDRESS_LENGTH_IN_HEX / 2;
 
     private Account() {
