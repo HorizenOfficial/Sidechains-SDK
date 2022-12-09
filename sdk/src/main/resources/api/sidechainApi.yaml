@@ -1019,41 +1019,50 @@ paths:
                   format: int32
                   minimum: 0
                   maximum: 1
+                  description: Key type - 0 for signers key, 1 for masters key
                 keyIndex:
                   type: integer
                   format: int32
                   minimum: 0
                   maximum: 500
+                  description: Index of certificate submitter key
                 newKey:
                   type: string
                   format: byte
                   minLength: 66
                   maxLength: 66
+                  description: Value of new key
                 signingKeySignature:
                   type: string
                   format: byte
                   minLength: 140
                   maxLength: 140
+                  description: Signing key signature
                 masterKeySignature:
                   type: string
                   format: byte
                   minLength: 140
                   maxLength: 140
+                  description: Master key signature
                 newKeySignature:
                   type: string
                   format: byte
                   minLength: 140
                   maxLength: 140
+                  description: New key signature (if key type 0, then new signers key signature; if key type 1, then master key signature)
                 format:
                   type: boolean
                   nullable: true
+                  description: Optional field - true if format, false if non format
                 automaticSend:
                   type: boolean
                   nullable: true
+                  description: Optional field - true if automatic, false if not automatic
                 fee:
                   type: integer
                   format: int64
                   nullable: true
+                  description: Optional field for transaction fee
       responses:
         '200':
           description: successful operation
@@ -1988,15 +1997,18 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  description: Number of withdrawal epoch
                 indexOfKey:
                   type: integer
                   format: int32
                   minimum: 0
+                  description: Index of certificate submitter key
                 keyType:
                   type: integer
                   format: int32
                   minimum: 0
                   maximum: 1
+                  description: Key type - 0 for signers key, 1 for masters key
       responses:
         '200':
           description: successful operation
