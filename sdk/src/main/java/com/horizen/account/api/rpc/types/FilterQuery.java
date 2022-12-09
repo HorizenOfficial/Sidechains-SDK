@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.horizen.account.api.rpc.handler.RpcException;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
@@ -44,6 +45,7 @@ public class FilterQuery {
      * Deserialization is configured in a way to accept single values and parse them as an array with a single value.
      * </p>
      */
+    @JsonDeserialize(using = AddressesDeserializer.class)
     public Address[] address;
 
     /**
@@ -62,6 +64,38 @@ public class FilterQuery {
      */
     @JsonDeserialize(using = TopicsDeserializer.class)
     public Hash[][] topics;
+
+    public static class AddressesDeserializer extends JsonDeserializer<Address[]> {
+        @Override
+        public Address[] deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException {
+            JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+            switch (node.getNodeType()) {
+                case STRING:
+                    try {
+                        return new Address[] { context.readTreeAsValue(node, Address.class) };
+                    } catch (Exception err) {
+                        throw new IOException(String.format("invalid address: %s", err.getMessage()), err);
+                    }
+                case ARRAY:
+                    var addresses = new Address[node.size()];
+                    for (int i = 0; i < node.size(); i++) {
+                        var address = node.get(i);
+                        if (address.getNodeType() != JsonNodeType.STRING) {
+                            throw new IOException(String.format("non-string address at index %d", i));
+                        }
+                        try {
+                            addresses[i] = context.readTreeAsValue(address, Address.class);
+                        } catch (Exception err) {
+                            throw new IOException(
+                                String.format("invalid address at index %d: %s", i, err.getMessage()), err);
+                        }
+                    }
+                    return addresses;
+                default:
+                    throw new IOException("invalid addresses in query");
+            }
+        }
+    }
 
     public static class TopicsDeserializer extends JsonDeserializer<Hash[][]> {
         @Override
