@@ -556,6 +556,13 @@ abstract class AbstractHistory[
       case None => JOptional.empty()
     }
   }
+
+  def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[TX] = {
+    storage.blockById(ModifierId(blockId)) match {
+      case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
+      case None => JOptional.empty()
+    }
+  }
 }
 
 object AbstractHistory {

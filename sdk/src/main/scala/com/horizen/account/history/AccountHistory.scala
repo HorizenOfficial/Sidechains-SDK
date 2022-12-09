@@ -43,13 +43,6 @@ extends com.horizen.AbstractHistory[
 
   override type NVCT = AccountHistory
 
-  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCAT] = {
-    storage.blockById(ModifierId(blockId)) match {
-      case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
-      case None => JOptional.empty()
-    }
-  }
-
   override def makeNewHistory(storage: AccountHistoryStorage, consensusDataStorage: ConsensusDataStorage): AccountHistory =
     new AccountHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 

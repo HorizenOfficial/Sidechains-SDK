@@ -8,7 +8,7 @@ import com.horizen.node.NodeHistory
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ScorexLogging}
 
 import scala.util.Try
 
@@ -33,13 +33,6 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
 
   override def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage): SidechainHistory =
       new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-
-  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCBT] = {
-    storage.blockById(ModifierId(blockId)) match {
-      case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
-      case None => JOptional.empty()
-    }
-  }
 
   override def searchTransactionInsideBlockchain(transactionId: String): JOptional[SidechainTypes#SCBT] = {
     var startingBlock = JOptional.ofNullable(getBestBlock)
