@@ -27,7 +27,7 @@ func randomLogs(n int) []*Log {
 }
 
 func TestLogs(t *testing.T) {
-	instance, _, stateHandle := setup()
+	instance, _, stateHandle := SetupTest()
 
 	// use constant seed to have reproducable results
 	rand.Seed(4321)

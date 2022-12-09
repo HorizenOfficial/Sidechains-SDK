@@ -44,18 +44,6 @@ func TestRawStateDB(t *testing.T) {
 	}
 }
 
-func setup() (*Service, int, int) {
-	var (
-		instance       = New()
-		dbHandle       = instance.OpenMemoryDB()
-		_, stateHandle = instance.StateOpen(StateParams{
-			DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
-			Root:           common.Hash{},
-		})
-	)
-	return instance, dbHandle, stateHandle
-}
-
 func TestStateEmpty(t *testing.T) {
 	checks := []struct {
 		name          string
@@ -97,7 +85,7 @@ func TestStateEmpty(t *testing.T) {
 
 	for i, check := range checks {
 		t.Run(check.name, func(t *testing.T) {
-			instance, _, stateHandle := setup()
+			instance, _, stateHandle := SetupTest()
 			accountParams := AccountParams{
 				HandleParams: HandleParams{
 					Handle: stateHandle,
@@ -126,7 +114,7 @@ func TestStateEmpty(t *testing.T) {
 
 func TestStateBalances(t *testing.T) {
 	var (
-		instance, _, stateHandle = setup()
+		instance, _, stateHandle = SetupTest()
 		numbers                  = []*big.Int{big.NewInt(5), big.NewInt(9862374968), big.NewInt(0), big.NewInt(1000)}
 		account                  = AccountParams{
 			HandleParams: HandleParams{
@@ -169,7 +157,7 @@ func TestStateBalances(t *testing.T) {
 
 func TestStateNonce(t *testing.T) {
 	var (
-		instance, _, stateHandle = setup()
+		instance, _, stateHandle = SetupTest()
 		numbers                  = []uint64{123, 3123123151, 0, 6}
 		account                  = AccountParams{
 			HandleParams: HandleParams{
@@ -197,7 +185,7 @@ func TestStateNonce(t *testing.T) {
 
 func TestCodeAndCodeHash(t *testing.T) {
 	var (
-		instance, _, stateHandle = setup()
+		instance, _, stateHandle = SetupTest()
 		codes                    = [][]byte{
 			common.FromHex("0xdeadbeef"),
 			common.FromHex("0x01020304"),
@@ -238,7 +226,7 @@ func TestCodeAndCodeHash(t *testing.T) {
 
 func TestSnapshot(t *testing.T) {
 	var (
-		instance, _, stateHandle = setup()
+		instance, _, stateHandle = SetupTest()
 		addr                     = common.HexToAddress("0x0011223344556677889900112233445566778899")
 		key                      = common.BytesToHash(crypto.Keccak256(common.FromHex("00112233")))
 		txHash                   = common.BytesToHash(crypto.Keccak256(common.FromHex("4321")))
