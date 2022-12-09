@@ -20,6 +20,7 @@ import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 
 
 abstract class AbstractHistory[
@@ -547,6 +548,13 @@ abstract class AbstractHistory[
     consensusDataStorage.addStakeConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.stakeConsensusEpochInfo)
     consensusDataStorage.addNonceConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.nonceConsensusEpochInfo)
     makeNewHistory(storage, consensusDataStorage)
+  }
+
+  def findTransactionInsideBlock[A <: Transaction, T <: SidechainBlockHeaderBase](transactionId: String, block: SidechainBlockBase[A, T]): JOptional[A] = {
+    block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
+      case Some(tx) => JOptional.ofNullable(tx)
+      case None => JOptional.empty()
+    }
   }
 }
 

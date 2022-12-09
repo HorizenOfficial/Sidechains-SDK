@@ -50,13 +50,6 @@ extends com.horizen.AbstractHistory[
     }
   }
 
-  private def findTransactionInsideBlock(transactionId : String, block : AccountBlock) : JOptional[SidechainTypes#SCAT] = {
-    block.transactions.find(tx => tx.id.equals(ModifierId(transactionId))) match {
-      case Some(tx) => JOptional.ofNullable(tx)
-      case None => JOptional.empty()
-    }
-  }
-
   override def makeNewHistory(storage: AccountHistoryStorage, consensusDataStorage: ConsensusDataStorage): AccountHistory =
     new AccountHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 
