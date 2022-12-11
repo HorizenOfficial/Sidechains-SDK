@@ -1,6 +1,7 @@
 package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.web3j.utils.Numeric;
 
@@ -20,6 +21,11 @@ public class Quantity {
 
     public Quantity(Long number) {
         this(BigInteger.valueOf(number));
+    }
+
+    @JsonValue
+    public String getValue() {
+        return value;
     }
 
     public BigInteger toNumber() {
