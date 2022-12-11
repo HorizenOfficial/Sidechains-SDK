@@ -187,7 +187,7 @@ function runTestScript
     shift
 
     echo -e "=== Running testscript ${testName} ===" | tee /dev/fd/3
-
+    echo -e "Arg is: $1" | tee /dev/fd/3
     if eval "$@"; then
     successCount=$(expr $successCount + 1)
     echo "--- Success: ${testName} ---" | tee /dev/fd/3
@@ -206,19 +206,19 @@ function runTests
   scriptArg=$1; shift
   # Assign remaining args (which should be the expanded test script array)
   testsToRun=("$@")
-
+  echo "Tests to Run is: ${#testsToRun[@]}" | tee /dev/fd/3
   for (( i = 0; i < ${#testsToRun[@]}; i++ )); do
+    echo "i equals $i " | tee /dev/fd/3
     if checkFileExists "${testsToRun[$i]}"; then
           if [ -z "$scriptArg" ] || [ "${scriptArg:0:1}" = "-" ] || [ "$scriptArg" = "${testsToRun[$i]}" ] || [ "$scriptArg.py" = "${testsToRun[$i]}" ]; then
           echo "Running $((i +1)) Of ${#testsToRun[@]} Tests" | tee /dev/fd/3
           runTestScript \
                 "${testsToRun[$i]}" \
-                "${BASH_SOURCE%/*}/${testsToRun[$i]}"
+                "${BASH_SOURCE%/*}/${testsToRun[$i]}" &
             else
               echo "Unable to run ${testsToRun[$i]}, invalid arg passed to shell script" | tee /dev/fd/3
           fi
     fi
-
   done
 }
 
@@ -240,6 +240,8 @@ if [ ! -z "$PARALLEL" ]; then
         "$1"  \
         "${!testGroup}"
   done
+  # Wait for all processes to finish
+  wait < <(jobs -p)
 else
   # Pass main script arg to function first (could be null or -PARALLLEL etc) followed by array.
   runTests  \
