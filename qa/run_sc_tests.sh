@@ -214,7 +214,7 @@ function runTests
           echo "Running $((i +1)) Of ${#testsToRun[@]} Tests" | tee /dev/fd/3
           runTestScript \
                 "${testsToRun[$i]}" \
-                "${BASH_SOURCE%/*}/${testsToRun[$i]}" &
+                "${BASH_SOURCE%/*}/${testsToRun[$i]}"
             else
               echo "Unable to run ${testsToRun[$i]}, invalid arg passed to shell script" | tee /dev/fd/3
           fi
@@ -234,14 +234,24 @@ if [ ! -z "$PARALLEL" ]; then
     TEST_GROUP=$((TEST_GROUP + 1))
   done
 
-  for arg in $(seq "$PARALLEL"); do
-    testGroup="testScripts_$arg"
+  for (( i=1; i<=$PARALLEL; i++ ))
+  do
+    testGroup="testScripts_$i"
     runTests  \
         "$1"  \
-        "${!testGroup}"
+        "${!testGroup}" &
   done
   # Wait for all processes to finish
-  wait < <(jobs -p)
+  for job in $(jobs -p); do
+    CODE=0
+    wait "${job}" || CODE=$?
+    if [[ "${CODE}" != "0" ]]; then
+               echo "At least one test failed with exit code => ${CODE}" ;
+               failureCount+=1
+    else
+      successCount+=1
+    fi
+  done
 else
   # Pass main script arg to function first (could be null or -PARALLLEL etc) followed by array.
   runTests  \
