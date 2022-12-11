@@ -34,29 +34,6 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
   override def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage): SidechainHistory =
       new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 
-  override def searchTransactionInsideBlockchain(transactionId: String): JOptional[SidechainTypes#SCBT] = {
-    var startingBlock = JOptional.ofNullable(getBestBlock)
-    var transaction : JOptional[SidechainTypes#SCBT] = JOptional.empty()
-    var found = false
-    while(!found && startingBlock.isPresent){
-      val tx = findTransactionInsideBlock(transactionId, startingBlock.get())
-      if(tx.isPresent){
-        found = true
-        transaction = JOptional.ofNullable(tx.get())
-      }else{
-        startingBlock = storage.parentBlockId(startingBlock.get().id) match {
-          case Some(id) => storage.blockById(id) match {
-            case Some(block) => JOptional.ofNullable(block)
-            case None => JOptional.empty()
-          }
-          case None => JOptional.empty()
-        }
-      }
-    }
-
-    transaction
-  }
-
 }
 
 object SidechainHistory
