@@ -42,6 +42,9 @@ public class EthereumBlockView {
     public String author;
     public List<String> uncles = new ArrayList<>();
     public List<String> sealFields = new ArrayList<>();
+
+    public final String difficulty = "0x";
+    public String totalDifficulty;
     public String baseFeePerGas;
 
     public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block) {
