@@ -31,14 +31,7 @@ func generateTransactions(count int) types.Transactions {
 			Data:  &data,
 			Nonce: nonce,
 		}
-		//if v%3 == 0 {
-		// legacy TX
 		tx.GasPrice = &gasPrice
-		//} else {
-		//	// dynamic fee TX
-		//	tx.MaxFeePerGas = &gasPrice
-		//	tx.MaxPriorityFeePerGas = &gasPrice
-		//}
 		txs[v] = tx.ToTransaction()
 	}
 	return txs

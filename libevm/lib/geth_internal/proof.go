@@ -8,6 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// The contents here are copied from an internal GETH package which we cannot import, see:
+// github.com/ethereum/go-ethereum@v1.10.26/internal/ethapi/api.go:657
+
 // AccountResult holds the results of GetProof
 type AccountResult struct {
 	Address      common.Address  `json:"address"`
