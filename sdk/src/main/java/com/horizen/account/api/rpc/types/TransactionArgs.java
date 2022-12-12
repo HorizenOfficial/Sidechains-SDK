@@ -14,7 +14,7 @@ import com.horizen.evm.utils.Converter;
 import com.horizen.params.NetworkParams;
 import org.web3j.utils.Numeric;
 import java.math.BigInteger;
-
+import java.util.Optional;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
@@ -157,8 +157,8 @@ public class TransactionArgs {
             }
         }
         return new Message(
-            new AddressProposition(getFrom()),
-            to == null ? null : new AddressProposition(to.toBytes()),
+            from == null ? Optional.empty() : Optional.of(new AddressProposition(from.toBytes())),
+            to == null ? Optional.empty() : Optional.of(new AddressProposition(to.toBytes())),
             effectiveGasPrice,
             gasFeeCap,
             gasTipCap,

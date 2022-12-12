@@ -7,7 +7,7 @@ import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
+import com.horizen.utils.ZenCoinsUtils
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
@@ -123,9 +123,9 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
     val requestInBytes = request.bytes
     view.updateAccountStorageBytes(contractAddress, getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes)
 
-    view.subBalance(msg.getFrom.address(), withdrawalAmount)
+    view.subBalance(msg.getFrom.get().address(), withdrawalAmount)
 
-    val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
+    val withdrawalEvent = AddWithdrawalRequest(msg.getFrom.get(), request.proposition, withdrawalAmount, currentEpochNum)
     val evmLog = getEvmLog(withdrawalEvent)
     view.addLog(evmLog)
 

@@ -16,7 +16,7 @@ object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
     // There is no need to check "from" account because it can't be a smart contract one,
     // because there is no known private key to create a valid signature.
     // Note: in case of smart contract declaration "to" is null.
-    msg.getTo != null && view.isEoaAccount(msg.getTo.address())
+    msg.getTo.isPresent && view.isEoaAccount(msg.getTo.get().address())
   }
 
   @throws(classOf[ExecutionFailedException])
@@ -26,8 +26,8 @@ object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
       gas: GasPool,
       blockContext: BlockContext
   ): Array[Byte] = {
-    view.subBalance(msg.getFrom.address(), msg.getValue)
-    view.addBalance(msg.getTo.address(), msg.getValue)
+    view.subBalance(msg.getFromAddressBytes, msg.getValue)
+    view.addBalance(msg.getToAddressBytes, msg.getValue)
     Array.emptyByteArray
   }
 }
