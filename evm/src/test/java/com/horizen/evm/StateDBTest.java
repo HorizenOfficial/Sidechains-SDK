@@ -5,9 +5,9 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.web3j.rlp.RlpEncoder;
 import org.web3j.rlp.RlpString;
 import scorex.crypto.hash.Keccak256;
-import org.web3j.rlp.RlpEncoder;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -108,7 +108,6 @@ public class StateDBTest extends LibEvmTestBase {
         final var databaseFolder = tempFolder.newFolder("account-db");
         final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
-        final var fakeCodeHash = bytes("abcdef00000000000000000000000000000000ff010101010101010102020202");
         final byte[][] values = {
                 bytes("aa"), bytes("ffff"),
                 bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
@@ -124,7 +123,7 @@ public class StateDBTest extends LibEvmTestBase {
             try (var statedb = new StateDB(db, hashEmpty)) {
                 assertTrue("account must not exist in an empty state", statedb.isEmpty(origin));
                 // make sure the account is not "empty"
-                statedb.setCodeHash(origin, fakeCodeHash);
+                statedb.setNonce(origin, BigInteger.ONE);
                 assertFalse("account must exist after setting code hash", statedb.isEmpty(origin));
                 initialRoot = statedb.getIntermediateRoot();
                 for (var value : values) {
@@ -154,8 +153,8 @@ public class StateDBTest extends LibEvmTestBase {
     }
 
     @Test
-    public void accountTypes() throws Exception {
-        final byte[] codeHash = Converter.fromHexString("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
+    public void TestAccountTypes() throws Exception {
+        final byte[] code = Converter.fromHexString("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
         final byte[] addr1 = Converter.fromHexString("1234561234561234561234561234561234561230");
 
         try (var db = new MemoryDatabase()) {
@@ -164,7 +163,6 @@ public class StateDBTest extends LibEvmTestBase {
                 assertTrue("EOA account expected", statedb.isEoaAccount(addr1));
                 assertFalse("EOA account expected", statedb.isSmartContractAccount(addr1));
 
-
                 // Test 2: account exists and has NO code defined, so considered as EOA
                 // Declare account with some coins
                 statedb.addBalance(addr1, BigInteger.TEN);
@@ -172,7 +170,7 @@ public class StateDBTest extends LibEvmTestBase {
                 assertFalse("EOA account expected", statedb.isSmartContractAccount(addr1));
 
                 // Test 3: Account exists and has code defined, so considered as Smart contract account
-                statedb.setCodeHash(addr1, codeHash);
+                statedb.setCode(addr1, code);
                 assertFalse("Smart contract account expected", statedb.isEoaAccount(addr1));
                 assertTrue("Smart contract account expected", statedb.isSmartContractAccount(addr1));
             }

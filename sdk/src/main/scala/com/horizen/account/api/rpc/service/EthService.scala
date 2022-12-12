@@ -457,6 +457,26 @@ class EthService(
     }
   }
 
+  // Uncle Blocks RPCs
+  // An uncle block is a block that did not get mined onto the canonical chain.
+  // Only one block can be mined and acknowledged as canonical on the blockchain. The remaining blocks are uncle blocks.
+  // The Sidechains that are created using this sdk DO NOT support uncle blocks.
+  // For this reason:
+  // - eth_getUncleCountByBlockHash and eth_getUncleCountByBlockNumber always return 0x0
+  // - eth_getUncleByBlockHashAndIndex and eth_getUncleByBlockNumberAndIndex always return null (as no block was found)
+  @RpcMethod("eth_getUncleCountByBlockHash")
+  def getUncleCountByBlockHash(hash: Hash) = new Quantity(0L)
+
+  @RpcMethod("eth_getUncleCountByBlockNumber")
+  def eth_getUncleCountByBlockNumber(tag: String) = new Quantity(0L)
+
+  @RpcMethod("eth_getUncleByBlockHashAndIndex")
+  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: Quantity) = null
+
+  @RpcMethod("eth_getUncleByBlockNumberAndIndex")
+  def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity) = null
+
+
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
   def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
