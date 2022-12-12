@@ -7,24 +7,19 @@ import scorex.crypto.hash.Keccak256
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
+import java.util
+
 /**
  * Bloom represents a 2048 bit bloom filter.
  */
-class Bloom() extends BytesSerializable {
-  private var filter = Array.fill[Byte](BLOOM_BYTE_LENGTH)(0)
+class Bloom(private val filter: Array[Byte]) extends BytesSerializable {
+  require(filter.length == BLOOM_BYTE_LENGTH)
 
   override type M = Bloom
   override def serializer: SparkzSerializer[Bloom] = BloomSerializer
 
-  /**
-   * Create a bloom filter from the given byte array, use as-is.
-   * @param filter raw 256 bytes bitmask of a bloom filter
-   */
-  def this(filter: Array[Byte]) = {
-    this()
-    require(filter.length == BLOOM_BYTE_LENGTH)
-    this.filter = filter.clone()
-  }
+  // this is essentially a default value for the constructor argument, but this also works in Java
+  def this() = this(Array.fill[Byte](BLOOM_BYTE_LENGTH)(0))
 
   /**
    * Add given data to the bloom filter.
@@ -32,20 +27,9 @@ class Bloom() extends BytesSerializable {
    *   raw data to hash and add to the filter
    */
   def add(data: Array[Byte]): Unit = {
-    getBloomValues(data)
-      .foreach({ case (index, value) =>
-        filter(index) = (filter(index) | value).toByte
-      })
-  }
-
-  /**
-   * Add given log to the bloom filter. This will add the logs address and all topics to the filter.
-   * @param log
-   *   the log to add to the filter
-   */
-  def add(log: EvmLog): Unit = {
-    add(log.address.toBytes)
-    log.topics.foreach(topic => add(topic.toBytes))
+    for ((value, index) <- getBloomValues(data)) {
+      filter(index) = (filter(index) | value).toByte
+    }
   }
 
   /**
@@ -54,10 +38,9 @@ class Bloom() extends BytesSerializable {
    *   instance of another bloom filter.
    */
   def merge(bloom: Bloom): Unit = {
-    bloom.filter.zipWithIndex
-      .foreach({ case (bloomByte, i) =>
-        filter(i) = (filter(i) | bloomByte).toByte
-      })
+    for ((value, index) <- bloom.filter.zipWithIndex) {
+      filter(index) = (filter(index) | value).toByte
+    }
   }
 
   /**
@@ -72,7 +55,7 @@ class Bloom() extends BytesSerializable {
    */
   def test(data: Array[Byte]): Boolean = {
     getBloomValues(data)
-      .exists({ case (index, value) =>
+      .exists({ case (value, index) =>
         (filter(index) & value) == value
       })
   }
@@ -83,21 +66,22 @@ class Bloom() extends BytesSerializable {
     val values = Array(
       1 << (hashBuffer(1) & 0x7),
       1 << (hashBuffer(3) & 0x7),
-      1 << (hashBuffer(5) & 0x7),
+      1 << (hashBuffer(5) & 0x7)
     )
 
     val indices = Array(
       BLOOM_BYTE_LENGTH - ((BytesUtils.getShort(hashBuffer, 0) & 0x7ff) >> 3) - 1,
       BLOOM_BYTE_LENGTH - ((BytesUtils.getShort(hashBuffer, 2) & 0x7ff) >> 3) - 1,
-      BLOOM_BYTE_LENGTH - ((BytesUtils.getShort(hashBuffer, 4) & 0x7ff) >> 3) - 1,
+      BLOOM_BYTE_LENGTH - ((BytesUtils.getShort(hashBuffer, 4) & 0x7ff) >> 3) - 1
     )
 
-    indices.zip(values)
+    values.zip(indices)
   }
 
   /**
    * Return the raw 256 bytes bitmask of this bloom filter.
-   * @return 256 byte bitmask
+   * @return
+   *   256 bytes bitmask
    */
   def getBytes: Array[Byte] = {
     filter.clone()
@@ -105,9 +89,13 @@ class Bloom() extends BytesSerializable {
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case l: Bloom => this.filter.sameElements(l.filter)
+      case other: Bloom => filter.sameElements(other.filter)
       case _ => false
     }
+  }
+
+  override def hashCode(): Int = {
+    util.Arrays.hashCode(filter)
   }
 }
 
@@ -115,15 +103,30 @@ object Bloom {
   val BLOOM_BYTE_LENGTH: Int = 256
   val BLOOM_BIT_LENGTH: Int = 8 * BLOOM_BYTE_LENGTH
 
+  /**
+   * Create a bloom filter from the given byte array.
+   *
+   * @param filter
+   *   raw 256 bytes bitmask of a bloom filter
+   */
+  def apply(filter: Array[Byte]): Bloom = {
+    new Bloom(filter.clone())
+  }
+
   def fromLogs(evmLogs: Seq[EvmLog]): Bloom = {
     val filter = new Bloom()
-    evmLogs.foreach(filter.add)
+    for (log <- evmLogs) {
+      filter.add(log.address.toBytes)
+      for (topic <- log.topics) {
+        filter.add(topic.toBytes)
+      }
+    }
     filter
   }
 
-  def fromReceipts(receipts: Seq[EthereumReceipt]): Bloom = {
+  def fromReceipts(receipts: Seq[EthereumConsensusDataReceipt]): Bloom = {
     val filter = new Bloom()
-    receipts.map(_.consensusDataReceipt.logsBloom).foreach(filter.merge)
+    receipts.map(_.logsBloom).foreach(filter.merge)
     filter
   }
 }
@@ -134,7 +137,6 @@ object BloomSerializer extends SparkzSerializer[Bloom] {
   }
 
   override def parse(r: Reader): Bloom = {
-    val bloomFilter = r.getBytes(BLOOM_BYTE_LENGTH)
-    new Bloom(bloomFilter)
+    new Bloom(r.getBytes(BLOOM_BYTE_LENGTH))
   }
 }

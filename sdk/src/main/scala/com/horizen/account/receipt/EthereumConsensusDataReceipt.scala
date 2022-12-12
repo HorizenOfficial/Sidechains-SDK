@@ -147,7 +147,7 @@ object EthereumConsensusDataReceipt {
       status,
       cumulativeGasUsed,
       logs,
-      new Bloom(logsBloom),
+      Bloom(logsBloom),
     )
   }
 

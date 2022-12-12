@@ -180,7 +180,7 @@ class AccountState(
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
       evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
 
-      val logsBloom = Bloom.fromReceipts(receiptList)
+      val logsBloom = Bloom.fromReceipts(receiptList.map(_.consensusDataReceipt))
 
       require(logsBloom.equals(mod.header.logsBloom), "Provided logs bloom doesn't match the calculated one")
 
