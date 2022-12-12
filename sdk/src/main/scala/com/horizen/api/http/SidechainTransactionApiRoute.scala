@@ -93,29 +93,21 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         val txId = body.transactionId
         val format = body.format.getOrElse(false)
-        val blockHash = body.blockHash.getOrElse("")
         var transaction: Option[SidechainTypes#SCBT] = None
         var error: String = ""
 
-        if (blockHash.isEmpty) {
-          // Search first in memory pool
-          transaction = searchTransactionInMemoryPool(txId)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in memory pool and blockchain"
-        }
+        body.blockHash match {
+          case Some(hash) =>
+            // Search in block referenced by blockHash
+            transaction = searchTransactionInBlock(txId, hash)
+            if (transaction.isEmpty)
+              error = s"Transaction $txId not found in specified block"
 
-        else if (blockHash.isEmpty) {
-          // Search in memory pool
-          transaction = searchTransactionInMemoryPool(txId)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in memory pool"
-        }
-
-        // Case --> blockHash set -> Search in block referenced by blockHash
-        else if (!blockHash.isEmpty) {
-          transaction = searchTransactionInBlock(txId, blockHash)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in specified block"
+          case None =>
+            // Search in memory pool
+            transaction = searchTransactionInMemoryPool(txId)
+            if (transaction.isEmpty)
+              error = s"Transaction $txId not found in memory pool"
         }
 
         transaction match {
