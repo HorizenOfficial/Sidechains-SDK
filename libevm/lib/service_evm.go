@@ -17,15 +17,15 @@ import (
 
 type EvmParams struct {
 	HandleParams
-	From          common.Address   `json:"from"`
-	To            *common.Address  `json:"to"`
-	Value         *hexutil.Big     `json:"value"`
-	Input         []byte           `json:"input"`
-	AvailableGas  hexutil.Uint64   `json:"availableGas"`
-	GasPrice      *hexutil.Big     `json:"gasPrice"`
-	AccessList    types.AccessList `json:"accessList"`
-	Context       EvmContext       `json:"context"`
-	TraceOptions *TraceOptions     `json:"traceOptions"`
+	From         common.Address   `json:"from"`
+	To           *common.Address  `json:"to"`
+	Value        *hexutil.Big     `json:"value"`
+	Input        []byte           `json:"input"`
+	AvailableGas hexutil.Uint64   `json:"availableGas"`
+	GasPrice     *hexutil.Big     `json:"gasPrice"`
+	AccessList   types.AccessList `json:"accessList"`
+	Context      EvmContext       `json:"context"`
+	TraceOptions *TraceOptions    `json:"traceOptions"`
 }
 
 type EvmContext struct {

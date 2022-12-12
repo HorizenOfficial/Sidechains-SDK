@@ -37,7 +37,7 @@ func TestEvmTrace(t *testing.T) {
 			Coinbase: common.Address{},
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
 		},
-		TxTraceParams: &TraceParams{
+		TraceOptions: &TraceOptions{
 			EnableMemory:     true,
 			DisableStack:     false,
 			DisableStorage:   false,
