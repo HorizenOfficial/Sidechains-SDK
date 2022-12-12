@@ -44,7 +44,7 @@ public class EthereumBlockView {
     public List<String> sealFields = new ArrayList<>();
 
     public final String difficulty = "0x";
-    public String totalDifficulty;
+    public final String totalDifficulty = "0x";
     public String baseFeePerGas;
 
     public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block) {
