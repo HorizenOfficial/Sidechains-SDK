@@ -179,12 +179,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        if (result == null)
-          fail("Serialization failed for object SidechainApiResponseBody")
-
-        assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("transactionBytes").isTextual)
-        assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
+        assertEquals(result, null)
       }
       // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool not found
@@ -195,12 +190,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        if (result == null)
-          fail("Serialization failed for object SidechainApiResponseBody")
-
-        assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("transaction").isObject)
-        jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
+        assertEquals(result, null)
       }
       // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool found
