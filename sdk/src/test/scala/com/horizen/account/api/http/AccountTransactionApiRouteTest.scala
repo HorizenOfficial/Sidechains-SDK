@@ -15,7 +15,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
   override val basePath = "/transaction/"
 
-  "The Api should to" should {
+  "The Api should" should {
 
     "reject and reply with http error" in {
       Get(basePath) ~> sidechainTransactionApiRoute ~> check {
