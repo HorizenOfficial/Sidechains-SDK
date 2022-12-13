@@ -255,14 +255,6 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     }
   }
 
-  override def allSecrets(): JList[Secret] = {
-    secretStorage.getAll.asJava
-  }
-
-  override def secretsOfType(secretType: Class[_ <: Secret]): JList[Secret] = {
-    secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
-  }
-
   override def allCoinsBoxesBalance(): lang.Long = {
     walletBoxStorage.getAll.withFilter(_.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(_.box.value()).sum
   }

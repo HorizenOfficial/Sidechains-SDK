@@ -212,7 +212,7 @@ abstract class AbstractSidechainNodeViewHolder[
     // Do rollback if chain switch needed
     val (walletToApplyTry: Try[VL], stateToApplyTry: Try[MS], suffixTrimmed: IndexedSeq[PMOD]) = if (progressInfo.chainSwitchingNeeded) {
       @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-      val branchingPoint = progressInfo.branchPoint.get //todo: .get
+      val branchingPoint = progressInfo.branchPoint.get
       if (state.version != branchingPoint) {
         log.debug(s"chain reorg needed, rolling back state and wallet to branching point: $branchingPoint")
         (
@@ -325,7 +325,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
               val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
               val (historyResult, walletResult) = if (stateAfterApply.isWithdrawalEpochLastIndex) {
-                val feePayments = getFeePaymentsInfo(stateAfterApply, stateWithdrawalEpochNumber)
+                val feePayments : FPI = getFeePaymentsInfo(stateAfterApply, stateWithdrawalEpochNumber)
                 var historyAfterUpdateFee = newHistory
                 if (!feePayments.isEmpty) {
                   historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, feePayments)
@@ -363,29 +363,8 @@ abstract class AbstractSidechainNodeViewHolder[
     }
   }
 
-
-
-  // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
-  protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
-
   def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
   def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
-
-  // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
-  // Scan modifier by the Wallet considering the forger fee payments.
-  protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL) = {
-    val stateWithdrawalEpochNumber: Int = state.getWithdrawalEpochInfo.epoch
-    if (state.isWithdrawalEpochLastIndex) {
-      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, getFeePaymentsInfo(state, stateWithdrawalEpochNumber))
-      val walletAfterApply: VL = getScanPersistentWallet(modToApply, Some(state), stateWithdrawalEpochNumber, wallet)
-      (historyAfterUpdateFee, walletAfterApply)
-    } else {
-      val walletAfterApply: VL = getScanPersistentWallet(modToApply, None, stateWithdrawalEpochNumber, wallet)
-      (history, walletAfterApply)
-    }
-  }
-
-
 
 }
 
@@ -434,14 +413,6 @@ object AbstractSidechainNodeViewHolder {
 
   protected[horizen] object InternalReceivableMessages {
     case class ApplyModifier[PMOD](applied: Seq[PMOD])
-
-    sealed trait NewLocallyGeneratedTransactions[TX <: Transaction] {
-      val txs: Iterable[TX]
-    }
-
-    case class LocallyGeneratedTransaction[TX <: Transaction](tx: TX) extends NewLocallyGeneratedTransactions[TX] {
-      override val txs: Iterable[TX] = Iterable(tx)
-    }
   }
 
 }

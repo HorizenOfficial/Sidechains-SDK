@@ -63,15 +63,9 @@
     <dependency>
       <groupId>org.web3j</groupId>
       <artifactId>rlp</artifactId>
-      <version>4.9.2</version>
+      <version>4.9.4</version>
       <scope>test</scope>
     </dependency>
-      <dependency>
-          <groupId>org.web3j</groupId>
-          <artifactId>rlp</artifactId>
-          <version>4.9.4</version>
-          <scope>test</scope>
-      </dependency>
   </dependencies>
 
   <build>
