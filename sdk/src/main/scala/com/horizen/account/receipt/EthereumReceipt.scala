@@ -70,7 +70,7 @@ case class EthereumReceipt(
     result = 31 * result + util.Arrays.hashCode(blockHash)
     result = 31 * result + Integer.hashCode(blockNumber)
     result = 31 * result + gasUsed.hashCode()
-    result = 31 * result + util.Arrays.hashCode(contractAddress.getOrElse(Array[Byte] (0)))
+    result = 31 * result + util.Arrays.hashCode(contractAddress.getOrElse(Array.empty))
 
     result
   }
@@ -103,10 +103,11 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
     writer.putInt(gasUsedBytes.length)
     writer.putBytes(gasUsedBytes)
 
-    val contractAddress = receipt.contractAddress.getOrElse(Array[Byte](0))
+    val contractAddress = receipt.contractAddress.getOrElse(Array.empty)
     // optional field
-    writer.putInt(contractAddress.length)
-    writer.putBytes(contractAddress)
+    val addr = receipt.contractAddress.getOrElse(Array.empty)
+    writer.putInt(addr.length)
+    writer.putBytes(addr)
   }
 
   override def parse(reader: Reader): EthereumReceipt = {
