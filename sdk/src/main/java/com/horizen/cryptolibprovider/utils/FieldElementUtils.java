@@ -4,6 +4,9 @@ import com.horizen.librustsidechains.FieldElement;
 import com.horizen.librustsidechains.Constants;
 import com.horizen.utils.BytesUtils;
 
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 public class FieldElementUtils {
@@ -12,11 +15,15 @@ public class FieldElementUtils {
     }
 
     public static FieldElement messageToFieldElement(byte[] message) {
-        if (message.length > fieldElementLength()) {
-            throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
-                    message.length + " but it shall be less than " + fieldElementLength());
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-512");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
         }
-        return FieldElement.deserialize(Arrays.copyOf(message, fieldElementLength()));
+        BigInteger m = new BigInteger(digest.digest(message));
+        BigInteger b = m.mod(new BigInteger("28948022309329048855892746252171976963322203655955319056773317069363642105857", 10));
+        return FieldElement.deserialize(b.toByteArray());
     }
 
     public static FieldElement hashToFieldElement(String hexByte) {
