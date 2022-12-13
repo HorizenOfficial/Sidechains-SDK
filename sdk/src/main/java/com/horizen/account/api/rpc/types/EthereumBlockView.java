@@ -43,8 +43,8 @@ public class EthereumBlockView {
     public List<String> uncles = new ArrayList<>();
     public List<String> sealFields = new ArrayList<>();
 
-    public final String difficulty = "0x";
-    public final String totalDifficulty = "0x";
+    public final String difficulty = "0x0";
+    public final String totalDifficulty = "0x0";
     public String baseFeePerGas;
 
     public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block) {
@@ -54,14 +54,14 @@ public class EthereumBlockView {
         this.hash = hash;
         this.parentHash = Numeric.prependHexPrefix((String) block.parentId());
         this.nonce = "0x"; // no nonce
-        this.sha3Uncles = "0x"; // no uncles
+        this.sha3Uncles = "0x0"; // no uncles
         this.logsBloom = Numeric.toHexString(block.header().logsBloom().getBloomFilter());
         this.transactionsRoot = Numeric.toHexString(block.header().sidechainTransactionsMerkleRootHash());
         this.stateRoot = Numeric.toHexString(block.header().stateRoot());
         this.receiptsRoot = Numeric.toHexString(block.header().receiptsRoot());
         this.miner = Numeric.toHexString(block.header().forgerAddress().address());
-        this.mixHash = "0x";
-        this.extraData = "0x";
+        this.mixHash = "0x0";
+        this.extraData = "0x0";
         this.size = Numeric.prependHexPrefix(Integer.toHexString(block.header().bytes().length));
         this.gasLimit = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasLimit()));
         this.gasUsed = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasUsed()));
