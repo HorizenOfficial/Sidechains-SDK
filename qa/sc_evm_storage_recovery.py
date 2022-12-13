@@ -8,7 +8,8 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     connect_sc_nodes, stop_sc_node, launch_db_tool, start_sc_node, \
-    wait_for_sc_node_initialization, AccountModelBlockVersion, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY
+    wait_for_sc_node_initialization, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, \
+    AccountModel
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 
@@ -101,7 +102,7 @@ class EvmStorageRecoveryTest(SidechainTestFramework):
             self.options,
             self.network,
             block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
-            blockversion=AccountModelBlockVersion)
+            model=AccountModel)
 
     def sc_setup_nodes(self):
         # Start both SC node
