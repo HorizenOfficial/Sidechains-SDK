@@ -35,7 +35,7 @@ case class EthereumReceipt(
 
     contractAddressStr = contractAddress match {
       case Some(addr) => BytesUtils.toHexString(addr)
-      case None => null
+      case None => "null"
     }
 
     val infoNonConsensusStr: String =
