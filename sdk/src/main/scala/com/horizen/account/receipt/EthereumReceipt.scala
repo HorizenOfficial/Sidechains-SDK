@@ -44,17 +44,10 @@ case class EthereumReceipt(
   override def equals(obj: Any): Boolean = {
     obj match {
       case other: EthereumReceipt =>
-        consensusDataReceipt.equals(other.consensusDataReceipt) &&
-        util.Arrays.equals(
-          transactionHash,
-          0,
-          transactionHash.length - 1,
-          other.transactionHash,
-          0,
-          other.transactionHash.length - 1
-        ) &&
+        consensusDataReceipt
+          .equals(other.consensusDataReceipt) && util.Arrays.equals(transactionHash, other.transactionHash) &&
         transactionIndex.equals(other.transactionIndex) &&
-        util.Arrays.equals(blockHash, 0, blockHash.length - 1, other.blockHash, 0, other.blockHash.length - 1) &&
+        util.Arrays.equals(blockHash, other.blockHash) &&
         blockNumber.equals(other.blockNumber) &&
         gasUsed.equals(other.gasUsed) &&
         util.Arrays.equals(
