@@ -6,7 +6,7 @@ from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGT
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, \
     start_sc_nodes, EVM_APP_BINARY, is_mainchain_block_included_in_sc_block, \
-    check_mainchain_block_reference_info, generate_next_block, connect_sc_nodes
+    check_mainchain_block_reference_info, generate_next_block, connect_sc_nodes, AccountModel
 from test_framework.util import start_nodes, websocket_port_by_mc_node_index, assert_equal, assert_true, \
     forward_transfer_to_sidechain
 
@@ -63,7 +63,7 @@ class AccountChainSetup(SidechainTestFramework):
                                          *sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
                                                                  block_timestamp_rewind=self.block_timestamp_rewind,
-                                                                 model="account")
+                                                                 model=AccountModel)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
