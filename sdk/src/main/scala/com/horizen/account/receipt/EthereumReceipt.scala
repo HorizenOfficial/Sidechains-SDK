@@ -70,7 +70,7 @@ case class EthereumReceipt(
     result = 31 * result + util.Arrays.hashCode(blockHash)
     result = 31 * result + Integer.hashCode(blockNumber)
     result = 31 * result + gasUsed.hashCode()
-    result = 31 * result + util.Arrays.hashCode(contractAddress.get)
+    result = 31 * result + util.Arrays.hashCode(contractAddress.getOrElse(Array[Byte] (0)))
 
     result
   }
