@@ -39,11 +39,6 @@ public class RpcRequest {
     }
 
     @JsonGetter
-    public String getJsonrpc() {
-        return jsonrpc;
-    }
-
-    @JsonGetter
     public RpcId getId() {
         return id;
     }
