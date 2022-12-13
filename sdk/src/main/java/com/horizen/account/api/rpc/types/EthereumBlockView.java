@@ -53,7 +53,8 @@ public class EthereumBlockView {
         this.number = blockNumber;
         this.hash = hash;
         this.parentHash = Numeric.prependHexPrefix((String) block.parentId());
-        this.nonce = "0x"; // no nonce
+        // no nonce, but we explicity set it to all zeroes as some RPC clients are very strict (e.g. GETH)
+        this.nonce = "0x0000000000000000";
         this.sha3Uncles = "0x0"; // no uncles
         this.logsBloom = Numeric.toHexString(block.header().logsBloom().getBloomFilter());
         this.transactionsRoot = Numeric.toHexString(block.header().sidechainTransactionsMerkleRootHash());
