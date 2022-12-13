@@ -51,7 +51,7 @@ class Bloom(private val filter: Array[Byte]) extends BytesSerializable {
    * @param data
    *   raw data to test for presence
    * @return
-   *   false if data is not present in the filter, true if it likely, see note
+   *   false if data is not present in the filter, true if it likely is, see note
    */
   def test(data: Array[Byte]): Boolean = {
     getBloomValues(data)
