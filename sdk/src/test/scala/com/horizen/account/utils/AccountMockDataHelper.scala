@@ -48,8 +48,8 @@ case class AccountMockDataHelper(genesis: Boolean)
       with MessageProcessorFixture {
 
   def getMockedAccountHistory(
-      block: Optional[AccountBlock],
-      parentBlock: Optional[AccountBlock] = null,
+      block: Option[AccountBlock],
+      parentBlock: Option[AccountBlock] = null,
       genesisBlockId: Option[String] = Option.empty[String]
   ): AccountHistory = {
     val history: AccountHistory = mock[AccountHistory]
@@ -68,12 +68,12 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(history.getCurrentHeight).thenReturn(height)
 
     Mockito.when(history.getBlockById(any())).thenReturn(Optional.empty[AccountBlock])
-    Mockito.when(history.getBlockById(blockId)).thenReturn(block)
+    Mockito.when(history.getBlockById(blockId)).thenReturn(Optional.of(block.get))
 
-    Mockito.when(history.getStorageBlockById(any())).thenReturn(Option.empty[AccountBlock])
-    Mockito.when(history.getStorageBlockById(blockId)).thenReturn(Option(block.get()))
+    Mockito.when(history.getStorageBlockById(any())).thenReturn(None)
+    Mockito.when(history.getStorageBlockById(blockId)).thenReturn(Some(block.get))
     if (parentBlock != null) {
-      val parentId = parentBlock.get().id
+      val parentId = parentBlock.get.id
       val blockInfo = new SidechainBlockInfo(
         height,
         0,
@@ -81,14 +81,14 @@ case class AccountMockDataHelper(genesis: Boolean)
         86400L * 2,
         ModifierSemanticValidity.Unknown,
         MainchainHeaderBaseInfo
-          .getMainchainHeaderBaseInfoSeqFromBlock(block.get(), FieldElementFixture.generateFieldElement()),
-        SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block.get()),
+          .getMainchainHeaderBaseInfoSeqFromBlock(block.get, FieldElementFixture.generateFieldElement()),
+        SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block.get),
         WithdrawalEpochInfo(0, 0),
         Option(VrfGenerator.generateVrfOutput(0)),
         parentId
       )
-      Mockito.when(history.getBlockById(parentId)).thenReturn(parentBlock)
-      Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Option(parentBlock.get()))
+      Mockito.when(history.getBlockById(parentId)).thenReturn(Optional.of(parentBlock.get))
+      Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Option(parentBlock.get))
       Mockito.when(history.blockInfoById(blockId)).thenReturn(blockInfo)
     }
 

@@ -43,7 +43,6 @@ import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
-// TODO: we need full coverage of eth rpc service. Every method with both success and fail cases
 class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture with TableDrivenPropertyChecks {
   val mapper = new ObjectMapper()
   val invalidCasesTxHash =
@@ -124,9 +123,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       txs
     )
     val mockedHistory: AccountHistory = mockHelper.getMockedAccountHistory(
-      Option.apply(mockedBlock).asJava,
-      Option.apply(genesisBlock).asJava,
-      Option(genesisBlockId)
+      Some(mockedBlock),
+      Some(genesisBlock),
+      Some(genesisBlockId)
     )
     val mockedState: AccountState = mockHelper.getMockedState(receipt, Numeric.hexStringToByteArray(txHash))
 
@@ -135,7 +134,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       .generateSecret(BytesUtils.fromHexString("1231231231231231231231231231231231231231231123123123123123123123"))
     senderWithSecret = Numeric.toHexString(secret.publicImage().address())
     txJson =
-      s"""{"from": "${senderWithSecret}", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"}"""
+      s"""{"from": "${senderWithSecret}", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675", "nonce": "0x1"}"""
     val mockedWallet: AccountWallet = mockHelper.getMockedWallet(secret)
 
     val mockedSidechainNodeViewHolder = TestProbe()
@@ -410,9 +409,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getBlockByHash"
     val validCases = Table(
       ("Block hash", "Full transaction objects", "Expected output"),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, blockViewOutput),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, blockViewOutputTxHashes),
-      ("0x12345677de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, "null")
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, blockViewOutput.length),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, blockViewOutputTxHashes.length),
+      ("0x12345677de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, "null".length)
     )
 
     val invalidCases =
@@ -421,7 +420,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     forAll(validCases) { (hash, fullTx, expectedOutput) =>
       assertEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(hash, fullTx), method = method)))
+        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(hash, fullTx), method = method))).length
       )
     }
 
