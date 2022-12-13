@@ -150,8 +150,8 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
 
   override def getBlockInfo(block: SidechainBlock): Try[ObjectNode] = Try {
     val (height: Int, feePaymentsInfoOpt: Option[SidechainFeePaymentsInfo])  = applyOnNodeView { sidechainNodeView =>
-      (sidechainNodeView.history.blockInfoById(block.id).height,
-        sidechainNodeView.history.feePaymentsInfo(block.id))
+        (sidechainNodeView.history.blockInfoById(block.id).height,
+          sidechainNodeView.history.feePaymentsInfo(block.id))
     }
 
     calculateBlockPayload(block, height, feePaymentsInfoOpt)
