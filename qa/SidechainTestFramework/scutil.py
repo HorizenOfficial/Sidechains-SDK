@@ -840,7 +840,7 @@ DefaultBlockTimestampRewind = 720 * 120 / 2
 # UTXO / Account model string
 UtxoModel = "utxo"
 AccountModel = "account"
-DefaultModel = "utxo"
+DefaultModel = UtxoModel
 
 """
 Bootstrap a network of sidechain nodes.
