@@ -25,15 +25,9 @@ case class EthereumReceipt(
 
   override def toString: String = {
 
-    var txHashStr: String = "null"
-    var blockHashStr: String = "null"
-    var contractAddressStr = "null"
-
-    txHashStr = BytesUtils.toHexString(transactionHash)
-
-    blockHashStr = BytesUtils.toHexString(blockHash)
-
-    contractAddressStr = contractAddress match {
+    val txHashStr: String = BytesUtils.toHexString(transactionHash)
+    val blockHashStr: String = BytesUtils.toHexString(blockHash)
+    val contractAddressStr = contractAddress match {
       case Some(addr) => BytesUtils.toHexString(addr)
       case None => "null"
     }
