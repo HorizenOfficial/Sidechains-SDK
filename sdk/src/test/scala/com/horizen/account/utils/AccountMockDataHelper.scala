@@ -49,8 +49,8 @@ case class AccountMockDataHelper(genesis: Boolean)
 
   def getMockedAccountHistory(
       block: Option[AccountBlock],
-      parentBlock: Option[AccountBlock] = null,
-      genesisBlockId: Option[String] = Option.empty[String]
+      parentBlock: Option[AccountBlock] = None,
+      genesisBlockId: Option[String] = None
   ): AccountHistory = {
     val history: AccountHistory = mock[AccountHistory]
     val blockId = block.get.id
@@ -58,7 +58,7 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
 
-    Mockito.when(history.blockIdByHeight(any())).thenReturn(Option.empty[String])
+    Mockito.when(history.blockIdByHeight(any())).thenReturn(None)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))
 
     if (genesis) {
@@ -72,7 +72,7 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     Mockito.when(history.getStorageBlockById(any())).thenReturn(None)
     Mockito.when(history.getStorageBlockById(blockId)).thenReturn(Some(block.get))
-    if (parentBlock != null) {
+    if (parentBlock.nonEmpty) {
       val parentId = parentBlock.get.id
       val blockInfo = new SidechainBlockInfo(
         height,
@@ -88,7 +88,7 @@ case class AccountMockDataHelper(genesis: Boolean)
         parentId
       )
       Mockito.when(history.getBlockById(parentId)).thenReturn(Optional.of(parentBlock.get))
-      Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Option(parentBlock.get))
+      Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Some(parentBlock.get))
       Mockito.when(history.blockInfoById(blockId)).thenReturn(blockInfo)
     }
 
@@ -120,7 +120,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     var mcBlockRef: MainchainBlockReference = generateMainchainBlockReference()
     mcBlockRef = new MainchainBlockReference(
       mcBlockRef.header,
-      MainchainBlockReferenceData(mcBlockRef.header.hash, Option(aggTx), None, None, Seq(), None)
+      MainchainBlockReferenceData(mcBlockRef.header.hash, Some(aggTx), None, None, Seq(), None)
     ) {
       override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
     }
@@ -178,7 +178,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     }
     Mockito.when(state.getView).thenReturn(stateView)
     Mockito.when(state.getView.getTransactionReceipt(any())).thenReturn(None)
-    Mockito.when(state.getView.getTransactionReceipt(txHash)).thenReturn(Option(receipt))
+    Mockito.when(state.getView.getTransactionReceipt(txHash)).thenReturn(Some(receipt))
     if (state.getView != null) {
       Mockito.when(state.getView.getBalance(any())).thenReturn(BigInteger.valueOf(99999999999999999L))
       Mockito
