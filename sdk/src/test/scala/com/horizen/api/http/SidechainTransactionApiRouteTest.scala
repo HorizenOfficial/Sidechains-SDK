@@ -158,59 +158,46 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       val transactionFound = memoryPool.get(0)
       val transactionIdNotValid = BytesUtils.toHexString("transactionId".getBytes)
       val transactionIdValid = transactionFound.id
-      // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
+      // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool not found
-      // searchTransactionInBlockchain not found
       // ERROR
       sidechainApiMockConfiguration.setShould_memPool_searchTransactionInMemoryPool_return_value(false)
       sidechainApiMockConfiguration.setShould_history_searchTransactionInBlockchain_return_value(false)
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, None, Some(true), None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, None, None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", JOptional.empty()).code)
       }
-      // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
+      // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool not found
-      // searchTransactionInBlockchain found
       // parameter 'format' = false
       sidechainApiMockConfiguration.setShould_memPool_searchTransactionInMemoryPool_return_value(false)
       sidechainApiMockConfiguration.setShould_history_searchTransactionInBlockchain_return_value(true)
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true), None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        if (result == null)
-          fail("Serialization failed for object SidechainApiResponseBody")
-
-        assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("transactionBytes").isTextual)
-        assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
+        assertEquals(result, null)
       }
-      // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
+      // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool not found
-      // searchTransactionInBlockchain found
       // parameter 'format' = true
       sidechainApiMockConfiguration.setShould_memPool_searchTransactionInMemoryPool_return_value(false)
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        if (result == null)
-          fail("Serialization failed for object SidechainApiResponseBody")
-
-        assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("transaction").isObject)
-        jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
+        assertEquals(result, null)
       }
-      // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
+      // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool found
       // parameter 'format' = false
       sidechainApiMockConfiguration.setShould_memPool_searchTransactionInMemoryPool_return_value(true)
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true), None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -221,11 +208,11 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         assertTrue(result.get("transactionBytes").isTextual)
         assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
       }
-      // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
+      // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool found
       // parameter 'format' = true
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -236,11 +223,11 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         assertTrue(result.get("transaction").isObject)
         jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
       }
-      // Case --> blockHash not set, txIndex = false -> Search in memory pool
+      // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool found
       // parameter 'format' = false
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(false), None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -251,11 +238,11 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         assertTrue(result.get("transactionBytes").isTextual)
         assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
       }
-      // Case --> blockHash not set, txIndex = false -> Search in memory pool
+      // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool found
       // parameter 'format' = true
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(false), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -266,40 +253,40 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         assertTrue(result.get("transaction").isObject)
         jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
       }
-      // Case --> blockHash not set, txIndex = false -> Search in memory pool
+      // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool not found
       // ERROR
       sidechainApiMockConfiguration.setShould_memPool_searchTransactionInMemoryPool_return_value(false)
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, None, Some(false), None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, None, None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", JOptional.empty()).code)
       }
-      // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
+      // Case --> blockHash set -> Search in block referenced by blockHash
       // searchTransactionInBlock not found
       // ERROR
       sidechainApiMockConfiguration.setShould_history_searchTransactionInBlock_return_value(false)
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, Some("blockHash"), Some(false), None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, Some("blockHash"), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", JOptional.empty()).code)
       }
-      // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
+      // Case --> blockHash set -> Search in block referenced by blockHash
       // searchTransactionInBlock found
       // parameter 'format' = false
       sidechainApiMockConfiguration.setShould_history_searchTransactionInBlock_return_value(true)
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, Some("blockHash"), Some(false), None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, Some("blockHash"), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
+      // Case --> blockHash set -> Search in block referenced by blockHash
       // searchTransactionInBlock found
       // parameter 'format' = true
       Post(basePath + "findById")
-        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, Some("blockHash"), Some(false), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, Some("blockHash"), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")

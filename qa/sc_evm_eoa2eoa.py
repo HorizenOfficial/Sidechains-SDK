@@ -7,10 +7,11 @@ from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.scutil import generate_next_block
+
 from httpCalls.transaction.allTransactions import allTransactions
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei, convertWeiToZen, \
-    ForgerStakeSmartContractAddress, WithdrawalReqSmartContractAddress
+    FORGER_STAKE_SMART_CONTRACT_ADDRESS, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 from test_framework.util import (
     assert_equal, assert_true, fail, )
 
@@ -24,11 +25,6 @@ Test:
     Test some negative scenario too
      
 """
-
-
-# helper method for EIP155 tx
-def getChainIdFromSignatureV(sigV):
-    return int((sigV - 35) / 2)
 
 
 class SCEvmEOA2EOA(AccountChainSetup):
@@ -64,7 +60,7 @@ class SCEvmEOA2EOA(AccountChainSetup):
 
         # get mempool contents and check contents are as expected
         response = allTransactions(from_sc_node, False)
-        assert_true(tx_hash in response["transactionIds"])
+        assert_true(tx_hash in response['transactionIds'])
 
         if print_json_results:
             logging.info(allTransactions(from_sc_node))
@@ -191,15 +187,6 @@ class SCEvmEOA2EOA(AccountChainSetup):
         except Exception as e:
             logging.info("Expected failure: {}".format(e))
 
-        # logging.info("Create an EOA to EOA transaction moving some fund with too high a nonce ==> SHOULD FAIL")
-        # transferred_amount_in_zen = Decimal('33')
-        # ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen,
-        #                             nonce=33)
-        # if not ret:
-        #     logging.info("Expected failure: {}".format(msg))
-        # else:
-        #     fail("EOA2EOA with bad nonce should not work")
-
         logging.info("Create an EOA to EOA transaction moving some fund with too low a nonce ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('33')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
@@ -221,7 +208,7 @@ class SCEvmEOA2EOA(AccountChainSetup):
         logging.info(
             "Create an EOA to EOA transaction moving a fund to a fake contract address (forger stakes)  ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('1')
-        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, ForgerStakeSmartContractAddress,
+        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
                                        transferred_amount_in_zen)
         if not ret:
             logging.info("Expected failure: {}".format(msg))
@@ -232,7 +219,7 @@ class SCEvmEOA2EOA(AccountChainSetup):
             "Create an EOA to EOA transaction moving a fund to a fake contract address (withdrawal reqs) ==> SHOULD "
             "FAIL")
         transferred_amount_in_zen = Decimal('1')
-        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, WithdrawalReqSmartContractAddress,
+        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
                                        transferred_amount_in_zen)
         if not ret:
             logging.info("Expected failure: {}".format(msg))

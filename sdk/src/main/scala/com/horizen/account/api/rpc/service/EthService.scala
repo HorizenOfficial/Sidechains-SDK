@@ -20,7 +20,7 @@ import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.TraceParams
+import com.horizen.evm.interop.{EvmResult, TraceOptions}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -455,17 +455,37 @@ class EthService(
     }
   }
 
+  // Uncle Blocks RPCs
+  // An uncle block is a block that did not get mined onto the canonical chain.
+  // Only one block can be mined and acknowledged as canonical on the blockchain. The remaining blocks are uncle blocks.
+  // The Sidechains that are created using this sdk DO NOT support uncle blocks.
+  // For this reason:
+  // - eth_getUncleCountByBlockHash and eth_getUncleCountByBlockNumber always return 0x0
+  // - eth_getUncleByBlockHashAndIndex and eth_getUncleByBlockNumberAndIndex always return null (as no block was found)
+  @RpcMethod("eth_getUncleCountByBlockHash")
+  def getUncleCountByBlockHash(hash: Hash) = new Quantity(0L)
+
+  @RpcMethod("eth_getUncleCountByBlockNumber")
+  def eth_getUncleCountByBlockNumber(tag: String) = new Quantity(0L)
+
+  @RpcMethod("eth_getUncleByBlockHashAndIndex")
+  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: Quantity) = null
+
+  @RpcMethod("eth_getUncleByBlockNumberAndIndex")
+  def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity) = null
+
+
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
-  def traceBlockByNumber(tag: String, traceParams: TraceParams): DebugTraceBlockView = {
+  def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
     applyOnAccountView { nodeView =>
       // get block to trace
-      val (block, blockInfo) = getBlockByTag(nodeView, tag)
+      val (block, blockInfo) = getBlockByTag(nodeView, number)
 
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceParams() else traceParams)
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
@@ -487,7 +507,7 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, traceParams: TraceParams): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: Hash, traceOptions: TraceOptions): DebugTraceTransactionView = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -515,10 +535,10 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceParams() else traceParams)
+        blockContext.setTraceParams(if (traceOptions == null) new TraceOptions() else traceOptions)
 
         // apply requested transaction with tracing enabled
-        blockContext.setEvmResult(null)
+        blockContext.setEvmResult(EvmResult.emptyEvmResult())
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         new DebugTraceTransactionView(blockContext.getEvmResult)
@@ -543,7 +563,7 @@ class EthService(
     val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        Hash.FromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
+        Hash.fromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
       }
     }
   }

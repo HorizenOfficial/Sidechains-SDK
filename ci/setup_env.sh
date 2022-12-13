@@ -51,9 +51,10 @@ function check_signed_tag() {
   # Checking if git tag signed by the maintainers
   if git verify-tag -v "${1}"; then
     echo "${1} is a valid signed tag"
-  else
-    echo "Git tag's = ${1} gpg signature is NOT valid. The build is not going to be released..."
+    return 0
   fi
+  echo "Git tag's = ${1} gpg signature is NOT valid. The build is not going to be released..."
+  return 1
 }
 
 function release_prep() {

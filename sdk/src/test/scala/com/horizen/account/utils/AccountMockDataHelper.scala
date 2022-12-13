@@ -195,7 +195,7 @@ case class AccountMockDataHelper(genesis: Boolean)
       Mockito.when(state.getView.getRefund).thenReturn(BigInteger.ONE)
 
       val proofRes: ProofAccountResult = mock[ProofAccountResult]
-      proofRes.address = Address.FromBytes(Numeric.hexStringToByteArray("0x1234567891011121314151617181920212223242"))
+      proofRes.address = Address.fromBytes(Numeric.hexStringToByteArray("0x1234567891011121314151617181920212223242"))
       proofRes.accountProof = Array("123")
       proofRes.nonce = BigInteger.ONE
       proofRes.balance = BigInteger.valueOf(123L)
