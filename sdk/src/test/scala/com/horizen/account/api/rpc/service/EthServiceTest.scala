@@ -14,17 +14,18 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{EthereumReceipt, ReceiptFixture}
+import com.horizen.account.secret.PrivateKeySecp256k1Creator
 import com.horizen.account.state.AccountState
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionActorRef
+import com.horizen.evm.utils.Hash
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.assertEquals
+import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
@@ -34,14 +35,12 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
 import sparkz.core.bytesToId
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
-import sparkz.core.transaction.Transaction
 
 import java.math.BigInteger
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
 // TODO: we need full coverage of eth rpc service. Every method with both success and fail cases
@@ -54,9 +53,18 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       "0x1234",
       "0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba1"
     )
+  val blockViewOutput =
+    """{"number":1,"hash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","parentHash":"0xnull","nonce":"0x0000000000000000","sha3Uncles":"0x","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","transactionsRoot":"0x1234567891011121314112345678910111213141","stateRoot":"0x1234567891011121314112345678910111213141","receiptsRoot":"0x1234567891011121314112345678910111213141","miner":"0x1234567891011121314112345678910111213141","mixHash":"0x","extraData":"0x","size":"0x100","gasLimit":"0x1c9c380","gasUsed":"0x3b9aca01","timestamp":"0x3b9aca00","transactions":[{"id":"6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","from":{"address":"0SO2idrY7WuZ+L1V7tZKs1fmqNE="},"to":null,"value":1,"nonce":0,"data":"","gasPrice":null,"gasLimit":1,"maxFeePerGas":1000000100,"maxPriorityFeePerGas":1,"eip1559":true,"version":2,"chainId":1111111,"signed":true,"signature":{"v":"HA==","r":"gFxlisCEvm2gedlr1Hmb7zqkV4yOV7l8PG359YFVECM=","s":"VoJ38Jpkdx9bRYj/B/dXJajkDSxkGUbrZFFS3NTJPw0="},"legacy":false,"eip155":false}],"author":"0x1234567891011121314112345678910111213141","difficulty":null,"totalDifficulty":null,"uncles":null,"sealFields":null,"baseFeePerGas":"0x342770c0"}"""
+  val blockViewOutputTxHashes =
+    """{"number":1,"hash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","parentHash":"0xnull","nonce":"0x0000000000000000","sha3Uncles":"0x","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","transactionsRoot":"0x1234567891011121314112345678910111213141","stateRoot":"0x1234567891011121314112345678910111213141","receiptsRoot":"0x1234567891011121314112345678910111213141","miner":"0x1234567891011121314112345678910111213141","mixHash":"0x","extraData":"0x","size":"0x100","gasLimit":"0x1c9c380","gasUsed":"0x3b9aca01","timestamp":"0x3b9aca00","transactions":["0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"],"author":"0x1234567891011121314112345678910111213141","difficulty":null,"totalDifficulty":null,"uncles":null,"sealFields":null,"baseFeePerGas":"0x342770c0"}"""
   val txViewOutput =
     """{"blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","hash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","type":"0x2","nonce":"0x0","to":null,"gas":"0x1","value":"0x1","input":"0x","maxPriorityFeePerGas":"0x1","maxFeePerGas":"0x3b9aca64","gasPrice":"0x342770c1","accessList":null,"chainId":"0x10f447","v":"0x1c","r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023","s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"}"""
+  val secretTestAddress: String = null
+  val txJsonNoSecret =
+    s"""{"from": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"}"""
   var ethService: EthService = _
+  var txJson: String = null
+  var senderWithSecret: String = null
 
   @Before
   def setUp(): Unit = {
@@ -122,6 +130,14 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     )
     val mockedState: AccountState = mockHelper.getMockedState(receipt, Numeric.hexStringToByteArray(txHash))
 
+    val secret = PrivateKeySecp256k1Creator
+      .getInstance()
+      .generateSecret(BytesUtils.fromHexString("1231231231231231231231231231231231231231231123123123123123123123"))
+    senderWithSecret = Numeric.toHexString(secret.publicImage().address())
+    txJson =
+      s"""{"from": "${senderWithSecret}", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"}"""
+    val mockedWallet: AccountWallet = mockHelper.getMockedWallet(secret)
+
     val mockedSidechainNodeViewHolder = TestProbe()
     mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
       override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
@@ -135,7 +151,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
               ] @unchecked =>
             m match {
               case GetDataFromCurrentView(f) =>
-                sender ! f(CurrentView(mockedHistory, mockedState, mock[AccountWallet], mock[AccountMemoryPool]))
+                sender ! f(CurrentView(mockedHistory, mockedState, mockedWallet, mock[AccountMemoryPool]))
             }
           case LocallyGeneratedTransaction(tx) =>
             actorSystem.eventStream.publish(SuccessfulTransaction(tx))
@@ -172,44 +188,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       Numeric.toHexStringWithPrefix(BigInteger.valueOf(875000000)),
       ethService.execute(getRpcRequest()).asInstanceOf[Quantity].value
     )
-  }
-
-  /**
-   * Helper for constructing a rpc request takes up to two Arrays containing the parameter names, values and the method
-   * name
-   * @param params
-   *   default is null
-   * @param paramValues
-   *   default is null
-   * @param method
-   *   RPC method, default is calling method name
-   * @return
-   *   RpcRequest instance
-   */
-  private[this] def getRpcRequest(
-                                   params: Array[String] = null,
-                                   paramValues: Array[Any] = null,
-                                   method: String = Thread.currentThread.getStackTrace()(2).getMethodName
-                                 ): RpcRequest = {
-    val jsonParams = if (params != null) {
-      if (params.length != paramValues.length)
-        throw new IllegalArgumentException("Number of parameters given must be equal to number of values given")
-      (params zip paramValues)
-        .map(param => s""""${param._1}":"${param._2}"""")
-        .mkString("{", ", ", "}")
-    } else if (paramValues != null) {
-      paramValues
-        .collect {
-          case stringValue: String => s""""$stringValue""""
-          case arrayValue: Array[_] => arrayValue.mkString("[", ", ", "]")
-          case value => value
-        }
-        .mkString("[", ", ", "]")
-    } else {
-      "[]"
-    }
-    val json = s"""{"id":"1","jsonrpc":"2.0","method":"$method", "params":$jsonParams}"""
-    new RpcRequest((new ObjectMapper).readTree(json))
   }
 
   @Test
@@ -326,6 +304,44 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   }
 
+  /**
+   * Helper for constructing a rpc request takes up to two Arrays containing the parameter names, values and the method
+   * name
+   * @param params
+   *   default is null
+   * @param paramValues
+   *   default is null
+   * @param method
+   *   RPC method, default is calling method name
+   * @return
+   *   RpcRequest instance
+   */
+  private[this] def getRpcRequest(
+      params: Array[String] = null,
+      paramValues: Array[Any] = null,
+      method: String = Thread.currentThread.getStackTrace()(2).getMethodName
+  ): RpcRequest = {
+    val jsonParams = if (params != null) {
+      if (params.length != paramValues.length)
+        throw new IllegalArgumentException("Number of parameters given must be equal to number of values given")
+      (params zip paramValues)
+        .map(param => s""""${param._1}":"${param._2}"""")
+        .mkString("[{", ", ", "}]")
+    } else if (paramValues != null) {
+      paramValues
+        .collect {
+          case stringValue: String => if (stringValue.length > 255) stringValue else s""""$stringValue""""
+          case arrayValue: Array[_] => arrayValue.mkString("[", ", ", "]")
+          case value => value
+        }
+        .mkString("[", ", ", "]")
+    } else {
+      "[]"
+    }
+    val json = s"""{"id":"1","jsonrpc":"2.0","method":"$method", "params":$jsonParams}"""
+    new RpcRequest((new ObjectMapper).readTree(json))
+  }
+
   @Test
   def eth_sendRawTransaction(): Unit = {
     val method = "eth_sendRawTransaction"
@@ -340,36 +356,257 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val invalidCases = Table(
       "Raw transaction",
       "123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba",
-      "0x123cfae639e9fcab216")
+      "0x123cfae639e9fcab216"
+    )
 
     forAll(validCases) { (input, expectedOutput) =>
-       assertEquals(
-            expectedOutput,
-            ethService.execute(getRpcRequest(paramValues = Array(input), method = method))
-        )
+      assertEquals(expectedOutput, ethService.execute(getRpcRequest(paramValues = Array(input), method = method)))
     }
 
     forAll(invalidCases) { input =>
-        assertThrows[RuntimeException] {
-            ethService.execute(getRpcRequest(paramValues = Array(input), method = method))
-        }
+      assertThrows[RuntimeException] {
+        ethService.execute(getRpcRequest(paramValues = Array(input), method = method))
+      }
     }
   }
 
-  /*@Test
+  @Test
+  def eth_getBlockByNumber(): Unit = {
+    val method = "eth_getBlockByNumber"
+    val validCases = Table(
+      ("Block tag", "Full transaction objects", "Expected output"),
+      ("latest", true, blockViewOutput.length),
+      ("pending", false, blockViewOutputTxHashes.length),
+      ("0x2", true, blockViewOutput.length)
+    )
+
+    val invalidCases =
+      Table(
+        ("Block tag / number", "Full transaction objects"),
+        ("safe", true),
+        ("finalized", true),
+        ("aaaa", true),
+        ("0x1337", true)
+      )
+
+    forAll(validCases) { (tag, fullTx, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        mapper
+          .writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(tag, fullTx), method = method)))
+          .length
+      )
+    }
+
+    forAll(invalidCases) { (tag, fullTx) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(tag, fullTx), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_getBlockByHash(): Unit = {
+    val method = "eth_getBlockByHash"
+    val validCases = Table(
+      ("Block hash", "Full transaction objects", "Expected output"),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, blockViewOutput),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, blockViewOutputTxHashes),
+      ("0x12345677de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, "null")
+    )
+
+    val invalidCases =
+      Table(("Block hash", "Full transaction objects"), ("0x1337", true), ("1337abcd", true))
+
+    forAll(validCases) { (hash, fullTx, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(hash, fullTx), method = method)))
+      )
+    }
+
+    forAll(invalidCases) { (hash, fullTx) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(hash, fullTx), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_getBlockTransactionCountByNumber(): Unit = {
+    val method = "eth_getBlockTransactionCountByNumber"
+    val validCases = Table(
+      ("Block tag / index", "Expected output"),
+      ("latest", "0x1"),
+      ("pending", "0x1"),
+      ("0x2", "0x1"),
+      ("0x1", "0x0")
+    )
+
+    val invalidCases =
+      Table(("Block tag / index"), ("0x1337"), ("1337abcd"))
+
+    forAll(validCases) { (tag, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        ethService.execute(getRpcRequest(paramValues = Array(tag), method = method)).asInstanceOf[Quantity].value
+      )
+    }
+
+    forAll(invalidCases) { (tag) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(tag), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_getBlockTransactionCountByHash(): Unit = {
+    val method = "eth_getBlockTransactionCountByHash"
+    val validCases = Table(
+      ("Block hash", "Expected output"),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0x1"),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0x1"),
+      // ("0x12345677de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
+      ("0x0000000000000000000000000000000000000000000000000000000000000123", "0x0")
+    )
+
+    val invalidCases =
+      Table(("Block hash"), ("0x1337"), ("1337abcd"))
+
+    forAll(validCases) { (hash, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        ethService.execute(getRpcRequest(paramValues = Array(hash), method = method)).asInstanceOf[Quantity].value
+      )
+    }
+
+    forAll(invalidCases) { (hash) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(hash), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_sendTransaction(): Unit = {
+    val method = "eth_sendTransaction"
+
+    val validCases = Table(
+      ("Transaction parameters", "Expected output"),
+      // tx hash length = 68
+      (Array[Any](txJson), 68)
+    )
+
+    val invalidCases = Table("Transaction", Array[Any](txJsonNoSecret), "aaaa")
+
+    forAll(validCases) { (params, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = params, method = method))).length
+      )
+    }
+
+    forAll(invalidCases) { (tx) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(tx), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_signTransaction(): Unit = {
+    val method = "eth_signTransaction"
+
+    val validCases = Table(
+      ("Transaction parameters", "Expected output"),
+      // signed tx length = 300
+      (Array[Any](txJson), 300)
+    )
+
+    val invalidCases = Table("Transaction", Array[Any](txJsonNoSecret), "aaaa")
+
+    forAll(validCases) { (params, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = params, method = method))).length
+      )
+    }
+
+    forAll(invalidCases) { (tx) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(tx), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_sign(): Unit = {
+    val method = "eth_sign"
+
+    val validCases = Table(
+      ("Sender", "message", "Expected output"),
+      // signed msg length = 134
+      (senderWithSecret, "message", 134)
+    )
+
+    val invalidCases = Table(("sender", "message"), ("asd", "message"), ("aaaa", "message"))
+
+    forAll(validCases) { (sender, message, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        mapper
+          .writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(sender, message), method = method)))
+          .length
+      )
+    }
+
+    forAll(invalidCases) { (sender, message) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(sender, message), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_getBalance(): Unit = {
+    val method = "eth_getBalance"
+
+    val validCases = Table(
+      ("Address", "tag", "Expected output"),
+      ("0x1234567891011121314151617181920212223242", "latest", "0x7b"),
+      ("0x1234567891011121314151617181920212223241", "latest", "0x16345785d89ffff")
+    )
+
+    val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
+
+    forAll(validCases) { (address, tag, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        ethService
+          .execute(getRpcRequest(paramValues = Array(address, tag), method = method))
+          .asInstanceOf[Quantity]
+          .value
+      )
+    }
+
+    forAll(invalidCases) { (address, tag) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
+      }
+    }
+  }
+
+  @Test
   def eth_getCode(): Unit = {
     val method = "eth_getCode"
     val validCases = Table(
       ("Address", "Tag", "Expected output"),
-      ("0x1234567890123456789012345678901234567899", "latest", "0x"),
-      ("0x1234567890123456789012345678901234567890", "latest", "0xabcdef")
+      ("0x1234567891011121314151617181920212223242", "latest", "0x1234"),
+      ("0x1234567890123456789012345678901234567890", "latest", "0x")
     )
 
-    val invalidCases = Table(
-      ("Address", "Tag"),
-      ("0x", "latest"),
-      ("0x1234567890123456789012345678901234567890", "")
-    )
+    val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
 
     forAll(validCases) { (address, tag, expectedOutput) =>
       assertEquals(
@@ -383,29 +620,352 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
       }
     }
-  }*/
+  }
+
+  @Test
+  def eth_getTransactionCount(): Unit = {
+    val method = "eth_getTransactionCount"
+    val validCases = Table(
+      ("Address", "Tag", "Expected output"),
+      ("0x1234567891011121314151617181920212223242", "latest", "0x1"),
+      ("0x1234567890123456789012345678901234567890", "latest", "0x0")
+    )
+
+    val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
+
+    forAll(validCases) { (address, tag, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        ethService
+          .execute(getRpcRequest(paramValues = Array(address, tag), method = method))
+          .asInstanceOf[Quantity]
+          .value
+      )
+    }
+
+    forAll(invalidCases) { (address, tag) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_getStorageAt(): Unit = {
+    val method = "eth_getStorageAt"
+    val validCases = Table(
+      ("Address", "Key", "Tag", "Expected output"),
+      (
+        "0x1234567891011121314151617181920212223242",
+        "0x0",
+        "latest",
+        "0x1511111111111111111111111111111111111111111111111111111111111111"
+      ),
+      (
+        "0x1234567890123456789012345678901234567890",
+        "0x0",
+        "latest",
+        "0x1411111111111111111111111111111111111111111111111111111111111111"
+      )
+    )
+
+    val invalidCases = Table(
+      ("Address", "Key", "Tag"),
+      ("0x12", "0x12", "latest"),
+      ("0x1234567890123456789012345678901234567890", "0x12", "")
+    )
+
+    forAll(validCases) { (address, key, tag, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        ethService
+          .execute(getRpcRequest(paramValues = Array(address, key, tag), method = method))
+          .asInstanceOf[Hash]
+          .toString
+      )
+    }
+
+    forAll(invalidCases) { (address, key, tag) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(address, key, tag), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_getProof(): Unit = {
+    val method = "eth_getProof"
+    val validCases = Table(
+      ("Address", "Tag", "Expected output"),
+      (
+        "0x1234567891011121314151617181920212223242",
+        "latest",
+        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+      ),
+      (
+        "0x1234567890123456789012345678901234567890",
+        "latest",
+        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+      )
+    )
+
+    val invalidCases = Table(("Address", "Tag"), ("0x12", "latest"), ("0x1234567890123456789012345678901234567890", ""))
+
+    forAll(validCases) { (address, tag, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        mapper.writeValueAsString(
+          ethService.execute(
+            new RpcRequest(
+              mapper.readTree(
+                s"""{"jsonrpc":"2.0","method":"$method", "params":["$address", ["0x1", "0x2"], "$tag"],"id":1}"""
+              )
+            )
+          )
+        )
+      )
+    }
+
+    forAll(invalidCases) { (address, tag) =>
+      assertThrows[RpcException] {
+        ethService.execute(
+          new RpcRequest(
+            mapper.readTree(
+              s"""{"jsonrpc":"2.0","method":"$method", "params":["$address", ["0x1", "0x2"], "$tag"],"id":1}"""
+            )
+          )
+        )
+      }
+    }
+  }
+
+  @Test
+  def eth_accounts(): Unit = {
+    assertEquals(
+      s"""["$senderWithSecret"]""",
+      mapper.writeValueAsString(ethService.execute(getRpcRequest())).toLowerCase()
+    )
+  }
+
+  @Test
+  def zen_getFeePayments(): Unit = {
+    val method = "zen_getFeePayments"
+    val validCases = Table(
+      ("Block id", "Expected output"),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
+      ("null", "null")
+    )
+
+    forAll(validCases) { (id, expectedOutput) =>
+      assertEquals(
+        expectedOutput,
+        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(id), method = method)))
+      )
+    }
+  }
+
+  @Test
+  def zen_getForwardTransfers(): Unit = {
+    val method = "zen_getForwardTransfers"
+    val validCases = Table(("Block id", "Size"), ("latest", 150), ("earliest", 150))
+
+    val invalidCases =
+      Table("Block id", "0x1337", "1337abcd")
+
+    forAll(validCases) { (id, size) =>
+      assertTrue(
+        mapper
+          .writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(id), method = method)))
+          .length > size
+      )
+    }
+
+    forAll(invalidCases) { (id) =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(id), method = method))
+      }
+    }
+  }
+
+  @Test
+  def eth_estimateGas(): Unit = {
+    val method = "eth_estimateGas"
+
+    val validCases = Table(
+      ("from", "to", "data", "value", "gasPrice", "nonce", "Expected output"),
+      (
+        senderWithSecret,
+        "0x0000000000000000000022222222222222222222",
+        "0x",
+        "0xE8D4A51000",
+        "0x4B9ACA00",
+        "0x1",
+        "0x5208"
+      ),
+      (
+        senderWithSecret,
+        "0x0000000000000000000011111111111111111111",
+        "0x9950a60fdbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+        "0xE8D4A51000",
+        "0x4B9ACA00",
+        "0x1",
+        "0x53b8"
+      )
+    )
+
+    forAll(validCases) { (from, to, data, value, gasPrice, nonce, expectedOutput) =>
+      val x = getRpcRequest(
+        params = Array("from", "to", "data", "value", "gasPrice", "nonce"),
+        paramValues = Array(from, to, data, value, gasPrice, nonce),
+        method = method
+      )
+      assertEquals(
+        expectedOutput,
+        ethService
+          .execute(
+            getRpcRequest(
+              params = Array("from", "to", "data", "value", "gasPrice", "nonce"),
+              paramValues = Array(from, to, data, value, gasPrice, nonce),
+              method = method
+            )
+          )
+          .asInstanceOf[Quantity]
+          .value
+      )
+    }
+
+    val invalidCases = Table(
+      ("from", "to", "data", "value", "gasPrice", "nonce"),
+      (
+        senderWithSecret,
+        "0x0000000000000000000022222222222222222222",
+        "5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",
+        "0x999999999900000000000000000",
+        "0x4B9ACA00",
+        "0x1"
+      )
+    )
+
+    forAll(invalidCases) { (from, to, data, value, gasPrice, nonce) =>
+      assertThrows[RpcException] {
+        ethService.execute(
+          getRpcRequest(
+            params = Array("from", "to", "data", "value", "gasPrice", "nonce"),
+            paramValues = Array(from, to, data, value, gasPrice, nonce),
+            method = method
+          )
+        )
+      }
+    }
+  }
+
+  @Test
+  def eth_call(): Unit = {
+    val method = "eth_call"
+
+    val validCases = Table(
+      ("from", "to", "data", "value", "gasPrice", "nonce", "Expected output"),
+      (senderWithSecret, "0x0000000000000000000022222222222222222222", "0x", "0xE8D4A51000", "0x4B9ACA00", "0x1", "0x"),
+      (
+        senderWithSecret,
+        "0x0000000000000000000011111111111111111111",
+        "0x9950a60fdbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+        "0xE8D4A51000",
+        "0x4B9ACA00",
+        "0x1",
+        "0x"
+      )
+    )
+
+    forAll(validCases) { (from, to, data, value, gasPrice, nonce, expectedOutput) =>
+      val x = getRpcRequest(
+        params = Array("from", "to", "data", "value", "gasPrice", "nonce"),
+        paramValues = Array(from, to, data, value, gasPrice, nonce),
+        method = method
+      )
+      assertEquals(
+        expectedOutput,
+        ethService
+          .execute(
+            getRpcRequest(
+              params = Array("from", "to", "data", "value", "gasPrice", "nonce"),
+              paramValues = Array(from, to, data, value, gasPrice, nonce),
+              method = method
+            )
+          )
+      )
+    }
+
+    val invalidCases = Table(
+      ("from", "to", "data", "value", "gasPrice", "nonce"),
+      (
+        senderWithSecret,
+        "0x0000000000000000000022222222222222222222",
+        "5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",
+        "0x999999999900000000000000000",
+        "0x4B9ACA00",
+        "0x1"
+      ),
+      (
+        senderWithSecret,
+        "0x0000000000000000000022222222222222222222",
+        "5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",
+        "0x0",
+        "0x4B9ACA00",
+        ""
+      )
+    )
+
+    forAll(invalidCases) { (from, to, data, value, gasPrice, nonce) =>
+      assertThrows[RpcException] {
+        ethService.execute(
+          getRpcRequest(
+            params = Array("from", "to", "data", "value", "gasPrice", "nonce"),
+            paramValues = Array(from, to, data, value, gasPrice, nonce),
+            method = method
+          )
+        )
+      }
+    }
+  }
 
   @Test
   def eth_feeHistory(): Unit = {
     val method = "eth_feeHistory"
     val validCases = Table(
       ("Block count", "Newest block (tag)", "Reward percentiles", "Expected output"),
-      ("0x1", "latest", Array(20, 50, 70), """{"oldestBlock":"0x2","baseFeePerGas":["0x342770c0","0x1e0408399"],"gasUsedRatio":[33.333333366666665],"reward":[["0x1","0x1","0x1"]]}"""),
-      ("0x1", "latest", null, """{"oldestBlock":"0x2","baseFeePerGas":["0x342770c0","0x1e0408399"],"gasUsedRatio":[33.333333366666665],"reward":null}"""),
-      ("0x20", "latest", null, """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00","0x342770c0","0x1e0408399"],"gasUsedRatio":[0.0,33.333333366666665],"reward":null}""")
+      (
+        "0x1",
+        "latest",
+        Array(20, 50, 70),
+        """{"oldestBlock":"0x2","baseFeePerGas":["0x342770c0","0x1e0408399"],"gasUsedRatio":[33.333333366666665],"reward":[["0x1","0x1","0x1"]]}"""
+      ),
+      (
+        "0x1",
+        "latest",
+        null,
+        """{"oldestBlock":"0x2","baseFeePerGas":["0x342770c0","0x1e0408399"],"gasUsedRatio":[33.333333366666665],"reward":null}"""
+      ),
+      (
+        "0x20",
+        "latest",
+        null,
+        """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00","0x342770c0","0x1e0408399"],"gasUsedRatio":[0.0,33.333333366666665],"reward":null}"""
+      )
     )
 
     forAll(validCases) { (nrOfBlocks, tag, rewardPercentiles, expectedOutput) =>
       assertEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(nrOfBlocks, tag, rewardPercentiles), method = method)))
+        mapper.writeValueAsString(
+          ethService.execute(getRpcRequest(paramValues = Array(nrOfBlocks, tag, rewardPercentiles), method = method))
+        )
       )
     }
 
-    val invalidCases = Table(
-      ("Block count", "Newest block (tag)", "Reward percentiles"),
-      ("0x1", "latest", Array(20, 50, 130))
-    )
+    val invalidCases =
+      Table(("Block count", "Newest block (tag)", "Reward percentiles"), ("0x1", "latest", Array(20, 50, 130)))
 
     forAll(invalidCases) { (nrOfBlocks, tag, rewardPercentiles) =>
       assertThrows[RpcException] {
@@ -423,19 +983,13 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       new RpcRequest(request)
     }
 
-    // Test 2: Parameters are of wrong type
-    var rpcRequest = getRpcRequest(Array("tx", "tx2"), Array("test", "test2"), "eth_estimateGas")
+    // Test 2: Wrong number of parameters
+    var rpcRequest = getRpcRequest(paramValues = Array(5, 10, 20), method = "eth_estimateGas")
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
     }
 
-    // Test 3: Wrong number of parameters
-    rpcRequest = getRpcRequest(paramValues = Array(5, 10, 20), method = "eth_estimateGas")
-    assertThrows[RpcException] {
-      ethService.execute(rpcRequest)
-    }
-
-    // Test 4: Trigger IllegalArgumentException rpc call
+    // Test 3: Trigger IllegalArgumentException rpc call
     rpcRequest = getRpcRequest(paramValues = Array(-1), method = "eth_estimateGas")
     assertThrows[RpcException] {
       ethService.execute(rpcRequest)
