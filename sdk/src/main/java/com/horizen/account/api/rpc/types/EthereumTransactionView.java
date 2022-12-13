@@ -52,11 +52,11 @@ public class EthereumTransactionView {
         v = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getV()) : null;
         r = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getR()) : null;
         s = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getS()) : null;
-        blockHash = Numeric.toHexString(receipt.blockHash());
-        blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
+        blockHash = receipt != null ? Numeric.toHexString(receipt.blockHash()) : null;
+        blockNumber = receipt != null ? Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber())) : null;
         from = (ethTx.getFrom() != null) ? Numeric.toHexString(ethTx.getFrom().address()) : null;
-        hash = Numeric.toHexString(receipt.transactionHash());
-        transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
+        hash = receipt != null ? Numeric.toHexString(receipt.transactionHash()) : null;
+        transactionIndex = receipt != null ? Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex())) : null;
         accessList = null;
     }
 }
