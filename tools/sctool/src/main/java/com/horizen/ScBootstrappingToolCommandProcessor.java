@@ -602,8 +602,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
         String toEncode = json.get("string").asText();
-        String salt = BCrypt.gensalt();
-        String encoded = BCrypt.hashpw(toEncode, salt);
+        String encoded = BCrypt.hashpw(toEncode, BCrypt.gensalt());
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("encodedString", encoded);
 
