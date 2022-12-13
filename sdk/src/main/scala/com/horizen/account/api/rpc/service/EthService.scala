@@ -3,7 +3,6 @@ package com.horizen.account.api.rpc.service
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.SidechainSettings
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
@@ -41,11 +40,10 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 class EthService(
-    val scNodeViewHolderRef: ActorRef,
-    val nvtimeout: FiniteDuration,
+    scNodeViewHolderRef: ActorRef,
+    nvtimeout: FiniteDuration,
     networkParams: NetworkParams,
-    val sidechainSettings: SidechainSettings,
-    val sidechainTransactionActorRef: ActorRef
+    sidechainTransactionActorRef: ActorRef
 ) extends RpcService
       with ClosableResourceHandler
       with ScorexLogging {
@@ -162,7 +160,7 @@ class EthService(
   @RpcMethod("eth_signTransaction")
   def signTransaction(params: TransactionArgs): String = {
     applyOnAccountView { nodeView =>
-      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value)
+      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value.add(params.gas))
         .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
         .map(tx => Numeric.toHexString(tx.encode(tx.isSigned)))
         .orNull
@@ -190,7 +188,7 @@ class EthService(
       wallet: AccountWallet,
       state: AccountState,
       fromAddress: Option[Address],
-      txValueInWei: BigInteger
+      txCostInWei: BigInteger
   ): Option[PrivateKeySecp256k1] = {
     wallet
       .secretsOfType(classOf[PrivateKeySecp256k1])
@@ -199,7 +197,7 @@ class EthService(
         // if from address is given the secrets public key needs to match, otherwise check all of the secrets
         fromAddress.forall(from => util.Arrays.equals(from.toBytes, secret.publicImage().address())) &&
           // TODO account for gas
-          state.getBalance(secret.publicImage.address).compareTo(txValueInWei) >= 0
+          state.getBalance(secret.publicImage.address).compareTo(txCostInWei) >= 0
       )
   }
 
