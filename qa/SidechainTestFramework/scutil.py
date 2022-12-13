@@ -525,16 +525,13 @@ def initialize_default_sc_datadir(dirname, n, api_key):
     resourcesDir = get_resources_dir()
     with open(resourcesDir + '/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
-    api_key_hash = ""
-    if api_key != "":
-        api_key_hash = calculateApiKeyHash(api_key)
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
-        'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': "5s",
         'BIND_PORT': str(bindPort),
         'MAX_INCOMING_CONNECTIONS': 100,
