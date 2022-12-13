@@ -837,11 +837,6 @@ def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, ex
 # without receiving "block in future" error. By default we rewind half of the consensus epoch.
 DefaultBlockTimestampRewind = 720 * 120 / 2
 
-# UTXO vs Account model block versions
-UtxoModelBlockVersion = 1
-AccountModelBlockVersion = 2
-DefaultBlockVersion = UtxoModelBlockVersion
-
 # UTXO / Account model string
 UtxoModel = "utxo"
 AccountModel = "account"
