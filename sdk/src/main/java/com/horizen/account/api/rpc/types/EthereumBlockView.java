@@ -55,14 +55,14 @@ public class EthereumBlockView {
         this.parentHash = Numeric.prependHexPrefix((String) block.parentId());
         // no nonce, but we explicity set it to all zeroes as some RPC clients are very strict (e.g. GETH)
         this.nonce = "0x0000000000000000";
-        this.sha3Uncles = "0x0"; // no uncles
+        this.sha3Uncles = "0x"; // no uncles
         this.logsBloom = Numeric.toHexString(block.header().logsBloom().getBloomFilter());
         this.transactionsRoot = Numeric.toHexString(block.header().sidechainTransactionsMerkleRootHash());
         this.stateRoot = Numeric.toHexString(block.header().stateRoot());
         this.receiptsRoot = Numeric.toHexString(block.header().receiptsRoot());
         this.miner = Numeric.toHexString(block.header().forgerAddress().address());
-        this.mixHash = "0x0";
-        this.extraData = "0x0";
+        this.mixHash = "0x";
+        this.extraData = "0x";
         this.size = Numeric.prependHexPrefix(Integer.toHexString(block.header().bytes().length));
         this.gasLimit = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasLimit()));
         this.gasUsed = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasUsed()));
