@@ -29,8 +29,8 @@ public class EthereumReceiptView {
     public final String status;
     public final String effectiveGasPrice;
 
-    public EthereumReceiptView(EthereumReceipt receipt, EthereumTransaction tx, BigInteger baseFee) {
-        type = Numeric.toHexString(new byte[]{tx.version()});
+    public EthereumReceiptView(EthereumReceipt receipt, EthereumTransaction tx, BigInteger baseFee, int firstLogIndex) {
+        type = Numeric.toHexString(new byte[] { tx.version() });
         transactionHash = Numeric.toHexString(receipt.transactionHash());
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         blockHash = Numeric.toHexString(receipt.blockHash());
@@ -43,8 +43,7 @@ public class EthereumReceiptView {
         var consensusLogs = JavaConverters.seqAsJavaList(receipt.consensusDataReceipt().logs());
         logs = new ArrayList<>(consensusLogs.size());
         for (var i = 0; i < consensusLogs.size(); i++) {
-            // TODO: the logIndex should refer to the index within the block, but this assigns it based on the index within the receipt
-            logs.add(new EthereumLogView(receipt, consensusLogs.get(i), i));
+            logs.add(new EthereumLogView(receipt, consensusLogs.get(i), firstLogIndex + i));
         }
         logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom().getBytes());
         status = Numeric.prependHexPrefix(Integer.toHexString(receipt.consensusDataReceipt().status()));

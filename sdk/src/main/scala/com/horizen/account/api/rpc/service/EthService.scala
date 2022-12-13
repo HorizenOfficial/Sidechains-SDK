@@ -429,8 +429,18 @@ class EthService(
   @RpcMethod("eth_getTransactionReceipt")
   def getTransactionReceipt(transactionHash: Hash): EthereumReceiptView = {
     getTransactionAndReceipt(transactionHash).map { case (block, tx, receipt) =>
-      // TODO: this returns wrong values for the logIndex, see constructor of EthereumReceiptView
-      new EthereumReceiptView(receipt, tx, block.header.baseFee)
+      // count the number of logs in the block before this transaction
+      val firstLogIndex = applyOnAccountView { nodeView =>
+        using(nodeView.state.getView) { stateView =>
+          block.sidechainTransactions
+            .take(receipt.transactionIndex)
+            .map(_.id.toBytes)
+            .flatMap(stateView.getTransactionReceipt)
+            .map(_.consensusDataReceipt.logs.length)
+            .sum
+        }
+      }
+      new EthereumReceiptView(receipt, tx, block.header.baseFee, firstLogIndex)
     }.orNull
   }
 
