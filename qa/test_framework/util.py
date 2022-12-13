@@ -12,7 +12,6 @@ import codecs
 import logging
 import os
 import sys
-
 from binascii import hexlify, unhexlify
 from base64 import b64encode
 from decimal import Decimal, ROUND_DOWN
@@ -22,23 +21,68 @@ import shutil
 import subprocess
 import time
 import re
-
 from test_framework.authproxy import AuthServiceProxy
-from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, NO_KEY_ROTATION_CIRCUIT
+from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 
 certificate_field_config_csw_enabled = [255, 255]
-
 certificate_field_config_csw_disabled = []
 certificate_with_key_rotation_field_config = [255]
-
 COIN = 100000000 # 1 zen in zatoshis
+parallel_test = None
+websocket_port_counter = None
+p2p_port_counter = None
+rpc_port_counter = None
+
+
+def set_mc_parallel_test(n):
+    global parallel_test
+    parallel_test = n
+
 
 def p2p_port(n):
-    return 11000 + n + os.getpid()%999
+    global p2p_port_counter
+    start_port = 11000
+
+    if parallel_test:
+        if p2p_port_counter is None:
+            p2p_port_counter = start_port + 1
+        else:
+            p2p_port_counter = p2p_port_counter + 1
+    else:
+        return start_port + n + os.getpid() % 999
+
+    return p2p_port_counter
+
+
 def rpc_port(n):
-    return 12000 + n + os.getpid()%999
+    global rpc_port_counter
+    start_port = 12000
+
+    if parallel_test:
+        if rpc_port_counter is None:
+            rpc_port_counter = start_port + 1
+        else:
+            rpc_port_counter = rpc_port_counter + 1
+    else:
+        return start_port + n + os.getpid() % 999
+
+    return p2p_port_counter
+
+
 def websocket_port_by_mc_node_index(n):
-    return 13000 + n + os.getpid()%999
+    global websocket_port_counter
+    start_port = 13000
+
+    if parallel_test:
+        if websocket_port_counter is None:
+            websocket_port_counter = start_port + 1
+        else:
+            websocket_port_counter = websocket_port_counter + 1
+    else:
+        return start_port + n + os.getpid() % 999
+
+    return websocket_port_counter
+
 
 def check_json_precision():
     """Make sure json library being used does not lose precision converting BTC values"""

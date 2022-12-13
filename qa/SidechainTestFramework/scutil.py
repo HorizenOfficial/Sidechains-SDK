@@ -35,6 +35,17 @@ DEFAULT_REST_API_TIMEOUT = 5
 # max P2P message size for a Modifier
 DEFAULT_MAX_PACKET_SIZE = 5242980
 
+# Parallel Testing
+parallel_test = None
+sc_p2p_port_counter = None
+sc_rpc_port_counter = None
+
+
+def set_sc_parallel_test(n):
+    global parallel_test
+    parallel_test = n
+
+
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -48,11 +59,33 @@ class LogInfo(object):
 
 
 def sc_p2p_port(n):
-    return 8300 + n + os.getpid() % 999
+    global sc_p2p_port_counter
+    start_port = 8300
+
+    if parallel_test:
+        if sc_p2p_port_counter is None:
+            sc_p2p_port_counter = start_port + 1
+        else:
+            sc_p2p_port_counter = sc_p2p_port_counter + 1
+    else:
+        return start_port + n + os.getpid() % 999
+
+    return sc_p2p_port_counter
 
 
 def sc_rpc_port(n):
-    return 8200 + n + os.getpid() % 999
+    global sc_rpc_port_counter
+    start_port = 8200
+
+    if parallel_test:
+        if sc_rpc_port_counter is None:
+            sc_rpc_port_counter = start_port + 1
+        else:
+            sc_rpc_port_counter = sc_rpc_port_counter + 1
+    else:
+        return start_port + n + os.getpid() % 999
+
+    return sc_rpc_port_counter
 
 
 # To be removed

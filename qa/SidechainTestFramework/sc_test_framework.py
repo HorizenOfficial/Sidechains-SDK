@@ -9,10 +9,10 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import check_json_precision, \
     initialize_chain_clean, \
     start_nodes, stop_nodes, \
-    sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index
+    sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index, set_mc_parallel_test
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, set_sc_parallel_test
 import os
 import tempfile
 import traceback
@@ -40,6 +40,11 @@ Default behavior: the framework starts 1 SC node connected to 1 MC node.
 
 '''
 class SidechainTestFramework(BitcoinTestFramework):
+
+
+    def set_parallel_test(self, n):
+        set_mc_parallel_test(n)
+        set_sc_parallel_test(n)
 
     def add_options(self, parser):
         pass
@@ -148,6 +153,8 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--certcircuittype", dest="certcircuittype", default="NaiveThresholdSignatureCircuit", action="store",
                           help="Type of certificate circuit: NaiveThresholdSignatureCircuit"
                                "/NaiveThresholdSignatureCircuitWithKeyRotation")
+        parser.add_option("--parallel", dest="parallel", default=None, action="store",
+                          help="Stores parallel process integer assigned to current test")
 
         self.add_options(parser)
         self.sc_add_options(parser)
@@ -164,6 +171,9 @@ class SidechainTestFramework(BitcoinTestFramework):
                 os.makedirs(self.options.tmpdir)
 
             logging.info("Initializing test directory "+self.options.tmpdir)
+
+            if self.options.parallel is not None:
+                self.set_parallel_test(self.options.parallel)
 
             self.setup_chain()
 

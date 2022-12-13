@@ -50,77 +50,77 @@ done
 testScripts=(
     'mc_sc_connected_nodes.py'
     'mc_sc_forging1.py'
-#    'mc_sc_forging2.py'
-#    'mc_sc_forging3.py'
-#    'mc_sc_forging4.py'
-#    'mc_sc_forging5.py'
-#    'mc_sc_forging_delegation.py'
-#    'mc_sc_forging_fee_payments.py'
-#    'mc_sc_nodes_alive.py'
-#    'sc_backward_transfer.py'
-#    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-#    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-#    'sc_blockid_for_backup.py'
-#    'sc_bootstrap.py'
-#    'sc_bt_limit.py'
-#    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-#    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-#    'sc_bt_limit_across_fork.py'
-#    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-#    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-#    'sc_bwt_minimum_value.py'
-#    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-#    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-#    'sc_ceased.py'
-#    'sc_cert_fee_conf.py'
-#    'sc_cert_no_coin_record.py'
-#    'sc_cert_submission_decentralization.py'
-#    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-#    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-#    'sc_cert_submitter_after_sync_1.py'
-#    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-#    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-#    'sc_cert_submitter_after_sync_2.py'
-#    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-#    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
-#    'sc_cert_key_rotation_old_circuit.py'
-#    'sc_cert_key_rotation.py'
-#    'sc_cert_key_rotation.py --nonceasing'
-#    'sc_cert_key_rotation_across_epoch.py'
-#    'sc_cert_key_rotation_across_epoch.py --nonceasing'
-#    'sc_cert_submitter_secure_enclave.py'
-#    'sc_closed_forger.py'
-#    'sc_csw_ceased_at_epoch_1.py'
-#    'sc_csw_ceased_at_epoch_1_with_large_epoch_length.py'
-#    'sc_csw_ceased_at_epoch_2.py'
-#    'sc_csw_ceased_at_epoch_3.py'
-#    'sc_csw_disabled.py'
-#    'sc_csw_in_fee_payment.py'
-#    'sc_cum_comm_tree_hash.py'
-#    'sc_forger_feerate.py'
-#    'sc_forward_transfer.py'
-#    'sc_genesisinfo_sc_versions.py'
-#    'sc_import_export_keys.py'
-#    'sc_mempool_max_fee.py'
-#    'sc_mempool_max_size.py'
-#    'sc_mempool_min_fee_rate.py'
-#    'sc_multiple_certs.py'
-#    'sc_multiple_certs.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
-#    'sc_multiple_pending_certs_non_ceasing.py'
-#    'sc_node_api_test.py'
-#    'sc_node_response_along_sync.py'
-#    'sc_nodes_initialize.py'
-#    'sc_storage_recovery_with_csw.py'
-#    'sc_storage_recovery_without_csw.py'
-#    'sc_versions_and_mc_certs.py'
-#    'sc_withdrawal_epoch_last_block.py'
-#    'websocket_server.py'
-#    'websocket_server_fee_payments.py'
-#    'sc_sync_after_fork.py'
-#    'sc_dust_threshold_fork.py'
-#    'sc_ft_limit_fork.py'
-#    'sc_fork_one_forced_tx.py'
-#    'sc_big_block.py'
+    'mc_sc_forging2.py'
+    'mc_sc_forging3.py'
+    'mc_sc_forging4.py'
+    'mc_sc_forging5.py'
+    'mc_sc_forging_delegation.py'
+    'mc_sc_forging_fee_payments.py'
+    'mc_sc_nodes_alive.py'
+    'sc_backward_transfer.py'
+    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_blockid_for_backup.py'
+    'sc_bootstrap.py'
+    'sc_bt_limit.py'
+    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_bt_limit_across_fork.py'
+    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_bwt_minimum_value.py'
+    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_ceased.py'
+    'sc_cert_fee_conf.py'
+    'sc_cert_no_coin_record.py'
+    'sc_cert_submission_decentralization.py'
+    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_cert_submitter_after_sync_1.py'
+    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_cert_submitter_after_sync_2.py'
+    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_cert_key_rotation_old_circuit.py'
+    'sc_cert_key_rotation.py'
+    'sc_cert_key_rotation.py --nonceasing'
+    'sc_cert_key_rotation_across_epoch.py'
+    'sc_cert_key_rotation_across_epoch.py --nonceasing'
+    'sc_cert_submitter_secure_enclave.py'
+    'sc_closed_forger.py'
+    'sc_csw_ceased_at_epoch_1.py'
+    'sc_csw_ceased_at_epoch_1_with_large_epoch_length.py'
+    'sc_csw_ceased_at_epoch_2.py'
+    'sc_csw_ceased_at_epoch_3.py'
+    'sc_csw_disabled.py'
+    'sc_csw_in_fee_payment.py'
+    'sc_cum_comm_tree_hash.py'
+    'sc_forger_feerate.py'
+    'sc_forward_transfer.py'
+    'sc_genesisinfo_sc_versions.py'
+    'sc_import_export_keys.py'
+    'sc_mempool_max_fee.py'
+    'sc_mempool_max_size.py'
+    'sc_mempool_min_fee_rate.py'
+    'sc_multiple_certs.py'
+    'sc_multiple_certs.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_multiple_pending_certs_non_ceasing.py'
+    'sc_node_api_test.py'
+    'sc_node_response_along_sync.py'
+    'sc_nodes_initialize.py'
+    'sc_storage_recovery_with_csw.py'
+    'sc_storage_recovery_without_csw.py'
+    'sc_versions_and_mc_certs.py'
+    'sc_withdrawal_epoch_last_block.py'
+    'websocket_server.py'
+    'websocket_server_fee_payments.py'
+    'sc_sync_after_fork.py'
+    'sc_dust_threshold_fork.py'
+    'sc_ft_limit_fork.py'
+    'sc_fork_one_forced_tx.py'
+    'sc_big_block.py'
 );
 
 # include extended tests
@@ -187,7 +187,6 @@ function runTestScript
     shift
 
     echo -e "=== Running testscript ${testName} ===" | tee /dev/fd/3
-    echo -e "Arg is: $1" | tee /dev/fd/3
     if eval "$@"; then
     successCount=$(expr $successCount + 1)
     echo "--- Success: ${testName} ---" | tee /dev/fd/3
@@ -204,19 +203,28 @@ function runTests
 {
   # Assign any parameter given to the shell script, then remove from this functions args
   scriptArg=$1; shift
+  # Assign parallelGroup if running parallel tests, then remove from this functions args
+  if [ "$PARALLEL" ]; then
+    parallelGroup=$1
+  fi; shift
+
   # Assign remaining args (which should be the expanded test script array)
   testsToRun=("$@")
-  echo "Tests to Run is: ${#testsToRun[@]}" | tee /dev/fd/3
+
   for (( i = 0; i < ${#testsToRun[@]}; i++ )); do
-    echo "i equals $i " | tee /dev/fd/3
     if checkFileExists "${testsToRun[$i]}"; then
           if [ -z "$scriptArg" ] || [ "${scriptArg:0:1}" = "-" ] || [ "$scriptArg" = "${testsToRun[$i]}" ] || [ "$scriptArg.py" = "${testsToRun[$i]}" ]; then
-          echo "Running $((i +1)) Of ${#testsToRun[@]} Tests" | tee /dev/fd/3
-          runTestScript \
-                "${testsToRun[$i]}" \
-                "${BASH_SOURCE%/*}/${testsToRun[$i]}"
-            else
-              echo "Unable to run ${testsToRun[$i]}, invalid arg passed to shell script" | tee /dev/fd/3
+            echo "Running $((i +1)) Of ${#testsToRun[@]} Tests" | tee /dev/fd/3
+            testFileWithArgs="${BASH_SOURCE%/*}/${testsToRun[$i]}"
+
+            if [ "$PARALLEL" ]; then
+              testFileWithArgs="$testFileWithArgs --parallel=$parallelGroup"
+            fi
+            runTestScript \
+                  "${testsToRun[$i]}" \
+                  "$testFileWithArgs"
+          else
+            echo "Unable to run ${testsToRun[$i]}, invalid arg passed to shell script" | tee /dev/fd/3
           fi
     fi
   done
@@ -239,21 +247,13 @@ if [ ! -z "$PARALLEL" ]; then
     testGroup="testScripts_$i"
     runTests  \
         "$1"  \
+        "$i"  \
         "${!testGroup}" &
   done
   # Wait for all processes to finish
-  for job in $(jobs -p); do
-    CODE=0
-    wait "${job}" || CODE=$?
-    if [[ "${CODE}" != "0" ]]; then
-               echo "At least one test failed with exit code => ${CODE}" ;
-               failureCount+=1
-    else
-      successCount+=1
-    fi
-  done
+  wait < <(jobs -p)
 else
-  # Pass main script arg to function first (could be null or -PARALLLEL etc) followed by array.
+  # Pass main script arg to function first (could be null or -PARALLEL etc) followed by array.
   runTests  \
       "$1"  \
       "${testScripts[@]}"
