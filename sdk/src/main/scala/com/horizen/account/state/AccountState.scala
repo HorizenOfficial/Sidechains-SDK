@@ -140,15 +140,15 @@ class AccountState(
               // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
               // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
               // This does not impact our case since the CREATE2 result would not be part of the receipt.
-              generateContractAddress(ethTx.getFrom.address, ethTx.getNonce)
+              Option(generateContractAddress(ethTx.getFrom.address, ethTx.getNonce))
             } else {
               // otherwise a zero-byte field
-              new Array[Byte](0)
+              None
             }
 
             // get a receipt obj with non consensus data (logs updated too)
             val fullReceipt =
-              EthereumReceipt(consensusDataReceipt, txHash, txIndex, blockHash, blockNumber, txGasUsed, Option(contractAddress))
+              EthereumReceipt(consensusDataReceipt, txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
 
             log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 

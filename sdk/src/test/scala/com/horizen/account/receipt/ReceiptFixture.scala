@@ -38,15 +38,15 @@ trait ReceiptFixture {
       logs += createTestEvmLog
 
     val contractAddress = if (contractAddressPresence) {
-      BytesUtils.fromHexString("1122334455667788990011223344556677889900")
+      Option(BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
     } else {
-      new Array[Byte](0)
+      None
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs)
     val receipt = EthereumReceipt(consensusDataReceipt,
       txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
       BigInteger.valueOf(1234567),
-      Option(contractAddress)
+      contractAddress
       )
     receipt
   }
