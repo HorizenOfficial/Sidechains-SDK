@@ -25,7 +25,7 @@ import com.horizen.evm.interop.TraceParams
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
+import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.NodeViewHolder.CurrentView
@@ -101,28 +101,21 @@ class EthService(
       blockId: ModifierId,
       hydratedTx: Boolean
   ): EthereumBlockView = {
-    nodeView.history
-      .getStorageBlockById(blockId)
-      .map(block => {
-        val ethReceipts = block.transactions.map(t => {
-          val ethTx = t.asInstanceOf[EthereumTransaction]
-          getTransactionAndReceipt(Hash.FromBytes(BytesUtils.fromHexString(ethTx.id()))) match {
-            case Some(res) =>
-              val (_, _, receipt) = res
-              receipt
-            case _ => null
+    val blockNumber = nodeView.history.getBlockHeightById(blockId).get().toLong
+    val blockHash = Hash.FromBytes(blockId.toBytes)
+    using(nodeView.state.getView) { stateView =>
+      nodeView.history
+        .getStorageBlockById(blockId)
+        .map(block => {
+          if (hydratedTx) {
+            val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
+            EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
+          } else {
+            EthereumBlockView.notHydrated(blockNumber, blockHash, block)
           }
         })
-
-        new EthereumBlockView(
-          nodeView.history.getBlockHeightById(blockId).get().toLong,
-          Numeric.prependHexPrefix(blockId),
-          hydratedTx,
-          block,
-          ethReceipts
-        )
-      })
-      .orNull
+        .orNull
+    }
   }
 
   @RpcMethod("eth_getBlockTransactionCountByHash")

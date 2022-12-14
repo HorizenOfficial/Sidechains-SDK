@@ -5,10 +5,12 @@ import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
+import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Objects;
 
 @JsonView(Views.Default.class)
 public class EthereumTransactionView {
@@ -33,9 +35,12 @@ public class EthereumTransactionView {
     public final String s;
 
     public EthereumTransactionView(EthereumReceipt receipt, EthereumTransaction ethTx, BigInteger baseFee) {
+        assert Objects.equals(BytesUtils.toHexString(receipt.transactionHash()), ethTx.id());
         type = Numeric.prependHexPrefix((Integer.toHexString(ethTx.version())));
         nonce = Numeric.encodeQuantity(ethTx.getNonce());
-        to = Numeric.cleanHexPrefix(ethTx.getToAddressString()).length() != 2 * Account.ADDRESS_SIZE ? null : ethTx.getToAddressString();
+        to = Numeric.cleanHexPrefix(ethTx.getToAddressString()).length() != 2 * Account.ADDRESS_SIZE
+            ? null
+            : ethTx.getToAddressString();
         gas = Numeric.encodeQuantity(ethTx.getGasLimit());
         value = Numeric.encodeQuantity(ethTx.getValue());
         input = Numeric.toHexString(ethTx.getData());
@@ -52,11 +57,11 @@ public class EthereumTransactionView {
         v = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getV()) : null;
         r = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getR()) : null;
         s = (ethTx.getSignature() != null) ? Numeric.toHexString(ethTx.getSignature().getS()) : null;
-        blockHash = receipt != null ? Numeric.toHexString(receipt.blockHash()) : null;
-        blockNumber = receipt != null ? Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber())) : null;
+        blockHash = Numeric.toHexString(receipt.blockHash());
+        blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
         from = (ethTx.getFrom() != null) ? Numeric.toHexString(ethTx.getFrom().address()) : null;
-        hash = receipt != null ? Numeric.toHexString(receipt.transactionHash()) : null;
-        transactionIndex = receipt != null ? Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex())) : null;
+        hash = Numeric.toHexString(receipt.transactionHash());
+        transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         accessList = null;
     }
 }
