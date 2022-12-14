@@ -41,7 +41,6 @@ Default behavior: the framework starts 1 SC node connected to 1 MC node.
 '''
 class SidechainTestFramework(BitcoinTestFramework):
 
-
     def set_parallel_test(self, n):
         set_mc_parallel_test(n)
         set_sc_parallel_test(n)
@@ -153,7 +152,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--certcircuittype", dest="certcircuittype", default="NaiveThresholdSignatureCircuit", action="store",
                           help="Type of certificate circuit: NaiveThresholdSignatureCircuit"
                                "/NaiveThresholdSignatureCircuitWithKeyRotation")
-        parser.add_option("--parallel", dest="parallel", default=None, action="store",
+        parser.add_option("--parallel", dest="parallel", default=0, action="store",
                           help="Stores parallel process integer assigned to current test")
 
         self.add_options(parser)
@@ -172,8 +171,9 @@ class SidechainTestFramework(BitcoinTestFramework):
 
             logging.info("Initializing test directory "+self.options.tmpdir)
 
-            if self.options.parallel is not None:
-                self.set_parallel_test(self.options.parallel)
+            parallel_group = int(self.options.parallel)
+            if parallel_group > 0:
+                self.set_parallel_test(parallel_group)
 
             self.setup_chain()
 

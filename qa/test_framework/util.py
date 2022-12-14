@@ -28,10 +28,7 @@ certificate_field_config_csw_enabled = [255, 255]
 certificate_field_config_csw_disabled = []
 certificate_with_key_rotation_field_config = [255]
 COIN = 100000000 # 1 zen in zatoshis
-parallel_test = None
-websocket_port_counter = None
-p2p_port_counter = None
-rpc_port_counter = None
+parallel_test = 0
 
 
 def set_mc_parallel_test(n):
@@ -39,49 +36,39 @@ def set_mc_parallel_test(n):
     parallel_test = n
 
 
+def start_port_modifier():
+    if parallel_test > 0:
+        return (parallel_test - 1) * 100
+
+
 def p2p_port(n):
-    global p2p_port_counter
     start_port = 11000
 
-    if parallel_test:
-        if p2p_port_counter is None:
-            p2p_port_counter = start_port + 1
-        else:
-            p2p_port_counter = p2p_port_counter + 1
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
     else:
         return start_port + n + os.getpid() % 999
-
-    return p2p_port_counter
 
 
 def rpc_port(n):
-    global rpc_port_counter
     start_port = 12000
 
-    if parallel_test:
-        if rpc_port_counter is None:
-            rpc_port_counter = start_port + 1
-        else:
-            rpc_port_counter = rpc_port_counter + 1
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
     else:
         return start_port + n + os.getpid() % 999
-
-    return p2p_port_counter
 
 
 def websocket_port_by_mc_node_index(n):
-    global websocket_port_counter
     start_port = 13000
 
-    if parallel_test:
-        if websocket_port_counter is None:
-            websocket_port_counter = start_port + 1
-        else:
-            websocket_port_counter = websocket_port_counter + 1
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
     else:
         return start_port + n + os.getpid() % 999
-
-    return websocket_port_counter
 
 
 def check_json_precision():
@@ -91,14 +78,17 @@ def check_json_precision():
     if satoshis != 2000000000000003:
         raise RuntimeError("JSON encode/decode loses precision")
 
+
 def bytes_to_hex_str(byte_str):
     return hexlify(byte_str).decode('ascii')
+
 
 def hex_str_to_bytes(hex_str):
     return unhexlify(hex_str.encode('ascii'))
 
 def str_to_b64str(string):
     return b64encode(string.encode('utf-8')).decode('ascii')
+
 
 def sync_blocks(rpc_connections, wait=1):
     """
@@ -109,6 +99,7 @@ def sync_blocks(rpc_connections, wait=1):
         if counts == [ counts[0] ]*len(counts):
             break
         time.sleep(wait)
+
 
 def sync_mempools(rpc_connections, wait=1):
     """

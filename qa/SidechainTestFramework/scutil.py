@@ -36,9 +36,7 @@ DEFAULT_REST_API_TIMEOUT = 5
 DEFAULT_MAX_PACKET_SIZE = 5242980
 
 # Parallel Testing
-parallel_test = None
-sc_p2p_port_counter = None
-sc_rpc_port_counter = None
+parallel_test = 0
 
 
 def set_sc_parallel_test(n):
@@ -58,34 +56,30 @@ class LogInfo(object):
         self.logConsoleLevel = logConsoleLevel
 
 
+def start_port_modifier():
+    if parallel_test > 0:
+        # Adjust this multiplier if port clashing due to many nodes
+        return (parallel_test - 1) * 20
+
+
 def sc_p2p_port(n):
-    global sc_p2p_port_counter
     start_port = 8300
 
-    if parallel_test:
-        if sc_p2p_port_counter is None:
-            sc_p2p_port_counter = start_port + 1
-        else:
-            sc_p2p_port_counter = sc_p2p_port_counter + 1
+    if parallel_test > 0:
+        start_port = 8500 + start_port_modifier()
+        return start_port + n
     else:
         return start_port + n + os.getpid() % 999
-
-    return sc_p2p_port_counter
 
 
 def sc_rpc_port(n):
-    global sc_rpc_port_counter
     start_port = 8200
 
-    if parallel_test:
-        if sc_rpc_port_counter is None:
-            sc_rpc_port_counter = start_port + 1
-        else:
-            sc_rpc_port_counter = sc_rpc_port_counter + 1
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
     else:
         return start_port + n + os.getpid() % 999
-
-    return sc_rpc_port_counter
 
 
 # To be removed

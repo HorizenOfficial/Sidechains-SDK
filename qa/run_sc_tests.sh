@@ -206,7 +206,8 @@ function runTests
   # Assign parallelGroup if running parallel tests, then remove from this functions args
   if [ "$PARALLEL" ]; then
     parallelGroup=$1
-  fi; shift
+    shift
+  fi;
 
   # Assign remaining args (which should be the expanded test script array)
   testsToRun=("$@")
