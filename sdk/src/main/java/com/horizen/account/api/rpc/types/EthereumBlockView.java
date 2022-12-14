@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.AccountBlockUtil;
 import com.horizen.proof.ProofSerializer;
@@ -47,7 +48,7 @@ public class EthereumBlockView {
     public final String totalDifficulty = "0x0";
     public String baseFeePerGas;
 
-    public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block) {
+    public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block, Seq<EthereumReceipt> receipts) {
         var blockHeader = block.header();
         this.author = Numeric.toHexString(block.header().forgerAddress().address());
         this.number = blockNumber;
@@ -74,7 +75,8 @@ public class EthereumBlockView {
         if (!hydratedTx) {
             this.transactions = transactions.stream().map(t -> Numeric.prependHexPrefix(t.id())).collect(Collectors.toList());
         } else {
-            this.transactions = transactions.stream().map(t -> new EthereumTransactionView(null, t, block.header().baseFee())).collect(Collectors.toList());
+            var transactionIndices = transactions.stream().mapToInt(transactions::indexOf);
+            this.transactions = transactionIndices.mapToObj(i -> new EthereumTransactionView(receipts.apply(i), transactions.get(i), block.header().baseFee())).collect(Collectors.toList());
         }
     }
 }

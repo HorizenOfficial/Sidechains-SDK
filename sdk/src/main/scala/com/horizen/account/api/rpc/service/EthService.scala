@@ -25,7 +25,7 @@ import com.horizen.evm.interop.TraceParams
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.NodeViewHolder.CurrentView
@@ -69,11 +69,7 @@ class EthService(
           case err: RpcException => throw err
           case reverted: ExecutionRevertedException =>
             throw new RpcException(
-              new RpcError(
-                RpcCode.ExecutionError.code,
-                reverted.getMessage,
-                Numeric.toHexString(reverted.revertReason)
-              )
+              new RpcError(RpcCode.ExecutionError.code, reverted.getMessage, Numeric.toHexString(reverted.revertReason))
             )
           case err: ExecutionFailedException =>
             throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
@@ -108,11 +104,22 @@ class EthService(
     nodeView.history
       .getStorageBlockById(blockId)
       .map(block => {
+        val ethReceipts = block.transactions.map(t => {
+          val ethTx = t.asInstanceOf[EthereumTransaction]
+          getTransactionAndReceipt(Hash.FromBytes(BytesUtils.fromHexString(ethTx.id()))) match {
+            case Some(res) =>
+              val (_, _, receipt) = res
+              receipt
+            case _ => null
+          }
+        })
+
         new EthereumBlockView(
           nodeView.history.getBlockHeightById(blockId).get().toLong,
           Numeric.prependHexPrefix(blockId),
           hydratedTx,
-          block
+          block,
+          ethReceipts
         )
       })
       .orNull
