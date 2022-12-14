@@ -119,7 +119,7 @@ Note:
 
 Note:
 - `signersPublicKeys` - list of Schnorr public signing keys of certificate Signers generated on step 5;
-- `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey, these keys should be different from signers keys;
+- `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey, mastersKeys have to be different from signersKeys;
 - `threshold` - the minimum set of participants required for a valid proof creation;
 - `isCSWEnabled` - Its value should be always false.
   Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys,
@@ -316,7 +316,7 @@ genesisinfo -f "~/dev/genesis_info_data.txt"
 where `genesis_info_data.txt` file contains proper json data `{"info":...}`.
 
 Note: For non ceasing sidechains forth parameter must be specified:  
-`"virtualWithdrawalEpochLength": 100` is the artificial withdrawal epoch length used only on the sidechain side
+`"virtualWithdrawalEpochLength": 100` is the artificial withdrawal epoch length used only on the sidechain side. The minimum value of virtualWithdrawalEpochLength for the RegTest network is 10 and for the MainNet and the TesNet is 100.   
 
 Output example:
 ```

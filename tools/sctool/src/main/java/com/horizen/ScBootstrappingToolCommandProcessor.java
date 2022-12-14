@@ -794,6 +794,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
+            if (isNonCeasing && virtualWithdrawalEpochLength < params.minVirtualWithdrawalEpochLength()) {
+                printGenesisInfoUsageMsg(String.format("Virtual withdrawal epoch length is too short. It should be at least %d for %s network.", params.minVirtualWithdrawalEpochLength(), mcNetworkName));
+                return;
+            }
+
             String sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
 
 
