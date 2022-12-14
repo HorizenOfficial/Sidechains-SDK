@@ -71,9 +71,9 @@ public class RpcService {
     }
 
     public Object execute(RpcRequest req) throws Throwable {
-        var method = rpcMethods.get(req.getMethod());
+        var method = rpcMethods.get(req.method);
         if (method == null) throw new RpcException(RpcError.fromCode(RpcCode.MethodNotFound));
-        var args = convertArgs(method, req.getParams());
+        var args = convertArgs(method, req.params);
         try {
             return method.invoke(this, args);
         } catch (InvocationTargetException e) {
