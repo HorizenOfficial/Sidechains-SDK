@@ -43,7 +43,6 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
       certificateData.endEpochCumCommTreeHash,
       certificateData.btrFee,
       certificateData.ftMinAmount,
-      certificateData.getCustomFields.toList.asJava,
       signaturesBytes.asJava,
       certificateData.schnorrKeysSignatures,
       params.signersThreshold,
@@ -105,12 +104,12 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
     val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
 
-    val customFields: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+    val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .getSchnorrKeysHash(getSchnorrKeysSignaturesListBytes(state, referencedWithdrawalEpochNumber))
 
     val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash, btrFee, ftMinAmount, util.Arrays.asList(customFields))
+        endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
     message
   }
 

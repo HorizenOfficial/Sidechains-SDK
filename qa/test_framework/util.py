@@ -29,7 +29,7 @@ from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, NO_KEY
 certificate_field_config_csw_enabled = [255, 255]
 
 certificate_field_config_csw_disabled = []
-certificate_with_key_rotation_field_config = [255]
+certificate_with_key_rotation_field_config = [255] * 32  # 32 elements of size 255 bits each
 
 COIN = 100000000 # 1 zen in zatoshis
 

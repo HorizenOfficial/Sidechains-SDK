@@ -25,19 +25,9 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
   extends CertificateData(referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
-    val validatorKeysUpdatesList = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getSchnorrKeysSignaturesList(schnorrKeysSignatures)
-    val customData = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getCertificateCustomFields(
-        Seq(validatorKeysUpdatesList.getUpdatedKeysRootHash.serializeFieldElement()).toList.asJava).iterator().asScala.toSeq
-    validatorKeysUpdatesList.getSigningKeys.foreach(_.freePublicKey())
-    validatorKeysUpdatesList.getMasterKeys.foreach(_.freePublicKey())
-    validatorKeysUpdatesList.getUpdatedSigningKeys.foreach(_.freePublicKey())
-    validatorKeysUpdatesList.getUpdatedMasterKeys.foreach(_.freePublicKey())
-    validatorKeysUpdatesList.getUpdatedSigningKeysSkSignatures.foreach(_.freeSignature())
-    validatorKeysUpdatesList.getUpdatedSigningKeysMkSignatures.foreach(_.freeSignature())
-    validatorKeysUpdatesList.getUpdatedMasterKeysSkSignatures.foreach(_.freeSignature())
-    validatorKeysUpdatesList.getUpdatedMasterKeysMkSignatures.foreach(_.freeSignature())
-    customData
+    val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getSchnorrKeysHash(schnorrKeysSignatures)
+
+    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getCertificateCustomFields(keysRootHash).asScala
   }
 
   override def toString: String = {
