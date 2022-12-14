@@ -186,8 +186,8 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 """
 
 
-def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind, blockversion, virtual_withdrawal_epoch_length):
-    jsonParameters = {"blockversion": blockversion,
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind, model, virtual_withdrawal_epoch_length):
+    jsonParameters = {"model": model,
                       "secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
                       "regtestBlockTimestampRewind": block_timestamp_rewind, "virtualWithdrawalEpochLength": virtual_withdrawal_epoch_length}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
@@ -859,10 +859,10 @@ def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, ex
 # without receiving "block in future" error. By default we rewind half of the consensus epoch.
 DefaultBlockTimestampRewind = 720 * 120 / 2
 
-# UTXO vs Account model block versions
-UtxoModelBlockVersion = 1
-AccountModelBlockVersion = 2
-DefaultBlockVersion = UtxoModelBlockVersion
+# UTXO / Account model string
+UtxoModel = "utxo"
+AccountModel = "account"
+DefaultModel = UtxoModel
 
 """
 Bootstrap a network of sidechain nodes.
@@ -916,7 +916,7 @@ network: {
 
 
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
-                              block_timestamp_rewind=DefaultBlockTimestampRewind, blockversion=DefaultBlockVersion):
+                              block_timestamp_rewind=DefaultBlockTimestampRewind, model=DefaultModel):
 
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     logging.info(options)
@@ -935,7 +935,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                block_timestamp_rewind,
                                                cert_keys_paths,
                                                csw_keys_paths,
-                                               blockversion)
+                                               model)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,
@@ -1003,7 +1003,7 @@ Parameters:
 
 
 def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths,
-                     blockversion=DefaultBlockVersion):
+                     model=DefaultModel):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
@@ -1021,7 +1021,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
 
     genesis_evm_account = None
     evm_account_public_key = None
-    if (blockversion == AccountModelBlockVersion):
+    if (model == AccountModel):
         evm_accounts = generate_account_proposition("seed", 1)
         genesis_evm_account = evm_accounts[0]
         evm_account_public_key = genesis_evm_account.proposition
@@ -1043,7 +1043,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
 
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
-                                         block_timestamp_rewind, blockversion, virtual_withdrawal_epoch_length)
+                                         block_timestamp_rewind, model, virtual_withdrawal_epoch_length)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],

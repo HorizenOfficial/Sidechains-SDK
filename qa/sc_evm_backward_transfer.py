@@ -49,10 +49,9 @@ Test:
 
 def check_withdrawal_event(event, source_addr, dest_addr, amount, exp_epoch):
     assert_equal(3, len(event['topics']), "Wrong number of topics in event")
-    event_id = remove_0x_prefix(event['topics'][0])
+    event_id = event['topics'][0]
 
-    event_signature = remove_0x_prefix(
-        encode_hex(event_signature_to_log_topic('AddWithdrawalRequest(address,bytes20,uint256,uint32)')))
+    event_signature = encode_hex(event_signature_to_log_topic('AddWithdrawalRequest(address,bytes20,uint256,uint32)'))
     assert_equal(event_signature, event_id, "Wrong event signature in topics")
 
     from_addr = decode(['address'], hex_str_to_bytes(event['topics'][1][2:]))[0][2:]

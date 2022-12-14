@@ -466,9 +466,8 @@ paths:
         - transaction
       summary: finds transaction in memory pool, or in a block or in full blockchain
       description:  "All the possible behaviours are:\n
-      1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)\n
-      2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain\n
-      3) blockHash not set, txIndex = false -> Search in memory pool"
+      1) blockHash set -> Search in block referenced by blockHash\n
+      2) blockHash not set -> Search in memory pool"
       operationId: findById
       requestBody:
         content:
@@ -483,9 +482,6 @@ paths:
                 blockHash:
                   type: string
                   default: ""
-                transactionIndex:
-                  type: boolean
-                  default: false
                 format:
                   type: boolean
                   default: false

@@ -18,7 +18,4 @@ public interface NodeAccountHistory extends NodeHistoryBase<
         > {
 
     Optional<AccountTransaction<Proposition, Proof<Proposition>>> searchTransactionInsideSidechainBlock(String transactionId, String blockId);
-
-    Optional<AccountTransaction<Proposition, Proof<Proposition>>> searchTransactionInsideBlockchain(String transactionId);
-
 }
