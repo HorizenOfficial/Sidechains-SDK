@@ -634,7 +634,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction): Unit = {
     val index = body.keyIndex
     val keyType = body.keyType
-    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newValueOfKey))
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey))
     val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature))
     if (index < 0 || index >= params.signersPublicKeys.length)
       throw new IllegalArgumentException(s"Key rotation proof - key index out for range: $index")
@@ -704,7 +704,7 @@ object AccountTransactionRestScheme {
   def encodeSubmitKeyRotationRequestCmd(request: ReqCreateKeyRotationTransaction): String = {
     val keyType = KeyRotationProofTypes(request.keyType)
     val index = request.keyIndex
-    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newValueOfKey))
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newKey))
     val signingSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.signingKeySignature))
     val masterSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.masterKeySignature))
     val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newKeySignature))
@@ -741,14 +741,14 @@ object AccountTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateKeyRotationTransaction(keyType: Int,
                                                           keyIndex: Int,
-                                                          newValueOfKey: String,
+                                                          newKey: String,
                                                           signingKeySignature: String,
                                                           masterKeySignature: String,
                                                           newKeySignature: String,
                                                           nonce: Option[BigInteger],
                                                           gasInfo: Option[EIP1559GasInfo]) {
     require(keyIndex >= 0, "Key index negative")
-    require(newValueOfKey.nonEmpty, "newValueOfKey is empty")
+    require(newKey.nonEmpty, "newKey is empty")
     require(signingKeySignature.nonEmpty, "signingKeySignature is empty")
     require(masterKeySignature.nonEmpty, "masterKeySignature is empty")
     require(newKeySignature.nonEmpty, "newKeySignature is empty")

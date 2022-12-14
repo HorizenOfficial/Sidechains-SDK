@@ -11,6 +11,7 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, 
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.schnorrnative.SchnorrPublicKey
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
@@ -83,10 +84,11 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
   }
 
   private[horizen] def getKeysRotationHistory(keyType: KeyRotationProofType, index: Int, view: BaseAccountStateView): KeyRotationHistory = {
-    Try(
-      KeyRotationHistorySerializer.parseBytes(view.getAccountStorageBytes(contractAddress, getKeysRotationHistoryKey(keyType, index)))
-    )
-      .getOrElse(KeyRotationHistory(List()))
+    val maybeData = view.getAccountStorageBytes(contractAddress, getKeysRotationHistoryKey(keyType, index))
+    if (maybeData.length > 0)
+      KeyRotationHistorySerializer.parseBytes(maybeData)
+    else
+      KeyRotationHistory(List())
   }
 
   private def putKeyRotationHistory(keyType: KeyRotationProofType, index: Int, view: BaseAccountStateView, history: KeyRotationHistory): Unit = {
@@ -121,7 +123,8 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 
     val signingKeyFromConfig = params.signersPublicKeys(index)
     val masterKeyFromConfig = params.mastersPublicKeys(index)
-    val newKeyAsMessage = keyRotationProof.newKey.bytes().take(32)
+    val newKey = SchnorrPublicKey.deserialize(keyRotationProof.newKey.pubKeyBytes())
+    val newKeyAsMessage = newKey.getHash.serializeFieldElement()
 
     val latestSigningKey = getLatestSigningKey(view, signingKeyFromConfig, currentEpochNum, index)
     val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)
@@ -164,7 +167,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
     val evmLog = getEvmLog(keyRotationEvent)
     view.addLog(evmLog)
 
-    keyRotationProof.bytes
+    keyRotationProof.encode()
   }
 
   private def checkMessageValidity(msg: Message): Unit = {
@@ -281,8 +284,4 @@ object KeyRotationHistorySerializer extends SparkzSerializer[KeyRotationHistory]
     }
     KeyRotationHistory(buffer.toList)
   }
-}
-
-object Test extends App {
-
 }

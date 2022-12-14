@@ -192,7 +192,7 @@ class CertificateKeyRotationMsgProcessorTest
     VERIFICATIONS:
     for epoch 0 all keys from config
     for epoch 1 master key #0 is changed
-    for epoch 2 master key #0 is changed twice and signing key #1 is changed
+    for epoch 2 master key #0 is changed twice and signing key #0 is changed
      */
     val Seq(
     oldMasterKey0,
