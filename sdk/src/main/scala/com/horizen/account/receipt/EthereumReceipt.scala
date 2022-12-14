@@ -29,7 +29,7 @@ case class EthereumReceipt(
     val blockHashStr: String = BytesUtils.toHexString(blockHash)
     val contractAddressStr = contractAddress match {
       case Some(addr) => BytesUtils.toHexString(addr)
-      case None => "null"
+      case None => BytesUtils.toHexString(Array.empty)
     }
 
     val infoNonConsensusStr: String =
@@ -51,12 +51,8 @@ case class EthereumReceipt(
         blockNumber.equals(other.blockNumber) &&
         gasUsed.equals(other.gasUsed) &&
         util.Arrays.equals(
-          contractAddress.get,
-          0,
-          if (contractAddress.get.length > 0) contractAddress.get.length - 1 else 0,
-          other.contractAddress.get,
-          0,
-          if (other.contractAddress.get.length > 0) other.contractAddress.get.length - 1 else 0
+          contractAddress.getOrElse(Array.empty),
+          other.contractAddress.getOrElse(Array.empty)
         )
 
       case _ => false
@@ -103,7 +99,6 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
     writer.putInt(gasUsedBytes.length)
     writer.putBytes(gasUsedBytes)
 
-    val contractAddress = receipt.contractAddress.getOrElse(Array.empty)
     // optional field
     val addr = receipt.contractAddress.getOrElse(Array.empty)
     writer.putInt(addr.length)

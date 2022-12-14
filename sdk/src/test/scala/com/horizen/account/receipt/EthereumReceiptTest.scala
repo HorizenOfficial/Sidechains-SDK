@@ -52,7 +52,10 @@ class EthereumReceiptTest
   @Test
   def receiptSimpleSerDeserWithoutContractAddress(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal(), contractAddressPresence = false)
-    assertEquals(receipt.contractAddress.get.length, 0)
+    receipt.contractAddress match {
+      case Some(address) => Assert.fail("Address: %s should be None".format(address))
+      case None =>
+    }
     val r1: String = receipt.toString
     //println(r1)
 
