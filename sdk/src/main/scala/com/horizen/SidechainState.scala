@@ -7,14 +7,17 @@ import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
+import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -24,9 +27,6 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core._
 import sparkz.core.transaction.state._
-import com.horizen.cryptolibprovider.utils.CircuitTypes
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.schnorrnative.SchnorrPublicKey
 
 import java.io.File
 import java.math.{BigDecimal, MathContext}
@@ -94,11 +94,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getWithdrawalRequests(withdrawalEpoch)
   }
 
-  def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
+  def backwardTransfers(withdrawalEpoch: Int): Seq[BackwardTransfer] = {
+    stateStorage.getWithdrawalRequests(withdrawalEpoch)
+      .map(box => new BackwardTransfer(box.proposition.bytes, box.value))
+  }
+
+  override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     stateStorage.getKeyRotationProof(withdrawalEpoch, indexOfSigner, keyType)
   }
 
-  def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
+  override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     if (withdrawalEpoch == -1)
       Option.apply(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
     else {
@@ -127,7 +132,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  def lastCertificateReferencedEpoch(): Option[Int] = {
+  override def lastCertificateReferencedEpoch(): Option[Int] = {
     stateStorage.getLastCertificateReferencedEpoch()
   }
 

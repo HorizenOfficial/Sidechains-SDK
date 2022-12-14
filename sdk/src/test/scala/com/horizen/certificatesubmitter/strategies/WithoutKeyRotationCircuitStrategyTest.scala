@@ -2,11 +2,12 @@ package com.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
 import com.horizen._
-import com.horizen.block.SidechainCreationVersions
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader, SidechainCreationVersions}
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
-import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
+import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import com.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo
@@ -67,12 +68,12 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       messageToSign = Array(135.toByte),
       knownSigs = ArrayBuffer(certificateSignatureInfo)
     )
-    val keyRotationStrategy: CircuitStrategy[CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mock[ThresholdSignatureCircuit])
-    val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView(), signaturesStatus)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mock[ThresholdSignatureCircuit])
+    val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView().asInstanceOf[keyRotationStrategy.View], signaturesStatus)
     assert(certificateDataWithoutKeyRotation.utxoMerkleTreeRoot.isDefined)
     assertResult(10)(certificateDataWithoutKeyRotation.referencedEpochNumber)
     assertResult(32)(certificateDataWithoutKeyRotation.sidechainId.length)
-    assertResult(0)(certificateDataWithoutKeyRotation.withdrawalRequests.size)
+    assertResult(0)(certificateDataWithoutKeyRotation.backwardTransfers.size)
     assertResult(32)(certificateDataWithoutKeyRotation.endEpochCumCommTreeHash.length)
     assertResult(0)(certificateDataWithoutKeyRotation.btrFee)
     assertResult(0)(certificateDataWithoutKeyRotation.ftMinAmount)
@@ -114,7 +115,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
     val certificateData = CertificateDataWithoutKeyRotation(
       referencedEpochNumber = WithoutKeyRotationCircuitStrategyTest.epochNumber,
       sidechainId = FieldElement.createRandom.serializeFieldElement(),
-      withdrawalRequests = Seq[WithdrawalRequestBox](),
+      backwardTransfers = Seq[BackwardTransfer](),
       endEpochCumCommTreeHash = FieldElement.createRandom.serializeFieldElement(),
       btrFee = WithoutKeyRotationCircuitStrategyTest.btrFee,
       ftMinAmount = WithoutKeyRotationCircuitStrategyTest.ftMinAmount,
@@ -124,7 +125,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
 
     val mockedCryptolibCircuit = mock[ThresholdSignatureCircuit]
     val key = new Array(4.toByte)
-    Mockito.when(mockedCryptolibCircuit.createProof(ArgumentMatchers.anyList[WithdrawalRequestBox](), ArgumentMatchers.any(), ArgumentMatchers.any(),
+    Mockito.when(mockedCryptolibCircuit.createProof(ArgumentMatchers.anyList[BackwardTransfer](), ArgumentMatchers.any(), ArgumentMatchers.any(),
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
       ArgumentMatchers.any())) thenAnswer (answer => {
@@ -140,7 +141,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       assertResult(true)(answer.getArgument(12).asInstanceOf[Boolean]) // compressProof
       new com.horizen.utils.Pair(key, 425L)
     })
-    val keyRotationStrategy: CircuitStrategy[CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     val pair: utils.Pair[Array[Byte], lang.Long] = keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")
     assert(pair.getValue == 425L)
     info.foreach(element => {
@@ -165,8 +166,8 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       assert(answer.getArgument(6).asInstanceOf[java.util.Optional[Byte]].isPresent)
       new com.horizen.utils.Pair(Array(67.toByte), 425L)
     })
-    val keyRotationStrategy: CircuitStrategy[CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
-    keyRotationStrategy.getMessageToSign(sidechainNodeView(), WithoutKeyRotationCircuitStrategyTest.epochNumber)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
+    keyRotationStrategy.getMessageToSign(sidechainNodeView().asInstanceOf[keyRotationStrategy.View], WithoutKeyRotationCircuitStrategyTest.epochNumber)
   }
 
   private def settings(): SidechainSettings = {
@@ -193,7 +194,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
   private def sidechainNodeView(): CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool] = {
     val sidechainState = mock[SidechainState]
     when(sidechainState.utxoMerkleTreeRoot(ArgumentMatchers.anyInt())).thenAnswer(_ => Some(new Array[Byte](32)))
-    when(sidechainState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => Seq())
+    when(sidechainState.backwardTransfers(ArgumentMatchers.anyInt())).thenAnswer(_ => Seq())
     val history = mock[SidechainHistory]
     when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => {
       val info: MainchainHeaderInfo = mock[MainchainHeaderInfo]

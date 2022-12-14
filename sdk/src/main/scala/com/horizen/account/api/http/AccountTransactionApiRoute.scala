@@ -22,8 +22,8 @@ import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactio
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
-import com.horizen.cryptolibprovider.utils.TypeOfCircuit
-import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrSignatureSerializer
@@ -44,7 +44,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                                       sidechainTransactionActorRef: ActorRef,
                                       companion: SidechainAccountTransactionsCompanion,
                                       params: NetworkParams,
-                                      circuitType: Int)
+                                      circuitType: CircuitTypes)
                                      (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
   extends TransactionBaseApiRoute[
     SidechainTypes#SCAT,
@@ -553,7 +553,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def createKeyRotationTransaction: Route = (post & path("createKeyRotationTransaction")) {
     withAuth {
       entity(as[ReqCreateKeyRotationTransaction]) { body =>
-        TypeOfCircuit(circuitType) match {
+        circuitType match {
           case NaiveThresholdSignatureCircuit =>
             ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
           case NaiveThresholdSignatureCircuitWithKeyRotation =>
@@ -639,7 +639,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     if (index < 0 || index >= params.signersPublicKeys.length)
       throw new IllegalArgumentException(s"Key rotation proof - key index out for range: $index")
 
-    if (keyType < 0 || keyType >= KeyRotationProofType.maxId)
+    if (keyType < 0 || keyType >= KeyRotationProofTypes.maxId)
       throw new IllegalArgumentException("Key type enumeration value should be valid!")
 
     if (!newKeySignature.isValid(newKey, newKey.bytes()))
@@ -702,7 +702,7 @@ object AccountTransactionRestScheme {
   }
 
   def encodeSubmitKeyRotationRequestCmd(request: ReqCreateKeyRotationTransaction): String = {
-    val keyType = KeyRotationProofType(request.keyType)
+    val keyType = KeyRotationProofTypes(request.keyType)
     val index = request.keyIndex
     val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newValueOfKey))
     val signingSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.signingKeySignature))

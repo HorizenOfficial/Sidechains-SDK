@@ -1,26 +1,41 @@
 package com.horizen.certificatesubmitter.strategies
 
-import akka.util.Timeout
 import com.horizen._
-import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateData
-import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
+import com.horizen.storage.AbstractHistoryStorage
+import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.transaction.MemoryPool
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.concurrent.duration.FiniteDuration
+import scala.reflect.ClassTag
 import scala.util.Try
 
-abstract class CircuitStrategy[T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{
+abstract class CircuitStrategy[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H] : ClassTag,
+  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{
   
   def generateProof(certificateData: T, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
-  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
+  type FPI <: AbstractFeePaymentsInfo
+  type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
+  type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
+  type MS <: AbstractState[TX, H, PM, MS]
+  type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
+  type MP <: MemoryPool[TX, MP]
+
+  type View = CurrentView[HIS, MS, VL, MP]
+
   def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): T
 
   def getMessageToSign(view: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
@@ -33,19 +48,19 @@ abstract class CircuitStrategy[T <: CertificateData](settings: SidechainSettings
     ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
   }
 
-  protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
+  protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: HIS, withdrawalEpochNumber: Int): Array[Byte] = {
     val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
     headerInfo.cumulativeCommTreeHash
   }
 
-  protected def lastConsensusEpochNumberForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
+  protected def lastConsensusEpochNumberForWithdrawalEpochNumber(history: HIS, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
     val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
 
     val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(headerInfo.sidechainBlockId)
     TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
   }
 
-  protected def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): MainchainHeaderInfo = {
+  protected def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: HIS, withdrawalEpochNumber: Int): MainchainHeaderInfo = {
     val mcBlockHash = withdrawalEpochNumber match {
       case -1 => params.parentHashOfGenesisMainchainBlock
       case _ =>

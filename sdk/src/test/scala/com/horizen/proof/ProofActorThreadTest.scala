@@ -12,7 +12,6 @@ import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, SchnorrFunctionsImplZendoo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.{NetworkParams, RegTestParams}

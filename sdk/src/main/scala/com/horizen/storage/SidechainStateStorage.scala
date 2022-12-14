@@ -361,11 +361,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     if (params.isNonCeasing) {
       topQualityCertificateOpt.foreach(certificate => {
-        // For non-ceasing sidechain store referenced epoch number of the top certificate
-        updateList.add(new JPair(getLastCertificateEpochNumberKey,
-          new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
-        updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
-          WithdrawalEpochCertificateSerializer.toBytes(certificate)))
 
         // For non-ceasing sidechain we remove outdated certificate info when we retrieve the new top quality certificate:
         // remove outdated withdrawal related records and counters from upt to the current cert data;
@@ -388,16 +383,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           }
         }
       })
-    } else {
-      // For ceasing sidechain store referenced epoch number and the top quality cert for epoch if present
-      topQualityCertificateOpt.foreach(certificate => {
-        updateList.add(new JPair(getLastCertificateEpochNumberKey,
-         new ByteArrayWrapper(Ints.toByteArray(topQualityCertificateOpt.get.epochNumber))))
-
-        updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
-          WithdrawalEpochCertificateSerializer.toBytes(certificate)))
-      })
     }
+    // For ceasing sidechain store referenced epoch number and the top quality cert for epoch if present
+    topQualityCertificateOpt.foreach(certificate => {
+      updateList.add(new JPair(getLastCertificateEpochNumberKey,
+       new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
+
+      updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
+        WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+    })
 
     // Update BlockFeeInfo data
     val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfo.epoch) + 1

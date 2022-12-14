@@ -1,8 +1,9 @@
 package com.horizen.cryptolibprovider.implementations;
 
-import com.horizen.block.*;
-import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.block.SidechainCreationVersions;
+import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
+import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.CreateProofResult;
 import com.horizen.certnative.NaiveThresholdSignatureWKeyRotation;
 import com.horizen.certnative.WithdrawalCertificate;
@@ -40,7 +41,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     @Override
-    public byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
+    public byte[] generateMessageToBeSigned(List<BackwardTransfer> bt,
                                             byte[] sidechainId,
                                             int epochNumber,
                                             byte[] endCumulativeScTxCommTreeRoot,
@@ -58,7 +59,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
             WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
                     FieldElement.deserialize(sidechainId),
                     epochNumber,
-                    CommonCircuit.getBackwardTransfers(bt),
+                    bt,
                     endCumulativeScTxCommTreeRootFe,
                     ftMinAmount,
                     btrFee,
@@ -83,7 +84,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
     @Override
     public Pair<byte[], Long> createProof
-            (List<WithdrawalRequestBox> bt,
+            (List<BackwardTransfer> bt,
              byte[] sidechainId,
              int epochNumber,
              byte[] endCumulativeScTxCommTreeRoot,
@@ -115,7 +116,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
                 sidechainIdFieldElement,
                 epochNumber,
-                CommonCircuit.getBackwardTransfers(bt),
+                bt,
                 endCumulativeScTxCommTreeRootFe,
                 ftMinAmount,
                 btrFee,
@@ -156,7 +157,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     @Override
-    public Boolean verifyProof(List<WithdrawalRequestBox> bt,
+    public Boolean verifyProof(List<BackwardTransfer> bt,
                                byte[] sidechainId,
                                int epochNumber,
                                byte[] endCumulativeScTxCommTreeRoot,
@@ -178,7 +179,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
                 sidechainIdFieldElement,
                 epochNumber,
-                CommonCircuit.getBackwardTransfers(bt),
+                bt,
                 quality,
                 endCumulativeScTxCommTreeRootFe,
                 ftMinAmount,
@@ -290,13 +291,13 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     private static List<SchnorrPublicKey> byteArrayToKeysList(Seq<SchnorrProposition> schnorrPublicKeysBytesList) {
-        return scala.collection.JavaConverters.seqAsJavaList(schnorrPublicKeysBytesList)
+        return scala.collection.JavaConverters.<SchnorrProposition>seqAsJavaList(schnorrPublicKeysBytesList)
                 .stream().map(SchnorrProposition::pubKeyBytes).map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
     }
 
 
     private static List<SchnorrSignature> byteArrayToSignaturesList(Seq<Option<SchnorrProof>> schnorrSignaturesBytesSeq) {
-        return scala.collection.JavaConverters.seqAsJavaList(schnorrSignaturesBytesSeq).stream().map(b -> {
+        return scala.collection.JavaConverters.<Option<SchnorrProof>>seqAsJavaList(schnorrSignaturesBytesSeq).stream().map(b -> {
             if (b.isDefined()) {
                 return SchnorrSignature.deserialize(b.get().bytes());
             } else {

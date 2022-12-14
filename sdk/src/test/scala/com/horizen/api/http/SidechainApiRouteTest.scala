@@ -159,6 +159,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
                 sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
               }
           }
+        case GetDataFromCurrentView(f) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentView_reply())
+            sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
         case m: ApplyFunctionOnNodeView[
           BoxTransaction[Proposition, Box[Proposition]],
           SidechainBlockHeader,
@@ -192,7 +195,6 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply())
                 sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration), funParameter)
           }
-        case GetDataFromCurrentView
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success(Unit)

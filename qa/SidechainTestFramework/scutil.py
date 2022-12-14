@@ -2,25 +2,18 @@ import logging
 import os
 import sys
 import json
-
-from decimal import Decimal
-from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, Account, AccountKey, \
-    VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
-    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, SCNetworkConfiguration
-
-from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, \
-    SCCreationInfo, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, NO_KEY_ROTATION_CIRCUIT
-from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
 import socket
 from contextlib import closing
+from decimal import Decimal
+from eth_utils import add_0x_prefix
+from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
+    AccountKey, VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, SCCreationInfo, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, \
+    NO_KEY_ROTATION_CIRCUIT
 
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
-from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
-from test_framework.util import get_spendable, swap_bytes, assert_equal, initialize_new_sidechain_in_mainchain
-from eth_utils import add_0x_prefix
 from test_framework.mc_test.mc_test import generate_random_field_element_hex
 from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal, assert_false, get_field_element_with_padding
 
@@ -581,8 +574,8 @@ def get_lib_separator():
 def get_examples_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
 
-SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.5.0.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
-EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.5.0.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* com.horizen.examples.EvmApp"
+SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.6.0.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* com.horizen.examples.EvmApp"
 
 
 
@@ -1045,8 +1038,8 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         sc_creation_info.btr_data_length,
         sc_creation_info.sc_creation_version,
         sc_creation_info.csw_enabled,
-        evm_account_public_key,
-        sc_creation_info.circuit_type)
+        sc_creation_info.circuit_type,
+        evm_account_public_key)
 
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,

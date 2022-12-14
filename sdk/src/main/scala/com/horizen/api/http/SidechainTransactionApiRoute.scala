@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainNodeErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
@@ -25,6 +26,7 @@ import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
 import sparkz.core.settings.RESTApiSettings
+
 import java.util.{Optional => JOptional}
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}

@@ -1,14 +1,14 @@
 package com.horizen.certificatesubmitter.strategies
 
-import com.horizen.block.SidechainBlock
-import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
+import com.horizen.{AbstractHistory, AbstractState}
+import scorex.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 
 trait CertificateSubmissionStrategy {
-  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
-  def getStatus(sidechainNodeView: View, block: SidechainBlock): SubmissionWindowStatus
+  def getStatus[H <: AbstractHistory[_, _, _, _, _, _], S <: AbstractState[_, _, _, _]](sidechainNodeView: CurrentView[H, S, _, _], id: ModifierId): SubmissionWindowStatus
+
   def checkQuality(status: SignaturesStatus): Boolean
 
 }

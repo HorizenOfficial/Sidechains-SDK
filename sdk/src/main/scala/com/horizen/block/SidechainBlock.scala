@@ -33,9 +33,6 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 {
   def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
-  // Note: can be 0 or 1 in case of ceasing sidechain, and 0+ for non-ceasing sidechain
-  lazy val topQualityCertificates: Seq[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificates)
-
   override type M = SidechainBlock
 
   override lazy val serializer = new SidechainBlockSerializer(companion)
@@ -47,8 +44,6 @@ class SidechainBlock(override val header: SidechainBlockHeader,
   }
 
   lazy val feeInfo: BlockFeeInfo = BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
-
-  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   override def verifyTransactionsDataConsistency(): Unit = {

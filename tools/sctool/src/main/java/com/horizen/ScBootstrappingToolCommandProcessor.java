@@ -5,17 +5,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.horizen.account.utils.FeeUtils;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.receipt.LogsBloom;
 import com.horizen.account.secret.PrivateKeySecp256k1;
-import com.horizen.account.state.*;
+import com.horizen.account.state.AccountStateView;
+import com.horizen.account.state.MessageProcessor;
+import com.horizen.account.state.MessageProcessorInitializationException;
+import com.horizen.account.state.MessageProcessorUtil;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.account.utils.AccountFeePaymentsUtils;
+import com.horizen.account.utils.FeeUtils;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
@@ -44,21 +47,19 @@ import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
+import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Keys;
 import scala.Enumeration;
-import org.web3j.crypto.ECKeyPair;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
 
-
-import java.io.*;
-import java.math.BigInteger;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -150,8 +151,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             String filePath = commandArguments.replaceAll("^-f\\s*\"*|\"$", "");
             // Try to open and read data from file
             try(
-                FileReader file = new FileReader(filePath);
-                BufferedReader reader = new BufferedReader(file)
+                    FileReader file = new FileReader(filePath);
+                    BufferedReader reader = new BufferedReader(file)
             ) {
                 jsonData = reader.readLine();
             } catch (FileNotFoundException e) {
@@ -175,25 +176,25 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     @Override
     protected void printUsageMsg() {
         printer.print("Usage:\n" +
-                      "\tFrom command line: <program name> <command name> [<json data>]\n" +
-                      "\tFor interactive mode: <command name> [<json data>]\n" +
-                      "\tRead command arguments from file: <command name> -f <path to file with json data>\n" +
-                      "Supported commands:\n" +
-                      "\thelp\n" +
-                      "\tgeneratekey <arguments>\n" +
-                      "\tgenerateVrfKey <arguments>\n" +
-                      "\tgenerateCertificateSignerKey <arguments>\n" +
-                      "\tgenerateCertProofInfo <arguments>\n" +
-                      "\tgenerateCswProofInfo <arguments>\n" +
-                      "\tgenesisinfo <arguments>\n" +
-                      "\texit\n"
+                "\tFrom command line: <program name> <command name> [<json data>]\n" +
+                "\tFor interactive mode: <command name> [<json data>]\n" +
+                "\tRead command arguments from file: <command name> -f <path to file with json data>\n" +
+                "Supported commands:\n" +
+                "\thelp\n" +
+                "\tgeneratekey <arguments>\n" +
+                "\tgenerateVrfKey <arguments>\n" +
+                "\tgenerateCertificateSignerKey <arguments>\n" +
+                "\tgenerateCertProofInfo <arguments>\n" +
+                "\tgenerateCswProofInfo <arguments>\n" +
+                "\tgenesisinfo <arguments>\n" +
+                "\texit\n"
         );
     }
 
     private void printGenerateKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgeneratekey {\"seed\":\"my seed\"}");
+                "\tgeneratekey {\"seed\":\"my seed\"}");
     }
 
     private void processGenerateKey(JsonNode json) {
@@ -217,13 +218,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateVrfKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgenerateVrfKey {\"seed\":\"my seed\"}");
-    }
-
-    private void printGenerateAccountKeyUsageMsg(String error) {
-        printer.print("Error: " + error);
-        printer.print("Usage:\n" +
-                "\tgenerateAccountKey {\"seed\":\"my seed\"}");
+                "\tgenerateVrfKey {\"seed\":\"my seed\"}");
     }
 
     private  void processGenerateVrfKey(JsonNode json) {
@@ -243,6 +238,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         String res = resJson.toString();
         printer.print(res);
+    }
+
+    private void printGenerateAccountKeyUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateAccountKey {\"seed\":\"my seed\"}");
     }
 
     private void processGenerateAccountKey(JsonNode json) {
@@ -285,7 +286,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateCertificateSignerKey(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                    "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}");
+                "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}");
     }
 
     private void processGenerateCertificateSignerKey(JsonNode json) {
@@ -652,8 +653,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
     private void processGenesisInfo(JsonNode json) {
         if (!json.has("info") || !json.get("info").isTextual()
-            || !json.has("vrfSecret") || !json.get("vrfSecret").isTextual()
-            || !json.has("secret") || !json.get("secret").isTextual()) {
+                || !json.has("vrfSecret") || !json.get("vrfSecret").isTextual()
+                || !json.has("secret") || !json.get("secret").isTextual()) {
             printGenesisInfoUsageMsg("wrong arguments syntax.");
             return;
         }
@@ -736,7 +737,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         boolean shouldUpdateConfig = json.has("updateconfig") && json.get("updateconfig").asBoolean();
         if(shouldUpdateConfig &&
-                        (!json.has("sourceconfig") || !json.get("sourceconfig").isTextual() ||
+                (!json.has("sourceconfig") || !json.get("sourceconfig").isTextual() ||
                         !json.has("resultconfig") || !json.get("resultconfig").isTextual())) {
             printGenesisInfoUsageMsg("'updateconfig' is specified but path to configs doesn't not.");
             return;
@@ -904,20 +905,20 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
             } else {
                 // no fee payments expected for the genesis block
-                byte[] feePaymentsHash = FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH();
+                byte[] feePaymentsHash = new byte[32];
 
                 ForgerBox forgerBox = sidechainCreation.getBox();
                 ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
 
-                SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
+                SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), CircuitTypes.NaiveThresholdSignatureCircuit());
 
                 SidechainBlock sidechainBlock = SidechainBlock.create(
                         params.sidechainGenesisBlockParentId(),
-                        block_version,
+                        SidechainBlock.BLOCK_VERSION(),
                         timestamp,
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainBlockReferencesData).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainHeadersData).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
                         key,
                         forgingStakeInfo,
@@ -931,11 +932,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 try {
                     SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
                     withdrawalEpochLength = creationOutput.withdrawalEpochLength();
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
                     return;
                 }
+                sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
+            }
 
             boolean isNonCeasing = (withdrawalEpochLength == 0);
 
@@ -948,9 +950,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 printGenesisInfoUsageMsg("For ceasing sidechains virtualWithdrawalEpochLength must not be specified.");
                 return;
             }
-
-            String sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
-
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();
             resJson.put("scId", BytesUtils.toHexString(BytesUtils.reverseBytes(scId))); // scId output expected to be in BE
@@ -1029,12 +1028,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, true, 11111111,true);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null,CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }
@@ -1055,17 +1053,17 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
 
             String conf = templateConf +
-                          "\nsparkz {\n" +
-                          "\tgenesis {\n" +
-                          "\t\tscGenesisBlockHex = \"" + scBlockHex + "\"\n" +
-                          "\t\tscId = \"" + scId + "\"\n" +
-                          "\t\tpowData = \"" + powData + "\"\n" +
-                          "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
-                          "\t\tmcNetwork = " + mcNetworkName + "\n" +
-                          "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
-                          "\t\tinitialCumulativeCommTreeHash = \"" + initialCumulativeCommTreeHashHex + "\"\n" +
-                          "\t}\n" +
-                          "}\n";
+                    "\nsparkz {\n" +
+                    "\tgenesis {\n" +
+                    "\t\tscGenesisBlockHex = \"" + scBlockHex + "\"\n" +
+                    "\t\tscId = \"" + scId + "\"\n" +
+                    "\t\tpowData = \"" + powData + "\"\n" +
+                    "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
+                    "\t\tmcNetwork = " + mcNetworkName + "\n" +
+                    "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
+                    "\t\tinitialCumulativeCommTreeHash = \"" + initialCumulativeCommTreeHashHex + "\"\n" +
+                    "\t}\n" +
+                    "}\n";
 
             Files.write(Paths.get(pathToResultConf), conf.getBytes());
 

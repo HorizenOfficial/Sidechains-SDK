@@ -193,7 +193,7 @@ class AccountForgeMessageBuilder(
       parentInfo.height + 1,
       TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
       WithdrawalEpochUtils
-        .getWithdrawalEpochInfo(mainchainBlockReferencesData, parentInfo.withdrawalEpochInfo, params)
+        .getWithdrawalEpochInfo(mainchainBlockReferencesData.size, parentInfo.withdrawalEpochInfo, params)
         .epoch,
       params.chainId
     )

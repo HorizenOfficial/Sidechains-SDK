@@ -1,33 +1,46 @@
 package com.horizen.api.http
 
 
-import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, IsCertificateSigningEnabled, IsSubmitterEnabled}
-import com.horizen.serialization.Views
-import sparkz.core.settings.RESTApiSettings
-
-import scala.concurrent.Await
-import scala.util.{Failure, Success, Try}
-import java.util.{Optional => JOptional}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorBadCircuit, ErrorRetrieveCertificateSigners, ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
-import com.horizen.api.http.SidechainDebugRestScheme._
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.cryptolibprovider.utils.CircuitTypes
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.schnorrnative.SchnorrPublicKey
-import com.horizen.utils.BytesUtils
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainNodeViewBase
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
-import com.horizen.api.http.SidechainDebugRestScheme.{RespCertGenerationState, RespCertSignerState, RespCertSubmitterState, RespSubmitterOk}
-import sparkz.core.api.http.{ApiDirectives, ApiRoute}
+import com.horizen.api.http.SidechainDebugErrorResponse._
+import com.horizen.api.http.SidechainDebugRestScheme._
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.chain.AbstractFeePaymentsInfo
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import com.horizen.schnorrnative.SchnorrPublicKey
+import com.horizen.serialization.Views
+import com.horizen.transaction.Transaction
+import com.horizen.utils.BytesUtils
+import org.scalatest.Ignore
+import sparkz.core.api.http.ApiDirectives
+import sparkz.core.settings.RESTApiSettings
+
+import java.util.{Optional => JOptional}
+import scala.concurrent.{Await, ExecutionContext}
+import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
 
 
-case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef, circuitType: CircuitTypes)
-                                     (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute
+case class SidechainSubmitterApiRoute[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  FPI <: AbstractFeePaymentsInfo,
+  NH <: NodeHistoryBase[TX, H, PM, FPI],
+  NS <: NodeStateBase,
+  NW <: NodeWalletBase,
+  NP <: NodeMemoryPoolBase[TX],
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef, circuitType: CircuitTypes)
+                                     (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
+  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV]
   with ApiDirectives
 {
   override val route: Route = pathPrefix("submitter") {
