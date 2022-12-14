@@ -3,7 +3,6 @@ package com.horizen.account.api.rpc.types;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
-import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
@@ -38,9 +37,7 @@ public class EthereumTransactionView {
         assert Objects.equals(BytesUtils.toHexString(receipt.transactionHash()), tx.id());
         type = Numeric.encodeQuantity(BigInteger.valueOf(tx.version()));
         nonce = Numeric.encodeQuantity(tx.getNonce());
-        to = Numeric.cleanHexPrefix(tx.getToAddressString()).length() != 2 * Account.ADDRESS_SIZE
-            ? null
-            : tx.getToAddressString();
+        to = tx.getToAddressString();
         gas = Numeric.encodeQuantity(tx.getGasLimit());
         value = Numeric.encodeQuantity(tx.getValue());
         input = Numeric.toHexString(tx.getData());
@@ -66,10 +63,9 @@ public class EthereumTransactionView {
         }
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
-        from = (tx.getFrom() != null) ? Numeric.toHexString(tx.getFrom().address()) : null;
+        from = tx.getFromAddressString();
         hash = Numeric.toHexString(receipt.transactionHash());
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         accessList = null;
     }
 }
-

@@ -35,8 +35,8 @@ public class EthereumReceiptView {
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
-        from = (tx.getFrom() != null) ? Numeric.toHexString(tx.getFrom().address()) : null;
-        to = (tx.getTo().isPresent()) ? Numeric.toHexString(tx.getTo().get().address()) : null;
+        from = tx.getFromAddressString();
+        to = tx.getToAddressString();
         cumulativeGasUsed = Numeric.encodeQuantity(receipt.consensusDataReceipt().cumulativeGasUsed());
         gasUsed = Numeric.encodeQuantity(receipt.gasUsed());
         contractAddress = receipt.contractAddress().length != Account.ADDRESS_SIZE ? null : Numeric.toHexString(receipt.contractAddress());
