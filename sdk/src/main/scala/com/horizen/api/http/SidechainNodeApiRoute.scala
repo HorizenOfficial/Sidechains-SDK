@@ -238,8 +238,4 @@ object SidechainNodeErrorResponse {
     override val code: String = "0402"
   }
 
-  case class ErrorBadCircuit(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0404"
-  }
-
 }

@@ -463,7 +463,7 @@ class AccountState(
 
   override def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
     // TODO: no CSW support expected for the Eth sidechain
-    Some(Array[Byte]())
+    None
   }
 }
 

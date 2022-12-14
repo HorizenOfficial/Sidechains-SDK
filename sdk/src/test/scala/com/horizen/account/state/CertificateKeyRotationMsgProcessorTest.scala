@@ -8,6 +8,7 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
+import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
@@ -80,12 +81,14 @@ class CertificateKeyRotationMsgProcessorTest
   }
 
   private def buildKeyRotationProof(`type`: KeyRotationProofType, index: Int, newKey: SchnorrSecret, oldSigningKey: SchnorrSecret, oldMasterKey: SchnorrSecret) = {
+    val messageToSign = SchnorrPublicKey.deserialize(newKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+
     KeyRotationProof(
       `type`,
       index,
       newKey.publicImage(),
-      oldSigningKey.sign(newKey.getPublicBytes.take(32)),
-      oldMasterKey.sign(newKey.getPublicBytes.take(32))
+      oldSigningKey.sign(messageToSign),
+      oldMasterKey.sign(messageToSign)
     )
   }
 
@@ -96,12 +99,14 @@ class CertificateKeyRotationMsgProcessorTest
       else
         new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1)
 
+    val messageToSign = SchnorrPublicKey.deserialize(newKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+
     withGas {
       certificateKeyRotationMsgProcessor.process(
         getMessage(
           to = contractAddress,
           data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++
-            SubmitKeyRotationCmdInput(keyRotationProof, newKey.sign(newKey.getPublicBytes.take(32))).encode(),
+            SubmitKeyRotationCmdInput(keyRotationProof, newKey.sign(messageToSign)).encode(),
           nonce = randomNonce
         ), view, _, blockContext
       )
@@ -130,7 +135,8 @@ class CertificateKeyRotationMsgProcessorTest
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey.publicImage()))
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
-      val cmdInput = SubmitKeyRotationCmdInput(keyRotationProof, newMasterKey.sign(newMasterKey.getPublicBytes.take(32)))
+      val messageToSign = SchnorrPublicKey.deserialize(newMasterKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+      val cmdInput = SubmitKeyRotationCmdInput(keyRotationProof, newMasterKey.sign(messageToSign))
       val data: Array[Byte] = cmdInput.encode()
       val msg = getMessage(to = contractAddress, data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ data, nonce = randomNonce)
 

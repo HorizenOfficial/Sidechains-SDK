@@ -19,7 +19,6 @@ import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
-import org.scalatest.Ignore
 import sparkz.core.api.http.ApiDirectives
 import sparkz.core.settings.RESTApiSettings
 

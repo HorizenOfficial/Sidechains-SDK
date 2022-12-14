@@ -8,9 +8,9 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainNodeErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
+import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}

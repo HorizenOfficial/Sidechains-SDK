@@ -6,6 +6,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
 import com.horizen.api.http._
+import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
@@ -15,7 +16,6 @@ import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.fork.{ForkConfigurator, ForkManager}
-import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl}
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
@@ -121,6 +121,8 @@ abstract class AbstractSidechainApp
   if (circuitType.equals(CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation) && isCSWEnabled)
     throw new IllegalArgumentException("Invalid Configuration file: With key rotation circuit CSW feature is not allowed.")
 
+  // Init Secure Enclave Api Client
+  val secureEnclaveApiClient = new SecureEnclaveApiClient(sidechainSettings.remoteKeysManagerSettings)
 
   lazy val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
@@ -242,11 +244,10 @@ abstract class AbstractSidechainApp
       case NaiveThresholdSignatureCircuitWithKeyRotation =>
         CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION
       case NaiveThresholdSignatureCircuit =>
-        params.isCSWEnabled match {
-          case true =>
-            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW
-          case false =>
-            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION
+        if (params.isCSWEnabled) {
+          CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW
+        } else {
+          CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION
         }
     }
     val result: Boolean = circuitType match {

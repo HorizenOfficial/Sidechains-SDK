@@ -444,8 +444,6 @@ abstract class AbstractCertificateSubmitter[
     }
   }
 
-  def getWithdrawalRequests(state: MS, referencedEpochNumber: Int) : Seq[BackwardTransfer]
-
   def submitterStatus: Receive = {
     case EnableSubmitter =>
       if (!submitterEnabled) {

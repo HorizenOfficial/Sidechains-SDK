@@ -46,9 +46,6 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
   type MP = AccountMemoryPool
   type PM = AccountBlock
 
-  override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[BackwardTransfer] =
-    state.withdrawalRequests(referencedEpochNumber).map(request => new BackwardTransfer(request.proposition.bytes, request.valueInZennies))
-
 }
 
 object AccountCertificateSubmitterRef {
