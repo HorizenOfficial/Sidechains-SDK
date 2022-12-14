@@ -210,7 +210,7 @@ function runTests
   fi;
 
   # Assign remaining args (which should be the expanded test script array)
-  testsToRun=("$@")
+  IFS=', ' read -r -a testsToRun <<< "${@}"
 
   for (( i = 0; i < ${#testsToRun[@]}; i++ )); do
     if checkFileExists "${testsToRun[$i]}"; then
