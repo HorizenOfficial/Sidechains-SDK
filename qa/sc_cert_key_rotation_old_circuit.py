@@ -94,7 +94,7 @@ class SCKeyRotationOldCircuitTest(SidechainTestFramework):
         response = http_create_key_rotation_transaction(sc_node, 
                         key_type=0,
                         key_index=0,
-                        new_value_of_key="0",
+                        new_key="0",
                         signing_key_signature="0",
                         master_key_signature="0",
                         new_key_signature="0",

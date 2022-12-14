@@ -469,6 +469,13 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         assert mastersPublicKeys.size() == signersPublicKeys.size() : "mastersPublicKeys and signersPublicKeys must have the same size";
 
+        for(int i = 0; i < mastersPublicKeys.size(); i++) {
+            if(Objects.equals(mastersPublicKeys.get(i), signersPublicKeys.get(i))) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("signersKey with index %d equals to mastersKey with index %d", i, i));
+                return;
+            }
+        }
+
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
             printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong threshold");
             return;
@@ -948,6 +955,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             if (!isNonCeasing && virtualWithdrawalEpochLength != 0) {
                 printGenesisInfoUsageMsg("For ceasing sidechains virtualWithdrawalEpochLength must not be specified.");
+                return;
+            }
+
+            if (isNonCeasing && virtualWithdrawalEpochLength < params.minVirtualWithdrawalEpochLength()) {
+                printGenesisInfoUsageMsg(String.format("Virtual withdrawal epoch length is too short. It should be at least %d for %s network.", params.minVirtualWithdrawalEpochLength(), mcNetworkName));
                 return;
             }
 

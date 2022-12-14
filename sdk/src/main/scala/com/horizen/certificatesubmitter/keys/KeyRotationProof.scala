@@ -52,9 +52,9 @@ object KeyRotationProofSerializer extends SparkzSerializer[KeyRotationProof] {
   override def parse(reader: Reader): KeyRotationProof = {
     val keyType = KeyRotationProofTypes.apply(reader.getInt())
     val index = reader.getInt()
-    val newValueOfKey = SchnorrPropositionSerializer.getSerializer.parse(reader)
+    val newKey = SchnorrPropositionSerializer.getSerializer.parse(reader)
     val signingKeySignature = SchnorrSignatureSerializer.getSerializer.parse(reader)
     val masterKeySignature = SchnorrSignatureSerializer.getSerializer.parse(reader)
-    KeyRotationProof(keyType, index, newValueOfKey, signingKeySignature, masterKeySignature)
+    KeyRotationProof(keyType, index, newKey, signingKeySignature, masterKeySignature)
   }
 }
