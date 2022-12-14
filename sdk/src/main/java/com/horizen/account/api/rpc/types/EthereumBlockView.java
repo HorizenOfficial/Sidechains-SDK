@@ -16,7 +16,7 @@ import java.util.stream.IntStream;
 
 @JsonView(Views.Default.class)
 public class EthereumBlockView {
-    public final Long number;
+    public final String number;
     public final String hash;
     public final String parentHash;
     public final String logsBloom;
@@ -49,23 +49,23 @@ public class EthereumBlockView {
     // PREVRANDAO EVM-opcode, just like Ethereum does since The Merge
     public final String mixHash = "0x";
 
-    private EthereumBlockView(Long blockNumber, Hash blockHash, AccountBlock block, List<?> transactions) {
-        var blockHeader = block.header();
-        this.author = Numeric.toHexString(block.header().forgerAddress().address());
-        this.number = blockNumber;
-        this.hash = blockHash.toString();
-        this.parentHash = Numeric.prependHexPrefix((String) block.parentId());
-        this.logsBloom = Numeric.toHexString(block.header().logsBloom().getBloomFilter());
-        this.transactionsRoot = Numeric.toHexString(block.header().sidechainTransactionsMerkleRootHash());
-        this.stateRoot = Numeric.toHexString(block.header().stateRoot());
-        this.receiptsRoot = Numeric.toHexString(block.header().receiptsRoot());
-        this.miner = Numeric.toHexString(block.header().forgerAddress().address());
-        this.size = Numeric.prependHexPrefix(Integer.toHexString(block.header().bytes().length));
-        this.gasLimit = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasLimit()));
-        this.gasUsed = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasUsed()));
-        this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
-        this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
-        this.transactions = transactions;
+    private EthereumBlockView(Long blockNumber, Hash blockHash, AccountBlock block, List<?> txs) {
+        var header = block.header();
+        author = Numeric.toHexString(header.forgerAddress().address());
+        number = Numeric.encodeQuantity(BigInteger.valueOf(blockNumber));
+        hash = Numeric.toHexString(blockHash.toBytes());
+        parentHash = Numeric.prependHexPrefix((String) block.parentId());
+        logsBloom = Numeric.toHexString(header.logsBloom().getBloomFilter());
+        transactionsRoot = Numeric.toHexString(header.sidechainTransactionsMerkleRootHash());
+        stateRoot = Numeric.toHexString(header.stateRoot());
+        receiptsRoot = Numeric.toHexString(header.receiptsRoot());
+        miner = Numeric.toHexString(header.forgerAddress().address());
+        size = Numeric.encodeQuantity(BigInteger.valueOf(header.bytes().length));
+        gasLimit = Numeric.encodeQuantity(BigInteger.valueOf(header.gasLimit()));
+        gasUsed = Numeric.encodeQuantity(BigInteger.valueOf(header.gasUsed()));
+        timestamp = Numeric.encodeQuantity(BigInteger.valueOf(block.timestamp()));
+        baseFeePerGas = Numeric.encodeQuantity(header.baseFee());
+        transactions = txs;
     }
 
     public static EthereumBlockView notHydrated(Long blockNumber, Hash blockHash, AccountBlock block) {
@@ -84,7 +84,7 @@ public class EthereumBlockView {
         assert transactions.size() == receipts.size();
         var txViews = IntStream
             .range(0, transactions.size())
-            .mapToObj(i -> new EthereumTransactionView(receipts.get(i), transactions.get(i), block.header().baseFee()))
+            .mapToObj(i -> new EthereumTransactionView(transactions.get(i), receipts.get(i), block.header().baseFee()))
             .collect(Collectors.toList());
         return new EthereumBlockView(blockNumber, blockHash, block, txViews);
     }
