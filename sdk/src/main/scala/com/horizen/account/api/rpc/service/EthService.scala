@@ -100,7 +100,7 @@ class EthService(
       hydratedTx: Boolean
   ): EthereumBlockView = {
     val blockNumber = nodeView.history.getBlockHeightById(blockId).get().toLong
-    val blockHash = Hash.FromBytes(blockId.toBytes)
+    val blockHash = Hash.fromBytes(blockId.toBytes)
     using(nodeView.state.getView) { stateView =>
       nodeView.history
         .getStorageBlockById(blockId)
