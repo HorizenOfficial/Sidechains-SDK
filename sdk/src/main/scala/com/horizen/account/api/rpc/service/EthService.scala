@@ -573,6 +573,36 @@ class EthService(
     }
   }
 
+  @RpcMethod("debug_traceBlockByHash")
+  @RpcOptionalParameters(1)
+  def traceBlockByHash(hash: Hash, traceParams: TraceParams): DebugTraceBlockView = {
+    applyOnAccountView { nodeView =>
+      // get block to trace
+      val (block, blockInfo) = getBlockById(nodeView, bytesToId(hash.toBytes))
+
+      // get state at previous block
+      getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
+        // use default trace params if none are given
+        blockContext.setTraceParams(if (traceParams == null) new TraceParams() else traceParams)
+
+        // apply mainchain references
+        for (mcBlockRefData <- block.mainchainBlockReferencesData) {
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+        }
+
+        val gasPool = new GasPool(BigInteger.valueOf(block.header.gasLimit))
+
+        // apply all transaction, collecting traces on the way
+        val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
+          tagStateView.applyTransaction(tx, i, gasPool, blockContext)
+          blockContext.getEvmResult
+        })
+
+        new DebugTraceBlockView(evmResults.toArray)
+      }
+    }
+  }
+
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
   def traceTransaction(transactionHash: Hash, traceOptions: TraceOptions): DebugTraceTransactionView = {
