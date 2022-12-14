@@ -11,8 +11,14 @@ public class EvmResult {
     public Address contractAddress;
     public EvmTraceLog[] traceLogs;
     public Boolean reverted;
-    
-    public boolean isEmpty() {
-        return usedGas == null && evmError == null && returnData == null && contractAddress == null && traceLogs == null;
+
+    public static EvmResult emptyEvmResult() {
+        var evmResult = new EvmResult();
+
+        evmResult.usedGas = BigInteger.ZERO;
+        evmResult.returnData = new byte[] {0};
+        evmResult.traceLogs = new EvmTraceLog[] {};
+
+        return evmResult;
     }
 }

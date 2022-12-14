@@ -66,12 +66,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     * -format: if true a JSON representation of transaction is returned, otherwise return the transaction serialized as
     * a hex string. If format is not specified, false behaviour is assumed as default;
     * -blockHash: If specified, will look for tx in the corresponding block
-    * -txIndex: If specified will look for transaction in all blockchain blocks;
     *
     * All the possible behaviours are be:
-    * 1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
-    * 2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
-    * 3) blockHash not set, txIndex = false -> Search in memory pool
+    * 1) blockHash set -> Search in block referenced by blockHash
+    * 2) blockHash not set -> Search in memory pool
     */
   def findById: Route = (post & path("findById")) {
     entity(as[ReqFindById]) { body =>
@@ -93,45 +91,23 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           else None
         }
 
-        def searchTransactionInBlockchain(id: String): Option[SidechainTypes#SCBT] = {
-          val opt = history.searchTransactionInsideBlockchain(id)
-          if (opt.isPresent)
-            Option(opt.get())
-          else None
-        }
-
         val txId = body.transactionId
         val format = body.format.getOrElse(false)
-        val blockHash = body.blockHash.getOrElse("")
-        val txIndex = body.transactionIndex.getOrElse(false)
         var transaction: Option[SidechainTypes#SCBT] = None
         var error: String = ""
 
+        body.blockHash match {
+          case Some(hash) =>
+            // Search in block referenced by blockHash
+            transaction = searchTransactionInBlock(txId, hash)
+            if (transaction.isEmpty)
+              error = s"Transaction $txId not found in specified block"
 
-        // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
-        if (blockHash.isEmpty && txIndex) {
-          // Search first in memory pool
-          transaction = searchTransactionInMemoryPool(txId)
-          // If not found search in the whole blockchain
-          if (transaction.isEmpty)
-            transaction = searchTransactionInBlockchain(txId)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in memory pool and blockchain"
-        }
-
-        // Case --> blockHash not set, txIndex = false -> Search in memory pool
-        else if (blockHash.isEmpty && !txIndex) {
-          // Search in memory pool
-          transaction = searchTransactionInMemoryPool(txId)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in memory pool"
-        }
-
-        // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
-        else if (!blockHash.isEmpty) {
-          transaction = searchTransactionInBlock(txId, blockHash)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in specified block"
+          case None =>
+            // Search in memory pool
+            transaction = searchTransactionInMemoryPool(txId)
+            if (transaction.isEmpty)
+              error = s"Transaction $txId not found in memory pool"
         }
 
         transaction match {
@@ -653,7 +629,7 @@ object SidechainTransactionRestScheme {
   private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
+  private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionDTO(transaction: SidechainTypes#SCBT) extends SuccessResponse

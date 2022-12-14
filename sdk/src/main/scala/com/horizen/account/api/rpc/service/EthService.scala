@@ -3,7 +3,6 @@ package com.horizen.account.api.rpc.service
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.SidechainSettings
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
@@ -21,7 +20,7 @@ import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.TraceParams
+import com.horizen.evm.interop.{EvmResult, TraceOptions}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -41,11 +40,10 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 class EthService(
-    val scNodeViewHolderRef: ActorRef,
-    val nvtimeout: FiniteDuration,
+    scNodeViewHolderRef: ActorRef,
+    nvtimeout: FiniteDuration,
     networkParams: NetworkParams,
-    val sidechainSettings: SidechainSettings,
-    val sidechainTransactionActorRef: ActorRef
+    sidechainTransactionActorRef: ActorRef
 ) extends RpcService
       with ClosableResourceHandler
       with ScorexLogging {
@@ -162,7 +160,7 @@ class EthService(
   @RpcMethod("eth_signTransaction")
   def signTransaction(params: TransactionArgs): String = {
     applyOnAccountView { nodeView =>
-      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value)
+      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value.add(params.gas))
         .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
         .map(tx => Numeric.toHexString(tx.encode(tx.isSigned)))
         .orNull
@@ -190,7 +188,7 @@ class EthService(
       wallet: AccountWallet,
       state: AccountState,
       fromAddress: Option[Address],
-      txValueInWei: BigInteger
+      txCostInWei: BigInteger
   ): Option[PrivateKeySecp256k1] = {
     wallet
       .secretsOfType(classOf[PrivateKeySecp256k1])
@@ -199,7 +197,7 @@ class EthService(
         // if from address is given the secrets public key needs to match, otherwise check all of the secrets
         fromAddress.forall(from => util.Arrays.equals(from.toBytes, secret.publicImage().address())) &&
           // TODO account for gas
-          state.getBalance(secret.publicImage.address).compareTo(txValueInWei) >= 0
+          state.getBalance(secret.publicImage.address).compareTo(txCostInWei) >= 0
       )
   }
 
@@ -457,17 +455,37 @@ class EthService(
     }
   }
 
+  // Uncle Blocks RPCs
+  // An uncle block is a block that did not get mined onto the canonical chain.
+  // Only one block can be mined and acknowledged as canonical on the blockchain. The remaining blocks are uncle blocks.
+  // The Sidechains that are created using this sdk DO NOT support uncle blocks.
+  // For this reason:
+  // - eth_getUncleCountByBlockHash and eth_getUncleCountByBlockNumber always return 0x0
+  // - eth_getUncleByBlockHashAndIndex and eth_getUncleByBlockNumberAndIndex always return null (as no block was found)
+  @RpcMethod("eth_getUncleCountByBlockHash")
+  def getUncleCountByBlockHash(hash: Hash) = new Quantity(0L)
+
+  @RpcMethod("eth_getUncleCountByBlockNumber")
+  def eth_getUncleCountByBlockNumber(tag: String) = new Quantity(0L)
+
+  @RpcMethod("eth_getUncleByBlockHashAndIndex")
+  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: Quantity) = null
+
+  @RpcMethod("eth_getUncleByBlockNumberAndIndex")
+  def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity) = null
+
+
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
-  def traceBlockByNumber(tag: String, traceParams: TraceParams): DebugTraceBlockView = {
+  def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
     applyOnAccountView { nodeView =>
       // get block to trace
-      val (block, blockInfo) = getBlockByTag(nodeView, tag)
+      val (block, blockInfo) = getBlockByTag(nodeView, number)
 
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceParams() else traceParams)
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
@@ -489,7 +507,7 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, traceParams: TraceParams): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: Hash, traceOptions: TraceOptions): DebugTraceTransactionView = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -517,10 +535,10 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceParams() else traceParams)
+        blockContext.setTraceParams(if (traceOptions == null) new TraceOptions() else traceOptions)
 
         // apply requested transaction with tracing enabled
-        blockContext.setEvmResult(null)
+        blockContext.setEvmResult(EvmResult.emptyEvmResult())
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         new DebugTraceTransactionView(blockContext.getEvmResult)
@@ -545,7 +563,7 @@ class EthService(
     val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        Hash.FromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
+        Hash.fromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
       }
     }
   }

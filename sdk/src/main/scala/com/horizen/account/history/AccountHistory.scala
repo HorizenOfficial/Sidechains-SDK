@@ -43,39 +43,6 @@ extends com.horizen.AbstractHistory[
 
   override type NVCT = AccountHistory
 
-  // TODO check this
-  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCAT] = ???
-
-  private def findTransactionInsideBlock(transactionId : String, block : AccountBlock) : JOptional[SidechainTypes#SCAT] = {
-    block.transactions.find(tx => tx.id.equals(ModifierId(transactionId))) match {
-      case Some(tx) => JOptional.ofNullable(tx)
-      case None => JOptional.empty()
-    }
-  }
-
-  override def searchTransactionInsideBlockchain(transactionId: String): JOptional[SidechainTypes#SCAT] = {
-    var startingBlock = JOptional.ofNullable(getBestBlock)
-    var transaction : JOptional[SidechainTypes#SCAT] = JOptional.empty()
-    var found = false
-    while(!found && startingBlock.isPresent){
-      val tx = findTransactionInsideBlock(transactionId, startingBlock.get())
-      if(tx.isPresent){
-        found = true
-        transaction = JOptional.ofNullable(tx.get())
-      }else{
-        startingBlock = storage.parentBlockId(startingBlock.get().id) match {
-          case Some(id) => storage.blockById(id) match {
-            case Some(block) => JOptional.ofNullable(block)
-            case None => JOptional.empty()
-          }
-          case None => JOptional.empty()
-        }
-      }
-    }
-
-    transaction
-  }
-
   override def makeNewHistory(storage: AccountHistoryStorage, consensusDataStorage: ConsensusDataStorage): AccountHistory =
     new AccountHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 

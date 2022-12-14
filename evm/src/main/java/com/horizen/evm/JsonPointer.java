@@ -73,7 +73,7 @@ public class JsonPointer implements NativeMapped {
         try {
             return mapper.writeValueAsString(this);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("JSON processing error " + this.getClass());
+            throw new IllegalArgumentException(e);
         }
     }
 
