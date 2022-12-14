@@ -70,7 +70,7 @@ class EthServiceTest extends JUnitSuite
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\", \"params\":[]}}"
     request = mapper.readTree(json)
     rpcRequest = new RpcRequest(request)
-    assertEquals(Numeric.toHexStringWithPrefix(BigInteger.valueOf(params.chainId)), ethService.execute(rpcRequest).asInstanceOf[Quantity].value)
+    assertEquals(Numeric.encodeQuantity(BigInteger.valueOf(params.chainId)), ethService.execute(rpcRequest).asInstanceOf[Quantity].getValue)
 
     // Test 4: Trigger IllegalArgumentException rpc call
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":[-1]}}"

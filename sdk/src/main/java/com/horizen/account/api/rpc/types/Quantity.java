@@ -1,14 +1,13 @@
 package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 
 public class Quantity {
-    public final String value;
+    private final String value;
 
     @JsonCreator
     public Quantity(String value) {

@@ -29,7 +29,7 @@ class RpcResponseSerializationTest {
   def rpcResponseSuccessStringId(): Unit = {
     val rpcId = new RpcId(mapper.readTree("\"xyz\""))
     val result = new Quantity(1997L)
-    val response = new RpcResponseSuccess(rpcId, result.value)
+    val response = new RpcResponseSuccess(rpcId, result)
     val serializedResponse = SerializationUtil.serialize(response)
     val rpcResponse = mapper.readTree(serializedResponse)
     assertEquals(stringFromJsonNode(rpcResponse.get("jsonrpc").toString), "2.0")
