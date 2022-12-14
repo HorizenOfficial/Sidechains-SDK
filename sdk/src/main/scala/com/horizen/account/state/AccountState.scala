@@ -104,8 +104,8 @@ class AccountState(
               case None =>
                 log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
                   s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
+                stateView.setCeased()
             }
-            stateView.setCeased()
         }
       }
 
