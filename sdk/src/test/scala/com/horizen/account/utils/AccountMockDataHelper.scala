@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumReceipt, LogsBloom}
+import com.horizen.account.receipt.{EthereumReceipt, Bloom}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountStateMetadataStorageView
@@ -144,8 +144,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito
       .when(block.header.stateRoot)
       .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))
-    Mockito.when(block.header.logsBloom).thenReturn(mock[LogsBloom])
-    Mockito.when(block.header.logsBloom.getBloomFilter()).thenReturn(new Array[Byte](256))
+    Mockito.when(block.header.logsBloom).thenReturn(mock[Bloom])
+    Mockito.when(block.header.logsBloom.getBytes).thenReturn(new Array[Byte](256))
     Mockito
       .when(block.header.sidechainTransactionsMerkleRootHash)
       .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))
