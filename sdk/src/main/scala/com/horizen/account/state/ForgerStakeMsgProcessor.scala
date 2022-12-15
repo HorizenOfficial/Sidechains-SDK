@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
-import com.horizen.account.events.{DelegateForgerStake, OpenForgerStakeList, WithdrawForgerStake}
+import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
@@ -77,9 +77,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     // forger list
     /* Do not initialize it here since bootstrapping tool can not do the same as of now. That would result in
        a different state root in the genesis block creation  */
-    val restictForserList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
-    if (!restictForserList.sameElements(NULL_HEX_STRING_32))
-      throw new MessageProcessorInitializationException("restictForserList already set")
+    val restictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
+    if (!restictForgerList.sameElements(NULL_HEX_STRING_32))
+      throw new MessageProcessorInitializationException("restictForgerList already set")
 
       /*
     if (networkParams.restrictForgers) {
@@ -397,11 +397,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val restrictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
     if (restrictForgerList.sameElements(NULL_HEX_STRING_32)) {
       // it is the first time we access this item, do the init now
-      val forgersIndexesArray = new Array[Byte](networkParams.allowedForgersList.size)
-      view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, forgersIndexesArray)
+      new Array[Byte](networkParams.allowedForgersList.size)
+    } else {
+      view.getAccountStorageBytes(contractAddress, RestrictedForgerFlagsList)
     }
-    view.getAccountStorageBytes(contractAddress, RestrictedForgerFlagsList)
-
   }
 
   def doOpenStakeForgerListCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
@@ -414,10 +413,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException("Illegal call when list of forger is empty")
     }
 
-    if (msg.getNonce == null) {
-      throw new ExecutionRevertedException("Call must include a nonce")
-    }
-
     if (msg.getValue.signum() != 0) {
       throw new ExecutionRevertedException("Call value must be zero")
     }
@@ -426,9 +421,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val cmdInput = OpenStakeForgerListCmdInputDecoder.decode(inputParams)
     val forgerIndex: Int = cmdInput.forgerIndex
     val signature: Signature25519 = cmdInput.signature
-
-    // get the forger list. Lazy init
-    val restrictForgerList = getAllowedForgersIndexList(view)
 
     // check consistency of input.
     if (networkParams.allowedForgersList.size < forgerIndex+1) {
@@ -444,6 +436,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException(s"Invalid signature, could not validate against blockSignerProposition=$blockSignerProposition")
     }
 
+    // get the forger list. Lazy init
+    val restrictForgerList = getAllowedForgersIndexList(view)
+
     // check that the forger list is not already open
     if (isForgerListOpenUnchecked(restrictForgerList)) {
       throw new ExecutionRevertedException("Forger list already open")
@@ -458,7 +453,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     restrictForgerList(forgerIndex) = 1
     view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, restrictForgerList)
 
-    val addOpenStakeForgerListEvt = OpenForgerStakeList(msg.getFrom, forgerIndex, blockSignerProposition)
+    val addOpenStakeForgerListEvt = OpenForgerList(forgerIndex, msg.getFrom, blockSignerProposition)
     val evmLog = getEvmLog(addOpenStakeForgerListEvt)
     view.addLog(evmLog)
 

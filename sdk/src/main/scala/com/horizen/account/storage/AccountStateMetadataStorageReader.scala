@@ -21,8 +21,6 @@ trait AccountStateMetadataStorageReader {
 
   def hasCeased: Boolean
 
-  def isForgingOpen: Boolean // TODO move it in message processor logic
-
   // tip height
   def getHeight: Int
 

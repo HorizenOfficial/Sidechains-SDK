@@ -132,8 +132,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   override def hasCeased: Boolean = hasCeasedOpt.getOrElse(storage.get(ceasingStateKey).isPresent)
 
-  override def isForgingOpen: Boolean = isForgersListOpenOpt.getOrElse(storage.get(isForgersListOpenKey).isPresent)
-
   override def getHeight: Int = {
     storage.get(heightKey).asScala.map(baw => Ints.fromByteArray(baw.data)).getOrElse(0)
   }

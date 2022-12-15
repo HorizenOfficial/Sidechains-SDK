@@ -12,9 +12,11 @@ import com.horizen.api.http.SidechainApiMockConfiguration
 import com.horizen.fixtures._
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.secret
 import com.horizen.utils.BytesUtils
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
+import sparkz.core.transaction.state.PrivateKey25519
 
 import java.math.BigInteger
 import java.util
@@ -29,10 +31,13 @@ class AccountNodeViewUtilMocks extends MockitoSugar
   with SecretFixture {
 
   val ownerSecret: PrivateKeySecp256k1 = getPrivateKeySecp256k1(2222222)
+  val signerSecret: secret.PrivateKey25519 = getPrivateKey25519("signer".getBytes())
   val ownerPublicKeyString: String = BytesUtils.toHexString(ownerSecret.publicImage().address())
   val blockSignerPropositionString = "1122334455669988112233445566778811223344556677881122334455667788"
   val vrfPublicKeyString = "aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
   val stakeId = "9e26bd4ff89374e916b369024e882db68a49b824e71008b827c7794e9f4d0170"
+  val forgerIndex : Int= 0 // must match the size of Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq((blockSignerProposition, vrfPublicKey)))
+
 
   val transactionList: util.List[EthereumTransaction] = getTransactionList
   val listOfStakes: Seq[AccountForgingStakeInfo] = getListOfStakes
@@ -61,6 +66,9 @@ class AccountNodeViewUtilMocks extends MockitoSugar
       .when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]]))
       .thenAnswer(_ => BigInteger.ONE) // It has always enough money
     Mockito
+      .when(accountState.nextBaseFee)
+      .thenAnswer(_ => BigInteger.valueOf(1234))
+    Mockito
       .when(accountState.getForgerStakeData(ArgumentMatchers.anyString()))
       .thenAnswer(myStakeId =>
         getListOfStakes
@@ -74,6 +82,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
     val wallet: NodeWalletBase = mock[NodeWalletBase]
     Mockito.when(wallet.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => util.Arrays.asList(fittingSecret))
     Mockito.when(wallet.secretByPublicKey(ownerSecret.publicImage())).thenAnswer(_ => Optional.of(ownerSecret))
+    Mockito.when(wallet.secretByPublicKey(signerSecret.publicImage())).thenAnswer(_ => Optional.of(signerSecret))
     wallet
   }
 

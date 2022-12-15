@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.events.{DelegateForgerStake, OpenForgerStakeList, WithdrawForgerStake}
+import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
@@ -22,12 +22,10 @@ import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import org.web3j.crypto.{ECKeyPair, Keys, Sign}
 import sparkz.core.bytesToVersion
 import scorex.crypto.hash.Keccak256
-
 import java.math.BigInteger
 import java.util
 import java.util.Random
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.util.{Failure, Success, Try}
 
 class ForgerStakeMsgProcessorTest
   extends JUnitSuite
@@ -55,8 +53,8 @@ class ForgerStakeMsgProcessorTest
   val NumOfIndexedAddNewStakeEvtParams = 2
   val RemoveForgerStakeEventSig: Array[Byte] = getEventSignature("WithdrawForgerStake(address,bytes32)")
   val NumOfIndexedRemoveForgerStakeEvtParams = 1
-  val OpenForgerStakeListEventSig: Array[Byte] = getEventSignature("OpenForgerStakeList(address,uint32,bytes32)")
-  val NumOfIndexedOpenForgerStakeListEvtParams = 2
+  val OpenForgerStakeListEventSig: Array[Byte] = getEventSignature("OpenForgerList(uint32,address,bytes32)")
+  val NumOfIndexedOpenForgerStakeListEvtParams = 1
 
 
   @Before
@@ -241,7 +239,7 @@ class ForgerStakeMsgProcessorTest
       var msg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
-      var returnData = assertGas(2500) {
+      var returnData = assertGas(1625) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
       }
 
@@ -254,7 +252,7 @@ class ForgerStakeMsgProcessorTest
       // Checking log
       val listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      val expectedAddStakeEvt = OpenForgerStakeList(msg.getFrom, forgerIndex, blockSignerProposition1)
+      val expectedAddStakeEvt = OpenForgerList(forgerIndex, msg.getFrom, blockSignerProposition1)
       checkOpenForgerStakeListEvent(expectedAddStakeEvt, listOfLogs(0))
 
       var isOpen = forgerStakeMessageProcessor.isForgerListOpen(view)
@@ -275,7 +273,7 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because index is out of bound
-      assertGas(500) { gas =>
+      assertGas(0) { gas =>
         assertThrows[ExecutionRevertedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
@@ -305,7 +303,7 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because signature is wrong
-      assertGas(500) { gas =>
+      assertGas(0) { gas =>
         assertThrows[ExecutionRevertedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
@@ -320,7 +318,7 @@ class ForgerStakeMsgProcessorTest
       msg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
-      returnData = assertGas(2250) {
+      returnData = assertGas(1875) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
       }
 
@@ -441,7 +439,7 @@ class ForgerStakeMsgProcessorTest
       val msg = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
 
       // positive case, verify we can add the stake to view
-      val returnData = assertGas(6300) {
+      val returnData = assertGas(5800) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
       }
       assertNotNull(returnData)
@@ -478,7 +476,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
           ownerAddressProposition, validWeiAmount))
 
-      val returnData2 = assertGas(6550) {
+      val returnData2 = assertGas(6300) {
         forgerStakeMessageProcessor.process(msg2, view, _, defaultBlockContext)
       }
       assertNotNull(returnData2)
@@ -574,7 +572,7 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because forger is not in the allowed list
-      assertGas(2150) { gas =>
+      assertGas(1650) { gas =>
         assertThrows[ExecutionFailedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
@@ -683,7 +681,7 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because staked amount is not a zat amount
-      assertGas(5600) { gas =>
+      assertGas(5100) { gas =>
         assertThrows[ExecutionFailedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
@@ -697,9 +695,6 @@ class ForgerStakeMsgProcessorTest
 
     // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
     usingView(forgerStakeMessageProcessor) { view =>
-
-      // create private/public key pair
-      val pair = Keys.createEcKeyPair
 
       val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
       val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
@@ -1007,7 +1002,10 @@ class ForgerStakeMsgProcessorTest
     assertEquals("Wrong from address in topic", expectedEvent.from, decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
     assertEquals("Wrong owner address in topic", expectedEvent.owner, decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.owner.getTypeAsString)))
 
-    val listOfRefs = util.Arrays.asList(TypeReference.makeTypeReference(expectedEvent.stakeId.getTypeAsString), TypeReference.makeTypeReference(expectedEvent.value.getTypeAsString)).asInstanceOf[util.List[TypeReference[Type[_]]]]
+    val listOfRefs = util.Arrays.asList(
+      TypeReference.makeTypeReference(expectedEvent.stakeId.getTypeAsString),
+      TypeReference.makeTypeReference(expectedEvent.value.getTypeAsString))
+      .asInstanceOf[util.List[TypeReference[Type[_]]]]
     val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
     assertEquals("Wrong amount in data", expectedEvent.stakeId, listOfDecodedData.get(0))
     assertEquals("Wrong stakeId in data", expectedEvent.value, listOfDecodedData.get(1))
@@ -1025,15 +1023,18 @@ class ForgerStakeMsgProcessorTest
   }
 
 
-  def checkOpenForgerStakeListEvent(expectedEvent: OpenForgerStakeList, actualEvent: EvmLog): Unit = {
+  def checkOpenForgerStakeListEvent(expectedEvent: OpenForgerList, actualEvent: EvmLog): Unit = {
     assertArrayEquals("Wrong address", contractAddress, actualEvent.address.toBytes)
     assertEquals("Wrong number of topics", NumOfIndexedOpenForgerStakeListEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
     assertArrayEquals("Wrong event signature", OpenForgerStakeListEventSig, actualEvent.topics(0).toBytes)
-    assertEquals("Wrong owner address in topic", expectedEvent.from, decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
-    assertEquals("Wrong forger index in topic", expectedEvent.forgerIndex, decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.forgerIndex.getTypeAsString)))
+    assertEquals("Wrong forger index in topic", expectedEvent.forgerIndex, decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.forgerIndex.getTypeAsString)))
 
-    val listOfRefs = util.Arrays.asList(TypeReference.makeTypeReference(expectedEvent.blockSignProposition.getTypeAsString)).asInstanceOf[util.List[TypeReference[Type[_]]]]
+    val listOfRefs = util.Arrays.asList(
+      TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString),
+      TypeReference.makeTypeReference(expectedEvent.blockSignProposition.getTypeAsString),
+    ).asInstanceOf[util.List[TypeReference[Type[_]]]]
     val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
-    assertEquals("Wrong block sign prop in data", expectedEvent.blockSignProposition, listOfDecodedData.get(0))
+    assertEquals("Wrong from in data", expectedEvent.from, listOfDecodedData.get(0))
+    assertEquals("Wrong block sign prop in data", expectedEvent.blockSignProposition, listOfDecodedData.get(1))
   }
 }

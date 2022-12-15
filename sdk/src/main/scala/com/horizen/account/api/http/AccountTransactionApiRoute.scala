@@ -61,7 +61,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openStakeForgerList ~ allowedForgerList
+      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList
   }
 
   def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -302,27 +302,26 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  def openStakeForgerList: Route = (post & path("openStakeForgerList")) {
+  // creates an eth transaction which makes a call to the forger stake fake smart contract
+  // expressing the vote for opening the restrict forgers list.
+  // Analogous to the UTXO model createOpenStakeTransaction
+  def openForgerList: Route = (post & path("openForgerList")) {
     withAuth {
       entity(as[ReqOpenStakeForgerList]) { body =>
 
         // first of all reject the command if we do not have closed forger list
         if (!params.restrictForgers) {
           ApiResponseUtil.toResponse(ErrorOpenForgersList(
-            s"Ther list of forger is not restricted (see configuration)",
+            s"The list of forger is not restricted (see configuration)",
             JOptional.empty()))
-        } else
-        if (body.forgerIndex <0) {
-          ApiResponseUtil.toResponse(ErrorOpenForgersList(
-            s"forger index=${body.forgerIndex} is negative",
-            JOptional.empty()))
+
         } else {
 
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
             val valueInWei = BigInteger.ZERO
             // default gas related params
-            val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+            val baseFee = sidechainNodeView.getNodeState.nextBaseFee
             var maxPriorityFeePerGas = BigInteger.valueOf(120)
             var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
             var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -409,7 +408,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
 
           // default gas related params
-          val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+          val baseFee = sidechainNodeView.getNodeState.nextBaseFee
           var maxPriorityFeePerGas = GasUtil.GasForgerStakeMaxPriorityFee
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
           var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -459,7 +458,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         applyOnNodeView { sidechainNodeView =>
           val valueInWei = BigInteger.ZERO
           // default gas related params
-          val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+          val baseFee = sidechainNodeView.getNodeState.nextBaseFee
           var maxPriorityFeePerGas = BigInteger.valueOf(120)
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
           var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -523,12 +522,20 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
   def allowedForgerList: Route = (post & path("allowedForgerList")) {
     if (params.restrictForgers) {
-      val allowedForgerKeysList = params.allowedForgersList
+      // get the restrict list of forgers from configuration
+      val allowedForgerKeysList : Seq[(PublicKey25519Proposition, VrfPublicKey)] = params.allowedForgersList
+
       withNodeView { sidechainNodeView =>
         val accountState = sidechainNodeView.getNodeState
-        val forgerList = accountState.getAllowedForgerList
-        val resultList = forgerList.zip(allowedForgerKeysList)
-        ApiResponseUtil.toResponse(RespAllowedForgerList(resultList.toList))
+        // get the list of indexes of allowed forgers (0 / 1 depending on the vote expressed so far)
+        val forgersIndexList : Seq[Int] = accountState.getAllowedForgerList
+        // join the two lists into one
+        val resultList : Seq[(Int, (PublicKey25519Proposition, VrfPublicKey))] = forgersIndexList.zip(allowedForgerKeysList)
+        // create the result
+        val allowedForgerInfoSeq = resultList.map {
+          entry => RespForgerInfo(entry._2._1, entry._2._2, entry._1)
+        }
+        ApiResponseUtil.toResponse(RespAllowedForgerList(allowedForgerInfoSeq.toList))
       }
     } else {
       ApiResponseUtil.toResponse(RespAllowedForgerList(Seq().toList))
@@ -568,7 +575,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val gasInfo = body.gasInfo
 
           // default gas related params
-          val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+          val baseFee = sidechainNodeView.getNodeState.nextBaseFee
           var maxPriorityFeePerGas = BigInteger.valueOf(120)
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
           var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -714,9 +721,13 @@ object AccountTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
 
-
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllowedForgerList(allowedForgers: List[(Int, (PublicKey25519Proposition, VrfPublicKey))]) extends SuccessResponse
+  private [api] case class RespForgerInfo(
+                                 blockSign: PublicKey25519Proposition,
+                                 vrfPubKey: VrfPublicKey,
+                                 openForgersVote: Int)
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllowedForgerList(allowedForgers: List[RespForgerInfo]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionWithdrawalRequest(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
@@ -767,9 +778,10 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqOpenStakeForgerList(
-                                                  nonce: Option[BigInteger],
-                                                  forgerIndex: Int,
-                                                  gasInfo: Option[EIP1559GasInfo]) {
+                                                nonce: Option[BigInteger],
+                                                forgerIndex: Int,
+                                                gasInfo: Option[EIP1559GasInfo]) {
+    require (forgerIndex >=0, "Forger index must be non negative")
   }
 
 

@@ -5,9 +5,11 @@ import pprint
 import time
 from decimal import Decimal
 
-from eth_utils import add_0x_prefix, remove_0x_prefix
+from eth_abi import decode
+from eth_utils import add_0x_prefix, remove_0x_prefix, encode_hex, event_signature_to_log_topic, to_hex
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
+from SidechainTestFramework.account.httpCalls.transaction.openForgerList import open_forger_list
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToWei
 from SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration
@@ -15,10 +17,10 @@ from SidechainTestFramework.scutil import (generate_next_block, generate_secrets
                                            SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
                                            )
 from test_framework.util import (
-    assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, )
+    assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, hex_str_to_bytes, )
 
 """
-Check the EVM bootstrap feature.
+Check the open forger list feature.
 
 Configuration: 
     - 2 SC nodes configured with a closed list of forger, connected with each other
@@ -32,6 +34,22 @@ Test:
 
 
 """
+
+
+def check_open_forger_list_event(event, forgerIndex):
+    assert_equal(2, len(event['topics']), "Wrong number of topics in event")
+    event_id = remove_0x_prefix(event['topics'][0])
+    event_signature = remove_0x_prefix(
+        encode_hex(event_signature_to_log_topic('OpenForgerList(uint32,address,bytes32)')))
+    assert_equal(event_signature, event_id, "Wrong event signature in topics")
+
+    index = decode(['uint32'], hex_str_to_bytes(event['topics'][1][2:]))[0]
+    logging.info("event: forgerIndex={}".format(index))
+    assert_equal(index, forgerIndex, "Wrong from address in topics")
+
+    (addr, pkey) = decode(['address', 'bytes32'], hex_str_to_bytes(event['data'][2:]))
+    logging.info("event: addr={}, blockSignPkey={}".format(addr, to_hex(pkey)))
+
 
 
 class SCEvmClosedForgerList(AccountChainSetup):
@@ -76,39 +94,51 @@ class SCEvmClosedForgerList(AccountChainSetup):
         logging.info("Getting receipt for txhash={}".format(tx_hash))
 
         receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+
+
         status = int(receipt['result']['status'], 16)
         # status == 1 is succesful
         return status == 1
 
 
-    def tryOpenStakeForgerList(self, sc_node, forgerIndex, api_error_expected=False, forger_node=None):
-        j = {
-            "forgerIndex": forgerIndex,
-        }
-        request = json.dumps(j)
-        jsonRes = sc_node.transaction_openStakeForgerList(request)
-        logging.info(json.dumps(jsonRes))
-        self.sc_sync_all()
+
+
+    def tryOpenForgerList(self, sc_node, forgerIndex, api_error_expected=False, forger_node=None):
+        try:
+            jsonRes = open_forger_list(sc_node, forgerIndex, api_error_expected)
+        except Exception as e:
+            if api_error_expected:
+                logging.info("Api failed as expected: {}".format(str(e.error)))
+                return False
+            else:
+                raise Exception(e)
 
         if api_error_expected:
           assert_true("error" in jsonRes)
+          logging.info("Api failed as expected")
           return False
-        else:
-          assert_true("result" in jsonRes)
 
         if forger_node is None:
             generate_next_block(sc_node, "first node")
         else:
             generate_next_block(forger_node, "first node")
+
         self.sc_sync_all()
 
         # check we had a failure in the receipt
-        tx_hash = jsonRes['result']["transactionId"]
+        tx_hash = jsonRes["transactionId"]
         logging.info("Getting receipt for txhash={}".format(tx_hash))
 
         receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+
         status = int(receipt['result']['status'], 16)
         # status == 1 is succesful
+
+        if (status == 1): # Check the logs
+            assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
+            event = receipt['result']['logs'][0]
+            check_open_forger_list_event(event, forgerIndex)
+
         return status == 1
 
     def run_test(self):
@@ -128,10 +158,10 @@ class SCEvmClosedForgerList(AccountChainSetup):
 
         # check we have the expected content of the close forger list
         allowedForgerList = sc_node_1.transaction_allowedForgerList()["result"]
-        assert_equal(len(allowedForgerList['allowedForgers']), 3)
-        assert_equal(allowedForgerList['allowedForgers'][0][0], 0)
-        assert_equal(allowedForgerList['allowedForgers'][1][0], 0)
-        assert_equal(allowedForgerList['allowedForgers'][2][0], 0)
+        assert_equal(3, len(allowedForgerList['allowedForgers']))
+        assert_equal(0, allowedForgerList['allowedForgers'][0]['openForgersVote'])
+        assert_equal(0, allowedForgerList['allowedForgers'][1]['openForgersVote'])
+        assert_equal(0, allowedForgerList['allowedForgers'][2]['openForgersVote'])
 
         # transfer a small fund from MC to SC2 at a new evm address, do not mine mc block
         # this is for enabling SC 2 gas fee payment when sending txes
@@ -194,14 +224,14 @@ class SCEvmClosedForgerList(AccountChainSetup):
 
         #Forger 0 opens the stake
         logging.info("Forger 0 opens the stake")
-        result = self.tryOpenStakeForgerList(sc_node_1, forgerIndex=0)
+        result = self.tryOpenForgerList(sc_node_1, forgerIndex=0)
         assert_true(result)
         logging.info("Ok!")
 
         allowedForgerList = sc_node_1.transaction_allowedForgerList()["result"]
-        assert_equal(allowedForgerList['allowedForgers'][0][0], 1)
-        assert_equal(allowedForgerList['allowedForgers'][1][0], 0)
-        assert_equal(allowedForgerList['allowedForgers'][2][0], 0)
+        assert_equal(1, allowedForgerList['allowedForgers'][0]['openForgersVote'])
+        assert_equal(0, allowedForgerList['allowedForgers'][1]['openForgersVote'])
+        assert_equal(0, allowedForgerList['allowedForgers'][2]['openForgersVote'])
 
         # Try to stake to an invalid blockSignProposition, it should fail because the list is still closed
         logging.info("Try to stake to an invalid blockSignProposition...")
@@ -214,7 +244,7 @@ class SCEvmClosedForgerList(AccountChainSetup):
 
         #Negative test: Forger 0 tries to open the list with the same index already used
         logging.info("Forger 0 opens the stake")
-        result = self.tryOpenStakeForgerList(sc_node_1, forgerIndex=0)
+        result = self.tryOpenForgerList(sc_node_1, forgerIndex=0)
         assert_false(result)
         logging.info("Ok!")
 
@@ -222,26 +252,26 @@ class SCEvmClosedForgerList(AccountChainSetup):
         #Negative test: SC 2 as a forger tries to open the list, should fail because it is not the owner of the
         # signer proposition
         logging.info("SC 2 Forger try to open the stake")
-        result = self.tryOpenStakeForgerList(sc_node_2, forgerIndex=1, api_error_expected=True, forger_node=sc_node_1)
+        result = self.tryOpenForgerList(sc_node_2, forgerIndex=1, api_error_expected=True, forger_node=sc_node_1)
         assert_false(result)
         logging.info("Ok!")
 
         # Negative test: try to open the stake using a negative forgerIndex, the cmd is rejected
         logging.info("Forger 1 tries to open the stake with a negative index")
-        result = self.tryOpenStakeForgerList(sc_node_1, forgerIndex=-1, api_error_expected=True)
+        result = self.tryOpenForgerList(sc_node_1, forgerIndex=-1, api_error_expected=True)
         assert_false(result)
         logging.info("Ok!")
 
         #Forger 1 opens the stake thus reaching the majority of 2 out of 3
         logging.info("Forger 1 opens the stake")
-        result = self.tryOpenStakeForgerList(sc_node_1, forgerIndex=1)
+        result = self.tryOpenForgerList(sc_node_1, forgerIndex=1)
         assert_true(result)
         logging.info("Ok!")
 
         allowedForgerList = sc_node_1.transaction_allowedForgerList()["result"]
-        assert_equal(allowedForgerList['allowedForgers'][0][0], 1)
-        assert_equal(allowedForgerList['allowedForgers'][1][0], 1)
-        assert_equal(allowedForgerList['allowedForgers'][2][0], 0)
+        assert_equal(1, allowedForgerList['allowedForgers'][0]['openForgersVote'])
+        assert_equal(1, allowedForgerList['allowedForgers'][1]['openForgersVote'])
+        assert_equal(0, allowedForgerList['allowedForgers'][2]['openForgersVote'])
 
         # Try to stake to a blockSignProposition not in the allowed forger list. This time must succeed since we just
         # open the forger list
@@ -253,14 +283,14 @@ class SCEvmClosedForgerList(AccountChainSetup):
 
         #Forger 2 tries to open the stake beyond the majority of 2 out of 3
         logging.info("Forger 2 opens the stake")
-        result = self.tryOpenStakeForgerList(sc_node_1, forgerIndex=2)
+        result = self.tryOpenForgerList(sc_node_1, forgerIndex=2)
         assert_false(result)
         logging.info("Ok!")
 
         allowedForgerList = sc_node_1.transaction_allowedForgerList()["result"]
-        assert_equal(allowedForgerList['allowedForgers'][0][0], 1)
-        assert_equal(allowedForgerList['allowedForgers'][1][0], 1)
-        assert_equal(allowedForgerList['allowedForgers'][2][0], 0)
+        assert_equal(1, allowedForgerList['allowedForgers'][0]['openForgersVote'])
+        assert_equal(1, allowedForgerList['allowedForgers'][1]['openForgersVote'])
+        assert_equal(0, allowedForgerList['allowedForgers'][2]['openForgersVote'])
 
 
 
