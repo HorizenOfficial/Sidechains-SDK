@@ -3,18 +3,14 @@ package com.horizen.utils
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
-import scorex.util.ScorexLogging
 
-object WithdrawalEpochUtils extends ScorexLogging {
+object WithdrawalEpochUtils {
 
   def getWithdrawalEpochInfo(
       mainchainBlockReferenceSize: Int,
       parentEpochInfo: WithdrawalEpochInfo,
       params: NetworkParams
   ): WithdrawalEpochInfo = {
-    logger.error("==================getting withdrawal epoch====================")
-    logger.error(s"mainchainBlockReferenceSize = ${mainchainBlockReferenceSize}")
-    logger.error(s"parentEpochInfo = ${parentEpochInfo}")
     val withdrawalEpoch: Int =
       if (parentEpochInfo.lastEpochIndex == params.withdrawalEpochLength)
         // Parent block is the last SC Block of withdrawal epoch.
