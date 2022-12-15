@@ -267,9 +267,17 @@ abstract class AbstractSidechainApp
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
-  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
-  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
-  var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
+//  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
+//  val applicationApiRoutes: Seq[ApplicationApiRoute]
+
+  // Init API
+  lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
+
+  // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
+  // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
+  lazy val applicationApiRoutes: Seq[ApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
+
+  val coreApiRoutes: Seq[ApiRoute]
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
