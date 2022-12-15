@@ -210,7 +210,8 @@ function runTests
   fi;
 
   # Assign remaining args (which should be the expanded test script array)
-  IFS=', ' read -r -a testsToRun <<< "${@}"
+  testsToRun=("$@")
+
 
   for (( i = 0; i < ${#testsToRun[@]}; i++ )); do
     if checkFileExists "${testsToRun[$i]}"; then
@@ -238,14 +239,13 @@ if [ ! -z "$PARALLEL" ]; then
   for((i = 0; i < ${#testScripts[@]}; i+=TESTS_TO_RUN_IN_PARALLEL))
   do
     part=( "${testScripts[@]:i:TESTS_TO_RUN_IN_PARALLEL}" )
-    declare testScripts_${TEST_GROUP}="${part[*]}"
-
+    eval declare -a testScripts_$TEST_GROUP=\( \"\${part[@]}\" \)
     TEST_GROUP=$((TEST_GROUP + 1))
   done
 
   for (( i=1; i<=$PARALLEL; i++ ))
   do
-    testGroup="testScripts_$i"
+    testGroup="testScripts_${i}[@]"
     runTests  \
         "$1"  \
         "$i"  \
