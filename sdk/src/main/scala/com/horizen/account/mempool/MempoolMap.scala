@@ -10,10 +10,12 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends ScorexLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
+  type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap.empty[ModifierId, SidechainTypes#SCAT]
@@ -58,8 +60,9 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
             })
           nonces.put(account, nextNonce)
         case -1 =>
-          val nonExecTxsPerAccount =
+          val nonExecTxsPerAccount = {
             nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
+          }
           val existingTxWithSameNonceIdOpt = nonExecTxsPerAccount.get(ethTransaction.getNonce)
           if (existingTxWithSameNonceIdOpt.isDefined) {
             val existingTxWithSameNonceId = existingTxWithSameNonceIdOpt.get
@@ -136,6 +139,50 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
   def contains(txId: ModifierId): Boolean = all.contains(txId)
 
   def values: Iterable[SidechainTypes#SCAT] = all.values
+
+  def executableTransactions: Iterable[ModifierId] = {
+    val txsList = new ListBuffer[ModifierId]
+    for ((_, v) <- executableTxs) {
+      for ((_, innerV) <- v) {
+        txsList += innerV
+      }
+    }
+    txsList
+  }
+
+  def nonExecutableTransactions: Iterable[ModifierId] = {
+    val txsList = new ListBuffer[ModifierId]
+    for ((_, v) <- nonExecutableTxs) {
+      for ((_, innerV) <- v) {
+        txsList += innerV
+      }
+    }
+    txsList
+  }
+
+  def executableTransactionsMap: TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
+    val executableTxsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
+    for ((from, nonceIdsMap) <- executableTxs) {
+      val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+      for ((txNonce, txId) <- nonceIdsMap) {
+        nonceTxsMap.put(txNonce, getTransaction(txId).get)
+      }
+      executableTxsMap.put(from,nonceTxsMap)
+    }
+    executableTxsMap
+  }
+
+  def nonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
+    val executableTxsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
+    for ((from, nonceIdsMap) <- nonExecutableTxs) {
+      val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+      for ((txNonce, txId) <- nonceIdsMap) {
+        nonceTxsMap.put(txNonce, getTransaction(txId).get)
+      }
+      executableTxsMap.put(from, nonceTxsMap)
+    }
+    executableTxsMap
+  }
 
   /**
    * Returns executable transactions sorted by gas tip (descending) and nonce. The ordering is performed in a semi-lazy

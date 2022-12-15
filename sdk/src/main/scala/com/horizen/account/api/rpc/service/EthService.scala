@@ -81,6 +81,57 @@ class EthService(
     }
   }
 
+  @RpcMethod("txpool_status")
+  def txpoolStatus(): TxPoolStatus = applyOnAccountView { nodeView =>
+    new TxPoolStatus(
+      nodeView.pool.getExecutableTransactions.size(),
+      nodeView.pool.getNonExecutableTransactions.size()
+    )
+  }
+
+  @RpcMethod("txpool_content")
+  def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
+    new TxPoolContent(getExecutablePoolTxs(nodeView), getNonExecutablePoolTxs(nodeView))
+  }
+
+  // returnTransactionsNonceMap
+  // transactionsNonceMap
+  private def getExecutablePoolTxs(nodeView: NV): util.Map[String,util.Map[BigInteger,TxPoolTransaction]] = {
+    val returnAddressNonceTxsMap = {
+      val addressNonceTxsMap = new java.util.HashMap[String,util.Map[BigInteger,TxPoolTransaction]]
+      for ((from, nonceTransactionsMap) <- nodeView.pool.getExecutableTransactionsMap) {
+        val returnNonceTxsMap = {
+          val nonceTxsMap = new java.util.HashMap[BigInteger,TxPoolTransaction]
+          for ((txNonce, tx) <- nonceTransactionsMap) {
+            nonceTxsMap.put(txNonce, new TxPoolTransaction(tx.getFrom.bytes(), tx.getGasLimit, tx.getGasPrice, null,
+              null, tx.getNonce, null, tx.getValue))
+          }
+          nonceTxsMap}
+        addressNonceTxsMap.put(Numeric.toHexString(from.bytes()),returnNonceTxsMap)
+      }
+      addressNonceTxsMap }
+    returnAddressNonceTxsMap
+  }
+
+  private def getNonExecutablePoolTxs(nodeView: NV): util.Map[String, util.Map[BigInteger, TxPoolTransaction]] = {
+    val returnAddressNonceTxsMap = {
+      val addressNonceTxsMap = new java.util.HashMap[String, util.Map[BigInteger, TxPoolTransaction]]
+      for ((from, nonceTransactionsMap) <- nodeView.pool.getNonExecutableTransactionsMap) {
+        val returnNonceTxsMap = {
+          val nonceTxsMap = new java.util.HashMap[BigInteger, TxPoolTransaction]
+          for ((txNonce, tx) <- nonceTransactionsMap) {
+            nonceTxsMap.put(txNonce, new TxPoolTransaction(tx.getFrom.bytes(), tx.getGasLimit, tx.getGasPrice, null,
+              null, tx.getNonce, null, tx.getValue))
+          }
+          nonceTxsMap
+        }
+        addressNonceTxsMap.put(Numeric.toHexString(from.bytes()), returnNonceTxsMap)
+      }
+      addressNonceTxsMap
+    }
+    returnAddressNonceTxsMap
+  }
+
   @RpcMethod("eth_getBlockByNumber")
   def getBlockByNumber(tag: String, hydratedTx: Boolean): EthereumBlockView = {
     applyOnAccountView { nodeView =>
@@ -322,12 +373,17 @@ class EthService(
     }
   }
 
-  private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
-    val blockId = getBlockIdByTag(nodeView, tag)
+  private def getBlockById(nodeView: NV, blockId: ModifierId): (AccountBlock, SidechainBlockInfo) = {
     val block = nodeView.history
       .getStorageBlockById(blockId)
       .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "Invalid block tag parameter.")))
     val blockInfo = nodeView.history.blockInfoById(blockId)
+    (block, blockInfo)
+  }
+
+  private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
+    val blockId = getBlockIdByTag(nodeView, tag)
+    val (block, blockInfo) = getBlockById(nodeView, blockId)
     (block, blockInfo)
   }
 
