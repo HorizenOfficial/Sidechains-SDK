@@ -195,13 +195,20 @@ function runTestScript
     fi;
 
     echo -e "$runningMessage" | tee /dev/fd/3
+    #Log test start time
+    testStart=$(date +%s)
+    runTimeMessage="Run Time: $testRuntime"
     if eval "$@"; then
+      testEnd=$(date +%s)
+      testRuntime=$((testEnd-testStart))
       successCount=$(expr $successCount + 1)
-      echo "--- Success: ${testName} ---" | tee /dev/fd/3
+      echo "--- Success: ${testName} --- ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
     else
+      testEnd=$(date +%s)
+      testRuntime=$((testEnd-testStart))
       failures[${#failures[@]}]="$testName"
       failureCount=$((failureCount + 1))
-      echo "!!! FAIL: ${testName} !!!" | tee /dev/fd/3
+      echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
     fi
 
     echo | tee /dev/fd/3
