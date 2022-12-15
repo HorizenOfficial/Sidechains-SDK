@@ -12,7 +12,7 @@ import com.horizen.utils.ByteArrayWrapper;
 public class ApplicationJsonSerializer {
 
     private Class<?> defaultView;
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
     private static ApplicationJsonSerializer instance;
 
     private ApplicationJsonSerializer() {
