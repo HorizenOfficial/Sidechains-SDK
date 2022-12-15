@@ -2,13 +2,15 @@ package com.horizen.account
 
 import com.google.inject.Provides
 import com.google.inject.name.Named
+import com.horizen.account.helper.{AccountNodeViewHelper, AccountNodeViewHelperImpl}
 import com.horizen.account.state.MessageProcessor
 import com.horizen.api.http.ApplicationApiGroup
 import com.horizen.fork.ForkConfigurator
+import com.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
 import com.horizen.secret.SecretSerializer
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
-import com.horizen.{ChainInfo, SidechainAppStopper, SidechainSettings, SidechainTypes}
+import com.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppStopper, SidechainSettings, SidechainTypes}
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -18,6 +20,20 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
   var app: AccountSidechainApp = null
 
   override def configure(): Unit = {
+
+    bind(classOf[AbstractSidechainApp])
+      .to(classOf[AccountSidechainApp])
+
+    bind(classOf[AccountNodeViewHelper])
+      .to(classOf[AccountNodeViewHelperImpl])
+
+    //TODO this should be substituted by the implementation made in EVM-459 branch, when it will be released in dev_evm
+//    bind(classOf[TransactionSubmitHelper])
+//      .to(classOf[TransactionSubmitHelperImpl])
+
+    bind(classOf[SecretSubmitHelper])
+      .to(classOf[SecretSubmitHelperImpl])
+
     configureApp()
   }
 

@@ -2,7 +2,6 @@ package com.horizen
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
-
 import com.google.inject.name.Named
 import com.google.inject.Provides
 import com.horizen.api.http.ApplicationApiGroup
@@ -27,6 +26,9 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
     bind(classOf[TransactionSubmitHelper])
       .to(classOf[TransactionSubmitHelperImpl])
+
+    bind(classOf[AbstractSidechainApp])
+      .to(classOf[SidechainApp])
 
     bind(classOf[SecretSubmitHelper])
       .to(classOf[SecretSubmitHelperImpl])

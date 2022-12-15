@@ -220,13 +220,29 @@ class SidechainApp @Inject()
   )
 
   // specific to Sidechain app only
-  val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
-  val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
+  val nodeViewProvider : NodeViewProvider[
+    SidechainTypes#SCBT,
+    SidechainBlockHeader,
+    SidechainBlock,
+    SidechainFeePaymentsInfo,
+    NodeHistory,
+    NodeState,
+    NodeWallet,
+    NodeMemoryPool,
+    SidechainNodeView] = new NodeViewProviderImpl(nodeViewHolderRef)
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
 
   def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
-  def getNodeViewProvider: NodeViewProvider = nodeViewProvider
-  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
+  def getNodeViewProvider: NodeViewProvider[
+    SidechainTypes#SCBT,
+    SidechainBlockHeader,
+    SidechainBlock,
+    SidechainFeePaymentsInfo,
+    NodeHistory,
+    NodeState,
+    NodeWallet,
+    NodeMemoryPool,
+    SidechainNodeView] = nodeViewProvider
 
   private def getSidechainStateUtxoMerkleTreeProvider(utxoMerkleTreeStorage: Storage, params: NetworkParams) = {
     if (params.isCSWEnabled) {
