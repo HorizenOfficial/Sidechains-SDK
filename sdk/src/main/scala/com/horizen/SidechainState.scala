@@ -311,8 +311,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
 
     if (params.circuitType == CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation) {
-      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION)
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION) {
         throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION} custom fields when ceased sidechain withdrawal is disabled and key rotation enabled.")
+        // todo: verify the first field against the key rotation root hash. Others are zeros of FE size
+      }
     } else {
       if (params.isCSWEnabled) {
         if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW)
