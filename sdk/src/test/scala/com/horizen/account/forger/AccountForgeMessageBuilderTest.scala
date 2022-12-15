@@ -36,7 +36,7 @@ class AccountForgeMessageBuilderTest
         gasLimit = BigInteger.valueOf(10000000)
       )
       val fromAddress = transaction.getFrom.address()
-      stateView.addBalance(fromAddress, BigInteger.valueOf(1000000000))
+      stateView.addBalance(fromAddress, BigInteger.valueOf(100000000010L))
 
       val forger = new AccountForgeMessageBuilder(null, null, null, false)
       val initialStateRoot = stateView.getIntermediateRoot
@@ -87,7 +87,7 @@ class AccountForgeMessageBuilderTest
     usingView(mockMsgProcessor) { stateView =>
       stateView.addBalance(
         invalidTx.getFrom.address(),
-        BigInteger.valueOf(1000000000)
+        BigInteger.valueOf(100000000010L)
       )
 
       val forger = new AccountForgeMessageBuilder(null, null, null, false)
