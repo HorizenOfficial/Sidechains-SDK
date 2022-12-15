@@ -13,7 +13,8 @@ class LogsBloomTest
     with MockitoSugar
     with ReceiptFixture {
 
-  @Test def bloomFilterTest(): Unit = {
+  @Test
+  def bloomFilter(): Unit = {
     val data = BytesUtils.fromHexString(
       "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
     )
@@ -29,7 +30,8 @@ class LogsBloomTest
     assertArrayEquals(bloomLogs.getBloomFilter(), bloomFilterExpected)
   }
 
-  @Test def bloomFilterGethTest(): Unit = {
+  @Test
+  def bloomFilterGeth(): Unit = {
     val positive = Array("testtest", "test", "hallo", "other")
     val negative = Array("tes", "lo")
 
@@ -51,7 +53,8 @@ class LogsBloomTest
     negative.foreach(s => assert(!bloomLog3.contains(s.getBytes())))
   }
 
-  @Test def bloomFilterGethExtensiveTest(): Unit = {
+  @Test
+  def bloomFilterGethExtensive(): Unit = {
     val exp = BytesUtils.fromHexString("c8d3ca65cdb4874300a9e39475508f23ed6da09fdbc487f89a2dcf50b09eb263")
     val bloomLog = new LogsBloom()
 
@@ -69,11 +72,28 @@ class LogsBloomTest
     assertArrayEquals(bloomFilterHash, bloomFilterHash2)
   }
 
-  @Test def bloomFilterEmptyTest(): Unit = {
+  @Test
+  def bloomFilterEmpty(): Unit = {
     val bloomLog = new LogsBloom()
     val bloomFilter = bloomLog.getBloomFilter()
 
     assertArrayEquals(bloomFilter, Array.fill[Byte](BLOOM_FILTER_LENGTH)(0))
+  }
+
+  @Test
+  def bloomFiltersSameBitsDifferentPositions(): Unit = {
+    val hexString = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+    val data1 = BytesUtils.fromHexString(hexString)
+    val data2 = BytesUtils.fromHexString(hexString.reverse)
+
+    val bloomLogs1 = new LogsBloom()
+    bloomLogs1.addBytesToBloomFilter(data1)
+
+    val bloomLogs2 = new LogsBloom()
+    bloomLogs2.addBytesToBloomFilter(data2)
+
+    assertNotEquals(bloomLogs2, bloomLogs1);
   }
 
 }
