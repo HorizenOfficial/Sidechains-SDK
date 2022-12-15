@@ -55,7 +55,7 @@ public class EthereumBlockView {
         number = Numeric.encodeQuantity(BigInteger.valueOf(blockNumber));
         hash = Numeric.toHexString(blockHash.toBytes());
         parentHash = Numeric.prependHexPrefix((String) block.parentId());
-        logsBloom = Numeric.toHexString(header.logsBloom().getBloomFilter());
+        logsBloom = Numeric.toHexString(header.logsBloom().getBytes());
         transactionsRoot = Numeric.toHexString(header.sidechainTransactionsMerkleRootHash());
         stateRoot = Numeric.toHexString(header.stateRoot());
         receiptsRoot = Numeric.toHexString(header.receiptsRoot());
