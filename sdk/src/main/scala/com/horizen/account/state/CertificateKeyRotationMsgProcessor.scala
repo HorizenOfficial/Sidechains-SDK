@@ -66,10 +66,10 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
       .getOrElse(configKey)
   }
 
-  private def getLatestSigningKey(view: BaseAccountStateView, configKey: SchnorrProposition, epoch: Int, index: Int): SchnorrProposition = {
+  private def getLatestSigningKey(view: BaseAccountStateView, configKey: SchnorrProposition, requestedEpoch: Int, index: Int): SchnorrProposition = {
     val signingKeyChangeHistory = getKeysRotationHistory(SigningKeyRotationProofType, index, view)
 
-    signingKeyChangeHistory.epochNumbers.find(epoch > _)
+    signingKeyChangeHistory.epochNumbers.find(_ < requestedEpoch)
       .flatMap(getSigningKey(_, index, view))
       .getOrElse(configKey)
   }

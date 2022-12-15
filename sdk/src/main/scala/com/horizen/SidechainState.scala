@@ -357,6 +357,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   def validateWithWithdrawalEpoch(tx: SidechainTypes#SCBT, withdrawalEpoch: Int): Try[Unit] = Try {
+    logger.error(s"===================VALIDATING WITH EPOCH $withdrawalEpoch")
     if (tx.isInstanceOf[CertificateKeyRotationTransaction]) {
       if (params.circuitType == CircuitTypes.NaiveThresholdSignatureCircuit) {
         throw new Exception("CertificateKeyRotationTransaction is not allowed with this kind of circuit!")
