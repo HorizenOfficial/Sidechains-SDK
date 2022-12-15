@@ -115,7 +115,7 @@ class AccountForgeMessageBuilderTest
 
     class BuggyTransaction(th: EthereumTransaction, sign : SignatureSecp256k1)
       extends EthereumTransaction(th, sign) {
-      override def version(): Byte = throw new Exception()
+      override def version(): Byte = throw new Exception("Transaction %s failed to execute".format(th.id()))
     }
 
     val gasLimit = GasUtil.intrinsicGas(Array.empty[Byte], isContractCreation = true).add(BigInteger.TEN)
