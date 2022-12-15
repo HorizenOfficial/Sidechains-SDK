@@ -27,7 +27,7 @@ class LogsBloomTest
     bloomFilterExpected(195) = 0x2
     bloomFilterExpected(123) = 0x10
 
-    assertArrayEquals(bloomLogs.getBloomFilter(), bloomFilterExpected)
+    assertArrayEquals(bloomFilterExpected, bloomLogs.getBloomFilter())
   }
 
   @Test
