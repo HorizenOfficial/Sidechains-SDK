@@ -5,6 +5,9 @@ set -e -o pipefail
 #Must match logfile location referenced in sc_test_framework
 exec 3>&1 1>>"${BASH_SOURCE%/*}/sc_test.log" 2>&1
 
+#Log start time
+start=$(date +%s)
+
 #Check Environment Variables have been set
 if [[ -z "$BITCOINCLI" ]]; then
     echo "Environment Variable: BITCOINCLI not set" | tee /dev/fd/3
@@ -186,14 +189,19 @@ function runTestScript
     #Remove first arg $1 from args passed to function, shifting the full file location to arg $1.
     shift
 
-    echo -e "=== Running testscript ${testName} ===" | tee /dev/fd/3
+    runningMessage="=== Running testscript ${testName} ==="
+    if [ "$PARALLEL" ]; then
+      runningMessage="$runningMessage (Parallel Group: $parallelGroup)"
+    fi;
+
+    echo -e "$runningMessage" | tee /dev/fd/3
     if eval "$@"; then
-    successCount=$(expr $successCount + 1)
-    echo "--- Success: ${testName} ---" | tee /dev/fd/3
+      successCount=$(expr $successCount + 1)
+      echo "--- Success: ${testName} ---" | tee /dev/fd/3
     else
-    failures[${#failures[@]}]="$testName"
-    failureCount=$((failureCount + 1))
-    echo "!!! FAIL: ${testName} !!!" | tee /dev/fd/3
+      failures[${#failures[@]}]="$testName"
+      failureCount=$((failureCount + 1))
+      echo "!!! FAIL: ${testName} !!!" | tee /dev/fd/3
     fi
 
     echo | tee /dev/fd/3
@@ -203,20 +211,25 @@ function runTests
 {
   # Assign any parameter given to the shell script, then remove from this functions args
   scriptArg=$1; shift
-  # Assign parallelGroup if running parallel tests, then remove from this functions args
+
   if [ "$PARALLEL" ]; then
-    parallelGroup=$1
+    # Assign parallelGroup if running parallel tests, then remove from this functions args
+    declare parallelGroup=$1
     shift
   fi;
 
-  # Assign remaining args (which should be the expanded test script array)
+  # Assign remaining args (which should be the test scripts array)
   testsToRun=("$@")
+  runningInfoMessage="Of ${#testsToRun[@]} Tests"
 
+  if [ "$PARALLEL" ]; then
+    runningInfoMessage="$runningInfoMessage :: Parallel Group $parallelGroup ::"
+  fi;
 
   for (( i = 0; i < ${#testsToRun[@]}; i++ )); do
     if checkFileExists "${testsToRun[$i]}"; then
           if [ -z "$scriptArg" ] || [ "${scriptArg:0:1}" = "-" ] || [ "$scriptArg" = "${testsToRun[$i]}" ] || [ "$scriptArg.py" = "${testsToRun[$i]}" ]; then
-            echo "Running $((i +1)) Of ${#testsToRun[@]} Tests" | tee /dev/fd/3
+            echo "Running $((i +1)) $runningInfoMessage" | tee /dev/fd/3
             testFileWithArgs="${BASH_SOURCE%/*}/${testsToRun[$i]}"
 
             if [ "$PARALLEL" ]; then
@@ -230,6 +243,40 @@ function runTests
           fi
     fi
   done
+
+  end=$(date +%s)
+  runtime=$((end-start))
+  total=$((successCount + failureCount))
+  testRunTimeMessage="===  TOTAL TEST RUN TIME: ${runtime}(s)  ==="
+  testsRunMessage="\n\nTests Run: $total"
+  summaryMessage="Passed: $successCount; Failed: $failureCount; Not Found: $notFoundCount"
+  fileNotFoundMessage="\nCould not exec any test: File name [$1]"
+  failingTestsMessage="\nFailing tests: ${failures[*]}"
+
+  if [ "$PARALLEL" ]; then
+    testRunTimeMessage="$testRunTimeMessage (Parallel Group: $parallelGroup)"
+    testsRunMessage="$testsRunMessage (Parallel Group: $parallelGroup)"
+    summaryMessage="$summaryMessage (Parallel Group: $parallelGroup)"
+    fileNotFoundMessage="$fileNotFoundMessage (Parallel Group: $parallelGroup)"
+    failingTestsMessage="$failingTestsMessage (Parallel Group: $parallelGroup)"
+  fi
+
+  echo -e "$testsRunMessage" | tee /dev/fd/3
+  echo "$summaryMessage" | tee /dev/fd/3
+  echo "$testRunTimeMessage" | tee /dev/fd/3
+
+  if [ $total -eq 0 ]; then
+    echo -e "$fileNotFoundMessage" | tee /dev/fd/3
+    checkFileExists $1
+    exit 1
+  fi
+
+  if [ ${#failures[@]} -gt 0 ]; then
+      echo -e "$failingTestsMessage" | tee /dev/fd/3
+      exit 1
+    else
+      exit 0
+  fi
 }
 
 if [ ! -z "$PARALLEL" ]; then
@@ -243,6 +290,7 @@ if [ ! -z "$PARALLEL" ]; then
     TEST_GROUP=$((TEST_GROUP + 1))
   done
 
+  echo "!=== Running ${#testScripts[@]} total tests between $PARALLEL Parallel Groups ===!" | tee /dev/fd/3
   for (( i=1; i<=$PARALLEL; i++ ))
   do
     testGroup="testScripts_${i}[@]"
@@ -258,21 +306,4 @@ else
   runTests  \
       "$1"  \
       "${testScripts[@]}"
-fi
-
-total=$((successCount + failureCount))
-echo -e "\n\nTests Run: $total" | tee /dev/fd/3
-echo "Passed: $successCount; Failed: $failureCount; Not Found: $notFoundCount" | tee /dev/fd/3
-
-if [ $total -eq 0 ]; then
-  echo -e "\nCould not exec any test: File name [$1]" | tee /dev/fd/3
-  checkFileExists $1
-  exit 1
-fi
-
-if [ ${#failures[@]} -gt 0 ]; then
-    echo -e "\nFailing tests: ${failures[*]}" | tee /dev/fd/3
-    exit 1
-  else
-    exit 0
 fi
