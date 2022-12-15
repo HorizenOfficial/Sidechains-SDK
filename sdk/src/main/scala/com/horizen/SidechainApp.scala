@@ -79,7 +79,7 @@ class SidechainApp @Inject()
 
   log.info(s"Starting application with settings \n$sidechainSettings")
 
-  protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  override protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
   protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
 
   // Deserialize genesis block bytes
@@ -114,32 +114,32 @@ class SidechainApp @Inject()
   // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/secret")),
-    registerStorage(secretStorage),
+    registerClosableResource(secretStorage),
     sidechainSecretsCompanion)
   protected val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/wallet")),
-    registerStorage(walletBoxStorage),
+    registerClosableResource(walletBoxStorage),
     sidechainBoxesCompanion)
   protected val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/walletTransaction")),
-    registerStorage(walletTransactionStorage),
+    registerClosableResource(walletTransactionStorage),
     sidechainTransactionsCompanion)
   protected val sidechainStateStorage = new SidechainStateStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/state")),
-    registerStorage(stateStorage),
+    registerClosableResource(stateStorage),
     sidechainBoxesCompanion)
-  protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
-  protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerStorage(utxoMerkleTreeStorage), params)
+  protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerClosableResource(forgerBoxStorage))
+  protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerClosableResource(utxoMerkleTreeStorage), params)
 
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/history")),
-    registerStorage(historyStorage),
+    registerClosableResource(historyStorage),
     sidechainTransactionsCompanion, params)
   protected val consensusDataStorage = new ConsensusDataStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/consensusData")),
-    registerStorage(consensusStorage))
-  protected val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(registerStorage(walletForgingBoxesInfoStorage))
-  protected val sidechainWalletCswDataProvider: SidechainWalletCswDataProvider = getSidechainWalletCswDataProvider(registerStorage(walletCswDataStorage), params)
+    registerClosableResource(consensusStorage))
+  protected val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(registerClosableResource(walletForgingBoxesInfoStorage))
+  protected val sidechainWalletCswDataProvider: SidechainWalletCswDataProvider = getSidechainWalletCswDataProvider(registerClosableResource(walletCswDataStorage), params)
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -150,7 +150,7 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
-  protected val backupStorage = new BackupStorage(registerStorage(backUpStorage), sidechainBoxesCompanion)
+  protected val backupStorage = new BackupStorage(registerClosableResource(backUpStorage), sidechainBoxesCompanion)
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
@@ -219,30 +219,31 @@ class SidechainApp @Inject()
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
   )
 
-  // specific to Sidechain app only
-  val nodeViewProvider : NodeViewProvider[
-    SidechainTypes#SCBT,
+  val nodeViewProvider: NodeViewProvider[
+    TX,
     SidechainBlockHeader,
-    SidechainBlock,
+    PMOD,
     SidechainFeePaymentsInfo,
     NodeHistory,
     NodeState,
     NodeWallet,
     NodeMemoryPool,
     SidechainNodeView] = new NodeViewProviderImpl(nodeViewHolderRef)
-  val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
 
-  def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
   def getNodeViewProvider: NodeViewProvider[
-    SidechainTypes#SCBT,
+    TX,
     SidechainBlockHeader,
-    SidechainBlock,
+    PMOD,
     SidechainFeePaymentsInfo,
     NodeHistory,
     NodeState,
     NodeWallet,
     NodeMemoryPool,
     SidechainNodeView] = nodeViewProvider
+
+  val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
+
+  def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
 
   private def getSidechainStateUtxoMerkleTreeProvider(utxoMerkleTreeStorage: Storage, params: NetworkParams) = {
     if (params.isCSWEnabled) {

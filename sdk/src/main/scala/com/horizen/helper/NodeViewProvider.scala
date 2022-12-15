@@ -3,7 +3,7 @@ package com.horizen.helper
 import com.horizen.SidechainNodeViewBase
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase, SidechainNodeView}
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import com.horizen.transaction.Transaction
 
 trait NodeViewProvider[TX <: Transaction,

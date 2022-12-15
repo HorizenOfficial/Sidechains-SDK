@@ -18,10 +18,9 @@ import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.storage._
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
+import com.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
 import com.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -64,7 +63,9 @@ abstract class AbstractSidechainApp
   override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
   override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
-  private val storageList = mutable.ListBuffer[Storage]()
+  private val closableResourceList = mutable.ListBuffer[AutoCloseable]()
+  protected val sidechainTransactionsCompanion: DynamicTypedSerializer[TX, TransactionSerializer[TX]]
+
 
   log.info(s"Starting application with settings \n$sidechainSettings")
 
@@ -74,7 +75,7 @@ abstract class AbstractSidechainApp
 
   override protected lazy val features: Seq[PeerFeature] = Seq()
 
-  val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
+  val stopAllInProgress: AtomicBoolean = new AtomicBoolean(false)
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(
     SidechainSyncInfoMessageSpec,
@@ -277,6 +278,9 @@ abstract class AbstractSidechainApp
     .union(applicationApiRoutes)
     .union(coreApiRoutes)
 
+  lazy val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
+  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
+
   val shutdownHookThread: Thread = new Thread("ShutdownHook-Thread") {
     override def run(): Unit = {
       log.error("Unexpected shutdown")
@@ -336,8 +340,8 @@ abstract class AbstractSidechainApp
       log.info("Calling custom application stopAll...")
       applicationStopper.stopAll()
 
-      log.info("Closing all data storages...")
-      storageList.foreach(_.close())
+      log.info("Closing all closable resources...")
+      closableResourceList.foreach(_.close())
 
       log.info("Shutdown the logger...")
       LogManager.shutdown()
@@ -348,13 +352,9 @@ abstract class AbstractSidechainApp
     }
   }
 
-  protected def registerStorage(storage: Storage) : Storage = {
-    storageList += storage
-    storage
+  protected def registerClosableResource[S <: AutoCloseable](closableResource: S) : S = {
+    closableResourceList += closableResource
+    closableResource
   }
-
-  lazy val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
-
-  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
 }
