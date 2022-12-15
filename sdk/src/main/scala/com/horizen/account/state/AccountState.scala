@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.utils.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.{EthereumReceipt, LogsBloom}
+import com.horizen.account.receipt.{EthereumReceipt, Bloom}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
@@ -181,7 +181,7 @@ class AccountState(
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
       evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
 
-      val logsBloom = LogsBloom.fromEthereumReceipt(receiptList)
+      val logsBloom = Bloom.fromReceipts(receiptList.map(_.consensusDataReceipt))
 
       require(logsBloom.equals(mod.header.logsBloom), "Provided logs bloom doesn't match the calculated one")
 

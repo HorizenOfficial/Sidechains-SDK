@@ -3,9 +3,9 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.account.utils.FeeUtils
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.receipt.{LogsBloom, LogsBloomSerializer}
+import com.horizen.account.receipt.{Bloom, BloomSerializer}
+import com.horizen.account.utils.FeeUtils
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
@@ -14,12 +14,12 @@ import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSeri
 import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
-import sparkz.core.block.Block
-import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
+import sparkz.core.block.Block
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
 
 import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
@@ -28,10 +28,10 @@ import scala.util.{Failure, Success, Try}
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
 case class AccountBlockHeader(
                                override val version: Block.Version,
-                               @JsonSerialize(using = classOf[ScorexModifierIdSerializer])override val parentId: ModifierId,
+                               @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) override val parentId: ModifierId,
                                override val timestamp: Block.Timestamp,
                                override val forgingStakeInfo: ForgingStakeInfo,
-                               @JsonSerialize(using = classOf[MerklePathJsonSerializer])override val forgingStakeMerklePath: MerklePath,
+                               @JsonSerialize(using = classOf[MerklePathJsonSerializer]) override val forgingStakeMerklePath: MerklePath,
                                override val vrfProof: VrfProof,
                                override val sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
                                override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
@@ -44,7 +44,7 @@ case class AccountBlockHeader(
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
                                override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
-                               logsBloom: LogsBloom,
+                               logsBloom: Bloom,
                                override val signature: Signature25519
                                ) extends SidechainBlockHeaderBase with BytesSerializable {
 
@@ -74,7 +74,7 @@ case class AccountBlockHeader(
       ommersMerkleRootHash,
       Longs.toByteArray(ommersCumulativeScore),
       feePaymentsHash,
-      logsBloom.getBloomFilter()
+      logsBloom.getBytes
     )
   }
 
@@ -155,7 +155,7 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     w.putBytes(obj.feePaymentsHash)
 
-    LogsBloomSerializer.serialize(obj.logsBloom, w)
+    BloomSerializer.serialize(obj.logsBloom, w)
 
     Signature25519Serializer.getSerializer.serialize(obj.signature, w)
   }
@@ -199,7 +199,7 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     val feePaymentsHash: Array[Byte] = r.getBytes(NodeViewModifier.ModifierIdSize)
 
-    val logsBloom: LogsBloom = LogsBloomSerializer.parse(r)
+    val logsBloom: Bloom = BloomSerializer.parse(r)
 
     val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(r)
 
