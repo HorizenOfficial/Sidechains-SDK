@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -9,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/params"
-	"libevm/lib/geth_internal"
 	"math"
 	"math/big"
 	"time"
@@ -17,15 +18,15 @@ import (
 
 type EvmParams struct {
 	HandleParams
-	From          common.Address   `json:"from"`
-	To            *common.Address  `json:"to"`
-	Value         *hexutil.Big     `json:"value"`
-	Input         []byte           `json:"input"`
-	AvailableGas  hexutil.Uint64   `json:"availableGas"`
-	GasPrice      *hexutil.Big     `json:"gasPrice"`
-	AccessList    types.AccessList `json:"accessList"`
-	Context       EvmContext       `json:"context"`
-	TxTraceParams *TraceParams     `json:"traceParams"`
+	From         common.Address   `json:"from"`
+	To           *common.Address  `json:"to"`
+	Value        *hexutil.Big     `json:"value"`
+	Input        []byte           `json:"input"`
+	AvailableGas hexutil.Uint64   `json:"availableGas"`
+	GasPrice     *hexutil.Big     `json:"gasPrice"`
+	AccessList   types.AccessList `json:"accessList"`
+	Context      EvmContext       `json:"context"`
+	TraceOptions *TraceOptions    `json:"traceOptions"`
 }
 
 type EvmContext struct {
@@ -38,7 +39,7 @@ type EvmContext struct {
 	Random      *common.Hash   `json:"random"`
 }
 
-type TraceParams struct {
+type TraceOptions struct {
 	EnableMemory     bool `json:"enableMemory"`
 	DisableStack     bool `json:"disableStack"`
 	DisableStorage   bool `json:"disableStorage"`
@@ -112,7 +113,7 @@ func (c *EvmContext) getChainConfig() *params.ChainConfig {
 	}
 }
 
-func (t *TraceParams) getTracer() *logger.StructLogger {
+func (t *TraceOptions) getTracer() *logger.StructLogger {
 	if t == nil {
 		return nil
 	}
@@ -131,12 +132,12 @@ func mockBlockHashFn(n uint64) common.Hash {
 }
 
 type EvmResult struct {
-	UsedGas         uint64                       `json:"usedGas"`
-	EvmError        string                       `json:"evmError"`
-	ReturnData      []byte                       `json:"returnData"`
-	ContractAddress *common.Address              `json:"contractAddress"`
-	TraceLogs       []geth_internal.StructLogRes `json:"traceLogs,omitempty"`
-	Reverted        bool                         `json:"reverted"`
+	UsedGas         uint64                `json:"usedGas"`
+	EvmError        string                `json:"evmError"`
+	ReturnData      []byte                `json:"returnData"`
+	ContractAddress *common.Address       `json:"contractAddress"`
+	TraceLogs       []logger.StructLogRes `json:"traceLogs,omitempty"`
+	Reverted        bool                  `json:"reverted"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -155,7 +156,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		blockContext = params.Context.getBlockContext()
 		chainConfig  = params.Context.getChainConfig()
-		tracer       = params.TxTraceParams.getTracer()
+		tracer       = params.TraceOptions.getTracer()
 		evmConfig    = vm.Config{
 			Debug:                   tracer != nil,
 			Tracer:                  tracer,
@@ -220,17 +221,27 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		evmError = vmerr.Error()
 	}
 
-	var traceLogs []geth_internal.StructLogRes
-	if tracer != nil {
-		traceLogs = geth_internal.FormatLogs(tracer.StructLogs())
-	}
-
-	return nil, &EvmResult{
+	result := EvmResult{
 		UsedGas:         uint64(params.AvailableGas) - gas,
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
-		TraceLogs:       traceLogs,
 		Reverted:        vmerr == vm.ErrExecutionReverted,
 	}
+
+	// add trace results if enabled
+	if tracer != nil {
+		traceResultJson, traceErr := tracer.GetResult()
+		if traceErr != nil {
+			return fmt.Errorf("trace error: %v", traceErr), nil
+		}
+		// unfortunately, there is no way to get the tracer results without json marshaling, so we unmarshal again here
+		var traceResult *logger.ExecutionResult
+		if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
+			return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
+		}
+		result.TraceLogs = traceResult.StructLogs
+	}
+
+	return nil, &result
 }

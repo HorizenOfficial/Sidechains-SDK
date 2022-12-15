@@ -17,7 +17,6 @@ import java.util.Map.entry
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.mutable.ListBuffer
 
-
 class EthereumReceiptTest
   extends JUnitSuite
     with MockitoSugar

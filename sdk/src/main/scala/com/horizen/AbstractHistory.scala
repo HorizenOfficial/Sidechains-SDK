@@ -20,6 +20,7 @@ import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 
 
 abstract class AbstractHistory[
@@ -548,6 +549,20 @@ abstract class AbstractHistory[
     consensusDataStorage.addNonceConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.nonceConsensusEpochInfo)
     makeNewHistory(storage, consensusDataStorage)
   }
+
+  def findTransactionInsideBlock[A <: Transaction, T <: SidechainBlockHeaderBase](transactionId: String, block: SidechainBlockBase[A, T]): JOptional[A] = {
+    block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
+      case Some(tx) => JOptional.ofNullable(tx)
+      case None => JOptional.empty()
+    }
+  }
+
+  def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[TX] = {
+    storage.blockById(ModifierId(blockId)) match {
+      case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
+      case None => JOptional.empty()
+    }
+  }
 }
 
 object AbstractHistory {
@@ -563,8 +578,7 @@ object AbstractHistory {
       // First MC header Cumulative CommTree hash is provided by genesis info
       Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock[TX](block),
-      // TODO check this
-      WithdrawalEpochUtils.getWithdrawalEpochInfo[TX](block, WithdrawalEpochInfo(0,0), params),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
       None,
       block.id
     )

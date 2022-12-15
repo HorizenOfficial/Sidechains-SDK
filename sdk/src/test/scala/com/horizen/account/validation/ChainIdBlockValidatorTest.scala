@@ -48,7 +48,7 @@ class ChainIdBlockValidatorTest extends JUnitSuite
 
     txs.append(txUnsigned.asInstanceOf[SidechainTypes#SCAT])
 
-    val mockedBlockWithUnsignedTx: AccountBlock = mockHelper.getMockedBlock2(txs)
+    val mockedBlockWithUnsignedTx: AccountBlock = mockHelper.getMockedBlock(txs = txs)
 
     // Test: Validation fails if the block contains an unsigned tx
     ChainIdBlockSemanticValidator(params).validate(mockedBlockWithUnsignedTx) match {
@@ -83,7 +83,7 @@ class ChainIdBlockValidatorTest extends JUnitSuite
 
     txs.append(txEip1559.asInstanceOf[SidechainTypes#SCAT])
 
-    val mockedBlockWithEip1559Tx: AccountBlock = mockHelper.getMockedBlock2(txs)
+    val mockedBlockWithEip1559Tx: AccountBlock = mockHelper.getMockedBlock(txs = txs)
 
     // Test: Validation succeeds if the block contains an eip1559 tx with the good chainId
     ChainIdBlockSemanticValidator(params).validate(mockedBlockWithEip1559Tx) match {
@@ -112,7 +112,7 @@ class ChainIdBlockValidatorTest extends JUnitSuite
 
     txs.append(txLegacy.asInstanceOf[SidechainTypes#SCAT])
 
-    val mockedBlockWithLegacyTx: AccountBlock = mockHelper.getMockedBlock2(txs)
+    val mockedBlockWithLegacyTx: AccountBlock = mockHelper.getMockedBlock(txs = txs)
 
     // Test: Validation succeeds if the block contains a legacy tx with no chainId indicated
     ChainIdBlockSemanticValidator(params).validate(mockedBlockWithLegacyTx) match {
@@ -143,7 +143,7 @@ class ChainIdBlockValidatorTest extends JUnitSuite
 
     txs.append(txEip155.asInstanceOf[SidechainTypes#SCAT])
 
-    val mockedBlockWithEip155Tx: AccountBlock = mockHelper.getMockedBlock2(txs)
+    val mockedBlockWithEip155Tx: AccountBlock = mockHelper.getMockedBlock(txs = txs)
 
     // Test: Validation succeeds if the block contains an eip155 tx with the good chainId
     ChainIdBlockSemanticValidator(params).validate(mockedBlockWithEip155Tx) match {
@@ -173,7 +173,7 @@ class ChainIdBlockValidatorTest extends JUnitSuite
 
     txs.append(txEip1559.asInstanceOf[SidechainTypes#SCAT])
 
-    val mockedBlockWithEip1559Tx: AccountBlock = mockHelper.getMockedBlock2(txs)
+    val mockedBlockWithEip1559Tx: AccountBlock = mockHelper.getMockedBlock(txs = txs)
 
     // Test: Validation fails if the block contains an eip1559 tx with a wrong chainId
     ChainIdBlockSemanticValidator(params).validate(mockedBlockWithEip1559Tx) match {
@@ -207,7 +207,7 @@ class ChainIdBlockValidatorTest extends JUnitSuite
 
     txs.append(txEip155.asInstanceOf[SidechainTypes#SCAT])
 
-    val mockedBlockWithEip155Tx: AccountBlock = mockHelper.getMockedBlock2(txs)
+    val mockedBlockWithEip155Tx: AccountBlock = mockHelper.getMockedBlock(txs = txs)
 
     // Test: Validation fails if the block contains an eip155 tx with a wrong chainId
     ChainIdBlockSemanticValidator(params).validate(mockedBlockWithEip155Tx) match {
