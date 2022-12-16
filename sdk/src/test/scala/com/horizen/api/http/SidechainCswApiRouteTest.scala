@@ -100,7 +100,6 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
-        println(mapper.readTree(entityAs[String]))
         if (result == null)
           fail("Serialization failed for object ErrorRetrievingCeasingState")
         assertEquals(3, result.elements().asScala.length)
