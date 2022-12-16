@@ -128,6 +128,7 @@ class ForgerStakeMsgProcessorTest
       assertFalse(view.accountExists(contractAddress))
       forgerStakeMessageProcessor.init(view)
       assertTrue(view.accountExists(contractAddress))
+      assertTrue(view.isSmartContractAccount(contractAddress))
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
