@@ -204,7 +204,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
         firstBlockInFork.id, validBlock.id)
       history
       })
-      .thenAnswer( answer => {
+      .thenAnswer( answer =>  Try {
       val validBlock: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("History received semantically valid notification about different block. Second fork block expected.",
         secondBlockInFork.id, validBlock.id)

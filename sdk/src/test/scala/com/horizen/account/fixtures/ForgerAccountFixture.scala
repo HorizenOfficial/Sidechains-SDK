@@ -5,7 +5,7 @@ import com.horizen.account.utils.AccountPayment
 
 import java.util.Random
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.txGen.getAddressProposition
+import com.horizen.fixtures.SecretFixture
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.utils
@@ -18,7 +18,7 @@ import java.math.BigInteger
 case class ForgerAccountGenerationMetadata(propositionSecret: PrivateKey25519, blockSignSecret: PrivateKey25519, vrfSecret: VrfSecretKey,
                                        forgingStakeInfo: ForgingStakeInfo)
 
-object ForgerAccountFixture {
+object ForgerAccountFixture extends SecretFixture {
   def generateForgerAccountData(seed: Long): (AccountPayment, ForgerAccountGenerationMetadata) = generateForgerAccountData(seed, None)
 
   def generateForgerAccountData(seed: Long,

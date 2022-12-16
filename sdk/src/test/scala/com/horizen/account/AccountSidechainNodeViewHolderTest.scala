@@ -93,6 +93,15 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
       history
     })
 
+    // Mock wallet scanPersistent with checks
+    var walletChecksPassed: Boolean = false
+    Mockito.when(wallet.scanPersistent(
+      ArgumentMatchers.any[AccountBlock]))
+      .thenAnswer(args => {
+        walletChecksPassed = true
+        wallet
+      })
+
 
     var walletNotificationExecuted: Boolean = false
     Mockito.when(wallet.applyConsensusEpochInfo(ArgumentMatchers.any[ConsensusEpochInfo])).thenAnswer(_ => {
@@ -147,18 +156,11 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
     // Wallet apply
-    /*
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[AccountBlock],
-      ArgumentMatchers.any[Int](),
-      ArgumentMatchers.any(),
-      ArgumentMatchers.any())).thenAnswer( answer => {
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[AccountBlock])).thenAnswer( answer => {
       val blockToApply: AccountBlock = answer.getArgument(0).asInstanceOf[AccountBlock]
       assertEquals("Wallet received different block to apply.", block.id, blockToApply.id)
       wallet
     })
-
-     */
-
 
     // Consensus epoch switching checks
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
@@ -205,7 +207,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
         firstBlockInFork.id, validBlock.id)
       history
       })
-      .thenAnswer( answer => {
+      .thenAnswer( answer => Try {
       val validBlock: AccountBlock = answer.getArgument(0).asInstanceOf[AccountBlock]
       assertEquals("History received semantically valid notification about different block. Second fork block expected.",
         secondBlockInFork.id, validBlock.id)
@@ -244,11 +246,8 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
       Success(wallet)
     })
     // Wallet apply - one by one for fork chain.
-    /*
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[AccountBlock],
-      ArgumentMatchers.any[Int](),
-      ArgumentMatchers.any(),
-      ArgumentMatchers.any()))
+
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[AccountBlock]))
       .thenAnswer( answer => {
         val blockToApply: AccountBlock = answer.getArgument(0).asInstanceOf[AccountBlock]
         assertEquals("Wallet received different block to apply. First fork block expected.", firstBlockInFork.id, blockToApply.id)
@@ -259,8 +258,6 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
         assertEquals("Wallet received different block to apply. Second fork block expected.", secondBlockInFork.id, blockToApply.id)
         wallet
       })
-
-     */
 
 
     // Consensus epoch switching checks
@@ -310,25 +307,13 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     })
 
     // Mock wallet scanPersistent with checks
-    /*
     var walletChecksPassed: Boolean = false
     Mockito.when(wallet.scanPersistent(
-      ArgumentMatchers.any[AccountBlock],
-      ArgumentMatchers.any[Int](),
-      ArgumentMatchers.any[Seq[ZenBox]](),
-      ArgumentMatchers.any[Option[UtxoMerkleTreeView]]()))
+      ArgumentMatchers.any[AccountBlock]))
       .thenAnswer(args => {
-        val epochNumber: Int = args.getArgument(1)
-        val feePayments: Seq[ZenBox] = args.getArgument(2)
-        val utxoView: Option[UtxoMerkleTreeView] = args.getArgument(3)
-        assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
-        assertTrue("No fee payments expected while not in the end of the withdrawal epoch.", feePayments.isEmpty)
-        assertTrue("No UtxoMerkleTreeView expected while not in the end of the withdrawal epoch.", utxoView.isEmpty)
-
         walletChecksPassed = true
         wallet
       })
-    */
 
     // Send locally generated block to the NodeViewHolder
     val eventListener = TestProbe()
@@ -378,25 +363,12 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock wallet scanPersistent with checks
     var walletChecksPassed: Boolean = false
-    /*
-    Mockito.when(wallet.scanPersistent(
-      ArgumentMatchers.any[AccountBlock],
-      ArgumentMatchers.any[Int](),
-      ArgumentMatchers.any[Seq[ZenBox]](),
-      ArgumentMatchers.any[Option[UtxoMerkleTreeView]]()))
-      .thenAnswer(args => {
-        val epochNumber: Int = args.getArgument(1)
-        val feePayments: Seq[ZenBox] = args.getArgument(2)
-        val utxoView: Option[UtxoMerkleTreeView] = args.getArgument(3)
-        assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
-        assertEquals("Different fee payments expected while in the end of the withdrawal epoch.", expectedFeePayments, feePayments)
-        assertTrue("UtxoMerkleTreeView expected to be defined while in the end of the withdrawal epoch.", utxoView.isDefined)
 
-        walletChecksPassed = true
+    Mockito.when(wallet.scanPersistent(
+      ArgumentMatchers.any[AccountBlock]))
+      .thenAnswer(args => {
         wallet
       })
-
-     */
 
     // Send locally generated block to the NodeViewHolder
     val eventListener = TestProbe()
@@ -404,14 +376,12 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     val block = generateNextAccountBlock(genesisBlock, sidechainTransactionsCompanion, params)
     mockedNodeViewHolderRef ! LocallyGeneratedModifier(block)
 
-
     // Verify successful applying
     eventListener.expectMsgType[SemanticallySuccessfulModifier[AccountBlock]]
     Thread.sleep(100)
 
     // Verify that all the checks passed
     assertTrue("State feePayments checks failed.", stateChecksPassed)
-    //assertTrue("Wallet scanPersistent checks failed.", walletChecksPassed)
   }
 
   @Test
@@ -486,6 +456,14 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     val secondRequestBlocks = Seq(block3, block4, block5)
     val correctSequence = Array(block1, block2, block3, block4, block5, block6)
     var blockIndex = 0
+
+    // Mock wallet scanPersistent with checks
+    var walletChecksPassed: Boolean = false
+    Mockito.when(wallet.scanPersistent(
+      ArgumentMatchers.any[AccountBlock]))
+      .thenAnswer(args => {
+        wallet
+      })
 
     // History appending check
     Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
