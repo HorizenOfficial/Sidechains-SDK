@@ -11,6 +11,7 @@ import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proof.SignatureSecp256k1
+import com.horizen.account.receipt.Bloom
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
@@ -67,11 +68,7 @@ class EthService(
           case err: RpcException => throw err
           case reverted: ExecutionRevertedException =>
             throw new RpcException(
-              new RpcError(
-                RpcCode.ExecutionError.code,
-                reverted.getMessage,
-                Numeric.toHexString(reverted.revertReason)
-              )
+              new RpcError(RpcCode.ExecutionError.code, reverted.getMessage, Numeric.toHexString(reverted.revertReason))
             )
           case err: ExecutionFailedException =>
             throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
@@ -346,18 +343,21 @@ class EthService(
     using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
   }
 
-  private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
-    val history = nodeView.history
-    val blockId = tag match {
-      case "earliest" => history.blockIdByHeight(1)
+  private def parseBlockTag(nodeView: NV, tag: String): Int = {
+    tag match {
+      case "earliest" => 1
       case "finalized" | "safe" => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
-      case "latest" | "pending" | null => history.blockIdByHeight(history.getCurrentHeight)
-      case height => Try.apply(Numeric.decodeQuantity(height).intValueExact()).toOption.flatMap(history.blockIdByHeight)
+      case "latest" | "pending" | null => nodeView.history.getCurrentHeight
+      case height =>
+        Try
+          .apply(Numeric.decodeQuantity(height).intValueExact())
+          .filter(_ <= nodeView.history.getCurrentHeight)
+          .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null)))
     }
-    ModifierId(
-      blockId
-        .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null)))
-    )
+  }
+
+  private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
+    ModifierId(nodeView.history.blockIdByHeight(parseBlockTag(nodeView, tag)).get)
   }
 
   @RpcMethod("net_version")
@@ -427,7 +427,18 @@ class EthService(
   @RpcMethod("eth_getTransactionReceipt")
   def getTransactionReceipt(transactionHash: Hash): EthereumReceiptView = {
     getTransactionAndReceipt(transactionHash).map { case (block, tx, receipt) =>
-      new EthereumReceiptView(receipt, tx, block.header.baseFee)
+      // count the number of logs in the block before this transaction
+      val firstLogIndex = applyOnAccountView { nodeView =>
+        using(nodeView.state.getView) { stateView =>
+          block.sidechainTransactions
+            .take(receipt.transactionIndex)
+            .map(_.id.toBytes)
+            .flatMap(stateView.getTransactionReceipt)
+            .map(_.consensusDataReceipt.logs.length)
+            .sum
+        }
+      }
+      new EthereumReceiptView(receipt, tx, block.header.baseFee, firstLogIndex)
     }.orNull
   }
 
@@ -469,11 +480,10 @@ class EthService(
   def eth_getUncleCountByBlockNumber(tag: String) = new Quantity(0L)
 
   @RpcMethod("eth_getUncleByBlockHashAndIndex")
-  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: Quantity) = null
+  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: Quantity): Null = null
 
   @RpcMethod("eth_getUncleByBlockNumberAndIndex")
-  def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity) = null
-
+  def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity): Null = null
 
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
@@ -707,5 +717,95 @@ class EthService(
     if (baseFee == null) tx.getMaxPriorityFeePerGas
     // we do not need to check if MaxFeePerGas is higher than baseFee, because the tx is already included in the block
     else tx.getMaxPriorityFeePerGas.min(tx.getMaxFeePerGas.subtract(baseFee))
+  }
+
+  @RpcMethod("eth_getLogs")
+  def getLogs(query: FilterQuery): Seq[EthereumLogView] = {
+    query.sanitize()
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        if (query.blockHash != null) {
+          // we currently need to get the block by blockhash and then retrieve the receipt for each tx via tx-hash
+          // geth retrieves all logs of a block by blockhash
+          val block = nodeView.history
+            .getStorageBlockById(bytesToId(query.blockHash.toBytes))
+            .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash")))
+          getBlockLogs(stateView, block, query)
+        } else {
+          val start = parseBlockTag(nodeView, query.fromBlock)
+          val end = parseBlockTag(nodeView, query.toBlock)
+          if (start > end) {
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
+          }
+          // get the logs from all blocks in the range into one flat list
+          (start to end).flatMap(blockNumber => {
+            nodeView.history
+              .blockIdByHeight(blockNumber)
+              .map(ModifierId(_))
+              .flatMap(nodeView.history.getStorageBlockById)
+              .map(getBlockLogs(stateView, _, query))
+              .get
+          })
+        }
+      }
+    }
+  }
+
+  /**
+   * Get all logs of a block matching the given query. Replication of the original implementation in GETH, see:
+   * github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:227
+   */
+  private def getBlockLogs(stateView: AccountStateView, block: AccountBlock, query: FilterQuery): Seq[EthereumLogView] = {
+    val filtered = query.address.length > 0 || query.topics.length > 0
+    if (filtered && !testBloom(block.header.logsBloom, query.address, query.topics)) {
+        // bail out if address or topic queries are given, but they fail the bloom filter test
+        return Seq.empty
+    }
+    // retrieve all logs of the given block
+    var logIndex = 0
+    val logs = block.sidechainTransactions
+      .map(_.id.toBytes)
+      .flatMap(stateView.getTransactionReceipt)
+      .flatMap(receipt =>
+        receipt.consensusDataReceipt.logs.map(log => {
+          val logView = new EthereumLogView(receipt, log, logIndex)
+          logIndex += 1
+          logView
+        })
+      )
+    if (filtered) {
+      // return filtered logs
+      logs.filter(testLog(query.address, query.topics))
+    } else {
+      // return all logs
+      logs
+    }
+  }
+
+  /**
+   * Tests if a bloom filter matches the given address and topic queries. Replication of the original implementation
+   * in GETH, see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:328
+   */
+  private def testBloom(bloom: Bloom, addresses: Array[Address], topics: Array[Array[Hash]]): Boolean = {
+    // bail out if an address filter is given and none of the addresses are contained in the bloom filter
+    if (addresses.length > 0 && !addresses.map(_.toBytes).exists(bloom.test)) {
+      false
+    } else {
+      topics.forall(sub => {
+        // empty rule set == wildcard, otherwise test if at least one of the given topics is contained
+        sub.length == 0 || sub.map(_.toBytes).exists(bloom.test)
+      })
+    }
+  }
+
+  /**
+   * Tests if a log matches the given address and topic queries. Replication of the original implementation in
+   * GETH, see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:293
+   */
+  private def testLog(addresses: Array[Address], topics: Array[Array[Hash]])(log: EthereumLogView): Boolean = {
+    if (addresses.length > 0 && addresses.map(_.toString).contains(log.address)) return false
+    // skip if the number of filtered topics is greater than the amount of topics in the log
+    if (topics.length > log.topics.length) return false
+    topics.zip(log.topics).forall({ case (sub, topic) => sub.length == 0 || sub.map(_.toString).contains(topic)})
   }
 }
