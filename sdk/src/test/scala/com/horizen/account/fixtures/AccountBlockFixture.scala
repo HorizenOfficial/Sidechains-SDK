@@ -8,19 +8,17 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.Bloom
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.customtypes.SemanticallyInvalidTransaction
-import com.horizen.fixtures.SidechainBlockFixture.firstOrSecond
-import com.horizen.fixtures.{CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MainchainBlockReferenceFixture, MerkleTreeFixture, VrfGenerator}
+import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, MerkleTreeFixture}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
-import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
@@ -57,7 +55,7 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
           ): AccountBlock = {
 
     //val (accountPayment, forgerMetadata) = firstOrSecond(forgerAccountData, ForgerAccountFixture.generateForgerAccount(basicSeed))
-    val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(basicSeed)
+    val (_, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(basicSeed)
 
 
     val ownerPrivateKey : PrivateKey25519 = forgerMetadata.blockSignSecret
@@ -125,10 +123,10 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
     val ownerPrivateKey : PrivateKey25519 = forgerMetadata.blockSignSecret
     val forgingStakeInfo : ForgingStakeInfo = forgerMetadata.forgingStakeInfo
     val forgerAddress: AddressProposition = accountPayment.address
-    val baseFee: BigInteger = BigInteger.ZERO // TODO
-    val gasUsed: Long = 0; // TODO
-    val gasLimit: Long = 0; // TODO
-    val logsBloom: Bloom = new Bloom(); // TODO
+    val baseFee: BigInteger = BigInteger.ZERO
+    val gasUsed: Long = 0
+    val gasLimit: Long = 0
+    val logsBloom: Bloom = new Bloom()
 
     AccountBlock.create(
       parent,
@@ -155,57 +153,6 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
 }
 
 trait AccountBlockFixture extends MainchainBlockReferenceFixture with AccountBlockHeaderFixture {
-
-  def generateGenesisBlockInfo(genesisMainchainHeaderHash: Option[Array[Byte]] = None,
-                               genesisMainchainReferenceDataHeaderHash: Option[Array[Byte]] = None,
-                               validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
-                               timestamp: Option[Block.Timestamp] = None,
-                               vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34),
-                               initialCumulativeHash: Array[Byte] = FieldElementFixture.generateFieldElement()
-                              ): SidechainBlockInfo = {
-    val blockId = bytesToId(new Array[Byte](32))
-    val mainchainHeaderHash : MainchainHeaderHash = com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))
-
-    SidechainBlockInfo(
-      1,
-      1,
-      bytesToId(new Array[Byte](32)),
-      timestamp.getOrElse(scala.util.Random.nextLong()),
-      validity,
-      Seq(MainchainHeaderBaseInfo(mainchainHeaderHash, initialCumulativeHash)),
-      Seq(mainchainHeaderHash),
-      WithdrawalEpochInfo(1, 1),
-      Option(vrfOutput),
-      blockId
-    )
-  }
-
-  def changeBlockInfoValidity(blockInfo: SidechainBlockInfo, validity: ModifierSemanticValidity): SidechainBlockInfo = {
-    blockInfo.copy(semanticValidity = validity)
-  }
-
-  def generateBlockInfo(block: SidechainBlock,
-                        parentBlockInfo: SidechainBlockInfo,
-                        params: NetworkParams,
-                        previousCumulativeHash: Array[Byte],
-                        customScore: Option[Long] = None,
-                        validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
-                        timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
-
-    SidechainBlockInfo(
-      parentBlockInfo.height + 1,
-      customScore.getOrElse(parentBlockInfo.score + (parentBlockInfo.mainchainHeaderHashes.size.toLong << 32) + 1),
-      block.parentId,
-      block.timestamp,
-      validity,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, previousCumulativeHash),
-      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
-      Option(VrfGenerator.generateVrfOutput(parentBlockInfo.timestamp)),
-      block.parentId
-    )
-  }
-
 
   def generateAccountBlockSeq(count: Int,
                                 companion: SidechainAccountTransactionsCompanion,
@@ -239,8 +186,7 @@ trait AccountBlockFixture extends MainchainBlockReferenceFixture with AccountBlo
   def generateNextAccountBlock(sidechainBlock: AccountBlock,
                                  companion: SidechainAccountTransactionsCompanion,
                                  params: NetworkParams,
-                                 basicSeed: Long = 123177L,
-                                 timestampDelta: Long = blockGenerationDelta): AccountBlock = {
+                                 basicSeed: Long = 123177L): AccountBlock = {
     AccountBlockFixture.copy(sidechainBlock,
       parentId = sidechainBlock.id,
       timestamp = sidechainBlock.timestamp + blockGenerationDelta,
@@ -252,25 +198,4 @@ trait AccountBlockFixture extends MainchainBlockReferenceFixture with AccountBlo
       basicSeed = basicSeed)
   }
 
-  def createSemanticallyInvalidClone(sidechainBlock: AccountBlock, companion: SidechainAccountTransactionsCompanion): AccountBlock = {
-    new SemanticallyInvalidAccountBlock(sidechainBlock, companion)
-  }
-
-  // not companion should contain serializer for SemanticallyInvalidTransaction
-  def generateNextAccountBlockWithInvalidTransaction(sidechainBlock: AccountBlock, companion: SidechainAccountTransactionsCompanion, params: NetworkParams, basicSeed: Long = 12325L): AccountBlock = {
-    AccountBlockFixture.copy(sidechainBlock,
-      parentId = sidechainBlock.id,
-      timestamp = sidechainBlock.timestamp + 10,
-      sidechainTransactions = Seq[SidechainTypes#SCAT](
-        new SemanticallyInvalidTransaction().asInstanceOf[SidechainTypes#SCAT]),
-      companion = companion,
-      params = params,
-      basicSeed = basicSeed)
-  }
-
-  def getRandomBlockId(seed: Long = 1312): ModifierId = {
-    val id: Array[Byte] = new Array[Byte](32)
-    new scala.util.Random(seed).nextBytes(id)
-    bytesToId(id)
-  }
 }

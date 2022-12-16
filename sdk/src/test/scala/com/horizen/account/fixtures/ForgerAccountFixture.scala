@@ -2,7 +2,6 @@ package com.horizen.account.fixtures
 
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.AccountPayment
-
 import java.util.Random
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.fixtures.SecretFixture

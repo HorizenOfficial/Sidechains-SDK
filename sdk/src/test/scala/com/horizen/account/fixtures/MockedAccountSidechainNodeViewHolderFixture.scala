@@ -65,10 +65,7 @@ trait MockedAccountSidechainNodeViewHolderFixture extends MockitoSugar {
       .thenAnswer(_ => {
         walletSettings
       })
-    Mockito.when(sidechainSettings.wallet.maxTxFee)
-      .thenAnswer(_ => {
-        10000000L
-      })
+
     actorSystem.actorOf(Props(new MockedAccountSidechainNodeViewHolder(sidechainSettings, history, state, wallet, mempool)))
   }
 }
