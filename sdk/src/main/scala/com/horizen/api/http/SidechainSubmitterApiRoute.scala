@@ -14,11 +14,10 @@ import akka.pattern.ask
 import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorBadCircuit, ErrorRetrieveCertificateSigners, ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
 import com.horizen.api.http.SidechainDebugRestScheme._
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.utils.BytesUtils
 import com.horizen.api.http.JacksonSupport._
+import com.horizen.proposition.SchnorrProposition
 
 case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef,  circuitType: CircuitTypes)
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
@@ -86,10 +85,10 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
   def getSchnorrPublicKeyHash: Route = (post & path("getSchnorrPublicKeyHash")) {
     entity(as[ReqGetSchnorrPublicKeyHash]) { body =>
       try {
-        val schnorrPublicKey = SchnorrPublicKey.deserialize(BytesUtils.fromHexString(body.schnorrPublicKey))
+        val schnorrPublicKey: SchnorrProposition = new SchnorrProposition(BytesUtils.fromHexString(body.schnorrPublicKey))
         ApiResponseUtil.toResponse(
           RespHashSchnorrPublicKey(
-            BytesUtils.toHexString(schnorrPublicKey.getHash.serializeFieldElement())
+            BytesUtils.toHexString(schnorrPublicKey.getHash)
           )
         )
       } catch {

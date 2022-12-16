@@ -74,7 +74,7 @@ class SidechainWalletCswDataProviderCSWEnabledTest
 
 
     // Test 1: RefData without MC2SCAggTx
-    val emptyRefData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, sidechainRelatedAggregatedTransaction = None, None, None, Seq(), Seq())
+    val emptyRefData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, sidechainRelatedAggregatedTransaction = None, None, None, Seq(), None)
     assertTrue("No CSW data expected to be found.", cswDataProviderWithCSW.calculateForwardTransferCswData(Seq(emptyRefData), pubKeys, params).isEmpty)
 
 
@@ -87,7 +87,7 @@ class SidechainWalletCswDataProviderCSWEnabledTest
     var mc2scTransactionsOutputs: Seq[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = Seq(scCr1, ft1, ft2)
     var aggTx = new MC2SCAggregatedTransaction(mc2scTransactionsOutputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION)
 
-    val refData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), Seq())
+    val refData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), None)
     assertTrue("No CSW data expected to be found.", cswDataProviderWithCSW.calculateForwardTransferCswData(Seq(refData), pubKeys, params).isEmpty)
 
 
@@ -99,7 +99,7 @@ class SidechainWalletCswDataProviderCSWEnabledTest
     mc2scTransactionsOutputs = Seq(walletFt1, ft1, ft2, walletFt2)
     aggTx = new MC2SCAggregatedTransaction(mc2scTransactionsOutputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION)
 
-    val refDataWithFTs: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), Seq())
+    val refDataWithFTs: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), None)
 
     val commTree = refDataWithFTs.commitmentTree(params.sidechainId, params.sidechainCreationVersion)
     val expectedCswData = Seq(
@@ -157,7 +157,7 @@ class SidechainWalletCswDataProviderCSWEnabledTest
     val aggTx = new MC2SCAggregatedTransaction(mc2scTransactionsOutputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION)
 
 
-    val refDataWithFTs: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), Seq())
+    val refDataWithFTs: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), None)
 
     val commTree = refDataWithFTs.commitmentTree(params.sidechainId, params.sidechainCreationVersion)
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(refDataWithFTs))

@@ -1,6 +1,5 @@
 package com.horizen.certificatesubmitter.strategies
 
-import akka.util.Timeout
 import com.horizen._
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateData
@@ -13,7 +12,6 @@ import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 abstract class CircuitStrategy[T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{

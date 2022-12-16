@@ -8,7 +8,6 @@ import com.horizen.box.data.ZenBoxData
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
@@ -26,7 +25,6 @@ import sparkz.core._
 import sparkz.core.transaction.state._
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.schnorrnative.SchnorrPublicKey
 
 import java.io.File
 import java.math.{BigDecimal, MathContext}
@@ -160,7 +158,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       // For non-ceasing sidechains certificate must be validated just when it has been received.
       // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
       // then the whole block is invalid.
-      mod.topQualityCertificates.foreach(cert => validateTopQualityCertificate(cert, cert.epochNumber))
+      mod.topQualityCertificateOpt.foreach(cert => validateTopQualityCertificate(cert, cert.epochNumber))
     } else {
       // For ceasing sidechains submission window concept is used.
       // If SC block has reached the certificate submission window end -> check the top quality certificate
@@ -169,7 +167,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
         // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificates.lastOption.orElse(
+        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
           stateStorage.getTopQualityCertificate(certReferencedEpochNumber))
 
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
@@ -360,10 +358,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
       val keyRotationTransaction: CertificateKeyRotationTransaction = tx.asInstanceOf[CertificateKeyRotationTransaction]
       val keyRotationProof = keyRotationTransaction.getKeyRotationProof
-      val newKey = SchnorrPublicKey.deserialize(keyRotationProof.newKey.pubKeyBytes())
       val oldCertifiersKeys = certifiersKeys(withdrawalEpoch - 1).get
 
-      val messageToSign = newKey.getHash.serializeFieldElement()
+      val messageToSign = keyRotationProof.newKey.getHash
 
       //Verify that the key index is in a valid range
       if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)
@@ -506,7 +503,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod.mainchainBlockReferencesData.size, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
-          mod.topQualityCertificates.lastOption, // we are interested only in the most recent top quality certificate
+          mod.topQualityCertificateOpt,
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions),
           getKeyRotationProofsToAdd(mod.sidechainTransactions)
