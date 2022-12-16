@@ -36,6 +36,7 @@ class WithdrawalMsgProcessorIntegrationTest
         "Wrong initial code hash",
         WithdrawalMsgProcessor.contractCodeHash,
         view.getCodeHash(address))
+      assertTrue(view.isSmartContractAccount(address))
     }
   }
 
