@@ -4,8 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumReceipt
-import com.horizen.account.receipt.Bloom
+import com.horizen.account.receipt.{EthereumReceipt, Bloom}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountStateMetadataStorageView
