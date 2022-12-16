@@ -464,9 +464,6 @@ class ForgerStakeMsgProcessorTest
     // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
     usingView(forgerStakeMessageProcessor) { view =>
 
-      // create private/public key pair
-      val pair = Keys.createEcKeyPair
-
       val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
       val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
 
