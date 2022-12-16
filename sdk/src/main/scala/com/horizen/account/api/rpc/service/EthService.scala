@@ -522,7 +522,7 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByHash")
   @RpcOptionalParameters(1)
-  def traceBlockByHash(hash: Hash, traceParams: TraceParams): DebugTraceBlockView = {
+  def traceBlockByHash(hash: Hash, config: TraceOptions): DebugTraceBlockView = {
     applyOnAccountView { nodeView =>
       // get block to trace
       val (block, blockInfo) = getBlockById(nodeView, bytesToId(hash.toBytes))
@@ -530,7 +530,7 @@ class EthService(
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceParams == null) new TraceParams() else traceParams)
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
