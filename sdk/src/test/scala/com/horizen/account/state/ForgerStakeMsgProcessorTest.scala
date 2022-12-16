@@ -99,7 +99,6 @@ class ForgerStakeMsgProcessorTest
     }
     // gas consumption depends on the number of items in the list
     assertTrue(usedGas.compareTo(0) > 0)
-    assertTrue(usedGas.compareTo(3000) < 0)
     assertNotNull(returnData)
     returnData
   }
