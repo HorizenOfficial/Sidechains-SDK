@@ -51,11 +51,11 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   override def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[AccountBlock]] = {
-    ChainIdBlockSemanticValidator(params) +: super.semanticBlockValidators(params)
+    super.semanticBlockValidators(params) :+ ChainIdBlockSemanticValidator(params)
   }
 
   override def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountFeePaymentsInfo, AccountHistoryStorage, AccountHistory]] = {
-    BaseFeeBlockValidator() +: super.historyBlockValidators(params)
+    super.historyBlockValidators(params) :+ BaseFeeBlockValidator()
   }
 
   override def checkAndRecoverStorages(restoredData: Option[(AccountHistory, AccountState, AccountWallet, AccountMemoryPool)]): Option[(AccountHistory, AccountState, AccountWallet, AccountMemoryPool)] = {
@@ -133,11 +133,6 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result
   }
 
-  override def postStop(): Unit = {
-    log.info("AccountSidechainNodeViewHolder actor is stopping...")
-    super.postStop()
-  }
-
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
       state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, genesisBlock)
@@ -184,7 +179,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
-      AccountTransaction[Proposition, Proof[Proposition]],
+      SidechainTypes#SCAT,
       AccountBlockHeader,
       AccountBlock,
       AccountFeePaymentsInfo,
@@ -208,7 +203,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def applyFunctionOnNodeView: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
-      AccountTransaction[Proposition, Proof[Proposition]],
+      SidechainTypes#SCAT,
       AccountBlockHeader,
       AccountBlock,
       AccountFeePaymentsInfo,
@@ -233,7 +228,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def applyBiFunctionOnNodeView[T, A]: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
-      AccountTransaction[Proposition, Proof[Proposition]],
+      SidechainTypes#SCAT,
       AccountBlockHeader,
       AccountBlock,
       AccountFeePaymentsInfo,

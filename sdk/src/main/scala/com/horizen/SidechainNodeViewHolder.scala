@@ -186,11 +186,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       })
   }
 
-  override def postStop(): Unit = {
-    log.info("SidechainNodeViewHolder actor is stopping...")
-    super.postStop()
-  }
-
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
       state <- SidechainState.createGenesisState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, backupStorage, params, applicationState, genesisBlock)
