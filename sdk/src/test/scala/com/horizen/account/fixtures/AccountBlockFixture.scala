@@ -7,7 +7,7 @@ import com.horizen.{SidechainTypes, utils}
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.LogsBloom
+import com.horizen.account.receipt.Bloom
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.consensus.ForgingStakeInfo
@@ -128,7 +128,7 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
     val baseFee: BigInteger = BigInteger.ZERO // TODO
     val gasUsed: Long = 0; // TODO
     val gasLimit: Long = 0; // TODO
-    val logsBloom: LogsBloom = new LogsBloom(); // TODO
+    val logsBloom: Bloom = new Bloom(); // TODO
 
     AccountBlock.create(
       parent,

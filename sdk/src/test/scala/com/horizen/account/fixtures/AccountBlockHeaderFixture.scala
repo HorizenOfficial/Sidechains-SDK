@@ -2,7 +2,7 @@ package com.horizen.account.fixtures
 
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.receipt.LogsBloom
+import com.horizen.account.receipt.Bloom
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.fixtures.VrfGenerator
@@ -44,7 +44,7 @@ trait AccountBlockHeaderFixture {
     val baseFee: BigInteger = BigInteger.ZERO // TODO
     val gasUsed: Long = 0; // TODO
     val gasLimit: Long = 0; // TODO
-    val logsBloom: LogsBloom = null; // TODO
+    val logsBloom: Bloom = null; // TODO
 
 
 
