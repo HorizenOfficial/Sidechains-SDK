@@ -121,31 +121,6 @@ class ForgerStakeMsgProcessorTest
     assertEquals("Wrong MethodId for RemoveStakeCmd", "f7419d79", ForgerStakeMsgProcessor.RemoveStakeCmd)
   }
 
-
-  @Test
-  def testNullRecords(): Unit = {
-    usingView(forgerStakeMessageProcessor) { view =>
-      forgerStakeMessageProcessor.init(view)
-
-      // getting a not existing key from state DB using RAW strategy gives an array of 32 bytes filled with 0, while
-      // using CHUNK strategy gives an empty array instead.
-      // If this behaviour changes, the codebase must change as well
-
-      val notExistingKey1 = Keccak256.hash("NONE1")
-      view.removeAccountStorage(contractAddress, notExistingKey1)
-      val ret1 = view.getAccountStorage(contractAddress, notExistingKey1)
-      assertEquals(new ByteArrayWrapper(new Array[Byte](32)), new ByteArrayWrapper(ret1))
-
-      val notExistingKey2 = Keccak256.hash("NONE2")
-      view.removeAccountStorageBytes(contractAddress, notExistingKey2)
-      val ret2 = view.getAccountStorageBytes(contractAddress, notExistingKey2)
-      assertEquals(new ByteArrayWrapper(new Array[Byte](0)), new ByteArrayWrapper(ret2))
-
-      view.commit(bytesToVersion(getVersion.data()))
-    }
-  }
-
-
   @Test
   def testInit(): Unit = {
     usingView(forgerStakeMessageProcessor) { view =>
