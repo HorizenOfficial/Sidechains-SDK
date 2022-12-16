@@ -56,7 +56,7 @@ class WithdrawalMsgProcessorIntegrationTest
       val withdrawalAmount = ZenWeiConverter.convertZenniesToWei(10)
       val msgBalance = addWithdrawalRequestMessage(withdrawalAmount)
       // Withdrawal request with insufficient balance should result in ExecutionFailed
-      assertThrows[ExecutionFailedException](withGas(WithdrawalMsgProcessor.process(msgBalance, view, _, defaultBlockContext)))
+      assertThrows[ExecutionRevertedException](withGas(WithdrawalMsgProcessor.process(msgBalance, view, _, defaultBlockContext)))
 
       // Creating the first Withdrawal request
       val withdrawalAmount1 = ZenWeiConverter.convertZenniesToWei(123)
