@@ -188,8 +188,8 @@ class ForgerStakeMsgProcessorTest
       println("This is the returned value: " + BytesUtils.toHexString(returnData))
 
       // verify we added the amount to smart contract and we charge the sender
-      assertTrue(view.getBalance(contractAddress) == validWeiAmount)
-      assertTrue(view.getBalance(origin) == initialAmount.subtract(validWeiAmount))
+      assertEquals(view.getBalance(contractAddress), validWeiAmount)
+      assertEquals(view.getBalance(origin), initialAmount.subtract(validWeiAmount))
 
       // Checking log
       // TODO: asInstanceOf required? gigo
