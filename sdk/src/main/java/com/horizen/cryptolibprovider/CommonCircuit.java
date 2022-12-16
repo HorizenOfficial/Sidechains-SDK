@@ -30,7 +30,12 @@ public class  CommonCircuit {
 
     public static final int CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION = 0;
 
-    public static final int CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION = 1;
+    // 32 custom fields for a possible future features placeholder.
+    // The first field is used for certificate keys merkle root.
+    // Two fields are dedicated for SC2SC feature: merkle root of messages and prev epoch top quality cert data hash.
+    // In general the idea is to have different sidecahins with different circuits to be compatible with SC2SC circuit.
+    // For example, for Latus circuit (at least 13 custom fields for own needs) with SC2SC support.
+    public static final int CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION = 32;
 
     public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(
