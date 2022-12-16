@@ -1,6 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.fixtures.SecretFixture
+import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -67,6 +68,13 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
       EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView))
+
+    // Test 4: Failure: data is empty array
+    Mockito.reset(mockStateView)
+    val contractDeclarationMessage2 = getMessage(null, value, Array.emptyByteArray)
+    assertFalse(
+      "Message for EoaMessageProcessor wrongly can be processed",
+      EoaMessageProcessor.canProcess(contractDeclarationMessage2, mockStateView))
   }
 
   @Test
