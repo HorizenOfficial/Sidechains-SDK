@@ -77,9 +77,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     // forger list
     /* Do not initialize it here since bootstrapping tool can not do the same as of now. That would result in
        a different state root in the genesis block creation  */
-    val restictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
-    if (!restictForgerList.sameElements(NULL_HEX_STRING_32))
-      throw new MessageProcessorInitializationException("restictForgerList already set")
+    val restrictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
+    if (!restrictForgerList.sameElements(NULL_HEX_STRING_32))
+      throw new MessageProcessorInitializationException("restrictForgerList already set")
 
       /*
     if (networkParams.restrictForgers) {
