@@ -179,6 +179,8 @@ class ForgerStakeMsgProcessorTest
 
       val data: Array[Byte] = cmdInput.encode()
       val msg = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
+      val expectedStakeId = Keccak256.hash(Bytes.concat(
+        msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
 
       // positive case, verify we can add the stake to view
       val returnData = assertGas(5550) {
@@ -188,6 +190,7 @@ class ForgerStakeMsgProcessorTest
       println("This is the returned value: " + BytesUtils.toHexString(returnData))
 
       // verify we added the amount to smart contract and we charge the sender
+      assertArrayEquals(expectedStakeId, returnData)
       assertEquals(view.getBalance(contractAddress), validWeiAmount)
       assertEquals(view.getBalance(origin), initialAmount.subtract(validWeiAmount))
 
