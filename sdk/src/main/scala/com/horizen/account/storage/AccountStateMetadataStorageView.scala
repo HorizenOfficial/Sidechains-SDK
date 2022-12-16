@@ -23,8 +23,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   require(storage != null, "Storage must be NOT NULL.")
 
   private[horizen] val ceasingStateKey = calculateKey("ceasingStateKey".getBytes)
-  private[horizen] val isForgersListOpenKey = calculateKey("isForgingOpenKey".getBytes) // TODO move in message proc logic
-
   private[horizen] val heightKey = calculateKey("heightKey".getBytes)
   private[horizen] val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes)
   private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
@@ -271,10 +269,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
     // If sidechain has ceased set the flag
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
-
-    // If the forgers list has been open set the flag
-    isForgersListOpenOpt.foreach(_ => updateList.add(new JPair(isForgersListOpenKey, new ByteArrayWrapper(Array.emptyByteArray))))
-
 
     // update the height unless we have the very first version of the db
     // TODO improve this: we are assuming that the saveToStorage() is call on a per-block base, this is an exception, is it the only one?
