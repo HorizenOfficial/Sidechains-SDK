@@ -45,12 +45,9 @@ class WithdrawalMsgProcessorIntegrationTest
     usingView(WithdrawalMsgProcessor) { view =>
       WithdrawalMsgProcessor.init(view)
 
-      val withdrawalEpoch = 102
-      val blockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, withdrawalEpoch, 1)
-
       // GetListOfWithdrawalRequest without withdrawal requests yet
-      val msgForListOfWR = listWithdrawalRequestsMessage(withdrawalEpoch)
-      var wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, blockContext))
+      val msgForListOfWR = listWithdrawalRequestsMessage(defaultBlockContext.withdrawalEpochNumber)
+      var wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, defaultBlockContext))
       val expectedListOfWR = new util.ArrayList[WithdrawalRequest]()
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
 
@@ -59,7 +56,7 @@ class WithdrawalMsgProcessorIntegrationTest
       val withdrawalAmount = ZenWeiConverter.convertZenniesToWei(10)
       val msgBalance = addWithdrawalRequestMessage(withdrawalAmount)
       // Withdrawal request with insufficient balance should result in ExecutionFailed
-      assertThrows[ExecutionFailedException](withGas(WithdrawalMsgProcessor.process(msgBalance, view, _, blockContext)))
+      assertThrows[ExecutionFailedException](withGas(WithdrawalMsgProcessor.process(msgBalance, view, _, defaultBlockContext)))
 
       // Creating the first Withdrawal request
       val withdrawalAmount1 = ZenWeiConverter.convertZenniesToWei(123)
@@ -72,7 +69,7 @@ class WithdrawalMsgProcessorIntegrationTest
       val txHash1 = Keccak256.hash("first tx")
       view.setupTxContext(txHash1, 10)
 
-      val wrInBytes = withGas(WithdrawalMsgProcessor.process(msg, view, _, blockContext))
+      val wrInBytes = withGas(WithdrawalMsgProcessor.process(msg, view, _, defaultBlockContext))
       assertArrayEquals(newExpectedWR.encode(), wrInBytes)
       val newBalance = view.getBalance(msg.getFrom.address())
       assertEquals("Wrong value in account balance", 1177, ZenWeiConverter.convertWeiToZennies(newBalance))
@@ -80,14 +77,14 @@ class WithdrawalMsgProcessorIntegrationTest
       // Checking log
       var listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      var expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount1, withdrawalEpoch)
+      var expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount1, defaultBlockContext.withdrawalEpochNumber)
       checkEvent(expectedEvent, listOfLogs(0))
 
       val txHash2 = Keccak256.hash("second tx")
       view.setupTxContext(txHash2, 10)
 
       // GetListOfWithdrawalRequest after first withdrawal request creation
-      wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, blockContext))
+      wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, defaultBlockContext))
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
 
       // Checking that log didn't change
@@ -103,7 +100,7 @@ class WithdrawalMsgProcessorIntegrationTest
       val txHash3 = Keccak256.hash("third tx")
       view.setupTxContext(txHash3, 10)
 
-      val wrInBytes2 = withGas(WithdrawalMsgProcessor.process(msg, view, _, blockContext))
+      val wrInBytes2 = withGas(WithdrawalMsgProcessor.process(msg, view, _, defaultBlockContext))
       assertArrayEquals(newExpectedWR.encode(), wrInBytes2)
 
       val newBalanceAfterSecondWR = view.getBalance(msg.getFrom.address())
@@ -113,11 +110,11 @@ class WithdrawalMsgProcessorIntegrationTest
       // Checking log
       listOfLogs = view.getLogs(txHash3.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount2, withdrawalEpoch)
+      expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount2, defaultBlockContext.withdrawalEpochNumber)
       checkEvent(expectedEvent, listOfLogs(0))
 
       // GetListOfWithdrawalRequest after second withdrawal request creation
-      wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, blockContext))
+      wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, defaultBlockContext))
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
     }
   }
