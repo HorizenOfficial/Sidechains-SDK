@@ -192,8 +192,7 @@ class ForgerStakeMsgProcessorTest
       assertEquals(view.getBalance(origin), initialAmount.subtract(validWeiAmount))
 
       // Checking log
-      // TODO: asInstanceOf required? gigo
-      var listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
+      var listOfLogs = view.getLogs(txHash1)
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
       var expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
       var expectedAddStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddressProposition, expStakeId, msg.getValue)
@@ -205,7 +204,7 @@ class ForgerStakeMsgProcessorTest
       assertThrows[ExecutionFailedException](withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)))
 
       // Checking that log doesn't change
-      listOfLogs = view.getLogs(txHash2.asInstanceOf[Array[Byte]])
+      listOfLogs = view.getLogs(txHash2)
       assertEquals("Wrong number of logs", 0, listOfLogs.length)
 
       // try processing a msg with different stake id (different nonce), should succeed
@@ -229,7 +228,7 @@ class ForgerStakeMsgProcessorTest
       assertTrue(view.getBalance(origin) == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
 
       // Checking log
-      listOfLogs = view.getLogs(txHash3.asInstanceOf[Array[Byte]])
+      listOfLogs = view.getLogs(txHash3)
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
       expStakeId = forgerStakeMessageProcessor.getStakeId(msg2)
       expectedAddStakeEvt = DelegateForgerStake(msg2.getFrom, ownerAddressProposition, expStakeId, msg2.getValue)
@@ -262,7 +261,7 @@ class ForgerStakeMsgProcessorTest
       assertEquals(validWeiAmount, view.getBalance(ownerAddressProposition.address()))
 
       // Checking log
-      listOfLogs = view.getLogs(txHash4.asInstanceOf[Array[Byte]])
+      listOfLogs = view.getLogs(txHash4)
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
       val expectedRemoveStakeEvent = WithdrawForgerStake(ownerAddressProposition, stakeId)
       checkRemoveForgerStakeEvent(expectedRemoveStakeEvent, listOfLogs(0))
