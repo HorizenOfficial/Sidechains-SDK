@@ -9,7 +9,7 @@ import com.horizen.node.NodeStateBase;
 import com.horizen.node.NodeWalletBase;
 import com.horizen.transaction.Transaction;
 
-interface SidechainNodeViewBase<
+public interface SidechainNodeViewBase<
         TX extends Transaction,
         H extends SidechainBlockHeaderBase,
         PM extends SidechainBlockBase<TX, H>,
