@@ -39,7 +39,6 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTra
 import java.math.BigInteger
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
-import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
@@ -61,6 +60,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   val secretTestAddress: String = null
   val txJsonNoSecret =
     s"""{"from": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"}"""
+  val txPoolStatusOutput = """{"pending":3,"queued":1}"""
+  val txPoolContentOutput = """{"pending":{"0x15532e34426cd5c37371ff455a5ba07501c0f522":{"16":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":null,"input":null,"nonce":"0x10","to":null,"transactionIndex":null,"value":"0xe4e1c0"},"24":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0x081d8a5b696ec5dfce641568e6665b6be2410ce2","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":null,"input":null,"nonce":"0x18","to":null,"transactionIndex":null,"value":"0x493e00"}},"0xb039865dbea73df08e23f185847bab8e6a44108d":{"32":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0xb3151940f923813eca1d70ad405a852bcd2d7609","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":null,"input":null,"nonce":"0x20","to":null,"transactionIndex":null,"value":"0x112a880"}}},"queued":{"0x15532e34426cd5c37371ff455a5ba07501c0f522":{"40":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0xc803d7146a4df6937b609f7951bc7eda3def09fb","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":null,"input":null,"nonce":"0x28","to":null,"transactionIndex":null,"value":"0x3c14dc0"}}}}"""
   var ethService: EthService = _
   var txJson: String = null
   var senderWithSecret: String = null
@@ -137,6 +138,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       s"""{"from": "${senderWithSecret}", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675", "nonce": "0x1"}"""
     val mockedWallet: AccountWallet = mockHelper.getMockedWallet(secret)
 
+    val mockedMemoryPool: AccountMemoryPool = mockHelper.getMockedAccoutMemoryPool()
+
     val mockedSidechainNodeViewHolder = TestProbe()
     mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
       override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
@@ -150,7 +153,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
               ] @unchecked =>
             m match {
               case GetDataFromCurrentView(f) =>
-                sender ! f(CurrentView(mockedHistory, mockedState, mockedWallet, mock[AccountMemoryPool]))
+                sender ! f(CurrentView(mockedHistory, mockedState, mockedWallet, mockedMemoryPool))
             }
           case LocallyGeneratedTransaction(tx) =>
             actorSystem.eventStream.publish(SuccessfulTransaction(tx))
@@ -993,4 +996,21 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ethService.execute(rpcRequest)
     }
   }
+
+  @Test
+  def txpool_status(): Unit = {
+    assertEquals(
+      txPoolStatusOutput,
+      mapper.writeValueAsString(ethService.execute(getRpcRequest()))
+    )
+  }
+
+  @Test
+  def txpool_content(): Unit = {
+    assertEquals(
+      txPoolContentOutput,
+      mapper.writeValueAsString(ethService.execute(getRpcRequest()))
+    )
+  }
+
 }
