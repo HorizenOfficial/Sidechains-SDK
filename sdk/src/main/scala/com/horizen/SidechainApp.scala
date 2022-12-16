@@ -201,13 +201,6 @@ class SidechainApp @Inject()
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
   }
 
-  // Init API
-  //rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
-//  override lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
-//
-//  // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
-//  // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
-//  override lazy val applicationApiRoutes: Seq[ApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
@@ -265,6 +258,8 @@ class SidechainApp @Inject()
       SidechainWalletCswDataProviderCSWDisabled()
   }
 
+  //Waits for actors to start
+  Thread.sleep(500)
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
