@@ -30,7 +30,6 @@ class ForgerStakeMsgProcessorTest
   extends JUnitSuite
     with MockitoSugar
     with MessageProcessorFixture
-    with ClosableResourceHandler
     with StoreFixture {
 
   val dummyBigInteger: BigInteger = BigInteger.ONE
