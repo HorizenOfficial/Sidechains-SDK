@@ -116,16 +116,16 @@ class AccountMemoryPool(
     unconfirmed.values.toList.asJava
 
   def getExecutableTransactions: util.List[ModifierId] =
-    unconfirmed.executableTransactions.toList.asJava
+    unconfirmed.mempoolTransactions(true).toList.asJava
 
   def getNonExecutableTransactions: util.List[ModifierId] =
-    unconfirmed.nonExecutableTransactions.toList.asJava
+    unconfirmed.mempoolTransactions(false).toList.asJava
 
   def getExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, TxByNonceMap] =
-    unconfirmed.executableTransactionsMap
+    unconfirmed.mempoolTransactionsMap(true)
 
   def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, TxByNonceMap] =
-    unconfirmed.nonExecutableTransactionsMap
+    unconfirmed.mempoolTransactionsMap(false)
 
   override def getTransactions(
       c: Comparator[SidechainTypes#SCAT],

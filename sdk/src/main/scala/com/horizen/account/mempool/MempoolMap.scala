@@ -140,9 +140,12 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
   def values: Iterable[SidechainTypes#SCAT] = all.values
 
-  def executableTransactions: Iterable[ModifierId] = {
+  def mempoolTransactions(executable: Boolean): Iterable[ModifierId] = {
     val txsList = new ListBuffer[ModifierId]
-    for ((_, v) <- executableTxs) {
+    var mempoolIdsMap = TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
+    if (executable) mempoolIdsMap = executableTxs
+    else mempoolIdsMap = nonExecutableTxs
+    for ((_, v) <- mempoolIdsMap) {
       for ((_, innerV) <- v) {
         txsList += innerV
       }
@@ -150,38 +153,19 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     txsList
   }
 
-  def nonExecutableTransactions: Iterable[ModifierId] = {
-    val txsList = new ListBuffer[ModifierId]
-    for ((_, v) <- nonExecutableTxs) {
-      for ((_, innerV) <- v) {
-        txsList += innerV
-      }
-    }
-    txsList
-  }
-
-  def executableTransactionsMap: TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
-    val executableTxsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
-    for ((from, nonceIdsMap) <- executableTxs) {
+  def mempoolTransactionsMap(executable: Boolean): TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
+    val txsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
+    var mempoolIdsMap = TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
+    if (executable) mempoolIdsMap = executableTxs
+    else mempoolIdsMap = nonExecutableTxs
+    for ((from, nonceIdsMap) <- mempoolIdsMap) {
       val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
       for ((txNonce, txId) <- nonceIdsMap) {
         nonceTxsMap.put(txNonce, getTransaction(txId).get)
       }
-      executableTxsMap.put(from,nonceTxsMap)
+      txsMap.put(from,nonceTxsMap)
     }
-    executableTxsMap
-  }
-
-  def nonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
-    val executableTxsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
-    for ((from, nonceIdsMap) <- nonExecutableTxs) {
-      val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
-      for ((txNonce, txId) <- nonceIdsMap) {
-        nonceTxsMap.put(txNonce, getTransaction(txId).get)
-      }
-      executableTxsMap.put(from, nonceTxsMap)
-    }
-    executableTxsMap
+    txsMap
   }
 
   /**

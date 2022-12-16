@@ -3,13 +3,14 @@ package com.horizen.account.api.rpc.service
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
+import com.horizen.SidechainTypes
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.receipt.Bloom
 import com.horizen.account.secret.PrivateKeySecp256k1
@@ -34,6 +35,7 @@ import sparkz.core.{NodeViewHolder, bytesToId}
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
@@ -91,15 +93,16 @@ class EthService(
 
   @RpcMethod("txpool_content")
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
-    new TxPoolContent(getExecutablePoolTxs(nodeView), getNonExecutablePoolTxs(nodeView))
+    new TxPoolContent(getPoolTxs(nodeView, true), getPoolTxs(nodeView, false))
   }
 
-  // returnTransactionsNonceMap
-  // transactionsNonceMap
-  private def getExecutablePoolTxs(nodeView: NV): util.Map[String,util.Map[BigInteger,TxPoolTransaction]] = {
+  private def getPoolTxs(nodeView: NV, executable: Boolean): util.Map[String,util.Map[BigInteger,TxPoolTransaction]] = {
     val returnAddressNonceTxsMap = {
       val addressNonceTxsMap = new java.util.HashMap[String,util.Map[BigInteger,TxPoolTransaction]]
-      for ((from, nonceTransactionsMap) <- nodeView.pool.getExecutableTransactionsMap) {
+      var mempoolTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+      if(executable) mempoolTxsMap = nodeView.pool.getExecutableTransactionsMap
+      else mempoolTxsMap = nodeView.pool.getNonExecutableTransactionsMap
+      for ((from, nonceTransactionsMap) <- mempoolTxsMap) {
         val returnNonceTxsMap = {
           val nonceTxsMap = new java.util.HashMap[BigInteger,TxPoolTransaction]
           for ((txNonce, tx) <- nonceTransactionsMap) {
@@ -110,25 +113,6 @@ class EthService(
         addressNonceTxsMap.put(Numeric.toHexString(from.bytes()),returnNonceTxsMap)
       }
       addressNonceTxsMap }
-    returnAddressNonceTxsMap
-  }
-
-  private def getNonExecutablePoolTxs(nodeView: NV): util.Map[String, util.Map[BigInteger, TxPoolTransaction]] = {
-    val returnAddressNonceTxsMap = {
-      val addressNonceTxsMap = new java.util.HashMap[String, util.Map[BigInteger, TxPoolTransaction]]
-      for ((from, nonceTransactionsMap) <- nodeView.pool.getNonExecutableTransactionsMap) {
-        val returnNonceTxsMap = {
-          val nonceTxsMap = new java.util.HashMap[BigInteger, TxPoolTransaction]
-          for ((txNonce, tx) <- nonceTransactionsMap) {
-            nonceTxsMap.put(txNonce, new TxPoolTransaction(tx.getFrom.bytes(), tx.getGasLimit, tx.getGasPrice, null,
-              null, tx.getNonce, null, tx.getValue))
-          }
-          nonceTxsMap
-        }
-        addressNonceTxsMap.put(Numeric.toHexString(from.bytes()), returnNonceTxsMap)
-      }
-      addressNonceTxsMap
-    }
     returnAddressNonceTxsMap
   }
 
