@@ -1,7 +1,9 @@
 package com.horizen.account.state
 
 import com.horizen.account.storage.AccountStateMetadataStorage
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
+import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment, FeeUtils}
+import com.horizen.consensus.intToConsensusEpochNumber
 import com.horizen.evm.Database
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
@@ -14,6 +16,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
 import java.math.BigInteger
+import scala.util.{Failure, Success}
 
 
 class AccountStateTest
@@ -166,4 +169,24 @@ class AccountStateTest
 
   }
 
+  @Test
+  def testSwitchingConsensusEpoch(): Unit = {
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(86400)))
+    val currentEpochNumber = state.getConsensusEpochNumber
+
+    assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), true)
+  }
+
+  @Test
+  def testTransactionLimitExceedsBlockGasLimit(): Unit = {
+    val tx = mock[EthereumTransaction]
+
+    Mockito.when(tx.semanticValidity()).thenAnswer(_ => true)
+    Mockito.when(tx.getGasLimit).thenReturn(BigInteger.valueOf(FeeUtils.GAS_LIMIT + 1))
+
+    state.validate(tx) match {
+      case Failure(_) =>
+      case Success(_) => Assert.fail("Transaction with gas limit greater than block is expected to fail")
+    }
+  }
 }

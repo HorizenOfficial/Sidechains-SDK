@@ -1,7 +1,7 @@
 package com.horizen.account.forger
 
 import com.horizen.account.block.AccountBlockHeader
-import com.horizen.{SidechainTypes, SidechainWallet}
+import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.mempool.TransactionsByPriceAndNonceIter
@@ -9,7 +9,6 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.{MainchainBlockReferenceData, MainchainHeader, Ommer}
-import com.horizen.chain.MainchainHeaderHash
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
@@ -20,12 +19,10 @@ import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
-import sparkz.core.block.Block.BlockId
 import sparkz.core.transaction.state.Secret
 
 import java.math.BigInteger
-import java.util
+import scala.compat.java8.FunctionConverters.enrichAsJavaFunction
 
 class AccountForgeMessageBuilderTest
     extends MockitoSugar
@@ -192,11 +189,14 @@ class AccountForgeMessageBuilderTest
   @Test
   def testCreateNewBlockFailingIfAddressSizeIsZero(): Unit = {
     val nodeView = mock[forger.View]
-    Mockito.when(nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1]))
-      .thenReturn(List.empty[Secret])
+    val vlMock = mock[forger.VL]
+    val secretsMock = mock[java.util.List[Secret]]
+
+    Mockito.when(secretsMock.size()).thenReturn(0)
+    Mockito.when(nodeView.vault).thenReturn(vlMock)
+    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => secretsMock)
 
     val branchPointInfo = mock[forger.BranchPointInfo]
-    val parentId = mock[BlockId]
     val mainchainBlockReferencesData = Seq(mock[MainchainBlockReferenceData])
     val sidechainTransactions = mock[Iterable[SidechainTypes#SCAT]]
     val mainchainHeaders = Seq(mock[MainchainHeader])
@@ -214,8 +214,8 @@ class AccountForgeMessageBuilderTest
     assertThrows[IllegalArgumentException](classOf[IllegalArgumentException], forger.createNewBlock(
       nodeView,
       branchPointInfo,
-      false,
-      parentId,
+      isWithdrawalEpochLastBlock = false,
+      null,
       0L,
       mainchainBlockReferencesData,
       sidechainTransactions,
