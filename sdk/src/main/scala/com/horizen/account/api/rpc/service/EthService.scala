@@ -27,12 +27,13 @@ import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.utils.Numeric
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.{NodeViewHolder, bytesToId}
 
 import java.math.BigInteger
 import java.util
+import java.util.Arrays
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
@@ -490,34 +491,14 @@ class EthService(
   @RpcMethod("eth_getUncleByBlockNumberAndIndex")
   def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity): Null = null
 
+
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
   def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
-    applyOnAccountView { nodeView =>
-      // get block to trace
-      val (block, blockInfo) = getBlockByTag(nodeView, number)
-
-      // get state at previous block
-      getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
-        // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
-
-        // apply mainchain references
-        for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
-        }
-
-        val gasPool = new GasPool(BigInteger.valueOf(block.header.gasLimit))
-
-        // apply all transaction, collecting traces on the way
-        val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
-          tagStateView.applyTransaction(tx, i, gasPool, blockContext)
-          blockContext.getEvmResult
-        })
-
-        new DebugTraceBlockView(evmResults.toArray)
-      }
-    }
+    val hash: Hash = {
+      applyOnAccountView { nodeView =>
+        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))}}
+    traceBlockByHash(hash, config)
   }
 
   @RpcMethod("debug_traceBlockByHash")
