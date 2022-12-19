@@ -53,7 +53,6 @@ public interface NodeHistoryBase<
 
     Optional<TX> searchTransactionInsideSidechainBlock(String transactionId, String blockId);
 
-    Optional<TX> searchTransactionInsideBlockchain(String transactionId);
 
 }
 

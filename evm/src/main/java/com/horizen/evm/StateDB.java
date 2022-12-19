@@ -8,17 +8,22 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 public class StateDB extends ResourceHandle {
-    public static byte[] EMPTY_CODE_HASH =
+    /**
+     * Code hash of an empty byte array
+     */
+    public static final byte[] EMPTY_CODE_HASH =
             Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
     /**
      * TrieHasher.Root() of an empty byte array
      */
-    public static byte[] EMPTY_ROOT_HASH =
+    public static final byte[] EMPTY_ROOT_HASH =
             Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
     /**
      * Opens a view on the state at the given state root hash.
+     * @param db database instance
+     * @param root root hash
      */
     public StateDB(Database db, byte[] root) {
         super(LibEvm.stateOpen(db.handle, root));
@@ -63,7 +68,7 @@ public class StateDB extends ResourceHandle {
      * Check if the account with the given address is empty
      *
      * @param address account address
-     * @return true if account exists, otherwise false
+     * @return true if account state is empty, otherwise false
      */
     public boolean isEmpty(byte[] address) {
         return LibEvm.stateEmpty(handle, address);
@@ -107,7 +112,7 @@ public class StateDB extends ResourceHandle {
      * Add amount to balance of given account. Will implicity create account if necessary.
      *
      * @param address account address
-     * @param amount amount to add to account balance
+     * @param amount  amount to add to account balance
      */
     public void addBalance(byte[] address, BigInteger amount) {
         LibEvm.stateAddBalance(handle, address, amount);
@@ -117,7 +122,7 @@ public class StateDB extends ResourceHandle {
      * Subtract from balance of given account.
      *
      * @param address account address
-     * @param amount amount to subtract from account balance
+     * @param amount  amount to subtract from account balance
      */
     public void subBalance(byte[] address, BigInteger amount) {
         LibEvm.stateSubBalance(handle, address, amount);
@@ -127,7 +132,7 @@ public class StateDB extends ResourceHandle {
      * Set balance of account balance
      *
      * @param address account address
-     * @param amount amount to assign to the account balance
+     * @param amount  amount to assign to the account balance
      */
     public void setBalance(byte[] address, BigInteger amount) {
         LibEvm.stateSetBalance(handle, address, amount);
@@ -147,7 +152,7 @@ public class StateDB extends ResourceHandle {
      * Set account nonce.
      *
      * @param address account address
-     * @param nonce value to set account nonce to
+     * @param nonce   value to set account nonce to
      */
     public void setNonce(byte[] address, BigInteger nonce) {
         LibEvm.stateSetNonce(handle, address, nonce);
@@ -176,7 +181,7 @@ public class StateDB extends ResourceHandle {
      * Set code for the given account. Will also recalculate and set code hash accordingly.
      *
      * @param address account address
-     * @param code code binary
+     * @param code    code binary
      */
     public void setCode(byte[] address, byte[] code) {
         LibEvm.stateSetCode(handle, address, code);
@@ -194,8 +199,8 @@ public class StateDB extends ResourceHandle {
     /**
      * Read storage trie of given account.
      *
-     * @param address account address
-     * @param key storage key
+     * @param address  account address
+     * @param key      storage key
      * @param strategy storage strategy to apply
      * @return storage value, representation depends on strategy
      */
@@ -215,9 +220,9 @@ public class StateDB extends ResourceHandle {
      * Note: Do not mix RAW and CHUNKED strategies for the same key,
      * this can potentially lead to dangling nodes in the storage Trie and de facto infinite-loops.
      *
-     * @param address account address
-     * @param key storage key
-     * @param value value to store
+     * @param address  account address
+     * @param key      storage key
+     * @param value    value to store
      * @param strategy storage strategy to apply
      */
     public void setStorage(byte[] address, byte[] key, byte[] value, StateStorageStrategy strategy) {
@@ -236,8 +241,8 @@ public class StateDB extends ResourceHandle {
     /**
      * Remove from storage trie of given account.
      *
-     * @param address account address
-     * @param key storage key
+     * @param address  account address
+     * @param key      storage key
      * @param strategy access strategy to apply
      */
     public void removeStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
@@ -255,8 +260,9 @@ public class StateDB extends ResourceHandle {
 
     /**
      * Get the Merkle-proof for a given account and optionally some storage keys.
+     *
      * @param address account address
-     * @param keys storage keys
+     * @param keys    storage keys
      * @return proofs
      */
     public ProofAccountResult getProof(byte[] address, byte[][] keys) {
@@ -303,7 +309,7 @@ public class StateDB extends ResourceHandle {
     /**
      * Set tx context, used when the EVM emits new state logs.
      *
-     * @param txHash the hash of the transaction to be set in context
+     * @param txHash  the hash of the transaction to be set in context
      * @param txIndex the index of the transaction in the block
      */
     public void setTxContext(byte[] txHash, int txIndex) {

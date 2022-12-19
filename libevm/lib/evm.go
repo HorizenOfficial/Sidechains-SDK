@@ -18,15 +18,15 @@ import (
 
 type EvmParams struct {
 	HandleParams
-	From          common.Address   `json:"from"`
-	To            *common.Address  `json:"to"`
-	Value         *hexutil.Big     `json:"value"`
-	Input         []byte           `json:"input"`
-	AvailableGas  hexutil.Uint64   `json:"availableGas"`
-	GasPrice      *hexutil.Big     `json:"gasPrice"`
-	AccessList    types.AccessList `json:"accessList"`
-	Context       EvmContext       `json:"context"`
-	TxTraceParams *TraceParams     `json:"traceParams"`
+	From         common.Address   `json:"from"`
+	To           *common.Address  `json:"to"`
+	Value        *hexutil.Big     `json:"value"`
+	Input        []byte           `json:"input"`
+	AvailableGas hexutil.Uint64   `json:"availableGas"`
+	GasPrice     *hexutil.Big     `json:"gasPrice"`
+	AccessList   types.AccessList `json:"accessList"`
+	Context      EvmContext       `json:"context"`
+	TraceOptions *TraceOptions    `json:"traceOptions"`
 }
 
 type EvmContext struct {
@@ -39,7 +39,7 @@ type EvmContext struct {
 	Random      *common.Hash   `json:"random"`
 }
 
-type TraceParams struct {
+type TraceOptions struct {
 	EnableMemory     bool `json:"enableMemory"`
 	DisableStack     bool `json:"disableStack"`
 	DisableStorage   bool `json:"disableStorage"`
@@ -113,7 +113,7 @@ func (c *EvmContext) getChainConfig() *params.ChainConfig {
 	}
 }
 
-func (t *TraceParams) getTracer() *logger.StructLogger {
+func (t *TraceOptions) getTracer() *logger.StructLogger {
 	if t == nil {
 		return nil
 	}
@@ -156,7 +156,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		blockContext = params.Context.getBlockContext()
 		chainConfig  = params.Context.getChainConfig()
-		tracer       = params.TxTraceParams.getTracer()
+		tracer       = params.TraceOptions.getTracer()
 		evmConfig    = vm.Config{
 			Debug:                   tracer != nil,
 			Tracer:                  tracer,

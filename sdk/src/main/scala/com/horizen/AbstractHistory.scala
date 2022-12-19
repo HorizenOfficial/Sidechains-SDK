@@ -20,6 +20,7 @@ import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 
 
 abstract class AbstractHistory[
@@ -549,44 +550,19 @@ abstract class AbstractHistory[
     makeNewHistory(storage, consensusDataStorage)
   }
 
+  def findTransactionInsideBlock(transactionId: String, block: PM): JOptional[TX] = {
+    block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
+      case Some(tx) => JOptional.ofNullable(tx)
+      case None => JOptional.empty()
+    }
+  }
 
-  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): Optional[TX] = {
+  def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[TX] = {
     storage.blockById(ModifierId(blockId)) match {
       case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
-      case None => Optional.empty()
+      case None => JOptional.empty()
     }
   }
-
-  protected def findTransactionInsideBlock(transactionId: String, block: PM): Optional[TX] = {
-    block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
-      case Some(tx) => Optional.ofNullable(tx)
-      case None => Optional.empty()
-    }
-  }
-
-  override def searchTransactionInsideBlockchain(transactionId: String): Optional[TX] = {
-    var startingBlock = Optional.ofNullable(getBestBlock)
-    var transaction: Optional[TX] = Optional.empty()
-    var found = false
-    while (!found && startingBlock.isPresent) {
-      val tx = findTransactionInsideBlock(transactionId, startingBlock.get())
-      if (tx.isPresent) {
-        found = true
-        transaction = Optional.ofNullable(tx.get())
-      } else {
-        startingBlock = storage.parentBlockId(startingBlock.get().id) match {
-          case Some(id) => storage.blockById(id) match {
-            case Some(block) => Optional.ofNullable(block)
-            case None => Optional.empty()
-          }
-          case None => Optional.empty()
-        }
-      }
-    }
-
-    transaction
-  }
-
 }
 
 object AbstractHistory {
@@ -602,8 +578,7 @@ object AbstractHistory {
       // First MC header Cumulative CommTree hash is provided by genesis info
       Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock[TX](block),
-      // TODO check this
-      WithdrawalEpochUtils.getWithdrawalEpochInfo[TX](block, WithdrawalEpochInfo(0,0), params),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
       None,
       block.id
     )

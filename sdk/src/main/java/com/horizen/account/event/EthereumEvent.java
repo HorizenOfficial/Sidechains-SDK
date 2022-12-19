@@ -75,13 +75,13 @@ public class EthereumEvent {
      * @throws IOException
      */
     private static EvmLog createEvmLog(Address contractAddress, Function eventFunction, Boolean anonymous) throws IOException {
-        var address = com.horizen.evm.utils.Address.FromBytes(Numeric.hexStringToByteArray(contractAddress.getValue()));
+        var address = com.horizen.evm.utils.Address.fromBytes(Numeric.hexStringToByteArray(contractAddress.getValue()));
         List<Hash> topics = new ArrayList<>();
         ByteArrayOutputStream dataOutputStream = new ByteArrayOutputStream();
         var outputParameters = eventFunction.getOutputParameters();
 
         if (!anonymous) {
-            topics.add(Hash.FromBytes(Numeric.hexStringToByteArray(EventEncoder.encode(new Event(eventFunction.getName(), new ArrayList<>(outputParameters))))));
+            topics.add(Hash.fromBytes(Numeric.hexStringToByteArray(EventEncoder.encode(new Event(eventFunction.getName(), new ArrayList<>(outputParameters))))));
         }
 
         for (var i = 0; i < outputParameters.size(); i++) {
@@ -90,9 +90,9 @@ public class EthereumEvent {
                 if (topics.size() > 3)
                     throw new IllegalArgumentException("Error: More than four topics defined - defined topics: " + topics.size());
                 // values <= 32 byte will be used as is
-                if (encodedValue.length > 32)
-                    encodedValue = (byte[]) Keccak256.hash(encodedValue);
-                topics.add(Hash.FromBytes(encodedValue));
+                if (encodedValue.length > 32) encodedValue = (byte[]) Keccak256.hash(encodedValue);
+                topics.add(Hash.fromBytes(encodedValue));
+
             } else {
                 dataOutputStream.write(encodedValue);
             }

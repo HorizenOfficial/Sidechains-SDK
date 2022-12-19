@@ -1,6 +1,6 @@
 package com.horizen.evm;
 
-public class Database extends ResourceHandle {
+public abstract class Database extends ResourceHandle {
     public Database(int handle) {
         super(handle);
     }
