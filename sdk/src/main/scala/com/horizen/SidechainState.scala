@@ -129,6 +129,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getLastCertificateReferencedEpoch()
   }
 
+  /*
+   * Returns the id of Sidechain block with the last top quality certificate certificate.
+   * Note: has sense only for non-ceasing sidechains. Always returns `None` for ceasing sidechains.
+   */
+  def lastCertificateSidechainBlockId(): Option[ModifierId] = {
+    stateStorage.getLastCertificateSidechainBlockId()
+  }
+
   def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
   }

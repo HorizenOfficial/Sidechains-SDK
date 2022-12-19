@@ -31,26 +31,70 @@ abstract class CircuitStrategy[T <: CertificateData](settings: SidechainSettings
     ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
   }
 
-  protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
-    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
+  protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, state: SidechainState, withdrawalEpochNumber: Int): Array[Byte] = {
+    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, state, withdrawalEpochNumber)
     headerInfo.cumulativeCommTreeHash
   }
 
-  protected def lastConsensusEpochNumberForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
-    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
+  protected def lastConsensusEpochNumberForWithdrawalEpochNumber(history: SidechainHistory, state: SidechainState, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
+    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, state, withdrawalEpochNumber)
 
     val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(headerInfo.sidechainBlockId)
     TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
   }
 
-  protected def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): MainchainHeaderInfo = {
-    val mcBlockHash = withdrawalEpochNumber match {
-      case -1 => params.parentHashOfGenesisMainchainBlock
-      case _ =>
-        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
-        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala
-          .map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
+  protected def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: SidechainHistory, state: SidechainState, withdrawalEpochNumber: Int): MainchainHeaderInfo = {
+    val mcBlockHash = {
+      val withdrawalEpochLastMcBlockHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
+
+      val withdrawalEpochLastMcBlockHash = withdrawalEpochNumber match {
+        case -1 => params.parentHashOfGenesisMainchainBlock
+        case _ =>
+          history.getMainchainBlockReferenceInfoByMainchainBlockHeight(withdrawalEpochLastMcBlockHeight).asScala
+            .map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
+      }
+
+      if(params.isNonCeasing) {
+        // For non-ceasing sidechain we may include previous epoch certificate after the end of its "virtual withdrawal
+        // epoch" because of any delay reason: submitters were offline or MC had other data to be included with higher
+        // priority, etc.
+        // Mainchain has a specific timing check that every certificate references a block whose commitment
+        // tree includes the previous certificate. That is applicable only for non-ceasing sidechains.
+        // For ceasing ones it comes for free, because of the concept of "submission window".
+        // So, in case of being non-ceasing one, certificate may refer to the `endEpochCumScTxCommTreeRoot` that belongs
+        // to the MC block after the end of "virtual withdrawal epoch". So the higher mc block must be chosen.
+        state.lastCertificateSidechainBlockId() match {
+          case Some(blockId) =>
+            val block = history.modifierById(blockId).getOrElse(throw new IllegalStateException(s"Missed sc block $blockId in the history."))
+            // Get mc block hash with the top quality certificate from the block.
+            // Note: sc block may contain multiple MC block ref data with certs for different epochs (for example: ... N-2, N-1, N),
+            // but we are sure that exactly the LAST certificate for epoch N is always the one we are interested at.
+            val mcBlockHashWithCert: Array[Byte] = block.mainchainBlockReferencesData
+              .reverse
+              .find(data => data.topQualityCertificate.isDefined)
+              .getOrElse(throw new IllegalStateException(s"top quality certificate was not found for given sc block $blockId"))
+              .headerHash
+          val certSubmissionHeight: Int = history.getMainchainHeaderInfoByHash(mcBlockHashWithCert).asScala
+            .getOrElse(throw new IllegalStateException(s"Missed MC header info."))
+            .height
+
+            if(certSubmissionHeight > withdrawalEpochLastMcBlockHeight) {
+              // Certificate has been submitted after the corresponding "virtual withdrawal epoch" end.
+              mcBlockHashWithCert
+            } else {
+              // Certificate has been submitted in-time.
+              withdrawalEpochLastMcBlockHash
+            }
+          case None =>
+            // First certificate case
+            withdrawalEpochLastMcBlockHash
+        }
+      } else {
+        // Ceasing sidechain case - behave as usual
+        withdrawalEpochLastMcBlockHash
+      }
     }
+
     log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${
       BytesUtils.toHexString(mcBlockHash)
     }")
