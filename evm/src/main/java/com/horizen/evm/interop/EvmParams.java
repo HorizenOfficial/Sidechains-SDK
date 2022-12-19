@@ -14,10 +14,7 @@ public class EvmParams extends HandleParams {
 
     public EvmContext context;
 
-    public TraceParams traceParams;
-
-    public EvmParams() {
-    }
+    public TraceOptions traceOptions;
 
     public EvmParams(
             int handle,
@@ -28,16 +25,16 @@ public class EvmParams extends HandleParams {
             BigInteger availableGas,
             BigInteger gasPrice,
             EvmContext context,
-            TraceParams traceParams
+            TraceOptions traceOptions
     ) {
         super(handle);
-        this.from = Address.FromBytes(from);
-        this.to = Address.FromBytes(to);
+        this.from = Address.fromBytes(from);
+        this.to = Address.fromBytes(to);
         this.value = value;
         this.input = input;
         this.availableGas = availableGas;
         this.gasPrice = gasPrice;
         this.context = context;
-        this.traceParams = traceParams;
+        this.traceOptions = traceOptions;
     }
 }

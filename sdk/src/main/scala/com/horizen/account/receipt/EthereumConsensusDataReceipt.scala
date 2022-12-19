@@ -1,7 +1,7 @@
 package com.horizen.account.receipt
 
-import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
@@ -17,6 +17,7 @@ case class EthereumConsensusDataReceipt(
     status: Int,
     cumulativeGasUsed: BigInteger,
     logs: Seq[EvmLog],
+    logsBloom: Bloom
 ) {
 
   /*  From yellow paper
@@ -27,7 +28,22 @@ case class EthereumConsensusDataReceipt(
       the set of logs created through execution of the transaction, Rl
       and the Bloom filter composed from information in those logs, Rb
    */
-  lazy val logsBloom: LogsBloom = LogsBloom.fromEvmLog(logs)
+
+  def this(
+      transactionType: Int,
+      status: Int,
+      cumulativeGasUsed: BigInteger,
+      logs: Seq[EvmLog]
+  ) {
+
+    this(
+      transactionType,
+      status,
+      cumulativeGasUsed,
+      logs,
+      Bloom.fromLogs(logs)
+    )
+  }
 
   require(
     transactionType >= EthereumTransactionType.LegacyTxType.ordinal() && transactionType <= EthereumTransactionType.DynamicFeeTxType.ordinal()
@@ -84,7 +100,8 @@ case class EthereumConsensusDataReceipt(
     }
     logsString = logsString.concat("}")
 
-    val logsBloomStr = BytesUtils.toHexString(logsBloom.getBloomFilter())
+    var logsBloomStr = "null"
+    logsBloomStr = BytesUtils.toHexString(logsBloom.getBytes)
 
     String.format(
       s"EthereumReceipt (receipt consensus data) { txType=$getTxType, status=$getStatus, cumGasUsed=$cumulativeGasUsed, logs=$logsString, logsBloom=$logsBloomStr}"
@@ -130,6 +147,7 @@ object EthereumConsensusDataReceipt {
       status,
       cumulativeGasUsed,
       logs,
+      Bloom(logsBloom),
     )
   }
 
@@ -143,6 +161,7 @@ object EthereumConsensusDataReceipt {
       r.status,
       r.cumulativeGasUsed,
       r.logs,
+      r.logsBloom
     )
   }
 
@@ -180,8 +199,8 @@ object EthereumConsensusDataReceipt {
       else new Array[Byte](0)
     result.add(RlpString.create(postTxState))
     result.add(RlpString.create(r.cumulativeGasUsed))
-    //bloom filters
-    result.add(RlpString.create(r.logsBloom.getBloomFilter()))
+    // bloom filter
+    result.add(RlpString.create(r.logsBloom.getBytes))
     // logs
     val rlpLogs = new util.ArrayList[RlpType]
     for (log <- r.logs) {

@@ -16,7 +16,7 @@ class FeeUtilsTest extends JUnitSuite {
       expectedBaseFee: Long
   ): Unit = {
     val block =
-      AccountMockDataHelper(false).getMockedBlock(BigInteger.valueOf(currentBaseFee), gasUsedPercent, 100, null, null)
+      AccountMockDataHelper(false).getMockedBlock(BigInteger.valueOf(currentBaseFee), gasUsedPercent, 100)
     assertEquals(message, calculateNextBaseFee(block), BigInteger.valueOf(expectedBaseFee))
   }
 

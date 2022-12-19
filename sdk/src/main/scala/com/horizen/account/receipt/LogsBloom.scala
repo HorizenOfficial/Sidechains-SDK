@@ -2,7 +2,6 @@ package com.horizen.account.receipt
 
 import scorex.crypto.hash.Keccak256
 import com.horizen.account.receipt.LogsBloom.BLOOM_FILTER_LENGTH
-import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -18,29 +17,6 @@ class LogsBloom() extends BytesSerializable {
 
     require(bloomFilter.length == BLOOM_FILTER_LENGTH)
     this.bloomFilter = bloomFilter.clone()
-  }
-
-  def addLogToBloomFilter(log: EvmLog): Unit = {
-    addBytesToBloomFilter(log.address.toBytes)
-    log.topics.foreach(topic => addBytesToBloomFilter(topic.toBytes))
-  }
-
-  def addBytesToBloomFilter(data: Array[Byte]): Unit = {
-    val (bloomFilterIndexes, bloomFilterValues) = getBloomFilterValues(data)
-
-    bloomFilterIndexes.zipWithIndex
-      .foreach({ case (bloomFilterIndex, i) =>
-        bloomFilter(bloomFilterIndex) = (bloomFilter(bloomFilterIndex) | bloomFilterValues(i)).toByte
-      })
-  }
-
-  def addBloomFilter(bloomFilter: LogsBloom): Unit = {
-    val bloomBytes = bloomFilter.getBloomFilter()
-
-    this.bloomFilter.zipWithIndex
-      .foreach({ case (bloomByte, i) =>
-        this.bloomFilter(i) = (bloomByte | bloomBytes(i)).toByte
-      })
   }
 
   def contains(data: Array[Byte]): Boolean = {
@@ -92,28 +68,6 @@ class LogsBloom() extends BytesSerializable {
 
 object LogsBloom {
   val BLOOM_FILTER_LENGTH = 256
-
-  def fromEvmLog(evmLogs: Seq[EvmLog]): LogsBloom = {
-    val logsBloom = new LogsBloom()
-
-    evmLogs.foreach(log => {
-      logsBloom.addLogToBloomFilter(log)
-    })
-
-    logsBloom
-  }
-
-  def fromEthereumReceipt(ethereumReceipts: Seq[EthereumReceipt]): LogsBloom = {
-    val logsBloom = new LogsBloom()
-
-    ethereumReceipts.foreach(receipt => {
-      receipt.consensusDataReceipt.logs.foreach(log => {
-        logsBloom.addLogToBloomFilter(log)
-      })
-    })
-
-    logsBloom
-  }
 }
 
 object LogsBloomSerializer extends SparkzSerializer[LogsBloom] {

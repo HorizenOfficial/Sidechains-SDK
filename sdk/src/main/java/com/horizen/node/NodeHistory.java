@@ -13,7 +13,5 @@ public interface NodeHistory
         extends NodeHistoryBase<BoxTransaction<Proposition, Box<Proposition>>, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo> {
 
     Optional<BoxTransaction<Proposition, Box<Proposition>>> searchTransactionInsideSidechainBlock(String transactionId, String blockId);
-
-    Optional<BoxTransaction<Proposition, Box<Proposition>>> searchTransactionInsideBlockchain(String transactionId);
 }
 

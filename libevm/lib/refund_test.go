@@ -2,13 +2,13 @@ package lib
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
 	"testing"
 )
 
 // test cases from EIP-3529:
 // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-3529.md#with-reduced-refunds
+// original implementation in GETH, see here:
+// github.com/ethereum/go-ethereum@v1.10.26/core/vm/gas_table_test.go:51
 var refundTests = []struct {
 	sequence string
 	refund   uint64
@@ -45,8 +45,14 @@ func TestSetStateWithRefund(t *testing.T) {
 			values = append(values, common.BytesToHash([]byte{value}))
 		}
 
+		dbHandle := instance.OpenMemoryDB()
+		_, stateHandle := instance.StateOpen(StateParams{
+			DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+			Root:           common.Hash{},
+		})
+		_, statedb := instance.statedbs.Get(stateHandle)
+
 		// set and commit the first value
-		statedb, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 		statedb.CreateAccount(address)
 		statedb.SetState(address, key, values[0])
 		// Push the state into the "original" slot
@@ -65,7 +71,7 @@ func TestSetStateWithRefund(t *testing.T) {
 		}
 
 		// verify the refund is as expected
-		if refund := statedb.GetRefund(); refund != tt.refund {
+		if _, refund := instance.StateGetRefund(HandleParams{Handle: stateHandle}); uint64(refund) != tt.refund {
 			t.Errorf("test %d: gas refund mismatch: have %v, want %v", i, refund, tt.refund)
 		}
 	}
