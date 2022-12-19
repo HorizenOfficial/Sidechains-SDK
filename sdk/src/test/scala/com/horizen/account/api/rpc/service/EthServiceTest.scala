@@ -191,7 +191,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def eth_syncing(): Unit = {
-    assertEquals(false, ethService.execute(getRpcRequest()).asInstanceOf[Quantity].value)
+    assertEquals(false, ethService.execute(getRpcRequest()).asInstanceOf[Boolean])
   }
 
   @Test
