@@ -5,7 +5,7 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewBase
+import com.horizen.{AbstractState, SidechainNodeViewBase}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainDebugErrorResponse._
 import com.horizen.api.http.SidechainDebugRestScheme._
@@ -34,7 +34,7 @@ case class SidechainSubmitterApiRoute[
   PM <: SidechainBlockBase[TX, H],
   FPI <: AbstractFeePaymentsInfo,
   NH <: NodeHistoryBase[TX, H, PM, FPI],
-  NS <: NodeStateBase,
+  NS <: AbstractState[TX, H, PM, NS] with NodeStateBase,
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
   NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef, circuitType: CircuitTypes)

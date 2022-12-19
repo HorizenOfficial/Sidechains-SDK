@@ -21,7 +21,6 @@ import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import java.util
 import scala.collection.mutable
-import scala.util.Try
 
 trait CertificateKeysProvider {
   private[horizen] def getKeyRotationProof(epochNum: Int, index: Int, keyType: KeyRotationProofType,  view: BaseAccountStateView): Option[KeyRotationProof]
@@ -58,10 +57,10 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
     CertifiersKeys(singingKeys, masterKeys)
   }
 
-  private def getLatestMasterKey(view: BaseAccountStateView, configKey: SchnorrProposition, epoch: Int, index: Int): SchnorrProposition = {
+  private def getLatestMasterKey(view: BaseAccountStateView, configKey: SchnorrProposition, requestedEpoch: Int, index: Int): SchnorrProposition = {
     val masterKeyChangeHistory = getKeysRotationHistory(MasterKeyRotationProofType, index, view)
 
-    masterKeyChangeHistory.epochNumbers.find(epoch > _)
+    masterKeyChangeHistory.epochNumbers.find(_ < requestedEpoch)
       .flatMap(getMasterKey(_, index, view))
       .getOrElse(configKey)
   }

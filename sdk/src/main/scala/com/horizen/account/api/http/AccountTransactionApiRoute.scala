@@ -28,6 +28,7 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrSignatureSerializer
 import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, SchnorrPropositionSerializer, VrfPublicKey}
+import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
@@ -642,8 +643,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     if (keyType < 0 || keyType >= KeyRotationProofTypes.maxId)
       throw new IllegalArgumentException("Key type enumeration value should be valid!")
 
-    if (!newKeySignature.isValid(newKey, newKey.bytes()))
+    val newPK = SchnorrPublicKey.deserialize(newKey.pubKeyBytes())
+    val newPKhash = newPK.getHash
+    val messageToSign = newPKhash.serializeFieldElement()
+
+    if (!newKeySignature.isValid(newKey, messageToSign))
       throw new IllegalArgumentException(s"Key rotation proof - self signature is invalid: $index")
+    newPK.freePublicKey()
+    newPKhash.freeFieldElement()
   }
 
 }
