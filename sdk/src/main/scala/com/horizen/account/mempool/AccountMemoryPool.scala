@@ -27,8 +27,6 @@ class AccountMemoryPool(
   with ScorexLogging {
   override type NVCT = AccountMemoryPool
 
-  type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
-
   // Getters:
   override def modifierById(
                              modifierId: ModifierId
@@ -121,10 +119,10 @@ class AccountMemoryPool(
   def getNonExecutableTransactions: util.List[ModifierId] =
     unconfirmed.mempoolTransactions(false).toList.asJava
 
-  def getExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, TxByNonceMap] =
+  def getExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMap(true)
 
-  def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, TxByNonceMap] =
+  def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMap(false)
 
   override def getTransactions(

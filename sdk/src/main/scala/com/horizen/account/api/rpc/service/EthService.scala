@@ -106,8 +106,8 @@ class EthService(
         val returnNonceTxsMap = {
           val nonceTxsMap = new java.util.HashMap[BigInteger,TxPoolTransaction]
           for ((txNonce, tx) <- nonceTransactionsMap) {
-            nonceTxsMap.put(txNonce, new TxPoolTransaction(tx.getFrom.bytes(), tx.getGasLimit, tx.getGasPrice, null,
-              null, tx.getNonce, null, tx.getValue))
+            nonceTxsMap.put(txNonce, new TxPoolTransaction(tx.getFrom.bytes(), tx.getGasLimit, tx.getGasPrice, tx.id.toBytes,
+              tx.getData, tx.getNonce, tx.getTo.get().bytes(), tx.getValue))
           }
           nonceTxsMap}
         addressNonceTxsMap.put(Numeric.toHexString(from.bytes()),returnNonceTxsMap)

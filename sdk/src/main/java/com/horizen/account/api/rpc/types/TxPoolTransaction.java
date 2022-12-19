@@ -17,8 +17,8 @@ public class TxPoolTransaction {
     private final String from;
     private final String gas;
     private final String gasPrice;
-    private final String hash;
-    private final String input;
+    private final String hash;              // transaction modifier id
+    private final String input;             // transaction data
     private final String nonce;
     private final String to;
     private final String transactionIndex;  // always null
