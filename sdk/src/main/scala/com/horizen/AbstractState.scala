@@ -24,6 +24,7 @@ abstract class AbstractState[
   def getWithdrawalEpochInfo: WithdrawalEpochInfo
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo)
   def lastCertificateReferencedEpoch: Option[Int]
+  def lastCertificateSidechainBlockId(): Option[ModifierId]
   def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof]
   def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys]
   def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]

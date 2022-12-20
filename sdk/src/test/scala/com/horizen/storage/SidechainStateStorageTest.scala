@@ -176,7 +176,7 @@ class SidechainStateStorageTest
     assertEquals("Storage must NOT contain requested Box.", None, stateStorage.getBox("non-existing id".getBytes()))
 
     // Data for Test 1:
-    val version = getVersion
+    val version: ByteArrayWrapper = getVersion
     val toUpdate = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     val toRemove = new JArrayList[ByteArrayWrapper]()
     toUpdate.add(storedBoxList.head)
@@ -189,11 +189,14 @@ class SidechainStateStorageTest
     val referenceEpochNumber = 0
     val cert: WithdrawalEpochCertificate = generateWithdrawalEpochCertificate(epochNumber = Some(referenceEpochNumber))
 
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateSidechainBlockIdKey), version))
+
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateEpochNumberKey),
       new ByteArrayWrapper(new ByteArrayWrapper(Ints.toByteArray(referenceEpochNumber)))))
 
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getTopQualityCertificateKey(referenceEpochNumber)),
       new ByteArrayWrapper(WithdrawalEpochCertificateSerializer.toBytes(cert))))
+
     // block fee info
     val nextBlockFeeInfoCounter: Int = 0
     val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
@@ -214,16 +217,16 @@ class SidechainStateStorageTest
       ArgumentMatchers.anyList[Pair[ByteArrayWrapper, ByteArrayWrapper]](),
       ArgumentMatchers.anyList[ByteArrayWrapper]()))
       // For Test 1:
-      .thenAnswer(answer => {
-        val actualVersion = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
-        val actualToUpdate = answer.getArgument(1).asInstanceOf[java.util.List[Pair[ByteArrayWrapper, ByteArrayWrapper]]]
-        val actualToRemove = answer.getArgument(2).asInstanceOf[java.util.List[ByteArrayWrapper]]
+      .thenAnswer(args => {
+        val actualVersion = args.getArgument(0).asInstanceOf[ByteArrayWrapper]
+        val actualToUpdate = args.getArgument(1).asInstanceOf[java.util.List[Pair[ByteArrayWrapper, ByteArrayWrapper]]]
+        val actualToRemove = args.getArgument(2).asInstanceOf[java.util.List[ByteArrayWrapper]]
         assertEquals("StateStorage.update(...) actual Version is wrong.", version, actualVersion)
         assertEquals("StateStorage.update(...) actual toUpdate list is wrong.", toUpdate, actualToUpdate)
         assertEquals("StateStorage.update(...) actual toRemove list is wrong.", toRemove, actualToRemove)
       })
       // For Test 2:
-      .thenAnswer(answer => throw expectedException)
+      .thenAnswer(_ => throw expectedException)
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),

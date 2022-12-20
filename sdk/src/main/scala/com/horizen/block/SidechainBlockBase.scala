@@ -23,8 +23,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
   val sidechainTransactions: Seq[TX]
   val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]
 
-  // Note: can be 0 or 1 in case of ceasing sidechain, and 0+ for non-ceasing sidechain
-  lazy val topQualityCertificates: Seq[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificates)
+  lazy val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificate).lastOption
 
   override lazy val version: Block.Version = header.version
 

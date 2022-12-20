@@ -9,6 +9,7 @@ import com.horizen.certnative.NaiveThresholdSignatureWKeyRotation;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.cryptolibprovider.CommonCircuit;
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation;
+import com.horizen.cryptolibprovider.utils.FieldElementUtils;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.proof.SchnorrProof;
 import com.horizen.proposition.SchnorrProposition;
@@ -30,12 +31,23 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     // but is always less or equal the one defined in the MC network (maxSegmentSize).
     private static final int supportedSegmentSize = (1 << 18);
 
-    private List<FieldElement> prepareCustomFieldElements(List<byte[]> customFields) {
-        Iterator<byte[]> iterator = customFields.iterator();
+    @Override
+    public List<byte[]> getCertificateCustomFields(byte[] keysRootHash) {
+        // Create an array with zero field elements. They are just a placeholders for future needs.
+        ArrayList<byte[]> customFields = new ArrayList<>(Collections.nCopies(
+                CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION, new byte[FieldElementUtils.fieldElementLength()]));
+        // Set genesis key root hash as a first item.
+        customFields.set(0, keysRootHash);
+        return customFields;
+    }
+
+
+    private List<FieldElement> prepareCustomFieldElements(byte[] keysRootHash) {
+        Iterator<byte[]> iterator = getCertificateCustomFields(keysRootHash).iterator();
         List<FieldElement> fieldElements = new ArrayList<>();
         while (iterator.hasNext()) {
-            byte[] actualKeysMerkleRootHash = iterator.next();
-            fieldElements.add(FieldElement.deserialize(actualKeysMerkleRootHash));
+            byte[] fieldBytes = iterator.next();
+            fieldElements.add(FieldElement.deserialize(fieldBytes));
         }
         return fieldElements;
     }
@@ -47,14 +59,14 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
                                             long ftMinAmount,
-                                            List<byte[]> customFields) {
+                                            byte[] keysRootHash) {
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         List<FieldElement> customFieldElements;
         FieldElement messageToSign;
         byte[] messageAsBytes;
         try (FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId)) {
-            customFieldElements = prepareCustomFieldElements(customFields);
+            customFieldElements = prepareCustomFieldElements(keysRootHash);
 
             WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
                     FieldElement.deserialize(sidechainId),
@@ -90,7 +102,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              byte[] endCumulativeScTxCommTreeRoot,
              long btrFee,
              long ftMinAmount,
-             List<byte[]> customFields,
              List<Optional<byte[]>> schnorrSignatureBytesList,
              SchnorrKeysSignatures schnorrKeysSignatures,
              long threshold,
@@ -105,7 +116,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFieldElement = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
+        List<FieldElement> customFieldsElements = prepareCustomFieldElements(getSchnorrKeysHash(schnorrKeysSignatures));
 
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
                 .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.apply(sidechainCreationVersionNumber)));
@@ -163,16 +174,16 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                byte[] endCumulativeScTxCommTreeRoot,
                                long btrFee,
                                long ftMinAmount,
-                               List<byte[]> customFields,
+                               byte[] keysRootHash,
                                long quality,
-                               Optional<WithdrawalCertificate> previousEpochCertificateOption,
+                               Optional<WithdrawalCertificate> previousEpochCertificateOption, // todo: use WithdrawalEpochCertificate same as in createProof
                                byte[] genesisConstantBytes,
                                int sidechainCreationVersionNumber,
                                byte[] proof,
                                String verificationKeyPath) {
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         boolean verificationResult = false;
-        List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
+        List<FieldElement> customFieldsElements = prepareCustomFieldElements(keysRootHash);
         FieldElement genesisConstant = FieldElement.deserialize(genesisConstantBytes);
         FieldElement sidechainIdFieldElement = FieldElement.deserialize(sidechainId);
 
@@ -221,14 +232,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         Arrays.stream(masterPublicKeys).forEach(SchnorrPublicKey::freePublicKey);
         hash.freeFieldElement();
         return sysDataConstantBytes;
-    }
-
-    @Override
-    public List<byte[]> getCertificateCustomFields(List<byte[]> customFields) {
-        List<FieldElement> fes = prepareCustomFieldElements(customFields);
-        List<byte[]> fesBytes = fes.stream().map(FieldElement::serializeFieldElement).collect(Collectors.toList());
-        fes.forEach(FieldElement::freeFieldElement);
-        return fesBytes;
     }
 
     @Override

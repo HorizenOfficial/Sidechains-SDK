@@ -1935,8 +1935,8 @@ paths:
     post:
       tags:
         - submitter
-      summary: returns certificate signer keys
-      description: Accepts number of withdrawal epoch and returns signer keys of certificate signers
+      summary: returns certifiers keys
+      description: Searches for the certifiers keys data actual at the end of the given withdrawal epoch
       operationId: getCertifiersKeys
       requestBody:
         content:
@@ -1949,7 +1949,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
-                  description: Withdrawal epoch of certificate signer keys
+                  description: Withdrawal epoch number
       responses:
         '200':
           description: successful operation
@@ -1963,7 +1963,7 @@ paths:
                     properties:
                       certifiersKeys:
                         $ref: '#/components/schemas/CertifiersKeys'
-                        description: Signer and master certificate submitter keys
+                        description: Signers and masters certificate submitter keys
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
