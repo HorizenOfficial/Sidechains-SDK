@@ -63,7 +63,7 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
+    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, status.referencedEpoch)
     val sidechainId = params.sidechainId
 
     val previousCertificateOption: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
@@ -101,7 +101,7 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
     val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
 
-    val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
 
     val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation

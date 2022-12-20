@@ -13,7 +13,7 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging, idToBytes, bytesToId}
 
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
@@ -63,6 +63,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   private[horizen] val getLastCertificateEpochNumberKey = Utils.calculateKey("lastCertificateEpochNumber".getBytes)
+
+  private[horizen] val getLastCertificateSidechainBlockIdKey = Utils.calculateKey("getLastCertificateSidechainBlockId".getBytes)
 
   private val undefinedBlockFeeInfoCounter: Int = -1
 
@@ -208,6 +210,21 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           case Success(epoch) => Some(epoch)
           case Failure(exception) =>
             log.error("Error while last certificate epoch information parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
+    }
+  }
+
+  def getLastCertificateSidechainBlockId(): Option[ModifierId] = {
+    storage.get(getLastCertificateSidechainBlockIdKey).asScala match {
+      case Some(baw) =>
+        Try {
+          bytesToId(baw.data())
+        } match {
+          case Success(id) => Some(id)
+          case Failure(exception) =>
+            log.error("Error while last certificate sidechain block id parsing.", exception)
             Option.empty
         }
       case _ => Option.empty
@@ -367,6 +384,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
         updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
           WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+        // For non-ceasing sidechain store the id of the SC block which contains the certificate.
+        // It is used to detect if certificate was included into the MC till the end of the "virtual withdrawal epoch"
+        // or with some delay, so will have an impact on the value of the next certificate `endEpochCumScTxCommTreeRoot`.
+        updateList.add(new JPair(getLastCertificateSidechainBlockIdKey, version))
 
         // For non-ceasing sidechain we remove outdated certificate info when we retrieve the new top quality certificate:
         // remove outdated withdrawal related records and counters from upt to the current cert data;

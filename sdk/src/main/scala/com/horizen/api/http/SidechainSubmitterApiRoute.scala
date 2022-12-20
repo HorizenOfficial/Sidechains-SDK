@@ -14,11 +14,10 @@ import akka.pattern.ask
 import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorBadCircuit, ErrorRetrieveCertificateSigners, ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
 import com.horizen.api.http.SidechainDebugRestScheme._
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.utils.BytesUtils
 import com.horizen.api.http.JacksonSupport._
+import com.horizen.proposition.SchnorrProposition
 
 case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef,  circuitType: CircuitTypes)
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
@@ -86,10 +85,10 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
   def getSchnorrPublicKeyHash: Route = (post & path("getSchnorrPublicKeyHash")) {
     entity(as[ReqGetSchnorrPublicKeyHash]) { body =>
       try {
-        val schnorrPublicKey = SchnorrPublicKey.deserialize(BytesUtils.fromHexString(body.schnorrPublicKey))
+        val schnorrPublicKey: SchnorrProposition = new SchnorrProposition(BytesUtils.fromHexString(body.schnorrPublicKey))
         ApiResponseUtil.toResponse(
           RespHashSchnorrPublicKey(
-            BytesUtils.toHexString(schnorrPublicKey.getHash.serializeFieldElement())
+            BytesUtils.toHexString(schnorrPublicKey.getHash)
           )
         )
       } catch {
@@ -102,11 +101,11 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
     try {
       entity(as[ReqGetCertificateSigners]) { body =>
           withView { sidechainNodeView =>
-            sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch -1) match {
+            sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch) match {
               case Some(certifiersKeys) =>
                 ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys))
               case None =>
-                ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Impossible to find certificate signer keys!", JOptional.empty()))
+                ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Can not find certifiers keys.", JOptional.empty()))
             }
           }
       }
@@ -163,7 +162,7 @@ object SidechainDebugRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqGetCertificateSigners(withdrawalEpoch: Int) {
-    require(withdrawalEpoch >= 0, "Withdrawal epoch is negative")
+    require(withdrawalEpoch >= -1, "Withdrawal epoch is smaller than -1")
   }
 
   @JsonView(Array(classOf[Views.Default]))

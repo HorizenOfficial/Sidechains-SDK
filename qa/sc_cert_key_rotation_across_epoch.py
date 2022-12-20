@@ -134,7 +134,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         epoch_mc_blocks_left -= 1
 
         # Call getCertificateKeys endpoint
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)["certifiersKeys"]
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, -1)["certifiersKeys"]
         assert_equal(len(certificate_signers_keys["signingKeys"]), self.cert_max_keys)
         assert_equal(len(certificate_signers_keys["masterKeys"]), self.cert_max_keys)
 
@@ -319,7 +319,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
             assert_equal(master_key_rotation_proof, {})
 
         # Verify that we have the updated key
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 1)["certifiersKeys"]
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)["certifiersKeys"]
         assert_equal(certificate_signers_keys["signingKeys"][0]["publicKey"], new_public_key_2)
         api_server_thread.terminate()
 
