@@ -13,8 +13,8 @@ from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
 from httpCalls.submitter.getSchnorrPublicKeyHash import http_get_schnorr_public_key_hash
 from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction_evm
-from qa.SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from qa.SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from test_framework.util import assert_equal, assert_true
 
 """

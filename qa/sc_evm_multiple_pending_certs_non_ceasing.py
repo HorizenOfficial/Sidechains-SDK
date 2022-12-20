@@ -7,8 +7,8 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     generate_next_block, connect_sc_nodes, AccountModel, assert_equal
-from qa.SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from qa.SidechainTestFramework.account.utils import convertZenToZennies
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.utils import convertZenToZennies
 from test_framework.util import fail, websocket_port_by_mc_node_index
 
 """

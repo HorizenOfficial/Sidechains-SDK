@@ -6,7 +6,7 @@ from SidechainTestFramework.scutil import generate_next_blocks
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
 from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction_evm
-from qa.SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from test_framework.util import assert_equal
 
 """
