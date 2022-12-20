@@ -37,12 +37,12 @@ Test:
     - Check that certificate submission is in progress on SC node 1
     - Wait for the cert in MC mempool and generate 1 MC block and 1 SC block with that Cert.
     - Check that we started generating certificate for the next epoch in the queue.
-    -- Verify that first certificate endCumulativeScTxCommitmentTreeRoot equals to last one in the withdrawal epoch 0.
+    - Verify that first certificate endCumulativeScTxCommitmentTreeRoot equals to last one in the withdrawal epoch 0.
     - Repeat previous 2 steps to see that we generated all certificates except the one for epoch 5 (not a moment)
-    -- Verify that certificate endCumulativeScTxCommitmentTreeRoot equals to the one that contains previous epoch cert.
+    - Verify that certificate endCumulativeScTxCommitmentTreeRoot equals to the one that contains previous epoch cert.
        Note: due to the certificate timing check in the MC we need to shift the endCumulativeScTxCommitmentTreeRoot.
     - Generate more MC and SC blocks. Check the submission of the Cert for epoch 5.
-    -- Verify that certificate endCumulativeScTxCommitmentTreeRoot equals to last one in the withdrawal epoch 5.
+    - Verify that certificate endCumulativeScTxCommitmentTreeRoot equals to last one in the withdrawal epoch 5.
 """
 
 
