@@ -26,7 +26,7 @@ class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) e
   private val ommersSerializer: ListSerializer[Ommer[AccountBlockHeader]] = new ListSerializer[Ommer[AccountBlockHeader]](AccountOmmerSerializer)
 
   override def serialize(obj: AccountBlock, w: Writer): Unit = {
-    AccountBlockHeaderSerializer.serialize(obj.header.asInstanceOf[AccountBlockHeader], w)
+    AccountBlockHeaderSerializer.serialize(obj.header, w)
     sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.asJava, w)
     mcBlocksDataSerializer.serialize(obj.mainchainBlockReferencesData.asJava, w)
     mainchainHeadersSerializer.serialize(obj.mainchainHeaders.asJava, w)
@@ -34,11 +34,8 @@ class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) e
   }
 
   override def parse(r: Reader): AccountBlock = {
-    require(r.remaining <= SidechainBlockBase.MAX_BLOCK_SIZE)
-
     val SidechainAccountBlockHeader: AccountBlockHeader = AccountBlockHeaderSerializer.parse(r)
-    val sidechainTransactions = sidechainTransactionsSerializer.parse(r)
-      .asScala.map(t => t.asInstanceOf[SidechainTypes#SCAT])
+    val sidechainTransactions = sidechainTransactionsSerializer.parse(r).asScala
     val mainchainBlockReferencesData = mcBlocksDataSerializer.parse(r).asScala
     val mainchainHeaders = mainchainHeadersSerializer.parse(r).asScala
     val ommers = ommersSerializer.parse(r).asScala

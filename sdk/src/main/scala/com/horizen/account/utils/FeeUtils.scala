@@ -9,10 +9,10 @@ import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 object FeeUtils {
 
-  val GAS_LIMIT = 30000000
+  val GAS_LIMIT: Long = 30000000L
   val INITIAL_BASE_FEE: BigInteger = BigInteger.valueOf(1000000000)
   val BASE_FEE_CHANGE_DENOMINATOR: BigInteger = BigInteger.valueOf(8)
-  val BASE_FEE_ELASTICITY_MULTIPLIER: Long = 2
+  val BASE_FEE_ELASTICITY_MULTIPLIER: Long = 2L
 
   def calculateBaseFee(history: AccountHistory, parentId: BlockId): BigInteger = {
     // If the current block is the first block, return the InitialBaseFee.
@@ -33,14 +33,14 @@ object FeeUtils {
 
   private def calculateBaseFeeForBlock(block: AccountBlock): BigInteger = {
     val blockHeader = block.header
-    val gasTarget = blockHeader.gasLimit / BASE_FEE_ELASTICITY_MULTIPLIER
+    val gasTarget = blockHeader.gasLimit.longValueExact() / BASE_FEE_ELASTICITY_MULTIPLIER
 
     // If the parent gasUsed is the same as the target, the baseFee remains unchanged
-    if (blockHeader.gasUsed == gasTarget) {
+    if (blockHeader.gasUsed.longValueExact() == gasTarget) {
       return blockHeader.baseFee
     }
 
-    val gasDiff = blockHeader.gasUsed - gasTarget
+    val gasDiff = blockHeader.gasUsed.longValueExact() - gasTarget
 
     val baseFeeDiff = BigInteger
       .valueOf(Math.abs(gasDiff))

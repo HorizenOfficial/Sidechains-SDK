@@ -49,7 +49,7 @@ public class BlockContext {
             blockHeader.forgerAddress().address(),
             blockHeader.timestamp(),
             blockHeader.baseFee(),
-            blockHeader.gasLimit(),
+            blockHeader.gasLimit().longValueExact(),
             blockNumber,
             consensusEpochNumber,
             withdrawalEpochNumber,

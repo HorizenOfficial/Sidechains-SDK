@@ -14,13 +14,11 @@ import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSeri
 import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
-import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-
 import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
 
@@ -39,11 +37,11 @@ case class AccountBlockHeader(
                                receiptsRoot: Array[Byte],
                                forgerAddress: AddressProposition,
                                baseFee: BigInteger,
-                               gasUsed: Long,
-                               gasLimit: Long,
+                               gasUsed: BigInteger,
+                               gasLimit: BigInteger,
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
-                               override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
+                               override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. By default StateDB.EMPTY_ROOT_HASH.
                                logsBloom: Bloom,
                                override val signature: Signature25519
                                ) extends SidechainBlockHeaderBase with BytesSerializable {
@@ -51,9 +49,6 @@ case class AccountBlockHeader(
   override type M = AccountBlockHeader
 
   override def serializer: SparkzSerializer[AccountBlockHeader] = AccountBlockHeaderSerializer
-
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
-  override lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
@@ -69,8 +64,8 @@ case class AccountBlockHeader(
       receiptsRoot,
       forgerAddress.bytes(),
       baseFee.toByteArray,
-      Longs.toByteArray(gasUsed),
-      Longs.toByteArray(gasLimit),
+      gasUsed.toByteArray,
+      gasLimit.toByteArray,
       ommersMerkleRootHash,
       Longs.toByteArray(ommersCumulativeScore),
       feePaymentsHash,
@@ -82,26 +77,51 @@ case class AccountBlockHeader(
     super.semanticValidity(params) match {
       case Success(_) =>
 
-        if (stateRoot.length != MerkleTree.ROOT_HASH_LENGTH
-          || receiptsRoot.length != MerkleTree.ROOT_HASH_LENGTH)
-          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id contains out of bound fields.")
+        if (stateRoot.length != MerkleTree.ROOT_HASH_LENGTH)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: invalid stateRoot.length ${stateRoot.length} != ${MerkleTree.ROOT_HASH_LENGTH}.")
+
+        if (receiptsRoot.length != MerkleTree.ROOT_HASH_LENGTH)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: invalid receiptsRoot.length ${receiptsRoot.length} != ${MerkleTree.ROOT_HASH_LENGTH}.")
 
         if (version != AccountBlock.ACCOUNT_BLOCK_VERSION)
-          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id version $version is invalid.")
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: version $version is invalid.")
 
         // check, that signature is valid
         if (!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
-          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id signature is invalid.")
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: signature is invalid.")
+
+        // Check gasLimit and gasUsed are in the expected bound in their BigInteger representation
+        // If the value of the BigInteger is out of the range of the long type, then an ArithmeticException is thrown.
+        // --
+        // this check is actually stricter than !BigIntegerUtil.isUint64(gas) since in java we can not handle unsigned
+        // long values
+        Try {
+          gasLimit.longValueExact()
+        } match {
+          case Success(_) =>
+          case Failure(exception) =>
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasLimit size overflows. " + exception.getMessage)
+        }
+        Try {
+          gasUsed.longValueExact()
+        } match {
+          case Success(_) =>
+          case Failure(exception) =>
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed size overflows.. " + exception.getMessage)
+        }
+
+        if (baseFee.signum() < 1)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: baseFee=$baseFee is negative and therefore invalid.")
 
         // check, that gas limit is valid
-        if (baseFee.signum() == 1) {
-          if(gasLimit != FeeUtils.GAS_LIMIT)
-            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasLimit is invalid.")
-          if(gasUsed < 0)
-            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasUsed is below zero and therefore invalid.")
-          if(gasUsed > gasLimit)
-            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasUsed is greater than $gasLimit and therefore invalid.")
-        }
+        if(gasLimit.longValue() != FeeUtils.GAS_LIMIT)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasLimit=$gasLimit is invalid.")
+        if(gasUsed.signum() < 0)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed=$gasUsed is below zero and therefore invalid.")
+        if(gasUsed.longValue() > gasLimit.longValue())
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed=$gasUsed is greater than gasLimit=$gasLimit and therefore invalid.")
+
+
       case Failure(exception) =>
         throw exception
     }
@@ -145,9 +165,9 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
     w.putInt(baseFee.length)
     w.putBytes(baseFee)
 
-    w.putLong(obj.gasUsed)
-
-    w.putLong(obj.gasLimit)
+    // longValueExact throws exception if overflows
+    w.putLong(obj.gasUsed.longValueExact())
+    w.putLong(obj.gasLimit.longValueExact())
 
     w.putBytes(obj.ommersMerkleRootHash)
 
@@ -180,18 +200,18 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
-    val stateRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
+    val stateRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val receiptsRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
+    val receiptsRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
     val baseFeeSize = r.getInt()
     val baseFee = new BigInteger(r.getBytes(baseFeeSize))
 
-    val gasUsed = r.getLong()
+    val gasUsed = BigInteger.valueOf(r.getLong())
 
-    val gasLimit = r.getLong()
+    val gasLimit = BigInteger.valueOf(r.getLong())
 
     val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 

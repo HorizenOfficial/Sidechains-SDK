@@ -707,9 +707,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 BigInteger baseFee = FeeUtils.INITIAL_BASE_FEE();
 
-                long gasUsed = 0L;
+                BigInteger gasUsed = BigInteger.ZERO;
 
-                long gasLimit = FeeUtils.GAS_LIMIT();
+                BigInteger gasLimit = BigInteger.valueOf(FeeUtils.GAS_LIMIT());
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 

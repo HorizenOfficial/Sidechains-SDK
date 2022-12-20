@@ -180,7 +180,7 @@ class AccountForgeMessageBuilder(
     val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 3. Set gasLimit
-    val gasLimit = FeeUtils.GAS_LIMIT
+    val gasLimit : BigInteger = BigInteger.valueOf(FeeUtils.GAS_LIMIT)
 
     // 4. create a context for the new block
     // this will throw if parent block was not found
@@ -189,7 +189,7 @@ class AccountForgeMessageBuilder(
       forgerAddress.address(),
       timestamp,
       baseFee,
-      gasLimit,
+      gasLimit.longValueExact(),
       parentInfo.height + 1,
       TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
       WithdrawalEpochUtils
@@ -241,7 +241,7 @@ class AccountForgeMessageBuilder(
     val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
 
     // 7. Get cumulativeGasUsed from last receipt in list if available
-    val gasUsed: Long = receiptList.lastOption.map(_.cumulativeGasUsed.longValueExact()).getOrElse(0)
+    val gasUsed: BigInteger = receiptList.lastOption.map(_.cumulativeGasUsed).getOrElse(BigInteger.ZERO)
 
     // 8. set the fee payments hash
     val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
@@ -293,13 +293,11 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      // stateRoot TODO add constant
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      // forgerAddress: PublicKeySecp256k1Proposition TODO add constant
       new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),
       BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
-      Long.MaxValue,
-      Long.MaxValue,
+      BigInteger.valueOf(Long.MaxValue),
+      BigInteger.valueOf(Long.MaxValue),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),

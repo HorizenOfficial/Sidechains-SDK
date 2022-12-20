@@ -120,7 +120,7 @@ class AccountState(
       var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
       var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
-      val blockGasPool = new GasPool(BigInteger.valueOf(mod.header.gasLimit))
+      val blockGasPool = new GasPool(mod.header.gasLimit)
       val blockContext =
         new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch, params.chainId)
 

@@ -40,9 +40,6 @@ case class SidechainBlockHeader(
 
   override def serializer: SparkzSerializer[SidechainBlockHeader] = SidechainBlockHeaderSerializer
 
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
-  override lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
-
   override lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
       Array[Byte]{version},

@@ -52,8 +52,8 @@ public class EthereumBlockView {
         this.mixHash = "0x";
         this.extraData = "0x";
         this.size = Numeric.prependHexPrefix(Integer.toHexString(block.header().bytes().length));
-        this.gasLimit = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasLimit()));
-        this.gasUsed = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasUsed()));
+        this.gasLimit = Numeric.toHexStringWithPrefix(blockHeader.gasLimit());
+        this.gasUsed = Numeric.toHexStringWithPrefix(blockHeader.gasUsed());
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
         this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
 
