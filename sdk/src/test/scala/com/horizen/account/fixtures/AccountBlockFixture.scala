@@ -124,8 +124,8 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
     val forgingStakeInfo : ForgingStakeInfo = forgerMetadata.forgingStakeInfo
     val forgerAddress: AddressProposition = accountPayment.address
     val baseFee: BigInteger = BigInteger.ZERO
-    val gasUsed: Long = 0
-    val gasLimit: Long = 0
+    val gasUsed: BigInteger = BigInteger.ZERO
+    val gasLimit: BigInteger = BigInteger.ZERO
     val logsBloom: Bloom = new Bloom()
 
     AccountBlock.create(
@@ -145,7 +145,8 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
       new Array[Byte](32),
       forgerAddress,
       baseFee,
-      gasUsed, gasLimit,
+      gasUsed,
+      gasLimit,
       companion,
       logsBloom
     ).get

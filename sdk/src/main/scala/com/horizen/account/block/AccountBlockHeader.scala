@@ -111,7 +111,7 @@ case class AccountBlockHeader(
         }
 
         if (baseFee.signum() < 1)
-          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: baseFee=$baseFee is negative and therefore invalid.")
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: baseFee=$baseFee is non positive and therefore invalid.")
 
         // check, that gas limit is valid
         if(gasLimit.longValue() != FeeUtils.GAS_LIMIT)

@@ -3,9 +3,12 @@ package com.horizen.account.fixtures
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.Bloom
+import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.fixtures.VrfGenerator
 import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.proposition.VrfPublicKey
+import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.{MerklePath, Utils}
 import scorex.util.bytesToId
 
@@ -16,31 +19,33 @@ import scala.util.Random
 trait AccountBlockHeaderFixture {
 
   def createUnsignedBlockHeader(seed: Long = 123134L,
+                                vrfKeysOpt: Option[(VrfSecretKey, VrfPublicKey)] = None,
                                 vrfProofOpt: Option[VrfProof] = None,
-                                blockVersion:Byte = AccountBlock.ACCOUNT_BLOCK_VERSION): AccountBlockHeader = {
+                                blockVersion:Byte = AccountBlock.ACCOUNT_BLOCK_VERSION): (AccountBlockHeader,  ForgerAccountGenerationMetadata) = {
     val random: Random = new Random(seed)
 
     val parentId = new Array[Byte](32)
     random.nextBytes(parentId)
 
+    val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(seed, vrfKeysOpt)
     val vrfProof = vrfProofOpt.getOrElse(VrfGenerator.generateProof(seed))
-    val merklePath = new MerklePath(new JArrayList())
-    val transactionsRootHash = Utils.ZEROS_HASH
-    val mainchainRootHash = Utils.ZEROS_HASH
-    val ommersRootHash = Utils.ZEROS_HASH
 
-    val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(0L)
+    val merklePath = new MerklePath(new JArrayList())
+
+    val transactionsRootHash = Utils.ZEROS_HASH
+
+    val mainchainRootHash = Utils.ZEROS_HASH
+
+    val ommersRootHash = Utils.ZEROS_HASH
 
     val forgingStakeInfo : ForgingStakeInfo = forgerMetadata.forgingStakeInfo
     val stateRoot = new Array[Byte](32)
     val receiptsRoot = new Array[Byte](32)
     val forgerAddress : AddressProposition = accountPayment.address
-    val baseFee: BigInteger = BigInteger.ZERO
-    val gasUsed: Long = 0
-    val gasLimit: Long = 0
+    val baseFee: BigInteger = INITIAL_BASE_FEE
+    val gasUsed: BigInteger = BigInteger.valueOf(21000)
+    val gasLimit: BigInteger = BigInteger.valueOf(GAS_LIMIT)
     val logsBloom: Bloom = new Bloom()
-
-
 
     val unsignedHeader = AccountBlockHeader(
       blockVersion,
@@ -64,6 +69,6 @@ trait AccountBlockHeaderFixture {
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH))
     )
 
-    unsignedHeader
+    (unsignedHeader, forgerMetadata)
   }
 }
