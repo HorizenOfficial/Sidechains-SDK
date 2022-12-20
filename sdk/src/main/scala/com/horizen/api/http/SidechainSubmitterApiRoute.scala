@@ -101,11 +101,11 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
     try {
       entity(as[ReqGetCertificateSigners]) { body =>
           withView { sidechainNodeView =>
-            sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch -1) match {
+            sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch) match {
               case Some(certifiersKeys) =>
                 ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys))
               case None =>
-                ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Impossible to find certificate signer keys!", JOptional.empty()))
+                ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Can not find certifiers keys.", JOptional.empty()))
             }
           }
       }
@@ -162,7 +162,7 @@ object SidechainDebugRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqGetCertificateSigners(withdrawalEpoch: Int) {
-    require(withdrawalEpoch >= 0, "Withdrawal epoch is negative")
+    require(withdrawalEpoch >= -1, "Withdrawal epoch is smaller than -1")
   }
 
   @JsonView(Array(classOf[Views.Default]))

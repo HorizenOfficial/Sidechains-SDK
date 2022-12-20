@@ -96,6 +96,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getKeyRotationProof(withdrawalEpoch, indexOfSigner, keyType)
   }
 
+  /**
+   * Searches for the certifiers keys data actual at the end of the given withdrawal epoch
+   * @param withdrawalEpoch
+   *        withdrawal epoch number, at the end of which the certifiers keys where defined/stored
+   * @return certifier keys in case the given withdrawal epoch has been finished and the record is still in the database,
+   *         None otherwise.
+   * @note in case {@code witdrawalEpoch == -1}, than returns the genesis set of certifiers keys from params.
+   */
   def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     if (withdrawalEpoch == -1)
       Option.apply(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))

@@ -148,7 +148,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         self.sc_sync_all()
 
         # Call getCertificateSigners endpoint
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)["certifiersKeys"]
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, -1)["certifiersKeys"]
         assert_equal(len(certificate_signers_keys["signingKeys"]), self.cert_max_keys)
         assert_equal(len(certificate_signers_keys["masterKeys"]), self.cert_max_keys)
 
@@ -419,7 +419,7 @@ class SCKeyRotationTest(SidechainTestFramework):
             assert_equal(master_key_rotation_proof, {})
 
         # Verify that we have the updated key
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 1)["certifiersKeys"]
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)["certifiersKeys"]
         assert_equal(certificate_signers_keys["signingKeys"][0]["publicKey"], new_public_key_2)
         assert_equal(certificate_signers_keys["masterKeys"][0]["publicKey"], new_public_key_3)
 
@@ -494,7 +494,7 @@ class SCKeyRotationTest(SidechainTestFramework):
             assert_equal(master_key_rotation_proof, {})
 
         # Verify that we have the updated key
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 2)["certifiersKeys"]
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, 1)["certifiersKeys"]
         assert_equal(certificate_signers_keys["signingKeys"][0]["publicKey"], new_public_key_4)
 
         # Change ALL the signing keys and ALL tee master keys
@@ -610,7 +610,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         check_mcreference_presence(we1_2_mcblock_hash, scblock_id, sc_node)
 
         # Verify that we have all the singing keys updated
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 3)["certifiersKeys"]
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, 2)["certifiersKeys"]
         for i in range(len(certificate_signers_keys["signingKeys"])):
             assert_equal(certificate_signers_keys["signingKeys"][i]["publicKey"], new_signing_keys[i].publicKey)
             assert_equal(certificate_signers_keys["masterKeys"][i]["publicKey"], new_master_keys[i].publicKey)
