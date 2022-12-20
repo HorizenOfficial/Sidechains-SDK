@@ -5,11 +5,13 @@ import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getA
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable}
 import com.horizen.account.events.SubmitKeyRotation
 import com.horizen.account.state.CertificateKeyRotationMsgProcessor.{CertificateKeyRotationContractAddress, CertificateKeyRotationContractCode, SubmitKeyRotationReqCmdSig}
-import com.horizen.account.state.KeyRotationProofType.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.schnorrnative.SchnorrPublicKey
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
@@ -17,13 +19,11 @@ import scorex.crypto.hash.{Digest32, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
-import java.math.BigInteger
 import java.util
 import scala.collection.mutable
-import scala.util.Try
 
 trait CertificateKeysProvider {
-  private[horizen] def getKeyRotationProof(keyType: KeyRotationProofType.Value, epochNum: Int, index: Int, view: BaseAccountStateView): Option[KeyRotationProof]
+  private[horizen] def getKeyRotationProof(epochNum: Int, index: Int, keyType: KeyRotationProofType,  view: BaseAccountStateView): Option[KeyRotationProof]
 
   private[horizen] def getCertifiersKeys(epochNum: Int, view: BaseAccountStateView): CertifiersKeys
 }
@@ -50,30 +50,30 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
       .map(key_index => getLatestSigningKey(view, key_index._1, epochNum, key_index._2))
       .toVector
 
-    val masterKeys = params.masterPublicKeys.zipWithIndex
+    val masterKeys = params.mastersPublicKeys.zipWithIndex
       .map(key_index => getLatestMasterKey(view, key_index._1, epochNum, key_index._2))
       .toVector
 
     CertifiersKeys(singingKeys, masterKeys)
   }
 
-  private def getLatestMasterKey(view: BaseAccountStateView, configKey: SchnorrProposition, epoch: Int, index: Int): SchnorrProposition = {
+  private def getLatestMasterKey(view: BaseAccountStateView, configKey: SchnorrProposition, requestedEpoch: Int, index: Int): SchnorrProposition = {
     val masterKeyChangeHistory = getKeysRotationHistory(MasterKeyRotationProofType, index, view)
 
-    masterKeyChangeHistory.epochNumbers.find(epoch > _)
+    masterKeyChangeHistory.epochNumbers.find(_ < requestedEpoch)
       .flatMap(getMasterKey(_, index, view))
       .getOrElse(configKey)
   }
 
-  private def getLatestSigningKey(view: BaseAccountStateView, configKey: SchnorrProposition, epoch: Int, index: Int): SchnorrProposition = {
+  private def getLatestSigningKey(view: BaseAccountStateView, configKey: SchnorrProposition, requestedEpoch: Int, index: Int): SchnorrProposition = {
     val signingKeyChangeHistory = getKeysRotationHistory(SigningKeyRotationProofType, index, view)
 
-    signingKeyChangeHistory.epochNumbers.find(epoch > _)
+    signingKeyChangeHistory.epochNumbers.find(_ < requestedEpoch)
       .flatMap(getSigningKey(_, index, view))
       .getOrElse(configKey)
   }
 
-  override private[horizen] def getKeyRotationProof(keyType: KeyRotationProofType.Value, epochNum: Int, index: Int, view: BaseAccountStateView): Option[KeyRotationProof] = {
+  override private[horizen] def getKeyRotationProof(epochNum: Int, index: Int, keyType: KeyRotationProofType, view: BaseAccountStateView): Option[KeyRotationProof] = {
     val key = getKeyRotationProofKey(keyType, epochNum, index)
     val maybeData = view.getAccountStorageBytes(contractAddress, key)
     if (maybeData.length > 0)
@@ -82,14 +82,15 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
       None
   }
 
-  private[horizen] def getKeysRotationHistory(keyType: KeyRotationProofType.Value, index: Int, view: BaseAccountStateView): KeyRotationHistory = {
-    Try(
-      KeyRotationHistorySerializer.parseBytes(view.getAccountStorageBytes(contractAddress, getKeysRotationHistoryKey(keyType, index)))
-    )
-      .getOrElse(KeyRotationHistory(List()))
+  private[horizen] def getKeysRotationHistory(keyType: KeyRotationProofType, index: Int, view: BaseAccountStateView): KeyRotationHistory = {
+    val maybeData = view.getAccountStorageBytes(contractAddress, getKeysRotationHistoryKey(keyType, index))
+    if (maybeData.length > 0)
+      KeyRotationHistorySerializer.parseBytes(maybeData)
+    else
+      KeyRotationHistory(List())
   }
 
-  private def putKeyRotationHistory(keyType: KeyRotationProofType.Value, index: Int, view: BaseAccountStateView, history: KeyRotationHistory): Unit = {
+  private def putKeyRotationHistory(keyType: KeyRotationProofType, index: Int, view: BaseAccountStateView, history: KeyRotationHistory): Unit = {
     view.updateAccountStorageBytes(contractAddress, getKeysRotationHistoryKey(keyType, index), history.bytes)
   }
 
@@ -120,8 +121,9 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
       throw new ExecutionRevertedException(s"Key rotation proof - key index out for range: $index")
 
     val signingKeyFromConfig = params.signersPublicKeys(index)
-    val masterKeyFromConfig = params.masterPublicKeys(index)
-    val newKeyAsMessage = keyRotationProof.newValueOfKey.bytes().take(32)
+    val masterKeyFromConfig = params.mastersPublicKeys(index)
+    val newKey = SchnorrPublicKey.deserialize(keyRotationProof.newKey.pubKeyBytes())
+    val newKeyAsMessage = newKey.getHash.serializeFieldElement()
 
     val latestSigningKey = getLatestSigningKey(view, signingKeyFromConfig, currentEpochNum, index)
     val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)
@@ -131,7 +133,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
     if (!keyRotationProof.masterKeySignature.isValid(latestMasterKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - master signature is invalid: $index")
 
-    if (!newKeySignature.isValid(keyRotationProof.newValueOfKey, newKeyAsMessage))
+    if (!newKeySignature.isValid(keyRotationProof.newKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - self signature is invalid: $index")
   }
 
@@ -152,7 +154,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
       case SigningKeyRotationProofType => getSigningKeyKey(currentEpochNum, keyIndex)
       case MasterKeyRotationProofType => getMasterKeyKey(currentEpochNum, keyIndex)
     }
-    view.updateAccountStorageBytes(contractAddress, storageKey, keyRotationProof.newValueOfKey.bytes())
+    view.updateAccountStorageBytes(contractAddress, storageKey, keyRotationProof.newKey.bytes())
 
     //update history
     val history = getKeysRotationHistory(keyType, keyIndex, view)
@@ -160,11 +162,11 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
       putKeyRotationHistory(keyType, keyIndex, view, KeyRotationHistory(currentEpochNum :: history.epochNumbers))
 
     //publish event
-    val keyRotationEvent = SubmitKeyRotation(keyType, keyIndex, keyRotationProof.newValueOfKey, currentEpochNum)
+    val keyRotationEvent = SubmitKeyRotation(keyType, keyIndex, keyRotationProof.newKey, currentEpochNum)
     val evmLog = getEvmLog(keyRotationEvent)
     view.addLog(evmLog)
 
-    keyRotationProof.bytes
+    keyRotationProof.encode()
   }
 
   private def checkMessageValidity(msg: Message): Unit = {
@@ -181,7 +183,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
     Keccak256.hash(keySeed)
   }
 
-  private def getKeyRotationProofKey(keyType: KeyRotationProofType.Value, withdrawalEpoch: Int, index: Int): Array[Byte] = {
+  private def getKeyRotationProofKey(keyType: KeyRotationProofType, withdrawalEpoch: Int, index: Int): Array[Byte] = {
     calculateKey(Bytes.concat(
       "keyRotationProof".getBytes,
       Ints.toByteArray(keyType.id),
@@ -198,7 +200,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
     calculateKey(Bytes.concat("masterKey".getBytes, Ints.toByteArray(epoch), Ints.toByteArray(index)))
   }
 
-  private def getKeysRotationHistoryKey(keyType: KeyRotationProofType.Value, index: Int): Array[Byte] = {
+  private def getKeysRotationHistoryKey(keyType: KeyRotationProofType, index: Int): Array[Byte] = {
     calculateKey(Bytes.concat("keyHistory".getBytes, Ints.toByteArray(keyType.id), Ints.toByteArray(index)))
   }
 }
@@ -207,7 +209,7 @@ object CertificateKeyRotationMsgProcessor {
   val CertificateKeyRotationContractAddress: Array[Byte] = CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
   val CertificateKeyRotationContractCode: Digest32 = Keccak256.hash("KeyRotationSmartContractCode")
 
-  val SubmitKeyRotationReqCmdSig: String = getABIMethodId("submitKeyRotation(uint32,uint32,bytes1,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)")
+  val SubmitKeyRotationReqCmdSig: String = getABIMethodId("submitKeyRotation(uint32,uint32,bytes32,bytes1,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)")
 }
 
 case class SubmitKeyRotationCmdInput(keyRotationProof: KeyRotationProof, newKeySignature: SchnorrProof) extends ABIEncodable[StaticStruct] {
@@ -231,8 +233,8 @@ object SubmitKeyRotationCmdInputDecoder extends ABIDecoder[SubmitKeyRotationCmdI
     org.web3j.abi.Utils.convert(util.Arrays.asList(
       new TypeReference[Uint32]() {},
       new TypeReference[Uint32]() {},
-      new TypeReference[Bytes1]() {},
       new TypeReference[Bytes32]() {},
+      new TypeReference[Bytes1]() {},
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes32]() {},
@@ -241,16 +243,16 @@ object SubmitKeyRotationCmdInputDecoder extends ABIDecoder[SubmitKeyRotationCmdI
       new TypeReference[Bytes32]() {}))
 
   override def createType(listOfParams: util.List[Type[_]]): SubmitKeyRotationCmdInput = {
-    val keyType = KeyRotationProofType(listOfParams.get(0).asInstanceOf[Uint32].getValue.intValue())
+    val keyType = KeyRotationProofTypes(listOfParams.get(0).asInstanceOf[Uint32].getValue.intValue())
     val index = listOfParams.get(1).asInstanceOf[Uint32].getValue.intValue()
-    val newKey = new SchnorrProposition(listOfParams.get(2).asInstanceOf[Bytes1].getValue ++ listOfParams.get(3).asInstanceOf[Bytes32].getValue)
+    val newKey = new SchnorrProposition(listOfParams.get(2).asInstanceOf[Bytes32].getValue ++ listOfParams.get(3).asInstanceOf[Bytes1].getValue)
     val signingSignature = new SchnorrProof(listOfParams.get(4).asInstanceOf[Bytes32].getValue ++ listOfParams.get(5).asInstanceOf[Bytes32].getValue)
     val masterSignature = new SchnorrProof(listOfParams.get(6).asInstanceOf[Bytes32].getValue ++ listOfParams.get(7).asInstanceOf[Bytes32].getValue)
     val newKeySignature = new SchnorrProof(listOfParams.get(8).asInstanceOf[Bytes32].getValue ++ listOfParams.get(9).asInstanceOf[Bytes32].getValue)
     val keyRotationProof = KeyRotationProof(
       keyType = keyType,
       index = index,
-      newValueOfKey = newKey,
+      newKey = newKey,
       signingKeySignature = signingSignature,
       masterKeySignature = masterSignature
     )
@@ -281,8 +283,4 @@ object KeyRotationHistorySerializer extends SparkzSerializer[KeyRotationHistory]
     }
     KeyRotationHistory(buffer.toList)
   }
-}
-
-object Test extends App {
-
 }

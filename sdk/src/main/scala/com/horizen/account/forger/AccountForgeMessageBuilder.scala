@@ -23,7 +23,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochUtils}
+import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
@@ -193,7 +193,7 @@ class AccountForgeMessageBuilder(
       parentInfo.height + 1,
       TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
       WithdrawalEpochUtils
-        .getWithdrawalEpochInfo(mainchainBlockReferencesData, parentInfo.withdrawalEpochInfo, params)
+        .getWithdrawalEpochInfo(mainchainBlockReferencesData.size, parentInfo.withdrawalEpochInfo, params)
         .epoch,
       params.chainId
     )
@@ -317,6 +317,7 @@ class AccountForgeMessageBuilder(
       nodeView: View,
       blockSizeIn: Int,
       mainchainBlockReferenceData: Seq[MainchainBlockReferenceData],
+      withdrawalEpochInfo: WithdrawalEpochInfo,
       timestamp: Timestamp,
       forcedTx: Iterable[SidechainTypes#SCAT]
   ): MempoolMap#TransactionsByPriceAndNonce = {

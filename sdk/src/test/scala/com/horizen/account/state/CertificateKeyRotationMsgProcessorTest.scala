@@ -4,8 +4,11 @@ import com.google.common.primitives.Bytes
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig
 import com.horizen.account.utils.FeeUtils
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
+import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
@@ -38,8 +41,8 @@ class CertificateKeyRotationMsgProcessorTest
 
   val keyGenerator: SchnorrKeyGenerator = SchnorrKeyGenerator.getInstance()
 
-  val masterKeyType: KeyRotationProofType.Value = KeyRotationProofType.MasterKeyRotationProofType
-  val signingKeyType: KeyRotationProofType.Value = KeyRotationProofType.SigningKeyRotationProofType
+  val masterKeyType: KeyRotationProofType = MasterKeyRotationProofType
+  val signingKeyType: KeyRotationProofType = SigningKeyRotationProofType
 
   @Before
   def setUp(): Unit = {
@@ -77,13 +80,15 @@ class CertificateKeyRotationMsgProcessorTest
     }
   }
 
-  private def buildKeyRotationProof(`type`: KeyRotationProofType.Value, index: Int, newKey: SchnorrSecret, oldSigningKey: SchnorrSecret, oldMasterKey: SchnorrSecret) = {
+  private def buildKeyRotationProof(`type`: KeyRotationProofType, index: Int, newKey: SchnorrSecret, oldSigningKey: SchnorrSecret, oldMasterKey: SchnorrSecret) = {
+    val messageToSign = SchnorrPublicKey.deserialize(newKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+
     KeyRotationProof(
       `type`,
       index,
       newKey.publicImage(),
-      oldSigningKey.sign(newKey.getPublicBytes.take(32)),
-      oldMasterKey.sign(newKey.getPublicBytes.take(32))
+      oldSigningKey.sign(messageToSign),
+      oldMasterKey.sign(messageToSign)
     )
   }
 
@@ -94,12 +99,14 @@ class CertificateKeyRotationMsgProcessorTest
       else
         new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1)
 
+    val messageToSign = SchnorrPublicKey.deserialize(newKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+
     withGas {
       certificateKeyRotationMsgProcessor.process(
         getMessage(
           to = contractAddress,
           data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++
-            SubmitKeyRotationCmdInput(keyRotationProof, newKey.sign(newKey.getPublicBytes.take(32))).encode(),
+            SubmitKeyRotationCmdInput(keyRotationProof, newKey.sign(messageToSign)).encode(),
           nonce = randomNonce
         ), view, _, blockContext
       )
@@ -109,7 +116,7 @@ class CertificateKeyRotationMsgProcessorTest
   @Test
   def testMethodIds(): Unit = {
     //The expected methodIds were calcolated using this site: https://emn178.github.io/online-tools/keccak_256.html
-    assertEquals("Wrong MethodId for SubmitKeyRotationReqCmdSig", "aa5a0d75", CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig)
+    assertEquals("Wrong MethodId for SubmitKeyRotationReqCmdSig", "288d61cc", CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig)
   }
 
   @Test
@@ -126,9 +133,10 @@ class CertificateKeyRotationMsgProcessorTest
 
       certificateKeyRotationMsgProcessor.init(view)
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey.publicImage()))
-      when(mockNetworkParams.masterPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
+      when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
-      val cmdInput = SubmitKeyRotationCmdInput(keyRotationProof, newMasterKey.sign(newMasterKey.getPublicBytes.take(32)))
+      val messageToSign = SchnorrPublicKey.deserialize(newMasterKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+      val cmdInput = SubmitKeyRotationCmdInput(keyRotationProof, newMasterKey.sign(messageToSign))
       val data: Array[Byte] = cmdInput.encode()
       val msg = getMessage(to = contractAddress, data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ data, nonce = randomNonce)
 
@@ -139,7 +147,7 @@ class CertificateKeyRotationMsgProcessorTest
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(masterKeyType, index = 0, view) shouldBe KeyRotationHistory(epochNumbers = List(0))
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(signingKeyType, index = 0, view) shouldBe KeyRotationHistory(epochNumbers = List())
 
-      certificateKeyRotationMsgProcessor.getKeyRotationProof(masterKeyType, 0, 0, view) shouldBe Some(keyRotationProof)
+      certificateKeyRotationMsgProcessor.getKeyRotationProof(0, 0, masterKeyType, view) shouldBe Some(keyRotationProof)
 
       certificateKeyRotationMsgProcessor.getCertifiersKeys(0, view) shouldBe
         CertifiersKeys(
@@ -165,7 +173,7 @@ class CertificateKeyRotationMsgProcessorTest
 
       certificateKeyRotationMsgProcessor.init(view)
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey.publicImage()))
-      when(mockNetworkParams.masterPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
+      when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
       processKeyRotationMessage(newMasterKeyFirst, keyRotationProofFirst, view)
       processKeyRotationMessage(newMasterKeySecond, keyRotationProofSecond, view)
@@ -173,7 +181,7 @@ class CertificateKeyRotationMsgProcessorTest
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(masterKeyType, index = 0, view) shouldBe KeyRotationHistory(epochNumbers = List(0))
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(signingKeyType, index = 0, view) shouldBe KeyRotationHistory(epochNumbers = List())
 
-      certificateKeyRotationMsgProcessor.getKeyRotationProof(masterKeyType, 0, 0, view) shouldBe Some(keyRotationProofSecond)
+      certificateKeyRotationMsgProcessor.getKeyRotationProof(0, 0, masterKeyType, view) shouldBe Some(keyRotationProofSecond)
     }
   }
 
@@ -190,7 +198,7 @@ class CertificateKeyRotationMsgProcessorTest
     VERIFICATIONS:
     for epoch 0 all keys from config
     for epoch 1 master key #0 is changed
-    for epoch 2 master key #0 is changed twice and signing key #1 is changed
+    for epoch 2 master key #0 is changed twice and signing key #0 is changed
      */
     val Seq(
     oldMasterKey0,
@@ -215,7 +223,7 @@ class CertificateKeyRotationMsgProcessorTest
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
       certificateKeyRotationMsgProcessor.init(view)
-      when(mockNetworkParams.masterPublicKeys).thenReturn(Seq(oldMasterKey0, oldMasterKey1).map(_.publicImage()))
+      when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey0, oldMasterKey1).map(_.publicImage()))
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey0, oldSigningKey1).map(_.publicImage()))
       //epoch 0
       processKeyRotationMessage(masterKey0FirstUpdate, keyRotationEpoch_0_MK_0, view)
@@ -250,9 +258,9 @@ class CertificateKeyRotationMsgProcessorTest
           Vector(masterKey0SecondUpdate, oldMasterKey1).map(_.publicImage())
         )
 
-      certificateKeyRotationMsgProcessor.getKeyRotationProof(masterKeyType, 0, 0, view) shouldBe Some(keyRotationEpoch_0_MK_0)
-      certificateKeyRotationMsgProcessor.getKeyRotationProof(masterKeyType, 1, 0, view) shouldBe Some(keyRotationEpoch_1_MK_0)
-      certificateKeyRotationMsgProcessor.getKeyRotationProof(masterKeyType, 2, 0, view) shouldBe Some(keyRotationEpoch_2_MK_0)
+      certificateKeyRotationMsgProcessor.getKeyRotationProof(0, 0, masterKeyType, view) shouldBe Some(keyRotationEpoch_0_MK_0)
+      certificateKeyRotationMsgProcessor.getKeyRotationProof(1, 0, masterKeyType, view) shouldBe Some(keyRotationEpoch_1_MK_0)
+      certificateKeyRotationMsgProcessor.getKeyRotationProof(2, 0, masterKeyType, view) shouldBe Some(keyRotationEpoch_2_MK_0)
     }
   }
 }

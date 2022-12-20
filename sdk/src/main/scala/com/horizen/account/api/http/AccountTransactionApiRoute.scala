@@ -20,14 +20,15 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
 import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainNodeErrorResponse.ErrorBadCircuit
+import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
-import com.horizen.cryptolibprovider.utils.TypeOfCircuit
-import com.horizen.cryptolibprovider.utils.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrSignatureSerializer
 import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, SchnorrPropositionSerializer, VrfPublicKey}
+import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
@@ -44,7 +45,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                                       sidechainTransactionActorRef: ActorRef,
                                       companion: SidechainAccountTransactionsCompanion,
                                       params: NetworkParams,
-                                      circuitType: Int)
+                                      circuitType: CircuitTypes)
                                      (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
   extends TransactionBaseApiRoute[
     SidechainTypes#SCAT,
@@ -63,7 +64,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes
+      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ createKeyRotationTransaction
   }
 
   def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -553,7 +554,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def createKeyRotationTransaction: Route = (post & path("createKeyRotationTransaction")) {
     withAuth {
       entity(as[ReqCreateKeyRotationTransaction]) { body =>
-        TypeOfCircuit(circuitType) match {
+        circuitType match {
           case NaiveThresholdSignatureCircuit =>
             ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
           case NaiveThresholdSignatureCircuitWithKeyRotation =>
@@ -634,16 +635,22 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction): Unit = {
     val index = body.keyIndex
     val keyType = body.keyType
-    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newValueOfKey))
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey))
     val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature))
     if (index < 0 || index >= params.signersPublicKeys.length)
       throw new IllegalArgumentException(s"Key rotation proof - key index out for range: $index")
 
-    if (keyType < 0 || keyType >= KeyRotationProofType.maxId)
+    if (keyType < 0 || keyType >= KeyRotationProofTypes.maxId)
       throw new IllegalArgumentException("Key type enumeration value should be valid!")
 
-    if (!newKeySignature.isValid(newKey, newKey.bytes()))
+    val newPK = SchnorrPublicKey.deserialize(newKey.pubKeyBytes())
+    val newPKhash = newPK.getHash
+    val messageToSign = newPKhash.serializeFieldElement()
+
+    if (!newKeySignature.isValid(newKey, messageToSign))
       throw new IllegalArgumentException(s"Key rotation proof - self signature is invalid: $index")
+    newPK.freePublicKey()
+    newPKhash.freeFieldElement()
   }
 
 }
@@ -702,9 +709,9 @@ object AccountTransactionRestScheme {
   }
 
   def encodeSubmitKeyRotationRequestCmd(request: ReqCreateKeyRotationTransaction): String = {
-    val keyType = KeyRotationProofType(request.keyType)
+    val keyType = KeyRotationProofTypes(request.keyType)
     val index = request.keyIndex
-    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newValueOfKey))
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newKey))
     val signingSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.signingKeySignature))
     val masterSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.masterKeySignature))
     val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newKeySignature))
@@ -741,14 +748,14 @@ object AccountTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateKeyRotationTransaction(keyType: Int,
                                                           keyIndex: Int,
-                                                          newValueOfKey: String,
+                                                          newKey: String,
                                                           signingKeySignature: String,
                                                           masterKeySignature: String,
                                                           newKeySignature: String,
                                                           nonce: Option[BigInteger],
                                                           gasInfo: Option[EIP1559GasInfo]) {
     require(keyIndex >= 0, "Key index negative")
-    require(newValueOfKey.nonEmpty, "newValueOfKey is empty")
+    require(newKey.nonEmpty, "newKey is empty")
     require(signingKeySignature.nonEmpty, "signingKeySignature is empty")
     require(masterKeySignature.nonEmpty, "masterKeySignature is empty")
     require(newKeySignature.nonEmpty, "newKeySignature is empty")

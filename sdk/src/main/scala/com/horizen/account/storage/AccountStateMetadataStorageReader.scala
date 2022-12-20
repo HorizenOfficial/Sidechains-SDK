@@ -15,6 +15,8 @@ trait AccountStateMetadataStorageReader {
 
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
 
+  def lastCertificateReferencedEpoch: Option[Int]
+
   def getConsensusEpochNumber: Option[ConsensusEpochNumber]
 
   def getTransactionReceipt(txHash: Array[Byte]) : Option[EthereumReceipt]

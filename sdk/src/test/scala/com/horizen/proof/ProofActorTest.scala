@@ -9,8 +9,9 @@ import akka.util.Timeout
 import com.google.common.io.Files
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
+import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, SchnorrFunctionsImplZendoo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.{NetworkParams, RegTestParams}
@@ -23,6 +24,7 @@ import org.junit.{Before, Ignore, Test}
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.Random
 
 case object ProofMessage
@@ -45,7 +47,7 @@ class ProofActorReceiver
     }
     catch {
       case e: Exception =>
-        assertEquals(e.toString(), true, false)
+        assertEquals(e.toString, true, false)
     }
 
     SchnorrSecretKey.deserialize(bytes)
@@ -61,13 +63,12 @@ class ProofActorReceiver
                                     merkelTreeRoot: Array[Byte]
                                    )
 
-  override def receive = {
-    case ProofMessage => {
+  override def receive: Receive = {
+    case ProofMessage =>
       sender ! tryGenerateProof
-    }
   }
 
-  protected def tryGenerateProof = {
+  protected def tryGenerateProof: Boolean = {
     val params = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
     val dataForProofGeneration: DataForProofGeneration = buildDataForProofGeneration(params)
     val proofWithQuality = generateProof(dataForProofGeneration)
@@ -81,7 +82,7 @@ class ProofActorReceiver
       dataForProofGeneration.withdrawalRequests.map(box => new BackwardTransfer(box.proposition.bytes, box.value)),
       0,
       0,
-      Optional.of(Array(0)),
+      Seq(Array(0)),
       None,
       params)
     true
@@ -115,21 +116,7 @@ class ProofActorReceiver
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
-      dataForProofGeneration.withdrawalRequests.map(box => new BackwardTransfer(box.proposition.bytes, box.value)).asJava,
-      dataForProofGeneration.sidechainId,
-      dataForProofGeneration.processedEpochNumber,
-      dataForProofGeneration.endCumulativeEpochBlockHash, // Pass block hash in LE endianness
-      0, // long btrFee
-      0, // long ftMinAmount
-      Optional.of(dataForProofGeneration.merkelTreeRoot), // utxoMerkleTreeRoot
-      dataForProofGeneration.signatures, // List<Optional<byte[]>> schnorrSignatureBytesList
-      dataForProofGeneration.publicKeysBytes, // List<byte[]> schnorrPublicKeysBytesList
-      dataForProofGeneration.threshold, //long threshold
-      ProofActorReceiver.provingKeyPath, // String provingKeyPath
-      true, //boolean checkProvingKey
-      true //boolean zk
-     )
+    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(dataForProofGeneration.withdrawalRequests.map(box => new BackwardTransfer(box.proposition.bytes, box.value)).asJava, dataForProofGeneration.sidechainId, dataForProofGeneration.processedEpochNumber, dataForProofGeneration.endCumulativeEpochBlockHash, 0, 0, Optional.of(dataForProofGeneration.merkelTreeRoot), dataForProofGeneration.signatures, dataForProofGeneration.publicKeysBytes, dataForProofGeneration.threshold, ProofActorReceiver.provingKeyPath, true, true)
   }
 }
 
@@ -167,7 +154,7 @@ class ProofActorTest {
     for (i <- 1 to 15) {
       println("Proof generation # " + i)
 
-      implicit val timeout = Timeout(600 seconds) // needed for `?` below
+      implicit val timeout: Timeout = Timeout(600 seconds) // needed for `?` below
 
       val result = Await.result(receiverInst ? ProofMessage, timeout.duration).asInstanceOf[Boolean]
 

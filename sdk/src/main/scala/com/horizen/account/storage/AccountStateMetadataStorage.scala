@@ -40,6 +40,8 @@ class AccountStateMetadataStorage(storage: Storage)
 
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = getView.getTopQualityCertificate(referencedWithdrawalEpoch)
 
+  override def lastCertificateReferencedEpoch: Option[Int] = getView.lastCertificateReferencedEpoch
+
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
 
   override def hasCeased: Boolean = getView.hasCeased

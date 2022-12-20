@@ -1,6 +1,5 @@
 package com.horizen.secret;
 
-import com.google.common.primitives.Ints;
 import com.horizen.proof.SchnorrProof;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.SchnorrProposition;

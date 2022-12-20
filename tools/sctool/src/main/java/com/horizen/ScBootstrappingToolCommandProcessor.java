@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.horizen.account.secret.PrivateKeySecp256k1Creator;
 import com.horizen.account.utils.FeeUtils;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
@@ -12,10 +13,14 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.receipt.LogsBloom;
 import com.horizen.account.secret.PrivateKeySecp256k1;
-import com.horizen.account.state.*;
+import com.horizen.account.state.AccountStateView;
+import com.horizen.account.state.MessageProcessor;
+import com.horizen.account.state.MessageProcessorInitializationException;
+import com.horizen.account.state.MessageProcessorUtil;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.account.utils.AccountFeePaymentsUtils;
+import com.horizen.account.utils.FeeUtils;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
@@ -26,6 +31,7 @@ import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CommonCircuit;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.utils.CircuitTypes;
 import com.horizen.evm.MemoryDatabase;
 import com.horizen.evm.StateDB;
 import com.horizen.params.MainNetParams;
@@ -43,14 +49,18 @@ import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
+import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Keys;
 import scala.Enumeration;
-import org.web3j.crypto.ECKeyPair;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
+import scorex.crypto.hash.Blake2b256;
+import scorex.util.encode.Base16;
 
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -58,8 +68,6 @@ import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
-import scorex.crypto.hash.Blake2b256;
-import scorex.util.encode.Base16;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
@@ -83,7 +91,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     }
 
     @Override
-    public void processCommand(String input) throws IOException {
+    public void processCommand(String input) throws Exception {
         Command command = parseCommand(input);
 
         switch(command.name()) {
@@ -107,6 +115,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 break;
             case "generateCertProofInfo":
                 processGenerateCertProofInfo(command.data());
+                break;
+            case "generateCertWithKeyRotationProofInfo":
+                processGenerateCertWithKeyRotationProofInfo(command.data());
                 break;
             case "generateCswProofInfo":
                 processGenerateCswProofInfo(command.data());
@@ -142,8 +153,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             String filePath = commandArguments.replaceAll("^-f\\s*\"*|\"$", "");
             // Try to open and read data from file
             try(
-                FileReader file = new FileReader(filePath);
-                BufferedReader reader = new BufferedReader(file)
+                    FileReader file = new FileReader(filePath);
+                    BufferedReader reader = new BufferedReader(file)
             ) {
                 jsonData = reader.readLine();
             } catch (FileNotFoundException e) {
@@ -167,25 +178,25 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     @Override
     protected void printUsageMsg() {
         printer.print("Usage:\n" +
-                      "\tFrom command line: <program name> <command name> [<json data>]\n" +
-                      "\tFor interactive mode: <command name> [<json data>]\n" +
-                      "\tRead command arguments from file: <command name> -f <path to file with json data>\n" +
-                      "Supported commands:\n" +
-                      "\thelp\n" +
-                      "\tgeneratekey <arguments>\n" +
-                      "\tgenerateVrfKey <arguments>\n" +
-                      "\tgenerateCertificateSignerKey <arguments>\n" +
-                      "\tgenerateCertProofInfo <arguments>\n" +
-                      "\tgenerateCswProofInfo <arguments>\n" +
-                      "\tgenesisinfo <arguments>\n" +
-                      "\texit\n"
+                "\tFrom command line: <program name> <command name> [<json data>]\n" +
+                "\tFor interactive mode: <command name> [<json data>]\n" +
+                "\tRead command arguments from file: <command name> -f <path to file with json data>\n" +
+                "Supported commands:\n" +
+                "\thelp\n" +
+                "\tgeneratekey <arguments>\n" +
+                "\tgenerateVrfKey <arguments>\n" +
+                "\tgenerateCertificateSignerKey <arguments>\n" +
+                "\tgenerateCertProofInfo <arguments>\n" +
+                "\tgenerateCswProofInfo <arguments>\n" +
+                "\tgenesisinfo <arguments>\n" +
+                "\texit\n"
         );
     }
 
     private void printGenerateKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgeneratekey {\"seed\":\"my seed\"}");
+                "\tgeneratekey {\"seed\":\"my seed\"}");
     }
 
     private void processGenerateKey(JsonNode json) {
@@ -209,13 +220,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateVrfKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgenerateVrfKey {\"seed\":\"my seed\"}");
-    }
-
-    private void printGenerateAccountKeyUsageMsg(String error) {
-        printer.print("Error: " + error);
-        printer.print("Usage:\n" +
-                "\tgenerateAccountKey {\"seed\":\"my seed\"}");
+                "\tgenerateVrfKey {\"seed\":\"my seed\"}");
     }
 
     private  void processGenerateVrfKey(JsonNode json) {
@@ -237,6 +242,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         printer.print(res);
     }
 
+    private void printGenerateAccountKeyUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateAccountKey {\"seed\":\"my seed\"}");
+    }
+
     private void processGenerateAccountKey(JsonNode json) {
 
         if(!json.has("seed") || !json.get("seed").isTextual()) {
@@ -248,11 +259,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         String accountPropositionStr;
 
         try {
-            ECKeyPair pair = Keys.createEcKeyPair(new SecureRandom(json.get("seed").asText().getBytes()));
 
             // private key
-            byte[] accountSecretBytes = Arrays.copyOf(pair.getPrivateKey().toByteArray(), Secp256k1.PRIVATE_KEY_SIZE);
-            PrivateKeySecp256k1 privKey = new PrivateKeySecp256k1(accountSecretBytes);
+            PrivateKeySecp256k1 privKey = PrivateKeySecp256k1Creator.getInstance().generateSecret(json.get("seed").asText().getBytes());
             SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
             accountSecretStr = BytesUtils.toHexString(secretsCompanion.toBytes(privKey));
 
@@ -261,7 +270,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             accountPropositionStr = BytesUtils.toHexString(addressProposition.address());
 
         } catch (Exception e) {
-            // throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException
             printGenerateAccountKeyUsageMsg("exception thrown: " + e.getMessage());
             return;
         }
@@ -277,7 +285,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateCertificateSignerKey(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                    "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}");
+                "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}");
     }
 
     private void processGenerateCertificateSignerKey(JsonNode json) {
@@ -313,7 +321,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
     private void processGenerateCertProofInfo(JsonNode json) {
         if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
-            printGenerateCertProofInfoUsageMsg("wrong public keys");
+            printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys");
             return;
         }
 
@@ -324,7 +332,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             JsonNode pkNode = pksIterator.next();
 
             if (!pkNode.isTextual()) {
-                printGenerateCertProofInfoUsageMsg("wrong public key format");
+                printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys format");
                 return;
             }
 
@@ -372,7 +380,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
-            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW;
+            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION;
             if (isCSWEnabled){
                 numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW;
             }
@@ -388,7 +396,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        List<byte[]> publicKeysBytes = publicKeys.stream().map(pk -> BytesUtils.fromHexString(pk)).collect(Collectors.toList());
+        List<byte[]> publicKeysBytes = publicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
         String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.sigProofThresholdCircuitFunctions().generateSysDataConstant(publicKeysBytes, threshold));
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -403,6 +411,138 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         for (String publicKeyStr : publicKeys) {
             keyArrayNode.add(publicKeyStr);
+        }
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
+    private void printGenerateCertWithKeyRotationProofInfoUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateCertProofInfo\":\"signersPublicKeys\": [signerPk1, signerPk2, ...], \"mastersPublicKeys\": [masterPk1, masterPk2, ...],\", \"threshold\":5, signersPublicKeys and mastersPublicKeys size should be equal," +
+                "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
+                "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\", "+
+                "\"isCSWEnabled\": true}" +
+                "\n\t - threshold parameter should be less or equal to keyCount." +
+                "\n\t - isCSWEnabled parameter could be true or false."  );
+    }
+    private void processGenerateCertWithKeyRotationProofInfo(JsonNode json) throws Exception {
+        if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong signersPublicKeys");
+            return;
+        }
+
+        List<String> signersPublicKeys = new ArrayList<String>();
+
+        Iterator<JsonNode> pksIterator = json.get("signersPublicKeys").elements();
+        while (pksIterator.hasNext()) {
+            JsonNode pkNode = pksIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong signersPublicKeys format");
+                return;
+            }
+
+            signersPublicKeys.add(pkNode.asText());
+        }
+
+        if (!json.has("mastersPublicKeys") || !json.get("mastersPublicKeys").isArray()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong mastersPublicKeys");
+            return;
+        }
+
+        List<String> mastersPublicKeys = new ArrayList<>();
+
+        Iterator<JsonNode> mastersPublicKeysIterator = json.get("mastersPublicKeys").elements();
+        while (mastersPublicKeysIterator.hasNext()) {
+            JsonNode pkNode = mastersPublicKeysIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong mastersPublicKeys format");
+                return;
+            }
+
+            mastersPublicKeys.add(pkNode.asText());
+        }
+
+        assert mastersPublicKeys.size() == signersPublicKeys.size() : "mastersPublicKeys and signersPublicKeys must have the same size";
+
+        for(int i = 0; i < mastersPublicKeys.size(); i++) {
+            if(Objects.equals(mastersPublicKeys.get(i), signersPublicKeys.get(i))) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("signersKey with index %d equals to mastersKey with index %d", i, i));
+                return;
+            }
+        }
+
+        if (!json.has("threshold") || !json.get("threshold").isInt()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong threshold");
+            return;
+        }
+
+        int threshold = json.get("threshold").asInt();
+
+        if (threshold <= 0 || threshold > signersPublicKeys.size()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong threshold: " + threshold);
+            return;
+        }
+
+        if (!json.has("provingKeyPath") || !json.get("provingKeyPath").isTextual()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
+            return;
+        }
+        String provingKeyPath = json.get("provingKeyPath").asText();
+
+        if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            return;
+        }
+        String verificationKeyPath = json.get("verificationKeyPath").asText();
+
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+
+        // Generate all keys only if verification key doesn't exist.
+        // Note: we are interested only in verification key raw data.
+        if(!Files.exists(Paths.get(verificationKeyPath))) {
+
+            if (!initDlogKey()) {
+                printer.print("Error occurred during dlog key generation.");
+                return;
+            }
+
+            if (!CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateCoboundaryMarlinSnarkKeys(signersPublicKeys.size(), provingKeyPath, verificationKeyPath)) {
+                printer.print("Error occurred during snark keys generation.");
+                return;
+            }
+        }
+        // Read verification key from file
+        String verificationKey = CryptoLibProvider.commonCircuitFunctions().getCoboundaryMarlinSnarkVerificationKeyHex(verificationKeyPath);
+        if(verificationKey.isEmpty()) {
+            printer.print("Verification key file is empty or the key is broken.");
+            return;
+        }
+
+        List<byte[]> signersPublicKeysBytes = signersPublicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
+        List<byte[]> mastersPublicKeysBytes = mastersPublicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
+        String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateSysDataConstant(signersPublicKeysBytes, mastersPublicKeysBytes, threshold));
+
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        ObjectNode resJson = mapper.createObjectNode();
+
+        resJson.put("maxPks", signersPublicKeys.size());
+        resJson.put("threshold", threshold);
+        resJson.put("genSysConstant", genSysConstant);
+        resJson.put("verificationKey", verificationKey);
+
+        ArrayNode signingKeyArrayNode = resJson.putArray("signersPublicKeys");
+
+        for (String publicKeyStr : signersPublicKeys) {
+            signingKeyArrayNode.add(publicKeyStr);
+        }
+
+        ArrayNode masterKeyArrayNode = resJson.putArray("mastersPublicKeys");
+        for (String publicKeyStr : mastersPublicKeys) {
+            masterKeyArrayNode.add(publicKeyStr);
         }
 
         String res = resJson.toString();
@@ -503,39 +643,40 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                       "\t\t\"secret\": <secret hex>, - private key to sign the sc genesis block\n" +
                       "\t\t\"vrfSecret\": <vrf secret hex>, secret vrf key\n" +
                       "\t\t\"info\": <sc genesis info hex> - hex data retrieved from MC RPC call 'getscgenesisinfo'\n" +
+                      "\t\t\"virtualWithdrawalEpochLength\": optional field used for non-ceasing sidechain to specify the cert generation frequency.\n" +
                       "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
                       "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
                       "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
-                      "\t\t\"blockversion\": int - Optional, default = 1. UTXO model block version=1, Account model block version=2.\n" +
+                      "\t\t\"model\": String - Optional, default = 'utxo', 'account' model.\n" +
                 "\t}"
         );
         printer.print("Examples:\n" +
                       "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\"}\n\n" +
-                      "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \"blockversion\":2}\n\n" +
+                      "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \"model\":\"account\"}\n\n" +
                       "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \n" +
                       "\t\"updateconfig\": true, \"sourceconfig\":\"./template.conf\", \"resultconfig\":\"./result.conf\"}");
     }
 
     private void processGenesisInfo(JsonNode json) {
         if (!json.has("info") || !json.get("info").isTextual()
-            || !json.has("vrfSecret") || !json.get("vrfSecret").isTextual()
-            || !json.has("secret") || !json.get("secret").isTextual()) {
+                || !json.has("vrfSecret") || !json.get("vrfSecret").isTextual()
+                || !json.has("secret") || !json.get("secret").isTextual()) {
             printGenesisInfoUsageMsg("wrong arguments syntax.");
             return;
         }
 
-        byte block_version;
-        if (json.has("blockversion"))
+        String model;
+        if (json.has("model"))
         {
-            block_version = (byte)json.get("blockversion").asInt();
-            if ( block_version != SidechainBlock.BLOCK_VERSION() &&
-                 block_version != AccountBlock.ACCOUNT_BLOCK_VERSION())
+            model = json.get("model").asText();
+            if ( !model.equals("account") &&
+                    !model.equals("utxo"))
             {
-                printGenesisInfoUsageMsg(String.format("Optional 'blockversion' integer field expected to be %d or %d.", SidechainBlock.BLOCK_VERSION(), AccountBlock.ACCOUNT_BLOCK_VERSION()));
+                printGenesisInfoUsageMsg("Optional 'model' string field expected to be 'utxo' or 'account'.");
                 return;
             }
         } else {
-            block_version = SidechainBlock.BLOCK_VERSION();
+            model = "utxo";
         }
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
@@ -585,9 +726,24 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
+        // virtualWithdrawalEpochLength is an optional field that
+        int virtualWithdrawalEpochLength = 0;
+        if (json.has("virtualWithdrawalEpochLength")) {
+            if(!json.get("virtualWithdrawalEpochLength").isInt()) {
+                printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' should be integer.");
+                return;
+            }
+            virtualWithdrawalEpochLength = json.get("virtualWithdrawalEpochLength").asInt();
+
+            if (virtualWithdrawalEpochLength < 0) {
+                printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' can't be negative.");
+                return;
+            }
+        }
+
         boolean shouldUpdateConfig = json.has("updateconfig") && json.get("updateconfig").asBoolean();
         if(shouldUpdateConfig &&
-                        (!json.has("sourceconfig") || !json.get("sourceconfig").isTextual() ||
+                (!json.has("sourceconfig") || !json.get("sourceconfig").isTextual() ||
                         !json.has("resultconfig") || !json.get("resultconfig").isTextual())) {
             printGenesisInfoUsageMsg("'updateconfig' is specified but path to configs doesn't not.");
             return;
@@ -683,11 +839,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             int withdrawalEpochLength;
             String sidechainBlockHex;
-
+            byte block_version;
 
             // are we building a utxo or account model based block?
-            if (block_version == AccountBlock.ACCOUNT_BLOCK_VERSION()) {
-
+            if (model.equals("account")) {
+                block_version = AccountBlock.ACCOUNT_BLOCK_VERSION();
                 // no fee payments expected for the genesis block
                 byte[] feePaymentsHash = AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH();
 
@@ -754,21 +910,22 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
             } else {
+                block_version = SidechainBlock.BLOCK_VERSION();
                 // no fee payments expected for the genesis block
-                byte[] feePaymentsHash = FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH();
+                byte[] feePaymentsHash = new byte[32];
 
                 ForgerBox forgerBox = sidechainCreation.getBox();
                 ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
 
-                SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
+                SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), CircuitTypes.NaiveThresholdSignatureCircuit());
 
                 SidechainBlock sidechainBlock = SidechainBlock.create(
                         params.sidechainGenesisBlockParentId(),
-                        block_version,
+                        SidechainBlock.BLOCK_VERSION(),
                         timestamp,
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainBlockReferencesData).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainHeadersData).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
                         key,
                         forgingStakeInfo,
@@ -782,13 +939,28 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 try {
                     SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
                     withdrawalEpochLength = creationOutput.withdrawalEpochLength();
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
                     return;
                 }
-
                 sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
+            }
+
+            boolean isNonCeasing = (withdrawalEpochLength == 0);
+
+            if (isNonCeasing && virtualWithdrawalEpochLength == 0) {
+                printGenesisInfoUsageMsg("For non-ceasing sidechains virtualWithdrawalEpochLength must be specified.");
+                return;
+            }
+
+            if (!isNonCeasing && virtualWithdrawalEpochLength != 0) {
+                printGenesisInfoUsageMsg("For ceasing sidechains virtualWithdrawalEpochLength must not be specified.");
+                return;
+            }
+
+            if (isNonCeasing && virtualWithdrawalEpochLength < params.minVirtualWithdrawalEpochLength()) {
+                printGenesisInfoUsageMsg(String.format("Virtual withdrawal epoch length is too short. It should be at least %d for %s network.", params.minVirtualWithdrawalEpochLength(), mcNetworkName));
+                return;
             }
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();
@@ -797,7 +969,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             resJson.put("powData", powData);
             resJson.put("mcBlockHeight", mcBlockHeight);
             resJson.put("mcNetwork", mcNetworkName);
-            resJson.put("withdrawalEpochLength", withdrawalEpochLength);
+            resJson.put("isNonCeasing", isNonCeasing);
+            resJson.put("withdrawalEpochLength", isNonCeasing ? virtualWithdrawalEpochLength : withdrawalEpochLength);
             resJson.put("initialCumulativeCommTreeHash", BytesUtils.toHexString(initialCumulativeCommTreeHash));
             String res = resJson.toString();
             printer.print(res);
@@ -867,12 +1040,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }
@@ -893,17 +1065,17 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
 
             String conf = templateConf +
-                          "\nsparkz {\n" +
-                          "\tgenesis {\n" +
-                          "\t\tscGenesisBlockHex = \"" + scBlockHex + "\"\n" +
-                          "\t\tscId = \"" + scId + "\"\n" +
-                          "\t\tpowData = \"" + powData + "\"\n" +
-                          "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
-                          "\t\tmcNetwork = " + mcNetworkName + "\n" +
-                          "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
-                          "\t\tinitialCumulativeCommTreeHash = \"" + initialCumulativeCommTreeHashHex + "\"\n" +
-                          "\t}\n" +
-                          "}\n";
+                    "\nsparkz {\n" +
+                    "\tgenesis {\n" +
+                    "\t\tscGenesisBlockHex = \"" + scBlockHex + "\"\n" +
+                    "\t\tscId = \"" + scId + "\"\n" +
+                    "\t\tpowData = \"" + powData + "\"\n" +
+                    "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
+                    "\t\tmcNetwork = " + mcNetworkName + "\n" +
+                    "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
+                    "\t\tinitialCumulativeCommTreeHash = \"" + initialCumulativeCommTreeHashHex + "\"\n" +
+                    "\t}\n" +
+                    "}\n";
 
             Files.write(Paths.get(pathToResultConf), conf.getBytes());
 

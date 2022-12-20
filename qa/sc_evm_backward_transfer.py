@@ -30,6 +30,14 @@ Configuration:
     Start 1 MC node and 1 SC node (with default websocket configuration).
     SC node connected to the first MC node.
 
+Note:
+    This test can be executed in two modes:
+    1. using no key rotation circuit (by default)
+    2. using key rotation circuit (with --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation)
+    With key rotation circuit can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+
 Test:
     For the SC node:
         - Checks that MC block with sc creation tx is referenced in the genesis sc block
@@ -49,10 +57,9 @@ Test:
 
 def check_withdrawal_event(event, source_addr, dest_addr, amount, exp_epoch):
     assert_equal(3, len(event['topics']), "Wrong number of topics in event")
-    event_id = remove_0x_prefix(event['topics'][0])
+    event_id = event['topics'][0]
 
-    event_signature = remove_0x_prefix(
-        encode_hex(event_signature_to_log_topic('AddWithdrawalRequest(address,bytes20,uint256,uint32)')))
+    event_signature = encode_hex(event_signature_to_log_topic('AddWithdrawalRequest(address,bytes20,uint256,uint32)'))
     assert_equal(event_signature, event_id, "Wrong event signature in topics")
 
     from_addr = decode(['address'], hex_str_to_bytes(event['topics'][1][2:]))[0][2:]
@@ -154,7 +161,7 @@ class SCEvmBackwardTransfer(AccountChainSetup):
 
         # Verify Certificate for epoch 0 on SC side
         mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
-        we0_sc_cert = mbrefdata["topQualityCertificate"]
+        we0_sc_cert = mbrefdata["topQualityCertificates"][0]
         assert_equal(len(mbrefdata["lowerCertificateLeaves"]), 0)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")
@@ -317,7 +324,7 @@ class SCEvmBackwardTransfer(AccountChainSetup):
 
         # Verify Certificate for epoch 1 on SC side
         mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
-        we1_sc_cert = mbrefdata["topQualityCertificate"]
+        we1_sc_cert = mbrefdata["topQualityCertificates"][0]
         assert_equal(len(mbrefdata["lowerCertificateLeaves"]), 0)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
 import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
@@ -79,6 +79,14 @@ case class WithdrawalEpochCertificate
 }
 
 object WithdrawalEpochCertificate {
+  /** Source: consensus.h of Zen MC code:
+   * The minimum theoretical possible size of a consistent cert.
+   * Large of its part is taken by the proof, which has a the minimum theoretical possible size of ~1086
+   * (was 2850 assuming SegmentSize = 1 << 18)
+   * static const unsigned int MIN_CERT_SIZE = MIN_PROOF_SIZE + 100;
+   */
+  val MIN_CERT_SIZE: Int = 1186
+
   def parse(certificateBytes: Array[Byte], offset: Int) : WithdrawalEpochCertificate = {
 
     var currentOffset: Int = offset
