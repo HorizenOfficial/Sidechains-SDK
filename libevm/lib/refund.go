@@ -2,11 +2,16 @@ package lib
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
 	gethParams "github.com/ethereum/go-ethereum/params"
 )
 
-// setStateRefunds replicates the refund part of the original SSTORE gas consumption logic:
+// setStateRefunds replicates the refund part of the original SSTORE gas consumption logic.
+// Original implementation can be found in go-ethereum, function "gasSStoreEIP2200":
+// github.com/ethereum/go-ethereum@v1.10.26/core/vm/gas_table.go:178
+//
+// This replicates gas refund logic including EIP3529.
 //
 // 0. If *gasleft* is less than or equal to 2300, fail the current call.
 // 1. If current value equals new value (this is a no-op), SLOAD_GAS is deducted.
@@ -58,4 +63,12 @@ func setStateRefunds(statedb *state.StateDB, address common.Address, key, value 
 func (s *Service) setStateWithRefund(statedb *state.StateDB, address common.Address, key, value common.Hash) {
 	setStateRefunds(statedb, address, key, value)
 	statedb.SetState(address, key, value)
+}
+
+func (s *Service) StateGetRefund(params HandleParams) (error, hexutil.Uint64) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, 0
+	}
+	return nil, (hexutil.Uint64)(statedb.GetRefund())
 }

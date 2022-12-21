@@ -26,14 +26,14 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
 
   def rlpDecode(values: RlpList): EvmLog = {
     val addressBytes = values.getValues.get(0).asInstanceOf[RlpString].getBytes
-    val address = Address.FromBytes(addressBytes)
+    val address = Address.fromBytes(addressBytes)
     val topicsRlp = values.getValues.get(1).asInstanceOf[RlpList]
     val hashList = new util.ArrayList[Hash]
     val topicsListSize = topicsRlp.getValues.size
     if (topicsListSize > 0) { // loop on list and decode all topics
       for (i <- 0 until topicsListSize) {
         val topicBytes = topicsRlp.getValues.get(i).asInstanceOf[RlpString].getBytes
-        hashList.add(Hash.FromBytes(topicBytes))
+        hashList.add(Hash.fromBytes(topicBytes))
       }
     }
     val topics = hashList.toArray(new Array[Hash](0))
@@ -80,13 +80,13 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
     val topicsArraySize: Int = reader.getInt
     val topics: util.ArrayList[Hash] = new util.ArrayList[Hash]
     for (_ <- 0 until topicsArraySize) {
-      topics.add(Hash.FromBytes(reader.getBytes(Hash.LENGTH)))
+      topics.add(Hash.fromBytes(reader.getBytes(Hash.LENGTH)))
     }
 
     val dataLength: Int = reader.getInt
     val data: Array[Byte] = reader.getBytes(dataLength)
 
-    new EvmLog(Address.FromBytes(address), topics.toArray(new Array[Hash](0)), data)
+    new EvmLog(Address.fromBytes(address), topics.toArray(new Array[Hash](0)), data)
   }
 }
 

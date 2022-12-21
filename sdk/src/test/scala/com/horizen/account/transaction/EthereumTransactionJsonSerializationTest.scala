@@ -5,7 +5,7 @@ import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Assert.{assertEquals, assertNull, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.utils.SparkzEncoder
@@ -64,7 +64,7 @@ class EthereumTransactionJsonSerializationTest
   def testPartiallySignedEip155TxToJson(): Unit = {
     val transaction = getPartiallySignedEip155LegacyTransaction
     assertTrue(transaction.isEIP155)
-    assertTrue(transaction.getFromString.equals(""))
+    assertNull(transaction.getFromAddressString)
     evalJsonRepr(transaction)
   }
 

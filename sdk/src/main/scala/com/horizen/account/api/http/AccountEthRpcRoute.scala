@@ -59,14 +59,13 @@ case class AccountEthRpcRoute(
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
   override val route: Route = pathPrefix("ethv1") {
-    ethRpc ~ ethOptions
+    ethRpc
   }
   val rpcHandler = new RpcHandler(
     new EthService(
       sidechainNodeViewHolderRef,
       settings.timeout,
       params,
-      sidechainSettings,
       sidechainTransactionActorRef
     )
   )
@@ -114,13 +113,9 @@ case class AccountEthRpcRoute(
           }
         }
 
-        log.debug(s"response << $json")
+        log.trace(s"RPC message response << $json")
         SidechainApiResponse(json);
       }
     }
-  }
-
-  def ethOptions: Route = options {
-    complete("Allow: OPTIONS, POST")
   }
 }

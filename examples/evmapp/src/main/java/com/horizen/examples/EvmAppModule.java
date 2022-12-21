@@ -32,6 +32,9 @@ public class EvmAppModule extends AccountAppModule {
 
     @Override
     public void configureApp() {
+        Long regTestId = 1997L;
+        Long testNetId = 1661L;
+        Long mainNetId = 7331L;
 
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
 
@@ -49,7 +52,7 @@ public class EvmAppModule extends AccountAppModule {
         // For example new Pair("wallet, "allBoxes");
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
 
-        ChainInfo chainInfo = new ChainInfo(1997, 1661, 7331);
+        ChainInfo chainInfo = new ChainInfo(regTestId, testNetId, mainNetId);
 
         // Here I can add my custom logic to manage EthereumTransaction content.
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();

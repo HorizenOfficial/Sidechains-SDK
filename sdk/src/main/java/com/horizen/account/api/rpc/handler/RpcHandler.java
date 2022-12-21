@@ -17,15 +17,15 @@ public class RpcHandler {
 
     public ApiResponse apply(RpcRequest request) {
         try {
-            if (rpcService.hasMethod(request.getMethod())) {
+            if (rpcService.hasMethod(request.method)) {
                 var result = rpcService.execute(request);
-                return new RpcResponseSuccess(request.getId(), result);
+                return new RpcResponseSuccess(request.id, result);
             }
-            return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.MethodNotFound));
+            return new RpcResponseError(request.id, RpcError.fromCode(RpcCode.MethodNotFound));
         } catch (RpcException e) {
-            return new RpcResponseError(request.getId(), e.error);
+            return new RpcResponseError(request.id, e.error);
         } catch (Throwable e) {
-            return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.InternalError, e.getMessage()));
+            return new RpcResponseError(request.id, RpcError.fromCode(RpcCode.InternalError, e.getMessage()));
         }
     }
 
