@@ -26,6 +26,7 @@ import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
+import scala.compat.java8.OptionConverters._
 
 class AccountState(
     val params: NetworkParams,
@@ -142,7 +143,7 @@ class AccountState(
               // This does not impact our case since the CREATE2 result would not be part of the receipt.
               Option(generateContractAddress(ethTx.getFrom.address, ethTx.getNonce))
             } else {
-              // otherwise a zero-byte field
+              // otherwise nothing
               None
             }
 
