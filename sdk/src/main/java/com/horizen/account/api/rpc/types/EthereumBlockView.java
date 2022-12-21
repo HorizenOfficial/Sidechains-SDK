@@ -1,11 +1,13 @@
 package com.horizen.account.api.rpc.types;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,7 +65,11 @@ public class EthereumBlockView {
         } else {
             this.transactions = txList;
         }
+    }
 
+    @JsonInclude
+    public List<String> getUncles() {
+        return new ArrayList<>();
     }
 }
 
