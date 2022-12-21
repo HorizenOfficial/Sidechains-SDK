@@ -3,11 +3,14 @@ package com.horizen.account.utils
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
+import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
+import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{EthereumReceipt, Bloom}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountStateMetadataStorageView
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData}
 import com.horizen.box.Box
@@ -31,13 +34,15 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
-import scorex.util.bytesToId
+import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
 
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
 import java.util.{Optional, HashMap => JHashMap}
 import scala.collection.JavaConverters._
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Success, Try}
 
@@ -46,6 +51,81 @@ case class AccountMockDataHelper(genesis: Boolean)
       with StoreFixture
       with SidechainRelatedMainchainOutputFixture
       with MessageProcessorFixture {
+
+  def getMockedAccoutMemoryPool(): AccountMemoryPool = {
+    val memoryPool: AccountMemoryPool = mock[AccountMemoryPool]
+
+    // executable transaction IDs list
+    val executableTxsIdList: Iterable[ModifierId] = List(bytesToId(new Array[Byte](32)),bytesToId(new Array[Byte](32)),bytesToId(new Array[Byte](32)))
+    Mockito.when(memoryPool.getExecutableTransactions).thenReturn(executableTxsIdList.toList.asJava)
+
+    // non executable transaction IDs list
+    val nonExecutableTxsIdList: Iterable[ModifierId] = List(bytesToId(new Array[Byte](32)))
+    Mockito.when(memoryPool.getNonExecutableTransactions).thenReturn(nonExecutableTxsIdList.toList.asJava)
+
+    // default signature for all txs
+    val defaultSignature = new SignatureSecp256k1(
+      BytesUtils.fromHexString("1c"),
+      BytesUtils.fromHexString("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023"),
+      BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d")
+    )
+
+    // executable address/nonces/transactions map
+    val executableTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+
+    // proposition 1 executable transactions
+    val executableNonceTxsMap1: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+    val proposition1 = new AddressProposition(BytesUtils.fromHexString("15532e34426cd5c37371ff455a5ba07501c0f522"))
+    val toProposition = new AddressProposition(BytesUtils.fromHexString("15532e34426cd5c37371ff455a5ba07501c0f522"))
+
+    val executableTx1 = new EthereumTransaction(
+      1997L, Optional.of(toProposition), BigInteger.valueOf(16L), BigInteger.valueOf(15467876L), BigInteger.valueOf(454545L),
+      FeeUtils.INITIAL_BASE_FEE.add(BigInteger.valueOf(100)), BigInteger.valueOf(15000000L), BytesUtils.fromHexString("bd54d1f34e34a90f7dc5efe0b3d65fa4"),
+      defaultSignature)
+    val executableTx2 = new EthereumTransaction(
+      1997L, Optional.of(toProposition), BigInteger.valueOf(24L), BigInteger.valueOf(15467876L), BigInteger.valueOf(454545L),
+      FeeUtils.INITIAL_BASE_FEE.add(BigInteger.valueOf(100)), BigInteger.valueOf(4800000L), BytesUtils.fromHexString("8c64fe48688ab096dfb6ac2eeefcf213"),
+      defaultSignature)
+
+    executableNonceTxsMap1.put(BigInteger.valueOf(16),executableTx1.asInstanceOf[SidechainTypes#SCAT])
+    executableNonceTxsMap1.put(BigInteger.valueOf(24),executableTx2.asInstanceOf[SidechainTypes#SCAT])
+    executableTxsMap.put(proposition1.asInstanceOf[SidechainTypes#SCP],executableNonceTxsMap1)
+
+    // proposition 2 executable transactions
+    val executableNonceTxsMap2: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+    val proposition2 = new AddressProposition(BytesUtils.fromHexString("b039865dbea73df08e23f185847bab8e6a44108d"))
+
+    val executableTx3 = new EthereumTransaction(
+      1997L, Optional.of(toProposition), BigInteger.valueOf(32L), BigInteger.valueOf(15467876L), BigInteger.valueOf(454545L),
+      FeeUtils.INITIAL_BASE_FEE.add(BigInteger.valueOf(100)), BigInteger.valueOf(18000000L), BytesUtils.fromHexString("bd54d1f34e34a90f7dc5efe0b3d65fa4"),
+      defaultSignature)
+
+    executableNonceTxsMap2.put(BigInteger.valueOf(32), executableTx3.asInstanceOf[SidechainTypes#SCAT])
+    executableTxsMap.put(proposition2.asInstanceOf[SidechainTypes#SCP], executableNonceTxsMap2)
+
+    // mock getExecutableTransactionsMap method call
+    Mockito.when(memoryPool.getExecutableTransactionsMap).thenReturn(executableTxsMap)
+
+    // non executable address/nonces/transactions map
+    val nonExecutableTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+
+    // proposition 1 non executable transactions
+    val nonExecutableNonceTxsMap1: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+
+    val nonExecutableTx1 = new EthereumTransaction(
+      1997L, Optional.of(toProposition), BigInteger.valueOf(40L), BigInteger.valueOf(15467876L), BigInteger.valueOf(454545L),
+      FeeUtils.INITIAL_BASE_FEE.add(BigInteger.valueOf(100)), BigInteger.valueOf(63000000L), BytesUtils.fromHexString("4aa64a075647e3621bbc14b03e4087903f2c9503"),
+      defaultSignature)
+
+    nonExecutableNonceTxsMap1.put(BigInteger.valueOf(40), nonExecutableTx1.asInstanceOf[SidechainTypes#SCAT])
+    nonExecutableTxsMap.put(proposition1.asInstanceOf[SidechainTypes#SCP], nonExecutableNonceTxsMap1)
+
+    // mock getExecutableTransactionsMap method call
+    Mockito.when(memoryPool.getNonExecutableTransactionsMap).thenReturn(nonExecutableTxsMap)
+
+    // return the mocked memory pool
+    memoryPool
+  }
 
   def getMockedAccountHistory(
       block: Option[AccountBlock],

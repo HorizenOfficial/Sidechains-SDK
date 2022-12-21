@@ -58,9 +58,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     """{"blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","hash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","type":"0x2","nonce":"0x0","to":null,"gas":"0x1","value":"0x1","input":"0x","maxPriorityFeePerGas":"0x1","maxFeePerGas":"0x3b9aca64","gasPrice":"0x342770c1","accessList":null,"chainId":"0x10f447","v":"0x1c","r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023","s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"}"""
   private val txJsonNoSecret =
     s"""{"from": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"}"""
-  private var ethService: EthService = _
-  private var txJson: String = _
-  private var senderWithSecret: String = _
+
+  val txPoolStatusOutput = """{"pending":3,"queued":1}"""
+  val txPoolContentOutput = """{"pending":{"0x15532e34426cd5c37371ff455a5ba07501c0f522":{"16":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044","input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4","nonce":"0x10","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0xe4e1c0"},"24":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0x081d8a5b696ec5dfce641568e6665b6be2410ce2","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37","input":"0x8c64fe48688ab096dfb6ac2eeefcf213","nonce":"0x18","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x493e00"}},"0xb039865dbea73df08e23f185847bab8e6a44108d":{"32":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0xb3151940f923813eca1d70ad405a852bcd2d7609","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd","input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4","nonce":"0x20","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x112a880"}}},"queued":{"0x15532e34426cd5c37371ff455a5ba07501c0f522":{"40":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0xc803d7146a4df6937b609f7951bc7eda3def09fb","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165","input":"0x4aa64a075647e3621bbc14b03e4087903f2c9503","nonce":"0x28","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x3c14dc0"}}}}"""
+  var ethService: EthService = _
+  var txJson: String = null
+  var senderWithSecret: String = null
 
   private def assertJsonLength(expected: String, actual: Object): Unit = {
     // TODO: mapper must be configured exactly like the one used in the actual RPC response
@@ -147,25 +150,29 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       s"""{"from": "$senderWithSecret", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675", "nonce": "0x1"}"""
     val mockedWallet: AccountWallet = mockHelper.getMockedWallet(secret)
 
+    val mockedMemoryPool: AccountMemoryPool = mockHelper.getMockedAccoutMemoryPool()
+
     val mockedSidechainNodeViewHolder = TestProbe()
+
     mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
         case m: GetDataFromCurrentView[
-              AccountHistory,
-              AccountState,
-              AccountWallet,
-              AccountMemoryPool,
-              _
-            ] @unchecked =>
+          AccountHistory,
+          AccountState,
+          AccountWallet,
+          AccountMemoryPool,
+          _
+        ]@unchecked =>
           m match {
             case GetDataFromCurrentView(f) =>
-              sender ! f(CurrentView(mockedHistory, mockedState, mockedWallet, mock[AccountMemoryPool]))
+              sender ! f(CurrentView(mockedHistory, mockedState, mockedWallet, mockedMemoryPool))
           }
         case LocallyGeneratedTransaction(tx) =>
           actorSystem.eventStream.publish(SuccessfulTransaction(tx))
       }
       TestActor.KeepRunning
     })
+
     val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
     ethService = new EthService(nodeViewHolderRef, new FiniteDuration(10, SECONDS), networkParams, transactionActorRef)
@@ -195,6 +202,11 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       Numeric.toHexStringWithPrefix(BigInteger.valueOf(875000000)),
       ethService.execute(getRpcRequest()).asInstanceOf[Quantity].getValue
     )
+  }
+
+  @Test
+  def eth_syncing(): Unit = {
+    assertEquals(false, ethService.execute(getRpcRequest()).asInstanceOf[Boolean])
   }
 
   @Test
@@ -989,4 +1001,21 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ethService.execute(rpcRequest)
     }
   }
+
+  @Test
+  def txpool_status(): Unit = {
+    assertEquals(
+      txPoolStatusOutput,
+      mapper.writeValueAsString(ethService.execute(getRpcRequest()))
+    )
+  }
+
+  @Test
+  def txpool_content(): Unit = {
+    assertEquals(
+      txPoolContentOutput,
+      mapper.writeValueAsString(ethService.execute(getRpcRequest()))
+    )
+  }
+
 }
