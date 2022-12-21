@@ -10,19 +10,24 @@ public class RpcId {
     public RpcId() {}
 
     public RpcId(JsonNode jsonId) {
-        if(!jsonId.isNull()) {
-            if(jsonId.isNumber()) {
-                if(jsonId.canConvertToLong()) {
-                    if(jsonId.asLong()>=0)
-                        this.longId = jsonId.asLong();
-                    else
-                        throw new IllegalStateException("Rpc Id can't be a negative number");
-                } else
-                    throw new IllegalStateException("Rpc Id value is greater than datatype max value");
-            } else
+        switch (jsonId.getNodeType()) {
+            case STRING:
                 this.stringId = jsonId.asText();
-        } else
-            throw new IllegalStateException("Rpc Id can't be null");
+                break;
+            case NUMBER:
+                if (!jsonId.canConvertToLong()) {
+                    throw new IllegalArgumentException("Rpc Id value is greater than datatype max value");
+                }
+                if (jsonId.asLong() < 0) {
+                    throw new IllegalArgumentException("Rpc Id can't be a negative number");
+                }
+                this.longId = jsonId.asLong();
+                break;
+            case NULL:
+                throw new IllegalArgumentException("Rpc Id can't be null");
+            default:
+                throw new IllegalArgumentException("Rpc Id is of invalid type");
+        }
     }
 
     public Long getLongId() {
@@ -35,8 +40,8 @@ public class RpcId {
 
     @Override
     public String toString() {
-        if(longId!=null) return longId.toString();
-        else if(stringId!=null) return stringId;
-        else return null;
+        if (stringId != null) return stringId;
+        if (longId != null) return longId.toString();
+        return null;
     }
 }

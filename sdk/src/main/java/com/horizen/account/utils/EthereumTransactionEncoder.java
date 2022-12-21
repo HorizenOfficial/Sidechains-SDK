@@ -1,10 +1,13 @@
 package com.horizen.account.utils;
 
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.transaction.EthereumTransaction;
 import org.web3j.crypto.Sign;
-import org.web3j.rlp.*;
-import org.web3j.utils.Bytes;
-import org.web3j.utils.Numeric;
+import org.web3j.rlp.RlpEncoder;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
+import org.web3j.rlp.RlpType;
+import scala.Array;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -28,19 +31,12 @@ public class EthereumTransactionEncoder {
         result.add(RlpString.create(tx.getGasLimit()));
 
         // an empty to address (contract creation) should not be encoded as a numeric 0 value
-        if (tx.getToAddressString() != null && tx.getToAddressString().length() > 0) {
-            // addresses that start with zeros should be encoded with the zeros included, not
-            // as numeric values
-            result.add(RlpString.create(Numeric.hexStringToByteArray(tx.getToAddressString())));
-        } else {
-            result.add(RlpString.create(""));
-        }
-
+        // addresses that start with zeros should be encoded with the zeros included, not as numeric values
+        result.add(RlpString.create(tx.getTo().map(AddressProposition::address).orElse(Array.emptyByteArray())));
         result.add(RlpString.create(tx.getValue()));
 
         // value field will already be hex encoded, so we need to convert into binary first
-        byte[] dataBytes = tx.getData();
-        result.add(RlpString.create(dataBytes));
+        result.add(RlpString.create(tx.getData()));
 
         if (accountSignature) {
             if (!tx.isSigned())
@@ -71,29 +67,20 @@ public class EthereumTransactionEncoder {
         List<RlpType> result = new ArrayList<>();
 
         result.add(RlpString.create(tx.getChainId()));
-
         result.add(RlpString.create(tx.getNonce()));
 
         // add maxPriorityFeePerGas and maxFeePerGas if this is an EIP-1559 transaction
         result.add(RlpString.create(tx.getMaxPriorityFeePerGas()));
         result.add(RlpString.create(tx.getMaxFeePerGas()));
-
         result.add(RlpString.create(tx.getGasLimit()));
 
         // an empty to address (contract creation) should not be encoded as a numeric 0 value
-        if (tx.getToAddressString() != null && tx.getToAddressString().length() > 0) {
-            // addresses that start with zeros should be encoded with the zeros included, not
-            // as numeric values
-            result.add(RlpString.create(Numeric.hexStringToByteArray(tx.getToAddressString())));
-        } else {
-            result.add(RlpString.create(""));
-        }
-
+        // addresses that start with zeros should be encoded with the zeros included, not as numeric values
+        result.add(RlpString.create(tx.getTo().map(AddressProposition::address).orElse(Array.emptyByteArray())));
         result.add(RlpString.create(tx.getValue()));
 
         // value field will already be hex encoded, so we need to convert into binary first
-        byte[] data = Numeric.hexStringToByteArray(tx.getDataString());
-        result.add(RlpString.create(data));
+        result.add(RlpString.create(tx.getData()));
 
         // access list
         result.add(new RlpList());
