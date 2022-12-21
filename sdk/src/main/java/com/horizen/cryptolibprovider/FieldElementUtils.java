@@ -12,11 +12,11 @@ public class FieldElementUtils {
     }
 
     public static FieldElement messageToFieldElement(byte[] message) {
-        if (message.length > fieldElementLength()) {
+        if (message.length != fieldElementLength()) {
             throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
-                    message.length + " but it shall be less than " + fieldElementLength());
+                    message.length + " but it shall be equal to " + fieldElementLength());
         }
-        return FieldElement.deserialize(Arrays.copyOf(message, fieldElementLength()));
+        return FieldElement.deserialize(message);
     }
 
     public static FieldElement hashToFieldElement(String hexByte) {
