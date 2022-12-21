@@ -22,7 +22,7 @@ public class SignatureSecp256k1SerializerTest {
         String payload = "This is string to sign";
         var message = payload.getBytes(StandardCharsets.UTF_8);
 
-        // Create a key pair and create the signature
+        // Create a key and generate the signature
         PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("seed".getBytes());
         signatureSecp256k1 = privateKey.sign(message);
     }

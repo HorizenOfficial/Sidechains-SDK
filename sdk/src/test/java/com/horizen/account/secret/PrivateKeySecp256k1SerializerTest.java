@@ -14,7 +14,6 @@ public class PrivateKeySecp256k1SerializerTest {
 
     @Before
     public void BeforeEachTest() {
-        // Create a key pair and create proposition
         privateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("secpprivatekeytest".getBytes());
     }
 

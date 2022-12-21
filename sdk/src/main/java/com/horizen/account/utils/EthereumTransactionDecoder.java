@@ -139,6 +139,6 @@ public class EthereumTransactionDecoder {
     }
 
     private static byte[] getVFromRecId(int recId) {
-        return new byte[]{(byte)(27 + recId)};
+        return new byte[]{(byte)(LOWER_REAL_V + recId)};
     }
 }

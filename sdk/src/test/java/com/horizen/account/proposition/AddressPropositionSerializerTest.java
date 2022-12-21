@@ -14,7 +14,6 @@ public class AddressPropositionSerializerTest {
 
     @Before
     public void BeforeEachTest() {
-        // Create a key pair and create proposition
         PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("addressproptest".getBytes());
         addressProposition = privateKey.publicImage();
     }

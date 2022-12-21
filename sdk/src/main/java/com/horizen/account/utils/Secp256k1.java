@@ -24,6 +24,8 @@ public final class Secp256k1 {
 
     public static final int LOWER_REAL_V = Sign.LOWER_REAL_V;
 
+    public static final int REAL_V_REPLAY_PROTECTED = 35;
+
     public static class Signature {
         public final byte[] v;
         public final byte[] r;

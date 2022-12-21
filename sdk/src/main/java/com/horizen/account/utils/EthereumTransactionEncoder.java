@@ -11,6 +11,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.horizen.account.utils.Secp256k1.*;
+
 public class EthereumTransactionEncoder {
 
     private EthereumTransactionEncoder() {
@@ -131,19 +133,19 @@ public class EthereumTransactionEncoder {
     private static byte[] createEip155v(byte[] realV, long chainId) {
         // update real `V` field with chain id
         BigInteger v = Numeric.toBigInt(realV);
-        v = v.subtract(BigInteger.valueOf(27L));
-        v = v.add(BigInteger.valueOf(chainId).multiply(BigInteger.valueOf(2L)));
-        v = v.add(BigInteger.valueOf(35L));
+        v = v.subtract(BigInteger.valueOf(LOWER_REAL_V));
+        v = v.add(BigInteger.valueOf(chainId).multiply(BigIntegers.TWO));
+        v = v.add(BigInteger.valueOf(CHAIN_ID_INC));
 
         return v.toByteArray();
     }
 
     private static int getRecId(byte[] realV, long chainId) {
         BigInteger v = Numeric.toBigInt(realV);
-        BigInteger lowerRealV = BigInteger.valueOf(27L);
-        BigInteger lowerRealVPlus1 = BigInteger.valueOf(28L);
-        BigInteger lowerRealVReplayProtected = BigInteger.valueOf(37L);
-        BigInteger chainIdInc = BigInteger.valueOf(35L);
+        BigInteger lowerRealV = BigInteger.valueOf(LOWER_REAL_V);
+        BigInteger lowerRealVPlus1 = lowerRealV.add(BigInteger.ONE);
+        BigInteger lowerRealVReplayProtected = BigInteger.valueOf(REAL_V_REPLAY_PROTECTED);
+        BigInteger chainIdInc = BigInteger.valueOf(CHAIN_ID_INC);
         if (!v.equals(lowerRealV) && !v.equals(lowerRealVPlus1)) {
             if (v.compareTo(lowerRealVReplayProtected) >= 0) {
                 return v.subtract(BigInteger.valueOf(chainId).multiply(BigIntegers.TWO)).subtract(chainIdInc).intValue();
