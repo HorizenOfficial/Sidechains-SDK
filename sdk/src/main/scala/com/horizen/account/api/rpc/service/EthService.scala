@@ -485,6 +485,10 @@ class EthService(
   @RpcMethod("eth_getUncleByBlockNumberAndIndex")
   def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity): Null = null
 
+  // Eth Syncing RPC
+  @RpcMethod("eth_syncing")
+  def eth_syncing() = false
+
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
   def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
