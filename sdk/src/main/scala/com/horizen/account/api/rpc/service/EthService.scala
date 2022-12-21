@@ -36,6 +36,7 @@ import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.collection.mutable
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -105,11 +106,25 @@ class EthService(
     nodeView.history
       .getStorageBlockById(blockId)
       .map(block => {
+        // retrieve ethereum transactions details and receipt only if the hydratedTx flag is true
+        val txViewList = mutable.MutableList[EthereumTransactionView]()
+        if(hydratedTx) {
+          using(nodeView.state.getView) { stateView =>
+            for (blockTx <- block.transactions) {
+              val txReceipt = stateView.getTransactionReceipt(Numeric.hexStringToByteArray(blockTx.id)).get
+              val ethTx = blockTx.asInstanceOf[EthereumTransaction]
+              val txView = new EthereumTransactionView(txReceipt, ethTx, block.header.baseFee)
+              txViewList += txView
+            }
+          }
+        }
+        // create the return EthereumBlockView
         new EthereumBlockView(
           nodeView.history.getBlockHeightById(blockId).get().toLong,
           Numeric.prependHexPrefix(blockId),
           hydratedTx,
-          block
+          block,
+          txViewList.asJava
         )
       })
       .orNull

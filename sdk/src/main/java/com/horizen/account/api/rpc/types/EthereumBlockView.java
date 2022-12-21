@@ -1,17 +1,19 @@
 package com.horizen.account.api.rpc.types;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @JsonView(Views.Default.class)
 public class EthereumBlockView {
-    public final Long number;
+    public final String number;
     public final String hash;
     public final String parentHash;
     public final String nonce;
@@ -35,10 +37,10 @@ public class EthereumBlockView {
     public List<String> sealFields;
     public String baseFeePerGas;
 
-    public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block) {
+    public EthereumBlockView(Long blockNumber, String hash, boolean hydratedTx, AccountBlock block, List<EthereumTransactionView> txList) {
         var blockHeader = block.header();
         this.author = Numeric.toHexString(block.header().forgerAddress().address());
-        this.number = blockNumber;
+        this.number = Numeric.encodeQuantity(BigInteger.valueOf(blockNumber));
         this.hash = hash;
         this.parentHash = Numeric.prependHexPrefix((String) block.parentId());
         // no nonce, but we explicity set it to all zeroes as some RPC clients are very strict (e.g. GETH)
@@ -57,14 +59,17 @@ public class EthereumBlockView {
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
         this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
 
-        var transactions = scala.collection.JavaConverters.seqAsJavaList(block.transactions());
-
         if (!hydratedTx) {
+            var transactions = scala.collection.JavaConverters.seqAsJavaList(block.transactions());
             this.transactions = transactions.stream().map(t -> Numeric.prependHexPrefix((String) t.id())).collect(Collectors.toList());
+        } else {
+            this.transactions = txList;
         }
-        else {
-            this.transactions = transactions;
-        }
+    }
+
+    @JsonInclude
+    public List<String> getUncles() {
+        return new ArrayList<>();
     }
 }
 
