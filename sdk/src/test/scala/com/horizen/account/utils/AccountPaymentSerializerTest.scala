@@ -1,36 +1,23 @@
 package com.horizen.account.utils
 
-import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import org.junit.Assert.{assertArrayEquals, assertEquals}
+import com.horizen.account.proposition.AddressProposition
+import com.horizen.fixtures.SecretFixture
+import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.mockito.Mockito.{verify, when}
-import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.serialization.{Reader, Writer}
 
-class AccountPaymentSerializerTest extends MockitoSugar  {
+import java.math.BigInteger
+
+class AccountPaymentSerializerTest extends SecretFixture  {
   @Test
   def serializeAccountPayment(): Unit = {
-    val mockAddressPropositionSerializer = mock[AddressPropositionSerializer]
-    val mockAddressProposition = mock[AddressProposition]
-    val mockWriter = mock[Writer]
-    val mockReader = mock[Reader]
+    val address: AddressProposition = getAddressProposition(123)
+    val value: BigInteger = BigInteger.valueOf(1234567890L)
+    val accountPayment: AccountPayment = AccountPayment(address, value)
 
-    val value = BigInt("1234567890")
-    val accountPayment = AccountPayment(mockAddressProposition, value.bigInteger)
-    val testAddressBytes = Array.fill[Byte](Account.ADDRESS_SIZE)(0)
+    val serializedBytes: Array[Byte] = AccountPaymentSerializer.toBytes(accountPayment)
 
-    when(mockAddressProposition.address).thenReturn(testAddressBytes)
-    when(mockAddressPropositionSerializer.parse(mockReader)).thenReturn(mockAddressProposition)
-    when(mockReader.getInt).thenReturn(value.toByteArray.length)
-    when(mockReader.getBytes(value.toByteArray.length)).thenReturn(value.toByteArray)
-    when(mockReader.getBytes(Account.ADDRESS_SIZE)).thenReturn(testAddressBytes)
+    val deserializedAccountPayment: AccountPayment = AccountPaymentSerializer.parseBytes(serializedBytes)
 
-    AccountPaymentSerializer.serialize(accountPayment, mockWriter)
-    verify(mockWriter).putInt(value.toByteArray.length)
-    verify(mockWriter).putBytes(value.toByteArray)
-
-    val deserialized = AccountPaymentSerializer.parse(mockReader)
-    assertArrayEquals(deserialized.addressBytes, testAddressBytes)
-    assertEquals(deserialized.value.toString(), value.bigInteger.toString())
+    assertEquals(accountPayment, deserializedAccountPayment)
   }
 }
