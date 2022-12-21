@@ -38,7 +38,7 @@ public class EthereumTransactionView {
         to = Numeric.cleanHexPrefix(ethTx.getToAddressString()).length() != 2 * Account.ADDRESS_SIZE ? null : Numeric.prependHexPrefix(ethTx.getToAddressString());
         gas = Numeric.encodeQuantity(ethTx.getGasLimit());
         value = Numeric.encodeQuantity(ethTx.getValue());
-        input = ethTx.getData()!=null && ethTx.getData().length!=0 ? Numeric.toHexString(ethTx.getData()) : null;
+        input = ethTx.getData()!=null ? Numeric.toHexString(ethTx.getData()) : null;
         gasPrice = Numeric.encodeQuantity(ethTx.getEffectiveGasPrice(baseFee));
         if (ethTx.isEIP1559()) {
             maxPriorityFeePerGas = Numeric.encodeQuantity(ethTx.getMaxPriorityFeePerGas());
