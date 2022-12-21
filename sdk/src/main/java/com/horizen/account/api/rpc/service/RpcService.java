@@ -65,23 +65,23 @@ public class RpcService {
             }
             return convertedArgs;
         } catch (IllegalArgumentException err) {
-            LogManager.getLogger().warn("RPC call with invalid params: " + method, err);
+            LogManager.getLogger().trace("RPC call with invalid params: " + method, err);
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, err.getMessage()));
         }
     }
 
     public Object execute(RpcRequest req) throws Throwable {
-        var method = rpcMethods.get(req.getMethod());
+        var method = rpcMethods.get(req.method);
         if (method == null) throw new RpcException(RpcError.fromCode(RpcCode.MethodNotFound));
-        var args = convertArgs(method, req.getParams());
+        var args = convertArgs(method, req.params);
         try {
             return method.invoke(this, args);
         } catch (InvocationTargetException e) {
             // unpack and rethrow potential RpcException
-            LogManager.getLogger().warn("RPC call failed: " + method, e);
+            LogManager.getLogger().trace("RPC call failed: " + method, e);
             throw e.getCause();
         } catch (IllegalArgumentException e) {
-            LogManager.getLogger().warn("RPC call failed: " + method, e);
+            LogManager.getLogger().trace("RPC call failed: " + method, e);
             throw e.getCause();
         }
     }
