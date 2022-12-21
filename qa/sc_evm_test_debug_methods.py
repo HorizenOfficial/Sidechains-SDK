@@ -63,9 +63,12 @@ class SCEvmDebugMethods(AccountChainSetup):
         res = sc_node.rpc_debug_traceTransaction(tx_hash)
         assert_true("error" not in res['result'], "debug_traceTransaction failed for successful eoa transfer")
 
-        res = sc_node.rpc_debug_traceBlockByNumber("0x4")
+        res = sc_node.rpc_debug_traceBlockByNumber('0x4')
         assert_true("error" not in res["result"], 'debug_traceBlockByNumber failed')
 
+        block_hash = sc_node.rpc_eth_getBlockByNumber('0x4',False)['result']['hash']
+        res = sc_node.rpc_debug_traceBlockByHash(block_hash)
+        assert_true("error" not in res["result"], 'debug_traceBlockByHash failed')
 
 if __name__ == "__main__":
     SCEvmDebugMethods().main()

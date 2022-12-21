@@ -27,12 +27,13 @@ import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.utils.Numeric
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.{NodeViewHolder, bytesToId}
 
 import java.math.BigInteger
 import java.util
+import java.util.Arrays
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
@@ -322,12 +323,17 @@ class EthService(
     }
   }
 
-  private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
-    val blockId = getBlockIdByTag(nodeView, tag)
+  private def getBlockById(nodeView: NV, blockId: ModifierId): (AccountBlock, SidechainBlockInfo) = {
     val block = nodeView.history
       .getStorageBlockById(blockId)
       .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "Invalid block tag parameter.")))
     val blockInfo = nodeView.history.blockInfoById(blockId)
+    (block, blockInfo)
+  }
+
+  private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
+    val blockId = getBlockIdByTag(nodeView, tag)
+    val (block, blockInfo) = getBlockById(nodeView, blockId)
     (block, blockInfo)
   }
 
@@ -492,9 +498,18 @@ class EthService(
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
   def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
+    val hash: Hash = {
+      applyOnAccountView { nodeView =>
+        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))}}
+    traceBlockByHash(hash, config)
+  }
+
+  @RpcMethod("debug_traceBlockByHash")
+  @RpcOptionalParameters(1)
+  def traceBlockByHash(hash: Hash, config: TraceOptions): DebugTraceBlockView = {
     applyOnAccountView { nodeView =>
       // get block to trace
-      val (block, blockInfo) = getBlockByTag(nodeView, number)
+      val (block, blockInfo) = getBlockById(nodeView, bytesToId(hash.toBytes))
 
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
