@@ -217,7 +217,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito
       .when(block.header.forgerAddress)
       .thenReturn(forgerAddress)
-    Mockito.when(block.sidechainTransactions).thenReturn(Seq[SidechainTypes#SCAT]())
+    Mockito.when(block.sidechainTransactions).thenReturn(txs)
     Mockito.when(block.transactions).thenReturn(txs)
     Mockito.when(block.mainchainHeaders).thenReturn(Seq(mcBlockRef.header))
     Mockito.when(block.mainchainBlockReferencesData).thenReturn(Seq(mcBlockRef.data))

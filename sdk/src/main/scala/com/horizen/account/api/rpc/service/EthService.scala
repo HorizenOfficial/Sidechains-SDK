@@ -136,17 +136,21 @@ class EthService(
       blockId: ModifierId,
       hydratedTx: Boolean
   ): EthereumBlockView = {
-    nodeView.history
-      .getStorageBlockById(blockId)
-      .map(block => {
-        new EthereumBlockView(
-          nodeView.history.getBlockHeightById(blockId).get().toLong,
-          Numeric.prependHexPrefix(blockId),
-          hydratedTx,
-          block
-        )
-      })
-      .orNull
+    val blockNumber = nodeView.history.getBlockHeightById(blockId).get().toLong
+    val blockHash = Hash.fromBytes(blockId.toBytes)
+    using(nodeView.state.getView) { stateView =>
+      nodeView.history
+        .getStorageBlockById(blockId)
+        .map(block => {
+          if (hydratedTx) {
+            val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
+            EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
+          } else {
+            EthereumBlockView.notHydrated(blockNumber, blockHash, block)
+          }
+        })
+        .orNull
+    }
   }
 
   @RpcMethod("eth_getBlockTransactionCountByHash")
@@ -433,7 +437,7 @@ class EthService(
   @RpcMethod("eth_getTransactionByHash")
   def getTransactionByHash(transactionHash: Hash): EthereumTransactionView = {
     getTransactionAndReceipt(transactionHash).map { case (block, tx, receipt) =>
-      new EthereumTransactionView(receipt, tx, block.header.baseFee)
+      new EthereumTransactionView(tx, receipt, block.header.baseFee)
     }.orNull
   }
 
@@ -459,7 +463,7 @@ class EthService(
             .map(_.asInstanceOf[EthereumTransaction])
             .flatMap(tx =>
               using(nodeView.state.getView)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
-                .map(new EthereumTransactionView(_, tx, block.header.baseFee))
+                .map(new EthereumTransactionView(tx, _, block.header.baseFee))
             )
         })
     }.orNull
