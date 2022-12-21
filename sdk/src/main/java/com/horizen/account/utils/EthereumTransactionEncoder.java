@@ -1,27 +1,35 @@
 package com.horizen.account.utils;
 
-import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.transaction.EthereumTransaction;
-import org.web3j.crypto.Sign;
-import org.web3j.rlp.RlpEncoder;
-import org.web3j.rlp.RlpList;
-import org.web3j.rlp.RlpString;
-import org.web3j.rlp.RlpType;
+import com.horizen.account.proposition.AddressProposition;
+import org.bouncycastle.util.BigIntegers;
+import org.web3j.rlp.*;
+import org.web3j.utils.Numeric;
 import scala.Array;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.horizen.account.utils.EthereumTransactionUtils.convertToBytes;
-import static org.web3j.crypto.TransactionEncoder.createEip155SignatureData;
+import static com.horizen.account.utils.Secp256k1.*;
 
 public class EthereumTransactionEncoder {
 
-    public EthereumTransactionEncoder() {
+    private EthereumTransactionEncoder() {
+        // prevent instantiation
     }
 
-    public static byte[] encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
+    public static byte[] encodeAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
+        if (tx.isEIP1559()) {
+            return encodeEip1559AsRlpValues(tx, accountSignature);
+        } else {
+            return encodeLegacyAsRlpValues(tx, accountSignature);
+        }
+    }
+
+    private static byte[] encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
 
         List<RlpType> result = new ArrayList<>();
 
@@ -41,18 +49,22 @@ public class EthereumTransactionEncoder {
         if (accountSignature) {
             if (!tx.isSigned())
                 throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
-            Sign.SignatureData signatureData;
+            SignatureSecp256k1 txSignature = tx.getSignature();
+
+            byte[] v = txSignature.getV();
+            byte[] r = txSignature.getR();
+            byte[] s = txSignature.getS();
+
             if (tx.isEIP155()) {
-                signatureData = createEip155SignatureData(tx.getSignature().getSignatureData(), tx.getChainId());
-            } else {
-                signatureData = tx.getSignature().getSignatureData();
+                v = createEip155v(v, tx.getChainId());
             }
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getV())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getR())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getS())));
+
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(v)));
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(r)));
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(s)));
         } else {
             if (tx.isEIP155()) {
-                result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(convertToBytes(tx.getChainId()))));
+                result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(EthereumTransactionUtils.convertToBytes(tx.getChainId()))));
                 result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(new byte[] {})));
                 result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(new byte[] {})));
             }
@@ -62,7 +74,7 @@ public class EthereumTransactionEncoder {
         return RlpEncoder.encode(rlpList);
     }
 
-    public static byte[] encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature) {
+    private static byte[] encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature) {
 
         List<RlpType> result = new ArrayList<>();
 
@@ -88,10 +100,11 @@ public class EthereumTransactionEncoder {
         if (accountSignature) {
             if (!tx.isSigned())
                 throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
-            Sign.SignatureData signatureData = tx.getSignature().getSignatureData();
-            result.add(RlpString.create(Sign.getRecId(signatureData, tx.getChainId())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getR())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(signatureData.getS())));
+
+            SignatureSecp256k1 txSignature = tx.getSignature();
+            result.add(RlpString.create(getRecId(txSignature.getV(), tx.getChainId())));
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(txSignature.getR())));
+            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(txSignature.getS())));
         }
 
         RlpList rlpList = new RlpList(result);
@@ -102,4 +115,32 @@ public class EthereumTransactionEncoder {
                 .put(encoded)
                 .array();
     }
+
+    private static byte[] createEip155v(byte[] realV, long chainId) {
+        // update real `V` field with chain id
+        BigInteger v = Numeric.toBigInt(realV);
+        v = v.subtract(BigInteger.valueOf(LOWER_REAL_V));
+        v = v.add(BigInteger.valueOf(chainId).multiply(BigIntegers.TWO));
+        v = v.add(BigInteger.valueOf(CHAIN_ID_INC));
+
+        return v.toByteArray();
+    }
+
+    private static int getRecId(byte[] realV, long chainId) {
+        BigInteger v = Numeric.toBigInt(realV);
+        BigInteger lowerRealV = BigInteger.valueOf(LOWER_REAL_V);
+        BigInteger lowerRealVPlus1 = lowerRealV.add(BigInteger.ONE);
+        BigInteger lowerRealVReplayProtected = BigInteger.valueOf(REAL_V_REPLAY_PROTECTED);
+        BigInteger chainIdInc = BigInteger.valueOf(CHAIN_ID_INC);
+        if (!v.equals(lowerRealV) && !v.equals(lowerRealVPlus1)) {
+            if (v.compareTo(lowerRealVReplayProtected) >= 0) {
+                return v.subtract(BigInteger.valueOf(chainId).multiply(BigIntegers.TWO)).subtract(chainIdInc).intValue();
+            } else {
+                throw new IllegalArgumentException(String.format("Unsupported v parameter: %s", v));
+            }
+        } else {
+            return v.subtract(lowerRealV).intValue();
+        }
+    }
+
 }

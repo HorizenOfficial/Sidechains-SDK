@@ -30,6 +30,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
+import scorex.crypto.hash.Keccak256
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
 import sparkz.core.bytesToId
@@ -115,8 +116,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       new Array[Byte](0),
       goodSignature
     )
-    val encodedMessage = EthereumTransactionEncoder.encodeEip1559AsRlpValues(txEip1559, txEip1559.isSigned)
-    val txHash = BytesUtils.toHexString(org.web3j.crypto.Hash.sha3(encodedMessage, 0, encodedMessage.length))
+    val encodedMessage = EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned)
+    val txHash = BytesUtils.toHexString(Keccak256.hash(encodedMessage))
 
     txs.append(txEip1559.asInstanceOf[SidechainTypes#SCAT])
 
