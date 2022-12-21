@@ -10,6 +10,7 @@ import sparkz.core.transaction.MempoolReader
 import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
@@ -109,6 +110,18 @@ class AccountMemoryPool(
 
   override def getTransactions: util.List[SidechainTypes#SCAT] =
     unconfirmed.values.toList.asJava
+
+  def getExecutableTransactions: util.List[ModifierId] =
+    unconfirmed.mempoolTransactions(true).toList.asJava
+
+  def getNonExecutableTransactions: util.List[ModifierId] =
+    unconfirmed.mempoolTransactions(false).toList.asJava
+
+  def getExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+    unconfirmed.mempoolTransactionsMap(true)
+
+  def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+    unconfirmed.mempoolTransactionsMap(false)
 
   override def getTransactions(
       c: Comparator[SidechainTypes#SCAT],

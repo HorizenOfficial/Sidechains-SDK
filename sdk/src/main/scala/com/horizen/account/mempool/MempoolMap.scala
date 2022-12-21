@@ -10,10 +10,12 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends ScorexLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
+  type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap.empty[ModifierId, SidechainTypes#SCAT]
@@ -136,6 +138,34 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
   def contains(txId: ModifierId): Boolean = all.contains(txId)
 
   def values: Iterable[SidechainTypes#SCAT] = all.values
+
+  def mempoolTransactions(executable: Boolean): Iterable[ModifierId] = {
+    val txsList = new ListBuffer[ModifierId]
+    var mempoolIdsMap = TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
+    if (executable) mempoolIdsMap = executableTxs
+    else mempoolIdsMap = nonExecutableTxs
+    for ((_, v) <- mempoolIdsMap) {
+      for ((_, innerV) <- v) {
+        txsList += innerV
+      }
+    }
+    txsList
+  }
+
+  def mempoolTransactionsMap(executable: Boolean): TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
+    val txsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
+    var mempoolIdsMap = TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
+    if (executable) mempoolIdsMap = executableTxs
+    else mempoolIdsMap = nonExecutableTxs
+    for ((from, nonceIdsMap) <- mempoolIdsMap) {
+      val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+      for ((txNonce, txId) <- nonceIdsMap) {
+        nonceTxsMap.put(txNonce, getTransaction(txId).get)
+      }
+      txsMap.put(from, nonceTxsMap)
+    }
+    txsMap
+  }
 
   /**
    * Returns executable transactions sorted by gas tip (descending) and nonce. The ordering is performed in a semi-lazy
