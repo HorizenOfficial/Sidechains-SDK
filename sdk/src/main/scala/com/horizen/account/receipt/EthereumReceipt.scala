@@ -130,8 +130,8 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
 
     // optional field
     val contractAddressLength = reader.getInt
-    val contractAddress: Array[Byte] = reader.getBytes(contractAddressLength)
+    val contractAddress: Option[Array[Byte]] = if(contractAddressLength == 0) None else Some(reader.getBytes(contractAddressLength))
 
-    EthereumReceipt(receipt, txHash, txIndex, blockHash, blockNumber, gasUsed, Option(contractAddress))
+    EthereumReceipt(receipt, txHash, txIndex, blockHash, blockNumber, gasUsed, contractAddress)
   }
 }
