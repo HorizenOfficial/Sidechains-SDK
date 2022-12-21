@@ -6,19 +6,11 @@ import com.horizen.serialization.Views;
 @JsonView(Views.Default.class)
 public class TxPoolStatus {
 
-    private final int pending;
-    private final int queued;
+    public final int pending;
+    public final int queued;
 
     public TxPoolStatus(int pending, int queued) {
         this.pending = pending;
         this.queued = queued;
-    }
-
-    public int getPending() {
-        return pending;
-    }
-
-    public int getQueued() {
-        return queued;
     }
 }

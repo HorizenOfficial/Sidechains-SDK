@@ -12,17 +12,17 @@ import java.math.BigInteger;
 public class TxPoolTransaction {
 
     private final static String DEFAULT_BLOCK_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
-    private final String blockHash;         // fixed default value
-    private final String blockNumber;       // always null
-    private final String from;
-    private final String gas;
-    private final String gasPrice;
-    private final String hash;              // transaction modifier id
-    private final String input;             // transaction data
-    private final String nonce;
-    private final String to;
-    private final String transactionIndex;  // always null
-    private final String value;
+    public final String blockHash;         // fixed default value
+    public final String blockNumber;       // always null
+    public final String from;
+    public final String gas;
+    public final String gasPrice;
+    public final String hash;              // transaction modifier id
+    public final String input;             // transaction data
+    public final String nonce;
+    public final String to;
+    public final String transactionIndex;  // always null
+    public final String value;
 
     public TxPoolTransaction(byte[] from, BigInteger gas, BigInteger gasPrice, byte[] hash,
                              byte[] input, BigInteger nonce, byte[] to, BigInteger value) {
@@ -37,49 +37,5 @@ public class TxPoolTransaction {
         this.to = (to!=null) ? Numeric.toHexString(to) : null;;
         this.transactionIndex = null;
         this.value = Numeric.encodeQuantity(value);
-    }
-
-    public String getBlockHash() {
-        return blockHash;
-    }
-
-    public String getBlockNumber() {
-        return blockNumber;
-    }
-
-    public String getFrom() {
-        return from;
-    }
-
-    public String getGas() {
-        return gas;
-    }
-
-    public String getGasPrice() {
-        return gasPrice;
-    }
-
-    public String getHash() {
-        return hash;
-    }
-
-    public String getInput() {
-        return input;
-    }
-
-    public String getNonce() {
-        return nonce;
-    }
-
-    public String getTo() {
-        return to;
-    }
-
-    public String getTransactionIndex() {
-        return transactionIndex;
-    }
-
-    public String getValue() {
-        return value;
     }
 }
