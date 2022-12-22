@@ -29,15 +29,9 @@ trait AccountBlockHeaderFixture {
 
     val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(seed, vrfKeysOpt)
     val vrfProof = vrfProofOpt.getOrElse(VrfGenerator.generateProof(seed))
-
     val merklePath = new MerklePath(new JArrayList())
-
     val transactionsRootHash = Utils.ZEROS_HASH
-
     val mainchainRootHash = Utils.ZEROS_HASH
-
-    val ommersRootHash = Utils.ZEROS_HASH
-
     val forgingStakeInfo : ForgingStakeInfo = forgerMetadata.forgingStakeInfo
     val stateRoot = new Array[Byte](32)
     val receiptsRoot = new Array[Byte](32)
@@ -45,6 +39,9 @@ trait AccountBlockHeaderFixture {
     val baseFee: BigInteger = INITIAL_BASE_FEE
     val gasUsed: BigInteger = BigInteger.valueOf(21000)
     val gasLimit: BigInteger = BigInteger.valueOf(GAS_LIMIT)
+    val ommersRootHash = Utils.ZEROS_HASH
+    val ommersCumulativeScore : Long = 0L;
+    val feePaymentHash = new Array[Byte](32)
     val logsBloom: Bloom = new Bloom()
 
     val unsignedHeader = AccountBlockHeader(
@@ -63,8 +60,8 @@ trait AccountBlockHeaderFixture {
       gasUsed,
       gasLimit,
       ommersRootHash,
-      0,
-      new Array[Byte](32),
+      ommersCumulativeScore,
+      feePaymentHash,
       logsBloom,
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH))
     )

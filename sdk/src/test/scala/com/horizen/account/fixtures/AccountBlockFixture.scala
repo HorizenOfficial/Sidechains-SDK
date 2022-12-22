@@ -9,9 +9,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.Bloom
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
-import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.customtypes.SemanticallyInvalidTransaction
 import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, MerkleTreeFixture}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -20,11 +18,9 @@ import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
 import sparkz.core.block.Block
-import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
-
 import java.math.BigInteger
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Random, Try}
 
 
 class SemanticallyInvalidAccountBlock(block: AccountBlock, companion: SidechainAccountTransactionsCompanion)
@@ -135,7 +131,7 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
       references.map(_.data),
       Seq(),
       references.map(_.header),
-      Seq(), // TODO: ommers suport
+      Seq(),
       ownerPrivateKey,
       forgingStakeInfo,
       vrfProof,
@@ -199,4 +195,9 @@ trait AccountBlockFixture extends MainchainBlockReferenceFixture with AccountBlo
       basicSeed = basicSeed)
   }
 
+  def getRandomBlockId(seed: Long = 1312): ModifierId = {
+    val id: Array[Byte] = new Array[Byte](32)
+    new Random(seed).nextBytes(id)
+    bytesToId(id)
+  }
 }
