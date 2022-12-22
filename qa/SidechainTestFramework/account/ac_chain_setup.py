@@ -19,7 +19,7 @@ class AccountChainSetup(SidechainTestFramework):
     def __init__(self, API_KEY='Horizen', number_of_mc_nodes=1, number_of_sidechain_nodes=1,
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
-                 circuittype_override=None):
+                 circuittype_override=None, remote_keys_manager_enabled=False):
         self.evm_address = None
         self.sc_nodes = None
         self.sc_nodes_bootstrap_info = None
@@ -34,6 +34,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.block_timestamp_rewind = block_timestamp_rewind
         self.forger_options = forger_options
         self.circuittype_override = circuittype_override
+        self.remote_keys_manager_enabled = remote_keys_manager_enabled
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -57,13 +58,15 @@ class AccountChainSetup(SidechainTestFramework):
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-                    api_key=self.API_KEY))
+                    api_key=self.API_KEY,
+                    remote_keys_manager_enabled=self.remote_keys_manager_enabled))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     forger_options=self.forger_options,
-                    api_key=self.API_KEY))
+                    api_key=self.API_KEY,
+                    remote_keys_manager_enabled=self.remote_keys_manager_enabled))
 
         if self.circuittype_override is not None:
             circuit_type = self.circuittype_override
@@ -88,7 +91,7 @@ class AccountChainSetup(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               auth_api_key=self.API_KEY,
                               binary=[EVM_APP_BINARY] * self.number_of_sidechain_nodes,
-                              extra_args=self.debug_extra_args)
+                              extra_args=['-agentlib'])
 
     def sc_ac_setup(self, wallet=True, forwardTransfer=True, ft_amount_in_zen=Decimal("33.22")):
         sc_node = self.sc_nodes[0]

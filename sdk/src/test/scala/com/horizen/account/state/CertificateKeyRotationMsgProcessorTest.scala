@@ -149,10 +149,16 @@ class CertificateKeyRotationMsgProcessorTest
 
       certificateKeyRotationMsgProcessor.getKeyRotationProof(0, 0, masterKeyType, view) shouldBe Some(keyRotationProof)
 
-      certificateKeyRotationMsgProcessor.getCertifiersKeys(0, view) shouldBe
+      certificateKeyRotationMsgProcessor.getCertifiersKeys(-1, view) shouldBe
         CertifiersKeys(
           Vector(oldSigningKey.publicImage()),
           Vector(oldMasterKey.publicImage())
+        )
+
+      certificateKeyRotationMsgProcessor.getCertifiersKeys(0, view) shouldBe
+        CertifiersKeys(
+          Vector(oldSigningKey.publicImage()),
+          Vector(newMasterKey.publicImage())
         )
     }
   }
@@ -182,6 +188,18 @@ class CertificateKeyRotationMsgProcessorTest
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(signingKeyType, index = 0, view) shouldBe KeyRotationHistory(epochNumbers = List())
 
       certificateKeyRotationMsgProcessor.getKeyRotationProof(0, 0, masterKeyType, view) shouldBe Some(keyRotationProofSecond)
+
+      certificateKeyRotationMsgProcessor.getCertifiersKeys(-1, view) shouldBe
+        CertifiersKeys(
+          Vector(oldSigningKey.publicImage()),
+          Vector(oldMasterKey.publicImage())
+        )
+
+      certificateKeyRotationMsgProcessor.getCertifiersKeys(0, view) shouldBe
+        CertifiersKeys(
+          Vector(oldSigningKey.publicImage()),
+          Vector(newMasterKeySecond.publicImage())
+        )
     }
   }
 
@@ -240,19 +258,19 @@ class CertificateKeyRotationMsgProcessorTest
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(masterKeyType, index = 1, view) shouldBe KeyRotationHistory(epochNumbers = List(2))
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(signingKeyType, index = 1, view) shouldBe KeyRotationHistory(epochNumbers = List())
 
-      certificateKeyRotationMsgProcessor.getCertifiersKeys(0, view) shouldBe
+      certificateKeyRotationMsgProcessor.getCertifiersKeys(-1, view) shouldBe
         CertifiersKeys(
           Vector(oldSigningKey0, oldSigningKey1).map(_.publicImage()),
           Vector(oldMasterKey0, oldMasterKey1).map(_.publicImage())
         )
 
-      certificateKeyRotationMsgProcessor.getCertifiersKeys(1, view) shouldBe
+      certificateKeyRotationMsgProcessor.getCertifiersKeys(0, view) shouldBe
         CertifiersKeys(
           Vector(oldSigningKey0, oldSigningKey1).map(_.publicImage()),
           Vector(masterKey0FirstUpdate, oldMasterKey1).map(_.publicImage())
         )
 
-      certificateKeyRotationMsgProcessor.getCertifiersKeys(2, view) shouldBe
+      certificateKeyRotationMsgProcessor.getCertifiersKeys(1, view) shouldBe
         CertifiersKeys(
           Vector(signingKey0Updated, oldSigningKey1).map(_.publicImage()),
           Vector(masterKey0SecondUpdate, oldMasterKey1).map(_.publicImage())

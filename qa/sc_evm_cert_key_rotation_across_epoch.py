@@ -218,6 +218,11 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
             assert_equal(0, len(sc_txs), "There should be no SC TXs in a block")
             # isWithdrawalEpochLastBlock condition is true, no SC TXs allowed
 
+            # Verify that we have the updated key
+            certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)
+            epoch_one_keys_root_hash = certificate_signers_keys["keysRootHash"]
+            assert_equal(certificate_signers_keys["certifiersKeys"]["signingKeys"][0]["publicKey"], new_public_key_2)
+
             # ******************** WITHDRAWAL EPOCH 1 START ********************
             logging.info("******************** WITHDRAWAL EPOCH 1 START ********************")
             # Generate first mc block of the next epoch
@@ -237,6 +242,11 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
                 time.sleep(2)
                 sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
             assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+            cert_hash = mc_node.getrawmempool()[0]
+            cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
+            assert_equal(epoch_one_keys_root_hash, cert['vFieldElementCertificateField'][0],
+                         "Certificate Keys Root Hash incorrect")
+            assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
             # Generate MC and SC blocks with Cert
             we1_2_mcblock_hash = mc_node.generate(1)[0]
@@ -256,9 +266,6 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
                 assert_equal(signer_key_rotation_proof, {})
                 assert_equal(master_key_rotation_proof, {})
 
-            # Verify that we have the updated key
-            certificate_signers_keys = http_get_certifiers_keys(sc_node, 1)["certifiersKeys"]
-            assert_equal(certificate_signers_keys["signingKeys"][0]["publicKey"], new_public_key_2)
         finally:
             api_server_thread.terminate()
 
