@@ -22,7 +22,7 @@ case class AccountFeePaymentsInfo(payments: Seq[AccountPayment]) extends Abstrac
 
 object AccountFeePaymentsInfoSerializer extends SparkzSerializer[AccountFeePaymentsInfo] {
 
-  private val outputsSerializer: ListSerializer[AccountPayment] = new ListSerializer[AccountPayment](AccountPaymentSerializer.getSerializer)
+  private val outputsSerializer: ListSerializer[AccountPayment] = new ListSerializer[AccountPayment](AccountPaymentSerializer)
 
   override def serialize(feePaymentsInfo: AccountFeePaymentsInfo, w: Writer): Unit = {
     outputsSerializer.serialize(feePaymentsInfo.payments.toList.asJava, w)
