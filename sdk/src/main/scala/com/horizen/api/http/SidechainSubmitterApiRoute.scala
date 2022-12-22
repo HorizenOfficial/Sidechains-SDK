@@ -126,10 +126,13 @@ case class SidechainSubmitterApiRoute[
           withView { sidechainNodeView =>
             sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch) match {
               case Some(certifiersKeys) =>
-                val keysRootHash = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
-                  certifiersKeys.signingKeys.map(_.pubKeyBytes()).toList.asJava,
-                  certifiersKeys.masterKeys.map(_.pubKeyBytes()).toList.asJava
-                )
+                val keysRootHash = if (certifiersKeys.masterKeys.nonEmpty)
+                  CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
+                    certifiersKeys.signingKeys.map(_.pubKeyBytes()).toList.asJava,
+                    certifiersKeys.masterKeys.map(_.pubKeyBytes()).toList.asJava
+                  )
+                else
+                  Array[Byte]()
                 ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys, keysRootHash))
               case None =>
                 ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Impossible to find certificate signer keys!", JOptional.empty()))

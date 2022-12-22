@@ -120,12 +120,12 @@ class SCKeyRotationTest(AccountChainSetup):
         new_signing_keys = []
         new_master_keys = []
         for i in range(cert_max_keys):
-            new_s_key = generate_cert_signer_secrets("random_seed5", 1)[0]
+            new_s_key = generate_cert_signer_secrets(f"random_seed5{i}", 1)[0]
             new_signing_keys += [new_s_key]
             private_master_keys.append(new_s_key.secret)
             public_master_keys.append(new_s_key.publicKey)
 
-            new_m_key = generate_cert_signer_secrets("random_seed6", 1)[0]
+            new_m_key = generate_cert_signer_secrets(f"random_seed6{i}", 1)[0]
             new_master_keys += [new_m_key]
             private_master_keys.append(new_m_key.secret)
             public_master_keys.append(new_m_key.publicKey)
