@@ -44,7 +44,6 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
   type PM = SidechainBlock
 
   override type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
-
 }
 
 
