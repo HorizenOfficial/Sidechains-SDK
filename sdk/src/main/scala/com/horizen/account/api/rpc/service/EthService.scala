@@ -557,7 +557,7 @@ class EthService(
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData, block.id).get
         }
 
         val gasPool = new GasPool(BigInteger.valueOf(block.header.gasLimit))
@@ -589,7 +589,7 @@ class EthService(
       getStateViewAtTag(nodeView, (blockNumber - 1).toString) { (tagStateView, blockContext) =>
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData, block.id).get
         }
 
         val gasPool = new GasPool(BigInteger.valueOf(block.header.gasLimit))

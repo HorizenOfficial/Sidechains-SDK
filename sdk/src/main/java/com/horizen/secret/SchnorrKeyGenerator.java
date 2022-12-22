@@ -3,7 +3,7 @@ package com.horizen.secret;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType;
+import com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType;
 import com.horizen.node.NodeWalletBase;
 import scorex.crypto.hash.Blake2b256;
 
@@ -36,7 +36,7 @@ public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
     public SchnorrSecret generateNextSecret(NodeWalletBase wallet) {
         List<Secret> prevSecrets = wallet.secretsOfType(SchnorrSecret.class);
         byte[] nonce = Ints.toByteArray(prevSecrets.size());
-        byte[] seed = Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));
+        byte[] seed = (byte[])Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));
 
         return generateSecret(seed);
     }

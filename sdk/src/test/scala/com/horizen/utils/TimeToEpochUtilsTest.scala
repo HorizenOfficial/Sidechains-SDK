@@ -3,6 +3,8 @@ package com.horizen.utils
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
 import org.junit.Assert.assertEquals
@@ -35,6 +37,8 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     override val nPowMaxAdjustUp: Int = 16 // 16% adjustment up
     override val nPowTargetSpacing: Int = 150 // 2.5 * 60
     override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
+    override val mastersPublicKeys: Seq[SchnorrProposition] = Seq()
+    override val circuitType: CircuitTypes = CircuitTypes.NaiveThresholdSignatureCircuit
     override val signersThreshold: Int = 0
     override val certProvingKeyFilePath: String = ""
     override val certVerificationKeyFilePath: String = ""
@@ -46,6 +50,8 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
     override val chainId: Long = 11111111
     override val isCSWEnabled: Boolean = true
+    override val isNonCeasing: Boolean = false
+    override val minVirtualWithdrawalEpochLength: Int = 10
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,
