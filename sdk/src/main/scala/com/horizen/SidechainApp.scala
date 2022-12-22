@@ -222,9 +222,9 @@ class SidechainApp @Inject()
   // specific to Sidechain app only
   val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
   val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
-  val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
+  val transactionSubmitProvider : TransactionSubmitProvider[TX] = new TransactionSubmitProviderImpl[TX](sidechainTransactionActorRef)
 
-  def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
+  override def getTransactionSubmitProvider: TransactionSubmitProvider[TX] = transactionSubmitProvider
   def getNodeViewProvider: NodeViewProvider = nodeViewProvider
   def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 

@@ -1,19 +1,19 @@
-package com.horizen.consensus
+package com.horizen.utils
 
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
-
-import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
-import com.horizen.utils.TimeToEpochUtils
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
+import sparkz.core.block.Block
 
-class TimeToEpochSlotConverterTest extends JUnitSuite {
+import java.math.BigInteger
+
+class TimeToEpochUtilsTest extends JUnitSuite {
 
   case class StubbedNetParams(override val sidechainGenesisBlockTimestamp: Block.Timestamp,
                               override val consensusSecondsInSlot: Int,
@@ -53,6 +53,13 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
                                 expectedEpoch: Int)(implicit params: StubbedNetParams): Unit = {
     assertEquals("Epoch shall be as expected", expectedEpoch, TimeToEpochUtils.timeStampToEpochNumber(params, timeStamp))
     assertEquals("Slot shall be as expected", expectedSlot, TimeToEpochUtils.timeStampToSlotNumber(params, timeStamp))
+    val expectedAbsoluteSlot = expectedEpoch * params.consensusSlotsInEpoch + expectedSlot
+    assertEquals("Absolute slot shall be as expected", expectedAbsoluteSlot, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, timeStamp))
+
+    val slotAndEpoch = TimeToEpochUtils.timestampToEpochAndSlot(params, timeStamp)
+    assertEquals("Epoch shall be as expected", expectedEpoch, slotAndEpoch.epochNumber)
+    assertEquals("Slot shall be as expected", expectedSlot, slotAndEpoch.slotNumber)
+
   }
 
   @Test
@@ -82,10 +89,15 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
 
     assertEquals(" Seconds in epoch shall be as expected", 24, TimeToEpochUtils.epochInSeconds(params))
     checkSlotAndEpoch(90, 1, 3)
+    assertEquals(1, TimeToEpochUtils.secondsRemainingInSlot(params,90))
     checkSlotAndEpoch(91, 2, 3)
+    assertEquals(3, TimeToEpochUtils.secondsRemainingInSlot(params,91))
     checkSlotAndEpoch(92, 2, 3)
+    assertEquals(2, TimeToEpochUtils.secondsRemainingInSlot(params,92))
     checkSlotAndEpoch(93, 2, 3)
+    assertEquals(1, TimeToEpochUtils.secondsRemainingInSlot(params,93))
     checkSlotAndEpoch(94, 3, 3)
+    assertEquals(3, TimeToEpochUtils.secondsRemainingInSlot(params,94))
   }
 
   @Test(expected = classOf[java.lang.IllegalArgumentException])
