@@ -1,6 +1,5 @@
 package com.horizen
 
-import java.util.{Optional => JOptional}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.consensus._
@@ -8,8 +7,9 @@ import com.horizen.node.NodeHistory
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.util.{ScorexLogging}
+import scorex.util.ScorexLogging
 
+import java.util.{Optional => JOptional}
 import scala.util.Try
 
 

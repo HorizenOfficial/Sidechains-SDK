@@ -3,7 +3,6 @@ package com.horizen.account
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.horizen._
 import com.horizen.account.api.http.{AccountBlockApiRoute, AccountEthRpcRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import com.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
@@ -13,9 +12,8 @@ import com.horizen.account.forger.AccountForgerRef
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.network.AccountNodeViewSynchronizer
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.state.{AccountState, MessageProcessor}
+import com.horizen.account.state.MessageProcessor
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
-import com.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainSettings, SidechainSyncInfoMessageSpec, SidechainTypes}
 import com.horizen.api.http._
 import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
@@ -28,6 +26,8 @@ import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, Pair}
+import com.horizen._
+import com.horizen.helper.{TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -174,4 +174,9 @@ class AccountSidechainApp @Inject()
    */
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
+
+  val transactionSubmitProvider: TransactionSubmitProvider[TX] = new TransactionSubmitProviderImpl[TX](sidechainTransactionActorRef)
+
+  override def getTransactionSubmitProvider: TransactionSubmitProvider[TX] = transactionSubmitProvider
+
 }
