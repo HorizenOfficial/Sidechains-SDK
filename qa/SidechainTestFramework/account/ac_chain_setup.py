@@ -91,7 +91,7 @@ class AccountChainSetup(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               auth_api_key=self.API_KEY,
                               binary=[EVM_APP_BINARY] * self.number_of_sidechain_nodes,
-                              extra_args=['-agentlib'])
+                              extra_args=self.debug_extra_args)
 
     def sc_ac_setup(self, wallet=True, forwardTransfer=True, ft_amount_in_zen=Decimal("33.22")):
         sc_node = self.sc_nodes[0]
