@@ -277,7 +277,7 @@ abstract class AbstractForgeMessageBuilder[
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if (blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+          if (blockSize + refDataSize > SidechainBlock.MAX_BLOCK_SIZE)
             false // stop data collection
           else {
             mainchainReferenceData.append(ref.data)

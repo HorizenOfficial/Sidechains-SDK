@@ -14,35 +14,35 @@ import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 
-abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBase] ()
-  extends OmmersContainer[H] with Block[TX]
-{
-  override val mainchainHeaders: Seq[MainchainHeader]
-  override val ommers: Seq[Ommer[H]]
-  val header: H
-  val sidechainTransactions: Seq[TX]
-  val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]
+abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBase] (override val header: H,
+                                                                                     val sidechainTransactions: Seq[TX],
+                                                                                     val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                                                                                     override val mainchainHeaders: Seq[MainchainHeader],
+                                                                                     override val ommers: Seq[Ommer[H]])
+  extends OmmersContainer[H] with Block[TX] {
 
   val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificate).lastOption
 
-  override lazy val version: Block.Version = header.version
+  override val version: Block.Version = header.version
 
-  override lazy val timestamp: Timestamp = header.timestamp
+  override val timestamp: Timestamp = header.timestamp
 
-  override lazy val parentId: ModifierId = header.parentId
+  override val parentId: ModifierId = header.parentId
 
   override val modifierTypeId: ModifierTypeId = SidechainBlockBase.ModifierTypeId
 
-  override lazy val id: ModifierId = header.id
+  override val id: ModifierId = header.id
   
   override def toString: String = s"${getClass.getSimpleName}(id = $id)"
 
   def feePaymentsHash: Array[Byte] = header.feePaymentsHash
 
   // Check block version
-  def versionIsValid(): Boolean
+  protected def versionIsValid(): Boolean
 
-  def transactionsListExceedsSizeLimit: Boolean = sidechainTransactions.size > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER
+  def transactionsListExceedsSizeLimit: Boolean
+
+  def blockExceedsSizeLimit(blockSize: Int): Boolean
 
   // Verify that included sidechainTransactions are consistent to header.sidechainTransactionsMerkleRootHash.
   @throws(classOf[InconsistentSidechainBlockDataException])
@@ -136,7 +136,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
 
     // Check Block size
     val blockSize: Int = bytes.length
-    if(blockSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+    if(blockExceedsSizeLimit(blockSize))
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id size exceeds the limit.")
 
 
@@ -177,8 +177,6 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
 object SidechainBlockBase {
   // SC Max block size is enough to include at least 2 MC block ref data full of SC outputs + Top quality cert -> ~2.3MB each
   // Also it is more than enough to process Ommers for very long MC forks (2000+)
-  val MAX_BLOCK_SIZE: Int = 5000000
-  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
   val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 3.toByte
   val BlockIdHexStringLength = 64
 
