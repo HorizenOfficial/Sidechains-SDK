@@ -7,7 +7,7 @@ import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
-import com.horizen.utils.{MerklePath, MerklePathSerializer}
+import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.util.ModifierId
@@ -120,11 +120,11 @@ object SidechainBlockHeaderSerializer extends SparkzSerializer[SidechainBlockHea
 
     val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
 
-    val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val sidechainTransactionsMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val mainchainMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val ommersCumulativeScore: Long = r.getLong()
 
