@@ -10,12 +10,11 @@ import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSeri
 import com.horizen.utils.{MerklePath, MerklePathSerializer}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
+import scorex.util.ModifierId
+import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.{Failure, Success, Try}
 
@@ -39,9 +38,6 @@ case class SidechainBlockHeader(
   override type M = SidechainBlockHeader
 
   override def serializer: SparkzSerializer[SidechainBlockHeader] = SidechainBlockHeaderSerializer
-
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
-  override lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
