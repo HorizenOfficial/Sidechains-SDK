@@ -58,7 +58,8 @@ public class EthereumBlockView {
         this.gasUsed = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasUsed()));
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
         this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
-        this.difficulty = Numeric.encodeQuantity(BigInteger.valueOf(blockNumber));
+        this.difficulty = "0x0";
+        this.totalDifficulty = "0x0";
 
         if (!hydratedTx) {
             var transactions = scala.collection.JavaConverters.seqAsJavaList(block.transactions());
