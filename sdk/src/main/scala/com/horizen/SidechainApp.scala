@@ -219,7 +219,7 @@ class SidechainApp @Inject()
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
-    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
+    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params)
   )
 
   // specific to Sidechain app only

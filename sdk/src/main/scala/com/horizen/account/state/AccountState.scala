@@ -350,7 +350,7 @@ class AccountState(
     if (withdrawalEpoch == -1)
       Some(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
     else {
-      using(getView)(_.certifiersKeys(withdrawalEpoch + 1))
+      using(getView)(_.certifiersKeys(withdrawalEpoch))
     }
   }
 

@@ -8,7 +8,6 @@ from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_cert_signer_secrets
 from SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
-from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
 from httpCalls.submitter.getSchnorrPublicKeyHash import http_get_schnorr_public_key_hash
@@ -49,7 +48,8 @@ Test:
     - End the WE and verify that the certificates is added to the MC and SC.
      ######## WITHDRAWAL EPOCH 3 ##########
     - Call the getCertificateSigners endpoint and verify that all the signing and master keys are updated.
-
+     ######## WITHDRAWAL EPOCH 4 ##########
+    - Verify that certificate was created using all new keys
 """
 
 
@@ -60,7 +60,8 @@ def convertSecretToPrivateKey(secret):
 class SCKeyRotationTest(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT)
+        super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT,
+                         remote_keys_manager_enabled=True)
 
     @staticmethod
     def secure_enclave_create_signature(message_to_sign, public_key="", key=""):
@@ -76,7 +77,7 @@ class SCKeyRotationTest(AccountChainSetup):
         else:
             raise Exception("Either public key or private key should be provided to call createSignature")
 
-        response = requests.post("http://127.0.01:5000/api/v1/createSignature", json=post_data)
+        response = requests.post("http://127.0.0.1:5000/api/v1/createSignature", json=post_data)
         json_response = json.loads(response.text)
         return json_response
 
@@ -97,10 +98,39 @@ class SCKeyRotationTest(AccountChainSetup):
         private_signing_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_signers_secrets
         private_master_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_masters_secrets
         public_master_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.public_master_keys
-        api_server = SecureEnclaveApiServer(
-            private_master_keys,
-            public_master_keys,
-        )
+        new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
+        new_public_key = new_signing_key.publicKey
+        new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
+        new_public_key_2 = new_signing_key_2.publicKey
+        new_master_key = generate_cert_signer_secrets("random_seed3", 1)[0]
+        new_public_key_3 = new_master_key.publicKey
+        new_signing_key_4 = generate_cert_signer_secrets("random_seed4", 1)[0]
+        new_public_key_4 = new_signing_key_4.publicKey
+
+        private_master_keys.append(new_signing_key.secret)
+        public_master_keys.append(new_public_key)
+        private_master_keys.append(new_signing_key_2.secret)
+        public_master_keys.append(new_public_key_2)
+        private_master_keys.append(new_master_key.secret)
+        public_master_keys.append(new_public_key_3)
+        private_master_keys.append(new_signing_key_4.secret)
+        public_master_keys.append(new_public_key_4)
+
+        # Change ALL the signing keys and ALL tee master keys
+        new_signing_keys = []
+        new_master_keys = []
+        for i in range(cert_max_keys):
+            new_s_key = generate_cert_signer_secrets(f"random_seed5{i}", 1)[0]
+            new_signing_keys += [new_s_key]
+            private_master_keys.append(new_s_key.secret)
+            public_master_keys.append(new_s_key.publicKey)
+
+            new_m_key = generate_cert_signer_secrets(f"random_seed6{i}", 1)[0]
+            new_master_keys += [new_m_key]
+            private_master_keys.append(new_m_key.secret)
+            public_master_keys.append(new_m_key.publicKey)
+
+        api_server = SecureEnclaveApiServer(private_master_keys, public_master_keys)
 
         api_server_thread = multiprocessing.Process(target=lambda: api_server.start())
         api_server_thread.start()
@@ -121,9 +151,10 @@ class SCKeyRotationTest(AccountChainSetup):
         self.sc_sync_all()
 
         # Call getCertificateSigners endpoint
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)["certifiersKeys"]
-        assert_equal(len(certificate_signers_keys["signingKeys"]), cert_max_keys)
-        assert_equal(len(certificate_signers_keys["masterKeys"]), cert_max_keys)
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, -1)
+        epoch_zero_keys_root_hash = certificate_signers_keys["keysRootHash"]
+        assert_equal(len(certificate_signers_keys["certifiersKeys"]["signingKeys"]), cert_max_keys)
+        assert_equal(len(certificate_signers_keys["certifiersKeys"]["masterKeys"]), cert_max_keys)
 
         # Call getKeyRotationProof endpoint and verify we don't have any KeyRotationProof
         for i in range(cert_max_keys):
@@ -133,8 +164,6 @@ class SCKeyRotationTest(AccountChainSetup):
             assert_equal(master_key_rotation_proof, {})
 
         # Try to change the signing key 0
-        new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
-        new_public_key = new_signing_key.publicKey
         new_public_key_hash = http_get_schnorr_public_key_hash(sc_node, new_public_key)["schnorrPublicKeyHash"]
 
         # Sign the new signing key with the old keys
@@ -261,8 +290,6 @@ class SCKeyRotationTest(AccountChainSetup):
 
         # Change again the same signature key
 
-        new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
-        new_public_key_2 = new_signing_key_2.publicKey
         new_public_key_hash_2 = http_get_schnorr_public_key_hash(sc_node, new_public_key_2)["schnorrPublicKeyHash"]
 
         # Sign the new signing key with the old keys
@@ -312,8 +339,6 @@ class SCKeyRotationTest(AccountChainSetup):
         assert_equal(signer_key_rotation_proof_2["newKey"]["publicKey"], new_public_key_2)
 
         # Try to update the master key 0
-        new_master_key = generate_cert_signer_secrets("random_seed3", 1)[0]
-        new_public_key_3 = new_master_key.publicKey
         new_public_key_hash_3 = http_get_schnorr_public_key_hash(sc_node, new_public_key_3)["schnorrPublicKeyHash"]
 
         # Sign the new signing key with the old keys
@@ -344,6 +369,12 @@ class SCKeyRotationTest(AccountChainSetup):
 
         check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
 
+        # Verify keys updated in epoch 0
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)
+        epoch_one_keys_root_hash = certificate_signers_keys["keysRootHash"]
+        assert_equal(certificate_signers_keys["certifiersKeys"]["signingKeys"][0]["publicKey"], new_public_key_2)
+        assert_equal(certificate_signers_keys["certifiersKeys"]["masterKeys"][0]["publicKey"], new_public_key_3)
+
         # ******************** WITHDRAWAL EPOCH 1 START ********************
         logging.info("******************** WITHDRAWAL EPOCH 1 START ********************")
 
@@ -359,6 +390,11 @@ class SCKeyRotationTest(AccountChainSetup):
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+        cert_hash = mc_node.getrawmempool()[0]
+        cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
+        assert_equal(epoch_one_keys_root_hash, cert['vFieldElementCertificateField'][0],
+                     "Certificate Keys Root Hash incorrect")
+        assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
         # Generate MC and SC blocks with Cert
         we1_2_mcblock_hash = mc_node.generate(1)[0]
@@ -375,14 +411,7 @@ class SCKeyRotationTest(AccountChainSetup):
             assert_equal(signer_key_rotation_proof, {})
             assert_equal(master_key_rotation_proof, {})
 
-        # Verify that we have the updated key
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 1)["certifiersKeys"]
-        assert_equal(certificate_signers_keys["signingKeys"][0]["publicKey"], new_public_key_2)
-        assert_equal(certificate_signers_keys["masterKeys"][0]["publicKey"], new_public_key_3)
-
         # Update again the signing key 0
-        new_signing_key_4 = generate_cert_signer_secrets("random_seed4", 1)[0]
-        new_public_key_4 = new_signing_key_4.publicKey
         new_public_key_hash_4 = http_get_schnorr_public_key_hash(sc_node, new_public_key_4)["schnorrPublicKeyHash"]
 
         # Sign the new signing key with the old keys
@@ -414,6 +443,11 @@ class SCKeyRotationTest(AccountChainSetup):
 
         check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
 
+        # Verify that we have the updated key
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, 1)
+        epoch_two_keys_root_hash = certificate_signers_keys["keysRootHash"]
+        assert_equal(certificate_signers_keys["certifiersKeys"]["signingKeys"][0]["publicKey"], new_public_key_4)
+
         # ******************** WITHDRAWAL EPOCH 2 START ********************
         logging.info("******************** WITHDRAWAL EPOCH 2 START ********************")
 
@@ -429,6 +463,11 @@ class SCKeyRotationTest(AccountChainSetup):
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+        cert_hash = mc_node.getrawmempool()[0]
+        cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
+        assert_equal(epoch_two_keys_root_hash, cert['vFieldElementCertificateField'][0],
+                     "Certificate Keys Root Hash incorrect")
+        assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
         # Generate MC and SC blocks with Cert
         we1_2_mcblock_hash = mc_node.generate(1)[0]
@@ -445,21 +484,12 @@ class SCKeyRotationTest(AccountChainSetup):
             assert_equal(signer_key_rotation_proof, {})
             assert_equal(master_key_rotation_proof, {})
 
-        # Verify that we have the updated key
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 2)["certifiersKeys"]
-        assert_equal(certificate_signers_keys["signingKeys"][0]["publicKey"], new_public_key_4)
-
-        # Change ALL the signing keys and ALL tee master keys
-        new_signing_keys = []
-        new_master_keys = []
         for i in range(cert_max_keys):
-            new_signing_key = generate_cert_signer_secrets("random_seed5", 1)[0]
-            new_signing_keys += [new_signing_key]
+            new_signing_key = new_signing_keys[i]
             new_signing_key_hash = http_get_schnorr_public_key_hash(sc_node, new_signing_key.publicKey)[
                 "schnorrPublicKeyHash"]
 
-            new_m_key = generate_cert_signer_secrets("random_seed6", 1)[0]
-            new_master_keys += [new_m_key]
+            new_m_key = new_master_keys[i]
             new_master_key_hash = http_get_schnorr_public_key_hash(sc_node, new_m_key.publicKey)["schnorrPublicKeyHash"]
 
             if (i == 0):
@@ -521,7 +551,7 @@ class SCKeyRotationTest(AccountChainSetup):
                                                      nonce=nonce)
             nonce += 1
 
-        tx_id = generate_next_blocks(sc_node, "first node", 1)
+        generate_next_blocks(sc_node, "first node", 1)
 
         # Verify that we changed all the signing keys
         for i in range(cert_max_keys):
@@ -538,20 +568,23 @@ class SCKeyRotationTest(AccountChainSetup):
         # Generate enough MC blocks to reach the end of the withdrawal epoch
         we0_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[0]
 
-        we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
-        we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-
         sc_block_id = generate_next_block(sc_node, "first node")
-        block_json = http_block_findById(sc_node, sc_block_id)
         check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
+
+        # Verify that we have all the singing keys updated
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, 3)["certifiersKeys"]
+        for i in range(len(certificate_signers_keys["signingKeys"])):
+            assert_equal(certificate_signers_keys["signingKeys"][i]["publicKey"], new_signing_keys[i].publicKey)
+            assert_equal(certificate_signers_keys["masterKeys"][i]["publicKey"], new_master_keys[i].publicKey)
+        epoch_three_keys_root_hash = http_get_certifiers_keys(sc_node, 3)['keysRootHash']
 
         # ******************** WITHDRAWAL EPOCH 3 START ********************
         logging.info("******************** WITHDRAWAL EPOCH 3 START ********************")
 
         # Generate first mc block of the next epoch
-        we1_1_mcblock_hash = mc_node.generate(1)[0]
+        mc_node.generate(1)
         epoch_mc_blocks_left = self.withdrawalEpochLength - 1
-        sc_block_id = generate_next_blocks(sc_node, "first node", 1)[0]
+        generate_next_blocks(sc_node, "first node", 1)
 
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
@@ -560,6 +593,11 @@ class SCKeyRotationTest(AccountChainSetup):
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+        cert_hash = mc_node.getrawmempool()[0]
+        cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
+        assert_equal(epoch_three_keys_root_hash, cert['vFieldElementCertificateField'][0],
+                     "Certificate Keys Root Hash incorrect")
+        assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
         # Generate MC and SC blocks with Cert
         we1_2_mcblock_hash = mc_node.generate(1)[0]
@@ -567,12 +605,29 @@ class SCKeyRotationTest(AccountChainSetup):
         # Generate SC block and verify that certificate is synced back
         scblock_id = generate_next_blocks(sc_node, "first node", 1)[0]
         check_mcreference_presence(we1_2_mcblock_hash, scblock_id, sc_node)
+        # Generate enough MC blocks to reach the end of the withdrawal epoch
+        mc_node.generate(epoch_mc_blocks_left - 1)
+        generate_next_block(sc_node, "first node")
 
-        # Verify that we have all the singing keys updated
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 3)["certifiersKeys"]
-        for i in range(len(certificate_signers_keys["signingKeys"])):
-            assert_equal(certificate_signers_keys["signingKeys"][i]["publicKey"], new_signing_keys[i].publicKey)
-            assert_equal(certificate_signers_keys["masterKeys"][i]["publicKey"], new_master_keys[i].publicKey)
+        # ******************** WITHDRAWAL EPOCH 4 START ********************
+        logging.info("******************** WITHDRAWAL EPOCH 4 START ********************")
+
+        # Generate first mc block of the next epoch
+        mc_node.generate(1)
+        generate_next_blocks(sc_node, "first node", 1)
+
+        # Wait until Certificate will appear in MC node mempool
+        time.sleep(10)
+        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
+            print("Wait for certificate in mc mempool...")
+            time.sleep(2)
+            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
+        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+        cert_hash = mc_node.getrawmempool()[0]
+        cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
+        assert_equal(epoch_three_keys_root_hash, cert['vFieldElementCertificateField'][0],
+                     "Certificate Keys Root Hash incorrect")
+        assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
         api_server_thread.terminate()
 

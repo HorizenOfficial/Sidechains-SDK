@@ -12,6 +12,7 @@ import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.node._
+import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
@@ -25,7 +26,8 @@ import scala.util.{Failure, Success, Try}
 
 case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef,
-                                   boxIterator: BoxIterator)
+                                   boxIterator: BoxIterator,
+                                   params: NetworkParams)
                                   (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute[
   SidechainTypes#SCBT,
   SidechainBlockHeader,
@@ -50,7 +52,7 @@ case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
   def getSidechainBlockIdForBackup: Route = (post & path("getSidechainBlockIdForBackup")) {
     withView { nodeView =>
       try {
-        val withdrawalEpochLength = nodeView.state.params.withdrawalEpochLength
+        val withdrawalEpochLength = params.withdrawalEpochLength
         val currentEpoch = nodeView.state.getWithdrawalEpochInfo.epoch
         val genesisMcBlockHeight = nodeView.history.getMainchainCreationBlockHeight
         val blockHeightToRollback = genesisMcBlockHeight + (currentEpoch - 2) * withdrawalEpochLength - 1

@@ -268,31 +268,25 @@ abstract class AbstractCertificateSubmitter[
   }
 
   protected def calculateSignatures(messageToSign: Array[Byte], referencedWithdrawalEpochNumber: Int): Try[Seq[CertificateSignatureInfo]] = Try {
-    def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
+    def getSignersPrivateKeys(sidechainNodeView: View): Seq[CertificateSignatureInfo] = {
       val wallet = sidechainNodeView.vault
-      sidechainNodeView.state.certifiersKeys(referencedWithdrawalEpochNumber - 1) match {
-        case Some(actualKeys) =>
-          actualKeys.signingKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
-            case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
-          }
-        case None =>
-          params.signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
-            case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
-          }
+      val signersPublicKeys = sidechainNodeView.state.certifiersKeys(referencedWithdrawalEpochNumber - 1) match {
+        case Some(actualKeys) => actualKeys.signingKeys
+        case None => params.signersPublicKeys
       }
+      val privateKeysWithIndexes = signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
+        case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
+      }
+
+      val remainingKeys = signersPublicKeys.zipWithIndex.filterNot(key_index => privateKeysWithIndexes.map(_._2).contains(key_index._2))
+      (signaturesFromEnclave(messageToSign, remainingKeys)
+        ++ privateKeysWithIndexes.map {
+        case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
+      })
     }
 
-    val privateKeysWithIndexes = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersPrivateKeys), timeoutDuration)
-      .asInstanceOf[Seq[(SchnorrSecret, Int)]]
-
-    val locallyPresentKeysIndexes = privateKeysWithIndexes.map(_._2)
-
-    val keys = params.signersPublicKeys.zipWithIndex
-    val filteredKeys = keys.filterNot(key_index => locallyPresentKeysIndexes.contains(key_index._2))
-    (signaturesFromEnclave(messageToSign, filteredKeys)
-      ++ privateKeysWithIndexes.map {
-      case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
-    })
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersPrivateKeys), timeoutDuration)
+      .asInstanceOf[Seq[CertificateSignatureInfo]]
   }
 
   def signaturesFromEnclave(messageToSign: Array[Byte], indexedPublicKeys: Seq[(SchnorrProposition, Int)]): Seq[CertificateSignatureInfo] = {
