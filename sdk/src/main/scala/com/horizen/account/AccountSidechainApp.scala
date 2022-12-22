@@ -27,6 +27,7 @@ import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen._
+import com.horizen.helper.{TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -173,4 +174,9 @@ class AccountSidechainApp @Inject()
    */
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
+
+  val transactionSubmitProvider: TransactionSubmitProvider[TX] = new TransactionSubmitProviderImpl[TX](sidechainTransactionActorRef)
+
+  override def getTransactionSubmitProvider: TransactionSubmitProvider[TX] = transactionSubmitProvider
+
 }

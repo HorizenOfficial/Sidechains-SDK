@@ -1,6 +1,9 @@
 package com.horizen.node;
 
-import com.horizen.block.*;
+import com.horizen.block.MainchainBlockReference;
+import com.horizen.block.MainchainHeader;
+import com.horizen.block.SidechainBlockBase;
+import com.horizen.block.SidechainBlockHeaderBase;
 import com.horizen.chain.AbstractFeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
 import com.horizen.chain.SidechainBlockInfo;
@@ -47,5 +50,9 @@ public interface NodeHistoryBase<
     Optional<MainchainHeader> getMainchainHeaderByHash(byte[] mainchainHeaderHash);
 
     Optional<MainchainHeaderInfo> getMainchainHeaderInfoByHash(byte[] mainchainHeaderHash);
+
+    Optional<TX> searchTransactionInsideSidechainBlock(String transactionId, String blockId);
+
+
 }
 

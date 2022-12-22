@@ -363,6 +363,7 @@
           <include>mctx_v-4_multiple_ft</include>
           <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_sc_creation</include>
+          <include>mctx_v-4_account_sc_creation</include>
           <!-- generated on regtest on 26.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_mbtr</include>
           <!-- generated on regtest on 31.05.2021 using MC qa/sc_csw_actcertdata.py -->

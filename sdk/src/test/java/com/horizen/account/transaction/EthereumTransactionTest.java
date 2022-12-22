@@ -6,8 +6,9 @@ import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
-import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
+import scorex.crypto.hash.Keccak256;
+
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Locale;
@@ -88,7 +89,8 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83"))
         );
         assertArrayEquals(unsignedEip155Tx.messageToSign(), eip155Tx.messageToSign());
-        assertEquals(Hash.sha3("0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"), "0x" + eip155Tx.id());
+        byte[] hash = (byte[]) Keccak256.hash(BytesUtils.fromHexString("f86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"));
+        assertEquals(BytesUtils.toHexString(hash), eip155Tx.id());
         checkEthTx(eip155Tx);
 
     }
@@ -247,14 +249,12 @@ public class EthereumTransactionTest {
         assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
 
         // similar test adding the real signature (taken from original tx) and comparing ids
-        var expectedTx2 = new EthereumTransaction(expectedTx,
-            new SignatureSecp256k1(
-                new Sign.SignatureData(
-                    new byte[]{0x1c},
-                    BytesUtils.fromHexString("a4e306691e16bbaa67faafeb00d81431b13194dcb39d97cf7dde47a6874d92d8"),
-                    BytesUtils.fromHexString("3b3b6a4500ff90d25022616d237de8559ab79cb294905cf79cadcdf076b50a2a"))
-            )
-        );
+        SignatureSecp256k1 signature = new SignatureSecp256k1(
+                new byte[]{0x1c},
+                BytesUtils.fromHexString("a4e306691e16bbaa67faafeb00d81431b13194dcb39d97cf7dde47a6874d92d8"),
+                BytesUtils.fromHexString("3b3b6a4500ff90d25022616d237de8559ab79cb294905cf79cadcdf076b50a2a")
+            );
+        var expectedTx2 = new EthereumTransaction(expectedTx, signature);
 
         assertEquals(expectedTx2.id(), actualTx.id());
     }

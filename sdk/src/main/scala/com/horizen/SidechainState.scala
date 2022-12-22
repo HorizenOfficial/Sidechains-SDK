@@ -126,7 +126,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     utxoMerkleTreeProvider.getMerklePath(boxId)
   }
 
-  def hasCeased: Boolean = stateStorage.hasCeased
+  override def hasCeased: Boolean = stateStorage.hasCeased
 
   def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     stateStorage.getTopQualityCertificate(referencedWithdrawalEpoch)

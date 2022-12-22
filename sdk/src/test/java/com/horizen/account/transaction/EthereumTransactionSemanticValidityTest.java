@@ -3,16 +3,13 @@ package com.horizen.account.transaction;
 import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.state.GasUtil;
-import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
-import org.web3j.crypto.Sign;
 
 import java.math.BigInteger;
 import java.util.Optional;
 
-import static com.horizen.account.utils.EthereumTransactionUtils.convertToLong;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 

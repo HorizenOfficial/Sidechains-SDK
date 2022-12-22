@@ -2,6 +2,7 @@ package com.horizen.account
 
 import com.google.inject.Provides
 import com.google.inject.name.Named
+import com.horizen.account.helper.{AccountTransactionSubmitHelper, AccountTransactionSubmitHelperImpl}
 import com.horizen.account.state.MessageProcessor
 import com.horizen.api.http.ApplicationApiGroup
 import com.horizen.fork.ForkConfigurator
@@ -18,6 +19,10 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
   var app: AccountSidechainApp = null
 
   override def configure(): Unit = {
+
+    bind(classOf[AccountTransactionSubmitHelper])
+      .to(classOf[AccountTransactionSubmitHelperImpl])
+
     configureApp()
   }
 

@@ -16,6 +16,7 @@ import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.fork.{ForkConfigurator, ForkManager}
+import com.horizen.helper.TransactionSubmitProvider
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
@@ -28,13 +29,13 @@ import com.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
 import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry
+import scorex.util.ScorexLogging
+import sparkz.core.api.http.ApiRoute
 import sparkz.core.app.Application
+import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 import sparkz.core.network.PeerFeature
 import sparkz.core.network.message.MessageSpec
 import sparkz.core.settings.SparkzSettings
-import scorex.util.ScorexLogging
-import sparkz.core.api.http.ApiRoute
-import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
@@ -404,4 +405,7 @@ abstract class AbstractSidechainApp
     storageList += storage
     storage
   }
+
+  def getTransactionSubmitProvider: TransactionSubmitProvider[TX]
+
 }

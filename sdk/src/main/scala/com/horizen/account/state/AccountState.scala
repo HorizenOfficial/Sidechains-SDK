@@ -3,10 +3,11 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.{EthereumReceipt, LogsBloom}
+import com.horizen.account.receipt.{EthereumReceipt, Bloom}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
+import com.horizen.account.utils.Account.generateContractAddress
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
@@ -16,7 +17,6 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
@@ -149,10 +149,10 @@ class AccountState(
               // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
               // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
               // This does not impact our case since the CREATE2 result would not be part of the receipt.
-              generateContractAddress(ethTx.getFrom.address, ethTx.getNonce)
+              Option(generateContractAddress(ethTx.getFrom.address, ethTx.getNonce))
             } else {
-              // otherwise a zero-byte field
-              new Array[Byte](0)
+              // otherwise nothing
+              None
             }
 
             // get a receipt obj with non consensus data (logs updated too)
@@ -189,7 +189,7 @@ class AccountState(
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
       evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
 
-      val logsBloom = LogsBloom.fromEthereumReceipt(receiptList)
+      val logsBloom = Bloom.fromReceipts(receiptList.map(_.consensusDataReceipt))
 
       require(logsBloom.equals(mod.header.logsBloom), "Provided logs bloom doesn't match the calculated one")
 
