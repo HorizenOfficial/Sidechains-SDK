@@ -16,8 +16,9 @@ import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToC
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
+import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import scorex.util.ModifierId
@@ -26,7 +27,6 @@ import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{VersionTag, idToVersion}
-
 import java.util
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
@@ -79,17 +79,12 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
  
-    var stateNotificationExecuted: Boolean = false
     Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
-      stateNotificationExecuted = true
       val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes()))
       (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
     })
 
-
-    var historyNotificationExecuted: Boolean = false
     Mockito.when(history.applyFullConsensusInfo(ArgumentMatchers.any[ModifierId], ArgumentMatchers.any[FullConsensusEpochInfo])).thenAnswer(_ => {
-      historyNotificationExecuted = true
       history
     })
 
@@ -103,9 +98,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
       })
 
 
-    var walletNotificationExecuted: Boolean = false
     Mockito.when(wallet.applyConsensusEpochInfo(ArgumentMatchers.any[ConsensusEpochInfo])).thenAnswer(_ => {
-      walletNotificationExecuted = true
       wallet
     })
 
@@ -122,9 +115,9 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     eventListener.expectMsgType[SemanticallySuccessfulModifier[AccountBlock]]
 
     // Verify that all Consensus Epoch switching methods were executed
-    assertTrue("State epoch info calculation was not emitted.", stateNotificationExecuted)
-    assertTrue("History epoch info processing was not emitted.", historyNotificationExecuted)
-    assertTrue("Wallet epoch info processing was not emitted.", walletNotificationExecuted)
+    Mockito.verify(state, times(1)).getCurrentConsensusEpochInfo
+    Mockito.verify(history, times(1)).applyFullConsensusInfo(ArgumentMatchers.any[ModifierId], ArgumentMatchers.any[FullConsensusEpochInfo])
+    Mockito.verify(wallet, times(1)).applyConsensusEpochInfo(ArgumentMatchers.any[ConsensusEpochInfo])
   }
 
   @Test
@@ -283,7 +276,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
 
   @Test
   def withdrawalEpochInTheMiddle(): Unit = {
-    // Test: Verify that SC block in the middle of withdrawal epoch will NOT emit notify wallet with fee payments and utxo merkle tree view.
+    // Test: Verify that SC block in the middle of withdrawal epoch will NOT process fee payments.
 
     // Mock history to add the incoming block to the ProgressInfo append list
     Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer( answer =>
@@ -300,9 +293,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
 
     // Mock state fee payments with checks
-    var feePaymentsCalculationEvent: Boolean = false
     Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])).thenAnswer(args => {
-      feePaymentsCalculationEvent = true
       Seq()
     })
 
@@ -327,13 +318,12 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Thread.sleep(100)
 
     // Verify that all the checks passed
-    assertFalse("State feePayments calculation should no occur.", feePaymentsCalculationEvent)
-    //assertTrue("Wallet scanPersistent checks failed.", walletChecksPassed)
+    Mockito.verify(state, times(0)).getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])
   }
 
   @Test
   def withdrawalEpochLastIndex(): Unit = {
-    // Test: Verify that SC block leading to the last withdrawal epoch index will emit notify wallet with fee payments and utxo merkle tree view.
+    // Test: Verify that SC block leading to the last withdrawal epoch index will calculate fee payments.
 
     // Mock history to add the incoming block to the ProgressInfo append list
     Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer( answer =>
@@ -351,13 +341,10 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(true)
 
     // Mock state fee payments with checks
-    var stateChecksPassed: Boolean = false
     val expectedFeePayments: Seq[AccountPayment] = Seq(ForgerAccountFixture.getAccountPayment(0L), ForgerAccountFixture.getAccountPayment(1L))
     Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]]())).thenAnswer(args => {
       val epochNumber: Int = args.getArgument(0)
       assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
-
-      stateChecksPassed = true
       expectedFeePayments
     })
 
@@ -381,7 +368,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Thread.sleep(100)
 
     // Verify that all the checks passed
-    assertTrue("State feePayments checks failed.", stateChecksPassed)
+    Mockito.verify(state, times(1)).getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])
   }
 
   @Test
