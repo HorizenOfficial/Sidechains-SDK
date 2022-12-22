@@ -11,70 +11,68 @@ import java.util
 import scala.collection.mutable.ListBuffer
 
 case class EthereumReceipt(
-                             consensusDataReceipt: EthereumConsensusDataReceipt,
-                             transactionHash: Array[Byte],
-                             transactionIndex: Int,
-                             blockHash: Array[Byte],
-                             blockNumber: Int,
-                             gasUsed: BigInteger,
-                             contractAddress: Array[Byte]) extends BytesSerializable  {
+    consensusDataReceipt: EthereumConsensusDataReceipt,
+    transactionHash: Array[Byte],
+    transactionIndex: Int,
+    blockHash: Array[Byte],
+    blockNumber: Int,
+    gasUsed: BigInteger,
+    contractAddress: Option[Array[Byte]]
+) extends BytesSerializable {
   override type M = EthereumReceipt
-
-  // optional field
-  require(contractAddress.length == 0 || contractAddress.length == Address.LENGTH)
 
   override def serializer: SparkzSerializer[EthereumReceipt] = EthereumReceiptSerializer
 
   override def toString: String = {
 
-    var txHashStr : String = "null"
-    var blockHashStr: String = "null"
-    var contractAddressStr = "null"
+    val txHashStr: String = BytesUtils.toHexString(transactionHash)
+    val blockHashStr: String = BytesUtils.toHexString(blockHash)
+    val contractAddressStr = contractAddress match {
+      case Some(addr) => BytesUtils.toHexString(addr)
+      case None => BytesUtils.toHexString(Array.empty)
+    }
 
-    if (transactionHash != null)
-      txHashStr = BytesUtils.toHexString(transactionHash)
+    val infoNonConsensusStr: String =
+      String.format(
+        s" - (receipt non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, gasUsed=${gasUsed
+            .toString()}, contractAddress=$contractAddressStr}"
+      )
 
-    if (blockHash != null)
-      blockHashStr = BytesUtils.toHexString(blockHash)
-
-    if (contractAddress != null)
-      contractAddressStr = BytesUtils.toHexString(contractAddress)
-
-    val infoNonConsensusStr : String =
-      String.format(s" - (receipt non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, gasUsed=${gasUsed.toString()}, contractAddress=$contractAddressStr}")
-
-     consensusDataReceipt.toString.concat(infoNonConsensusStr)
+    consensusDataReceipt.toString.concat(infoNonConsensusStr)
   }
 
   override def equals(obj: Any): Boolean = {
     obj match {
       case other: EthereumReceipt =>
-        consensusDataReceipt.equals(other.consensusDataReceipt) &&
-          new ByteArrayWrapper(transactionHash).equals(new ByteArrayWrapper(other.transactionHash)) &&
-          transactionIndex.equals(other.transactionIndex) &&
-          new ByteArrayWrapper(blockHash).equals(new ByteArrayWrapper(other.blockHash)) &&
-          blockNumber.equals(other.blockNumber) &&
-          gasUsed.equals(other.gasUsed) &&
-          new ByteArrayWrapper(contractAddress).equals(new ByteArrayWrapper(other.contractAddress))
+        consensusDataReceipt
+          .equals(other.consensusDataReceipt) && util.Arrays.equals(transactionHash, other.transactionHash) &&
+        transactionIndex.equals(other.transactionIndex) &&
+        util.Arrays.equals(blockHash, other.blockHash) &&
+        blockNumber.equals(other.blockNumber) &&
+        gasUsed.equals(other.gasUsed) &&
+        util.Arrays.equals(
+          contractAddress.getOrElse(Array.empty),
+          other.contractAddress.getOrElse(Array.empty)
+        )
 
       case _ => false
     }
   }
 
-  override def hashCode: Int =  {
+  override def hashCode: Int = {
     var result = consensusDataReceipt.hashCode()
     result = 31 * result + util.Arrays.hashCode(transactionHash)
     result = 31 * result + Integer.hashCode(transactionIndex)
     result = 31 * result + util.Arrays.hashCode(blockHash)
     result = 31 * result + Integer.hashCode(blockNumber)
     result = 31 * result + gasUsed.hashCode()
-    result = 31 * result + util.Arrays.hashCode(contractAddress)
+    result = 31 * result + util.Arrays.hashCode(contractAddress.getOrElse(Array.empty))
 
     result
   }
 }
 
-object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
+object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
 
   override def serialize(receipt: EthereumReceipt, writer: Writer): Unit = {
     // consensus data
@@ -101,9 +99,10 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
     writer.putInt(gasUsedBytes.length)
     writer.putBytes(gasUsedBytes)
 
-    //optional field
-    writer.putInt(receipt.contractAddress.length)
-    writer.putBytes(receipt.contractAddress)
+    // optional field
+    val addr = receipt.contractAddress.getOrElse(Array.empty)
+    writer.putInt(addr.length)
+    writer.putBytes(addr)
   }
 
   override def parse(reader: Reader): EthereumReceipt = {
@@ -118,7 +117,8 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
     for (_ <- 0 until numberOfLogs)
       logs += EvmLogUtils.parse(reader)
 
-    val receipt: EthereumConsensusDataReceipt = new EthereumConsensusDataReceipt(transactionType, status, cumGasUsed, logs)
+    val receipt: EthereumConsensusDataReceipt =
+      new EthereumConsensusDataReceipt(transactionType, status, cumGasUsed, logs)
 
     val txHash: Array[Byte] = reader.getBytes(32)
     val txIndex: Int = reader.getInt
@@ -128,9 +128,9 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
     val gasUsedLength: Int = reader.getInt
     val gasUsed: BigInteger = new BigInteger(reader.getBytes(gasUsedLength))
 
-    //optional field
+    // optional field
     val contractAddressLength = reader.getInt
-    val contractAddress: Array[Byte] = reader.getBytes(contractAddressLength)
+    val contractAddress: Option[Array[Byte]] = if(contractAddressLength == 0) None else Some(reader.getBytes(contractAddressLength))
 
     EthereumReceipt(receipt, txHash, txIndex, blockHash, blockNumber, gasUsed, contractAddress)
   }
