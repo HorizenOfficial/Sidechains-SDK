@@ -85,7 +85,7 @@ class AccountState(
           // For non-ceasing sidechains certificate must be validated just when it has been received.
           // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
           // then the whole block is invalid.
-          mod.topQualityCertificates.foreach(cert => validateTopQualityCertificate(cert, stateView))
+          mod.topQualityCertificateOpt.foreach(cert => validateTopQualityCertificate(cert, stateView))
         } else {
           // For ceasing sidechains submission window concept is used.
           // If SC block has reached the certificate submission window end -> check the top quality certificate
@@ -94,7 +94,7 @@ class AccountState(
             val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
             // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-            val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificates.lastOption.orElse(
+            val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
               stateView.certificate(certReferencedEpochNumber))
 
             // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
@@ -117,7 +117,7 @@ class AccountState(
 
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
-        stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+        stateView.applyMainchainBlockReferenceData(mcBlockRefData, mod.id).get
       }
 
       // get also list of receipts, useful for computing the receiptRoot hash
@@ -355,6 +355,9 @@ class AccountState(
   }
 
   override def lastCertificateReferencedEpoch: Option[Int] = stateMetadataStorage.lastCertificateReferencedEpoch
+
+  override def lastCertificateSidechainBlockId(): Option[ModifierId] =
+    stateMetadataStorage.lastCertificateSidechainBlockId
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)

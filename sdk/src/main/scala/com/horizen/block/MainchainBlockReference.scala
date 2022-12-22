@@ -32,9 +32,9 @@ import scala.util.{Failure, Success, Try}
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("hash", "hashHex"))
 case class MainchainBlockReference(
-                    header: MainchainHeader,
-                    data: MainchainBlockReferenceData
-                    )
+                                    header: MainchainHeader,
+                                    data: MainchainBlockReferenceData
+                                  )
   extends BytesSerializable
 {
 
@@ -55,10 +55,10 @@ case class MainchainBlockReference(
 
     if (header.version != MainchainBlockReference.SC_CERT_BLOCK_VERSION) {
       if (data.sidechainRelatedAggregatedTransaction.isDefined ||
-          data.topQualityCertificates.nonEmpty ||
-          data.lowerCertificateLeaves.nonEmpty ||
-          data.existenceProof.isDefined ||
-          data.absenceProof.isDefined) {
+        data.topQualityCertificate.isDefined ||
+        data.lowerCertificateLeaves.nonEmpty ||
+        data.existenceProof.isDefined ||
+        data.absenceProof.isDefined) {
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader. " +
           s"MainchainBlock without SC support should have no SC related data.")
       }
@@ -70,39 +70,24 @@ case class MainchainBlockReference(
     // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
     if (data.existenceProof.isDefined) {
       // Check for defined transaction and/or certificate.
-      if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.topQualityCertificates.isEmpty && data.lowerCertificateLeaves.isEmpty)
+      if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.topQualityCertificate.isEmpty && data.lowerCertificateLeaves.isEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
       // Check for absence proof.
       if (data.absenceProof.isDefined)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
-      if(params.isNonCeasing) {
-        // For non-ceasing sidechain all certificates are meaningful.
-        // This check is needed to prevent malicious Forger to hide some certs in a lower quality leaves.
-        if(data.lowerCertificateLeaves.nonEmpty)
-          throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} for non-ceasing " +
-            s"sidechains can't contains lower quality leaves.")
-      } else {
-        // For ceasing sidechains it can be only 1 top quality certificate.
-        // This check is needed to prevent Forger to include unnecessary the full representation of lower quality certificatges.
-        if(data.topQualityCertificates.size > 1) {
-          throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} for ceasing " +
-            s"sidechains can't contains multiple top quality certificates.")
-        }
-      }
-
-      // Check top quality certificates custom fields.
-      data.topQualityCertificates.foreach(cert => {
+      // Check top quality certificate custom fields.
+      data.topQualityCertificate.foreach(cert => {
         if (params.scCreationBitVectorCertificateFieldConfigs.size != cert.bitVectorCertificateFields.size) {
           throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
-            s"${BytesUtils.toHexString(cert.hash)} bitvectors number is inconsistent to Sc Creation info.")
+            s"bitvectors number is inconsistent to Sc Creation info.")
         }
         for (i <- cert.bitVectorCertificateFields.indices) {
           // Note: bitVectorSizeBits must be transformed to bytes first. Considering the protocol we are sure that bit size % 8 == 0.
           if (cert.bitVectorCertificateFields(i).tryMerkleRootBytesWithCheck(BytesUtils.getBytesFromBits(params.scCreationBitVectorCertificateFieldConfigs(i).getBitVectorSizeBits)).isFailure)
             throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
-              s"${BytesUtils.toHexString(cert.hash)} bitvectors data length is invalid.")
+              s"bitvectors data length is invalid.")
         }
       })
 
@@ -127,7 +112,7 @@ case class MainchainBlockReference(
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
     } else { // Current sidechain was not mentioned in MainchainBlockReference.
       // Check for empty transaction and certificates.
-      if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificates.nonEmpty || data.lowerCertificateLeaves.nonEmpty)
+      if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificate.isDefined || data.lowerCertificateLeaves.nonEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
       // Check for absence proof to be defined.
@@ -154,7 +139,7 @@ object MainchainBlockReference extends ScorexLogging {
           throw new IllegalArgumentException("Input data corrupted. There are unprocessed %d bytes.".format(mainchainBlockBytes.length - blockSize))
 
         if (header.version != SC_CERT_BLOCK_VERSION) {
-          val data: MainchainBlockReferenceData = MainchainBlockReferenceData(header.hash, None, None, None, Seq(), Seq())
+          val data: MainchainBlockReferenceData = MainchainBlockReferenceData(header.hash, None, None, None, Seq(), None)
           return Success(MainchainBlockReference(header, data))
         }
 
@@ -200,23 +185,12 @@ object MainchainBlockReference extends ScorexLogging {
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
           sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))
-
-        val topQualityCertificates: Seq[WithdrawalEpochCertificate] =
-        if (params.isNonCeasing) {
-          // Non ceasing sidechains have only 1 certificate per epoch
-          // So select all related certificates, they should be validated in the state.
-          certificates.filter(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
-        } else { // is ceasing sidechain
-          // Certificates for a given sidechain are ordered by quality: from lowest to highest.
-          // So get the last sidechain related certificate if present
-          // There is no need to get lower quality certificates, only their leaf representation is enough
-          certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data)).toList
-        }
-
-
-        // For non-ceasing sidechains only get lower quality cert leaves if present.
+        // Certificates for a given sidechain are ordered by quality: from lowest to highest.
+        // So get the last sidechain related certificate if present
+        val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
+        // Get lower quality cert leaves if present.
         val certLeaves = commitmentTree.getCertLeaves(sidechainId.data)
-        val lowerCertificateLeaves: Seq[Array[Byte]] = if(params.isNonCeasing || certLeaves.isEmpty) Seq() else certLeaves.init
+        val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
 
         val data: MainchainBlockReferenceData =
           if (scIds.contains(sidechainId)) {
@@ -226,7 +200,7 @@ object MainchainBlockReference extends ScorexLogging {
               scExistenceProof,
               None,
               lowerCertificateLeaves,
-              topQualityCertificates)
+              topQualityCertificate)
           } else {
             val scAbsenceProof = commitmentTree.getAbsenceProof(sidechainId.data);
             MainchainBlockReferenceData(header.hash,
@@ -234,7 +208,7 @@ object MainchainBlockReference extends ScorexLogging {
               None,
               scAbsenceProof,
               Seq(),
-              Seq())
+              None)
           }
 
         commitmentTree.free()
@@ -270,7 +244,7 @@ object MainchainBlockReference extends ScorexLogging {
   // Try to parse Mainchain block and return MainchainHeader, Transactions, Certificates
   // and the actual size of the parsed block.
   def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
-    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[WithdrawalEpochCertificate], Int)] = Try {
+  Try[(MainchainHeader, Seq[MainchainTransaction], Seq[WithdrawalEpochCertificate], Int)] = Try {
     var offset: Int = 0
 
     MainchainHeader.create(mainchainBlockBytes, offset) match {
@@ -293,15 +267,15 @@ object MainchainBlockReference extends ScorexLogging {
 
         // Parse certificates only if version is the same as specified and there is bytes to parse.
         if (header.version == SC_CERT_BLOCK_VERSION) {
-            val certificatesCount: CompactSize = BytesUtils.getCompactSize(mainchainBlockBytes, offset)
-            offset += certificatesCount.size()
+          val certificatesCount: CompactSize = BytesUtils.getCompactSize(mainchainBlockBytes, offset)
+          offset += certificatesCount.size()
 
-            while (certificates.size < certificatesCount.value()) {
-              log.debug(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
-              val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
-              certificates = certificates :+ c
-              offset += c.size
-            }
+          while (certificates.size < certificatesCount.value()) {
+            log.debug(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
+            val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
+            certificates = certificates :+ c
+            offset += c.size
+          }
         }
 
         (header, transactions, certificates, offset)

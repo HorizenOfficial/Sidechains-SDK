@@ -17,7 +17,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                      byte[] endCumulativeScTxCommTreeRoot,
                                      long btrFee,
                                      long ftMinAmount,
-                                     List<byte[]> customFields);
+                                     byte[] keysRootHash);
 
     Pair<byte[], Long> createProof(List<BackwardTransfer> bt,
                                    byte[] sidechainId,
@@ -25,7 +25,6 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    byte[] endCumulativeScTxCommTreeRoot,
                                    long btrFee,
                                    long ftMinAmount,
-                                   List<byte[]> customFields,
                                    List<Optional<byte[]>> schnorrSignatureBytesList,
                                    SchnorrKeysSignatures schnorrKeysSignatures,
                                    long threshold,
@@ -42,7 +41,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                         byte[] endCumulativeScTxCommTreeRoot,
                         long btrFee,
                         long ftMinAmount,
-                        List<byte[]> customFields,
+                        byte[] keysRootHash,
                         long quality,
                         Optional<WithdrawalCertificate> previousEpochCertificateOption,
                         byte[] genesisConstantBytes,
@@ -52,7 +51,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
 
     byte[] generateSysDataConstant(List<byte[]> signerPublicKeysList, List<byte[]> masterPublicKeysList, long threshold) throws Exception;
 
-    List<byte[]> getCertificateCustomFields(List<byte[]> customFields);
+    List<byte[]> getCertificateCustomFields(byte[] keysRootHash);
 
     boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath) throws Exception;
 

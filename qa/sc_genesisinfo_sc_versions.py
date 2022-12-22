@@ -216,7 +216,7 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         mbrefdata = mbref[0]
         logging.info(mbref)
         #input("______")
-        we0_sc_cert = mbrefdata["topQualityCertificates"][0]
+        we0_sc_cert = mbrefdata["topQualityCertificate"]
         assert_equal(len(mbrefdata["lowerCertificateLeaves"]), 0)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")

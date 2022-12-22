@@ -20,7 +20,7 @@ import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import sparkz.core.VersionTag
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
@@ -40,11 +40,11 @@ class AccountStateView(
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
   // modifiers
-  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData, blockId: ModifierId): Try[Unit] = Try {
 
-    refData.topQualityCertificates.foreach(cert => {
+    refData.topQualityCertificate.foreach(cert => {
       log.debug(s"adding top quality cert to state: $cert.")
-      addCertificate(cert)
+      addCertificate(cert, blockId)
     })
 
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
@@ -263,9 +263,10 @@ class AccountStateView(
     stateDb.getProof(address, keys)
 
   // out-of-the-box helpers
-  override def addCertificate(cert: WithdrawalEpochCertificate): Unit = {
+  override def addCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit = {
     metadataStorageView.updateTopQualityCertificate(cert)
     metadataStorageView.updateLastCertificateReferencedEpoch(cert.epochNumber)
+    metadataStorageView.updateLastCertificateSidechainBlockIdOpt(blockId)
   }
 
   override def addFeeInfo(info: AccountBlockFeeInfo): Unit = {

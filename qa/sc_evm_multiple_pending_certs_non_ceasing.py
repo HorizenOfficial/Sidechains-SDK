@@ -36,8 +36,12 @@ Test:
     - Check that certificate submission is in progress on SC node 1
     - Wait for the cert in MC mempool and generate 1 MC block and 1 SC block with that Cert.
     - Check that we started generating certificate for the next epoch in the queue.
+    - Verify that first certificate endCumulativeScTxCommitmentTreeRoot equals to last one in the withdrawal epoch 0.
     - Repeat previous 2 steps to see that we generated all certificates except the one for epoch 5 (not a moment)
+    - Verify that certificate endCumulativeScTxCommitmentTreeRoot equals to the one that contains previous epoch cert.
+       Note: due to the certificate timing check in the MC we need to shift the endCumulativeScTxCommitmentTreeRoot.
     - Generate more MC and SC blocks. Check the submission of the Cert for epoch 5.
+    - Verify that certificate endCumulativeScTxCommitmentTreeRoot equals to last one in the withdrawal epoch 5.
 """
 
 
@@ -167,6 +171,7 @@ class SCMultiplePendingCertsNonCeasing(AccountChainSetup):
         mc_blocks_left_for_we -= 1  # minus block with FT
         generate_next_block(sc_node1, "first node")
 
+        end_epoch_cum_sc_tx_comm_tree_root = ""
         # Do `total_withdrawal_epochs_number` loops of withdrawal epochs with different BTs size
         half_epoch = int(self.withdrawalEpochLength / 2)
         for epoch_number in range(0, self.total_withdrawal_epochs_number):
@@ -177,6 +182,13 @@ class SCMultiplePendingCertsNonCeasing(AccountChainSetup):
             pass_withdrawal_epoch(mc_node, sc_node1, mc_blocks_before_wrs, mc_block_after_wrs, epoch_number, nonce)
             nonce += epoch_number
             mc_blocks_left_for_we = self.withdrawalEpochLength
+
+            # For the first epoch store the last virtual withdrawal epoch block scCumTreeHash
+            # It should appear as the first certificate endEpochCumScTxCommTreeRoot
+            if epoch_number == 0:
+                mcblock_hash = mc_node.getbestblockhash()
+                mcblock = mc_node.getblock(mcblock_hash)
+                end_epoch_cum_sc_tx_comm_tree_root = mcblock["scCumTreeHash"]
 
         # First node expects to generate its signatures
         # Connect and sync SC nodes
@@ -190,20 +202,33 @@ class SCMultiplePendingCertsNonCeasing(AccountChainSetup):
             # Check for certificate to be appeared in MC mempool
             check_for_certificate(mc_node, sc_node1)
 
-            mc_node.generate(1)
+            # Get Certificate and verify epoch number and endEpochCumScTxCommTreeRoot
+            cert_hash = mc_node.getrawmempool()[0]
+            cert = mc_node.getrawtransaction(cert_hash, 1)
+            assert_equal(epoch_number, cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
+            assert_equal(end_epoch_cum_sc_tx_comm_tree_root, cert["cert"]["endEpochCumScTxCommTreeRoot"],
+                         "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
+
+            # Generate MC block and remember its scCumTreeHash
+            # It should appear as the next certificate endEpochCumScTxCommTreeRoot, because the current certificate
+            # had been applied to the MC after the given virtual withdrawal epoch end.
+            mc_block_with_cert_hash = mc_node.generate(1)[0]
             mc_blocks_left_for_we -= 1
+
+            mc_block_with_cert = mc_node.getblock(mc_block_with_cert_hash)
+            end_epoch_cum_sc_tx_comm_tree_root = mc_block_with_cert["scCumTreeHash"]
 
             # After cert appeared only in MC, no next cert attempts expected
             time.sleep(2)
             if sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
                 fail("Cert submission is not expected")
-            # Next SC block triggers WE `epoch_number + 1` certificate submitting
+            # Next SC block triggers WE `epoch_number + 1` certificate submission
             generate_next_block(sc_node1, "first node")
             self.sc_sync_all()
 
         # Generate MC blocks and SC blocks to finish the WE
         # Check that after all pending cert were published, Nodes are able to keep processing new epochs
-        mc_node.generate(mc_blocks_left_for_we)
+        mcblock_hash = mc_node.generate(mc_blocks_left_for_we)[-1]
         generate_next_block(sc_node1, "first node")
 
         # Generate one more MC and SC block to trigger cert submission
@@ -212,6 +237,18 @@ class SCMultiplePendingCertsNonCeasing(AccountChainSetup):
 
         # Check for certificate to be appeared in MC mempool
         check_for_certificate(mc_node, sc_node1)
+
+        # Get Certificate and verify epoch number and endEpochCumScTxCommTreeRoot
+        cert_hash = mc_node.getrawmempool()[0]
+        cert = mc_node.getrawtransaction(cert_hash, 1)
+        assert_equal(self.total_withdrawal_epochs_number, cert["cert"]["epochNumber"],
+                     "Sidechain epoch number in certificate is wrong.")
+        mcblock = mc_node.getblock(mcblock_hash)
+        # Since the previous certificate has been generated in time, the next certificate should specify
+        # endEpochCumScTxCommTreeRoot equals to the one of virtual withdrawal epoch last mc block.
+        end_epoch_cum_sc_tx_comm_tree_root = mcblock["scCumTreeHash"]
+        assert_equal(end_epoch_cum_sc_tx_comm_tree_root, cert["cert"]["endEpochCumScTxCommTreeRoot"],
+                     "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
 
 
 if __name__ == "__main__":

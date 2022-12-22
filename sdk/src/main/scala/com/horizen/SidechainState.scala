@@ -17,7 +17,6 @@ import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -103,6 +102,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getKeyRotationProof(withdrawalEpoch, indexOfSigner, keyType)
   }
 
+  /**
+   * Searches for the certifiers keys data actual at the end of the given withdrawal epoch
+   * @param withdrawalEpoch
+   *        withdrawal epoch number, at the end of which the certifiers keys where defined/stored
+   * @return certifier keys in case the given withdrawal epoch has been finished and the record is still in the database,
+   *         None otherwise.
+   * @note in case {@code witdrawalEpoch == -1}, than returns the genesis set of certifiers keys from params.
+   */
   override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     if (withdrawalEpoch == -1)
       Option.apply(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
@@ -136,6 +143,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getLastCertificateReferencedEpoch()
   }
 
+  /*
+   * Returns the id of Sidechain block with the last top quality certificate certificate.
+   * Note: has sense only for non-ceasing sidechains. Always returns `None` for ceasing sidechains.
+   */
+  override def lastCertificateSidechainBlockId(): Option[ModifierId] = {
+    stateStorage.getLastCertificateSidechainBlockId()
+  }
+
   def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
   }
@@ -165,7 +180,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       // For non-ceasing sidechains certificate must be validated just when it has been received.
       // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
       // then the whole block is invalid.
-      mod.topQualityCertificates.foreach(cert => validateTopQualityCertificate(cert, cert.epochNumber))
+      mod.topQualityCertificateOpt.foreach(cert => validateTopQualityCertificate(cert, cert.epochNumber))
     } else {
       // For ceasing sidechains submission window concept is used.
       // If SC block has reached the certificate submission window end -> check the top quality certificate
@@ -174,7 +189,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
         // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificates.lastOption.orElse(
+        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
           stateStorage.getTopQualityCertificate(certReferencedEpochNumber))
 
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
@@ -316,8 +331,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
 
     if (params.circuitType == CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation) {
-      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION)
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION) {
         throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION} custom fields when ceased sidechain withdrawal is disabled and key rotation enabled.")
+        // todo: verify the first field against the key rotation root hash. Others are zeros of FE size
+      }
     } else {
       if (params.isCSWEnabled) {
         if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW)
@@ -363,10 +380,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
       val keyRotationTransaction: CertificateKeyRotationTransaction = tx.asInstanceOf[CertificateKeyRotationTransaction]
       val keyRotationProof = keyRotationTransaction.getKeyRotationProof
-      val newKey = SchnorrPublicKey.deserialize(keyRotationProof.newKey.pubKeyBytes())
       val oldCertifiersKeys = certifiersKeys(withdrawalEpoch - 1).get
 
-      val messageToSign = newKey.getHash.serializeFieldElement()
+      val messageToSign = keyRotationProof.newKey.getHash
 
       //Verify that the key index is in a valid range
       if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)
@@ -509,7 +525,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod.mainchainBlockReferencesData.size, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
-          mod.topQualityCertificates.lastOption, // we are interested only in the most recent top quality certificate
+          mod.topQualityCertificateOpt,
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions),
           getKeyRotationProofsToAdd(mod.sidechainTransactions)

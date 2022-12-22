@@ -64,7 +64,6 @@ class WithKeyRotationCircuitStrategy[
       certificateData.endEpochCumCommTreeHash,
       certificateData.btrFee,
       certificateData.ftMinAmount,
-      certificateData.getCustomFields.toList.asJava,
       signaturesBytes.asJava,
       certificateData.schnorrKeysSignatures,
       params.signersThreshold,
@@ -85,7 +84,7 @@ class WithKeyRotationCircuitStrategy[
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
+    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, status.referencedEpoch)
     val sidechainId = params.sidechainId
 
     val previousCertificateOption: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
@@ -123,15 +122,15 @@ class WithKeyRotationCircuitStrategy[
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
     val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
 
-    val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
 
-    val customFields: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+    val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .getSchnorrKeysHash(getSchnorrKeysSignaturesListBytes(state, referencedWithdrawalEpochNumber))
 
     val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash, btrFee, ftMinAmount, util.Arrays.asList(customFields))
+        endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
     message
   }
 

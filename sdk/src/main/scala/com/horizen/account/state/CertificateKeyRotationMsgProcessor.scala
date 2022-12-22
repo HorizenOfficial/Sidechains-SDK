@@ -122,8 +122,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 
     val signingKeyFromConfig = params.signersPublicKeys(index)
     val masterKeyFromConfig = params.mastersPublicKeys(index)
-    val newKey = SchnorrPublicKey.deserialize(keyRotationProof.newKey.pubKeyBytes())
-    val newKeyAsMessage = newKey.getHash.serializeFieldElement()
+    val newKeyAsMessage: Array[Byte] = keyRotationProof.newKey.getHash
 
     val latestSigningKey = getLatestSigningKey(view, signingKeyFromConfig, currentEpochNum, index)
     val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)

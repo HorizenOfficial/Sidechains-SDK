@@ -68,6 +68,18 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
     }
 
     @Override
+    public byte[] getHash(byte[] publicKeyBytes) {
+        SchnorrPublicKey publicKey = SchnorrPublicKey.deserialize(publicKeyBytes);
+        FieldElement hash = publicKey.getHash();
+        byte[] hashBytes = hash.serializeFieldElement();
+
+        publicKey.freePublicKey();
+        hash.freeFieldElement();
+
+        return hashBytes;
+    }
+
+    @Override
     public int schnorrSecretKeyLength() {
         return Constants.SCHNORR_SK_LENGTH();
     }

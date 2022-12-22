@@ -80,7 +80,7 @@ class SCKeyRotationOldCircuitTest(SidechainTestFramework):
         epoch_mc_blocks_left -= 1
 
         # Call getCertificateSigners endpoint
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)["certifiersKeys"]
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, -1)["certifiersKeys"]
         assert_equal(len(certificate_signers_keys["signingKeys"]), self.cert_max_keys)
         assert_equal(len(certificate_signers_keys["masterKeys"]), 0)
 

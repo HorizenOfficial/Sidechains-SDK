@@ -19,6 +19,8 @@ public interface SchnorrFunctions {
     //looks like is not used at all in SDK
     boolean verify(byte[] messageBytes, byte[] publicKeyBytes, byte[] signatureBytes);
 
+    byte[] getHash(byte[] publicKeyBytes);
+
     int schnorrSecretKeyLength();
 
     int schnorrPublicKeyLength();

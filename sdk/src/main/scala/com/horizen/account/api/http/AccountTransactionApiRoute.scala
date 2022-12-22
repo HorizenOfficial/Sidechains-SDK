@@ -643,14 +643,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     if (keyType < 0 || keyType >= KeyRotationProofTypes.maxId)
       throw new IllegalArgumentException("Key type enumeration value should be valid!")
 
-    val newPK = SchnorrPublicKey.deserialize(newKey.pubKeyBytes())
-    val newPKhash = newPK.getHash
-    val messageToSign = newPKhash.serializeFieldElement()
+    val messageToSign: Array[Byte] = newKey.getHash
 
     if (!newKeySignature.isValid(newKey, messageToSign))
       throw new IllegalArgumentException(s"Key rotation proof - self signature is invalid: $index")
-    newPK.freePublicKey()
-    newPKhash.freeFieldElement()
   }
 
 }

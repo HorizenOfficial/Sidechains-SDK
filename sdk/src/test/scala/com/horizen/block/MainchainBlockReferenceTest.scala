@@ -15,7 +15,13 @@ import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 // Most of the tests are executed twice (once for ceasing, once for non-ceasing case)
-// But the cases with multiple certificates for given sidechain are specific to the type of sidechain
+// But the cases with multiple certificates for given sidechain are specific to the ceasing sidechains only:
+// Non-ceasing sidechains can't have more than one certificate for in a single MC block.
+
+// Note: At the earlier version of SDK (0.6.0-SNAPSHOT2) non-ceasing sidechains had a different structure
+// of McBlockRefData compared to ceasing ones: multiple certificates for different epochs were allowed.
+// In 0.6.0-SNAPSHOT3 this modification has been reverted, since became impossible from MC side (zend 4.0.0-beta).
+// Thus, we still keep full coverage of McBlockRefs parsing for both ceasing and non-ceasing sidechains.
 class MainchainBlockReferenceTest extends JUnitSuite {
 
   @Test
@@ -47,7 +53,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertFalse("Old Block occurred, proof of existence expected to be undefined.", block.get.data.existenceProof.isDefined)
     assertFalse("Old Block occurred, proof of absence expected to be undefined.", block.get.data.absenceProof.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificates.isEmpty)
+    assertTrue("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificate.isEmpty)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "0000000009572f35ecc6e319216b29046fdb6695ad93b3e5d77053285df4af03", BytesUtils.toHexString(block.get.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "5bf368ee4fc02f055e8ca5447a21b9758e6435b3214bc10b55f533cc9b3d1a6d", BytesUtils.toHexString(block.get.header.hashMerkleRoot))
@@ -73,7 +79,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertFalse("Old Block occurred, proof of existence expected to be undefined.", block.get.data.existenceProof.isDefined)
     assertFalse("Old Block occurred, proof of absence expected to be undefined.", block.get.data.absenceProof.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificates.isEmpty)
+    assertTrue("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificate.isEmpty)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "00000000106843ee0119c6db92e38e8655452fd85f638f6640475e8c6a3a3582", BytesUtils.toHexString(block.get.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "493232e7d362852c8e3fe6aa5a48d6f6e01220f617c258db511ee2386b6362ea", BytesUtils.toHexString(block.get.header.hashMerkleRoot))
@@ -99,7 +105,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertFalse("Old Block occurred, proof of existence expected to be undefined.", block.get.data.existenceProof.isDefined)
     assertFalse("Old Block occurred, proof of absence expected to be undefined.", block.get.data.absenceProof.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificates.isEmpty)
+    assertTrue("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificate.isEmpty)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "0000000071076828a1d738dfde576b21ac4e28998ae7a026f631e57d7561a28b", BytesUtils.toHexString(block.get.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "7169f926344ff99dbee02ed2429481bbbc0b84cb4773c1dcaee20458e0d0437a", BytesUtils.toHexString(block.get.header.hashMerkleRoot))
@@ -147,7 +153,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     }
 
     assertTrue("Block must not contain transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not contain proof of existence.", mcblock.data.existenceProof.isEmpty)
     assertTrue("Block must not contain proof of absence", mcblock.data.absenceProof.isEmpty)
 
@@ -202,7 +208,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Sc creation output id is different", scId, new ByteArrayWrapper(scCreation.sidechainId()))
 
 
-    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificate.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
 
@@ -247,7 +253,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("FT output id is different", scId, new ByteArrayWrapper(ft.sidechainId()))
 
 
-    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificate.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
 
@@ -285,7 +291,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificate.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
 
@@ -305,7 +311,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock2.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock2.data.topQualityCertificate.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isEmpty)
 
@@ -325,7 +331,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock3.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock3.data.topQualityCertificate.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock3.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock3.data.absenceProof.isEmpty)
 
@@ -344,7 +350,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock4.semanticValidity(params4).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock4.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock4.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock4.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not contain proof of existence.", mcblock4.data.existenceProof.isEmpty)
     assertTrue("Block must not contain proof of absence", mcblock4.data.absenceProof.isDefined)
 
@@ -363,7 +369,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock5.semanticValidity(params5).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock5.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock5.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock5.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not contain proof of existence.", mcblock5.data.existenceProof.isEmpty)
     assertTrue("Block must contain proof of absence.", mcblock5.data.absenceProof.isDefined)
 
@@ -383,7 +389,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock6.semanticValidity(params6).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock6.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock6.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock6.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not contain proof of existence.", mcblock6.data.existenceProof.isEmpty)
     assertTrue("Block must contain proof of absence.", mcblock6.data.absenceProof.isDefined)
 
@@ -403,7 +409,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock7.semanticValidity(params7).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock7.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock7.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock7.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not contain proof of existence.", mcblock7.data.existenceProof.isEmpty)
     assertTrue("Block must contain proof of absence.", mcblock7.data.absenceProof.isDefined)
   }
@@ -437,7 +443,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificates.nonEmpty)
+    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.nonEmpty)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock1.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
@@ -457,7 +463,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock2.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isEmpty)
     assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isDefined)
@@ -489,10 +495,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificates.nonEmpty)
+    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.nonEmpty)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock1.data.lowerCertificateLeaves.isEmpty)
-    assertEquals("Block certificate must contain correct ft fee.", 54, mcblock1.data.topQualityCertificates.head.ftMinAmount)
-    assertEquals("Block certificate must contain correct btr fee.", 0, mcblock1.data.topQualityCertificates.head.btrFee)
+    assertEquals("Block certificate must contain correct ft fee.", 54, mcblock1.data.topQualityCertificate.get.ftMinAmount)
+    assertEquals("Block certificate must contain correct btr fee.", 0, mcblock1.data.topQualityCertificate.get.btrFee)
   }
 
   @Test
@@ -532,7 +538,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificates.nonEmpty)
+    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.nonEmpty)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock1.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
@@ -552,25 +558,13 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock2.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isEmpty)
     assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isDefined)
   }
 
-  @Test
   def blockWithMultipleCertificates_Ceasing(): Unit = {
-    blockWithMultipleCertificates(false)
-  }
-
-  @Test
-  def blockWithMultipleCertificates_NonCeasing(): Unit = {
-    // Note: Used MC block actually contains 2 certificates for ceasing case (they both below to the same epoch)
-    // but for current test case it is more than enough.
-    blockWithMultipleCertificates(true)
-  }
-
-  def blockWithMultipleCertificates(isNonCeasing: Boolean): Unit = {
     // Test: parse MC block with 2 certificates.
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_2_certificates").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
@@ -580,7 +574,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val scIdHex1 = "1aabf493f8605e78177d71c0aef3b251b2b9aaa66715fc86729a4e86ce566d8e"
     val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
 
-    val params1 = RegTestParams(scId1.data, isNonCeasing = isNonCeasing)
+    val params1 = RegTestParams(scId1.data)
 
     val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1, TestSidechainsVersionsManager(params1))
 
@@ -598,17 +592,9 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     }
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    if(isNonCeasing) {
-      assertEquals("For non-ceasing sidechain block must contain 2 top quality certificates.", 2,
-        mcblock1.data.topQualityCertificates.size)
-      assertTrue("For non-ceasing sidechain block must contain NO lower quality certificates.",
-        mcblock1.data.lowerCertificateLeaves.isEmpty)
-    } else {
-      assertEquals("For ceasing sidechain block must contain 1 top quality certificate.", 1,
-        mcblock1.data.topQualityCertificates.size)
-      assertEquals("For ceasing sidechain block must contain 1 low quality certificate.", 1,
-        mcblock1.data.lowerCertificateLeaves.size)
-    }
+    assertTrue("For ceasing sidechain block must contain 1 top quality certificate.", mcblock1.data.topQualityCertificate.isDefined)
+    assertEquals("For ceasing sidechain block must contain 1 low quality certificate.", 1,
+      mcblock1.data.lowerCertificateLeaves.size)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence.", mcblock1.data.absenceProof.isEmpty)
 
@@ -617,7 +603,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
     val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
-    val params2 = RegTestParams(scId2.data, isNonCeasing = isNonCeasing)
+    val params2 = RegTestParams(scId2.data)
 
     val mcblockTry2 = MainchainBlockReference.create(mcBlockBytes, params2, TestSidechainsVersionsManager(SidechainVersionZero))
 
@@ -627,7 +613,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain top quality certificate.", mcblock2.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain top quality certificate.", mcblock2.data.topQualityCertificate.isEmpty)
     assertEquals("Block must not contain lower quality certificates.", 0, mcblock2.data.lowerCertificateLeaves.size)
     assertTrue("Block must not contain proof of existence.", mcblock2.data.existenceProof.isEmpty)
     assertTrue("Block must contain proof of absence.", mcblock2.data.absenceProof.isDefined)
@@ -670,9 +656,9 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificates.nonEmpty)
-    assertEquals("Block must contain certificate with 3 cert field elements.", 3, mcblock1.data.topQualityCertificates.head.fieldElementCertificateFields.length)
-    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock1.data.topQualityCertificates.head.bitVectorCertificateFields.length)
+    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.nonEmpty)
+    assertEquals("Block must contain certificate with 3 cert field elements.", 3, mcblock1.data.topQualityCertificate.get.fieldElementCertificateFields.length)
+    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock1.data.topQualityCertificate.get.bitVectorCertificateFields.length)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock1.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
@@ -692,7 +678,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock2.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isEmpty)
     assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isDefined)
@@ -775,7 +761,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificate.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
 
@@ -794,7 +780,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock2.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock2.data.topQualityCertificate.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isEmpty)
 
@@ -816,9 +802,9 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock3.data.topQualityCertificates.nonEmpty)
-    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock3.data.topQualityCertificates.head.fieldElementCertificateFields.length)
-    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock3.data.topQualityCertificates.head.bitVectorCertificateFields.length)
+    assertTrue("Block must contain certificate.", mcblock3.data.topQualityCertificate.nonEmpty)
+    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock3.data.topQualityCertificate.get.fieldElementCertificateFields.length)
+    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock3.data.topQualityCertificate.get.bitVectorCertificateFields.length)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock3.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock3.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock3.data.absenceProof.isEmpty)
@@ -841,9 +827,9 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock4.semanticValidity(params4).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock4.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock4.data.topQualityCertificates.nonEmpty)
-    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock4.data.topQualityCertificates.head.fieldElementCertificateFields.length)
-    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock4.data.topQualityCertificates.head.bitVectorCertificateFields.length)
+    assertTrue("Block must contain certificate.", mcblock4.data.topQualityCertificate.nonEmpty)
+    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock4.data.topQualityCertificate.get.fieldElementCertificateFields.length)
+    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock4.data.topQualityCertificate.get.bitVectorCertificateFields.length)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock4.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock4.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock4.data.absenceProof.isEmpty)
@@ -866,9 +852,9 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock5.semanticValidity(params5).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock5.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock5.data.topQualityCertificates.nonEmpty)
-    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock5.data.topQualityCertificates.head.fieldElementCertificateFields.length)
-    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock5.data.topQualityCertificates.head.bitVectorCertificateFields.length)
+    assertTrue("Block must contain certificate.", mcblock5.data.topQualityCertificate.nonEmpty)
+    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock5.data.topQualityCertificate.get.fieldElementCertificateFields.length)
+    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock5.data.topQualityCertificate.get.bitVectorCertificateFields.length)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock5.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock5.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock5.data.absenceProof.isEmpty)
@@ -891,9 +877,9 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock6.semanticValidity(params6).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock6.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock6.data.topQualityCertificates.nonEmpty)
-    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock6.data.topQualityCertificates.head.fieldElementCertificateFields.length)
-    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock6.data.topQualityCertificates.head.bitVectorCertificateFields.length)
+    assertTrue("Block must contain certificate.", mcblock6.data.topQualityCertificate.nonEmpty)
+    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock6.data.topQualityCertificate.get.fieldElementCertificateFields.length)
+    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock6.data.topQualityCertificate.get.bitVectorCertificateFields.length)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock6.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock6.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock6.data.absenceProof.isEmpty)
@@ -913,7 +899,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock7.semanticValidity(params7).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock7.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock7.data.topQualityCertificates.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock7.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not contain lower quality certificate leaves.", mcblock7.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must not contain proof of existence.", mcblock7.data.existenceProof.isEmpty)
     assertTrue("Block must contain proof of absence", mcblock7.data.absenceProof.isDefined)
@@ -1007,7 +993,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
     assertTrue("Block reference data must not contain transaction.", mcBlockReferenceData.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block reference data must not contain certificate.", mcBlockReferenceData.topQualityCertificates.isEmpty)
+    assertTrue("Block reference data must not contain certificate.", mcBlockReferenceData.topQualityCertificate.isEmpty)
     assertTrue("Block reference data must not contain proof of existence.", mcBlockReferenceData.existenceProof.isEmpty)
     assertTrue("Block reference data must not contain proof of absence", mcBlockReferenceData.absenceProof.isEmpty)
 
@@ -1036,9 +1022,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
     assertTrue("Block reference data must not contain transaction.", mcBlockReferenceData.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block reference data must contain certificate.", mcBlockReferenceData.topQualityCertificates.nonEmpty)
-    assertEquals("Block reference data must contain 1 top quality certificate.",
-      1, mcBlockReferenceData.topQualityCertificates.size)
+    assertTrue("Block reference data must contain certificate.", mcBlockReferenceData.topQualityCertificate.nonEmpty)
     assertTrue("Block reference data must not-contain lower quality certificate leaves.", mcBlockReferenceData.lowerCertificateLeaves.isEmpty)
     assertTrue("Block reference data must contain proof of existence.", mcBlockReferenceData.existenceProof.isDefined)
     assertTrue("Block reference data must not contain proof of absence", mcBlockReferenceData.absenceProof.isEmpty)
@@ -1067,8 +1051,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("MainchainBlockReferenceData expected to by parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
-    assertEquals("Block reference data must contain 1 top quality certificate.",
-      1, mcBlockReferenceData.topQualityCertificates.size)
+    assertTrue("Block reference data must contain 1 top quality certificate.", mcBlockReferenceData.topQualityCertificate.nonEmpty)
     assertEquals("Block reference data must contain 1 low quality certificate.",
       1, mcBlockReferenceData.lowerCertificateLeaves.size)
     assertTrue("Block reference data must contain proof of existence.", mcBlockReferenceData.existenceProof.isDefined)
@@ -1106,7 +1089,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertEquals("Block hash is different.", blockHash, mcblock.header.hashHex)
     assertTrue("Block must not contain MC2SCAggTx transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock.data.topQualityCertificates.nonEmpty)
-    assertEquals("Certificate BTs number is different", 156, mcblock.data.topQualityCertificates.head.backwardTransferOutputs.size)
+    assertTrue("Block must contain certificate.", mcblock.data.topQualityCertificate.nonEmpty)
+    assertEquals("Certificate BTs number is different", 156, mcblock.data.topQualityCertificate.get.backwardTransferOutputs.size)
   }
 }

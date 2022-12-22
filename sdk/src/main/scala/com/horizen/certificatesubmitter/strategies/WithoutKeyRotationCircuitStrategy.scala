@@ -76,9 +76,9 @@ class WithoutKeyRotationCircuitStrategy[
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(status.referencedEpoch)
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
-    val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, status.referencedEpoch)
+    val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, state, status.referencedEpoch)
     val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
+    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, status.referencedEpoch)
     val sidechainId = params.sidechainId
     val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
 
@@ -106,10 +106,10 @@ class WithoutKeyRotationCircuitStrategy[
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-    val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
 
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
 
     val utxoMerkleTreeRoot: Option[Array[Byte]] = {

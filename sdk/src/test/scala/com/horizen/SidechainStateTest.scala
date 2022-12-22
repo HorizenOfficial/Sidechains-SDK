@@ -11,7 +11,6 @@ import com.horizen.forge.ForgerList
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
@@ -120,7 +119,7 @@ class SidechainStateTest
 
   def getKeyRotationTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), typeOfKey: KeyRotationProofTypes.KeyRotationProofType, keyIndex: Int, newKeySecret: SchnorrSecret, oldSigningKeySecret: SchnorrSecret, oldMasterKeySecret: SchnorrSecret, wrongNewKey: Boolean = false): CertificateKeyRotationTransaction = {
     val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
-    val messageToSign = SchnorrPublicKey.deserialize(newKeySecret.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+    val messageToSign = newKeySecret.publicImage().getHash
     val oldSigningKeySignature = oldSigningKeySecret.sign(messageToSign)
     val newMasterKeySignature = oldMasterKeySecret.sign(messageToSign)
     val newKeySignature = wrongNewKey match {
@@ -208,7 +207,7 @@ class SidechainStateTest
     //Test validate(Block)
     val mockedBlock = mock[SidechainBlock]
 
-    Mockito.when(mockedBlock.topQualityCertificates).thenReturn(Seq())
+    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -251,7 +250,7 @@ class SidechainStateTest
 
     //test mutuality transaction check
     val mutualityMockedBlock = mock[SidechainBlock]
-    Mockito.when(mutualityMockedBlock.topQualityCertificates).thenReturn(Seq())
+    Mockito.when(mutualityMockedBlock.topQualityCertificateOpt).thenReturn(None)
     Mockito.when(mutualityMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(mutualityMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(mutualityMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
@@ -273,7 +272,7 @@ class SidechainStateTest
 
 
     val doubleSpendTransactionMockedBlock = mock[SidechainBlock]
-    Mockito.when(doubleSpendTransactionMockedBlock.topQualityCertificates).thenReturn(Seq())
+    Mockito.when(doubleSpendTransactionMockedBlock.topQualityCertificateOpt).thenReturn(None)
     Mockito.when(doubleSpendTransactionMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(doubleSpendTransactionMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(doubleSpendTransactionMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
@@ -446,7 +445,7 @@ class SidechainStateTest
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
 
-    Mockito.when(mockedBlock.topQualityCertificates).thenReturn(Seq())
+    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
     Mockito.when(mockedBlock.feeInfo).thenReturn(modBlockFeeInfo)
 
@@ -989,7 +988,7 @@ class SidechainStateTest
     //Test validate block with no empty WB slots accumulated, no new mainchain block references and a transaction with 1 WB
     val mockedBlock = mock[SidechainBlock]
 
-    Mockito.when(mockedBlock.topQualityCertificates).thenReturn(Seq())
+    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
     Mockito.when(mockedBlock.transactions).thenReturn(transactionList.toList)
 
@@ -1015,7 +1014,7 @@ class SidechainStateTest
 
 
     //Test validate block with no empty WB slots accumulated, 1 new mainchain block reference and a transaction with 10 WBs
-    val emptyRefData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, sidechainRelatedAggregatedTransaction = None, None, None, Seq(), Seq())
+    val emptyRefData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, sidechainRelatedAggregatedTransaction = None, None, None, Seq(), None)
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData))
 
     transactionList.clear()

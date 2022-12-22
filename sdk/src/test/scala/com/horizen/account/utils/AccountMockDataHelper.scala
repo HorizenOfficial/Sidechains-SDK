@@ -120,7 +120,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     var mcBlockRef: MainchainBlockReference = generateMainchainBlockReference()
     mcBlockRef = new MainchainBlockReference(
       mcBlockRef.header,
-      MainchainBlockReferenceData(mcBlockRef.header.hash, Some(aggTx), None, None, Seq(), Seq())
+      MainchainBlockReferenceData(mcBlockRef.header.hash, Some(aggTx), None, None, Seq(), None)
     ) {
       override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
     }

@@ -24,7 +24,7 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 
@@ -78,7 +78,9 @@ class AccountForgeMessageBuilder(
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
     for (mcBlockRefData <- mainchainBlockReferencesData) {
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+      // Since forger still doesn't know the candidate block id we may pass random one.
+      val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData, dummyBlockId).get
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
