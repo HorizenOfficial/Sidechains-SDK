@@ -64,7 +64,7 @@ class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
         val result = mapper.readTree(entityAs[String]).get("result")
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
-        assertEquals(1, result.elements.asScala.length)
+        assertEquals(2, result.elements.asScala.length)
 
         val certifiersKeysJson = result.get("certifiersKeys")
         assertTrue(certifiersKeysJson.has("signingKeys"))

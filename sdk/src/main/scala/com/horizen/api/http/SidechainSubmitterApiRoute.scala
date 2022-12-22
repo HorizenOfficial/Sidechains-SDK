@@ -13,6 +13,7 @@ import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.chain.AbstractFeePaymentsInfo
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import com.horizen.proposition.SchnorrProposition
@@ -23,6 +24,7 @@ import sparkz.core.api.http.ApiDirectives
 import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
+import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -123,7 +125,14 @@ case class SidechainSubmitterApiRoute[
           withView { sidechainNodeView =>
             sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch) match {
               case Some(certifiersKeys) =>
-                ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys))
+                val keysRootHash = if (certifiersKeys.masterKeys.nonEmpty)
+                  CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
+                    certifiersKeys.signingKeys.map(_.pubKeyBytes()).toList.asJava,
+                    certifiersKeys.masterKeys.map(_.pubKeyBytes()).toList.asJava
+                  )
+                else
+                  Array[Byte]()
+                ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys, keysRootHash))
               case None =>
                 ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Can not find certifiers keys.", JOptional.empty()))
             }
@@ -186,7 +195,7 @@ object SidechainDebugRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGetCertificateSigners(certifiersKeys: CertifiersKeys) extends SuccessResponse
+  private[api] case class RespGetCertificateSigners(certifiersKeys: CertifiersKeys, keysRootHash: Array[Byte]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespGetKeyRotationProof(keyRotationProof: Option[KeyRotationProof]) extends SuccessResponse

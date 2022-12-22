@@ -47,11 +47,11 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 
   override private[horizen] def getCertifiersKeys(epochNum: Int, view: BaseAccountStateView) = {
     val singingKeys = params.signersPublicKeys.zipWithIndex
-      .map(key_index => getLatestSigningKey(view, key_index._1, epochNum, key_index._2))
+      .map(key_index => getLatestSigningKey(view, key_index._1, epochNum + 1, key_index._2))
       .toVector
 
     val masterKeys = params.mastersPublicKeys.zipWithIndex
-      .map(key_index => getLatestMasterKey(view, key_index._1, epochNum, key_index._2))
+      .map(key_index => getLatestMasterKey(view, key_index._1, epochNum + 1, key_index._2))
       .toVector
 
     CertifiersKeys(singingKeys, masterKeys)

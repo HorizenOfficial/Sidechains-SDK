@@ -103,7 +103,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         else:
             raise Exception("Either public key or private key should be provided to call createSignature")
 
-        response = requests.post("http://127.0.01:5000/api/v1/createSignature", json = post_data)
+        response = requests.post("http://127.0.0.1:5000/api/v1/createSignature", json = post_data)
         jsonResponse = json.loads(response.text)
         return jsonResponse
 
