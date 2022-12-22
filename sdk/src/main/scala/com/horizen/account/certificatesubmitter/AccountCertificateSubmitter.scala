@@ -8,9 +8,7 @@ import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.params.NetworkParams
@@ -19,6 +17,7 @@ import com.horizen.websocket.client.MainchainNodeChannel
 import java.util.Optional
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
+import scala.reflect.ClassTag
 
 
 class AccountCertificateSubmitter(settings: SidechainSettings,
@@ -26,18 +25,21 @@ class AccountCertificateSubmitter(settings: SidechainSettings,
                                   params: NetworkParams,
                                   mainchainChannel: MainchainNodeChannel)
                                  (implicit ec: ExecutionContext)
-  extends AbstractCertificateSubmitter[
-    SidechainTypes#SCAT,
-    AccountBlockHeader,
-    AccountBlock
-  ](settings, sidechainNodeViewHolderRef, params, mainchainChannel) {
-  type FPI = AccountFeePaymentsInfo
-  type HSTOR = AccountHistoryStorage
-  type VL = AccountWallet
-  type HIS = AccountHistory
-  type MS = AccountState
-  type MP = AccountMemoryPool
-  type PM = AccountBlock
+  extends AbstractCertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel) {
+
+
+  override type TX = SidechainTypes#SCAT
+  override type H = AccountBlockHeader
+  override type PM = AccountBlock
+
+  override type FPI = AccountFeePaymentsInfo
+  override type HSTOR = AccountHistoryStorage
+  override type VL = AccountWallet
+  override type HIS = AccountHistory
+  override type MS = AccountState
+  override type MP = AccountMemoryPool
+
+  override implicit val tag: ClassTag[PM] = ClassTag[PM](classOf[PM])
 
   override def getUtxoMerkleTreeRoot(referencedEpoch: Int, state: AccountState): Optional[Array[Byte]] = Optional.empty()
 

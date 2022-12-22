@@ -9,10 +9,12 @@ import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.websocket.client.MainchainNodeChannel
+
 import scala.concurrent.ExecutionContext
 import java.util.Optional
 import scala.compat.java8.OptionConverters._
 import scala.language.postfixOps
+import scala.reflect.ClassTag
 
 
 class CertificateSubmitter(settings: SidechainSettings,
@@ -20,19 +22,20 @@ class CertificateSubmitter(settings: SidechainSettings,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
                           (implicit ec: ExecutionContext)
-  extends AbstractCertificateSubmitter[
-    SidechainTypes#SCBT,
-    SidechainBlockHeader,
-    SidechainBlock
-  ](settings, sidechainNodeViewHolderRef, params, mainchainChannel) {
-  type FPI = SidechainFeePaymentsInfo
-  type HSTOR = SidechainHistoryStorage
-  type VL = SidechainWallet
-  type HIS = SidechainHistory
-  type MS = SidechainState
-  type MP = SidechainMemoryPool
-  type PM = SidechainBlock
+  extends AbstractCertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel) {
 
+  override type TX = SidechainTypes#SCBT
+  override type H = SidechainBlockHeader
+  override type PM = SidechainBlock
+
+  override type FPI = SidechainFeePaymentsInfo
+  override type HSTOR = SidechainHistoryStorage
+  override type VL = SidechainWallet
+  override type HIS = SidechainHistory
+  override type MS = SidechainState
+  override type MP = SidechainMemoryPool
+
+  override implicit val tag: ClassTag[PM] = ClassTag[PM](classOf[PM])
 
   override def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
     if (params.isCSWEnabled) {

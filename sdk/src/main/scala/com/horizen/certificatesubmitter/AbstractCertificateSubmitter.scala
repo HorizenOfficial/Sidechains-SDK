@@ -10,9 +10,8 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableM
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.fork.ForkManager
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
@@ -25,12 +24,12 @@ import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
+import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.transaction.MemoryPool
-import sparkz.core.transaction.state.MinimalState
-import scorex.util.ScorexLogging
+
 import java.io.File
 import java.util
 import java.util.Optional
@@ -49,15 +48,16 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-abstract class AbstractCertificateSubmitter[
-  TX <: Transaction,
-  H <: SidechainBlockHeaderBase,
-  PM <: SidechainBlockBase[TX, H] : ClassTag](settings: SidechainSettings,
+abstract class AbstractCertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
+  type TX <: Transaction
+  type H <: SidechainBlockHeaderBase
+  type PM <: SidechainBlockBase[TX, H]
+
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
   type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
@@ -66,6 +66,8 @@ abstract class AbstractCertificateSubmitter[
   type MP <: MemoryPool[TX, MP]
 
   type View = CurrentView[HIS, MS, VL, MP]
+
+  implicit val tag: ClassTag[PM]
 
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
@@ -554,11 +556,10 @@ abstract class AbstractCertificateSubmitter[
         Try {
           getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
         } match {
-          case Failure(e: IllegalStateException) =>
+          case Failure(_: IllegalStateException) =>
             throw new Exception("CertificateSubmitter is too late against the State. " +
-              s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. ")
-              // TODO eneble state.getWithdrawalEpochInfo
-              // + s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
+              s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
+              s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
           case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
             throw new Exception(exception)
           case Success(value) => value
