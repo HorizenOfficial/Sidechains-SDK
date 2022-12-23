@@ -550,7 +550,7 @@ abstract class AbstractHistory[
     makeNewHistory(storage, consensusDataStorage)
   }
 
-  def findTransactionInsideBlock[A <: Transaction, T <: SidechainBlockHeaderBase](transactionId: String, block: SidechainBlockBase[A, T]): JOptional[A] = {
+  def findTransactionInsideBlock(transactionId: String, block: PM): JOptional[TX] = {
     block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
       case Some(tx) => JOptional.ofNullable(tx)
       case None => JOptional.empty()

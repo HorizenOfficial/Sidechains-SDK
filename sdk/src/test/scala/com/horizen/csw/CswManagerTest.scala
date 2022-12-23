@@ -8,7 +8,8 @@ import com.google.common.primitives.Longs
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion1
 import com.horizen.block.{MainchainHeader, WithdrawalEpochCertificate}
 import com.horizen.chain.{MainchainHeaderHash, MainchainHeaderInfo}
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.csw.CswManager.{ProofInProcess, ProofInQueue}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, GenerateCswProofStatus, Generated, InProcess, InQueue, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}

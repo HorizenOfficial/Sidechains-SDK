@@ -1,7 +1,9 @@
 package com.horizen
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.consensus.{ConsensusEpochInfo, ForgingStakeInfo}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.certnative.BackwardTransfer
+import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.transaction.Transaction
 import com.horizen.utils.WithdrawalEpochInfo
 import scorex.util.ModifierId
@@ -25,7 +27,14 @@ abstract class AbstractState[
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo)
 
   //Check if the majority of the allowed forgers opened the stake to everyone
-  def isForgingOpen(): Boolean
+  def isForgingOpen: Boolean
+  def lastCertificateReferencedEpoch: Option[Int]
+  def lastCertificateSidechainBlockId(): Option[ModifierId]
+  def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof]
+  def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys]
+  def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
+  def backwardTransfers(withdrawalEpoch: Int): Seq[BackwardTransfer]
+  def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]]
 }
 
 

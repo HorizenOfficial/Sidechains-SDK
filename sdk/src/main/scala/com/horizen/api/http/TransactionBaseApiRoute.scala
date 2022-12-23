@@ -22,7 +22,6 @@ import java.util.{Optional => JOptional}
 import sparkz.core.serialization.SparkzSerializer
 
 import scala.collection.JavaConverters._
-import scala.collection.convert.ImplicitConversions.`iterable AsScalaIterable`
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -140,6 +139,10 @@ object TransactionBaseErrorResponse {
 
   case class GenericTransactionError(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0204"
+  }
+
+  case class ErrorBadCircuit(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0404"
   }
 
 }

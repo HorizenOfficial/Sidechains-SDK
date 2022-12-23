@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Optional;
 
-import static org.web3j.crypto.Sign.LOWER_REAL_V;
+import static com.horizen.account.utils.Secp256k1.LOWER_REAL_V;
 
 public final class EthereumTransactionUtils {
 

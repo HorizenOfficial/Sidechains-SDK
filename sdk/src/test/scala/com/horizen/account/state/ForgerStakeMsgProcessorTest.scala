@@ -2,9 +2,9 @@ package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
-import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
+import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.interop.EvmLog
 import com.horizen.fixtures.StoreFixture
@@ -19,7 +19,6 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
-import org.web3j.crypto.{ECKeyPair, Keys, Sign}
 import sparkz.core.bytesToVersion
 import scorex.crypto.hash.Keccak256
 import java.math.BigInteger
@@ -46,8 +45,8 @@ class ForgerStakeMsgProcessorTest
   val contractAddress: Array[Byte] = forgerStakeMessageProcessor.contractAddress
 
   // create private/public key pair
-  val pair: ECKeyPair = Keys.createEcKeyPair
-  val ownerAddressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)))
+  val privateKey: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("fakemsgprocessortest".getBytes())
+  val ownerAddressProposition: AddressProposition = privateKey.publicImage()
 
   val AddNewForgerStakeEventSig: Array[Byte] = getEventSignature("DelegateForgerStake(address,address,bytes32,uint256)")
   val NumOfIndexedAddNewStakeEvtParams = 2
@@ -80,9 +79,9 @@ class ForgerStakeMsgProcessorTest
 
   def removeForgerStake(stateView: AccountStateView, stakeId: Array[Byte]): Unit = {
     val nonce = randomNonce
+
     val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(stakeId, origin, nonce.toByteArray)
-    val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
-    val msgSignature = new SignatureSecp256k1(msgSignatureData)
+    val msgSignature = privateKey.sign(msgToSign)
 
     // create command arguments
     val removeCmdInput = RemoveStakeCmdInput(stakeId, msgSignature)
@@ -496,9 +495,9 @@ class ForgerStakeMsgProcessorTest
       // remove first stake id
       val stakeId = forgerStakeMessageProcessor.getStakeId(msg)
       val nonce3 = randomNonce
+
       val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(stakeId, origin, nonce3.toByteArray)
-      val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
-      val msgSignature = new SignatureSecp256k1(msgSignatureData)
+      val msgSignature = privateKey.sign(msgToSign)
 
       // create command arguments
       val removeCmdInput = RemoveStakeCmdInput(stakeId, msgSignature)
@@ -604,7 +603,7 @@ class ForgerStakeMsgProcessorTest
     // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
     usingView(forgerStakeMessageProcessor) { view =>
       // create private/public key pair
-      val pair = Keys.createEcKeyPair
+      val key: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("amounttest".getBytes())
 
       val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
       val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
@@ -612,7 +611,7 @@ class ForgerStakeMsgProcessorTest
       val blockSignerProposition2 = new PublicKey25519Proposition(BytesUtils.fromHexString("2200000000000000000000000000000000000000000000000000000000000022")) // 32 bytes
       val vrfPublicKey2 = new VrfPublicKey(BytesUtils.fromHexString("220000000000000000000000000000000000000000000000000000000000000022")) // 33 bytes
 
-      val ownerAddressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)))
+      val ownerAddressProposition = key.publicImage()
 
       forgerStakeMessageProcessor.init(view)
 
@@ -650,7 +649,7 @@ class ForgerStakeMsgProcessorTest
     usingView(forgerStakeMessageProcessor) { view =>
 
       // create private/public key pair
-      val pair = Keys.createEcKeyPair
+      val key: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("emptybalancetest".getBytes())
 
       val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
       val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
@@ -658,7 +657,7 @@ class ForgerStakeMsgProcessorTest
       val blockSignerProposition2 = new PublicKey25519Proposition(BytesUtils.fromHexString("2200000000000000000000000000000000000000000000000000000000000022")) // 32 bytes
       val vrfPublicKey2 = new VrfPublicKey(BytesUtils.fromHexString("220000000000000000000000000000000000000000000000000000000000000022")) // 33 bytes
 
-      val ownerAddressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)))
+      val ownerAddressProposition = key.publicImage()
 
       forgerStakeMessageProcessor.init(view)
 
@@ -921,9 +920,9 @@ class ForgerStakeMsgProcessorTest
 
 
       val nonce = randomNonce
+
       val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(forgingStakeInfo.stakeId, origin, nonce.toByteArray)
-      val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
-      val msgSignature = new SignatureSecp256k1(msgSignatureData)
+      val msgSignature = privateKey.sign(msgToSign)
 
       // create command arguments
       val removeCmdInput = RemoveStakeCmdInput(forgingStakeInfo.stakeId, msgSignature)
