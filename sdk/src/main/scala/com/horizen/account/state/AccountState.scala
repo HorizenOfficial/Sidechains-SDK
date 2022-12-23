@@ -352,9 +352,8 @@ class AccountState(
   override def lastCertificateSidechainBlockId(): Option[ModifierId] =
     stateMetadataStorage.lastCertificateSidechainBlockId
 
-
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
-    stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
+    getTopQualityCertificate(referencedWithdrawalEpoch)
 
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)

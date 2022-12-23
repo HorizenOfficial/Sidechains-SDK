@@ -7,7 +7,6 @@ import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.evm.StateDB
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.state.StateView
 import com.horizen.utils.WithdrawalEpochInfo
 import sparkz.core.VersionTag
@@ -76,22 +75,6 @@ class AccountStateView(
 
   // getters
 
-  def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
-    certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
-  }
-
-  def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
-    Some(certificateKeysProvider.getCertifiersKeys(withdrawalEpoch, this))
-  }
-
-  def lastCertificateReferencedEpoch: Option[Int] =
-    metadataStorageView.lastCertificateReferencedEpoch
-
-  def lastCertificateSidechainBlockId(): Option[ModifierId] = {
-    metadataStorageView.lastCertificateSidechainBlockId
-  }
-
-
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
 
@@ -109,6 +92,4 @@ class AccountStateView(
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
-  //override
-  def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = None
 }

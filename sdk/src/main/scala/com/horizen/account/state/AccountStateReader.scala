@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.evm.ResourceHandle
 import com.horizen.evm.interop.EvmLog
 
@@ -26,5 +27,8 @@ trait AccountStateReader {
 
   def getLogs(txHash: Array[Byte]): Array[EvmLog]
   def getIntermediateRoot: Array[Byte]
+
+  def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys]
+  def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof]
 
 }
