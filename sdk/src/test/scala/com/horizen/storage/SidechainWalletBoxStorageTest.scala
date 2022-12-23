@@ -22,6 +22,7 @@ import scala.collection.JavaConverters._
 import org.mockito._
 import scorex.crypto.hash.Blake2b256
 
+import java.nio.charset.StandardCharsets
 import scala.util.Try
 
 
@@ -91,12 +92,12 @@ class SidechainWalletBoxStorageTest
 
 
     // Test 4: try get non-existing item
-    assertEquals("Storage should NOT contain requested WalletBox.", None, walletBoxStorage.get("non-existing id".getBytes()))
+    assertEquals("Storage should NOT contain requested WalletBox.", None, walletBoxStorage.get("non-existing id".getBytes(StandardCharsets.UTF_8)))
 
 
     // Test 5: get multiple items, not all of them exist
     assertEquals("Storage should contain NOT ALL requested WalletBoxes.", List(boxList.head),
-      walletBoxStorage.get(List(boxList.head.box.id(), "non-existing id".getBytes())))
+      walletBoxStorage.get(List(boxList.head.box.id(), "non-existing id".getBytes(StandardCharsets.UTF_8))))
 
 
     // Test 6: get by type for existing type

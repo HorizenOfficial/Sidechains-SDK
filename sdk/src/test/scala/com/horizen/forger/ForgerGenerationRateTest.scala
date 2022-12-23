@@ -7,6 +7,8 @@ import com.horizen.secret.VrfKeyGenerator
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
 import org.scalatestplus.junit.JUnitSuite
+
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable
 
 class ForgerGenerationRateTest extends JUnitSuite {
@@ -20,7 +22,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
 
     // Generation VRF secret
     val rnd: Random = new Random()
-    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes())
+    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))
 
     // Construction message to sign: (slot + random(8 bytes))
     val initialNonce: Array[Byte] = new Array[Byte](8)
@@ -54,7 +56,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
 
     // Generation VRF secret
     val rnd: Random = new Random()
-    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes())
+    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))
 
     // Construction message to sign: (slot + random(8 bytes))
     val initialNonce: Array[Byte] = new Array[Byte](8)
@@ -92,7 +94,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
 
     // Generation VRF secret
     val rnd: Random = new Random()
-    val forgerKeys = (1 to forgerNum).map(_ => VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes()))
+    val forgerKeys = (1 to forgerNum).map(_ => VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8)))
 
     // Construction message to sign: (slot + random(8 bytes))
     val initialNonce: Array[Byte] = new Array[Byte](8)
@@ -130,7 +132,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
 
     // Generation VRF secret
     val rnd: Random = new Random()
-    val forgers = stakeList.map(stake => (VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes()), stake))
+    val forgers = stakeList.map(stake => (VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8)), stake))
     val forgersGenRate: mutable.HashMap[Int, Int] = new mutable.HashMap[Int, Int]()
     stakeList.foreach(stake => forgersGenRate.put(stake, 0))
 

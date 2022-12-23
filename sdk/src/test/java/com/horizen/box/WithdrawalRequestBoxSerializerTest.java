@@ -8,6 +8,7 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
@@ -43,7 +44,7 @@ public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
         assertEquals("Boxes expected to be equal", box, box2);
 
 
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
 
     }

@@ -8,13 +8,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 import java.lang.reflect.Method
+import java.nio.charset.StandardCharsets
 
 class CswCircuitUtilsTest {
   val cswCircuit = new CswCircuitImplZendoo()
 
   @Test
   def transformPrivateKey25519(): Unit = {
-    val pk: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("seed".getBytes)
+    val pk: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("seed".getBytes(StandardCharsets.UTF_8))
 
     val scalar = cswCircuit.privateKey25519ToScalar(pk)
 

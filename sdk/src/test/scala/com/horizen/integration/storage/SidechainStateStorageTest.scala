@@ -16,6 +16,7 @@ import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 
 class SidechainStateStorageTest
@@ -34,7 +35,7 @@ class SidechainStateStorageTest
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
   val nextConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(2)
 
-  val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+  val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes(StandardCharsets.UTF_8)).publicImage())
   val params: NetworkParams = MainNetParams()
 
   @Test
@@ -234,7 +235,7 @@ class SidechainStateStorageTest
     // Test append block fee info for given withdrawal epoch (empty storage).
     val mod1Version = getVersion
     val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(withdrawalEpoch0, 1)
-    val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes()).publicImage())
+    val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(),
@@ -255,7 +256,7 @@ class SidechainStateStorageTest
     // Test append block fee info to existing withdrawal epoch payments
     val mod2Version = getVersion
     val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(withdrawalEpoch0, 1)
-    val mod2BlockFeeInfo = BlockFeeInfo(200, getPrivateKey25519("mod2".getBytes()).publicImage())
+    val mod2BlockFeeInfo = BlockFeeInfo(200, getPrivateKey25519("mod2".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(),
@@ -278,7 +279,7 @@ class SidechainStateStorageTest
     val mod3Version = getVersion
     val withdrawalEpoch1: Int = 1
     val mod3WithdrawalEpochInfo = WithdrawalEpochInfo(withdrawalEpoch1, 1)
-    val mod3BlockFeeInfo = BlockFeeInfo(300, getPrivateKey25519("mod3".getBytes()).publicImage())
+    val mod3BlockFeeInfo = BlockFeeInfo(300, getPrivateKey25519("mod3".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod3Version, mod3WithdrawalEpochInfo, Set(), Set(), Seq(),
@@ -326,7 +327,7 @@ class SidechainStateStorageTest
     val utxoMerkleRoot1: Array[Byte] = FieldElementFixture.generateFieldElement()
     val mod1Version = getVersion
     val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(withdrawalEpoch1, 1)
-    val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes()).publicImage())
+    val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(),
@@ -345,7 +346,7 @@ class SidechainStateStorageTest
     val withdrawalEpoch2 = withdrawalEpoch1 + 1
     val mod2Version = getVersion
     val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(withdrawalEpoch2, 2)
-    val mod2BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes()).publicImage())
+    val mod2BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(),
@@ -376,7 +377,7 @@ class SidechainStateStorageTest
     // Test 1: append block with hasCeased=false.
     val mod1Version = getVersion
     val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(withdrawalEpoch0, 1)
-    val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes()).publicImage())
+    val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(),
@@ -391,7 +392,7 @@ class SidechainStateStorageTest
     // Test2: append block with hasCeased=false.
     val mod2Version = getVersion
     val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(withdrawalEpoch0, 2)
-    val mod2BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes()).publicImage())
+    val mod2BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(),

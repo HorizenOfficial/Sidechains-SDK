@@ -3,6 +3,7 @@ package com.horizen.utils;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
@@ -14,7 +15,7 @@ public class Ed25519Test {
      */
     @Test
     public void deterministicKeysGeneration() {
-        byte[] seed = "seed1".getBytes();
+        byte[] seed = "seed1".getBytes(StandardCharsets.UTF_8);
 
         Pair<byte[], byte[]> keyPair1 = Ed25519.createKeyPair(seed);
         Pair<byte[], byte[]> keyPair2 = Ed25519.createKeyPair(seed);
@@ -33,8 +34,8 @@ public class Ed25519Test {
      */
     @Test
     public void differentKeysGeneration() {
-        byte[] seed1 = "seed1".getBytes();
-        byte[] seed2 = "seed2".getBytes();
+        byte[] seed1 = "seed1".getBytes(StandardCharsets.UTF_8);
+        byte[] seed2 = "seed2".getBytes(StandardCharsets.UTF_8);
 
         Pair<byte[], byte[]> keyPair1 = Ed25519.createKeyPair(seed1);
         Pair<byte[], byte[]> keyPair2 = Ed25519.createKeyPair(seed2);
@@ -53,7 +54,7 @@ public class Ed25519Test {
      */
     @Test
     public void deterministicSignature() {
-        byte[] seed = "seed1".getBytes();
+        byte[] seed = "seed1".getBytes(StandardCharsets.UTF_8);
 
         Pair<byte[], byte[]> keyPair1 = Ed25519.createKeyPair(seed);
         Pair<byte[], byte[]> keyPair2 = Ed25519.createKeyPair(seed);
@@ -63,7 +64,7 @@ public class Ed25519Test {
         byte[] publicKey1 = keyPair1.getValue();
         byte[] publicKey2 = keyPair2.getValue();
 
-        byte[] msg = "message to sign".getBytes();
+        byte[] msg = "message to sign".getBytes(StandardCharsets.UTF_8);
         byte[] signature1 = Ed25519.sign(privateKey1, msg, publicKey1);
         byte[] signature2 = Ed25519.sign(privateKey2, msg, publicKey2);
 
@@ -80,7 +81,7 @@ public class Ed25519Test {
      */
     @Test
     public void signatureVerification() {
-        byte[] seed = "seed1".getBytes();
+        byte[] seed = "seed1".getBytes(StandardCharsets.UTF_8);
 
         Pair<byte[], byte[]> keyPair1 = Ed25519.createKeyPair(seed);
         Pair<byte[], byte[]> keyPair2 = Ed25519.createKeyPair(seed);
@@ -89,7 +90,7 @@ public class Ed25519Test {
         byte[] publicKey1 = keyPair1.getValue();
         byte[] publicKey2 = keyPair2.getValue();
 
-        byte[] msg = "message to sign".getBytes();
+        byte[] msg = "message to sign".getBytes(StandardCharsets.UTF_8);
         byte[] signature = Ed25519.sign(privateKey1, msg, publicKey1);
 
         boolean isVerified = Ed25519.verify(signature, msg, publicKey1);

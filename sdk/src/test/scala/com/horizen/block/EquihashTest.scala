@@ -1,7 +1,6 @@
 package com.horizen.block
 
 import java.util
-
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.utils.BytesUtils
 import org.bouncycastle.crypto.digests.Blake2bDigest
@@ -9,6 +8,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
+
+import java.nio.charset.StandardCharsets
 
 class EquihashTest extends JUnitSuite {
 
@@ -243,13 +244,13 @@ class EquihashTest extends JUnitSuite {
     val N: Int = 96
     val K: Int = 5
     val biLen: Int = N / (K + 1)
-    val msg: Array[Byte] = "Equihash is an asymmetric PoW based on the Generalised Birthday problem.".getBytes("utf-8")
+    val msg: Array[Byte] = "Equihash is an asymmetric PoW based on the Generalised Birthday problem.".getBytes(StandardCharsets.UTF_8)
     var nonce: Array[Byte] = new Array[Byte](32) // original: uint256 V = ArithToUint256(arith_uint256(1));
     nonce(0) = 1
     val equihash: Equihash = new Equihash(N, K)
 
     val b2digest: Blake2bDigest = new Blake2bDigest(null, 512 / N * N / 8, null,
-      Bytes.concat("ZcashPoW".getBytes, BytesUtils.reverseBytes(Ints.toByteArray(N)), BytesUtils.reverseBytes(Ints.toByteArray(K))))
+      Bytes.concat("ZcashPoW".getBytes(StandardCharsets.UTF_8), BytesUtils.reverseBytes(Ints.toByteArray(N)), BytesUtils.reverseBytes(Ints.toByteArray(K))))
     b2digest.update(msg, 0 , msg.length)
     b2digest.update(nonce, 0 , nonce.length)
 
@@ -348,7 +349,7 @@ class EquihashTest extends JUnitSuite {
 
     // Test 11: Original valid solution, but invalid digest base state (nonce missed)
     val wrongDigest: Blake2bDigest = new Blake2bDigest(null, 512 / N * N / 8, null,
-      Bytes.concat("ZcashPoW".getBytes, BytesUtils.reverseBytes(Ints.toByteArray(N)), BytesUtils.reverseBytes(Ints.toByteArray(K))))
+      Bytes.concat("ZcashPoW".getBytes(StandardCharsets.UTF_8), BytesUtils.reverseBytes(Ints.toByteArray(N)), BytesUtils.reverseBytes(Ints.toByteArray(K))))
     b2digest.update(msg, 0 , msg.length)
 
     indices = Array(2261, 15185, 36112, 104243, 23779, 118390, 118332, 130041, 32642, 69878,

@@ -6,6 +6,8 @@ import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.Assert.*;
 
 public class PublicKey25519PropositionTest {
@@ -21,11 +23,11 @@ public class PublicKey25519PropositionTest {
 
     @Before
     public void beforeEachTest() {
-        seed = "12345".getBytes();
+        seed = "12345".getBytes(StandardCharsets.UTF_8);
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(seed);
         privateKey = keyPair.getKey();
         publicKey = keyPair.getValue();
-        messageToSign = "message to sign".getBytes();
+        messageToSign = "message to sign".getBytes(StandardCharsets.UTF_8);
         signature = Ed25519.sign(privateKey, messageToSign, publicKey);
     }
 
@@ -39,7 +41,7 @@ public class PublicKey25519PropositionTest {
 
         boolean exceptionOccurred = false;
         try {
-            PublicKey25519Proposition prop2 = new PublicKey25519Proposition("broken public key".getBytes());
+            PublicKey25519Proposition prop2 = new PublicKey25519Proposition("broken public key".getBytes(StandardCharsets.UTF_8));
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -56,7 +58,7 @@ public class PublicKey25519PropositionTest {
         assertEquals("Propositions hash codes expected to be equal", true, prop1.hashCode() == prop2.hashCode());
         assertEquals("Propositions expected to be equal", true, prop1.equals(prop2));
 
-        byte[] anotherSeed = "testseed".getBytes();
+        byte[] anotherSeed = "testseed".getBytes(StandardCharsets.UTF_8);
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
         PublicKey25519Proposition prop3 = new PublicKey25519Proposition(keyPair.getValue());
 
@@ -85,14 +87,14 @@ public class PublicKey25519PropositionTest {
         boolean res = prop1.verify(messageToSign, signature);
         assertEquals("Signature expected to be valid", true, res);
 
-        res = prop1.verify("another message".getBytes(), signature);
+        res = prop1.verify("another message".getBytes(StandardCharsets.UTF_8), signature);
         assertEquals("Signature expected to be NOT valid", false, res);
 
-        res = prop1.verify(messageToSign, "broken signature".getBytes());
+        res = prop1.verify(messageToSign, "broken signature".getBytes(StandardCharsets.UTF_8));
         assertEquals("Signature expected to be NOT valid", false, res);
 
 
-        byte[] anotherSeed = "testseed".getBytes();
+        byte[] anotherSeed = "testseed".getBytes(StandardCharsets.UTF_8);
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
         PublicKey25519Proposition prop2 = new PublicKey25519Proposition(keyPair.getValue());
 

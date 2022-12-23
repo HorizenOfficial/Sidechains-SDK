@@ -21,6 +21,7 @@ import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.BytesUtils
 import sparkz.core.NodeViewHolder.CurrentView
 
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
 
 class NonCeasingSidechainTest extends JUnitSuite
@@ -64,8 +65,8 @@ class NonCeasingSidechainTest extends JUnitSuite
     val messageToSign = FieldElementFixture.generateFieldElement()
     val knownSigs = ArrayBuffer[CertificateSignatureInfo]()
 
-    val schnorrSecret1 = SchnorrKeyGenerator.getInstance().generateSecret("seed1".getBytes())
-    val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes())
+    val schnorrSecret1 = SchnorrKeyGenerator.getInstance().generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
+    val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes(StandardCharsets.UTF_8))
 
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret1.sign(messageToSign)))
     knownSigs.append(CertificateSignatureInfo(1, schnorrSecret2.sign(messageToSign)))

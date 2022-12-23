@@ -28,6 +28,8 @@ import scala.util.Try
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 
+import java.nio.charset.StandardCharsets
+
 
 class SidechainStateStorageTest
   extends JUnitSuite
@@ -101,7 +103,7 @@ class SidechainStateStorageTest
     assertEquals("Storage must return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
 
     // Test 2: try get non-existing item
-    assertEquals("Storage must NOT contain requested Box.", None, stateStorage.getBox("non-existing id".getBytes()))
+    assertEquals("Storage must NOT contain requested Box.", None, stateStorage.getBox("non-existing id".getBytes(StandardCharsets.UTF_8)))
 
     // Data for Test 1:
     val version = getVersion
@@ -114,7 +116,7 @@ class SidechainStateStorageTest
 
     // block fee info
     val nextBlockFeeInfoCounter: Int = 0
-    val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+    val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes(StandardCharsets.UTF_8)).publicImage())
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getBlockFeeInfoCounterKey(withdrawalEpochInfo.epoch)),
       new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getBlockFeeInfoKey(withdrawalEpochInfo.epoch, nextBlockFeeInfoCounter)),
@@ -173,7 +175,7 @@ class SidechainStateStorageTest
     assertEquals("Storage must return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
 
     // Test 2: try get non-existing item
-    assertEquals("Storage must NOT contain requested Box.", None, stateStorage.getBox("non-existing id".getBytes()))
+    assertEquals("Storage must NOT contain requested Box.", None, stateStorage.getBox("non-existing id".getBytes(StandardCharsets.UTF_8)))
 
     // Data for Test 1:
     val version: ByteArrayWrapper = getVersion
@@ -199,7 +201,7 @@ class SidechainStateStorageTest
 
     // block fee info
     val nextBlockFeeInfoCounter: Int = 0
-    val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+    val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes(StandardCharsets.UTF_8)).publicImage())
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getBlockFeeInfoCounterKey(withdrawalEpochInfo.epoch)),
       new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getBlockFeeInfoKey(withdrawalEpochInfo.epoch, nextBlockFeeInfoCounter)),
@@ -256,7 +258,7 @@ class SidechainStateStorageTest
     val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
 
     //Fill BackUpStorage with 5 CustomBoxes and 1 random element
-    customStoredBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    customStoredBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes(StandardCharsets.UTF_8)), new ByteArrayWrapper("value1".getBytes(StandardCharsets.UTF_8))))
     backupStorage.update(getVersion, customStoredBoxList.asJava).get
 
     //Restore the SidechainStateStorage based on the BackupStorage
@@ -285,7 +287,7 @@ class SidechainStateStorageTest
     val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
 
     //Fill BackUpStorage with 5 ZenBoxes and 1 random element
-    storedBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    storedBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes(StandardCharsets.UTF_8)), new ByteArrayWrapper("value1".getBytes(StandardCharsets.UTF_8))))
     backupStorage.update(getVersion, storedBoxList.asJava).get
     var exceptionThrown = false
     try {

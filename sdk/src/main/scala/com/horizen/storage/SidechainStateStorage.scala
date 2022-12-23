@@ -14,6 +14,7 @@ import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -31,52 +32,52 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
-  private[horizen] val withdrawalEpochInformationKey = Utils.calculateKey("withdrawalEpochInformation".getBytes)
+  private[horizen] val withdrawalEpochInformationKey = Utils.calculateKey("withdrawalEpochInformation".getBytes(StandardCharsets.UTF_8))
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
 
-  private[horizen] val consensusEpochKey = Utils.calculateKey("consensusEpoch".getBytes)
+  private[horizen] val consensusEpochKey = Utils.calculateKey("consensusEpoch".getBytes(StandardCharsets.UTF_8))
 
-  private[horizen] val ceasingStateKey = Utils.calculateKey("ceasingStateKey".getBytes)
+  private[horizen] val ceasingStateKey = Utils.calculateKey("ceasingStateKey".getBytes(StandardCharsets.UTF_8))
 
-  private[horizen] val forgerListIndexKey = Utils.calculateKey("forgerListIndexKey".getBytes)
+  private[horizen] val forgerListIndexKey = Utils.calculateKey("forgerListIndexKey".getBytes(StandardCharsets.UTF_8))
 
   private val undefinedWithdrawalEpochCounter: Int = -1
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
+    Utils.calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch)))
   }
 
   private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
+    Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
   private[horizen] def getCertifiersStorageKey(withdrawalEpoch: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("certificateKeys".getBytes, Ints.toByteArray(withdrawalEpoch)))
+    Utils.calculateKey(Bytes.concat("certificateKeys".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch)))
   }
   private[horizen] def getKeyRotationProofKey(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, Ints.toByteArray(withdrawalEpoch),
+    Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch),
       Ints.toByteArray(indexOfSigner), Ints.toByteArray(keyType)))
   }
 
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
+    Utils.calculateKey(Bytes.concat("topQualityCertificate".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(referencedWithdrawalEpoch)))
   }
 
-  private[horizen] val getLastCertificateEpochNumberKey = Utils.calculateKey("lastCertificateEpochNumber".getBytes)
+  private[horizen] val getLastCertificateEpochNumberKey = Utils.calculateKey("lastCertificateEpochNumber".getBytes(StandardCharsets.UTF_8))
 
-  private[horizen] val getLastCertificateSidechainBlockIdKey = Utils.calculateKey("getLastCertificateSidechainBlockId".getBytes)
+  private[horizen] val getLastCertificateSidechainBlockIdKey = Utils.calculateKey("getLastCertificateSidechainBlockId".getBytes(StandardCharsets.UTF_8))
 
   private val undefinedBlockFeeInfoCounter: Int = -1
 
   private[horizen] def getBlockFeeInfoCounterKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
+    Utils.calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpochNumber)))
   }
 
   private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
+    Utils.calculateKey(Bytes.concat("blockFeeInfo".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
 
   private[horizen] def getUtxoMerkleTreeRootKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("utxoMerkleTreeRoot".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
+    Utils.calculateKey(Bytes.concat("utxoMerkleTreeRoot".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpochNumber)))
   }
 
 

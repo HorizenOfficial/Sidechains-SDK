@@ -11,6 +11,7 @@ import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.utils.Pair;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,12 +23,12 @@ public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClas
     public void DefaultTransactionIncompatibilityCheckerTest_IncompatibilityTest() {
         long fee = 10;
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
-        PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
-        PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes());
-        PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes());
-        PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes());
-        PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());
-        PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes());
+        PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes(StandardCharsets.UTF_8));
 
 
         // Set inputs for 'newTx'
@@ -52,7 +53,7 @@ public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClas
 
 
         // Set outputs, the same for all transactions
-        PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
+        PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes(StandardCharsets.UTF_8));
         List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk7.publicImage(), 10L));
 

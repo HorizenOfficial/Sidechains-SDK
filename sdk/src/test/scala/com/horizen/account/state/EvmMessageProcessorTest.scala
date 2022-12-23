@@ -5,6 +5,7 @@ import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 
+import java.nio.charset.StandardCharsets
 import java.util
 
 class EvmMessageProcessorTest extends MessageProcessorFixture with EvmMessageProcessorTestBase with MockitoSugar {
@@ -41,6 +42,6 @@ class EvmMessageProcessorTest extends MessageProcessorFixture with EvmMessagePro
       processor.canProcess(getMessage(eoaAddress), mockStateView))
     assertFalse(
       "should ignore data on EOA to EOA transfer",
-      processor.canProcess(getMessage(eoaAddress, "the same thing we do every night, pinky".getBytes()), mockStateView))
+      processor.canProcess(getMessage(eoaAddress, "the same thing we do every night, pinky".getBytes(StandardCharsets.UTF_8)), mockStateView))
   }
 }

@@ -1,7 +1,6 @@
 package com.horizen
 
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-
 import com.horizen.box.{Box, BoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
@@ -11,9 +10,10 @@ import com.horizen.utils.BytesUtils
 import org.junit.{Before, Test}
 import org.junit.Assert._
 import org.scalatestplus.junit.JUnitSuite
+
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
-
+import java.nio.charset.StandardCharsets
 import scala.util.Random
 
 class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
@@ -30,7 +30,7 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
     // Test 1: serialization for core Box
     Random.nextBytes(transactionIdBytes)
     val walletBoxWithZenBox = new WalletBox(
-      getZenBox(getPrivateKey25519("seed1".getBytes), 1, 100),
+      getZenBox(getPrivateKey25519("seed1".getBytes(StandardCharsets.UTF_8)), 1, 100),
       bytesToId(transactionIdBytes),
       10000)
     serializer = walletBoxWithZenBox.serializer(sidechainBoxesCompanion)
@@ -52,7 +52,7 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
 
 
     // Test 3: try parse of broken bytes
-    val failureExpected: Boolean = new WalletBoxSerializer(sidechainBoxesCompanion).parseBytesTry("broken bytes".getBytes).isFailure
+    val failureExpected: Boolean = new WalletBoxSerializer(sidechainBoxesCompanion).parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure
     assertEquals("Failure during parsing expected.", true, failureExpected)
 
   }

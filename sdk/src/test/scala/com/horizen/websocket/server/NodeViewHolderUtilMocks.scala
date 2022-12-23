@@ -9,7 +9,7 @@ import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, Sidec
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ForgerBox, ZenBox}
-import com.horizen.chain.{SidechainFeePaymentsInfo, SidechainBlockInfo}
+import com.horizen.chain.{SidechainBlockInfo, SidechainFeePaymentsInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -23,6 +23,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -38,10 +39,10 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208"),
     BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208")) // TO DO: check, probably use different sc id
 
-  val secret1: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
-  val secret2: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
-  val secret3: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
-  val secret4: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
+  val secret1: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes(StandardCharsets.UTF_8))
+  val secret2: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes(StandardCharsets.UTF_8))
+  val secret3: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes(StandardCharsets.UTF_8))
+  val secret4: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes(StandardCharsets.UTF_8))
   val box_1: ZenBox = getZenBox(secret1.publicImage(), 1, 10)
   val box_2: ZenBox = getZenBox(secret2.publicImage(), 1, 20)
   val box_3: ZenBox = getZenBox(secret3.publicImage(), 1, 30)
@@ -210,7 +211,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
 
     Mockito.when(wallet.secretsOfType(ArgumentMatchers.any())).thenAnswer(_ => listOfSecrets.asJava)
 
-    Mockito.when(wallet.walletSeed()).thenAnswer(_ => "a seed".getBytes)
+    Mockito.when(wallet.walletSeed()).thenAnswer(_ => "a seed".getBytes(StandardCharsets.UTF_8))
 
     Mockito.when(wallet.allSecrets()).thenAnswer(_ => listOfSecrets.asJava)
 

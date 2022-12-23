@@ -10,6 +10,8 @@ import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.vrf.VrfOutput
 
+import java.nio.charset.StandardCharsets
+
 
 case class SidechainForgingData(key: PrivateKey25519, forgingStakeInfo: ForgingStakeInfo, vrfSecret: VrfSecretKey) {
   /**
@@ -52,8 +54,8 @@ case class SidechainForgingData(key: PrivateKey25519, forgingStakeInfo: ForgingS
 
 object SidechainForgingData {
   def generate(rnd: Random, value: Long): SidechainForgingData = {
-    val key: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret(rnd.nextLong().toString.getBytes)
-    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes())
+    val key: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))
+    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))
     val vrfPublicKey: VrfPublicKey = vrfSecretKey.publicImage()
     val forgerBox = new ForgerBoxData(key.publicImage(), value, key.publicImage(), vrfPublicKey).getBox(rnd.nextLong())
     val forgingStakeInfo = ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value())

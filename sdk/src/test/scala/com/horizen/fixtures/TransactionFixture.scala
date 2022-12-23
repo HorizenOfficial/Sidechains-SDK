@@ -1,24 +1,24 @@
 package com.horizen.fixtures
 
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import com.horizen.box.{Box, ZenBox}
-import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{Pair => JPair}
 
+import java.nio.charset.StandardCharsets
 import scala.util.Random
 
 trait TransactionFixture extends BoxFixture {
 
   def generateRegularTransaction(rnd: Random, transactionBaseTimeStamp: Long, inputTransactionsSize: Int, outputTransactionsSize: Int): RegularTransaction = {
     val inputTransactionsList: Seq[PrivateKey25519] = (1 to inputTransactionsSize)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextLong.toString.getBytes))
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextLong.toString.getBytes(StandardCharsets.UTF_8)))
 
     val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to outputTransactionsSize)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextLong.toString.getBytes).publicImage())
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextLong.toString.getBytes(StandardCharsets.UTF_8)).publicImage())
 
     getRegularTransaction(inputTransactionsList, outputTransactionsList, rnd = rnd, transactionBaseTimeStamp = transactionBaseTimeStamp)
   }

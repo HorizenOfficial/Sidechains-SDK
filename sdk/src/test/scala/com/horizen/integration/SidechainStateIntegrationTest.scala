@@ -23,6 +23,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.{bytesToId, bytesToVersion}
 
 import java.io.{File => JFile}
+import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -51,7 +52,7 @@ class SidechainStateIntegrationTest
   val initialWithdrawalEpochInfo = WithdrawalEpochInfo(1, params.withdrawalEpochLength - 1)
   val initialConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
 
-  val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+  val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes(StandardCharsets.UTF_8)).publicImage())
 
   val simpleForkConfigurator = new SimpleForkConfigurator
   val forkManagerUtil = new ForkManagerUtil()
@@ -257,7 +258,7 @@ class SidechainStateIntegrationTest
 
     Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
-    val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
+    val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes(StandardCharsets.UTF_8)).publicImage())
     Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
 
     Mockito.when(mockedBlock.feePaymentsHash).thenAnswer(_ => {

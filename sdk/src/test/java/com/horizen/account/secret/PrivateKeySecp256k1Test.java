@@ -5,6 +5,8 @@ import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+
 import static com.horizen.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
 import static org.junit.Assert.*;
 
@@ -40,7 +42,7 @@ public class PrivateKeySecp256k1Test {
         assertNotEquals(privateKeySecp256k1, null);
 
         // Test 6: Returns false as the object does not contain the same private key
-        PrivateKeySecp256k1 anotherPrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("anotherkey".getBytes());
+        PrivateKeySecp256k1 anotherPrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("anotherkey".getBytes(StandardCharsets.UTF_8));
         assertNotEquals(privateKeySecp256k1, anotherPrivateKeySecp256k1);
 
         // Test 7: Returns true as the object contains the same private key

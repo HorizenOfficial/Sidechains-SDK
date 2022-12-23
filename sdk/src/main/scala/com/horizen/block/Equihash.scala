@@ -1,11 +1,11 @@
 package com.horizen.block
 
 import java.math.BigInteger
-
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.utils.BytesUtils
 import org.bouncycastle.crypto.digests.Blake2bDigest
 
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
 
 // For MainNet and TestNet N = 200, K = 9
@@ -111,7 +111,7 @@ class Equihash(val N: Int, val K: Int) {
   // Generates base digest state with Horizen Mainchain personalization bytes and updates with msg (usually header bytes without solution)
   def checkEquihashSolution(msgBytes: Array[Byte], solution: Array[Byte]): Boolean = {
     val b2digest: Blake2bDigest = new Blake2bDigest(null, HashOutputLength, null,
-      Bytes.concat("ZcashPoW".getBytes, BytesUtils.reverseBytes(Ints.toByteArray(N)), BytesUtils.reverseBytes(Ints.toByteArray(K))))
+      Bytes.concat("ZcashPoW".getBytes(StandardCharsets.UTF_8), BytesUtils.reverseBytes(Ints.toByteArray(N)), BytesUtils.reverseBytes(Ints.toByteArray(K))))
     b2digest.update(msgBytes, 0, msgBytes.length)
 
     checkEquihashSolution(b2digest, solution)

@@ -24,6 +24,7 @@ import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Try}
 
 
@@ -108,7 +109,7 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
                            vrfProofOpt: Option[VrfProof] = None
                             ): AccountBlock = {
     val vrfKey = VrfKeyGenerator.getInstance().generateSecret(Array.fill(32)(basicSeed.toByte))
-    val vrfMessage = "Some non random string as input".getBytes
+    val vrfMessage = "Some non random string as input".getBytes(StandardCharsets.UTF_8)
     val vrfProof = vrfProofOpt.getOrElse(vrfKey.prove(vrfMessage).getKey)
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))

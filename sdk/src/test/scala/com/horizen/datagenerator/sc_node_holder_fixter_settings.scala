@@ -14,6 +14,8 @@ import org.junit.Test
 import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
+import java.nio.charset.StandardCharsets
+
 
 class sc_node_holder_fixter_settings extends CompanionsFixture {
   private val seed = 49850L
@@ -32,10 +34,10 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
     val mcRef: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(mcBlockHex), params, TestSidechainsVersionsManager(params)).get
     val mainchainBlockReferences = Seq(mcRef)
     val (forgerBox: ForgerBox, forgerMetadata)= ForgerBoxFixture.generateForgerBox(seed)
-    val secretKey = VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes)
+    val secretKey = VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes(StandardCharsets.UTF_8))
     val publicKey = secretKey.publicImage()
     val genesisMessage =
-      buildVrfMessage(intToConsensusSlotNumber(1), NonceConsensusEpochInfo(ConsensusNonce @@ "42424242".getBytes))
+      buildVrfMessage(intToConsensusSlotNumber(1), NonceConsensusEpochInfo(ConsensusNonce @@ "42424242".getBytes(StandardCharsets.UTF_8)))
     val vrfProof: VrfProof = secretKey.prove(genesisMessage).getKey
     val merklePath = MerkleTreeFixture.generateRandomMerklePath(seed + 1)
     val companion = getDefaultTransactionsCompanion

@@ -19,6 +19,7 @@ import com.horizen.tools.utils.MessagePrinter;
 import com.horizen.utils.BytesUtils;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
 public class SigningToolCommandProcessor extends CommandProcessor {
@@ -202,7 +203,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
         }
         String privateKey = json.get("privateKey").asText();
         byte[] message = BytesUtils.fromHexString(json.get("message").asText());
-        byte[] prefix = json.get("prefix").asText().getBytes();
+        byte[] prefix = json.get("prefix").asText().getBytes(StandardCharsets.UTF_8);
         byte[] prefixMessage = hash(concatenate(prefix, message));
         switch (json.get("type").asText()) {
             case SCHNORR:
@@ -243,7 +244,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
         byte[] message = BytesUtils.fromHexString(json.get("message").asText());
         String signature = json.get("signature").asText();
         String publicKey = json.get("publicKey").asText();
-        byte[] prefix = json.get("prefix").asText().getBytes();
+        byte[] prefix = json.get("prefix").asText().getBytes(StandardCharsets.UTF_8);
         byte[] prefixMessage = hash(concatenate(prefix, message));
         switch (json.get("type").asText()) {
             case SCHNORR:

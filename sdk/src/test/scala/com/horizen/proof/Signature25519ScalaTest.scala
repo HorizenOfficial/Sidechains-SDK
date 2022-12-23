@@ -10,14 +10,16 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.utils.SparkzEncoder
 
+import java.nio.charset.StandardCharsets
+
 class Signature25519ScalaTest
   extends JUnitSuite
 {
 
   @Test
   def testToJson(): Unit = {
-    val testMessage: Array[Byte] = "Test string message to sign/verify.".getBytes
-    val seed = "12345".getBytes
+    val testMessage: Array[Byte] = "Test string message to sign/verify.".getBytes(StandardCharsets.UTF_8)
+    val seed = "12345".getBytes(StandardCharsets.UTF_8)
     val key = PrivateKey25519Creator.getInstance.generateSecret(seed)
     val pr = key.sign(testMessage)
 

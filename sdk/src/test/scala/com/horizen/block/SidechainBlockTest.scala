@@ -21,6 +21,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}
 
+import java.nio.charset.StandardCharsets
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
@@ -141,7 +142,7 @@ class SidechainBlockTest
     }
 
     // Test 2: try to deserialize broken bytes.
-    assertTrue("SidechainBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("SidechainBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test
@@ -384,10 +385,10 @@ class SidechainBlockTest
   // Generate Seq of Transaction which total size exceeds the limit specified.
   private def generateExceedingTransactions(sizeToExceed: Int): Seq[RegularTransaction] = {
     val inputTransactionsList: Seq[PrivateKey25519] = (1 to 10)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes))
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes(StandardCharsets.UTF_8)))
 
     val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to BoxTransaction.MAX_TRANSACTION_NEW_BOXES)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes).publicImage())
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes(StandardCharsets.UTF_8)).publicImage())
 
     var txsSize: Int = 0
     var txs: Seq[RegularTransaction] = Seq()

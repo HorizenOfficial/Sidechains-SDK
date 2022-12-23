@@ -3,10 +3,9 @@ package com.horizen.fixtures
 import java.lang.{Byte => JByte}
 import java.time.Instant
 import java.util.{HashMap => JHashMap}
-
 import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.box.{ForgerBox, Box}
+import com.horizen.box.{Box, ForgerBox}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
@@ -21,6 +20,7 @@ import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Random, Try}
 
 
@@ -87,7 +87,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
                             ): SidechainBlock = {
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(basicSeed, vrfKeysOpt)
     val vrfKey = VrfKeyGenerator.getInstance().generateSecret(Array.fill(32)(basicSeed.toByte))
-    val vrfMessage = "Some non random string as input".getBytes
+    val vrfMessage = "Some non random string as input".getBytes(StandardCharsets.UTF_8)
     val vrfProof = vrfProofOpt.getOrElse(vrfKey.prove(vrfMessage).getKey)
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))

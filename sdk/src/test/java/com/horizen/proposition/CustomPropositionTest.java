@@ -6,6 +6,8 @@ import com.horizen.secret.Secret;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import org.junit.Test;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -17,7 +19,7 @@ public class CustomPropositionTest {
     public void testProvable(){
         CustomPrivateKey customPrivate1 = generateCustomKey();
 
-        Pair<byte[], byte[]> keyPair2= Ed25519.createKeyPair("abc".getBytes());
+        Pair<byte[], byte[]> keyPair2= Ed25519.createKeyPair("abc".getBytes(StandardCharsets.UTF_8));
         PrivateKey25519 privateKey2 =  new PrivateKey25519(keyPair2.getKey(), keyPair2.getValue());
 
         List<Secret> secrets = new ArrayList();

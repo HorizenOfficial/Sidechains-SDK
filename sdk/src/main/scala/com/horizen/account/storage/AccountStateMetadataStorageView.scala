@@ -11,8 +11,8 @@ import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpoch
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 import sparkz.core.{VersionTag, versionToBytes}
-
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList}
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
@@ -23,12 +23,12 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   require(storage != null, "Storage must be NOT NULL.")
 
-  private[horizen] val ceasingStateKey = calculateKey("ceasingStateKey".getBytes)
-  private[horizen] val heightKey = calculateKey("heightKey".getBytes)
-  private[horizen] val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes)
-  private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
-  private[horizen] val accountStateRootKey = calculateKey("accountStateRoot".getBytes)
-  private[horizen] val baseFeeKey = calculateKey("baseFee".getBytes)
+  private[horizen] val ceasingStateKey = calculateKey("ceasingStateKey".getBytes(StandardCharsets.UTF_8))
+  private[horizen] val heightKey = calculateKey("heightKey".getBytes(StandardCharsets.UTF_8))
+  private[horizen] val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes(StandardCharsets.UTF_8))
+  private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes(StandardCharsets.UTF_8))
+  private[horizen] val accountStateRootKey = calculateKey("accountStateRoot".getBytes(StandardCharsets.UTF_8))
+  private[horizen] val baseFeeKey = calculateKey("baseFee".getBytes(StandardCharsets.UTF_8))
 
   private val undefinedBlockFeeInfoCounter: Int = -1
 
@@ -386,24 +386,24 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
+    calculateKey(Bytes.concat("topQualityCertificate".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(referencedWithdrawalEpoch)))
   }
 
   private[horizen] def getBlockFeeInfoCounterKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
+    calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpochNumber)))
   }
 
   private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
+    calculateKey(Bytes.concat("blockFeeInfo".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
 
   private[horizen] def getReceiptKey(txHash : Array[Byte]): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("receipt".getBytes, txHash))
+    calculateKey(Bytes.concat("receipt".getBytes(StandardCharsets.UTF_8), txHash))
   }
 
-  private[horizen] val getLastCertificateEpochNumberKey: ByteArrayWrapper = calculateKey("lastCertificateEpochNumber".getBytes)
+  private[horizen] val getLastCertificateEpochNumberKey: ByteArrayWrapper = calculateKey("lastCertificateEpochNumber".getBytes(StandardCharsets.UTF_8))
 
-  private [horizen] val lastCertificateSidechainBlockIdKey: ByteArrayWrapper = calculateKey("lastCertificateSidechainBlockId".getBytes)
+  private [horizen] val lastCertificateSidechainBlockIdKey: ByteArrayWrapper = calculateKey("lastCertificateSidechainBlockId".getBytes(StandardCharsets.UTF_8))
 
 }
 

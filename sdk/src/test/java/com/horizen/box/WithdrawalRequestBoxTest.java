@@ -5,6 +5,7 @@ import com.horizen.proposition.MCPublicKeyHashProposition;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
@@ -42,7 +43,7 @@ public class WithdrawalRequestBoxTest extends BoxFixtureClass
         assertTrue("Boxes ids expected to be equal", Arrays.equals(box1.id(), box2.id()));
 
 
-        byte[] anotherSeed = "another test seed".getBytes();
+        byte[] anotherSeed = "another test seed".getBytes(StandardCharsets.UTF_8);
         byte[] mcKey1 = new byte[MCPublicKeyHashProposition.KEY_LENGTH];
         Arrays.fill(mcKey1, (byte) 1);
         MCPublicKeyHashProposition anotherProposition = new MCPublicKeyHashProposition(mcKey1);

@@ -11,6 +11,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 
 class AccountMemoryPoolTest
   extends JUnitSuite
@@ -37,7 +38,7 @@ class AccountMemoryPoolTest
     //Adding some txs in the mempool
 
     val value = BigInteger.TEN
-    val account1Key: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest1".getBytes())
+    val account1Key: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest1".getBytes(StandardCharsets.UTF_8))
 
 
     val account1ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account1Key), gasFee = BigInteger.valueOf(3), priorityGasFee = BigInteger.valueOf(3))
@@ -75,7 +76,7 @@ class AccountMemoryPoolTest
 
     //Create txs for other accounts and verify that the list is ordered by nonce and gas price
     //The expected order is: tx3_0, tx3_1, tx3_2, tx2_0, tx1_0, tx2_1, tx2_2, tx1_1, tx1_2
-    val account2Key = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest2".getBytes())
+    val account2Key = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest2".getBytes(StandardCharsets.UTF_8))
     val account2ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account2Key), gasFee = BigInteger.valueOf(25), priorityGasFee = BigInteger.valueOf(5))
     val account2ExecTransaction1 = createEIP1559Transaction(value, account2ExecTransaction0.getNonce.add(BigInteger.ONE), Option(account2Key), gasFee = BigInteger.valueOf(2), priorityGasFee = BigInteger.valueOf(2))
     val account2ExecTransaction2 = createEIP1559Transaction(value, account2ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account2Key), gasFee = BigInteger.valueOf(990), priorityGasFee = BigInteger.valueOf(2))
@@ -83,7 +84,7 @@ class AccountMemoryPoolTest
     assertTrue(accountMemoryPool.put(account2ExecTransaction2).isSuccess)
     assertTrue(accountMemoryPool.put(account2ExecTransaction0).isSuccess)
 
-    val account3Key = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest3".getBytes())
+    val account3Key = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest3".getBytes(StandardCharsets.UTF_8))
     val account3ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account3Key), gasFee = BigInteger.valueOf(10), priorityGasFee = BigInteger.valueOf(10))
     val account3ExecTransaction1 = createEIP1559Transaction(value, account3ExecTransaction0.getNonce.add(BigInteger.ONE), Option(account3Key), gasFee = BigInteger.valueOf(2200), priorityGasFee = BigInteger.valueOf(200))
     val account3ExecTransaction2 = createEIP1559Transaction(value, account3ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account3Key), gasFee = BigInteger.valueOf(60), priorityGasFee = BigInteger.valueOf(6))

@@ -22,7 +22,7 @@ public class SignatureSecp256k1Test {
         message = payload.getBytes(StandardCharsets.UTF_8);
 
         // Create a key and generate the signature
-        PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("sigtest".getBytes());
+        PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("sigtest".getBytes(StandardCharsets.UTF_8));
         signatureSecp256k1 = privateKey.sign(message);
         addressProposition = privateKey.publicImage();
     }
@@ -45,7 +45,7 @@ public class SignatureSecp256k1Test {
         assertEquals(String.format("SignatureSecp256k1{v=%s, r=%s, s=%s}", Numeric.toHexStringNoPrefix(signatureSecp256k1.getV()), Numeric.toHexStringNoPrefix(signatureSecp256k1.getR()), Numeric.toHexStringNoPrefix(signatureSecp256k1.getS())), signatureSecp256k1.toString());
 
         // Test 6: Returns false because of invalid signature
-        AddressProposition newAddressProposition = PrivateKeySecp256k1Creator.getInstance().generateSecret("sigtest_other".getBytes()).publicImage();
+        AddressProposition newAddressProposition = PrivateKeySecp256k1Creator.getInstance().generateSecret("sigtest_other".getBytes(StandardCharsets.UTF_8)).publicImage();
         assertFalse(signatureSecp256k1.isValid(newAddressProposition, message));
 
         // Test 7: Returns true for valid signature

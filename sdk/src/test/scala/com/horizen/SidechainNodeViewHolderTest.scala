@@ -23,7 +23,7 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersPro
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{VersionTag, idToVersion}
 import scorex.util.ModifierId
-
+import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
@@ -83,7 +83,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock], ArgumentMatchers.any[Int](), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(wallet)
 
     Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
-      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes()))
+      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes(StandardCharsets.UTF_8)))
       (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
     })
 

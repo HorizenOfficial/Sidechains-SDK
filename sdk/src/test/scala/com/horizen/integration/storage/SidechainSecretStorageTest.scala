@@ -2,7 +2,6 @@ package com.horizen.integration.storage
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
@@ -13,6 +12,7 @@ import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 import scala.util.Try
 
@@ -32,7 +32,7 @@ class SidechainSecretStorageTest
   @Test
   def testCoreTypes(): Unit = {
     testCoreType(getPrivateKey25519, getPrivateKey25519List(3).asScala.toList)
-    testCoreType(VrfKeyGenerator.getInstance().generateSecret("seed".getBytes()), getPrivateKey25519List(3).asScala.toList)
+    testCoreType(VrfKeyGenerator.getInstance().generateSecret("seed".getBytes(StandardCharsets.UTF_8)), getPrivateKey25519List(3).asScala.toList)
   }
 
 
