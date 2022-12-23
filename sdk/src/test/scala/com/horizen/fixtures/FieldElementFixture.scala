@@ -1,6 +1,6 @@
 package com.horizen.fixtures
 
-import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.fixtures.SidechainBlockFixture.generateBytes
 import com.horizen.utils.BytesUtils
 

@@ -26,6 +26,14 @@ Configuration:
     Start 1 MC node and 1 SC node (with default websocket configuration).
     SC node connected to the first MC node.
 
+Note:
+    This test can be executed in two modes:
+    1. using no key rotation circuit (by default)
+    2. using key rotation circuit (with --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation)
+    With key rotation circuit can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+
 Test:
     For the SC node:
         - Checks that MC block with sc creation tx is referenced in the genesis sc block

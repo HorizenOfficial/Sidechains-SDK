@@ -2,24 +2,22 @@ package com.horizen.account.secret;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.utils.Account;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
-import org.web3j.crypto.ECKeyPair;
-import org.web3j.crypto.Hash;
-import org.web3j.crypto.Sign;
-import org.web3j.utils.Numeric;
+import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
-import static com.horizen.account.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
+import static com.horizen.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
 
 public final class PrivateKeySecp256k1 implements Secret {
     private static final byte privateKeySecp256k1SecretId = PrivateKeySecp256k1SecretId.id();
 
     private final byte[] privateKey;
+
+    private final AddressProposition address;
 
     public PrivateKeySecp256k1(byte[] privateKey) {
         if (privateKey.length != Secp256k1.PRIVATE_KEY_SIZE) {
@@ -30,6 +28,7 @@ public final class PrivateKeySecp256k1 implements Secret {
             ));
         }
         this.privateKey = Arrays.copyOf(privateKey, Secp256k1.PRIVATE_KEY_SIZE);
+        this.address = new AddressProposition(Secp256k1.getAddress(Secp256k1.getPublicKey(privateKey)));
     }
 
     @Override
@@ -44,9 +43,7 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public AddressProposition publicImage() {
-        var publicKey = ECKeyPair.create(privateKey).getPublicKey();
-        var hashedKey = Hash.sha3(Numeric.toBytesPadded(publicKey, Secp256k1.PUBLIC_KEY_SIZE));
-        return new AddressProposition(Arrays.copyOfRange(hashedKey, hashedKey.length - Account.ADDRESS_SIZE, hashedKey.length));
+        return address;
     }
 
     @Override
@@ -70,8 +67,8 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public SignatureSecp256k1 sign(byte[] message) {
-        var pair = ECKeyPair.create(privateKey);
-        return new SignatureSecp256k1(Sign.signMessage(message, pair, true));
+        Secp256k1.Signature signature = Secp256k1.sign(privateKey, message);
+        return new SignatureSecp256k1(signature.v, signature.r, signature.s);
     }
 
     public byte[] privateKeyBytes() {
@@ -80,6 +77,7 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public String toString() {
-        return String.format("PrivateKeySecp256k1{privateKey=%s}", Numeric.toHexString(privateKey));
+        // Show only the first 4 bytes to protect the key
+        return String.format("PrivateKeySecp256k1{privateKey=%s}", BytesUtils.toHexString(privateKey).substring(0, 8));
     }
 }

@@ -187,5 +187,4 @@ object AccountBlock {
     // 2. compute hash
     TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
   }
-
 }
