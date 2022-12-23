@@ -11,6 +11,7 @@ import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
 
 import java.io._
+import java.nio.charset.StandardCharsets
 import java.util.Optional
 import java.{lang, util}
 import scala.collection.JavaConverters._

@@ -13,6 +13,8 @@ import scala.collection.JavaConverters._
 
 import java.nio.charset.StandardCharsets
 
+import java.nio.charset.StandardCharsets
+
 class PublicKey25519PropositionScalaTest
   extends JUnitSuite
 {

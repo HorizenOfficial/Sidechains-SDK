@@ -11,7 +11,6 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 import java.util.{ArrayList => JArrayList}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
-
 import java.nio.charset.StandardCharsets
 
 

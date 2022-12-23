@@ -13,6 +13,8 @@ import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 import java.nio.charset.StandardCharsets
 
+import java.nio.charset.StandardCharsets
+
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   setSeed(1000L)
 
