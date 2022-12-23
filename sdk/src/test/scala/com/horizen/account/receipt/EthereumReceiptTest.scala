@@ -17,7 +17,6 @@ import java.util.Map.entry
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.mutable.ListBuffer
 
-
 class EthereumReceiptTest
   extends JUnitSuite
     with MockitoSugar
@@ -32,7 +31,7 @@ class EthereumReceiptTest
   @Test
   def receiptSimpleSerDeser(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal())
-    assertEquals(receipt.contractAddress.length, Address.LENGTH)
+    assertEquals(receipt.contractAddress.get.length, Address.LENGTH)
     val r1: String = receipt.toString
     //println(r1)
 
@@ -52,7 +51,10 @@ class EthereumReceiptTest
   @Test
   def receiptSimpleSerDeserWithoutContractAddress(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal(), contractAddressPresence = false)
-    assertEquals(receipt.contractAddress.length, 0)
+    receipt.contractAddress match {
+      case Some(address) => Assert.fail("Address: %s should be None".format(address))
+      case None =>
+    }
     val r1: String = receipt.toString
     //println(r1)
 

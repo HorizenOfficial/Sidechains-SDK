@@ -26,11 +26,15 @@ public class Address {
         return "0x" + Converter.toHexString(bytes);
     }
 
-    public static Address FromBytes(byte[] bytes) {
+    public static Address fromBytes(byte[] bytes) {
         if (bytes == null) {
             return null;
         }
         return new Address(bytes);
+    }
+
+    public static Address addressZero() {
+        return new Address(new byte[LENGTH]);
     }
 
     public byte[] toBytes() {
@@ -54,7 +58,7 @@ public class Address {
             if (!text.startsWith("0x")) {
                 throw new IOException("address must be prefixed with 0x");
             }
-            return Address.FromBytes(Converter.fromHexString(text.substring(2)));
+            return Address.fromBytes(Converter.fromHexString(text.substring(2)));
         }
     }
 }

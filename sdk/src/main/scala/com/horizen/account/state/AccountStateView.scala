@@ -7,12 +7,14 @@ import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.evm.StateDB
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.state.StateView
 import com.horizen.utils.WithdrawalEpochInfo
 import sparkz.core.VersionTag
 import scorex.util.ScorexLogging
-import java.math.BigInteger
+import scorex.util.ModifierId
 
+import java.math.BigInteger
 
 // this class extends 2 main hierarchies, which are kept separate:
 //  - StateView (trait): metadata read/write
@@ -29,16 +31,19 @@ class AccountStateView(
     with ScorexLogging {
 
 
-  def addTopQualityCertificates(refData: MainchainBlockReferenceData): Unit = {
+  def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {
     refData.topQualityCertificate.foreach(cert => {
       log.debug(s"adding top quality cert to state: $cert.")
-      updateTopQualityCertificate(cert)
+      updateTopQualityCertificate(cert, blockId)
     })
   }
 
   // out-of-the-box helpers
-  override def updateTopQualityCertificate(cert: WithdrawalEpochCertificate): Unit =
+  override def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit = {
     metadataStorageView.updateTopQualityCertificate(cert)
+    metadataStorageView.updateLastCertificateReferencedEpoch(cert.epochNumber)
+    metadataStorageView.updateLastCertificateSidechainBlockIdOpt(blockId)
+  }
 
   override def updateFeePaymentInfo(info: AccountBlockFeeInfo): Unit = {
     metadataStorageView.updateFeePaymentInfo(info)
@@ -70,6 +75,23 @@ class AccountStateView(
   }
 
   // getters
+
+  def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
+    certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
+  }
+
+  def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
+    Some(certificateKeysProvider.getCertifiersKeys(withdrawalEpoch, this))
+  }
+
+  def lastCertificateReferencedEpoch: Option[Int] =
+    metadataStorageView.lastCertificateReferencedEpoch
+
+  def lastCertificateSidechainBlockId(): Option[ModifierId] = {
+    metadataStorageView.lastCertificateSidechainBlockId
+  }
+
+
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
 
@@ -87,4 +109,6 @@ class AccountStateView(
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
+  //override
+  def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = None
 }

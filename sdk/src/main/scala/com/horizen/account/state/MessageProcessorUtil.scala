@@ -8,6 +8,7 @@ object MessageProcessorUtil {
       EoaMessageProcessor,
       WithdrawalMsgProcessor,
       ForgerStakeMsgProcessor(params),
+      CertificateKeyRotationMsgProcessor(params)
     ) ++ customMessageProcessors
   }
 }

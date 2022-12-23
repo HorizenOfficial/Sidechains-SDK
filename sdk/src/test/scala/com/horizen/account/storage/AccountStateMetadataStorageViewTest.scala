@@ -54,6 +54,8 @@ class AccountStateMetadataStorageViewTest
     assertTrue("Consensus epoch number should be empty in view", storageView.getConsensusEpochNumber.isEmpty)
     assertTrue("Consensus epoch number should be empty in storage", stateMetadataStorage.getConsensusEpochNumber.isEmpty)
 
+    assertTrue("Last certificate referenced epoch number should be empty in view", storageView.lastCertificateReferencedEpoch.isEmpty)
+    assertTrue("Last certificate referenced epoch number should be empty in storage", stateMetadataStorage.lastCertificateReferencedEpoch.isEmpty)
 
     //Starting modification of the view and checking that view and storage are no more aligned
 
@@ -88,6 +90,12 @@ class AccountStateMetadataStorageViewTest
     assertTrue("Consensus epoch number should be defined in view", storageView.getConsensusEpochNumber.isDefined)
     assertTrue("Consensus epoch number should be empty in storage", stateMetadataStorage.getConsensusEpochNumber.isEmpty)
 
+    val lastCertificateReferencedEpoch: Int = 4
+    storageView.updateLastCertificateReferencedEpoch(lastCertificateReferencedEpoch)
+    assertTrue("Last certificate referenced epoch number should be defined in view", storageView.lastCertificateReferencedEpoch.isDefined)
+    assertEquals("Last certificate referenced epoch number should be correct", lastCertificateReferencedEpoch,storageView.lastCertificateReferencedEpoch.get)
+    assertTrue("Last certificate referenced epoch number should be empty in storage", stateMetadataStorage.lastCertificateReferencedEpoch.isEmpty)
+
     val receipts = new ListBuffer[EthereumReceipt]()
     val receipt1 = createTestEthereumReceipt(0)
     val receipt2 = createTestEthereumReceipt(1)
@@ -115,6 +123,9 @@ class AccountStateMetadataStorageViewTest
     assertEquals("Wrong Consensus epoch number in view after commit", consensusEpochNum, storageView.getConsensusEpochNumber.get)
     assertEquals("Wrong Consensus epoch number in storage after commit", consensusEpochNum, stateMetadataStorage.getConsensusEpochNumber.get)
 
+    assertEquals("Wrong last certificate referenced epoch number value in view after commit", lastCertificateReferencedEpoch, storageView.lastCertificateReferencedEpoch.get)
+    assertEquals("Wrong last certificate referenced epoch number value in storage after commit", lastCertificateReferencedEpoch, stateMetadataStorage.lastCertificateReferencedEpoch.get)
+
     assertEquals("Wrong receipts in view after commit", receipt1.blockNumber, storageView.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
     assertEquals("Wrong receipts in storage after commit", receipt1.blockNumber, stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
 
@@ -131,6 +142,7 @@ class AccountStateMetadataStorageViewTest
       storageView.updateWithdrawalEpochInfo(WithdrawalEpochInfo(epochNumber, 1))
       storageView.updateTopQualityCertificate(generateCertificateWithEpochNumber(epochNumber))
       storageView.updateFeePaymentInfo(AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(8333).publicImage()))
+      storageView.updateLastCertificateReferencedEpoch((epochNumber))
       storageView.updateAccountStateRoot(getRandomAccountStateRoot)
       storageView.commit(bytesToVersion(getVersion.data()))
 

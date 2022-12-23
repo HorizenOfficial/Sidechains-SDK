@@ -31,6 +31,8 @@ class StateDbAccountStateView(
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
+  lazy val certificateKeysProvider: CertificateKeysProvider = messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
+
 
   override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)

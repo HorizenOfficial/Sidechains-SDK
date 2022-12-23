@@ -1,11 +1,6 @@
-import json
-#create and send a custom transaction block/best
-def http_wallet_createPrivateKeySec256k1(sidechainNode, api_key = None):
-      if (api_key != None):
-            response = sidechainNode.wallet_createPrivateKeySecp256k1({},api_key)
-      else:
-            response = sidechainNode.wallet_createPrivateKeySecp256k1()
-      return response['result']['proposition']['address']
-
-
-
+def http_wallet_createPrivateKeySec256k1(sidechainNode, api_key=None):
+    if (api_key != None):
+        response = sidechainNode.wallet_createPrivateKeySecp256k1({}, api_key)
+    else:
+        response = sidechainNode.wallet_createPrivateKeySecp256k1()
+    return response['result']['proposition']['address']

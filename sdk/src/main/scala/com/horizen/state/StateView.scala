@@ -6,14 +6,15 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
 import com.horizen.utils.WithdrawalEpochInfo
+import scorex.util.ModifierId
 import sparkz.core.VersionTag
 
 import java.math.BigInteger
-import scala.util.Try
 
 trait StateView[TX <: Transaction] extends BaseStateReader {
+
   def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit
-  def updateTopQualityCertificate(cert: WithdrawalEpochCertificate): Unit
+  def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit
   def updateFeePaymentInfo(info: AccountBlockFeeInfo): Unit
   def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit
   def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit

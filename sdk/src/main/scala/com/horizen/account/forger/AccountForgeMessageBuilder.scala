@@ -8,7 +8,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, LogsBloom}
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, Bloom}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
@@ -23,8 +23,8 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, ScorexLogging}
+import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 
@@ -79,7 +79,9 @@ class AccountForgeMessageBuilder(
 
 
     for (mcBlockRefData <- mainchainBlockReferencesData) {
-      stateView.addTopQualityCertificates(mcBlockRefData)
+      // Since forger still doesn't know the candidate block id we may pass random one.
+      val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
+      stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
       stateView.applyMainchainBlockReferenceData(mcBlockRefData)
     }
 
@@ -195,7 +197,7 @@ class AccountForgeMessageBuilder(
       parentInfo.height + 1,
       TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
       WithdrawalEpochUtils
-        .getWithdrawalEpochInfo(mainchainBlockReferencesData, parentInfo.withdrawalEpochInfo, params)
+        .getWithdrawalEpochInfo(mainchainBlockReferencesData.size, parentInfo.withdrawalEpochInfo, params)
         .epoch,
       params.chainId
     )
@@ -248,10 +250,7 @@ class AccountForgeMessageBuilder(
     // 8. set the fee payments hash
     val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
-    val logsBloom = new LogsBloom()
-    val logsBloomSeq = receiptList.map(r => r.logsBloom)
-
-    logsBloomSeq.foreach(l => logsBloom.addBloomFilter(l))
+    val logsBloom = Bloom.fromReceipts(receiptList)
 
     val block = AccountBlock.create(
       parentId,
@@ -308,7 +307,7 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),
-      new LogsBloom(),
+      new Bloom(),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
@@ -319,6 +318,7 @@ class AccountForgeMessageBuilder(
       nodeView: View,
       blockSizeIn: Int,
       mainchainBlockReferenceData: Seq[MainchainBlockReferenceData],
+      withdrawalEpochInfo: WithdrawalEpochInfo,
       timestamp: Timestamp,
       forcedTx: Iterable[SidechainTypes#SCAT]
   ): MempoolMap#TransactionsByPriceAndNonce = {
