@@ -8,13 +8,11 @@ import com.horizen.account.utils.Secp256k1
 import com.horizen.secret._
 import com.horizen.customtypes._
 
-import java.util.{Arrays, ArrayList => JArrayList, List => JList}
+import java.util.{ ArrayList => JArrayList, List => JList}
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
-import org.web3j.crypto.{ECKeyPair, Keys, Sign}
 
 import java.nio.charset.StandardCharsets
-import java.security.SecureRandom
 import java.util
 import scala.util.Random
 
@@ -117,16 +115,9 @@ trait SecretFixture {
   }
 
   def getPrivateKeySecp256k1(seed: Long): PrivateKeySecp256k1 = {
-    val pair = Keys.createEcKeyPair(new SecureRandom(Longs.toByteArray(seed)))
-    val privateKey = util.Arrays.copyOf(pair.getPrivateKey.toByteArray, Secp256k1.PRIVATE_KEY_SIZE)
+    val pair = Secp256k1.createKeyPair(Longs.toByteArray(seed));
+    val privateKey = util.Arrays.copyOf(pair.getKey, Secp256k1.PRIVATE_KEY_SIZE)
     new PrivateKeySecp256k1(privateKey)
-  }
-
-  def getRandomSignatureSecp256k1: SignatureSecp256k1 = {
-    val payload = "This is string to sign"
-    val message = payload.getBytes(StandardCharsets.UTF_8)
-    val pair = Keys.createEcKeyPair
-    new SignatureSecp256k1(Sign.signMessage(message, pair, true))
   }
 
   def getAddressProposition(seed: Long): AddressProposition = {

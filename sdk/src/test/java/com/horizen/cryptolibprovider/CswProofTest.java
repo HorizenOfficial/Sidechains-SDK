@@ -1,6 +1,7 @@
 package com.horizen.cryptolibprovider;
 
 import com.horizen.certnative.WithdrawalCertificate;
+import com.horizen.cryptolibprovider.implementations.CswCircuitImplZendoo;
 import com.horizen.cswnative.CswFtProverData;
 import com.horizen.cswnative.CswProof;
 import com.horizen.cswnative.CswSysData;

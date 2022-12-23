@@ -20,16 +20,16 @@ public class SidechainNodeView implements
                 NodeState,
                 NodeWallet,
                 NodeMemoryPool> {
-    private ApplicationState applicationState;
-    private ApplicationWallet applicationWallet;
+    private final ApplicationState applicationState;
+    private final ApplicationWallet applicationWallet;
 
-    private NodeHistory nodeHistory;
+    private final NodeHistory nodeHistory;
 
-    private NodeState nodeState;
+    private final NodeState nodeState;
 
-    private NodeWallet nodeWallet;
+    private final NodeWallet nodeWallet;
 
-    private NodeMemoryPool nodeMemoryPool;
+    private final NodeMemoryPool nodeMemoryPool;
 
 
     public SidechainNodeView(NodeHistory nodeHistory,

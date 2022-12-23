@@ -97,6 +97,11 @@ abstract class AbstractSidechainNodeViewHolder[
       super.receive
   }
 
+  override def postStop(): Unit = {
+    log.info("AbstractSidechainNodeViewHolder actor is stopping...")
+    super.postStop()
+  }
+
   protected def getCurrentSidechainNodeViewInfo: Receive
 
   protected def applyFunctionOnNodeView: Receive

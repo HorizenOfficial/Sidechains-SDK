@@ -1,13 +1,13 @@
 package com.horizen.utils
 
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 
 object WithdrawalEpochUtils {
 
   def getWithdrawalEpochInfo(
-      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+      mainchainBlockReferenceSize: Int,
       parentEpochInfo: WithdrawalEpochInfo,
       params: NetworkParams
   ): WithdrawalEpochInfo = {
@@ -15,7 +15,7 @@ object WithdrawalEpochUtils {
       if (parentEpochInfo.lastEpochIndex == params.withdrawalEpochLength)
         // Parent block is the last SC Block of withdrawal epoch.
         parentEpochInfo.epoch + 1
-      else if (parentEpochInfo.lastEpochIndex + mainchainBlockReferencesData.size > params.withdrawalEpochLength)
+      else if (parentEpochInfo.lastEpochIndex + mainchainBlockReferenceSize > params.withdrawalEpochLength)
         // block mc block references lead to surpassing of the epoch length
         parentEpochInfo.epoch + 1
       else
@@ -26,11 +26,11 @@ object WithdrawalEpochUtils {
       if (withdrawalEpoch > parentEpochInfo.epoch)
         // New withdrawal epoch started
         // Note: in case of empty MC Block ref list index should be 0.
-        (parentEpochInfo.lastEpochIndex + mainchainBlockReferencesData.size) % params.withdrawalEpochLength
+        (parentEpochInfo.lastEpochIndex + mainchainBlockReferenceSize) % params.withdrawalEpochLength
       else
         // Continue current withdrawal epoch
         // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
-        parentEpochInfo.lastEpochIndex + mainchainBlockReferencesData.size
+        parentEpochInfo.lastEpochIndex + mainchainBlockReferenceSize
 
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }
@@ -39,7 +39,7 @@ object WithdrawalEpochUtils {
       block: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase],
       parentEpochInfo: WithdrawalEpochInfo,
       params: NetworkParams
-  ): WithdrawalEpochInfo = getWithdrawalEpochInfo(block.mainchainBlockReferencesData, parentEpochInfo, params)
+  ): WithdrawalEpochInfo = getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, parentEpochInfo, params)
 
   def hasReachedCertificateSubmissionWindowEnd(
       newEpochInfo: WithdrawalEpochInfo,
@@ -71,6 +71,7 @@ object WithdrawalEpochUtils {
   }
 
   // Certificate can be sent only when mc block is in a specific position in the Withdrawal epoch
+  // Has sense only for ceasing sidechains.
   def inSubmitCertificateWindow(withdrawalEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
     (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= certificateSubmissionWindowLength(params))
   }

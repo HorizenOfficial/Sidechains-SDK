@@ -2,6 +2,7 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import org.junit.Assert._
@@ -9,7 +10,6 @@ import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import org.web3j.crypto.Keys
 import scorex.util.ModifierId
 
 import java.math.BigInteger
@@ -24,6 +24,10 @@ class MempoolMapTest
   val stateViewMock: AccountStateReader = mock[AccountStateReader]
   val stateProvider: AccountStateReaderProvider = () => stateViewMock
 
+  val account1KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes()))
+  val account2KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
+  val account3KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest3".getBytes()))
+  
   @Before
   def setUp(): Unit = {
     Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
@@ -88,12 +92,11 @@ class MempoolMapTest
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
-
-    val account1KeyPairOpt = Some(Keys.createEcKeyPair)
+    
     val account1ExecTransaction0 = createEIP1559Transaction(
       value,
       account1InitialStateNonce,
-      account1KeyPairOpt
+      account1KeyOpt
     )
 
     expectedNumOfTxs += 1
@@ -141,7 +144,7 @@ class MempoolMapTest
     val account1ExecTransaction1 = createEIP1559Transaction(
       value,
       account1InitialStateNonce.add(BigInteger.ONE),
-      account1KeyPairOpt
+      account1KeyOpt
     )
 
     expectedNumOfTxs += 1
@@ -181,13 +184,12 @@ class MempoolMapTest
       account1ExecTransaction1.id(),
       executableTxs.last.id
     )
-
-    val account2KeyPair = Keys.createEcKeyPair
+    
     val account2InitialStateNonce = BigInteger.valueOf(4576)
     val account2ExecTransaction0 = createEIP1559Transaction(
       value,
       account2InitialStateNonce,
-      Some(account2KeyPair)
+      account2KeyOpt
     )
 
     Mockito
@@ -241,10 +243,8 @@ class MempoolMapTest
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
-
-    val account1KeyPairOpt = Some(Keys.createEcKeyPair)
-    val account1NonExecTransaction0 =
-      createEIP1559Transaction(value, BigInteger.TWO, account1KeyPairOpt)
+    
+    val account1NonExecTransaction0 = createEIP1559Transaction(value, BigInteger.TWO, account1KeyOpt)
 
     expectedNumOfTxs += 1
     var res = mempoolMap.add(account1NonExecTransaction0)
@@ -278,8 +278,7 @@ class MempoolMapTest
     assertTrue("Adding twice the same tx should not fail", res.isSuccess)
     mempoolMap = res.get
 
-    val account1NonExecTransaction1 =
-      createEIP1559Transaction(value, BigInteger.ONE, account1KeyPairOpt)
+    val account1NonExecTransaction1 = createEIP1559Transaction(value, BigInteger.ONE, account1KeyOpt)
     expectedNumOfTxs += 1
 
     res = mempoolMap.add(account1NonExecTransaction1)
@@ -314,7 +313,7 @@ class MempoolMapTest
     val account1ExecTransaction0 = createEIP1559Transaction(
       value,
       account1InitialStateNonce,
-      account1KeyPairOpt
+      account1KeyOpt
     )
     expectedNumOfTxs += 1
     expectedNumOfExecutableTxs = expectedNumOfTxs
@@ -366,7 +365,7 @@ class MempoolMapTest
     val account1ExecTransaction1 = createEIP1559Transaction(
       value,
       account1NonExecTransaction0.getNonce.add(BigInteger.ONE),
-      account1KeyPairOpt
+      account1KeyOpt
     )
     expectedNumOfTxs += 1
     expectedNumOfExecutableTxs += 1
@@ -402,7 +401,7 @@ class MempoolMapTest
     val account1NonExecTransaction2 = createEIP1559Transaction(
       value,
       account1NonExecTransaction0.getNonce.add(BigInteger.TEN),
-      account1KeyPairOpt
+      account1KeyOpt
     )
     expectedNumOfTxs += 1
 
@@ -438,8 +437,6 @@ class MempoolMapTest
 
   @Test
   def testAddSameNonce(): Unit = {
-    val account1KeyPairOpt = Some(Keys.createEcKeyPair)
-
     var mempoolMap = new MempoolMap(stateProvider)
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -450,7 +447,7 @@ class MempoolMapTest
     val account1NonExecTransaction0 = createEIP1559Transaction(
       value,
       nonExecNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       nonExecGasFeeCap,
       nonExecGasTipCap
     )
@@ -463,7 +460,7 @@ class MempoolMapTest
     (1 to 5).foreach(_ => {
       val nonce =
         BigInteger.valueOf(Random.nextInt(10000) + nonExecNonce.intValue() + 1)
-      val tx = createEIP1559Transaction(value, nonce, account1KeyPairOpt)
+      val tx = createEIP1559Transaction(value, nonce, account1KeyOpt)
       val res = mempoolMap.add(tx)
       assertTrue("Adding transaction failed", res.isSuccess)
       mempoolMap = res.get
@@ -472,7 +469,7 @@ class MempoolMapTest
     val account1NonExecTransactionSameNonceLowerFee = createEIP1559Transaction(
       BigInteger.valueOf(123),
       nonExecNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       BigInteger.ONE,
       BigInteger.ONE
     )
@@ -489,7 +486,7 @@ class MempoolMapTest
     val account1NonExecTransactionSameNonceSameFee = createEIP1559Transaction(
       BigInteger.valueOf(123),
       nonExecNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       account1NonExecTransaction0.getGasPrice,
       BigInteger.ONE
     )
@@ -507,7 +504,7 @@ class MempoolMapTest
     val account1NonExecTransactionSameNonceHigherFee = createEIP1559Transaction(
       BigInteger.valueOf(123),
       nonExecNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       higherFee,
       higherFee
     )
@@ -528,7 +525,7 @@ class MempoolMapTest
     val account1ExecTransaction0 = createEIP1559Transaction(
       value,
       account1InitialStateNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       BigInteger.valueOf(100),
       BigInteger.valueOf(80)
     )
@@ -538,7 +535,7 @@ class MempoolMapTest
     //Create some additional exec txs
     (1 to 5).foreach(i => {
       val nonce = account1InitialStateNonce.add(BigInteger.valueOf(i))
-      val tx = createEIP1559Transaction(value, nonce, account1KeyPairOpt)
+      val tx = createEIP1559Transaction(value, nonce, account1KeyOpt)
       val res = mempoolMap.add(tx)
       assertTrue("Adding transaction failed", res.isSuccess)
       mempoolMap = res.get
@@ -547,7 +544,7 @@ class MempoolMapTest
     val account1ExecTransactionSameNonceLowerFee = createEIP1559Transaction(
       BigInteger.valueOf(123),
       account1InitialStateNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       BigInteger.ONE,
       BigInteger.ONE
     )
@@ -564,7 +561,7 @@ class MempoolMapTest
     val account1ExecTransactionSameNonceSameFee = createEIP1559Transaction(
       BigInteger.valueOf(123),
       account1InitialStateNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       account1ExecTransaction0.getGasPrice,
       account1ExecTransaction0.getGasPrice
     )
@@ -583,7 +580,7 @@ class MempoolMapTest
     val account1ExecTransactionSameNonceHigherFee = createEIP1559Transaction(
       BigInteger.valueOf(123),
       account1InitialStateNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       execTxHigherFee,
       execTxHigherFee
     )
@@ -608,9 +605,8 @@ class MempoolMapTest
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
-    val account1KeyPairOpt = Some(Keys.createEcKeyPair)
     val account1NonExecTransaction0 =
-      createEIP1559Transaction(value, BigInteger.TWO, account1KeyPairOpt)
+      createEIP1559Transaction(value, BigInteger.TWO, account1KeyOpt)
 
     var res = mempoolMap.remove(account1NonExecTransaction0)
 
@@ -644,7 +640,7 @@ class MempoolMapTest
     val account1ExecTransaction0 = createEIP1559Transaction(
       value,
       account1InitialStateNonce,
-      account1KeyPairOpt
+      account1KeyOpt
     )
 
     mempoolMap.add(account1ExecTransaction0)
@@ -673,7 +669,7 @@ class MempoolMapTest
     var txToRemove: EthereumTransaction = null
     (0 to 5).foreach(i => {
       val nonce = account1InitialStateNonce.add(BigInteger.valueOf(i))
-      val tx = createEIP1559Transaction(value, nonce, account1KeyPairOpt)
+      val tx = createEIP1559Transaction(value, nonce, account1KeyOpt)
       if (i == 3)
         txToRemove = tx
       val res = mempoolMap.add(tx)
@@ -734,12 +730,11 @@ class MempoolMapTest
     //Adding some txs in the mempool
 
     val value = BigInteger.TEN
-    val account1KeyPairOpt = Some(Keys.createEcKeyPair)
 
     val account1ExecTransaction0 = createEIP1559Transaction(
       value,
       initialStateNonce,
-      account1KeyPairOpt,
+      account1KeyOpt,
       gasFee = BigInteger.valueOf(13),
       priorityGasFee = BigInteger.valueOf(4)
     )
@@ -776,7 +771,7 @@ class MempoolMapTest
     val account1NonExecTransaction0 = createEIP1559Transaction(
       value,
       BigInteger.valueOf(1000),
-      account1KeyPairOpt,
+      account1KeyOpt,
       gasFee = BigInteger.ONE,
       priorityGasFee = BigInteger.ONE
     )
@@ -814,7 +809,7 @@ class MempoolMapTest
     val account1ExecTransaction1 = createEIP1559Transaction(
       value,
       account1ExecTransaction0.getNonce.add(BigInteger.ONE),
-      account1KeyPairOpt,
+      account1KeyOpt,
       gasFee = BigInteger.valueOf(20),
       priorityGasFee = BigInteger.ONE
     )
@@ -824,7 +819,7 @@ class MempoolMapTest
     val account1ExecTransaction2 = createEIP1559Transaction(
       value,
       account1ExecTransaction1.getNonce.add(BigInteger.ONE),
-      account1KeyPairOpt,
+      account1KeyOpt,
       gasFee = BigInteger.valueOf(1100),
       priorityGasFee = BigInteger.valueOf(110)
     )
@@ -878,26 +873,25 @@ class MempoolMapTest
 
     //Create txs for other accounts and verify that the list is ordered by nonce and gas price
     //The expected order is: tx3_0, tx3_1, tx3_2, tx2_0, tx1_0, tx2_1, tx2_2, tx1_1, tx1_2
-    val account2KeyPairOpt = Some(Keys.createEcKeyPair)
 
     val account2ExecTransaction0 = createLegacyTransaction(
       value,
       initialStateNonce,
-      account2KeyPairOpt,
+      account2KeyOpt,
       gasPrice = BigInteger.valueOf(15)
     )
 
     val account2ExecTransaction1 = createEIP1559Transaction(
       value,
       account2ExecTransaction0.getNonce.add(BigInteger.ONE),
-      account2KeyPairOpt,
+      account2KeyOpt,
       gasFee = BigInteger.valueOf(12),
       priorityGasFee = BigInteger.valueOf(12)
     )
     val account2ExecTransaction2 = createEIP1559Transaction(
       value,
       account2ExecTransaction1.getNonce.add(BigInteger.ONE),
-      account2KeyPairOpt,
+      account2KeyOpt,
       gasFee = BigInteger.valueOf(203),
       priorityGasFee = BigInteger.valueOf(190)
     )
@@ -911,11 +905,10 @@ class MempoolMapTest
     assertTrue(res.isSuccess)
     mempoolMap = res.get
 
-    val account3KeyPairOpt = Some(Keys.createEcKeyPair)
     val account3ExecTransaction0 = createLegacyTransaction(
       value,
       initialStateNonce,
-      account3KeyPairOpt,
+      account3KeyOpt,
       gasPrice = BigInteger.valueOf(20)
     )
 
@@ -923,14 +916,14 @@ class MempoolMapTest
     val account3ExecTransaction1 = createEIP1559Transaction(
       value,
       account3ExecTransaction0.getNonce.add(BigInteger.ONE),
-      account3KeyPairOpt,
+      account3KeyOpt,
       gasFee = BigInteger.valueOf(1200),
       priorityGasFee = BigInteger.valueOf(200)
     )
     val account3ExecTransaction2 = createEIP1559Transaction(
       value,
       account3ExecTransaction1.getNonce.add(BigInteger.ONE),
-      account3KeyPairOpt,
+      account3KeyOpt,
       gasFee = BigInteger.valueOf(16),
       priorityGasFee = BigInteger.valueOf(6)
     )
@@ -1021,12 +1014,12 @@ class MempoolMapTest
     assertEquals(
       "Wrong tx",
       account1ExecTransaction0.id(),
-      iter.removeAndSkipAccount.id
+      iter.removeAndSkipAccount().id
     )
     assertEquals(
       "Wrong tx ",
       account2ExecTransaction1.id(),
-      iter.removeAndSkipAccount.id
+      iter.removeAndSkipAccount().id
     )
     assertFalse(iter.hasNext)
     assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.removeAndSkipAccount())

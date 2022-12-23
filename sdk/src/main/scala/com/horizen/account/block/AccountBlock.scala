@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, LogsBloom}
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, Bloom}
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
@@ -17,6 +17,7 @@ import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
 import scorex.util.ScorexLogging
 import sparkz.core.utils.SparkzEncoding
+
 import java.math.BigInteger
 import scala.util.Try
 
@@ -96,7 +97,7 @@ object AccountBlock extends SparkzEncoding {
              gasUsed: Long,
              gasLimit: Long,
              companion: SidechainAccountTransactionsCompanion,
-             logsBloom: LogsBloom,
+             logsBloom: Bloom,
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
             ): Try[AccountBlock] = Try {
     require(mainchainBlockReferencesData != null)
@@ -188,5 +189,4 @@ object AccountBlock extends SparkzEncoding {
     // 2. compute hash
     TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
   }
-
 }

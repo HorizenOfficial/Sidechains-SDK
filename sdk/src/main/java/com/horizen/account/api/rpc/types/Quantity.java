@@ -7,7 +7,7 @@ import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 
 public class Quantity {
-    public final String value;
+    private final String value;
 
     @JsonCreator
     public Quantity(String value) {
