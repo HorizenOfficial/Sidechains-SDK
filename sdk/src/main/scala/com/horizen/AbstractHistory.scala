@@ -577,7 +577,7 @@ object AbstractHistory {
       ModifierSemanticValidity.Unknown,
       // First MC header Cumulative CommTree hash is provided by genesis info
       Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
-      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock[TX](block),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
       None,
       block.id
