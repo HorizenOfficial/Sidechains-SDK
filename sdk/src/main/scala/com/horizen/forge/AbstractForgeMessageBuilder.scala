@@ -254,14 +254,12 @@ abstract class AbstractForgeMessageBuilder[
     var ommers: Seq[Ommer[H]] = Seq()
     var blockId = nodeView.history.bestBlockId
     while (blockId != parentBlockId) {
-      val block = nodeView.history.getBlockById(blockId).get // TODO: replace with method blockById with no Option
+      val block = nodeView.history.getBlockById(blockId).get
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers
     }
 
     // Update block size with Ommers
-    //val ommersSerializer = new ListSerializer[Ommer[H]](OmmerSerializer)
-    //blockSize += ommersSerializer.toBytes(ommers.asJava).length
     blockSize += getOmmersSize(ommers)
 
     // Get all needed MainchainBlockReferences from the MC Node
