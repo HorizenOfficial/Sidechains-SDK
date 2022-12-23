@@ -2,10 +2,12 @@ package com.horizen
 
 import java.util
 
+import com.horizen.box.{ZenBox,ForgerBox}
 import org.scalatestplus.junit.JUnitSuite
 import org.junit.{Before, Test}
 import org.junit.Assert._
 import com.horizen.fixtures._
+import com.horizen.mempool.{MempoolTakeFilter, MempoolTakeFilterWithMaxBoxType}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.FeeRate
 import org.mockito.Mockito
@@ -274,6 +276,28 @@ class SidechainMemoryPoolTest
     val tx1 = getRegularRandomTransaction(10,1)
     val memoryPool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(1, 200))
     assertEquals("Put tx operation must not be successfull.", false, memoryPool.put(tx1).isSuccess)
+  }
+
+  @Test
+  def takeWithLimit(): Unit = {
+    val tx1 = getRegularRandomTransaction(10,1)
+    val tx2 = getRegularRandomTransaction(10,2)
+    val tx3 = getRegularRandomTransaction(10,3)
+    val memoryPool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(300, 0))
+    assertEquals("Put tx operation must  be successfull.", true, memoryPool.put(tx1).isSuccess)
+    assertEquals("Put tx operation must  be successfull.", true, memoryPool.put(tx2).isSuccess)
+    assertEquals("Put tx operation must  be successfull.", true, memoryPool.put(tx3).isSuccess)
+
+    val take1 =  memoryPool.takeWithFilterLimit(Seq[MempoolTakeFilter](new MempoolTakeFilterWithMaxBoxType[ZenBox](classOf[ZenBox], 3)))
+    assertEquals("Unexpected number of transaction taken", 2, take1.size)
+
+    val take2 =  memoryPool.takeWithFilterLimit(Seq[MempoolTakeFilter](new MempoolTakeFilterWithMaxBoxType[ForgerBox](classOf[ForgerBox], 3)))
+    assertEquals("Unexpected number of transaction taken", 3, take2.size)
+
+    val take3 =  memoryPool.takeWithFilterLimit(Seq[MempoolTakeFilter](
+      new MempoolTakeFilterWithMaxBoxType[ZenBox](classOf[ZenBox], 3),
+      new MempoolTakeFilterWithMaxBoxType[ForgerBox](classOf[ForgerBox], 3)))
+    assertEquals("Unexpected number of transaction taken", 2, take3.size)
   }
 
   private def getMockedMempoolSettings(maxSize: Int, minFeeRate: Long): MempoolSettings = {

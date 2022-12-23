@@ -30,7 +30,7 @@ class SidechainBackupTest
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers, false)
 
   val boxListFirstModifier = new ListBuffer[SidechainTypes#SCB]()
   val boxListSecondModifier = new ListBuffer[SidechainTypes#SCB]()

@@ -351,7 +351,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers, false)
   val mockedStorageIterator: StorageIterator = mock[StorageIterator]
   var boxList: ListBuffer[SidechainTypes#SCB] = new ListBuffer[SidechainTypes#SCB]()
   boxList ++= getCustomBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB])

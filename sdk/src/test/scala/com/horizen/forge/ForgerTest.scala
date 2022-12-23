@@ -6,6 +6,7 @@ import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.forge.AbstractForger.ReceivableMessages.StartForging
 import com.horizen.params.NetworkParams
+import com.horizen.sc2sc.Sc2ScConfigurator
 import com.horizen.{SidechainSettings, WebSocketSettings}
 import org.junit.Test
 import org.mockito.Mockito.when
@@ -66,7 +67,7 @@ class ForgerTest extends JUnitSuite with Matchers {
     val mainchainSynchronizer = mock[MainchainSynchronizer]
     val companion = mock[SidechainTransactionsCompanion]
 
-    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
+    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, Sc2ScConfigurator(false, false), params, settings.websocket.allowNoConnectionInRegtest)
 
     class ForgerUnderTest(settings: SidechainSettings,
                      viewHolderRef: ActorRef,

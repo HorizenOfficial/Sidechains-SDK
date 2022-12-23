@@ -35,12 +35,14 @@ import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 import sparkz.core.network.PeerFeature
 import sparkz.core.network.message.MessageSpec
 import sparkz.core.settings.SparkzSettings
-
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{HashMap => JHashMap, List => JList}
+
+import com.horizen.sc2sc.Sc2ScConfigurator
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -56,6 +58,7 @@ abstract class AbstractSidechainApp
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
+   val sc2scConfigurator : Sc2ScConfigurator,
    val chainInfo : ChainInfo,
    val consensusSecondsInSlot: Int
   )

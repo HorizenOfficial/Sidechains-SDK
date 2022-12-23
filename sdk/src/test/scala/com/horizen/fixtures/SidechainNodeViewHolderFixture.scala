@@ -2,6 +2,7 @@ package com.horizen.fixtures
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
@@ -15,6 +16,7 @@ import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
+import com.horizen.sc2sc.Sc2ScConfigurator
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
@@ -48,7 +50,7 @@ trait SidechainNodeViewHolderFixture
 
   val timeProvider = new NetworkTimeProvider(sidechainSettings.sparkzSettings.ntp)
 
-  val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
+  val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]](), false)
   val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
@@ -109,6 +111,7 @@ trait SidechainNodeViewHolderFixture
   val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
   val cswDataProvider: SidechainWalletCswDataProvider = SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(getStorage()))
   val backupStorage = new BackupStorage(getStorage(), sidechainBoxesCompanion)
+  val sc2scConfig = Sc2ScConfigurator(false, false)
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -130,6 +133,7 @@ trait SidechainNodeViewHolderFixture
     cswDataProvider,
     backupStorage,
     params,
+    sc2scConfig,
     timeProvider,
     defaultApplicationWallet,
     defaultApplicationState,

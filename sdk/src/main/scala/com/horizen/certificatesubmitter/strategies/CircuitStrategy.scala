@@ -8,6 +8,7 @@ import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
+import com.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScUtils}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import sparkz.util.SparkzLogging
@@ -23,8 +24,8 @@ abstract class CircuitStrategy[
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
   MS <: AbstractState[TX, H, PM, MS],
-  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends SparkzLogging{
-  
+  T <: CertificateData](settings: SidechainSettings, sc2scConfig: Sc2ScConfigurator, params: NetworkParams) extends SparkzLogging   with Sc2ScUtils[TX, H, PM, MS, HIS]{
+
   def generateProof(certificateData: T, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
   def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): T

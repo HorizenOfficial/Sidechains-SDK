@@ -4,6 +4,7 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
+import com.horizen.sc2sc.Sc2ScDataForCertificate
 import com.horizen.utils.BytesUtils
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -13,13 +14,15 @@ case class CertificateDataWithoutKeyRotation(override val referencedEpochNumber:
                                              override val sidechainId: Array[Byte],
                                              override val backwardTransfers: Seq[BackwardTransfer],
                                              override val endEpochCumCommTreeHash: Array[Byte],
+                                             override val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate],
                                              override val btrFee: Long,
                                              override val ftMinAmount: Long,
                                              override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])],
                                              utxoMerkleTreeRoot: Option[Array[Byte]])
-  extends CertificateData (referencedEpochNumber, sidechainId, backwardTransfers, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
+  extends CertificateData (referencedEpochNumber, sidechainId, backwardTransfers, endEpochCumCommTreeHash, sc2ScDataForCertificate, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
+    //TODO: use sc2ScDataForCertificate to add custom fields for sc2sc
     CryptoLibProvider.sigProofThresholdCircuitFunctions.getCertificateCustomFields(utxoMerkleTreeRoot.asJava).toSeq
   }
 

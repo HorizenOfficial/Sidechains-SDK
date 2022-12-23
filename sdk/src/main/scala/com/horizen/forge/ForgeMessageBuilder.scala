@@ -2,10 +2,11 @@ package com.horizen.forge
 
 
 import com.horizen.block._
-import com.horizen.box.Box
+import com.horizen.box.{Box, CrossChainMessageBox, WithdrawalRequestBox}
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
@@ -15,6 +16,8 @@ import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import sparkz.util.ModifierId
 import com.horizen.fork.ForkManager
+import com.horizen.mempool.{MempoolTakeFilter, MempoolTakeFilterWithMaxBoxType}
+import com.horizen.sc2sc.Sc2ScConfigurator
 import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 
@@ -23,10 +26,12 @@ import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block
 import sparkz.core.block.Block.BlockId
 
+import scala.:+
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                           companion: SidechainTransactionsCompanion,
+                          sc2ScConfigurator: Sc2ScConfigurator,
                           params: NetworkParams,
                           allowNoWebsocketConnectionInRegtest: Boolean)
   extends AbstractForgeMessageBuilder[
@@ -147,12 +152,20 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     var blockSize: Int = blockSizeIn
 
     var txsCounter: Int = 0
-    val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
-    val mempoolTx =
-      if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
+    var takeFilters : Seq[MempoolTakeFilter] = Seq()
+    if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled()) {
       //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
-        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
+      val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+      takeFilters = takeFilters :+ new MempoolTakeFilterWithMaxBoxType[WithdrawalRequestBox](classOf[WithdrawalRequestBox],allowedWithdrawalRequestBoxes)
+    }
+    if (sc2ScConfigurator.canSendMessages) {
+      val allowedCrossChainMessageBoxes = nodeView.state.getAllowedCrosschainMessageBoxes(mainchainBlockReferenceData.size, CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate) - nodeView.state.getAlreadyMinedCrosschainMessagesInCurrentEpoch
+      takeFilters = takeFilters :+ new MempoolTakeFilterWithMaxBoxType[CrossChainMessageBox](classOf[CrossChainMessageBox],allowedCrossChainMessageBoxes)
+    }
+    val mempoolTx =
+      if (takeFilters.size > 0)
+        nodeView.pool.takeWithFilterLimit(takeFilters)
       else
         nodeView.pool.take(nodeView.pool.size)
     (mempoolTx

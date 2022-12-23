@@ -8,6 +8,7 @@ import com.horizen.api.http.ApplicationApiGroup
 import com.horizen.box.BoxSerializer
 import com.horizen.fork.ForkConfigurator
 import com.horizen.helper.{NodeViewHelper, NodeViewHelperImpl, SecretSubmitHelper, SecretSubmitHelperImpl, TransactionSubmitHelper, TransactionSubmitHelperImpl}
+import com.horizen.sc2sc.Sc2ScConfigurator
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage.Storage
@@ -61,6 +62,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
           @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
+          @Named("Sc2ScConfiguration") sc2ScConfigurator: Sc2ScConfigurator,
           @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   ): SidechainApp = {
     synchronized {
@@ -87,6 +89,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           rejectedApiPaths,
           applicationStopper,
           forkConfigurator,
+          sc2ScConfigurator,
           secondsInSlot
         )
       }

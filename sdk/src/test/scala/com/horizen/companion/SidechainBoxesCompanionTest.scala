@@ -21,8 +21,8 @@ class SidechainBoxesCompanionTest
   var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
 
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
-  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers, false)
+  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap(), false)
 
   @Test
   def testCore(): Unit = {

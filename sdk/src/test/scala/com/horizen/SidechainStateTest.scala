@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
+import com.horizen.block.{MainchainBlockReferenceData, MainchainHeader, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
@@ -27,8 +27,10 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.util.ModifierId
 import sparkz.core.{bytesToId, bytesToVersion}
-
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
+
+import com.horizen.sc2sc.{CrossChainMessage, Sc2ScConfigurator}
+
 import scala.collection.JavaConverters._
 import scala.collection.Seq
 import scala.collection.immutable._
@@ -197,7 +199,7 @@ class SidechainStateTest
     Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
 
     val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      params, Sc2ScConfigurator(false, false),  bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     //Test get
     assertEquals("State must return existing box.",
@@ -353,8 +355,9 @@ class SidechainStateTest
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
+      ArgumentMatchers.any[Seq[CrossChainMessage]](),
       ArgumentMatchers.any[ConsensusEpochNumber](),
-      ArgumentMatchers.any[Option[WithdrawalEpochCertificate]](),
+      ArgumentMatchers.any[Seq[(WithdrawalEpochCertificate, Array[Byte])]](),
       ArgumentMatchers.any[BlockFeeInfo](),
       ArgumentMatchers.any[Option[Array[Byte]]](),
       ArgumentMatchers.any[Boolean](),
@@ -368,18 +371,18 @@ class SidechainStateTest
         val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](2)
         val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
         val withdrawalRequestAppendSeq = answer.getArgument[ListBuffer[WithdrawalRequestBox]](4)
-        val consensusEpoch = answer.getArgument[ConsensusEpochNumber](5)
-        val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
-        val blockFeeInfo = answer.getArgument[BlockFeeInfo](7)
-        val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](8)
-        val scHasCeased = answer.getArgument[Boolean](9)
+        val consensusEpoch = answer.getArgument[ConsensusEpochNumber](6)
+        val backwardTransferCertificate = answer.getArgument[Seq[(WithdrawalEpochCertificate, Array[Byte])]](7)
+        val blockFeeInfo = answer.getArgument[BlockFeeInfo](8)
+        val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](9)
+        val scHasCeased = answer.getArgument[Boolean](10)
 
         // Verify withdrawals
         assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
         // Verify consensus epoch number
         assertEquals("Consensus epoch  number should be different.", 2, consensusEpoch)
         // Verify certificate presence
-        assertEquals("Certificate expected to be absent.", None, backwardTransferCertificate)
+        assertEquals("Certificate expected to be absent.", 0, backwardTransferCertificate.size)
         // Verify blockFeeInfo
         assertEquals("blockFeeInfo expected to be different.", modBlockFeeInfo, blockFeeInfo)
         // Verify utxoMerkleTreeRoot
@@ -487,7 +490,7 @@ class SidechainStateTest
       .thenReturn(Success(mockedApplicationState))
 
     val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      params, Sc2ScConfigurator(false,false), bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 
@@ -511,7 +514,7 @@ class SidechainStateTest
     Mockito.when(stateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(version))
 
     val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeProvider,
-      params, bytesToVersion(version.data), applicationState)
+      params, Sc2ScConfigurator(false,false), bytesToVersion(version.data), applicationState)
 
     // Test 1: No block fee info record in the storage
     Mockito.when(stateStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq())
@@ -593,7 +596,7 @@ class SidechainStateTest
     Mockito.when(stateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(version))
 
     val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeProvider,
-      params, bytesToVersion(version.data), applicationState)
+      params, Sc2ScConfigurator(false,false), bytesToVersion(version.data), applicationState)
 
 
     // Test 1: No utxoMerkleTreeRoot found for given epoch
@@ -634,7 +637,7 @@ class SidechainStateTest
     Mockito.when(stateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(version))
 
     val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeProvider,
-      params, bytesToVersion(version.data), applicationState)
+      params, Sc2ScConfigurator(false,false), bytesToVersion(version.data), applicationState)
 
 
     // Test 1: Sidechain is alive
@@ -693,7 +696,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.restrictForgers).thenReturn(false)
 
     val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      mockedParams, Sc2ScConfigurator(false,false), bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     //Test validate(Transaction) with no restrict forgers enabled
     var tryValidate = sidechainState.validate(stakeTransaction)
@@ -785,7 +788,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.restrictForgers).thenReturn(true)
 
     val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      mockedParams, Sc2ScConfigurator(false,false), bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     val forgerList = Seq(
       (secretList(0).publicImage(), vrfList(0)),
@@ -947,7 +950,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.maxWBsAllowed).thenReturn(99)
 
     val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      mockedParams, Sc2ScConfigurator(false,false), bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     //Test validate(Transaction) with a number of WithdrawalBoxes < maxWBsAllowed
     var tryValidate = sidechainState.validate(belowTresholdTransaction)
@@ -1028,7 +1031,7 @@ class SidechainStateTest
       ArgumentMatchers.any[SidechainBlock]())
 
     val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      mockedParams, Sc2ScConfigurator(false,false), bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     var validateTry = sidechainState.validate(mockedBlock)
     assertFalse("Block validation must fail.",
@@ -1151,7 +1154,7 @@ class SidechainStateTest
     Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
 
     val sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      params, bytesToVersion(getVersion.data()), mockedApplicationState)
+      params, Sc2ScConfigurator(false,false), bytesToVersion(getVersion.data()), mockedApplicationState)
 
     val consensusEpochNumberFork = 10
 
@@ -1232,7 +1235,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.circuitType).thenReturn(CircuitTypes.NaiveThresholdSignatureCircuit)
 
     var sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      mockedParams, Sc2ScConfigurator(false,false), bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     var tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
@@ -1245,7 +1248,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.circuitType).thenReturn(CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation)
 
     sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
-      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      mockedParams, Sc2ScConfigurator(false,false), bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.", tryValidate.isSuccess)

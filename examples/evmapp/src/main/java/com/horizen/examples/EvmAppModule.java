@@ -13,6 +13,7 @@ import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.fork.ForkConfigurator;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
+import com.horizen.sc2sc.Sc2ScConfigurator;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
@@ -99,6 +100,10 @@ public class EvmAppModule extends AccountAppModule {
         bind(new TypeLiteral<List<MessageProcessor>>() {})
                 .annotatedWith(Names.named("CustomMessageProcessors"))
                 .toInstance(customMessageProcessors);
+
+        bind(Sc2ScConfigurator.class)
+                .annotatedWith(Names.named("Sc2ScConfiguration"))
+                .toInstance(new Sc2ScConfigurator(true, true) );
 
         bind(Integer.class)
                 .annotatedWith(Names.named("ConsensusSecondsInSlot"))

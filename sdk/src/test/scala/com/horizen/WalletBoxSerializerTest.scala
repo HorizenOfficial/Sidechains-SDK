@@ -22,7 +22,7 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
     val transactionIdBytes = new Array[Byte](32)
     var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
     customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
-    val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+    val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers, false)
 
     var serializer: WalletBoxSerializer = null
     var bytes: Array[Byte] = null

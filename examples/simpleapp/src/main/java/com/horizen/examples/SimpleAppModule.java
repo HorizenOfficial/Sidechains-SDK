@@ -14,6 +14,7 @@ import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
 import com.horizen.fork.ForkConfigurator;
 import com.horizen.proposition.Proposition;
+import com.horizen.sc2sc.Sc2ScConfigurator;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
@@ -24,6 +25,7 @@ import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
 import com.horizen.utils.Pair;
+import org.checkerframework.checker.units.qual.A;
 
 public class SimpleAppModule extends SidechainAppModule
 {
@@ -158,5 +160,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(Integer.class)
                 .annotatedWith(Names.named("ConsensusSecondsInSlot"))
                 .toInstance(consensusSecondsInSlot);
+        bind(Sc2ScConfigurator.class)
+                .annotatedWith(Names.named("Sc2ScConfiguration"))
+                .toInstance(new Sc2ScConfigurator(true, true) );
+
     }
 }

@@ -8,8 +8,10 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
-
 import java.util.Optional
+
+import com.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScDataForCertificate}
+
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
@@ -19,9 +21,11 @@ class WithoutKeyRotationCircuitStrategy[
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
-  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings, params: NetworkParams,
+  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
+                                      sc2scConfig: Sc2ScConfigurator,
+                                      params: NetworkParams,
                             cryptolibCircuit: ThresholdSignatureCircuit)
-  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithoutKeyRotation](settings, params) {
+  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithoutKeyRotation](settings, sc2scConfig, params) {
 
   override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
@@ -64,6 +68,12 @@ class WithoutKeyRotationCircuitStrategy[
     val sidechainId = params.sidechainId
     val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(state, status.referencedEpoch)
 
+    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =
+      sc2scConfig.canSendMessages match {
+        case true => Some(getDataForCertificateCreation(status.referencedEpoch, state, history, params))
+        case false => None
+      }
+
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
@@ -75,6 +85,7 @@ class WithoutKeyRotationCircuitStrategy[
       sidechainId,
       backwardTransfers,
       endEpochCumCommTreeHash,
+      sc2ScDataForCertificate,
       btrFee,
       ftMinAmount,
       signersPublicKeyWithSignatures,
@@ -90,6 +101,12 @@ class WithoutKeyRotationCircuitStrategy[
 
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
+
+    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =  sc2scConfig.canSendMessages match {
+      case true => Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
+      case false => None
+    }
+    //TODO: sc2ScDataForCertificate must be used in below circuits..
 
     val utxoMerkleTreeRoot: Option[Array[Byte]] = {
       Try {

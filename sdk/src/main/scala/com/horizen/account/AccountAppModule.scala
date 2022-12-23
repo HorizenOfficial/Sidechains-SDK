@@ -12,9 +12,10 @@ import com.horizen.secret.SecretSerializer
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
 import com.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppStopper, SidechainSettings, SidechainTypes}
-
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
+
+import com.horizen.sc2sc.Sc2ScConfigurator
 
 abstract class AccountAppModule extends com.google.inject.AbstractModule {
 
@@ -51,6 +52,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
           @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
+          @Named("Sc2ScConfiguration") sc2ScConfigurator: Sc2ScConfigurator,
           @Named("ConsensusSecondsInSlot") secondsInSlot: Int
          ): AccountSidechainApp = {
     synchronized {
@@ -64,6 +66,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           customMessageProcessors,
           applicationStopper,
           forkConfigurator,
+          sc2ScConfigurator,
           chainInfo,
           secondsInSlot
         )

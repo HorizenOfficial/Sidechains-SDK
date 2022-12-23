@@ -19,6 +19,9 @@ import sparkz.core.utils.NetworkTimeProvider
 import java.math.BigInteger
 import scala.util.{Failure, Success}
 
+import com.horizen.sc2sc.Sc2ScConfigurator
+
+
 class AccountStateTest
     extends JUnitSuite
       with SecretFixture
@@ -28,6 +31,7 @@ class AccountStateTest
       with SidechainTypesTestsExtension {
 
   val params: MainNetParams = MainNetParams()
+  val sc2ScConfigurator: Sc2ScConfigurator = Sc2ScConfigurator(false, false)
   var state: AccountState = _
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
 
@@ -41,6 +45,7 @@ class AccountStateTest
 
     state = new AccountState(
       params,
+      sc2ScConfigurator,
       mockedTimeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,

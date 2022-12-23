@@ -32,6 +32,9 @@ import sparkz.util.SparkzEncoding
 import java.io.{BufferedWriter, FileWriter}
 import java.math.BigInteger
 import java.util.Calendar
+
+import com.horizen.sc2sc.Sc2ScConfigurator
+
 import scala.collection.concurrent.TrieMap
 
 /*
@@ -533,6 +536,7 @@ class AccountSidechainNodeViewHolderPerfTest
   class MockedAccountSidechainNodeViewHolder(
       sidechainSettings: SidechainSettings,
       params: NetworkParams,
+      sc2ScConfig: Sc2ScConfigurator,
       timeProvider: NetworkTimeProvider,
       historyStorage: AccountHistoryStorage,
       consensusDataStorage: ConsensusDataStorage,
@@ -544,6 +548,7 @@ class AccountSidechainNodeViewHolderPerfTest
   ) extends AccountSidechainNodeViewHolder(
         sidechainSettings,
         params,
+        sc2ScConfig,
         timeProvider,
         historyStorage,
         consensusDataStorage,
@@ -582,6 +587,7 @@ class AccountSidechainNodeViewHolderPerfTest
     Mockito.when(mockWalletSettings.maxTxFee).thenReturn(100L)
     Mockito.when(sidechainSettings.wallet).thenReturn(mockWalletSettings)
     val params: NetworkParams = mock[NetworkParams]
+    val sc2scConfig : Sc2ScConfigurator = Sc2ScConfigurator(false, false)
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]
@@ -597,6 +603,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
     state = new AccountState(
       params,
+      Sc2ScConfigurator(false, false),
       timeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,
@@ -614,6 +621,7 @@ class AccountSidechainNodeViewHolderPerfTest
         new MockedAccountSidechainNodeViewHolder(
           sidechainSettings,
           params,
+          sc2scConfig,
           timeProvider,
           historyStorage,
           consensusDataStorage,

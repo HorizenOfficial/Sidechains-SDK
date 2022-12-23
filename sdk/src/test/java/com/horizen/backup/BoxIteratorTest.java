@@ -42,7 +42,7 @@ public class BoxIteratorTest extends BoxFixtureClass {
     @Before
     public void setup() {
         customBoxSerializers.put(CustomBox.BOX_TYPE_ID, (BoxSerializer) CustomBoxSerializer.getSerializer());
-        sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxSerializers);
+        sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxSerializers, false);
 
         customBoxes = getCustomBoxList(nBoxes);
         for (CustomBox box : customBoxes) {

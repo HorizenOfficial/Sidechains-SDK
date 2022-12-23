@@ -26,4 +26,6 @@ trait WithdrawalEpochCertificateFixture {
       Seq(),
       Seq())
   }
+
+  def generateRandomMainchainHash(): Array[Byte] = getBytes()
 }

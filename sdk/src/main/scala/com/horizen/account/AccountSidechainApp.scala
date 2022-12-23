@@ -33,10 +33,12 @@ import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
+
+import com.horizen.sc2sc.Sc2ScConfigurator
+
 import scala.collection.JavaConverters.asScalaBufferConverter
 
 
@@ -49,6 +51,7 @@ class AccountSidechainApp @Inject()
    @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
+   @Named("Sc2ScConfiguration") override val sc2scConfigurator : Sc2ScConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
    @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   )
@@ -59,6 +62,7 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
+    sc2scConfigurator,
     chainInfo,
     secondsInSlot
   )
@@ -119,6 +123,7 @@ class AccountSidechainApp @Inject()
     customMessageProcessors.asScala,
     sidechainSecretStorage,
     params,
+    sc2scConfigurator,
     timeProvider,
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
@@ -140,7 +145,7 @@ class AccountSidechainApp @Inject()
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, AccountHistory]("AccountBlock", sidechainSettings, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, sc2scConfigurator, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
 
