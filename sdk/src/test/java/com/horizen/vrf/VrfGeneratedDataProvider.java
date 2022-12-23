@@ -13,6 +13,7 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class VrfGeneratedDataProvider {
     private static final String pathPrefix = "src/test/resources/";
@@ -23,7 +24,7 @@ public class VrfGeneratedDataProvider {
     }
 
     public static VrfPublicKey getVrfPublicKey(Integer seed) {
-        return VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes()).publicImage();
+        return VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes(StandardCharsets.UTF_8)).publicImage();
     }
 
     public static VrfOutput getVrfOutput(Integer seed) {

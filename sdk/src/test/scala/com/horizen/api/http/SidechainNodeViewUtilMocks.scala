@@ -29,6 +29,7 @@ import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
 
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -44,10 +45,10 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208"),
     BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208")) // TO DO: check, probably use different sc id
 
-  val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
-  val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
-  val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
-  val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
+  val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes(StandardCharsets.UTF_8))
+  val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes(StandardCharsets.UTF_8))
+  val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes(StandardCharsets.UTF_8))
+  val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes(StandardCharsets.UTF_8))
   val box_1 = getZenBox(secret1.publicImage(), 1, 10)
   val box_2 = getZenBox(secret2.publicImage(), 1, 20)
   val box_3 = getZenBox(secret3.publicImage(), 1, 30)
@@ -211,7 +212,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
 
     Mockito.when(wallet.secretsOfType(ArgumentMatchers.any())).thenAnswer(_ => listOfSecrets.asJava)
 
-    Mockito.when(wallet.walletSeed()).thenAnswer(_ => "a seed".getBytes)
+    Mockito.when(wallet.walletSeed()).thenAnswer(_ => "a seed".getBytes(StandardCharsets.UTF_8))
 
     Mockito.when(wallet.allSecrets()).thenAnswer(_ => listOfSecrets.asJava)
 
@@ -290,12 +291,12 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
         mock[ApplicationState],
         mock[ApplicationWallet])
 
-  val schnorrSecret = SchnorrKeyGenerator.getInstance().generateSecret("seed".getBytes)
-  val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes)
-  val schnorrSecret3 = SchnorrKeyGenerator.getInstance().generateSecret("seed3".getBytes)
-  val schnorrSecret4 = SchnorrKeyGenerator.getInstance().generateSecret("seed4".getBytes)
+  val schnorrSecret = SchnorrKeyGenerator.getInstance().generateSecret("seed".getBytes(StandardCharsets.UTF_8))
+  val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes(StandardCharsets.UTF_8))
+  val schnorrSecret3 = SchnorrKeyGenerator.getInstance().generateSecret("seed3".getBytes(StandardCharsets.UTF_8))
+  val schnorrSecret4 = SchnorrKeyGenerator.getInstance().generateSecret("seed4".getBytes(StandardCharsets.UTF_8))
 
-  val schnorrProof = schnorrSecret.sign("Message".getBytes)
+  val schnorrProof = schnorrSecret.sign("Message".getBytes(StandardCharsets.UTF_8))
   val keyRotationProof = KeyRotationProof(KeyRotationProofTypes(0), 0, schnorrSecret.publicImage(), schnorrProof, schnorrProof)
   val signerKeys = Seq(schnorrSecret.publicImage(), schnorrSecret2.publicImage())
   val masterKeys = Seq(schnorrSecret3.publicImage(), schnorrSecret4.publicImage())

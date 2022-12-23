@@ -46,6 +46,7 @@ import sparkz.util.serialization.VLQByteBufferWriter
 import sparkz.util.{ByteArrayBuilder, bytesToId}
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util
 import java.util.Optional
@@ -340,7 +341,7 @@ class AccountForgeMessageBuilderTest
 
     val value = BigInteger.TEN
     val account1Key: PrivateKeySecp256k1 =
-      PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest1".getBytes())
+      PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest1".getBytes(StandardCharsets.UTF_8))
 
     val account1ExecTransaction0 = createEIP1559Transaction(
       value,

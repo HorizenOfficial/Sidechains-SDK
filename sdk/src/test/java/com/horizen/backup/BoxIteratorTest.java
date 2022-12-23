@@ -20,6 +20,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -66,7 +67,7 @@ public class BoxIteratorTest extends BoxFixtureClass {
         BackupStorage backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion);
 
         //Add an additional random element to customBoxToSave list.
-        customBoxToSave.add(new Pair(new ByteArrayWrapper("key1".getBytes()), new ByteArrayWrapper("value1".getBytes())));
+        customBoxToSave.add(new Pair(new ByteArrayWrapper("key1".getBytes(StandardCharsets.UTF_8)), new ByteArrayWrapper("value1".getBytes(StandardCharsets.UTF_8))));
 
         //Populate the BackupStorage
         backupStorage.update(new ByteArrayWrapper(Utils.nextVersion()), customBoxToSave).get();
@@ -129,7 +130,7 @@ public class BoxIteratorTest extends BoxFixtureClass {
         BackupStorage backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion);
 
         //Add an additional random element to customBoxToSave list.
-        customBoxToSave.add(new Pair(new ByteArrayWrapper("key1".getBytes()), new ByteArrayWrapper("value1".getBytes())));
+        customBoxToSave.add(new Pair(new ByteArrayWrapper("key1".getBytes(StandardCharsets.UTF_8)), new ByteArrayWrapper("value1".getBytes(StandardCharsets.UTF_8))));
 
         //Populate the BackupStorage
         backupStorage.update(new ByteArrayWrapper(Utils.nextVersion()), customBoxToSave).get();

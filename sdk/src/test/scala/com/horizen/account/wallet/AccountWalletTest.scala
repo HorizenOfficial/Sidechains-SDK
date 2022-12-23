@@ -16,6 +16,7 @@ import sparkz.core.VersionTag
 import sparkz.crypto.hash.Blake2b256
 
 import java.lang.{Byte => JByte}
+import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
@@ -84,20 +85,16 @@ class AccountWalletTest
         }
         storedSecretList.appendAll(answer.getArgument(1).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
       })
-
-
-
-
   }
 
   @Test
   def testSecrets(): Unit = {
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val accountWallet = new AccountWallet(
-      "seed".getBytes(),
+      "seed".getBytes(StandardCharsets.UTF_8),
       mockedSecretStorage1)
-    val secret1 = getPrivateKey25519("testSeed1".getBytes())
-    val secret2 = getPrivateKey25519("testSeed2".getBytes())
+    val secret1 = getPrivateKey25519("testSeed1".getBytes(StandardCharsets.UTF_8))
+    val secret2 = getPrivateKey25519("testSeed2".getBytes(StandardCharsets.UTF_8))
 
 
     // Test 1: test secret(proposition) and secretByPublicKey(proposition)

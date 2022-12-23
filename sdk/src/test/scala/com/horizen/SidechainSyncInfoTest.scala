@@ -1,13 +1,14 @@
 package com.horizen
 
 import java.io._
-
 import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.utils.BytesUtils
 import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import sparkz.util.ModifierId
+
+import java.nio.charset.StandardCharsets
 
 class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val size: Int = 255
@@ -50,7 +51,7 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
 
 
     // Test 2: try to deserialize broken bytes.
-    assertTrue("SidechainSyncInfo expected to be not parsed due to broken data.", SidechainSyncInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("SidechainSyncInfo expected to be not parsed due to broken data.", SidechainSyncInfoSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test

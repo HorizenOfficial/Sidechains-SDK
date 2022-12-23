@@ -12,6 +12,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.crypto.hash.Blake2b256
 
+import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList, Optional => JOptional}
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -62,7 +63,7 @@ class SidechainStateForgerBoxStorageTest
     assertEquals("Storage must return existing Box.", boxList(3), sidechainStateForgerBoxStorage.getForgerBox(boxList(3).id()).get)
 
     // Test 2: try get non-existing item
-    assertEquals("Storage must NOT contain requested Box.", None, sidechainStateForgerBoxStorage.getForgerBox("non-existing id".getBytes()))
+    assertEquals("Storage must NOT contain requested Box.", None, sidechainStateForgerBoxStorage.getForgerBox("non-existing id".getBytes(StandardCharsets.UTF_8)))
 
     // Data for Test 3:
     val version = getVersion

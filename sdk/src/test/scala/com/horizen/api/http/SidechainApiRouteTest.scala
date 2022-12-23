@@ -57,9 +57,9 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import org.mindrot.jbcrypt
 import org.mindrot.jbcrypt.BCrypt
-
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
+import java.nio.charset.StandardCharsets
 import java.util.{HashMap => JHashMap}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable.ListBuffer
@@ -288,10 +288,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
         case GenerateSidechainBlocks(count) =>
           if (sidechainApiMockConfiguration.getShould_blockActor_GenerateSidechainBlocks_reply())
             sender ! Future[Try[Seq[ModifierId]]](Try(Seq(
-              bytesToId("block_id_1".getBytes),
-              bytesToId("block_id_2".getBytes),
-              bytesToId("block_id_3".getBytes),
-              bytesToId("block_id_4".getBytes))))
+              bytesToId("block_id_1".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_2".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_3".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_4".getBytes(StandardCharsets.UTF_8)))))
           else sender ! Future[Try[ModifierId]](Failure(new Exception("Block actor not configured for generate blocks.")))
       }
       TestActor.KeepRunning

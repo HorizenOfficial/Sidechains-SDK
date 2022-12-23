@@ -22,6 +22,7 @@ import sparkz.core.network.peer.PenaltyType
 import sparkz.core.settings.NetworkSettings
 
 import java.net.InetSocketAddress
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
@@ -60,7 +61,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
   private def getParams(publicKeysNumber: Int): NetworkParams = {
     val publicKeys = (0 until publicKeysNumber).map {
-      idx => SchnorrKeyGenerator.getInstance().generateSecret(s"seed$idx".getBytes()).publicImage()
+      idx => SchnorrKeyGenerator.getInstance().generateSecret(s"seed$idx".getBytes(StandardCharsets.UTF_8)).publicImage()
     }
     RegTestParams(signersPublicKeys = publicKeys)
   }
@@ -131,7 +132,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
     // Test3: getCertificateSignaturesSpec when inside the submission window and has known signatures
     val keyGenerator = SchnorrKeyGenerator.getInstance()
-    val secret = keyGenerator.generateSecret("seed1".getBytes())
+    val secret = keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
 
     val knownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer(invData.indexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
     statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs))
@@ -186,7 +187,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val pubKeyIndex: Int = 3
     val messageToSign = FieldElementFixture.generateFieldElement()
     val keyGenerator = SchnorrKeyGenerator.getInstance()
-    val secret = keyGenerator.generateSecret("seed1".getBytes())
+    val secret = keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
     val signature = secret.sign(messageToSign)
     val info: CertificateSignatureFromRemoteInfo = CertificateSignatureFromRemoteInfo(pubKeyIndex, messageToSign, signature)
 
@@ -241,7 +242,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val peer: ConnectedPeer = mock[ConnectedPeer]
     val messageToSign: Array[Byte] = FieldElementFixture.generateFieldElement()
     val keyGenerator = SchnorrKeyGenerator.getInstance()
-    val secret = keyGenerator.generateSecret("seed1".getBytes())
+    val secret = keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
     val signaturesInfo = (0 until pubKeysNumber).map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign)))
     val knownSignatures = KnownSignatures(messageToSign, signaturesInfo)
 
@@ -377,7 +378,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val referencedEpoch: Int = 10
     val messageToSign: Array[Byte]= FieldElementFixture.generateFieldElement()
     val keyGenerator = SchnorrKeyGenerator.getInstance()
-    val secret = keyGenerator.generateSecret("seed1".getBytes())
+    val secret = keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
     var knownIndexes = Seq(0, 2, 4)
     var knownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer(knownIndexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
 

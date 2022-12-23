@@ -10,13 +10,15 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.SparkzEncoder
 
+import java.nio.charset.StandardCharsets
+
 class ZenBoxScalaTest
   extends JUnitSuite with BoxFixture
 {
 
   @Test
   def testToJson(): Unit = {
-    val seed = "12345".getBytes
+    val seed = "12345".getBytes(StandardCharsets.UTF_8)
     val keyPair = Ed25519.createKeyPair(seed)
     val privateKey = keyPair.getKey
     val publicKey = keyPair.getValue
