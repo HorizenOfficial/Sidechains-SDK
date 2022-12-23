@@ -94,13 +94,13 @@ public class Message {
                 "Message{from=%s, to=%s, gasPrice=%s, gasFeeCap=%s, gasTipCap=%s, gasLimit=%s, value=%s, nonce=%s, data=%s, fakeMsg=%s}",
                 getFrom().isEmpty() ? "" : BytesUtils.toHexString(getFrom().get().address()),
                 getTo().isEmpty() ? "" : BytesUtils.toHexString(getTo().get().address()),
-                Numeric.toHexStringWithPrefix(getGasPrice() != null ? getGasPrice() : BigInteger.ZERO),
-                Numeric.toHexStringWithPrefix(getGasFeeCap() != null ? getGasFeeCap() : BigInteger.ZERO),
-                Numeric.toHexStringWithPrefix(getGasTipCap() != null ? getGasTipCap() : BigInteger.ZERO),
-                Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
-                Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
-                Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
-                getData() != null ? BytesUtils.toHexString(getData()) : "",
+                getGasPrice() != null ?  Numeric.toHexStringWithPrefix(getGasPrice()) : "null",
+                getGasFeeCap() != null ? Numeric.toHexStringWithPrefix(getGasFeeCap()) : "null",
+                getGasTipCap() != null ? Numeric.toHexStringWithPrefix(getGasTipCap()) : "null",
+                getGasLimit() != null ? Numeric.toHexStringWithPrefix(getGasLimit()) : "null",
+                getValue() != null ? Numeric.toHexStringWithPrefix(getValue()) : "null",
+                getNonce() != null ? Numeric.toHexStringWithPrefix(getNonce()) : "null",
+                getData() != null ? BytesUtils.toHexString(getData()) : "null",
                 getIsFakeMsg() ? "YES" : "NO");
     }
 }
