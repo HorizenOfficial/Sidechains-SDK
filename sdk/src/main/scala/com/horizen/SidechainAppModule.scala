@@ -9,6 +9,7 @@ import com.horizen.api.http.ApplicationApiGroup
 import com.horizen.box.BoxSerializer
 import com.horizen.fork.ForkConfigurator
 import com.horizen.helper.{NodeViewHelper, NodeViewHelperImpl, SecretSubmitHelper, SecretSubmitHelperImpl, TransactionSubmitHelper, TransactionSubmitHelperImpl}
+import com.horizen.sc2sc.Sc2ScConfigurator
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage.Storage
@@ -58,7 +59,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
-          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator
+          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
+          @Named("Sc2ScConfiguration") sc2ScConfigurator: Sc2ScConfigurator
   ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -83,7 +85,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           customApiGroups,
           rejectedApiPaths,
           applicationStopper,
-          forkConfigurator
+          forkConfigurator,
+          sc2ScConfigurator
         )
       }
     }
