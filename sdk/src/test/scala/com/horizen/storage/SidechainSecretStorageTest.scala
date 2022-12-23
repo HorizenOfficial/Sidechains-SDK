@@ -21,6 +21,7 @@ import scala.collection.mutable.ListBuffer
 import org.mockito._
 import sparkz.crypto.hash.Blake2b256
 
+import java.nio.charset.StandardCharsets
 import scala.util.Try
 
 class SidechainSecretStorageTest
@@ -89,7 +90,7 @@ class SidechainSecretStorageTest
 
 
     // Test 4: try get non-existing item
-    val nonExistingSecret = getPrivateKey25519("test non-existing".getBytes())
+    val nonExistingSecret = getPrivateKey25519("test non-existing".getBytes(StandardCharsets.UTF_8))
     assertEquals("Storage should NOT contain requested Secrets.", None, secretStorage.get(nonExistingSecret.publicImage()))
 
 
@@ -105,7 +106,7 @@ class SidechainSecretStorageTest
     var tryRes: Try[SidechainSecretStorage] = null
     val expectedException = new IllegalArgumentException("on add exception")
 
-    val newSecret = getPrivateKey25519("new secret".getBytes())
+    val newSecret = getPrivateKey25519("new secret".getBytes(StandardCharsets.UTF_8))
     val key = new ByteArrayWrapper(Blake2b256.hash(newSecret.publicImage().bytes))
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(newSecret))
 
@@ -136,7 +137,7 @@ class SidechainSecretStorageTest
 
 
     // Test 2: test failed add(...), when Storage throws an exception
-    val newSecret2 = getPrivateKey25519("new secret2".getBytes())
+    val newSecret2 = getPrivateKey25519("new secret2".getBytes(StandardCharsets.UTF_8))
     tryRes = secretStorage.add(newSecret2)
     assertTrue("SecretStorage failure expected during add.", tryRes.isFailure)
     assertEquals("SecretStorage different exception expected during add.", expectedException, tryRes.failed.get)
@@ -196,7 +197,7 @@ class SidechainSecretStorageTest
 
 
     // Test 3: test successful remove(...), when try to remove non-existing Secret
-    val newSecret = getPrivateKey25519("new secret".getBytes())
+    val newSecret = getPrivateKey25519("new secret".getBytes(StandardCharsets.UTF_8))
     tryRes = secretStorage.remove(newSecret.publicImage())
 
     assertTrue("SecretStorage successful removing expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),

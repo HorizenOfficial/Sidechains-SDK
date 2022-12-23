@@ -38,6 +38,7 @@ import sparkz.core.{NodeViewHolder, bytesToId}
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
@@ -250,7 +251,7 @@ class EthService(
   def sign(sender: Address, message: String): String = {
     val data = Numeric.hexStringToByteArray(message)
     val prefix = s"\u0019Ethereum Signed Message:\n${data.length}"
-    val messageToSign = prefix.getBytes() ++ data
+    val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ data
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
         .map(secret => secret.sign(messageToSign))

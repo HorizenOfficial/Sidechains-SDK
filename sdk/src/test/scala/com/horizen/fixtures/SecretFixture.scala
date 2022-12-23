@@ -11,6 +11,7 @@ import com.horizen.proof.Signature25519
 import com.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
 import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util
 import scala.util.Random
 
@@ -18,15 +19,14 @@ trait SecretFixture {
   val pkc: PrivateKey25519Creator = PrivateKey25519Creator.getInstance()
   val schnorr: SchnorrKeyGenerator = SchnorrKeyGenerator.getInstance()
 
-  val pk1: PrivateKey25519 = pkc.generateSecret("seed1".getBytes())
-  val pk2: PrivateKey25519 = pkc.generateSecret("seed2".getBytes())
-  val pk3: PrivateKey25519 = pkc.generateSecret("seed3".getBytes())
-  val pk4: PrivateKey25519 = pkc.generateSecret("seed4".getBytes())
-  val pk5: PrivateKey25519 = pkc.generateSecret("seed5".getBytes())
-  val pk6: PrivateKey25519 = pkc.generateSecret("seed6".getBytes())
-
-  val pk7: PrivateKey25519 = pkc.generateSecret("seed7".getBytes())
-  val schnorrPk: SchnorrSecret = schnorr.generateSecret("seed8".getBytes())
+  val pk1: PrivateKey25519 = pkc.generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
+  val pk2: PrivateKey25519 = pkc.generateSecret("seed2".getBytes(StandardCharsets.UTF_8))
+  val pk3: PrivateKey25519 = pkc.generateSecret("seed3".getBytes(StandardCharsets.UTF_8))
+  val pk4: PrivateKey25519 = pkc.generateSecret("seed4".getBytes(StandardCharsets.UTF_8))
+  val pk5: PrivateKey25519 = pkc.generateSecret("seed5".getBytes(StandardCharsets.UTF_8))
+  val pk6: PrivateKey25519 = pkc.generateSecret("seed6".getBytes(StandardCharsets.UTF_8))
+  val pk7: PrivateKey25519 = pkc.generateSecret("seed7".getBytes(StandardCharsets.UTF_8))
+  val schnorrPk: SchnorrSecret = schnorr.generateSecret("seed8".getBytes(StandardCharsets.UTF_8))
 
   def getPrivateKey25519: PrivateKey25519 = {
     val seed = new Array[Byte](32)
@@ -54,7 +54,7 @@ trait SecretFixture {
 
   def getRandomSignature25519: Signature25519 = {
     val pk = getPrivateKey25519
-    val message = "12345".getBytes
+    val message = "12345".getBytes(StandardCharsets.UTF_8)
     pk.sign(message)
   }
 
@@ -107,11 +107,11 @@ trait SecretFixture {
   }
 
   def getVRFPublicKey: VrfPublicKey = {
-    VrfKeyGenerator.getInstance().generateSecret(Random.nextString(32).getBytes).publicImage()
+    VrfKeyGenerator.getInstance().generateSecret(Random.nextString(32).getBytes(StandardCharsets.UTF_8)).publicImage()
   }
 
   def getVRFPublicKey(seed: Long): VrfPublicKey = {
-    VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes).publicImage()
+    VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes(StandardCharsets.UTF_8)).publicImage()
   }
 
   def getPrivateKeySecp256k1(seed: Long): PrivateKeySecp256k1 = {

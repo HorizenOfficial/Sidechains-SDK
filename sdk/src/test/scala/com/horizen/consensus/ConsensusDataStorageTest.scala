@@ -7,6 +7,7 @@ import org.junit.{Before, Test}
 import sparkz.util._
 import org.junit.Assert._
 
+import java.nio.charset.StandardCharsets
 import scala.util.Random
 
 
@@ -34,9 +35,9 @@ class ConsensusDataStorageTest {
     val storage = new ConsensusDataStorage(new InMemoryStorageAdapter())
 
     val stakeData: Map[ConsensusEpochId, StakeConsensusEpochInfo] = (1 to 100).map{ _ =>
-      val id = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes)))
+      val id = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))))
       val stakeInfo =
-        StakeConsensusEpochInfo(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes).take(merkleTreeHashLen), rnd.nextLong())
+        StakeConsensusEpochInfo(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8)).take(merkleTreeHashLen), rnd.nextLong())
       (id, stakeInfo)
     }.toMap
 
@@ -44,12 +45,12 @@ class ConsensusDataStorageTest {
 
     assertTrue(stakeData.forall{case (id, stake) => storage.getStakeConsensusEpochInfo(id).get == stake})
     assertTrue(stakeData.forall{case (id, _) =>
-      val nonExistingId = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(id.getBytes())))
+      val nonExistingId = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(id.getBytes(StandardCharsets.UTF_8))))
       storage.getStakeConsensusEpochInfo(nonExistingId).isEmpty
     })
 
     val nonceData: Map[ConsensusEpochId, NonceConsensusEpochInfo] = (1 to 100).map{ _ =>
-      val id = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes)))
+      val id = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))))
       val nonceBytes:Array[Byte] = new Array[Byte](ForkManager.getSidechainConsensusEpochFork(epochNumber).nonceLength)
       rnd.nextBytes(nonceBytes)
       val nonceInfo =
@@ -61,7 +62,7 @@ class ConsensusDataStorageTest {
 
     assertTrue(nonceData.forall{case (id, nonce) => storage.getNonceConsensusEpochInfo(id).get == nonce})
     assertTrue(nonceData.forall{case (id, _) =>
-      val nonExistingId = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(id.getBytes())))
+      val nonExistingId = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(id.getBytes(StandardCharsets.UTF_8))))
       storage.getNonceConsensusEpochInfo(nonExistingId).isEmpty
     })
   }

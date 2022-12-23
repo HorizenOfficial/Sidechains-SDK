@@ -15,7 +15,7 @@ import sparkz.util.ModifierId
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{idToVersion, versionToId}
-
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -167,7 +167,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     val restoredData = for {
       history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
       state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, applicationState)
-      wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
+      wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), walletBoxStorage, secretStorage,
         walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, params, applicationWallet)
       pool <- Some(SidechainMemoryPool.createEmptyMempool(sidechainSettings.mempool))
     } yield (history, state, wallet, pool)
@@ -194,7 +194,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
       withdrawalEpochNumber: Int <- Success(state.getWithdrawalEpochInfo.epoch)
 
-      wallet <- SidechainWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
+      wallet <- SidechainWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), walletBoxStorage, secretStorage,
         walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, applicationWallet,
         genesisBlock, withdrawalEpochNumber, consensusEpochInfo)
 

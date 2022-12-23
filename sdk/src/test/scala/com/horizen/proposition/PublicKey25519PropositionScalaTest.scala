@@ -11,13 +11,15 @@ import sparkz.util.SparkzEncoder
 
 import scala.collection.JavaConverters._
 
+import java.nio.charset.StandardCharsets
+
 class PublicKey25519PropositionScalaTest
   extends JUnitSuite
 {
 
   @Test
   def testToJson(): Unit = {
-    val seed = "12345".getBytes
+    val seed = "12345".getBytes(StandardCharsets.UTF_8)
     val keyPair = Ed25519.createKeyPair(seed)
     val privateKey = keyPair.getKey
     val publicKey = keyPair.getValue
@@ -40,8 +42,8 @@ class PublicKey25519PropositionScalaTest
 
   @Test
   def testProvable(): Unit = {
-    val privateKey1 = PrivateKey25519Creator.getInstance().generateSecret("seed1".getBytes)
-    val privateKey2 = PrivateKey25519Creator.getInstance().generateSecret("seed2".getBytes)
+    val privateKey1 = PrivateKey25519Creator.getInstance().generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
+    val privateKey2 = PrivateKey25519Creator.getInstance().generateSecret("seed2".getBytes(StandardCharsets.UTF_8))
     val publicKey1 = privateKey1.publicImage();
 
     var provableCheckResult = publicKey1.canBeProvedBy( List[Secret](privateKey1, privateKey2).asJava);
@@ -50,7 +52,7 @@ class PublicKey25519PropositionScalaTest
     assertEquals(provableCheckResult.secretsNeeded().get(0), privateKey1)
 
     //negative test
-    val privateKey3 = PrivateKey25519Creator.getInstance().generateSecret("seed3".getBytes)
+    val privateKey3 = PrivateKey25519Creator.getInstance().generateSecret("seed3".getBytes(StandardCharsets.UTF_8))
     val publicKey3 = privateKey3.publicImage();
     provableCheckResult = publicKey3.canBeProvedBy( List[Secret](privateKey1, privateKey2).asJava);
     assertFalse(provableCheckResult.canBeProved)

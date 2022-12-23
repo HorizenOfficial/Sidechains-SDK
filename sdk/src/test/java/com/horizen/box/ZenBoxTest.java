@@ -7,6 +7,7 @@ import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
@@ -19,7 +20,7 @@ public class ZenBoxTest extends BoxFixtureClass
 
     @Before
     public void setUp() {
-        byte[] anotherSeed = "testseed".getBytes();
+        byte[] anotherSeed = "testseed".getBytes(StandardCharsets.UTF_8);
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
         proposition = new PublicKey25519Proposition(keyPair.getValue());
 
@@ -46,7 +47,7 @@ public class ZenBoxTest extends BoxFixtureClass
         assertTrue("Boxes ids expected to be equal", Arrays.equals(box1.id(), box2.id()));
 
 
-        byte[] anotherSeed = "another test seed".getBytes();
+        byte[] anotherSeed = "another test seed".getBytes(StandardCharsets.UTF_8);
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
         PublicKey25519Proposition anotherProposition = new PublicKey25519Proposition(keyPair.getValue());
 

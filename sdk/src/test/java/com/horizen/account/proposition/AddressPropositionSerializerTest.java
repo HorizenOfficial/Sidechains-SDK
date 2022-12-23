@@ -6,7 +6,7 @@ import com.horizen.proposition.PropositionSerializer;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
-
+import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.assertTrue;
 
 public class AddressPropositionSerializerTest {
@@ -14,7 +14,7 @@ public class AddressPropositionSerializerTest {
 
     @Before
     public void BeforeEachTest() {
-        PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("addressproptest".getBytes());
+        PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("addressproptest".getBytes(StandardCharsets.UTF_8));
         addressProposition = privateKey.publicImage();
     }
 
@@ -30,7 +30,7 @@ public class AddressPropositionSerializerTest {
                 addressProposition.equals(t.get()));
 
         // Test 2: try to parse broken bytes
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
     }
 }

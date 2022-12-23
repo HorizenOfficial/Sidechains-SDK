@@ -19,6 +19,7 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util
 import java.util.Optional
 import scala.collection.JavaConverters._
@@ -29,7 +30,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
   with SecretFixture {
 
   val ownerSecret: PrivateKeySecp256k1 = getPrivateKeySecp256k1(2222222)
-  val signerSecret: secret.PrivateKey25519 = getPrivateKey25519("signer".getBytes())
+  val signerSecret: secret.PrivateKey25519 = getPrivateKey25519("signer".getBytes(StandardCharsets.UTF_8))
   val ownerAddress: Address = ownerSecret.publicImage().address()
   val blockSignerPropositionString = "1122334455669988112233445566778811223344556677881122334455667788"
   val vrfPublicKeyString = "aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"

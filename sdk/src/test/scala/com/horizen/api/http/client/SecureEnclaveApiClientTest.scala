@@ -19,6 +19,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -131,7 +132,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
         ))
 
       val result = Await.result(
-        apiClient.signWithEnclave("test".getBytes, (publicKey, index)), 1.second
+        apiClient.signWithEnclave("test".getBytes(StandardCharsets.UTF_8), (publicKey, index)), 1.second
       )
 
       result shouldBe empty
@@ -140,7 +141,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
     "return signature info with memorized index" in {
       val (apiClient, serverMock) = prepareApiClient()
-      val message = "test".getBytes
+      val message = "test".getBytes(StandardCharsets.UTF_8)
       val privateKey = generateKey()
       val publicKey = privateKey.publicImage()
       val index = 1
@@ -165,7 +166,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
     "process several requests with errors between them signWithEnclave" in {
       val (apiClient, serverMock) = prepareApiClient()
-      val message = "test".getBytes
+      val message = "test".getBytes(StandardCharsets.UTF_8)
       val privateKey = generateKey()
       val publicKey = privateKey.publicImage()
       val response = mapper
