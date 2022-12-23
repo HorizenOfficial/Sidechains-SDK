@@ -95,14 +95,6 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case m: GetDataFromCurrentSidechainNodeView[
-          AccountTransaction[Proposition, Proof[Proposition]],
-          AccountBlockHeader,
-          AccountBlock,
-          AccountFeePaymentsInfo,
-          NodeAccountHistory,
-          NodeAccountState,
-          NodeWalletBase,
-          NodeAccountMemoryPool,
           AccountNodeView,
           _] @unchecked =>
           m match {
@@ -112,14 +104,6 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
               }
           }
         case m: ApplyFunctionOnNodeView[
-          AccountTransaction[Proposition, Proof[Proposition]],
-          AccountBlockHeader,
-          AccountBlock,
-          AccountFeePaymentsInfo,
-          NodeAccountHistory,
-          NodeAccountState,
-          NodeWalletBase,
-          NodeAccountMemoryPool,
           AccountNodeView,
           _] @unchecked =>
           m match {
@@ -128,14 +112,6 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
                 sender ! f(utilMocks.getAccountNodeView(sidechainApiMockConfiguration))
           }
         case m: ApplyBiFunctionOnNodeView[
-          AccountTransaction[Proposition, Proof[Proposition]],
-          AccountBlockHeader,
-          AccountBlock,
-          AccountFeePaymentsInfo,
-          NodeAccountHistory,
-          NodeAccountState,
-          NodeWalletBase,
-          NodeAccountMemoryPool,
           AccountNodeView,
           _,
           _] @unchecked =>

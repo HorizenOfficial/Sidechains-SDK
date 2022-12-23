@@ -137,14 +137,6 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case m: GetDataFromCurrentSidechainNodeView[
-          BoxTransaction[Proposition, Box[Proposition]],
-          SidechainBlockHeader,
-          SidechainBlock,
-          SidechainFeePaymentsInfo,
-          NodeHistory,
-          NodeState,
-          NodeWallet,
-          NodeMemoryPool,
           SidechainNodeView,
           _] @unchecked=>
           m match {
@@ -154,14 +146,6 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
               }
           }
         case m: ApplyFunctionOnNodeView[
-          BoxTransaction[Proposition, Box[Proposition]],
-          SidechainBlockHeader,
-          SidechainBlock,
-          SidechainFeePaymentsInfo,
-          NodeHistory,
-          NodeState,
-          NodeWallet,
-          NodeMemoryPool,
           SidechainNodeView,
           _] @unchecked =>
           m match {
@@ -170,14 +154,6 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
                 sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
           }
         case m: ApplyBiFunctionOnNodeView[
-          BoxTransaction[Proposition, Box[Proposition]],
-          SidechainBlockHeader,
-          SidechainBlock,
-          SidechainFeePaymentsInfo,
-          NodeHistory,
-          NodeState,
-          NodeWallet,
-          NodeMemoryPool,
           SidechainNodeView,
           _,
           _] @unchecked =>
