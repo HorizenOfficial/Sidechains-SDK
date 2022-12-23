@@ -69,3 +69,4 @@ public class EthereumTransactionView {
         accessList = null;
     }
 }
+
