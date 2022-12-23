@@ -3,7 +3,7 @@ package com.horizen.evm.interop;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class TraceParams {
+public class TraceOptions {
     private final boolean enableMemory;
     private final boolean disableStack;
     private final boolean disableStorage;
@@ -12,7 +12,7 @@ public class TraceParams {
     private final String timeout;
     private final TracerConfig tracerConfig;
 
-    public TraceParams() {
+    public TraceOptions() {
         enableMemory = false;
         disableStack = false;
         disableStorage = false;
