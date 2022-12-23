@@ -31,10 +31,12 @@ import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
+
+import com.horizen.sc2sc.Sc2ScConfigurator
+
 import scala.collection.JavaConverters._
 
 class SidechainApp @Inject()
@@ -56,9 +58,10 @@ class SidechainApp @Inject()
    @Named("ConsensusStorage") consensusStorage: Storage,
    @Named("BackupStorage") backUpStorage: Storage,
    @Named("CustomApiGroups") override val customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
-   @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
-   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator
+   @Named("RejectedApiPaths") override val rejectedApiPaths : JList[Pair[String, String]],
+   @Named("ApplicationStopper") override val applicationStopper : SidechainAppStopper,
+   @Named("ForkConfiguration") override val forkConfigurator : ForkConfigurator,
+   @Named("Sc2ScConfiguration") override val sc2scConfigurator : Sc2ScConfigurator
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -67,6 +70,7 @@ class SidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
+    sc2scConfigurator,
     //ChainInfo is used in Account model and it has no sense for UTXO but it still requested by AbstractSidechainApp.
     //TODO In the future we may think about how to make Params to have model specific part.
     ChainInfo(
