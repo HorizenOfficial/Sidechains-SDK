@@ -15,7 +15,6 @@ def withdrawcoins(sidechain_node, destMCAddress, amount_in_zennies, nonce=None, 
             "gasLimit": gas_limit,
             "maxFeePerGas": max_fee_per_gas,
             "maxPriorityFeePerGas": max_priority_fee_per_gas
-
         }
     }
     request = json.dumps(j)
@@ -28,6 +27,3 @@ def withdrawcoins(sidechain_node, destMCAddress, amount_in_zennies, nonce=None, 
         return response
 
     raise RuntimeError("Something went wrong, see {}".format(str(response)))
-
-
-    return response

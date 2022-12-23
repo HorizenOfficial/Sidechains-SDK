@@ -21,7 +21,7 @@ import java.util.List;
  */
 @JsonView(Views.Default.class)
 public class CustomMultiKeyProposition implements ProofOfKnowledgeProposition<PrivateKey25519> {
-    public static final int SINGLE_PUBLIC_KEY_LENGTH = Ed25519.publicKeyLength();;
+    public static final int SINGLE_PUBLIC_KEY_LENGTH = Ed25519.publicKeyLength();
 
     @JsonProperty("publicKeyA")
     private byte[] pubKeyABytes;
@@ -92,9 +92,9 @@ public class CustomMultiKeyProposition implements ProofOfKnowledgeProposition<Pr
             }
         }
         if (validKeys.size()>0){
-            return new ProvableCheckResultImpl(true, validKeys);
+            return new ProvableCheckResultImpl<>(true, validKeys);
         }else{
-            return new ProvableCheckResultImpl(false);
+            return new ProvableCheckResultImpl<>(false);
         }
     }
 

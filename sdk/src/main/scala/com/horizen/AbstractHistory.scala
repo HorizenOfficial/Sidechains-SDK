@@ -550,7 +550,7 @@ abstract class AbstractHistory[
     makeNewHistory(storage, consensusDataStorage)
   }
 
-  def findTransactionInsideBlock[A <: Transaction, T <: SidechainBlockHeaderBase](transactionId: String, block: SidechainBlockBase[A, T]): JOptional[A] = {
+  def findTransactionInsideBlock(transactionId: String, block: PM): JOptional[TX] = {
     block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
       case Some(tx) => JOptional.ofNullable(tx)
       case None => JOptional.empty()
@@ -578,8 +578,7 @@ object AbstractHistory {
       // First MC header Cumulative CommTree hash is provided by genesis info
       Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock[TX](block),
-      // TODO check this
-      WithdrawalEpochUtils.getWithdrawalEpochInfo[TX](block, WithdrawalEpochInfo(0,0), params),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
       None,
       block.id
     )

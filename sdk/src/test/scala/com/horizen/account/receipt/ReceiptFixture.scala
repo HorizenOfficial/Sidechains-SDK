@@ -1,6 +1,5 @@
 package com.horizen.account.receipt
 
-
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.BytesUtils
@@ -9,7 +8,6 @@ import scorex.crypto.hash.Keccak256
 import java.math.BigInteger
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
-
 
 trait ReceiptFixture {
     def getRandomHash(): Array[Byte] = {
@@ -34,7 +32,8 @@ trait ReceiptFixture {
       new EvmLog(address, topics, data)
     }
 
-  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]] = None, address: Array[Byte] = Address.addressZero().toBytes): EthereumReceipt = {
+  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]] = None, address: Array[Byte] = Address.addressZero().toBytes,
+                                blockHash: String = "blockhash", blockNumber: Int = 22, transactionIndex: Int = 33): EthereumReceipt = {
     val txHashTemp: Array[Byte] = txHash.getOrElse(getRandomHash())
 
     val logs = new ListBuffer[EvmLog]
@@ -42,16 +41,20 @@ trait ReceiptFixture {
       logs += createTestEvmLog(Some(address))
 
     val contractAddress = if (contractAddressPresence) {
-      BytesUtils.fromHexString("1122334455667788990011223344556677889900")
+      Option(BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
     } else {
-      new Array[Byte](0)
+      None
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs)
-    val receipt = EthereumReceipt(consensusDataReceipt,
-      txHashTemp, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
+    val receipt = EthereumReceipt(
+      consensusDataReceipt,
+      txHashTemp,
+      transactionIndex,
+      Keccak256.hash(blockHash.getBytes).asInstanceOf[Array[Byte]],
+      blockNumber,
       BigInteger.valueOf(1234567),
       contractAddress
-      )
+    )
     receipt
   }
 

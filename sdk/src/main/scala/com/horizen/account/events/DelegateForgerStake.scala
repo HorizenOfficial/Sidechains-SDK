@@ -20,9 +20,11 @@ object DelegateForgerStake {
             owner: AddressProposition,
             stakeId: Array[Byte],
             value: BigInteger): DelegateForgerStake = {
-    new DelegateForgerStake(new Address(BytesUtils.toHexString(fromAddress.address())),
+    new DelegateForgerStake(
+      new Address(BytesUtils.toHexString(fromAddress.address())),
       new Address(BytesUtils.toHexString(owner.address())),
       new Bytes32(stakeId),
-      new Uint256(value))
+      new Uint256(value)
+    )
   }
 }

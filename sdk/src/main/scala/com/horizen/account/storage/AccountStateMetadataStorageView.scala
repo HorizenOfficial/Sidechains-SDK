@@ -8,9 +8,10 @@ import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.storage.Storage
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import sparkz.core._
 import scorex.crypto.hash.Blake2b256
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import sparkz.core.{VersionTag, versionToBytes}
+
 import java.math.BigInteger
 import java.util.{ArrayList => JArrayList}
 import scala.collection.mutable.ListBuffer
@@ -34,6 +35,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var hasCeasedOpt: Option[Boolean] = None
   private[horizen] var withdrawalEpochInfoOpt: Option[WithdrawalEpochInfo] = None
   private[horizen] var topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = None
+  private[horizen] var lastCertificateReferencedEpochOpt: Option[Int] = None
+  private[horizen] var lastCertificateSidechainBlockIdOpt: Option[ModifierId] = None
   private[horizen] var blockFeeInfoOpt: Option[AccountBlockFeeInfo] = None
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
@@ -92,6 +95,42 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case Some(certificate) if certificate.epochNumber == referencedWithdrawalEpoch => topQualityCertificateOpt
       case _ => getTopQualityCertificateFromStorage(referencedWithdrawalEpoch)
     }
+  }
+
+  override def lastCertificateReferencedEpoch: Option[Int] = {
+    lastCertificateReferencedEpochOpt.orElse(lastCertificateReferencedEpochFromStorage)
+  }
+
+  private[horizen] def lastCertificateReferencedEpochFromStorage: Option[Int] = {
+    storage.get(getLastCertificateEpochNumberKey).asScala
+      .flatMap { baw =>
+        Try {
+          Ints.fromByteArray(baw.data)
+        } match {
+          case Success(epoch) => Some(epoch)
+          case Failure(exception) =>
+            log.error("Error while last certificate referenced epoch parsing.", exception)
+            Option.empty
+        }
+      }
+  }
+
+  override def lastCertificateSidechainBlockId: Option[ModifierId] = {
+    lastCertificateSidechainBlockIdOpt.orElse(lastCertificateSidechainBlockIdFromStorage)
+  }
+
+  private[horizen] def lastCertificateSidechainBlockIdFromStorage: Option[ModifierId] = {
+    storage.get(lastCertificateSidechainBlockIdKey).asScala
+      .flatMap { baw =>
+        Try {
+          bytesToId(baw.data())
+        } match {
+          case Success(blockId) => Some(blockId)
+          case Failure(exception) =>
+            log.error("Error while last certificate sidechain block id parsing.", exception)
+            Option.empty
+        }
+      }
   }
 
   private[horizen] def getTopQualityCertificateFromStorage(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
@@ -167,6 +206,13 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   def updateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate): Unit =
     topQualityCertificateOpt = Some(topQualityCertificate)
 
+  def updateLastCertificateReferencedEpoch(lastCertificateReferencedEpoch: Int): Unit =
+    lastCertificateReferencedEpochOpt = Some(lastCertificateReferencedEpoch)
+
+  def updateLastCertificateSidechainBlockIdOpt(blockId: ModifierId): Unit = {
+    lastCertificateSidechainBlockIdOpt = Some(blockId)
+  }
+
   def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit = {
     receiptsOpt = Some(receipts)
   }
@@ -216,6 +262,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     hasCeasedOpt = None
     withdrawalEpochInfoOpt = None
     topQualityCertificateOpt = None
+    lastCertificateReferencedEpochOpt = None
+    lastCertificateSidechainBlockIdOpt = None
     blockFeeInfoOpt = None
     consensusEpochOpt = None
     accountStateRootOpt = None
@@ -240,6 +288,16 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     topQualityCertificateOpt.foreach(certificate => {
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+    })
+
+    // Store the last certificate referenced epoch if present
+    lastCertificateReferencedEpochOpt.foreach(epoch => {
+      updateList.add(new JPair(getLastCertificateEpochNumberKey, Ints.toByteArray(epoch)))
+    })
+
+    // Store the last certificate containing sidechain block id
+    lastCertificateSidechainBlockIdOpt.foreach(blockId => {
+      updateList.add(new JPair(lastCertificateSidechainBlockIdKey, idToBytes(blockId)))
     })
 
     blockFeeInfoOpt.foreach(feeInfo => {
@@ -342,6 +400,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getReceiptKey(txHash : Array[Byte]): ByteArrayWrapper = {
     calculateKey(Bytes.concat("receipt".getBytes, txHash))
   }
+
+  private[horizen] val getLastCertificateEpochNumberKey: ByteArrayWrapper = calculateKey("lastCertificateEpochNumber".getBytes)
+
+  private [horizen] val lastCertificateSidechainBlockIdKey: ByteArrayWrapper = calculateKey("lastCertificateSidechainBlockId".getBytes)
 
 }
 

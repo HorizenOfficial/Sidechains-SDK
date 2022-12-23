@@ -10,11 +10,11 @@ import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Converter;
 import com.horizen.params.NetworkParams;
 import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 import java.util.Optional;
+
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
@@ -65,8 +65,7 @@ public class TransactionArgs {
         }
         var saneType = type == null ? 0 : type.intValueExact();
 
-        var toAddressString = to == null ? null : Converter.toHexString(to.toBytes());
-        var optionalToAddress = EthereumTransactionUtils.getToAddressFromString(toAddressString);
+        var optionalToAddress = Optional.ofNullable(to == null ? null : new AddressProposition(to.toBytes()));
         var dataBytes = EthereumTransactionUtils.getDataFromString(this.getDataString());
 
         switch (saneType) {
