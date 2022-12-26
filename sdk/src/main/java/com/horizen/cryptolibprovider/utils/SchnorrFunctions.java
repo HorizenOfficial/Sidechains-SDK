@@ -20,6 +20,8 @@ public interface SchnorrFunctions {
 
     byte[] getHash(byte[] publicKeyBytes);
 
+    byte[] getPublicKey(byte[] secretKeyBytes);
+
     int schnorrSecretKeyLength();
 
     int schnorrPublicKeyLength();

@@ -29,6 +29,11 @@ public class SchnorrSecretSerializer implements SecretSerializer<SchnorrSecret> 
         byte[] secretKey = reader.getBytes(SchnorrSecret.SECRET_KEY_LENGTH);
         byte[] publicKey = reader.getBytes(SchnorrSecret.PUBLIC_KEY_LENGTH);
 
-        return new SchnorrSecret(secretKey, publicKey);
+        SchnorrSecret schnorrSecret = new SchnorrSecret(secretKey, publicKey);
+
+        if(!schnorrSecret.isPublicKeyValid())
+            throw new IllegalArgumentException("The public key is not corresponds to the secret key.");
+
+        return schnorrSecret;
     }
 }

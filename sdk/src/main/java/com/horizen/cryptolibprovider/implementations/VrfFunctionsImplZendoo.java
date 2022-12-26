@@ -102,6 +102,19 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     }
 
     @Override
+    public byte[] getPublicKey(byte[] secretKeyBytes) {
+        VRFSecretKey secretKey = VRFSecretKey.deserialize(secretKeyBytes);
+        VRFPublicKey publicKey = secretKey.getPublicKey();
+
+        byte[] publicKeyBytes = publicKey.serializePublicKey();
+
+        secretKey.freeSecretKey();
+        publicKey.freePublicKey();
+
+        return publicKeyBytes;
+    }
+
+    @Override
     public int vrfSecretKeyLength() {
         return Constants.VRF_SK_LENGTH();
     }
