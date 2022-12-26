@@ -53,7 +53,7 @@ object FeeUtils {
       blockHeader.baseFee.add(baseFeeDiff.max(BigInteger.ONE))
     } else {
       // Otherwise if the parent block used less gas than its target, the baseFee should decrease
-      blockHeader.baseFee.subtract(baseFeeDiff).max(BigInteger.ONE)
+      blockHeader.baseFee.subtract(baseFeeDiff).max(BigInteger.ZERO)
     }
   }
 }
