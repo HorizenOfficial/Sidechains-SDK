@@ -33,11 +33,7 @@ public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
     }
 
     @Override
-    public VrfSecretKey generateNextSecret(NodeWalletBase wallet) {
-        List<Secret> prevSecrets = wallet.secretsOfType(VrfSecretKey.class);
-        byte[] nonce = Ints.toByteArray(prevSecrets.size());
-        byte[] seed = Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));
-
-        return generateSecret(seed);
+    public byte[] salt() {
+        return "VrfKey".getBytes();
     }
 }

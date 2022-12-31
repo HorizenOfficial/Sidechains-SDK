@@ -1,18 +1,12 @@
 package com.horizen.account.secret;
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
 import com.horizen.account.utils.Secp256k1;
-import com.horizen.node.NodeWalletBase;
-import com.horizen.secret.Secret;
 import com.horizen.secret.SecretCreator;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Keys;
-import scorex.crypto.hash.Keccak256;
 
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.List;
 
 public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKeySecp256k1>
 {
@@ -45,11 +39,7 @@ public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKe
     }
 
     @Override
-    public PrivateKeySecp256k1 generateNextSecret(NodeWalletBase wallet) {
-        List<Secret> prevSecrets = wallet.secretsOfType(PrivateKeySecp256k1.class);
-        byte[] nonce = Ints.toByteArray(prevSecrets.size());
-        byte[] seed = Keccak256.hash(Bytes.concat(wallet.walletSeed(), nonce));
-
-        return generateSecret(seed);
+    public byte[] salt() {
+        return "PrivateKeySecp25519k1".getBytes();
     }
 }

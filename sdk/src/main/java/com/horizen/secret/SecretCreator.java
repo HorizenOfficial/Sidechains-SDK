@@ -1,7 +1,5 @@
 package com.horizen.secret;
 
-import com.horizen.node.NodeWallet;
-import com.horizen.node.NodeWalletBase;
 
 public interface SecretCreator<S extends Secret>
 {
@@ -9,6 +7,5 @@ public interface SecretCreator<S extends Secret>
     // Mostly for tests.
     S generateSecret(byte[] seed);
 
-    // Generate secret taking in consideration context of previously generated secrets stored in wallet.
-    S generateNextSecret(NodeWalletBase wallet);
+    byte[] salt();
 }

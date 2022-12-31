@@ -5,6 +5,7 @@ import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.node._
 import com.horizen.params.NetworkParams
+import com.horizen.secret.{Secret, SecretCreator}
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, SDKModifiersCache}
@@ -14,6 +15,7 @@ import sparkz.core.{ModifiersCache, idToVersion}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.settings.SparkzSettings
+
 import scala.util.{Failure, Success, Try}
 
 abstract class AbstractSidechainNodeViewHolder[
@@ -90,6 +92,7 @@ abstract class AbstractSidechainNodeViewHolder[
       applyBiFunctionOnNodeView orElse
       getCurrentSidechainNodeViewInfo orElse
       processLocallyGeneratedSecret orElse
+      processGenerateSecret orElse
       processRemoteModifiers orElse
       applyModifier orElse
       processGetStorageVersions orElse
@@ -124,6 +127,17 @@ abstract class AbstractSidechainNodeViewHolder[
   protected def processLocallyGeneratedSecret: Receive = {
     case AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret) =>
       vault().addSecret(secret) match {
+        case Success(newVault) =>
+          updateNodeView(updatedVault = Some(newVault))
+          sender() ! Success(Unit)
+        case Failure(ex) =>
+          sender() ! Failure(ex)
+      }
+  }
+
+  protected def processGenerateSecret: Receive = {
+    case AbstractSidechainNodeViewHolder.ReceivableMessages.GenerateSecret(secretCreator) =>
+      vault().generateNextSecret(secretCreator) match {
         case Success(newVault) =>
           updateNodeView(updatedVault = Some(newVault))
           sender() ! Success(Unit)
@@ -403,6 +417,8 @@ object AbstractSidechainNodeViewHolder {
       A](f: NV => A)
 
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+    case class GenerateSecret[T <: Secret](secretCreator: SecretCreator[T])
+
 
     case class ApplyFunctionOnNodeView[TX <: Transaction,
       H <: SidechainBlockHeaderBase,
