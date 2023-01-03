@@ -1,5 +1,6 @@
 package com.horizen.account.api.rpc.types;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
@@ -20,10 +21,10 @@ public class EthereumReceiptView {
     public final String blockHash;
     public final String blockNumber;
     public final String from;
-    public final String to;
+    @JsonInclude public final String to;
+    @JsonInclude public final String contractAddress;
     public final String cumulativeGasUsed;
     public final String gasUsed;
-    public final String contractAddress;
     public final List<EthereumLogView> logs;
     public final String logsBloom;
     public final String status;
