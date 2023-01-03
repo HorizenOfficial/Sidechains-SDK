@@ -1,5 +1,6 @@
 package com.horizen.account.api.rpc.types;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
@@ -19,7 +20,7 @@ public class EthereumTransactionView {
     public final String transactionIndex;
     public final String type;
     public final String nonce;
-    public final String to;
+    @JsonInclude public final String to; // the to field will be included in the rpc response even if null
     public final String gas;
     public final String value;
     public final String input;
