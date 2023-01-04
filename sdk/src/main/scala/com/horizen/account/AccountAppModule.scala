@@ -32,10 +32,6 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
     bind(classOf[AccountNodeViewHelper])
       .to(classOf[AccountNodeViewHelperImpl])
 
-    //TODO this should be substituted by the implementation made in EVM-459 branch, when it will be released in dev_evm
-//    bind(classOf[TransactionSubmitHelper])
-//      .to(classOf[TransactionSubmitHelperImpl])
-
     bind(classOf[SecretSubmitHelper])
       .to(classOf[SecretSubmitHelperImpl])
 
