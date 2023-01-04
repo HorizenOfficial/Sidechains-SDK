@@ -49,11 +49,11 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   override def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[AccountBlock]] = {
-    ChainIdBlockSemanticValidator(params) +: super.semanticBlockValidators(params)
+    super.semanticBlockValidators(params) :+ ChainIdBlockSemanticValidator(params)
   }
 
   override def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountFeePaymentsInfo, AccountHistoryStorage, AccountHistory]] = {
-    BaseFeeBlockValidator() +: super.historyBlockValidators(params)
+    super.historyBlockValidators(params) :+ BaseFeeBlockValidator()
   }
 
   override def checkAndRecoverStorages(restoredData: Option[(AccountHistory, AccountState, AccountWallet, AccountMemoryPool)]): Option[(AccountHistory, AccountState, AccountWallet, AccountMemoryPool)] = {

@@ -2,7 +2,7 @@ package com.horizen.fixtures
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
-import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.util.{ModifierId, bytesToId}
@@ -102,7 +102,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture with Side
       allRefsMainchainHeaderBaseInfo,
       allRefsDataHeadersHashes,
       WithdrawalEpochUtils.getWithdrawalEpochInfo(
-        new SidechainBlock(header, null, allRefs.map(_.data), allRefs.map(_.header), null, null),
+        allRefs.map(_.data).size,
         parentSidechainBlockInfo.withdrawalEpochInfo,
         params),
       Option(VrfGenerator.generateVrfOutput(Random.nextLong())),

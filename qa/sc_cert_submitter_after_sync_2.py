@@ -3,7 +3,7 @@ import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
@@ -20,6 +20,14 @@ Configuration:
     SC nodes are certificate submitters.
     Every SC Node has enough keys to produce certificate signatures.
 
+Note:
+    This test can be executed in two modes:
+    1. using no key rotation circuit (by default)
+    2. using key rotation circuit (with --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation)
+    With key rotation circuit can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     - Generate many MC blocks and SC blocks to pass 10 withdrawal epochs. SC node 1 generates certificates for every epoch.
     - Connect SC node 2 to SC node 1 and start syncing
@@ -29,8 +37,9 @@ Test:
     - Check that certificate was generated. So Submitter and Signer are alive on SC node 2.
     - Sleep for 20 seconds and visually check that there is no continues errors/warnings after sync.
 """
-class ScCertSubmitterAfterSync2(SidechainTestFramework):
 
+
+class ScCertSubmitterAfterSync2(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
 
@@ -41,7 +50,8 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1',
+                                        '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -58,13 +68,20 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
             list([4, 5, 6])  # with 3 schnorr PKs
         )
 
-        network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
-            sc_node_1_configuration,
-            sc_node_2_configuration)
+        if self.options.certcircuittype == KEY_ROTATION_CIRCUIT:
+            sc_creation_version = SC_CREATION_VERSION_2  # non-ceasing could be only SC_CREATION_VERSION_2>=2
+        else:
+            sc_creation_version = SC_CREATION_VERSION_1
+
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length,
+                                                        sc_creation_version=sc_creation_version,
+                                                        is_non_ceasing=self.options.nonceasing,
+                                                        circuit_type=self.options.certcircuittype),
+                                         sc_node_1_configuration,
+                                         sc_node_2_configuration)
 
         # rewind sc genesis block timestamp for 10 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*10)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
@@ -88,12 +105,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         generate_next_block(sc_forger_node, "second node")  # 1 MC block to trigger Submitter logic
 
         # Wait for Certificates appearance
-        time.sleep(5)
-        logging.info("Waiting to start certificate generation.")
-        # The following line also checks Certificate Submitter Api during the node synchronization
-        while not sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
-            time.sleep(1)
-
+        time.sleep(10)
         while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
             logging.info("Wait for certificates in the MC mempool...")
             if sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:

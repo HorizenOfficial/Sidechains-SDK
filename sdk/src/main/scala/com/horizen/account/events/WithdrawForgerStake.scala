@@ -14,7 +14,9 @@ case class WithdrawForgerStake(@(Parameter@getter)(1) @(Indexed@getter) owner: A
 
 object WithdrawForgerStake {
   def apply(owner: AddressProposition, stakeId: Array[Byte]): WithdrawForgerStake = {
-    new WithdrawForgerStake(new Address(BytesUtils.toHexString(owner.address())),
-      new Bytes32(stakeId))
+    new WithdrawForgerStake(
+      new Address(BytesUtils.toHexString(owner.address())),
+      new Bytes32(stakeId)
+    )
   }
 }

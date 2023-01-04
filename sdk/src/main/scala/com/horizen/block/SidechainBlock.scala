@@ -22,7 +22,7 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo", "forgerPublicKey"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo", "forgerPublicKey", "topQualityCertificateOpt"))
 class SidechainBlock(override val header: SidechainBlockHeader,
                      override val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
                      override val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
@@ -31,6 +31,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
                      companion: SidechainTransactionsCompanion)
   extends SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader](header, sidechainTransactions,mainchainBlockReferencesData, mainchainHeaders, ommers)
 {
+  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
+
   override type M = SidechainBlock
 
   override lazy val serializer = new SidechainBlockSerializer(companion)
@@ -42,8 +44,6 @@ class SidechainBlock(override val header: SidechainBlockHeader,
   }
 
   lazy val feeInfo: BlockFeeInfo = BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
-
-  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   override def verifyTransactionsDataConsistency(): Unit = {

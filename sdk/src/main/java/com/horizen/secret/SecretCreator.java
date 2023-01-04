@@ -1,6 +1,5 @@
 package com.horizen.secret;
 
-import com.horizen.node.NodeWallet;
 import com.horizen.node.NodeWalletBase;
 
 public interface SecretCreator<S extends Secret>

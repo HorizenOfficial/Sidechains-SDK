@@ -1,24 +1,22 @@
 package com.horizen
 
-import com.horizen.block.SidechainBlock
 import com.horizen.backup.BoxIterator
+import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, ForgerBox, ZenBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.node.NodeWallet
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition._
+import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.utils._
 import com.horizen.wallet.ApplicationWallet
 import scorex.util.ModifierId
-import java.lang
-import java.util.{List => JList}
-import com.horizen.proposition._
-import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}
-import java.util.{ArrayList => JArrayList, Optional => JOptional}
-import java.util
+
+import java.lang
+import java.util.{ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -216,39 +214,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     walletBoxStorage.getBoxesBalance(boxType)
   }
 
-  override def secretByPublicKey25519Proposition(publicKey: PublicKey25519Proposition): JOptional[PrivateKey25519] = {
-    secretStorage.get(publicKey) match {
-      case Some(secret) => JOptional.of(secret.asInstanceOf[PrivateKey25519])
-      case None => JOptional.empty()
-    }
-  }
-
-  override def secretBySchnorrProposition(publicKey: SchnorrProposition): JOptional[SchnorrSecret] = {
-    secretStorage.get(publicKey) match {
-      case Some(secret) => JOptional.of(secret.asInstanceOf[SchnorrSecret])
-      case None => JOptional.empty()
-    }
-  }
-
-  override def secretByVrfPublicKey(publicKey: VrfPublicKey): JOptional[VrfSecretKey] = {
-    secretStorage.get(publicKey) match {
-      case Some(secret) => JOptional.of(secret.asInstanceOf[VrfSecretKey])
-      case None => JOptional.empty()
-    }
-  }
-
-  override def secretsByProposition[S <: SCS](proposition: ProofOfKnowledgeProposition[S]): JList[S] = {
-      proposition.canBeProvedBy(secretStorage.getAll.asJava).secretsNeeded()
-  }
-
-  override def secretByPublicKeyBytes[S <: SCS](proposition: Array[Byte]): JOptional[S] = {
-    secretStorage.getAll.find(secret => util.Arrays.equals(secret.publicImage().pubKeyBytes(), proposition)) match {
-      case Some(s) => JOptional.of(s.asInstanceOf[S])
-      case None => JOptional.empty()
-    }
-  }
-
-  override def allSecrets(): JList[Secret] = {
+   override def allSecrets(): JList[Secret] = {
     secretStorage.getAll.asJava
   }
 

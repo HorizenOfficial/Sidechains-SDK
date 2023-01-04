@@ -12,15 +12,16 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
-import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
+import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.util.ModifierId
 import com.horizen.fork.ForkManager
-import com.horizen.utils.TimeToEpochUtils
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet, SidechainTypes}
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
+
 import scala.collection.JavaConverters._
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block
 import sparkz.core.block.Block.BlockId
+
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -133,7 +134,14 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]): Iterable[SidechainTypes#SCBT] = {
+  override def collectTransactionsFromMemPool(
+       nodeView: View,
+       blockSizeIn: Int,
+       mainchainBlockReferenceData: Seq[MainchainBlockReferenceData],
+       withdrawalEpochInfo: WithdrawalEpochInfo,
+       timestamp: Long,
+       forcedTx: Iterable[SidechainTypes#SCBT]
+  ): Iterable[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
 
     var txsCounter: Int = 0
@@ -146,7 +154,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       else
         nodeView.pool.take(nodeView.pool.size)
     (mempoolTx
-      .filter(nodeView.state.validateWithFork(_, consensusEpochNumber).isSuccess)
+      .filter( tx => {nodeView.state.validateWithFork(tx, consensusEpochNumber).isSuccess &&
+        nodeView.state.validateWithWithdrawalEpoch(tx,
+          WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferenceData.size, withdrawalEpochInfo, params).epoch
+        ).isSuccess})
       ++ forcedTx)
       .filter(tx => {
         val txSize = tx.bytes.length + 4 // placeholder for Tx length

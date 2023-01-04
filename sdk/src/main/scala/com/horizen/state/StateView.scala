@@ -3,16 +3,19 @@ package com.horizen.state
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.account.state.{BlockContext, GasPool}
 import com.horizen.account.utils.AccountBlockFeeInfo
-import com.horizen.block.{MainchainBlockReferenceData,WithdrawalEpochCertificate}
+import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
 import com.horizen.utils.WithdrawalEpochInfo
+import scorex.util.ModifierId
 import sparkz.core.VersionTag
+
 import scala.util.Try
 
 trait StateView[TX <: Transaction] extends BaseStateReader {
   def applyMainchainBlockReferenceData(
-      refData: MainchainBlockReferenceData
+      refData: MainchainBlockReferenceData,
+      blockId: ModifierId
   ): Try[Unit]
 
   def applyTransaction(
@@ -23,7 +26,7 @@ trait StateView[TX <: Transaction] extends BaseStateReader {
       finalizeChanges: Boolean = true
   ): Try[EthereumConsensusDataReceipt]
 
-  def addCertificate(cert: WithdrawalEpochCertificate): Unit
+  def addCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit
   def addFeeInfo(info: AccountBlockFeeInfo): Unit
   def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit
   def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit

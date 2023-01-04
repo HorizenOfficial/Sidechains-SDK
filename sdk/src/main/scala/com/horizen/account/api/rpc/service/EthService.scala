@@ -12,7 +12,7 @@ import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.receipt.Bloom
+import com.horizen.account.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
@@ -415,7 +415,7 @@ class EthService(
     }
   }
 
-  private def getTransactionAndReceipt(transactionHash: Hash) = {
+  private def getTransactionAndReceipt(transactionHash: Hash): Option[(AccountBlock, EthereumTransaction, EthereumReceipt)] = {
     applyOnAccountView { nodeView =>
       using(nodeView.state.getView) { stateView =>
         stateView
@@ -557,7 +557,7 @@ class EthService(
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData, block.id).get
         }
 
         val gasPool = new GasPool(BigInteger.valueOf(block.header.gasLimit))
@@ -575,7 +575,7 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, traceOptions: TraceOptions): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: Hash, config: TraceOptions): DebugTraceTransactionView = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -589,7 +589,7 @@ class EthService(
       getStateViewAtTag(nodeView, (blockNumber - 1).toString) { (tagStateView, blockContext) =>
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData, block.id).get
         }
 
         val gasPool = new GasPool(BigInteger.valueOf(block.header.gasLimit))
@@ -603,7 +603,7 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceOptions == null) new TraceOptions() else traceOptions)
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
         // apply requested transaction with tracing enabled
         blockContext.setEvmResult(EvmResult.emptyEvmResult())

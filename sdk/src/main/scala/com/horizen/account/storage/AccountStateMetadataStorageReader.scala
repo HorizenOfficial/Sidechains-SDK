@@ -5,6 +5,7 @@ import com.horizen.account.utils.AccountBlockFeeInfo
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.utils.WithdrawalEpochInfo
+import scorex.util.ModifierId
 
 // expect this storage to be passed by the app during SidechainApp initialization
 trait AccountStateMetadataStorageReader {
@@ -14,6 +15,10 @@ trait AccountStateMetadataStorageReader {
   def getFeePayments(withdrawalEpochNumber: Int): Seq[AccountBlockFeeInfo]
 
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
+
+  def lastCertificateReferencedEpoch: Option[Int]
+
+  def lastCertificateSidechainBlockId: Option[ModifierId]
 
   def getConsensusEpochNumber: Option[ConsensusEpochNumber]
 

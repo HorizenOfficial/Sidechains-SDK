@@ -206,7 +206,7 @@ class SCCswDisabled(SidechainTestFramework):
         sc_block_id = sc_block["id"]
         check_mcreference_presence(mc_block_hash, sc_block_id, sc_node)
 
-        sc_certificate = sc_block["topQualityCertificateOpt"]
+        sc_certificate = sc_block["mainchainBlockReferencesData"][0]["topQualityCertificate"]
         assert_true(len(sc_certificate["fieldElementCertificateFields"]) == 0,
                     "Custom Field Elements list should be empty")
 
