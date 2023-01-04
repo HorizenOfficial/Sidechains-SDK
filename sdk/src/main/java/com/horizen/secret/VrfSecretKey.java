@@ -1,7 +1,7 @@
 package com.horizen.secret;
 
-import com.google.common.primitives.Ints;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import com.horizen.cryptolibprovider.VrfFunctions;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
@@ -89,4 +89,10 @@ public class VrfSecretKey implements Secret {
 
     @Override
     public Boolean isCustom() { return false; }
+
+    @Override
+    public String toString() {
+        // Show only the first 4 bytes to protect the key
+        return String.format("VrfSecretKey{secret=%s}", BytesUtils.toHexString(secretBytes).substring(0, 8));
+    }
 }

@@ -17,6 +17,7 @@ import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
 import scorex.util.ScorexLogging
 import sparkz.core.utils.SparkzEncoding
+
 import java.math.BigInteger
 import scala.util.Try
 
@@ -188,5 +189,4 @@ object AccountBlock extends SparkzEncoding {
     // 2. compute hash
     TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
   }
-
 }

@@ -1,10 +1,9 @@
 package com.horizen.account.state
 
 import com.horizen.account.state.InvalidMessageException.{toAddress, toHex}
+import com.horizen.account.utils.Secp256k1
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Keys
-import org.web3j.utils.Numeric
 
 import java.math.BigInteger
 
@@ -21,7 +20,7 @@ import java.math.BigInteger
 class InvalidMessageException(message: String) extends TransactionSemanticValidityException(message)
 
 private object InvalidMessageException {
-  def toAddress(address: Array[Byte]): String = Keys.toChecksumAddress(Numeric.toHexString(address))
+  def toAddress(address: Array[Byte]): String = Secp256k1.checksumAddress(address)
 
   def toHex(data: Array[Byte]): String = BytesUtils.toHexString(data)
 }

@@ -3,8 +3,9 @@ package com.horizen.account.api.rpc.types;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
-import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
+import com.horizen.utils.BytesUtils;
+import org.glassfish.grizzly.http.util.HexUtils;
 import org.web3j.utils.Numeric;
 import scala.collection.JavaConverters;
 
@@ -35,11 +36,12 @@ public class EthereumReceiptView {
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
-        from = (tx.getFrom() != null) ? Numeric.toHexString(tx.getFrom().address()) : null;
-        to = (tx.getTo().isPresent()) ? Numeric.toHexString(tx.getTo().get().address()) : null;
+        from = tx.getFromAddressString();
+        to = tx.getToAddressString();
         cumulativeGasUsed = Numeric.encodeQuantity(receipt.consensusDataReceipt().cumulativeGasUsed());
         gasUsed = Numeric.encodeQuantity(receipt.gasUsed());
-        contractAddress = receipt.contractAddress().length != Account.ADDRESS_SIZE ? null : Numeric.toHexString(receipt.contractAddress());
+        contractAddress = receipt.contractAddress().isDefined() ?
+                "0x" + BytesUtils.toHexString(receipt.contractAddress().get()) : null;
         var consensusLogs = JavaConverters.seqAsJavaList(receipt.consensusDataReceipt().logs());
         logs = new ArrayList<>(consensusLogs.size());
         for (var i = 0; i < consensusLogs.size(); i++) {

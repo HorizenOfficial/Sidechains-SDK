@@ -1,20 +1,16 @@
 package com.horizen.account.proof;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
-import org.apache.logging.log4j.LogManager;
-import org.web3j.crypto.Keys;
-import org.web3j.crypto.Sign;
-import org.web3j.utils.Numeric;
+import com.horizen.serialization.Views;
+import com.horizen.utils.BytesUtils;
 
-import java.security.SignatureException;
-import java.util.Objects;
-
+@JsonView(Views.Default.class)
 public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp256k1, AddressProposition> {
 
     @JsonProperty("v")
@@ -36,7 +32,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             throw new IllegalArgumentException("Null v/r/s obj passed in signature data");
         if  (!checkSignatureDataSizes(v, r, s)) {
             throw new IllegalArgumentException(String.format(
-                    "Incorrect signature data obj size: v=%d (expected 0<v<=%d); r/s==%d/%d (expected %d/%d)",
+                    "Incorrect signature length: v=%d (expected 0<v<=%d); r/s==%d/%d (expected %d/%d)",
                     v.length, Secp256k1.SIGNATURE_V_MAXSIZE,
                     r.length, s.length,
                     Secp256k1.SIGNATURE_RS_SIZE, Secp256k1.SIGNATURE_RS_SIZE
@@ -52,21 +48,9 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
         this.s = s;
     }
 
-    public SignatureSecp256k1(Sign.SignatureData signature) {
-        this(signature.getV(), signature.getR(), signature.getS());
-    }
-
     @Override
     public boolean isValid(AddressProposition proposition, byte[] message) {
-        try {
-            final var signature = new Sign.SignatureData(v, r, s);
-            // verify signature validity for the given message
-            final var signingAddress = Keys.getAddress(Sign.signedMessageToKey(message, signature));
-            // verify that the signature was created with the expected address
-            return Objects.equals(signingAddress, Numeric.toHexStringNoPrefix(proposition.address()));
-        } catch (SignatureException e) {
-            return false;
-        }
+        return Secp256k1.verify(message, this.v, this.r, this.s, proposition.address());
     }
 
     @Override
@@ -90,14 +74,9 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     public String toString() {
         return String.format(
                 "SignatureSecp256k1{v=%s, r=%s, s=%s}",
-                Numeric.toHexString(v),
-                Numeric.toHexString(r),
-                Numeric.toHexString(s)
+                BytesUtils.toHexString(v),
+                BytesUtils.toHexString(r),
+                BytesUtils.toHexString(s)
         );
-    }
-
-    @JsonIgnore
-    public Sign.SignatureData getSignatureData() {
-        return new Sign.SignatureData(v, r, s);
     }
 }

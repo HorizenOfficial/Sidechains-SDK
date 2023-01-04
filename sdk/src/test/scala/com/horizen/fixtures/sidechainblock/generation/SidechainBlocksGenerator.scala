@@ -8,6 +8,7 @@ import com.horizen.box.data.ForgerBoxData
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
 import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
@@ -530,6 +531,8 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val consensusSecondsInSlot: Int = params.consensusSecondsInSlot
       override val consensusSlotsInEpoch: Int = params.consensusSlotsInEpoch
       override val signersPublicKeys: Seq[SchnorrProposition] = params.signersPublicKeys
+      override val mastersPublicKeys: Seq[SchnorrProposition] = params.mastersPublicKeys
+      override val circuitType: CircuitTypes = params.circuitType
       override val signersThreshold: Int = params.signersThreshold
       override val certProvingKeyFilePath: String = params.certProvingKeyFilePath
       override val certVerificationKeyFilePath: String = params.certVerificationKeyFilePath
@@ -541,6 +544,8 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
       override val chainId: Long = 11111111
       override val isCSWEnabled: Boolean = params.isCSWEnabled
+      override val isNonCeasing: Boolean = params.isNonCeasing
+      override val minVirtualWithdrawalEpochLength: Int = 10
     }
   }
 

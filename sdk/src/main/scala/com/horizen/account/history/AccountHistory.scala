@@ -1,6 +1,5 @@
 package com.horizen.account.history
 
-import java.util.{Optional => JOptional}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
@@ -9,8 +8,9 @@ import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.util.{ModifierId, ScorexEncoding, ScorexLogging}
+import scorex.util.{ScorexEncoding, ScorexLogging}
 
+import java.util.{Optional => JOptional}
 import scala.util.Try
 
 

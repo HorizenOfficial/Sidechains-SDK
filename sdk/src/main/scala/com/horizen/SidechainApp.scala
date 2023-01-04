@@ -35,14 +35,15 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
+import scala.collection.JavaConverters._
 
 class SidechainApp @Inject()
-  (@Named("SidechainSettings") sidechainSettings: SidechainSettings,
+  (@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
    @Named("CustomBoxSerializers") customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
-   @Named("CustomSecretSerializers") customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+   @Named("CustomSecretSerializers") override val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    @Named("CustomTransactionSerializers") customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
-   @Named("ApplicationWallet") applicationWallet: ApplicationWallet,
-   @Named("ApplicationState") applicationState: ApplicationState,
+   @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
+   @Named("ApplicationState") val applicationState: ApplicationState,
    @Named("SecretStorage") secretStorage: Storage,
    @Named("WalletBoxStorage") walletBoxStorage: Storage,
    @Named("WalletTransactionStorage") walletTransactionStorage: Storage,
@@ -54,10 +55,10 @@ class SidechainApp @Inject()
    @Named("WalletCswDataStorage") walletCswDataStorage: Storage,
    @Named("ConsensusStorage") consensusStorage: Storage,
    @Named("BackupStorage") backUpStorage: Storage,
-   @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") rejectedApiPaths: JList[Pair[String, String]],
-   @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
-   @Named("ForkConfiguration") forkConfigurator: ForkConfigurator
+   @Named("CustomApiGroups") override val customApiGroups: JList[ApplicationApiGroup],
+   @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
+   @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
+   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -69,8 +70,8 @@ class SidechainApp @Inject()
     //ChainInfo is used in Account model and it has no sense for UTXO but it still requested by AbstractSidechainApp.
     //TODO In the future we may think about how to make Params to have model specific part.
     ChainInfo(
-      regtestId = 111, 
-      testnetId = 222, 
+      regtestId = 111,
+      testnetId = 222,
       mainnetId = 333)
     )
 {
@@ -81,7 +82,7 @@ class SidechainApp @Inject()
 
   log.info(s"Starting application with settings \n$sidechainSettings")
 
-  override protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  override protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, circuitType)
   protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
 
   // Deserialize genesis block bytes
@@ -129,7 +130,8 @@ class SidechainApp @Inject()
   protected val sidechainStateStorage = new SidechainStateStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/state")),
     registerClosableResource(stateStorage),
-    sidechainBoxesCompanion)
+    sidechainBoxesCompanion,
+    params)
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerClosableResource(forgerBoxStorage))
   protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerClosableResource(utxoMerkleTreeStorage), params)
 
@@ -190,7 +192,8 @@ class SidechainApp @Inject()
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, SidechainHistory]("SidechainBlock", sidechainSettings, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  // Depends on params.isNonCeasing submitter will choose a proper strategy.
+  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init CSW manager
@@ -208,11 +211,11 @@ class SidechainApp @Inject()
       SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
+    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
-    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
+    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params)
   )
 
   val nodeViewProvider: NodeViewProvider[
@@ -237,9 +240,9 @@ class SidechainApp @Inject()
     NodeMemoryPool,
     SidechainNodeView] = nodeViewProvider
 
-  val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
+  val transactionSubmitProvider : TransactionSubmitProvider[TX] = new TransactionSubmitProviderImpl[TX](sidechainTransactionActorRef)
 
-  def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
+  override def getTransactionSubmitProvider: TransactionSubmitProvider[TX] = transactionSubmitProvider
 
   private def getSidechainStateUtxoMerkleTreeProvider(utxoMerkleTreeStorage: Storage, params: NetworkParams) = {
     if (params.isCSWEnabled) {

@@ -11,13 +11,9 @@ public final class Utils
 {
     private Utils() {}
 
-    public static final byte[] ZEROS_HASH = new byte[32];
-
-    public static boolean isZerosHash(byte[] hash ) {
-        return java.util.Arrays.equals(hash, ZEROS_HASH);
-    }
-
     public static final int SHA256_LENGTH = 32;
+
+    public static final byte[] ZEROS_HASH = new byte[SHA256_LENGTH];
 
     public static byte[] doubleSHA256Hash(byte[] bytes) {
         try {
