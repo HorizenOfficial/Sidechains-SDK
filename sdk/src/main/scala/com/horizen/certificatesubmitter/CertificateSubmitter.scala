@@ -6,9 +6,7 @@ import com.horizen._
 import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.certificatesubmitter.dataproof.CertificateData
-import com.horizen.certificatesubmitter.keys.CertifiersKeys
 import com.horizen.certificatesubmitter.strategies._
-import com.horizen.certnative.BackwardTransfer
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes
@@ -19,7 +17,6 @@ import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
-import scala.reflect.ClassTag
 
 
 class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
@@ -36,9 +33,6 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
     SidechainBlock,
     T
   ](settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy) {
-  override type TX = SidechainTypes#SCBT
-  override type H = SidechainBlockHeader
-  override type PM = SidechainBlock
 
   override type FPI = SidechainFeePaymentsInfo
   override type HSTOR = SidechainHistoryStorage
@@ -47,7 +41,6 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
   override type MS = SidechainState
   override type MP = SidechainMemoryPool
 
-  override implicit val tag: ClassTag[PM] = ClassTag[PM](classOf[PM])
 
   override type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 }

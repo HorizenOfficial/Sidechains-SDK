@@ -12,12 +12,8 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.Cert
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies.{CertificateSubmissionStrategy, CircuitStrategy, SubmissionWindowStatus}
-import com.horizen.certnative.BackwardTransfer
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.fork.ForkManager
 import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeCertificateApi, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -63,9 +59,6 @@ abstract class AbstractCertificateSubmitter[
                         keyRotationStrategy: CircuitStrategy[TX, H, PM, T])
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
-  type TX <: Transaction
-  type H <: SidechainBlockHeaderBase
-  type PM <: SidechainBlockBase[TX, H]
 
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
@@ -75,8 +68,6 @@ abstract class AbstractCertificateSubmitter[
   type MP <: MemoryPool[TX, MP]
 
   type View = CurrentView[HIS, MS, VL, MP]
-
-  implicit val tag: ClassTag[PM]
 
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)

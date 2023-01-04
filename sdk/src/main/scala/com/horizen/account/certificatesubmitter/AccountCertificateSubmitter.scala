@@ -13,7 +13,6 @@ import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies._
-import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.mainchain.api.MainchainNodeCertificateApi
@@ -22,7 +21,6 @@ import com.horizen.websocket.client.MainchainNodeChannel
 
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
-import scala.reflect.ClassTag
 
 
 class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
@@ -39,9 +37,6 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
     AccountBlock,
     T
   ](settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy) {
-  override type TX = SidechainTypes#SCAT
-  override type H = AccountBlockHeader
-  override type PM = AccountBlock
 
   override type FPI = AccountFeePaymentsInfo
   override type HSTOR = AccountHistoryStorage
@@ -49,8 +44,6 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
   override type HIS = AccountHistory
   override type MS = AccountState
   override type MP = AccountMemoryPool
-
-  override implicit val tag: ClassTag[PM] = ClassTag[PM](classOf[PM])
 
 }
 
