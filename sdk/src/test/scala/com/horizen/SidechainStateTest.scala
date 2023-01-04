@@ -921,7 +921,7 @@ class SidechainStateTest
     secretList ++= getPrivateKey25519List(10).asScala
     // Set base Box data
     boxList.clear()
-    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    boxList ++= getZenBoxList(secretList.asJava, minValue = 10000).asScala.toList
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
@@ -1123,6 +1123,7 @@ class SidechainStateTest
     assertTrue("Block validation must be successful.",
       validateTry.isSuccess)
   }
+
   @Test
   def testCoinBoxFeeBeforeAndAfterFork(): Unit = {
     secretList.clear()
