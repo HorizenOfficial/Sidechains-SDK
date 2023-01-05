@@ -50,6 +50,11 @@ EVM_APP_SLOT_TIME = 12  # seconds
 
 DEFAULT_SIMPLE_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * SIMPLE_APP_SLOT_TIME * 5  # 5 epochs
 DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 5  # 5 epochs
+
+# Parallel Testing
+parallel_test = 0
+
+
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -62,12 +67,33 @@ class LogInfo(object):
         self.logConsoleLevel = logConsoleLevel
 
 
+def set_sc_parallel_test(n):
+    global parallel_test
+    parallel_test = n
+
+
+def start_port_modifier():
+    if parallel_test > 0:
+        # Adjust this multiplier if port clashing due to many nodes
+        return (parallel_test - 1) * 20
+
+
 def sc_p2p_port(n):
-    return 8300 + n + os.getpid() % 999
+    start_port = 8300
+    if parallel_test > 0:
+        start_port = 8500 + start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 def sc_rpc_port(n):
-    return 8200 + n + os.getpid() % 999
+    start_port = 8200
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 # To be removed
