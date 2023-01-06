@@ -246,6 +246,37 @@ function checkFileExists
     fi
 }
 
+function runTestScript
+{
+    local testName="$1"
+    #Remove first arg $1 from args passed to function, shifting the full file location to arg $1.
+    shift
+
+    runningMessage="=== Running testscript ${testName} ==="
+    if [ "$PARALLEL" ]; then
+      runningMessage="$runningMessage (Parallel Group: $parallelGroup)"
+    fi;
+
+    echo -e "$runningMessage" | tee /dev/fd/3
+    #Log test start time
+    testStart=$(date +%s)
+    runTimeMessage="Run Time: $testRuntime"
+    if eval "$@"; then
+      testEnd=$(date +%s)
+      testRuntime=$((testEnd-testStart))
+      successCount=$(expr $successCount + 1)
+      echo "--- Success: ${testName} --- ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
+    else
+      testEnd=$(date +%s)
+      testRuntime=$((testEnd-testStart))
+      failures[${#failures[@]}]="$testName"
+      failureCount=$((failureCount + 1))
+      echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
+    fi
+
+    echo | tee /dev/fd/3
+}
+
 function runTests
 {
   # Assign any parameter given to the shell script, then remove from this functions args
