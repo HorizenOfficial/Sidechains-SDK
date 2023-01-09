@@ -148,23 +148,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
-  // Check if the next modifier will change Consensus Epoch, so notify History with current info.
-  // Note: there is no need to store any info in the Wallet, since for Account model Forger is able
-  // to get all necessary information from the State.
-  override protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
-     val historyAfterConsensusInfoApply = if (state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
-      val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getCurrentConsensusEpochInfo
-      val nonceConsensusEpochInfo = history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
-      val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
 
-      history.applyFullConsensusInfo(lastBlockInEpoch,
-        FullConsensusEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
-    } else {
-       history
-     }
-
-    (historyAfterConsensusInfoApply, wallet)
-  }
 
   override def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI = {
     val feePayments = state.getFeePayments(epochNumber)

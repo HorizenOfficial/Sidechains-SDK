@@ -431,7 +431,7 @@ abstract class AbstractHistory[
     height
   }
 
-  def getFeePaymentsInfo(blockId: String): java.util.Optional[FPI] = {
+  override def getFeePaymentsInfo(blockId: String): java.util.Optional[FPI] = {
     feePaymentsInfo(ModifierId @@ blockId).asJava
   }
 
