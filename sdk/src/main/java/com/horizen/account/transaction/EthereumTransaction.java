@@ -470,8 +470,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         // this will default to gasPrice if the transaction is not EIP-1559
         var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
-                getFrom(),
-                getTo().orElse(null),
+                Optional.ofNullable(this.from),
+                Optional.ofNullable(this.to),
                 effectiveGasPrice,
                 gasFeeCap,
                 gasTipCap,
