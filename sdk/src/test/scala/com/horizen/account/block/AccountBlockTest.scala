@@ -7,7 +7,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture, ForgerAccountFixture}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer, SidechainBlock}
@@ -28,7 +28,6 @@ import org.scalatestplus.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import java.math
 import java.math.BigInteger
 import java.util.Random
 import scala.io.Source
@@ -378,35 +377,23 @@ class AccountBlockTest
     }
 
 
-    // Test 13: AccountBlock with semantically valid AccountBlockHeader but too large a size should not be valid.
-    //          This test also checks that we do not have a limit on the number of txes
-    // TODO this test should not fail as soon as check on block size
-    //      is removed for account model (as of now this check is made in SidechainBlockBase for both UTXO and Account
-    //      models
+    // Test 13: AccountBlock with semantically valid AccountBlockHeader and large number of txes
     val seq_35001 = List.fill(35001){getContractDeploymentEip1559Transaction}
     invalidBlock = createBlock(sidechainTransactions = seq_35001)
     invalidBlock.semanticValidity(params) match {
       case Success(_) =>
-        jFail("AccountBlock expected to be semantically Invalid.")
       case Failure(e) =>
-        assertEquals("Different exception type expected during semanticValidity.",
-          classOf[InvalidSidechainBlockDataException], e.getClass)
+        jFail(s"AccountBlock expected to be semantically valid, instead got exception: ${e.getMessage}")
     }
 
 
-    // Test 13b: AccountBlock with semantically valid AccountBlockHeader but too large a size should not be valid.
-    // Similar to the test above but with just one big tx
-    // TODO this test should not fail as soon as check on block size
-    //      is removed for account model (as of now this check is made in SidechainBlockBase for both UTXO and Account
-    //      models
+    // Test 13b: AccountBlock with semantically valid AccountBlockHeader and very large size.
     invalidBlock = createBlock(
       sidechainTransactions = Seq(getBigDataTransaction(5000000, BigInteger.valueOf(100000000))))
     invalidBlock.semanticValidity(params) match {
       case Success(_) =>
-        jFail("AccountBlock expected to be semantically Invalid.")
       case Failure(e) =>
-        assertEquals("Different exception type expected during semanticValidity.",
-          classOf[InvalidSidechainBlockDataException], e.getClass)
+        jFail(s"AccountBlock expected to be semantically valid, instead got exception: ${e.getMessage}")
     }
 
   }
