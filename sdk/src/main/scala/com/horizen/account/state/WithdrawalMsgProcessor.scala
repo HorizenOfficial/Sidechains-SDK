@@ -123,7 +123,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
     val requestInBytes = request.bytes
     view.updateAccountStorageBytes(contractAddress, getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes)
 
-    view.subBalance(msg.getFrom.get().address(), withdrawalAmount)
+    view.subBalance(msg.getFromAddressBytes, withdrawalAmount)
 
     val withdrawalEvent = AddWithdrawalRequest(msg.getFrom.get(), request.proposition, withdrawalAmount, currentEpochNum)
     val evmLog = getEvmLog(withdrawalEvent)
