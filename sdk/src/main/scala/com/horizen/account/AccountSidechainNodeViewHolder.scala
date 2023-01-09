@@ -175,7 +175,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     wallet.scanPersistent(modToApply)
   }
 
-  protected def getNodeView(): AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
+  override protected def getNodeView(): AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
 
   override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage, stateMetadataStorage, secretStorage)

@@ -207,7 +207,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
-  protected def getNodeView(): SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
+  override protected def getNodeView(): SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
 
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
