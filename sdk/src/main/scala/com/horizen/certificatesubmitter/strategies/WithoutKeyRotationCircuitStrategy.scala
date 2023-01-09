@@ -1,6 +1,5 @@
 package com.horizen.certificatesubmitter.strategies
 
-import com.horizen.{AbstractHistory, AbstractState, SidechainSettings, SidechainTypes, Wallet}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
@@ -10,18 +9,18 @@ import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
+import com.horizen._
 import sparkz.core.transaction.MemoryPool
 
 import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
-import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 class WithoutKeyRotationCircuitStrategy[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
-  PM <: SidechainBlockBase[TX, H] : ClassTag,
+  PM <: SidechainBlockBase[TX, H],
   _FPI <: AbstractFeePaymentsInfo,
   _HSTOR <: AbstractHistoryStorage[PM, _FPI, _HSTOR],
   _HIS <: AbstractHistory[TX, H, PM, _FPI, _HSTOR, _HIS],

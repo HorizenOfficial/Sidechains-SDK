@@ -7,21 +7,16 @@ import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import com.horizen.account.node.AccountNodeView
 import com.horizen.account.state.MessageProcessor
 import com.horizen.account.storage.AccountStateMetadataStorage
-import com.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http._
 import com.horizen.evm.LevelDBDatabase
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.node.NodeWalletBase
 import com.horizen.params.MainNetParams
-import com.horizen.proof.Proof
-import com.horizen.proposition.Proposition
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.runner.RunWith
@@ -66,14 +61,6 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case m: GetDataFromCurrentSidechainNodeView[
-          AccountTransaction[Proposition, Proof[Proposition]],
-          AccountBlockHeader,
-          AccountBlock,
-          AccountFeePaymentsInfo,
-          NodeAccountHistory,
-          NodeAccountState,
-          NodeWalletBase,
-          NodeAccountMemoryPool,
           AccountNodeView,
           _] @unchecked =>
           m match {
@@ -83,14 +70,6 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
               }
           }
         case m: ApplyFunctionOnNodeView[
-          AccountTransaction[Proposition, Proof[Proposition]],
-          AccountBlockHeader,
-          AccountBlock,
-          AccountFeePaymentsInfo,
-          NodeAccountHistory,
-          NodeAccountState,
-          NodeWalletBase,
-          NodeAccountMemoryPool,
           AccountNodeView,
           _] @unchecked =>
           m match {
@@ -99,14 +78,6 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
                 sender ! f(utilMocks.getAccountNodeView(sidechainApiMockConfiguration))
           }
         case m: ApplyBiFunctionOnNodeView[
-          AccountTransaction[Proposition, Proof[Proposition]],
-          AccountBlockHeader,
-          AccountBlock,
-          AccountFeePaymentsInfo,
-          NodeAccountHistory,
-          NodeAccountState,
-          NodeWalletBase,
-          NodeAccountMemoryPool,
           AccountNodeView,
           _,
           _] @unchecked =>

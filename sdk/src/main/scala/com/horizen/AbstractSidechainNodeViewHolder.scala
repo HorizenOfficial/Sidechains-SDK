@@ -3,17 +3,18 @@ package com.horizen
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
-import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, SDKModifiersCache}
 import com.horizen.validation._
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
-import sparkz.core.{ModifiersCache, idToVersion}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
-import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.settings.SparkzSettings
+import sparkz.core.utils.NetworkTimeProvider
+import sparkz.core.{ModifiersCache, idToVersion}
+
 import scala.util.{Failure, Success, Try}
 
 abstract class AbstractSidechainNodeViewHolder[
@@ -27,6 +28,8 @@ abstract class AbstractSidechainNodeViewHolder[
   override type SI = SidechainSyncInfo
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR]
+
+  type NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _]
 
   override type HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS]
   override type MS <: AbstractState[TX, H, PMOD, MS]
@@ -97,16 +100,60 @@ abstract class AbstractSidechainNodeViewHolder[
       super.receive
   }
 
-  override def postStop(): Unit = {
-    log.info("AbstractSidechainNodeViewHolder actor is stopping...")
-    super.postStop()
+
+
+  protected def getCurrentSidechainNodeViewInfo[A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
+      NV,
+      A]@unchecked =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
+          val l: NV = getNodeView()
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
   }
 
-  protected def getCurrentSidechainNodeViewInfo: Receive
 
-  protected def applyFunctionOnNodeView: Receive
 
-  protected def applyBiFunctionOnNodeView[T, A]: Receive
+  protected def getNodeView(): NV
+
+  protected def applyFunctionOnNodeView[A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[NV,
+      A]@unchecked =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
+          val l: NV = getNodeView()
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+
+  }
+
+
+  protected def applyBiFunctionOnNodeView[T, A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[NV,
+      T, A]@unchecked =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParams) => try {
+          val l: NV = getNodeView()
+          sender() ! f(l, functionParams)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+  }
+
 
   /**
    * Process new modifiers from remote.
@@ -156,7 +203,12 @@ abstract class AbstractSidechainNodeViewHolder[
       sender() ! getStorageVersions
   }
 
-  def processLocallyGeneratedTransaction: Receive
+  protected def applyLocallyGeneratedTransactions(newTxs: Iterable[TX]): Unit
+
+  def processLocallyGeneratedTransaction: Receive = {
+    case newTxs: LocallyGeneratedTransaction[TX] =>
+      applyLocallyGeneratedTransactions(newTxs.txs)
+  }
 
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
@@ -390,46 +442,25 @@ abstract class AbstractSidechainNodeViewHolder[
     }
   }
 
+  override def postStop(): Unit = {
+    log.info(s"${getClass.getSimpleName} actor is stopping...")
+    super.postStop()
+  }
 
 
 }
 
 object AbstractSidechainNodeViewHolder {
   object ReceivableMessages {
-    case class GetDataFromCurrentSidechainNodeView[TX <: Transaction,
-      H <: SidechainBlockHeaderBase,
-      PMOD <: SidechainBlockBase[TX, H],
-      FPI <: AbstractFeePaymentsInfo,
-      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
-      NS <: NodeStateBase,
-      NW <: NodeWalletBase,
-      NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
-      A](f: NV => A)
+
+    case class GetDataFromCurrentSidechainNodeView[NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _], A](f: NV => A)
 
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
 
-    case class ApplyFunctionOnNodeView[TX <: Transaction,
-      H <: SidechainBlockHeaderBase,
-      PMOD <: SidechainBlockBase[TX, H],
-      FPI <: AbstractFeePaymentsInfo,
-      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
-      NS <: NodeStateBase,
-      NW <: NodeWalletBase,
-      NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
-      A](f: java.util.function.Function[NV, A])
+    case class ApplyFunctionOnNodeView[NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _], A](f: java.util.function.Function[NV, A])
 
     case class ApplyBiFunctionOnNodeView[
-      TX <: Transaction,
-      H <: SidechainBlockHeaderBase,
-      PMOD <: SidechainBlockBase[TX, H],
-      FPI <: AbstractFeePaymentsInfo,
-      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
-      NS <: NodeStateBase,
-      NW <: NodeWalletBase,
-      NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
+      NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _],
       T,
       A](f: java.util.function.BiFunction[NV, T, A], functionParameter: T)
 

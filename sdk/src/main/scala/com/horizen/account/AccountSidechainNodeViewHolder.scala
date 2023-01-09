@@ -5,26 +5,22 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import com.horizen.account.node.AccountNodeView
 import com.horizen.account.state._
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
-import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
 import com.horizen.evm.Database
-import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Proof
-import com.horizen.proposition.Proposition
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.util.{ModifierId, bytesToId}
-import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.RollbackFailed
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.idToVersion
+
 import scala.util.{Failure, Success}
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -45,6 +41,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type VL = AccountWallet
   override type MP = AccountMemoryPool
   override type FPI = AccountFeePaymentsInfo
+  override type NV = AccountNodeView
+
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
       MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors)
@@ -177,99 +175,26 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     wallet.scanPersistent(modToApply)
   }
 
-  override protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
-      SidechainTypes#SCAT,
-      AccountBlockHeader,
-      AccountBlock,
-      AccountFeePaymentsInfo,
-      NodeAccountHistory,
-      NodeAccountState,
-      NodeWalletBase,
-      NodeAccountMemoryPool,
-      AccountNodeView,
-      _] @unchecked =>
-      msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
-          sender() ! f(l)
-        }
-        catch {
-          case e: Exception => sender() ! akka.actor.Status.Failure(e)
-        }
-
-      }
-  }
-
-  override protected def applyFunctionOnNodeView: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
-      SidechainTypes#SCAT,
-      AccountBlockHeader,
-      AccountBlock,
-      AccountFeePaymentsInfo,
-      NodeAccountHistory,
-      NodeAccountState,
-      NodeWalletBase,
-      NodeAccountMemoryPool,
-      AccountNodeView,
-      _] @unchecked =>
-      msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
-          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
-          sender() ! f(l)
-        }
-        catch {
-          case e: Exception => sender() ! akka.actor.Status.Failure(e)
-        }
-
-      }
-
-  }
-
-  override protected def applyBiFunctionOnNodeView[T, A]: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
-      SidechainTypes#SCAT,
-      AccountBlockHeader,
-      AccountBlock,
-      AccountFeePaymentsInfo,
-      NodeAccountHistory,
-      NodeAccountState,
-      NodeWalletBase,
-      NodeAccountMemoryPool,
-      AccountNodeView,
-      T,A] @unchecked =>
-      msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f,functionParams) => try {
-          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
-          sender() ! f(l,functionParams)
-        }
-        catch {
-          case e: Exception => sender() ! akka.actor.Status.Failure(e)
-        }
-
-      }
-  }
+  override protected def getNodeView(): AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
 
   override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage, stateMetadataStorage, secretStorage)
 
+  override def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCAT]): Unit = {
+    newTxs.foreach(tx => {
+      // TODO FOR MERGE - Any custom implementation?
+      /*
+      if (tx.fee() > maxTxFee)
+        context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
+          immediateFailure = true))
+      else
 
-  override def processLocallyGeneratedTransaction: Receive = {
-    case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCAT] =>
-      newTxs.txs.foreach(tx => {
-        // TODO FOR MERGE - Any custom implementation?
-        /*
-        if (tx.fee() > maxTxFee)
-          context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
-            immediateFailure = true))
-        else
+       */
+      log.info(s"Got locally generated tx ${tx.id} of type ${tx.modifierTypeId}")
 
-         */
-        log.info(s"Got locally generated tx ${tx.id} of type ${tx.modifierTypeId}")
+      txModify(tx)
 
-        txModify(tx)
-
-      })
+    })
   }
 
   override protected def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock], memPool: MP, state: MS): MP = {
