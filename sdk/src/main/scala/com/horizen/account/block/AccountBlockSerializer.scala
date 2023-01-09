@@ -2,10 +2,10 @@ package com.horizen.account.block
 
 import com.horizen.SidechainTypes
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.block.{AccountOmmerSerializer, MainchainBlockReferenceData, MainchainBlockReferenceDataSerializer, MainchainHeader, MainchainHeaderSerializer, Ommer, SidechainBlockBase}
+import com.horizen.block._
 import com.horizen.utils.ListSerializer
-import sparkz.core.serialization.SparkzSerializer
 import scorex.util.serialization.{Reader, Writer}
+import sparkz.core.serialization.SparkzSerializer
 
 import scala.collection.JavaConverters._
 
@@ -34,6 +34,9 @@ class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) e
   }
 
   override def parse(r: Reader): AccountBlock = {
+
+    require(r.remaining <= SidechainBlock.MAX_BLOCK_SIZE)
+
     val SidechainAccountBlockHeader: AccountBlockHeader = AccountBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r).asScala
     val mainchainBlockReferencesData = mcBlocksDataSerializer.parse(r).asScala

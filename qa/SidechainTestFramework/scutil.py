@@ -20,14 +20,23 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
 WAIT_CONST = 1
 
 # log levels of the log4j trace system used by java applications
-LEVEL_OFF = "off"
-LEVEL_FATAL = "fatal"
-LEVEL_ERROR = "error"
-LEVEL_WARN = "warn"
-LEVEL_INFO = "info"
-LEVEL_DEBUG = "debug"
-LEVEL_TRACE = "trace"
-LEVEL_ALL = "all"
+APP_LEVEL_OFF = "off"
+APP_LEVEL_FATAL = "fatal"
+APP_LEVEL_ERROR = "error"
+APP_LEVEL_WARN = "warn"
+APP_LEVEL_INFO = "info"
+APP_LEVEL_DEBUG = "debug"
+APP_LEVEL_TRACE = "trace"
+APP_LEVEL_ALL = "all"
+
+# log levels of the python logging trace system
+TEST_LEVEL_NOTSET = "notset"
+TEST_LEVEL_FATAL = "fatal"
+TEST_LEVEL_ERROR = "error"
+TEST_LEVEL_WARN = "warn"
+TEST_LEVEL_INFO = "info"
+TEST_LEVEL_DEBUG = "debug"
+
 
 # timeout in secs for rest api
 DEFAULT_REST_API_TIMEOUT = 5
@@ -48,7 +57,7 @@ class TimeoutException(Exception):
 
 
 class LogInfo(object):
-    def __init__(self, logFileLevel=LEVEL_ALL, logConsoleLevel=LEVEL_ERROR):
+    def __init__(self, logFileLevel=APP_LEVEL_ALL, logConsoleLevel=APP_LEVEL_ERROR):
         self.logFileLevel = logFileLevel
         self.logConsoleLevel = logConsoleLevel
 

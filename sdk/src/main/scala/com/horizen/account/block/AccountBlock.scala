@@ -27,7 +27,13 @@ class AccountBlock(override val header: AccountBlockHeader,
                    override val mainchainHeaders: Seq[MainchainHeader],
                    override val ommers: Seq[Ommer[AccountBlockHeader]],
                    companion: SidechainAccountTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader] with ScorexLogging {
+  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader](
+    header,
+    sidechainTransactions,
+    mainchainBlockReferencesData,
+    mainchainHeaders,
+    ommers)
+    with ScorexLogging {
   override type M = AccountBlock
 
   override lazy val serializer = new AccountBlockSerializer(companion)
@@ -68,7 +74,12 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override def versionIsValid(): Boolean = version == AccountBlock.ACCOUNT_BLOCK_VERSION
 
+  //Number of transactions doesn't have a limit in an AccountBlock because txs are limited using block gas limit
   override def transactionsListExceedsSizeLimit: Boolean = false
+
+  //AccountBlock size doesn't have a limit in an AccountBlock because block gas limit control the number of txs included
+  override def blockExceedsSizeLimit(blockSize: Int): Boolean = false
+
 }
 
 
