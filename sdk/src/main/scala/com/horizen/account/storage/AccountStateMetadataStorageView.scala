@@ -245,8 +245,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   def setCeased(): Unit = hasCeasedOpt = Some(true)
-  def setForgerListOpen(flag: Boolean): Unit = isForgersListOpenOpt = Some(flag)
-
 
   // update the database with "dirty" records new values
   // also increment the height value directly

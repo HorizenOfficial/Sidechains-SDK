@@ -80,13 +80,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val restrictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
     if (!restrictForgerList.sameElements(NULL_HEX_STRING_32))
       throw new MessageProcessorInitializationException("restrictForgerList already set")
-
-      /*
-    if (networkParams.restrictForgers) {
-      val forgersIndexesArray = new Array[Byte](networkParams.allowedForgersList.size)
-      view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, forgersIndexesArray)
-    }
-     */
   }
 
   def existsStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Boolean = {
@@ -272,7 +265,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException(s"Owner account is not an EOA")
     }
 
-    // TODO decide whether we need to check also genesis case (also UTXO model)
     if (!isGenesisScCreation) {
       // check that the delegation arguments satisfy the restricted list of forgers if we have any.
       if (!isForgerListOpen(view)) {
