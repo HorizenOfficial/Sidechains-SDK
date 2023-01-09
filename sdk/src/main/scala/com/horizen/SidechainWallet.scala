@@ -21,12 +21,6 @@ import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-
-trait BoxWallet {
-  def boxes(): Seq[WalletBox]
-}
-
-
 class SidechainWallet private[horizen] (seed: Array[Byte],
                                         walletBoxStorage: SidechainWalletBoxStorage,
                                         secretStorage: SidechainSecretStorage,
@@ -42,7 +36,6 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                  SidechainWallet](seed, secretStorage)
   with SidechainTypes
   with NodeWallet
-  with BoxWallet
 {
   override type NVCT = SidechainWallet
 
@@ -64,7 +57,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     this
   }
 
-  override def boxes(): Seq[WalletBox] = {
+  def boxes(): Seq[WalletBox] = {
     walletBoxStorage.getAll
   }
 

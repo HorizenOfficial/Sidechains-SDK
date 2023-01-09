@@ -9,13 +9,13 @@ import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
+import com.horizen.transaction.Transaction
 import com.horizen.wallet.ApplicationWallet
-import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
-import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
-import sparkz.core.transaction.Transaction
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{idToVersion, versionToId}
+
 import scala.util.{Failure, Success}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -43,6 +43,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
   override type FPI = SidechainFeePaymentsInfo
+  override type NV = SidechainNodeView
+
 
   lazy val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage,
@@ -174,16 +176,15 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result
   }
 
-  override def processLocallyGeneratedTransaction: Receive = {
-    case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>
-      newTxs.txs.foreach(tx => {
-        if (tx.fee() > maxTxFee)
-          context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
-            immediateFailure = true))
-        else
-          txModify(tx)
+  override protected def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCBT]): Unit = {
+    newTxs.foreach(tx => {
+      if (tx.fee() > maxTxFee)
+        context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
+          immediateFailure = true))
+      else
+        txModify(tx)
 
-      })
+    })
   }
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
@@ -206,76 +207,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
-  override protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
-      SidechainTypes#SCBT,
-      SidechainBlockHeader,
-      SidechainBlock,
-      SidechainFeePaymentsInfo,
-      NodeHistory,
-      NodeState,
-      NodeWallet,
-      NodeMemoryPool,
-      SidechainNodeView,
-      _] @unchecked =>
-      msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
-          sender() ! f(l)
-        }
-        catch {
-          case e: Exception => sender() ! akka.actor.Status.Failure(e)
-        }
-
-      }
-  }
-
-
-  override protected def applyFunctionOnNodeView: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
-      SidechainTypes#SCBT,
-      SidechainBlockHeader,
-      SidechainBlock,
-      SidechainFeePaymentsInfo,
-      NodeHistory,
-      NodeState,
-      NodeWallet,
-      NodeMemoryPool,
-      SidechainNodeView,
-      _]@unchecked =>
-      msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
-          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
-          sender() ! f(l)
-        }
-        catch {
-          case e: Exception => sender() ! akka.actor.Status.Failure(e)
-        }
-      }
-  }
-
-  override protected def applyBiFunctionOnNodeView[T, A]: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
-      SidechainTypes#SCBT,
-      SidechainBlockHeader,
-      SidechainBlock,
-      SidechainFeePaymentsInfo,
-      NodeHistory,
-      NodeState,
-      NodeWallet,
-      NodeMemoryPool,
-      SidechainNodeView,
-      T, A]@unchecked =>
-      msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParams) => try {
-          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
-          sender() ! f(l, functionParams)
-        }
-        catch {
-          case e: Exception => sender() ! akka.actor.Status.Failure(e)
-        }
-      }
-  }
+  override protected def getNodeView(): SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
 
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.

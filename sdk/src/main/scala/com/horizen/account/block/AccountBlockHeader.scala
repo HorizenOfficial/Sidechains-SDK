@@ -11,10 +11,9 @@ import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
-import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
+import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
-import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
@@ -51,9 +50,6 @@ case class AccountBlockHeader(
   override type M = AccountBlockHeader
 
   override def serializer: SparkzSerializer[AccountBlockHeader] = AccountBlockHeaderSerializer
-
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
-  override lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
@@ -176,9 +172,9 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
 
-    val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val sidechainTransactionsMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val mainchainMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val stateRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
 
@@ -193,7 +189,7 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     val gasLimit = r.getLong()
 
-    val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val ommersCumulativeScore: Long = r.getLong()
 

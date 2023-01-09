@@ -36,7 +36,7 @@ abstract class AbstractSidechainNodeViewSynchronizer[
     PMOD, HIS, MR](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers)
 {
   override def postStop(): Unit = {
-    log.info("SidechainNodeViewSynchronizer actor is stopping...")
+    log.info(s"${getClass.getSimpleName} actor is stopping...")
     super.postStop()
   }
 
