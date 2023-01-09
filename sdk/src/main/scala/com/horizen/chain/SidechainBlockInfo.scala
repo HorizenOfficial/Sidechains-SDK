@@ -47,13 +47,7 @@ object SidechainBlockInfo {
   def mainchainReferenceDataHeaderHashesFromBlock(b: SidechainBlockBase[_ <: Transaction,_ <: SidechainBlockHeaderBase]): Seq[MainchainHeaderHash] = {
       b.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
   }
-//
-//  def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
-//    sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
-//  }
-//  def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: AccountBlock): Seq[MainchainHeaderHash] = {
-//    sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
-//  }
+
 }
 
 object SidechainBlockInfoSerializer extends SparkzSerializer[SidechainBlockInfo] {
