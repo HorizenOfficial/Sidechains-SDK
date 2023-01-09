@@ -220,4 +220,12 @@ final class LibEvm {
     public static byte[] hashRoot(byte[][] values) {
         return invoke("HashRoot", new HashParams(values), Hash.class).toBytes();
     }
+
+    public static boolean accessAccount(int handle, byte[] address) {
+        return invoke("AccessAccount", new AccountParams(handle, address), Boolean.class);
+    }
+
+    public static boolean accessSlot(int handle, byte[] address, byte[] slot) {
+        return invoke("AccessSlot", new SlotParams(handle, address, slot), Boolean.class);
+    }
 }

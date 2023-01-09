@@ -316,6 +316,14 @@ public class StateDB extends ResourceHandle {
         LibEvm.stateSetTxContext(handle, txHash, txIndex);
     }
 
+    public boolean accessAccount(byte[] address) {
+        return LibEvm.accessAccount(handle, address);
+    }
+
+    public boolean accessSlot(byte[] address, byte[] slot) {
+        return LibEvm.accessSlot(handle, address, slot);
+    }
+
     @Override
     public String toString() {
         return String.format("StateDB{handle=%d}", handle);
