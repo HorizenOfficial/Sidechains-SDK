@@ -9,7 +9,7 @@ import (
 
 // setStateRefunds replicates the refund part of the original SSTORE gas consumption logic.
 // Original implementation can be found in go-ethereum, function "gasSStoreEIP2200":
-// github.com/ethereum/go-ethereum@v1.10.26/core/vm/gas_table.go:178
+// github.com/ethereum/go-ethereum@v1.10.26/core/vm/operations_acl.go:27
 //
 // This replicates gas refund logic including EIP3529.
 //

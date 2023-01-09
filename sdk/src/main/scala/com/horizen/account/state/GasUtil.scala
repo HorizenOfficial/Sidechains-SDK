@@ -17,9 +17,15 @@ object GasUtil {
   val CallGasEIP150: BigInteger = BigInteger.valueOf(700)
   val BalanceGasEIP1884: BigInteger = BigInteger.valueOf(700)
   val ExtcodeHashGasEIP1884: BigInteger = BigInteger.valueOf(700)
+  val ColdAccountAccessCostEIP2929: BigInteger = BigInteger.valueOf(2600)
+  val WarmStorageReadCostEIP2929: BigInteger = BigInteger.valueOf(100)
+  val ColdSloadCostEIP2929: BigInteger = BigInteger.valueOf(2100)
+
+  val CopyGas: BigInteger = BigInteger.valueOf(3)
 
   val LogGas: BigInteger = BigInteger.valueOf(375)
   val LogTopicGas: BigInteger = BigInteger.valueOf(375)
+  val LogDataGas: BigInteger = BigInteger.valueOf(8)
 
   // TODO:GAS replace with proper values
   val GasTBD: BigInteger = BigInteger.valueOf(250)
@@ -30,8 +36,7 @@ object GasUtil {
 
   /**
    * Global gas limit when executing messages via RPC calls this can be larger than the block gas limit, getter's might
-   * require more gas than is ever required during a transaction.
-   * TODO: move to SidechainSettings
+   * require more gas than is ever required during a transaction. TODO: move to SidechainSettings
    */
   val RpcGlobalGasCap: BigInteger = BigInteger.valueOf(50000000)
 
@@ -58,7 +63,17 @@ object GasUtil {
     gas
   }
 
-  def logGas(evmLog: EvmLog): BigInteger = LogGas.add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
+  def logGas(evmLog: EvmLog): BigInteger = LogGas
+    .add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
+    .add(LogDataGas.multiply(BigInteger.valueOf(evmLog.data.length)))
+
+  def codeCopy(size: Int): BigInteger = {
+    val _31 = BigInteger.valueOf(31)
+    val _32 = BigInteger.valueOf(32)
+    // size in number of 256-bit words
+    val words = BigInteger.valueOf(size).add(_31).divide(_32)
+    CopyGas.multiply(words)
+  }
 
   def getTxFeesPerGas(tx: EthereumTransaction, baseFeePerGas: BigInteger): (BigInteger, BigInteger) = {
     if (tx.isEIP1559) {
