@@ -25,7 +25,7 @@ class MainchainPoWValidator[
   extends HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HT] {
 
   override def validate(block: PMOD, history: HT): Try[Unit] = {
-    if(ProofOfWorkVerifier.checkNextWorkRequired[TX, H, PMOD, FPI, HSTOR](block, history.storage, params)) {
+    if(ProofOfWorkVerifier.checkNextWorkRequired[H, PMOD, FPI, HSTOR](block, history.storage, params)) {
       Success(Unit)
     }
     else {
