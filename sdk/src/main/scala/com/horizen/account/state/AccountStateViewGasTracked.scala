@@ -15,7 +15,7 @@ import java.math.BigInteger
 class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) extends BaseAccountStateView {
   override def getStateDbHandle: ResourceHandle = view.getStateDbHandle
 
-  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit = view.addAccount(address, codeHash)
+  override def addAccount(address: Array[Byte], code: Array[Byte]): Unit = view.addAccount(address, code)
 
   override def accountExists(address: Array[Byte]): Boolean = {
     gas.subGas(GasUtil.ExtcodeHashGasEIP1884)
