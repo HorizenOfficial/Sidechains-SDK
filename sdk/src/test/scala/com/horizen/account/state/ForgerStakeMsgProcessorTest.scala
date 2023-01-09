@@ -24,6 +24,7 @@ import scorex.crypto.hash.Keccak256
 import java.math.BigInteger
 import java.util
 import java.util.Random
+import java.util.Optional
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class ForgerStakeMsgProcessorTest
@@ -63,8 +64,8 @@ class ForgerStakeMsgProcessorTest
   def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount): Message = {
     val data = Bytes.concat(opCode, arguments)
     new Message(
-      new AddressProposition(origin),
-      new AddressProposition(contractAddress), // to
+      Optional.of(new AddressProposition(origin)),
+      Optional.of(new AddressProposition(contractAddress)), // to
       dummyBigInteger, // gasPrice
       dummyBigInteger, // gasFeeCap
       dummyBigInteger, // gasTipCap
@@ -251,7 +252,7 @@ class ForgerStakeMsgProcessorTest
       // Checking log
       val listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      val expectedAddStakeEvt = OpenForgerList(forgerIndex, msg.getFrom, blockSignerProposition1)
+      val expectedAddStakeEvt = OpenForgerList(forgerIndex, msg.getFrom.get(), blockSignerProposition1)
       checkOpenForgerStakeListEvent(expectedAddStakeEvt, listOfLogs(0))
 
       var isOpen = forgerStakeMessageProcessor.isForgerListOpen(view)
@@ -453,7 +454,7 @@ class ForgerStakeMsgProcessorTest
       var listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
       var expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
-      var expectedAddStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddressProposition, expStakeId, msg.getValue)
+      var expectedAddStakeEvt = DelegateForgerStake(msg.getFrom.get, ownerAddressProposition, expStakeId, msg.getValue)
       checkAddNewForgerStakeEvent(expectedAddStakeEvt, listOfLogs(0))
 
       val txHash2 = Keccak256.hash("second tx")
@@ -489,7 +490,7 @@ class ForgerStakeMsgProcessorTest
       listOfLogs = view.getLogs(txHash3.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
       expStakeId = forgerStakeMessageProcessor.getStakeId(msg2)
-      expectedAddStakeEvt = DelegateForgerStake(msg2.getFrom, ownerAddressProposition, expStakeId, msg2.getValue)
+      expectedAddStakeEvt = DelegateForgerStake(msg2.getFrom.get(), ownerAddressProposition, expStakeId, msg2.getValue)
       checkAddNewForgerStakeEvent(expectedAddStakeEvt, listOfLogs(0))
 
       // remove first stake id

@@ -1,5 +1,6 @@
 package com.horizen.certificatesubmitter.strategies
 
+import com.horizen._
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
@@ -12,20 +13,17 @@ import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen._
 import sparkz.core.transaction.MemoryPool
 
-import java.util
 import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
-import scala.reflect.ClassTag
 import scala.util.Try
 
 class WithKeyRotationCircuitStrategy[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
-  PM <: SidechainBlockBase[TX, H] : ClassTag,
+  PM <: SidechainBlockBase[TX, H],
   _FPI <: AbstractFeePaymentsInfo,
   _HSTOR <: AbstractHistoryStorage[PM, _FPI, _HSTOR],
   _HIS <: AbstractHistory[TX, H, PM, _FPI, _HSTOR, _HIS],

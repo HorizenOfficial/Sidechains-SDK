@@ -575,7 +575,7 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, traceOptions: TraceOptions): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: Hash, config: TraceOptions): DebugTraceTransactionView = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -603,7 +603,7 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
         // use default trace params if none are given
-        blockContext.setTraceParams(if (traceOptions == null) new TraceOptions() else traceOptions)
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
         // apply requested transaction with tracing enabled
         blockContext.setEvmResult(EvmResult.emptyEvmResult())

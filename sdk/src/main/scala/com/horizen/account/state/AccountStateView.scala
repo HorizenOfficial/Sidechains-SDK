@@ -23,6 +23,7 @@ import sparkz.core.VersionTag
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
+import java.util.Optional
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
@@ -71,8 +72,8 @@ class AccountStateView(
           val data = Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), cmdInput.encode())
 
           val message = new Message(
-            ownerAddressProposition,
-            new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES),
+            Optional.of(ownerAddressProposition),
+            Optional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
             BigInteger.ZERO, // gasPrice
             BigInteger.ZERO, // gasFeeCap
             BigInteger.ZERO, // gasTipCap

@@ -57,7 +57,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
    */
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
-      msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
+      msg.getFromAddressBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
   }
 
   override def init(view: BaseAccountStateView): Unit = {
@@ -245,12 +245,17 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException("Value must not be zero")
     }
 
+    // check that msg.from is not empty
+    if (msg.getFrom.isEmpty) {
+      throw new ExecutionRevertedException("Sender should not be empty")
+    }
+
     // check that msg.value is a legal wei amount convertible to satoshis without any remainder
     if (!isValidZenAmount(msg.getValue)) {
       throw new ExecutionRevertedException(s"Value is not a legal wei amount: ${msg.getValue.toString()}")
     }
 
-    val sender = msg.getFrom.address()
+    val sender = msg.getFromAddressBytes
     // check that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(sender)) {
       throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom.toString}")
@@ -290,7 +295,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
     log.debug(s"Added stake to stateDb: newStakeId=${BytesUtils.toHexString(newStakeId)}, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
 
-    val addNewStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddress, newStakeId, stakedAmount)
+    val addNewStakeEvt = DelegateForgerStake(msg.getFrom.get(), ownerAddress, newStakeId, stakedAmount)
     val evmLog = getEvmLog(addNewStakeEvt)
     view.addLog(evmLog)
 
@@ -355,6 +360,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
+    // check that msg.from is not empty
+    if (msg.getFrom.isEmpty) {
+      throw new ExecutionRevertedException("Sender should not be empty")
+    }
+
     val inputParams = getArgumentsFromData(msg.getData)
     val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams)
     val stakeId: Array[Byte] = cmdInput.stakeId
@@ -365,7 +375,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       .getOrElse(throw new ExecutionRevertedException("No such stake id in state-db"))
 
     // check signature
-    val msgToSign = getRemoveStakeCmdMessageToSign(stakeId, msg.getFrom.address(), msg.getNonce.toByteArray)
+    val msgToSign = getRemoveStakeCmdMessageToSign(stakeId, msg.getFrom.get().address(), msg.getNonce.toByteArray)
     if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
       throw new ExecutionRevertedException("Invalid signature")
     }
@@ -431,7 +441,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     // check signature
     val blockSignerProposition = networkParams.allowedForgersList(forgerIndex)._1
 
-    val msgToSign = getOpenStakeForgerListCmdMessageToSign(forgerIndex, msg.getFrom.address(), msg.getNonce.toByteArray)
+    val msgToSign = getOpenStakeForgerListCmdMessageToSign(forgerIndex, msg.getFrom.get().address(), msg.getNonce.toByteArray)
     if (!signature.isValid(blockSignerProposition, msgToSign)) {
       throw new ExecutionRevertedException(s"Invalid signature, could not validate against blockSignerProposition=$blockSignerProposition")
     }
@@ -453,7 +463,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     restrictForgerList(forgerIndex) = 1
     view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, restrictForgerList)
 
-    val addOpenStakeForgerListEvt = OpenForgerList(forgerIndex, msg.getFrom, blockSignerProposition)
+    val addOpenStakeForgerListEvt = OpenForgerList(forgerIndex, msg.getFrom.get(), blockSignerProposition)
     val evmLog = getEvmLog(addOpenStakeForgerListEvt)
     view.addLog(evmLog)
 
