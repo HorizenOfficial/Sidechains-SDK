@@ -4,6 +4,7 @@ import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.StateDB
 import com.horizen.proposition.MCPublicKeyHashProposition
+import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
@@ -60,7 +61,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar {
     assertTrue("The list of withdrawal requests is not empty", res.isEmpty)
 
     // With 3999 withdrawal requests
-    val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
+    val maxNumOfWithdrawalReqs = MaxWithdrawalReqsNumPerEpoch
 
     val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
     val listOfWR = (1 to maxNumOfWithdrawalReqs).map(index => {
