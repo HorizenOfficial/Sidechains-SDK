@@ -370,7 +370,7 @@ class SidechainBlockTest
 
     // Test 13: Too big SidechainBlock
     invalidBlock = createBlock(
-      sidechainTransactions = generateExceedingTransactions(SidechainBlockBase.MAX_BLOCK_SIZE)
+      sidechainTransactions = generateExceedingTransactions(SidechainBlock.MAX_BLOCK_SIZE)
     )
     invalidBlock.semanticValidity(params) match {
       case Success(_) =>

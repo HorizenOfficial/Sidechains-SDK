@@ -19,6 +19,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
 import java.math.BigInteger
+import java.util.Optional
 import scala.collection.immutable
 import scala.util.Random
 
@@ -55,8 +56,8 @@ class CertificateKeyRotationMsgProcessorTest
   def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = bigIntegerZero): Message = {
     val data = Bytes.concat(opCode, arguments)
     new Message(
-      new AddressProposition(origin),
-      new AddressProposition(contractAddress), // to
+      Optional.of(new AddressProposition(origin)),
+      Optional.of(new AddressProposition(contractAddress)), // to
       bigIntegerZero, // gasPrice
       bigIntegerZero, // gasFeeCap
       bigIntegerZero, // gasTipCap

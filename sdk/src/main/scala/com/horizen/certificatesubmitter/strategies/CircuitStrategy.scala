@@ -16,13 +16,12 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.transaction.MemoryPool
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.reflect.ClassTag
 import scala.util.Try
 
 abstract class CircuitStrategy[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
-  PM <: SidechainBlockBase[TX, H] : ClassTag,
+  PM <: SidechainBlockBase[TX, H],
   T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{
   
   def generateProof(certificateData: T, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long]

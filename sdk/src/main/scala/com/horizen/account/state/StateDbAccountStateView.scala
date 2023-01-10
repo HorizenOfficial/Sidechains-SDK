@@ -20,6 +20,7 @@ import com.horizen.utils.BytesUtils
 import scorex.util.ScorexLogging
 
 import java.math.BigInteger
+import java.util.Optional
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 
@@ -77,8 +78,8 @@ class StateDbAccountStateView(
           val data = Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), cmdInput.encode())
 
           val message = new Message(
-            ownerAddressProposition,
-            new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES),
+            Optional.of(ownerAddressProposition),
+            Optional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
             BigInteger.ZERO, // gasPrice
             BigInteger.ZERO, // gasFeeCap
             BigInteger.ZERO, // gasTipCap

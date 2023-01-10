@@ -4,6 +4,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.utils.BytesUtils
 
 import java.math.BigInteger
+import java.util.Optional
 
 trait EvmMessageProcessorTestBase {
 
@@ -21,7 +22,7 @@ trait EvmMessageProcessorTestBase {
     val gasTipCap = BigInteger.ZERO
     val value = BigInteger.ZERO
     val nonce = BigInteger.ZERO
-    new Message(originAddress, to, gasPrice, gasFeeCap, gasTipCap, gasLimit, value, nonce, data, false)
+    new Message(Optional.of(originAddress), Optional.ofNullable(to), gasPrice, gasFeeCap, gasTipCap, gasLimit, value, nonce, data, false)
   }
 
   def getMessage(to: AddressProposition): Message = getMessage(to, null)

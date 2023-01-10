@@ -12,7 +12,6 @@ import com.horizen.utils.WithdrawalEpochInfo
 import sparkz.core.VersionTag
 import scorex.util.ScorexLogging
 import scorex.util.ModifierId
-
 import java.math.BigInteger
 
 // this class extends 2 main hierarchies, which are kept separate:
