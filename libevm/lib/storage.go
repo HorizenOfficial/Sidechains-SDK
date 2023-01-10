@@ -73,12 +73,21 @@ func (s *Service) StateGetStorage(params StorageParams) (error, common.Hash) {
 	return nil, value
 }
 
+func (s *Service) StateGetCommittedStorage(params StorageParams) (error, common.Hash) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, common.Hash{}
+	}
+	value := statedb.GetCommittedState(params.Address, params.Key)
+	return nil, value
+}
+
 func (s *Service) StateSetStorage(params SetStorageParams) error {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}
-	s.setStateWithRefund(statedb, params.Address, params.Key, params.Value)
+	statedb.SetState(params.Address, params.Key, params.Value)
 	return nil
 }
 
@@ -88,7 +97,7 @@ func (s *Service) StateRemoveStorage(params StorageParams) error {
 		return err
 	}
 	// the "empty" value will cause the key-value pair to be deleted
-	s.setStateWithRefund(statedb, params.Address, params.Key, common.Hash{})
+	statedb.SetState(params.Address, params.Key, common.Hash{})
 	return nil
 }
 
@@ -129,7 +138,7 @@ func (s *Service) StateSetStorageBytes(params SetStorageBytesParams) error {
 	// the length of the value is stored at the original key and the chunks are stored at hash(key, i)
 	newLength := len(params.Value)
 	// if the new value is empty remove all key-value pairs, including the one holding the value length
-	s.setStateWithRefund(statedb, params.Address, params.Key, intToHash(newLength))
+	statedb.SetState(params.Address, params.Key, intToHash(newLength))
 	for start := 0; start < newLength || start < oldLength; start += common.HashLength {
 		chunkIndex := start / common.HashLength
 		var chunk common.Hash
@@ -144,7 +153,7 @@ func (s *Service) StateSetStorageBytes(params SetStorageBytesParams) error {
 			// remove previous chunks that are not needed anymore
 			chunk = common.Hash{}
 		}
-		s.setStateWithRefund(statedb, params.Address, getChunkKey(params.Key, chunkIndex), chunk)
+		statedb.SetState(params.Address, getChunkKey(params.Key, chunkIndex), chunk)
 	}
 	return nil
 }

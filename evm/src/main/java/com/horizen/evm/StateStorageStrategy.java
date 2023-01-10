@@ -1,5 +1,6 @@
 package com.horizen.evm;
 
+// TODO: remove
 public enum StateStorageStrategy {
     /**
      * Raw 256bit key-value pair storage, requires all values to be exactly 32-bytes. This will always access exactly

@@ -1,21 +1,22 @@
 package com.horizen.account.state
 
-import com.horizen.evm.ResourceHandle
+import com.horizen.account.storage.AccountStateMetadataStorageView
+import com.horizen.evm.StateDB
 import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
 
 /**
  * Wrapper for AccountStateView to help with tracking gas consumption.
- * @param view
- *   instance of BaseAccountStateView
  * @param gas
  *   GasPool instance to deduct gas from
  */
-class AccountStateViewGasTracked(view: AccountStateView, gas: GasPool) extends BaseAccountStateView {
-  override def getStateDbHandle: ResourceHandle = view.getStateDbHandle
-
-  override def addAccount(address: Array[Byte], code: Array[Byte]): Unit = view.addAccount(address, code)
+class AccountStateViewGasTracked(
+    metadataStorageView: AccountStateMetadataStorageView,
+    stateDb: StateDB,
+    messageProcessors: Seq[MessageProcessor],
+    gas: GasPool
+) extends AccountStateView(metadataStorageView, stateDb, messageProcessors) {
 
   /**
    * Consume gas for account access:
@@ -24,7 +25,7 @@ class AccountStateViewGasTracked(view: AccountStateView, gas: GasPool) extends B
    */
   @throws(classOf[OutOfGasException])
   private def accountAccess(address: Array[Byte]): Unit = {
-    val warm = view.stateDb.accessAccount(address)
+    val warm = stateDb.accessAccount(address)
     gas.subGas(if (warm) GasUtil.WarmStorageReadCostEIP2929 else GasUtil.ColdAccountAccessCostEIP2929)
   }
 
@@ -35,37 +36,37 @@ class AccountStateViewGasTracked(view: AccountStateView, gas: GasPool) extends B
    */
   @throws(classOf[OutOfGasException])
   private def slotRead(address: Array[Byte], slot: Array[Byte]): Unit = {
-    val warm = view.stateDb.accessSlot(address, slot)
+    val warm = stateDb.accessSlot(address, slot)
     gas.subGas(if (warm) GasUtil.WarmStorageReadCostEIP2929 else GasUtil.ColdSloadCostEIP2929)
   }
 
   override def accountExists(address: Array[Byte]): Boolean = {
     accountAccess(address)
-    view.accountExists(address)
+    super.accountExists(address)
   }
 
   @throws(classOf[OutOfGasException])
   override def isEoaAccount(address: Array[Byte]): Boolean = {
     accountAccess(address)
-    view.isEoaAccount(address)
+    super.isEoaAccount(address)
   }
 
   @throws(classOf[OutOfGasException])
   override def isSmartContractAccount(address: Array[Byte]): Boolean = {
     accountAccess(address)
-    view.isSmartContractAccount(address)
+    super.isSmartContractAccount(address)
   }
 
   @throws(classOf[OutOfGasException])
   override def getCodeHash(address: Array[Byte]): Array[Byte] = {
     accountAccess(address)
-    view.getCodeHash(address)
+    super.getCodeHash(address)
   }
 
   @throws(classOf[OutOfGasException])
   override def getCode(address: Array[Byte]): Array[Byte] = {
     accountAccess(address)
-    val code = view.getCode(address)
+    val code = super.getCode(address)
     // cosume additional gas proportional to the code size,
     // this should preferably be done before acutally copying the code, but we don't know the size beforehand
     gas.subGas(GasUtil.codeCopy(code.length))
@@ -74,93 +75,48 @@ class AccountStateViewGasTracked(view: AccountStateView, gas: GasPool) extends B
 
   override def getNonce(address: Array[Byte]): BigInteger = {
     accountAccess(address)
-    view.getNonce(address)
+    super.getNonce(address)
   }
 
   override def increaseNonce(address: Array[Byte]): Unit = {
     accountAccess(address)
-    view.increaseNonce(address)
+    super.increaseNonce(address)
   }
 
   @throws(classOf[OutOfGasException])
   override def getBalance(address: Array[Byte]): BigInteger = {
     accountAccess(address)
-    view.getBalance(address)
+    super.getBalance(address)
   }
 
   @throws(classOf[OutOfGasException])
   override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
     accountAccess(address)
-    view.addBalance(address, amount)
+    super.addBalance(address, amount)
   }
 
   @throws(classOf[OutOfGasException])
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
     accountAccess(address)
-    view.subBalance(address, amount)
+    super.subBalance(address, amount)
   }
 
   @throws(classOf[OutOfGasException])
   override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
     slotRead(address, key)
-    view.getAccountStorage(address, key)
-  }
-
-  @throws(classOf[OutOfGasException])
-  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
-    // here we read 1 word overhead (storing the length) plus N bytes of data spread over M words
-    // so we charge warm or cold gas for the word storing the length, depending on previous access to the same key
-    // and we charge M*warm gas
-    slotRead(address, key)
-    val value = view.getAccountStorageBytes(address, key)
-    val words = (value.length + 31) / 32
-    gas.subGas(GasUtil.WarmStorageReadCostEIP2929.multiply(BigInteger.valueOf(words)))
-    value
+    super.getAccountStorage(address, key)
   }
 
   @throws(classOf[OutOfGasException])
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
     // TODO: complicated SSTORE gas usage + refunds handling
     gas.subGas(GasUtil.GasTBD)
-    view.updateAccountStorage(address, key, value)
-  }
-
-  @throws(classOf[OutOfGasException])
-  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    // TODO: complicated SSTORE gas usage + refunds handling
-    gas.subGas(GasUtil.GasTBD)
-    view.updateAccountStorageBytes(address, key, value)
-  }
-
-  @throws(classOf[OutOfGasException])
-  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit = {
-    // TODO: complicated SSTORE gas usage + refunds handling
-    gas.subGas(GasUtil.GasTBD)
-    view.removeAccountStorage(address, key)
-  }
-
-  @throws(classOf[OutOfGasException])
-  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit = {
-    // TODO: complicated SSTORE gas usage + refunds handling
-    gas.subGas(GasUtil.GasTBD)
-    view.removeAccountStorageBytes(address, key)
+    super.updateAccountStorage(address, key, value)
   }
 
   @throws(classOf[OutOfGasException])
   override def addLog(evmLog: EvmLog): Unit = {
     gas.subGas(GasUtil.logGas(evmLog))
-    view.addLog(evmLog)
+    super.addLog(evmLog)
   }
-
-  override def getAccountStateRoot: Array[Byte] = view.getAccountStateRoot
-
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = view.getListOfForgerStakes
-
-  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = view.getForgerStakeData(stakeId)
-
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = view.getLogs(txHash)
-
-  override def getIntermediateRoot: Array[Byte] = view.getIntermediateRoot
-
-  override def nextBaseFee: BigInteger = view.nextBaseFee
 }

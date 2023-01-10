@@ -28,4 +28,6 @@ trait BaseAccountStateView extends AccountStateReader {
   def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit
 
   def addLog(evmLog: EvmLog): Unit
+
+  def getGasTrackedView(gas: GasPool): BaseAccountStateView
 }

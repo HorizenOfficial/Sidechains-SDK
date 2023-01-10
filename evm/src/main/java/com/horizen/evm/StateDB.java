@@ -12,17 +12,18 @@ public class StateDB extends ResourceHandle {
      * Code hash of an empty byte array
      */
     public static final byte[] EMPTY_CODE_HASH =
-            Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+        Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
     /**
      * TrieHasher.Root() of an empty byte array
      */
     public static final byte[] EMPTY_ROOT_HASH =
-            Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+        Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
     /**
      * Opens a view on the state at the given state root hash.
-     * @param db database instance
+     *
+     * @param db   database instance
      * @param root root hash
      */
     public StateDB(Database db, byte[] root) {
@@ -188,12 +189,30 @@ public class StateDB extends ResourceHandle {
     }
 
     /**
+     * Add gas refund.
+     *
+     * @param gas amount to add to refund counter
+     */
+    public void addRefund(BigInteger gas) {
+        LibEvm.refundAdd(handle, gas);
+    }
+
+    /**
+     * Remove gas refund.
+     *
+     * @param gas amount to remove from refund counter
+     */
+    public void subRefund(BigInteger gas) {
+        LibEvm.refundSub(handle, gas);
+    }
+
+    /**
      * Get refunded gas.
      *
      * @return refunded gas
      */
     public BigInteger getRefund() {
-        return LibEvm.stateGetRefund(handle);
+        return LibEvm.refundGet(handle);
     }
 
     /**
@@ -213,6 +232,17 @@ public class StateDB extends ResourceHandle {
             default:
                 throw new RuntimeException("invalid storage strategy");
         }
+    }
+
+    /**
+     * Read comitted storage trie of given account.
+     *
+     * @param address account address
+     * @param key     storage key
+     * @return comitted storage value
+     */
+    public byte[] getCommittedStorage(byte[] address, byte[] key) {
+        return LibEvm.stateGetCommittedStorage(handle, address, key);
     }
 
     /**
@@ -244,6 +274,7 @@ public class StateDB extends ResourceHandle {
      * @param address  account address
      * @param key      storage key
      * @param strategy access strategy to apply
+     * @deprecated use setStorage with a value of null or 32-bytes of zeros instead
      */
     public void removeStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
         switch (strategy) {

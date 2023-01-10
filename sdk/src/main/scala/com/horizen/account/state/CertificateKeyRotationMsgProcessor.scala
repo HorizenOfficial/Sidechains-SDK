@@ -35,7 +35,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = new AccountStateViewGasTracked(view, gas)
+    val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case SubmitKeyRotationReqCmdSig =>
         execSubmitKeyRotation(msg, gasView, blockContext.withdrawalEpochNumber)
