@@ -7,6 +7,8 @@ import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import com.horizen.account.state.FakeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import com.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, addNewNodeToList, findLinkedListNode, linkedListNodeRefIsNull}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
@@ -42,14 +44,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
   val networkParams: NetworkParams = params
 
-  /**
-   * TODO: Currently the stake id is calculated exclusively from message properties, which is good because it results in
-   *  a predictable result for the caller. The downside is that we need the nonce for that and in the context of RPC
-   *  calls messages often do not contain a nonce. Normal smart contract are also unable to access the nonce of an
-   *  account. A possible solution is to store a nonce counter within the forger stakes contract and use that, which
-   *  removes the need for the message nonce, but also destroys the predictability. We would need to store a nonce per
-   *  account to get that back.
-   */
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
       msg.getFromAddressBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
@@ -93,41 +87,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
           throw new ExecutionRevertedException("Error while parsing forger data.", exception)
       }
     }
-  }
-
-  def findLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte]): Option[LinkedListNode] = {
-    val data = view.getAccountStorageBytes(contractAddress, nodeId)
-    if (data.length == 0) {
-      // getting a not existing key from state DB using RAW strategy
-      // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
-      // gives an empty array instead
-      None
-    } else {
-      LinkedListNodeSerializer.parseBytesTry(data) match {
-        case Success(obj) => Some(obj)
-        case Failure(exception) =>
-          throw new ExecutionRevertedException("Error while parsing forger info.", exception)
-      }
-    }
-  }
-
-  def addNewNodeToList(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
-    val oldTip = view.getAccountStorage(contractAddress, LinkedListTipKey)
-
-    val newTip = Blake2b256.hash(stakeId)
-
-    // modify previous node (if any) to point at this one
-    modifyNode(view, oldTip) { previousNode =>
-      LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, newTip)
-    }
-
-    // update list tip, now it is this newly added one
-    view.updateAccountStorage(contractAddress, LinkedListTipKey, newTip)
-
-    // store the new node
-    view.updateAccountStorageBytes(contractAddress, newTip,
-      LinkedListNodeSerializer.toBytes(
-        LinkedListNode(stakeId, oldTip, LinkedListNullValue)))
   }
 
   def addForgerStake(view: BaseAccountStateView, stakeId: Array[Byte],
@@ -208,9 +167,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     }
   }
 
-  def linkedListNodeRefIsNull(ref: Array[Byte]): Boolean =
-    BytesUtils.toHexString(ref).equals(BytesUtils.toHexString(LinkedListNullValue))
-
   override def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): Array[Byte] =
     doAddNewStakeCmd(msg, view, isGenesisScCreation = true)
 
@@ -238,7 +194,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
     val sender = msg.getFromAddressBytes
     // check that sender account exists (unless we are staking in the sc creation phase)
-    if (!isGenesisScCreation && !view.accountExists(sender)) {
+    if (!view.accountExists(sender) && !isGenesisScCreation) {
       throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom.toString}")
     }
 
@@ -253,7 +209,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException(s"Owner account is not an EOA")
     }
 
-    // TODO decide whether we need to check also genesis case (also UTXO model)
     if (!isGenesisScCreation && networkParams.restrictForgers) {
       // check that the delegation arguments satisfy the restricted list of forgers.
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
@@ -287,8 +242,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       view.subBalance(sender, stakedAmount)
       // increase the balance of the "forger stake smart contract” account
       view.addBalance(contractAddress, stakedAmount)
-      // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
-      //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
     }
     // result in case of success execution might be useful for RPC commands
     newStakeId
@@ -389,9 +342,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 }
 
 object ForgerStakeMsgProcessor {
-
-  val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
-  val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
 
   val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes()")
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
@@ -634,85 +584,5 @@ object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
     val stakeAmount = new BigInteger(r.getBytes(stakeAmountLength))
 
     ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
-  }
-}
-
-// A (sort of) linked list node containing:
-//     stakeId of a forger stake data db record
-//     two keys to contiguous nodes, previous and next
-// Each node is stored in stateDb as key/value pair:
-//     key=Hash(node.dataKey) / value = node
-// Note:
-// 1) we use Blake256b hash since stateDb internally uses Keccak hash of stakeId as key for forger stake data records
-// and it would clash
-// 2) TIP value is stored in the state db as well, initialized as NULL value
-
-/*
-TIP                            NULL
-  |                               ^
-  |                                \
-  |                                 \
-  +-----> NODE_n [stakeId_n, prev, next]  <------------+
-                    |         |                         \
-                    |         |                          \
-                    |         V                           \
-                    |       NODE_n-1 [stakeId_n-1, prev, next]  <------------+
-                    |                   |           |                         \
-                    |                   |           |                          \
-                    V                   |           V                           \
-                 STAKE_n                |         NODE_n-2 [stakeId_n-2, prev, next]
-                                        |                     |           |
-                                        |                    ...         ...
-                                        V
-                                     STAKE_n-1                      .
-                                                                     .
-                                                                      .
-
-                                                                                    ...
-                                                                                      \
-                                                          NODE_1 [stakeId_n-1, prev, next]  <---------+
-                                                                    |           |                      \
-                                                                    |           |                       \
-                                                                    |           V                        \
-                                                                    |         NODE_0 [stakeId_0, prev, next]
-                                                                    |                   |         |
-                                                                    |                   |         |
-                                                                    V                   |         V
-                                                                 STAKE_1                |       NULL
-                                                                                        |
-                                                                                        |
-                                                                                        V
-                                                                                     STAKE_0
-
- */
-
-case class LinkedListNode(dataKey: Array[Byte], previousNodeKey: Array[Byte], nextNodeKey: Array[Byte])
-  extends BytesSerializable {
-
-  require(dataKey.length == 32, "data key size should be 32")
-  require(previousNodeKey.length == 32, "next node key size should be 32")
-  require(nextNodeKey.length == 32, "next node key size should be 32")
-
-  override type M = LinkedListNode
-
-  override def serializer: SparkzSerializer[LinkedListNode] = LinkedListNodeSerializer
-
-  override def toString: String = "%s(dataKey: %s, previousNodeKey: %s, nextNodeKey: %s)"
-    .format(this.getClass.toString, BytesUtils.toHexString(dataKey),
-      BytesUtils.toHexString(previousNodeKey), BytesUtils.toHexString(nextNodeKey))
-}
-
-object LinkedListNodeSerializer extends SparkzSerializer[LinkedListNode] {
-  override def serialize(s: LinkedListNode, w: Writer): Unit = {
-    w.putBytes(s.dataKey)
-    w.putBytes(s.previousNodeKey)
-    w.putBytes(s.nextNodeKey)
-  }
-
-  override def parse(r: Reader): LinkedListNode = {
-    val dataKey = r.getBytes(32)
-    val previousNodeKey = r.getBytes(32)
-    val nextNodeKey = r.getBytes(32)
-    LinkedListNode(dataKey, previousNodeKey, nextNodeKey)
   }
 }
