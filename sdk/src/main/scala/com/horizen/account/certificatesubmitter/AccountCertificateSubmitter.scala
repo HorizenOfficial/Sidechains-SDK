@@ -13,7 +13,6 @@ import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies._
-import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.mainchain.api.MainchainNodeCertificateApi
@@ -71,13 +70,17 @@ object AccountCertificateSubmitterRef {
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel)
-      .withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel))
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel)
-      .withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel), name)
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 }

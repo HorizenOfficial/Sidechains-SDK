@@ -177,8 +177,6 @@ class AccountSidechainApp @Inject()
     NodeAccountMemoryPool,
     AccountNodeView] = nodeViewProvider
 
-  //Waits for actors to start
-  Thread.sleep(500)
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
   val transactionSubmitProvider: TransactionSubmitProvider[TX] = new TransactionSubmitProviderImpl[TX](sidechainTransactionActorRef)

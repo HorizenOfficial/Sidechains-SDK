@@ -1,10 +1,8 @@
 package com.horizen.forge
 
-import java.util.{Timer, TimerTask}
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.{Wallet, _}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
@@ -13,13 +11,14 @@ import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.TimeToEpochUtils
+import com.horizen._
 import scorex.util.ScorexLogging
-import sparkz.core.NodeViewHolder.{CurrentView, ReceivableMessages}
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import sparkz.core.NodeViewHolder.{CurrentView, ReceivableMessages}
 import sparkz.core.transaction.MemoryPool
-import sparkz.core.transaction.state.MinimalState
 import sparkz.core.utils.NetworkTimeProvider
 
+import java.util.{Timer, TimerTask}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
@@ -82,7 +81,8 @@ abstract class AbstractForger[
   }
 
   override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
+    log.debug(" Forger actor is starting")
+    super.preStart()
   }
 
   override def postStop(): Unit = {

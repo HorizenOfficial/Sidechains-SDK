@@ -261,8 +261,6 @@ class SidechainApp @Inject()
       SidechainWalletCswDataProviderCSWDisabled()
   }
 
-  //Waits for actors to start
-  Thread.sleep(500)
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
