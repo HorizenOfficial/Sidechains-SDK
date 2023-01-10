@@ -14,9 +14,6 @@ object GasUtil {
   val TxDataZeroGas: BigInteger = BigInteger.valueOf(4)
   val TxDataNonZeroGasEIP2028: BigInteger = BigInteger.valueOf(16)
 
-  val CallGasEIP150: BigInteger = BigInteger.valueOf(700)
-  val BalanceGasEIP1884: BigInteger = BigInteger.valueOf(700)
-  val ExtcodeHashGasEIP1884: BigInteger = BigInteger.valueOf(700)
   val ColdAccountAccessCostEIP2929: BigInteger = BigInteger.valueOf(2600)
   val WarmStorageReadCostEIP2929: BigInteger = BigInteger.valueOf(100)
   val ColdSloadCostEIP2929: BigInteger = BigInteger.valueOf(2100)
@@ -26,9 +23,6 @@ object GasUtil {
   val LogGas: BigInteger = BigInteger.valueOf(375)
   val LogTopicGas: BigInteger = BigInteger.valueOf(375)
   val LogDataGas: BigInteger = BigInteger.valueOf(8)
-
-  // TODO:GAS replace with proper values
-  val GasTBD: BigInteger = BigInteger.valueOf(250)
 
   // The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
   // up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529

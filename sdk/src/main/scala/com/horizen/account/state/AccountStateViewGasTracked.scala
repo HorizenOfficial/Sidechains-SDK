@@ -110,7 +110,8 @@ class AccountStateViewGasTracked(
   @throws(classOf[OutOfGasException])
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
     // TODO: complicated SSTORE gas usage + refunds handling
-    gas.subGas(GasUtil.GasTBD)
+    //  see /home/gigo/go/pkg/mod/github.com/ethereum/go-ethereum@v1.10.26/core/vm/operations_acl.go:27
+//    gas.subGas(GasUtil.GasTBD)
     super.updateAccountStorage(address, key, value)
   }
 
