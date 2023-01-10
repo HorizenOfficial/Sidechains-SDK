@@ -6,7 +6,7 @@ import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumReceipt, Bloom}
+import com.horizen.account.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountStateMetadataStorageView
@@ -17,9 +17,9 @@ import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
+import com.horizen.evm.StateDB
 import com.horizen.evm.interop.ProofAccountResult
 import com.horizen.evm.utils.Address
-import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.fixtures.SidechainBlockFixture.generateMainchainBlockReference
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
@@ -286,14 +286,13 @@ case class AccountMockDataHelper(genesis: Boolean)
       Mockito.when(state.getView.getProof(any(), any())).thenReturn(proofRes)
       if (stateDB != null) {
         Mockito
-          .when(stateDB.getStorage(any(), any(), any()))
+          .when(stateDB.getStorage(any(), any()))
           .thenReturn(Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"))
         Mockito
           .when(
             stateDB.getStorage(
               Numeric.hexStringToByteArray("0x1234567890123456789012345678901234567890"),
-              Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"),
-              StateStorageStrategy.RAW
+              Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
             )
           )
           .thenReturn(
@@ -303,8 +302,7 @@ case class AccountMockDataHelper(genesis: Boolean)
           .when(
             stateDB.getStorage(
               Numeric.hexStringToByteArray("0x1234567891011121314151617181920212223242"),
-              Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"),
-              StateStorageStrategy.RAW
+              Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
             )
           )
           .thenReturn(

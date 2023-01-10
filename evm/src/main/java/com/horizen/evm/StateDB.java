@@ -220,18 +220,10 @@ public class StateDB extends ResourceHandle {
      *
      * @param address  account address
      * @param key      storage key
-     * @param strategy storage strategy to apply
-     * @return storage value, representation depends on strategy
+     * @return storage value, always 32 bytes
      */
-    public byte[] getStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
-        switch (strategy) {
-            case RAW:
-                return LibEvm.stateGetStorage(handle, address, key);
-            case CHUNKED:
-                return LibEvm.stateGetStorageBytes(handle, address, key);
-            default:
-                throw new RuntimeException("invalid storage strategy");
-        }
+    public byte[] getStorage(byte[] address, byte[] key) {
+        return LibEvm.stateGetStorage(handle, address, key);
     }
 
     /**
@@ -239,7 +231,7 @@ public class StateDB extends ResourceHandle {
      *
      * @param address account address
      * @param key     storage key
-     * @return comitted storage value
+     * @return comitted storage value, always 32 bytes
      */
     public byte[] getCommittedStorage(byte[] address, byte[] key) {
         return LibEvm.stateGetCommittedStorage(handle, address, key);
@@ -253,40 +245,9 @@ public class StateDB extends ResourceHandle {
      * @param address  account address
      * @param key      storage key
      * @param value    value to store
-     * @param strategy storage strategy to apply
      */
-    public void setStorage(byte[] address, byte[] key, byte[] value, StateStorageStrategy strategy) {
-        switch (strategy) {
-            case RAW:
-                LibEvm.stateSetStorage(handle, address, key, value);
-                return;
-            case CHUNKED:
-                LibEvm.stateSetStorageBytes(handle, address, key, value);
-                return;
-            default:
-                throw new RuntimeException("invalid storage strategy");
-        }
-    }
-
-    /**
-     * Remove from storage trie of given account.
-     *
-     * @param address  account address
-     * @param key      storage key
-     * @param strategy access strategy to apply
-     * @deprecated use setStorage with a value of null or 32-bytes of zeros instead
-     */
-    public void removeStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
-        switch (strategy) {
-            case RAW:
-                LibEvm.stateRemoveStorage(handle, address, key);
-                return;
-            case CHUNKED:
-                LibEvm.stateRemoveStorageBytes(handle, address, key);
-                return;
-            default:
-                throw new RuntimeException("invalid storage strategy");
-        }
+    public void setStorage(byte[] address, byte[] key, byte[] value) {
+        LibEvm.stateSetStorage(handle, address, key, value);
     }
 
     /**

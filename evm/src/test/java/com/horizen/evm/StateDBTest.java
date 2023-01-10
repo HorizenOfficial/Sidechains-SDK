@@ -11,6 +11,7 @@ import scorex.crypto.hash.Keccak256;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
@@ -27,12 +28,9 @@ public class StateDBTest extends LibEvmTestBase {
     }
 
     public static byte[] createPaddingBuffer(byte paddingByte, int paddingLength) {
-        byte[] pading = new byte[paddingLength];
-        for (int i = 0; i < pading.length; i++) {
-            pading[i] = paddingByte;
-        }
-
-        return pading;
+        byte[] padding = new byte[paddingLength];
+        Arrays.fill(padding, paddingByte);
+        return padding;
     }
 
     @Rule
@@ -108,12 +106,13 @@ public class StateDBTest extends LibEvmTestBase {
         final var databaseFolder = tempFolder.newFolder("account-db");
         final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
+        // TODO: add some negative cases: e.g. trying to store a value that is not 32 bytes should throw
+        //  32 bytes of zeros and null should be identical
         final byte[][] values = {
-                bytes("aa"), bytes("ffff"),
-                bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
-                bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffabcd001122"),
+                bytes("0000000000000000000000000000000000000000000000000000000000000000"),
+                bytes("0000000000000000000000001234000000000000000000000000000000000000"),
+                bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
                 bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
-                bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffaa")
         };
 
         byte[] initialRoot;
@@ -127,12 +126,12 @@ public class StateDBTest extends LibEvmTestBase {
                 assertFalse("account must exist after setting code hash", statedb.isEmpty(origin));
                 initialRoot = statedb.getIntermediateRoot();
                 for (var value : values) {
-                    statedb.setStorage(origin, key, value, StateStorageStrategy.CHUNKED);
-                    var retrievedValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
+                    statedb.setStorage(origin, key, value);
+                    var retrievedValue = statedb.getStorage(origin, key);
                     assertArrayEquals(value, retrievedValue);
                     // store the root hash of each state
                     roots.add(statedb.commit());
-                    var committedValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
+                    var committedValue = statedb.getStorage(origin, key);
                     assertArrayEquals(value, committedValue);
                 }
             }
@@ -142,10 +141,10 @@ public class StateDBTest extends LibEvmTestBase {
         try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
             for (int i = 0; i < values.length; i++) {
                 try (var statedb = new StateDB(db, roots.get(i))) {
-                    var writtenValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
+                    var writtenValue = statedb.getStorage(origin, key);
                     assertArrayEquals(values[i], writtenValue);
                     // verify that removing the key results in the initial state root
-                    statedb.removeStorage(origin, key, StateStorageStrategy.CHUNKED);
+                    statedb.setStorage(origin, key, null);
                     assertArrayEquals(initialRoot, statedb.getIntermediateRoot());
                 }
             }
@@ -187,10 +186,11 @@ public class StateDBTest extends LibEvmTestBase {
         try (var db = new MemoryDatabase()) {
             try (var statedb = new StateDB(db, hashNull)) {
                 statedb.setStorage(address, (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000000")),
-                        pad(RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))), paddingByte, paddingLength),
-                        StateStorageStrategy.RAW);
+                        pad(RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))), paddingByte, paddingLength)
+                );
                 statedb.setStorage(address, (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000001")),
-                        pad(RlpEncoder.encode(RlpString.create(bytes("02"))), paddingByte, paddingLength), StateStorageStrategy.RAW);
+                        pad(RlpEncoder.encode(RlpString.create(bytes("02"))), paddingByte, paddingLength)
+                );
 
                 statedb.commit();
 

@@ -15,7 +15,7 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, 
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
 import com.horizen.evm.utils.Hash
-import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
+import com.horizen.evm.{ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
@@ -244,10 +244,10 @@ class AccountStateView(
   }
 
   override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] =
-    stateDb.getStorage(address, key, StateStorageStrategy.RAW)
+    stateDb.getStorage(address, key)
 
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
-    stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
+    stateDb.setStorage(address, key, value)
 
   final override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
     updateAccountStorage(address, key, null)

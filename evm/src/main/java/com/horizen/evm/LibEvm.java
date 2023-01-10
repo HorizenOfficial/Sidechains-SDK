@@ -162,26 +162,6 @@ final class LibEvm {
         invoke("StateSetStorage", new SetStorageParams(handle, address, key, value));
     }
 
-    // TODO: remove
-    public static void stateRemoveStorage(int handle, byte[] address, byte[] key) {
-        invoke("StateRemoveStorage", new StorageParams(handle, address, key));
-    }
-
-    // TODO: remove
-    public static byte[] stateGetStorageBytes(int handle, byte[] address, byte[] key) {
-        return invoke("StateGetStorageBytes", new StorageParams(handle, address, key), byte[].class);
-    }
-
-    // TODO: remove
-    public static void stateSetStorageBytes(int handle, byte[] address, byte[] key, byte[] value) {
-        invoke("StateSetStorageBytes", new SetStorageBytesParams(handle, address, key, value));
-    }
-
-    // TODO: remove
-    public static void stateRemoveStorageBytes(int handle, byte[] address, byte[] key) {
-        invoke("StateRemoveStorageBytes", new StorageParams(handle, address, key));
-    }
-
     public static ProofAccountResult stateGetProof(int handle, byte[] address, byte[][] keys) {
         return invoke("StateGetProof", new ProofParams(handle, address, keys), ProofAccountResult.class);
     }
