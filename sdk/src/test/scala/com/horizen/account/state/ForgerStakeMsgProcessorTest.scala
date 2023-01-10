@@ -409,55 +409,6 @@ class ForgerStakeMsgProcessorTest
     }
   }
 
-  // this test is not meaningful anymore: all sanity checks are performed before calling any MessageProcessor
-  // ===> here we are succesful even with an empty balance account
-  @Test
-  @Ignore
-  def testAddStakeFromEmptyBalanceAccount(): Unit = {
-
-    usingView(forgerStakeMessageProcessor) { view =>
-
-      // create private/public key pair
-      val key: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("emptybalancetest".getBytes())
-
-      val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
-      val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
-
-      val blockSignerProposition2 = new PublicKey25519Proposition(BytesUtils.fromHexString("2200000000000000000000000000000000000000000000000000000000000022")) // 32 bytes
-      val vrfPublicKey2 = new VrfPublicKey(BytesUtils.fromHexString("220000000000000000000000000000000000000000000000000000000000000022")) // 33 bytes
-
-      val ownerAddressProposition = key.publicImage()
-
-      forgerStakeMessageProcessor.init(view)
-
-      Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
-      Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
-        (blockSignerProposition1, vrfPublicKey1),
-        (blockSignerProposition2, vrfPublicKey2)
-      ))
-
-      createSenderAccount(view, BigInteger.ZERO)
-
-      val cmdInput = AddNewStakeCmdInput(
-        ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
-        ownerAddressProposition
-      )
-      val data: Array[Byte] = cmdInput.encode()
-
-      val msg = getDefaultMessage(
-        BytesUtils.fromHexString(AddNewStakeCmd),
-        data, randomNonce, validWeiAmount)
-
-      // should fail because staked amount is not a zat amount
-      assertGas(5550) { gas =>
-        assertThrows[ExecutionFailedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
-      }
-      view.commit(bytesToVersion(getVersion.data()))
-    }
-  }
-
   @Test
   def testAddStakeWithSmartContractAsOwner(): Unit = {
 

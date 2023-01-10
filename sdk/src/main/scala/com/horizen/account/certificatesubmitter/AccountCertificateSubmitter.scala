@@ -18,8 +18,6 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.mainchain.api.MainchainNodeCertificateApi
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.client.MainchainNodeChannel
-
-import java.util.Optional
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -45,14 +43,6 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
   override type HIS = AccountHistory
   override type MS = AccountState
   override type MP = AccountMemoryPool
-
-  //override def getUtxoMerkleTreeRoot(referencedEpoch: Int, state: AccountState): Optional[Array[Byte]] = Optional.empty()
-
-  /*
-  override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[BackwardTransfer] =
-    state.getWithdrawalRequests(referencedEpochNumber).map(request => new BackwardTransfer(request.proposition.bytes, request.valueInZennies))
-  */
-
 }
 
 object AccountCertificateSubmitterRef {
