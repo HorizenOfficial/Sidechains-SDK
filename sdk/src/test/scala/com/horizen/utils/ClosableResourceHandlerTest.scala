@@ -10,7 +10,7 @@ import org.mockito.Mockito
 import org.mockito.Mockito.{times, verify}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.bytesToId
+import sparkz.util.bytesToId
 
 import java.time.Instant
 

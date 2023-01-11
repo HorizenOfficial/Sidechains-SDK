@@ -1,7 +1,7 @@
 package com.horizen.storage
 
-import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.SparkzEncoding
 
 /**
  * That source code had been copied/modified from ErgoPlatform Project

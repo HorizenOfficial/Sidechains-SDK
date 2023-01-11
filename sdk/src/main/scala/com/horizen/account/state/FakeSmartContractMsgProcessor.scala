@@ -4,10 +4,10 @@ import com.horizen.account.event.EthereumEvent
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import org.web3j.abi.datatypes.Address
-import scorex.crypto.hash.Keccak256
-import scorex.util.ScorexLogging
+import sparkz.crypto.hash.Keccak256
+import sparkz.util.SparkzLogging
 
-abstract class FakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
+abstract class FakeSmartContractMsgProcessor extends MessageProcessor with SparkzLogging {
 
   val NULL_HEX_STRING_32: Array[Byte] = Array.fill(32)(0)
 

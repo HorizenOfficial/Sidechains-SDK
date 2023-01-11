@@ -2,7 +2,7 @@ package com.horizen.utils;
 
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
-import scorex.crypto.hash.Sha256;
+import sparkz.crypto.hash.Sha256;
 
 public final class Ed25519 {
 

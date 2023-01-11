@@ -40,7 +40,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.net.{InetAddress, InetSocketAddress}
 import java.util
@@ -51,8 +51,8 @@ import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, Get
 import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, Outgoing, PeerSpec}
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 

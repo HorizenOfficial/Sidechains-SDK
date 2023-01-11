@@ -8,7 +8,7 @@ import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertNull, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.core.utils.SparkzEncoder
+import sparkz.util.SparkzEncoder
 
 class EthereumTransactionJsonSerializationTest
   extends JUnitSuite

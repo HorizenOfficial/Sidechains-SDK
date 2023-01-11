@@ -4,8 +4,8 @@ import org.bouncycastle.util.Strings;
 import org.junit.Test;
 import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 import java.util.ArrayList;
 import java.util.Arrays;

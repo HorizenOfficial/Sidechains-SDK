@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, Bloom}
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
@@ -15,8 +15,7 @@ import com.horizen.utils.{BytesUtils, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
-import scorex.util.ScorexLogging
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.{SparkzEncoding, SparkzLogging}
 
 import java.math.BigInteger
 import scala.util.Try
@@ -35,7 +34,7 @@ class AccountBlock(override val header: AccountBlockHeader,
     mainchainBlockReferencesData,
     mainchainHeaders,
     ommers)
-    with ScorexLogging {
+    with SparkzLogging {
   override type M = AccountBlock
 
   override lazy val serializer = new AccountBlockSerializer(companion)

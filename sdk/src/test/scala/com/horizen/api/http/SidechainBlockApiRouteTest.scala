@@ -8,7 +8,7 @@ import com.horizen.consensus.{ConsensusEpochAndSlot, intToConsensusEpochNumber, 
 import com.horizen.forge
 import com.horizen.serialization.SerializationUtil
 import org.junit.Assert._
-import scorex.util.bytesToId
+import sparkz.util.bytesToId
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}

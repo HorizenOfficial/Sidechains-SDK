@@ -9,8 +9,8 @@ import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 import java.util.HashMap;
 import java.util.List;

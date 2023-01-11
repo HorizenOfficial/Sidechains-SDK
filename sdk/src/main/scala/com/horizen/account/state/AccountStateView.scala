@@ -20,7 +20,7 @@ import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import sparkz.core.VersionTag
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 import java.util.Optional
@@ -34,7 +34,7 @@ class AccountStateView(
   extends StateView[SidechainTypes#SCAT]
     with BaseAccountStateView
     with AutoCloseable
-    with ScorexLogging {
+    with SparkzLogging {
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val certificateKeysProvider: CertificateKeysProvider = messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]

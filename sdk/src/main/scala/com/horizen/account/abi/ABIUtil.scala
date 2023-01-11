@@ -4,7 +4,7 @@ import com.horizen.account.state.ExecutionFailedException
 import com.horizen.account.utils.Secp256k1
 import com.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 import java.util
 

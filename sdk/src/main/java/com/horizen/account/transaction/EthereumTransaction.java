@@ -16,7 +16,7 @@ import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
-import scorex.crypto.hash.Keccak256;
+import sparkz.crypto.hash.Keccak256;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;

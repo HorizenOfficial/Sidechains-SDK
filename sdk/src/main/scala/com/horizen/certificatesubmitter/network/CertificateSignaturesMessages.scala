@@ -4,7 +4,7 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Certificate
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.proof.SchnorrSignatureSerializer
 import sparkz.core.network.message.{Message, MessageSpecV1}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 /**
  * Specify the unknown certificate signatures indexes

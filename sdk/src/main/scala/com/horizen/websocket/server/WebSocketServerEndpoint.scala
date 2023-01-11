@@ -8,7 +8,7 @@ import com.horizen.block.SidechainBlock
 
 import javax.websocket.{OnClose, OnError, OnMessage, OnOpen, SendHandler, SendResult, Session}
 import javax.websocket.server.ServerEndpoint
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.{Failure, Success}
 
@@ -25,7 +25,7 @@ case object RESPONSE_MESSAGE extends MsgType(2)
 case object ERROR_MESSAGE extends MsgType(3)
 
 @ServerEndpoint("/")
-class WebSocketServerEndpoint() extends ScorexLogging {
+class WebSocketServerEndpoint() extends SparkzLogging {
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
   val sidechainNodeChannel: SidechainNodeChannelImpl = new SidechainNodeChannelImpl()
 
@@ -197,7 +197,7 @@ class WebSocketServerEndpoint() extends ScorexLogging {
   }
 }
 
-private object WebSocketServerEndpoint extends ScorexLogging {
+private object WebSocketServerEndpoint extends SparkzLogging {
   var sessions: util.ArrayList[Session] = new util.ArrayList[Session]()
   val sidechainNodeChannelImpl = new SidechainNodeChannelImpl();
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)

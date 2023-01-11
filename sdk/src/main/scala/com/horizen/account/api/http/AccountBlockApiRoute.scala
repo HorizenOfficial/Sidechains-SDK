@@ -18,7 +18,7 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.serialization.SparkzSerializer
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext, Future}

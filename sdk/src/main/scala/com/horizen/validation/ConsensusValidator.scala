@@ -11,7 +11,7 @@ import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.core.utils.TimeProvider
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.util.Try
 
@@ -27,7 +27,7 @@ class ConsensusValidator[
   timeProvider: TimeProvider
 )
   extends HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HT]
-    with ScorexLogging {
+    with SparkzLogging {
 
   override def validate(block: PMOD, history: HT): Try[Unit] = Try {
     if (history.isGenesisBlock(block.id)) {

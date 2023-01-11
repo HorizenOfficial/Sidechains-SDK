@@ -8,7 +8,7 @@ import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.util.{ScorexEncoding, ScorexLogging}
+import sparkz.util.{SparkzEncoding, SparkzLogging}
 
 import java.util.{Optional => JOptional}
 import scala.util.Try
@@ -36,9 +36,9 @@ extends com.horizen.AbstractHistory[
     storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   with NetworkParamsUtils
   with ConsensusDataProvider
-  with ScorexEncoding
+  with SparkzEncoding
   with NodeAccountHistory
-  with ScorexLogging
+  with SparkzLogging
 {
 
   override type NVCT = AccountHistory

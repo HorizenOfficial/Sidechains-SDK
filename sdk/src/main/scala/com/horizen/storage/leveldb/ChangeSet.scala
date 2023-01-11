@@ -1,7 +1,7 @@
 package com.horizen.storage.leveldb
 
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 /**
   * That source code had been copied/modified from ErgoPlatform Project

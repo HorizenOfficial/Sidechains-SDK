@@ -8,7 +8,7 @@ import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer
 import com.horizen.serialization.Views
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 @JsonView(Array(classOf[Views.Default]))
