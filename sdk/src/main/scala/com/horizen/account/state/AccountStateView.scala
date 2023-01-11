@@ -30,7 +30,7 @@ import scala.util.Try
 
 class AccountStateView(
   metadataStorageView: AccountStateMetadataStorageView,
-  val stateDb: StateDB,
+  stateDb: StateDB,
   messageProcessors: Seq[MessageProcessor])
   extends StateView[SidechainTypes#SCAT]
     with BaseAccountStateView
