@@ -10,8 +10,8 @@ public interface CrossChainMessage {
     CrossChainProtocolVersion getProtocolVersion(); //version of the protocol for future extensions
     int getMessageType();
     byte[] getSenderSidechain();
-    Proposition getSender();
+    byte[] getSender(); //sender proposition, we keep it generic because we could have different formats depending on the sidechain
     byte[] getReceiverSidechain();
-    Proposition getReceiver();
+    byte[] getReceiver(); //receiver proposition, we keep it generic because we could have different formats depending on the sidechain
     byte[] getPayload();
 }

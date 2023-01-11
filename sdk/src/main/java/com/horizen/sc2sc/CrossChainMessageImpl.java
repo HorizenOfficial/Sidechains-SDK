@@ -1,6 +1,7 @@
 package com.horizen.sc2sc;
 
 import com.horizen.proposition.Proposition;
+import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
@@ -8,12 +9,12 @@ public class CrossChainMessageImpl implements CrossChainMessage{
 
     private int messageType;
     private byte[] senderSidechain;
-    private Proposition sender;
+    private byte[] sender;
     private byte[] receiverSidechain;
-    private Proposition receiver;
+    private byte[] receiver;
     private byte[] payload;
 
-    public CrossChainMessageImpl(int msgType, byte[] senderSidechain, Proposition sender, byte[] receiverSidechain, Proposition receiver, byte[] payload) {
+    public CrossChainMessageImpl(int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
         this.messageType = msgType;
         this.senderSidechain = senderSidechain;
         this.sender = sender;
@@ -46,11 +47,11 @@ public class CrossChainMessageImpl implements CrossChainMessage{
     }
 
     @Override
-    public Proposition getSender() {
+    public byte[]  getSender() {
         return sender;
     }
 
-    public void setSender(Proposition sender) {
+    public void setSender(byte[]  sender) {
         this.sender = sender;
     }
 
@@ -64,11 +65,11 @@ public class CrossChainMessageImpl implements CrossChainMessage{
     }
 
     @Override
-    public Proposition getReceiver() {
+    public byte[]  getReceiver() {
         return receiver;
     }
 
-    public void setReceiver(Proposition receiver) {
+    public void setReceiver(byte[]  receiver) {
         this.receiver = receiver;
     }
 
@@ -85,11 +86,10 @@ public class CrossChainMessageImpl implements CrossChainMessage{
     public String toString() {
         return "CrossChainMessage{" +
                 "messageType=" + messageType +
-                ", senderSidechain=" + Arrays.toString(senderSidechain) +
-                ", sender=" + sender +
-                ", receiverSidechain=" + Arrays.toString(receiverSidechain) +
-                ", receiver=" + receiver +
-                ", payload=" + Arrays.toString(payload) +
+                ", senderSidechain=" + BytesUtils.toHexString(senderSidechain) +
+                ", sender=" + BytesUtils.toHexString(sender) +
+                ", receiverSidechain=" + BytesUtils.toHexString(receiverSidechain) +
+                ", receiver=" + BytesUtils.toHexString(receiver) +
                 '}';
     }
 }
