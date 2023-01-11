@@ -37,13 +37,13 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
     AccountBlock,
     T
   ](settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy) {
-  type FPI = AccountFeePaymentsInfo
-  type HSTOR = AccountHistoryStorage
-  type VL = AccountWallet
-  type HIS = AccountHistory
-  type MS = AccountState
-  type MP = AccountMemoryPool
-  type PM = AccountBlock
+
+  override type FPI = AccountFeePaymentsInfo
+  override type HSTOR = AccountHistoryStorage
+  override type VL = AccountWallet
+  override type HIS = AccountHistory
+  override type MS = AccountState
+  override type MP = AccountMemoryPool
 
 }
 

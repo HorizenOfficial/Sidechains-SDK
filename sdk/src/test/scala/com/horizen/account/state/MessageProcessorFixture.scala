@@ -11,7 +11,9 @@ import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
+
 import java.math.BigInteger
+import java.util.Optional
 import scala.language.implicitConversions
 import scala.util.Random
 
@@ -62,8 +64,8 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
     val gasTipCap = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     new Message(
-      new AddressProposition(origin),
-      if (to == null) null else new AddressProposition(to),
+      Optional.of(new AddressProposition(origin)),
+      if (to == null) Optional.empty() else Optional.of(new AddressProposition(to)),
       gasPrice,
       gasFeeCap,
       gasTipCap,

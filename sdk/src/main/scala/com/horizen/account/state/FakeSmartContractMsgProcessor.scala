@@ -29,7 +29,7 @@ abstract class FakeSmartContractMsgProcessor extends MessageProcessor with Score
 
   override def canProcess(msg: Message, view: BaseAccountStateView): Boolean = {
     // we rely on the condition that init() has already been called at this point
-    msg.getTo != null && contractAddress.sameElements(msg.getTo.address())
+    msg.getTo.isPresent && contractAddress.sameElements(msg.getToAddressBytes)
   }
 
   def getEvmLog(event: Any): EvmLog = {

@@ -59,6 +59,7 @@ abstract class AbstractCertificateSubmitter[
                         keyRotationStrategy: CircuitStrategy[TX, H, PM, T])
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
+
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
   type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
