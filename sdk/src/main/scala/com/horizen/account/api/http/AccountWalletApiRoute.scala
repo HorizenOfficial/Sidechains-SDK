@@ -60,7 +60,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     withAuth {
       entity(as[ReqCreateKey]) { _ =>
         withNodeView { sidechainNodeView =>
-          val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(VrfKeyGenerator)
+          val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(PrivateKeySecp256k1Creator)
           Await.result(secretFuture, timeout.duration).asInstanceOf[Try[PrivateKeySecp256k1]] match {
             case Success(secret: PrivateKeySecp256k1) =>
               val future = sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret)
