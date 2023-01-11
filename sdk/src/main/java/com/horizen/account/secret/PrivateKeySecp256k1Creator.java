@@ -12,6 +12,8 @@ public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKe
 {
     private static PrivateKeySecp256k1Creator instance;
 
+    private final String domain = "PrivateKeySecp25519k1";
+
     static {
         instance = new PrivateKeySecp256k1Creator();
     }
@@ -40,6 +42,6 @@ public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKe
 
     @Override
     public byte[] salt() {
-        return "PrivateKeySecp25519k1".getBytes();
+        return domain.getBytes();
     }
 }

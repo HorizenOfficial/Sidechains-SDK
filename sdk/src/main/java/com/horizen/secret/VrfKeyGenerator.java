@@ -13,6 +13,8 @@ import java.util.List;
 public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
     private static VrfKeyGenerator instance;
 
+    private final String domain = "VrfKey";
+
     static {
         instance = new VrfKeyGenerator();
     }
@@ -34,6 +36,6 @@ public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
 
     @Override
     public byte[] salt() {
-        return "VrfKey".getBytes();
+        return domain.getBytes();
     }
 }

@@ -6,6 +6,7 @@ import com.horizen.utils.Pair;
 public final class PrivateKey25519Creator implements SecretCreator<PrivateKey25519>
 {
     private static PrivateKey25519Creator instance;
+    private final String domain = "PrivateKey25519";
 
     static {
         instance = new PrivateKey25519Creator();
@@ -27,6 +28,6 @@ public final class PrivateKey25519Creator implements SecretCreator<PrivateKey255
 
     @Override
     public byte[] salt() {
-        return "PrivateKey25519".getBytes();
+        return domain.getBytes();
     }
 }
