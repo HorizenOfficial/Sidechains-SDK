@@ -8,9 +8,10 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.WellKnownAddresses.{NULL_ADDRESS_BYTES, FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES}
+import com.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, NULL_ADDRESS_BYTES}
 import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
 import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
@@ -19,7 +20,7 @@ import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import sparkz.core.VersionTag
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
@@ -35,14 +36,15 @@ class AccountStateView(
     with ScorexLogging {
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
+  lazy val certificateKeysProvider: CertificateKeysProvider = messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
   // modifiers
-  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData, blockId: ModifierId): Try[Unit] = Try {
 
     refData.topQualityCertificate.foreach(cert => {
       log.debug(s"adding top quality cert to state: $cert.")
-      addCertificate(cert)
+      addCertificate(cert, blockId)
     })
 
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
@@ -261,8 +263,11 @@ class AccountStateView(
     stateDb.getProof(address, keys)
 
   // out-of-the-box helpers
-  override def addCertificate(cert: WithdrawalEpochCertificate): Unit =
+  override def addCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit = {
     metadataStorageView.updateTopQualityCertificate(cert)
+    metadataStorageView.updateLastCertificateReferencedEpoch(cert.epochNumber)
+    metadataStorageView.updateLastCertificateSidechainBlockIdOpt(blockId)
+  }
 
   override def addFeeInfo(info: AccountBlockFeeInfo): Unit = {
     metadataStorageView.addFeePayment(info)
@@ -296,6 +301,17 @@ class AccountStateView(
   // getters
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
+
+  def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
+    certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
+  }
+
+  def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
+    Some(certificateKeysProvider.getCertifiersKeys(withdrawalEpoch, this))
+  }
+
+  def lastCertificateReferencedEpoch: Option[Int] =
+    metadataStorageView.lastCertificateReferencedEpoch
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)

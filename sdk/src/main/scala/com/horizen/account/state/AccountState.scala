@@ -1,25 +1,26 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
-import com.horizen.account.utils.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.{EthereumReceipt, LogsBloom}
+import com.horizen.account.receipt.{EthereumReceipt, Bloom}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
+import com.horizen.account.utils.Account.generateContractAddress
 import com.horizen.block.WithdrawalEpochCertificate
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import org.web3j.crypto.ContractUtils.generateContractAddress
+import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import java.util
@@ -79,24 +80,32 @@ class AccountState(
       val currentWithdrawalEpochInfo = getWithdrawalEpochInfo
       val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
-      // If SC block has reached the certificate submission window end -> check the top quality certificate
-      // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-      if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
-        val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
-
-        // Top quality certificate may be present in the current SC block or in the previous blocks or can be absent.
-        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] =
-          mod.topQualityCertificateOpt.orElse(stateView.certificate(certReferencedEpochNumber))
-
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
-        topQualityCertificateOpt match {
-          case Some(cert) => validateTopQualityCertificate(cert, stateView)
-          case None =>
-            log.info(
-              s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
-                s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased."
-            )
-            stateView.setCeased()
+        if(params.isNonCeasing) {
+          // For non-ceasing sidechains certificate must be validated just when it has been received.
+          // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
+          // then the whole block is invalid.
+          mod.topQualityCertificateOpt.foreach(cert => validateTopQualityCertificate(cert, stateView))
+        } else {
+          // For ceasing sidechains submission window concept is used.
+          // If SC block has reached the certificate submission window end -> check the top quality certificate
+          // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
+          if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+            val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
+
+            // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
+            val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
+              stateView.certificate(certReferencedEpochNumber))
+
+            // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
+            topQualityCertificateOpt match {
+              case Some(cert) =>
+                validateTopQualityCertificate(cert, stateView)
+              case None =>
+                log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
+                  s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
+                stateView.setCeased()
+            }
         }
       }
 
@@ -108,7 +117,7 @@ class AccountState(
 
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
-        stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+        stateView.applyMainchainBlockReferenceData(mcBlockRefData, mod.id).get
       }
 
       // get also list of receipts, useful for computing the receiptRoot hash
@@ -140,10 +149,10 @@ class AccountState(
               // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
               // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
               // This does not impact our case since the CREATE2 result would not be part of the receipt.
-              generateContractAddress(ethTx.getFrom.address, ethTx.getNonce)
+              Option(generateContractAddress(ethTx.getFrom.address, ethTx.getNonce))
             } else {
-              // otherwise a zero-byte field
-              new Array[Byte](0)
+              // otherwise nothing
+              None
             }
 
             // get a receipt obj with non consensus data (logs updated too)
@@ -180,7 +189,7 @@ class AccountState(
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
       evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
 
-      val logsBloom = LogsBloom.fromEthereumReceipt(receiptList)
+      val logsBloom = Bloom.fromReceipts(receiptList.map(_.consensusDataReceipt))
 
       require(logsBloom.equals(mod.header.logsBloom), "Provided logs bloom doesn't match the calculated one")
 
@@ -329,6 +338,27 @@ class AccountState(
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     using(getView)(_.withdrawalRequests(withdrawalEpoch))
 
+  override def backwardTransfers(withdrawalEpoch: Int): Seq[BackwardTransfer] =
+    using(getView)(_.withdrawalRequests(withdrawalEpoch))
+      .map(wr => new BackwardTransfer(wr.proposition.bytes(), wr.valueInZennies))
+
+  override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
+    using(getView)(_.keyRotationProof(withdrawalEpoch, indexOfSigner, keyType))
+  }
+
+  override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
+    if (withdrawalEpoch == -1)
+      Some(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
+    else {
+      using(getView)(_.certifiersKeys(withdrawalEpoch))
+    }
+  }
+
+  override def lastCertificateReferencedEpoch: Option[Int] = stateMetadataStorage.lastCertificateReferencedEpoch
+
+  override def lastCertificateSidechainBlockId(): Option[ModifierId] =
+    stateMetadataStorage.lastCertificateSidechainBlockId
+
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
 
@@ -432,6 +462,11 @@ class AccountState(
   // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
   def isWithdrawalEpochLastIndex: Boolean = {
     WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
+  }
+
+  override def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
+    // TODO: no CSW support expected for the Eth sidechain
+    None
   }
 }
 

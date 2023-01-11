@@ -12,6 +12,7 @@ import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
 import com.horizen.evm.interop.EvmLog
+import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -111,6 +112,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         nodeView,
         1500,
         Seq.empty[MainchainBlockReferenceData],
+        WithdrawalEpochInfo(0,0),
         100,
         Seq.empty[SidechainTypes#SCAT]
       )

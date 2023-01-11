@@ -2,16 +2,16 @@ package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import com.horizen.node.NodeWallet;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.VrfFunctions.KeyType;
 import com.horizen.node.NodeWalletBase;
 import scorex.crypto.hash.Blake2b256;
-import com.horizen.cryptolibprovider.VrfFunctions.KeyType;
+
 import java.util.EnumMap;
 import java.util.List;
 
 public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
-    private static VrfKeyGenerator instance;
+    private static final VrfKeyGenerator instance;
 
     private final String domain = "VrfKey";
 

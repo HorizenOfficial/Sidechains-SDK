@@ -1,11 +1,12 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.fixtures.EthereumTransactionFixture;
+import com.horizen.account.secret.PrivateKeySecp256k1;
+import com.horizen.account.secret.PrivateKeySecp256k1Serializer;
 import com.horizen.account.state.GasUtil;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
-import org.web3j.crypto.ECKeyPair;
 import scala.Option;
 import scala.util.Try;
 import java.io.BufferedReader;
@@ -22,16 +23,16 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
     @Test
     public void checkSigningTxTest() {
 
-        var privKey = new BigInteger("49128115046059273042656529250771669375541382406576940612305697909438063650480");
-        var pubKey = new BigInteger("8198110339830204259458045104072783158824826560452916203793316544691619725076836725487148486981196842344156645049311437356787993166435716250962254331877695");
-        var account1KeyPair = Option.apply(new ECKeyPair(privKey, pubKey));
+        String privateKeyHex = "227dbb8586117d55284e26620bc76534dfbd2394be34cf4a09cb775d593b6f2b";
+        PrivateKeySecp256k1 privKey = PrivateKeySecp256k1Serializer.getSerializer().parseBytes(BytesUtils.fromHexString(privateKeyHex));
+        var account1Key = Option.apply(privKey);
 
         var nonce = BigInteger.valueOf(0);
         var value = BigInteger.valueOf(11);
         var gasPrice = BigInteger.valueOf(12);
         var gasLimit = GasUtil.TxGas();
 
-        var tx1 = createLegacyTransaction(value, nonce, account1KeyPair, gasPrice, gasLimit);
+        var tx1 = createLegacyTransaction(value, nonce, account1Key, gasPrice, gasLimit);
 
         try {
             tx1.semanticValidity();
@@ -39,7 +40,7 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
             fail("Expected a valid tx: " + t.getMessage());
         }
 
-        var tx2 = createLegacyTransaction(value, nonce.add(BigInteger.ONE), account1KeyPair, gasPrice, gasLimit);
+        var tx2 = createLegacyTransaction(value, nonce.add(BigInteger.ONE), account1Key, gasPrice, gasLimit);
 
         try {
             tx2.semanticValidity();
@@ -53,7 +54,7 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
 
         var maxFeePerGas = BigInteger.valueOf(15);
         var maxPriorityFeePerGas = BigInteger.valueOf(15);
-        var tx3 = createEIP1559Transaction(value, nonce.add(BigInteger.ONE), account1KeyPair, maxFeePerGas, maxPriorityFeePerGas, gasLimit);
+        var tx3 = createEIP1559Transaction(value, nonce.add(BigInteger.ONE), account1Key, maxFeePerGas, maxPriorityFeePerGas, gasLimit);
 
         try {
             tx3.semanticValidity();
@@ -65,7 +66,7 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         assertNotEquals(tx1.getSignature(), tx3.getSignature());
         assertEquals(tx1.getFrom(), tx3.getFrom());
 
-        var tx4 = createLegacyEip155Transaction(value, nonce.add(BigInteger.ONE), account1KeyPair, gasPrice, gasLimit);
+        var tx4 = createLegacyEip155Transaction(value, nonce.add(BigInteger.ONE), account1Key, gasPrice, gasLimit);
 
         try {
             tx4.semanticValidity();

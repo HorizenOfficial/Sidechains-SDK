@@ -1,11 +1,18 @@
 package com.horizen.secret;
 
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
+import com.horizen.node.NodeWallet;
+import com.horizen.node.NodeWalletBase;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
+import scorex.crypto.hash.Blake2b256;
+
+import java.util.List;
 
 public final class PrivateKey25519Creator implements SecretCreator<PrivateKey25519>
 {
-    private static PrivateKey25519Creator instance;
+    private static final PrivateKey25519Creator instance;
     private final String domain = "PrivateKey25519";
 
     static {

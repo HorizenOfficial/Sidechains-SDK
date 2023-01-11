@@ -20,9 +20,11 @@ case class AddWithdrawalRequest(@(Parameter@getter)(1) @(Indexed@getter) from: A
 
 object AddWithdrawalRequest {
   def apply(fromAddress: AddressProposition, mcAddr: MCPublicKeyHashProposition, withdrawalAmount: BigInteger, epochNum: Int): AddWithdrawalRequest = {
-    new AddWithdrawalRequest(new Address(BytesUtils.toHexString(fromAddress.address())),
+    new AddWithdrawalRequest(
+      new Address(BytesUtils.toHexString(fromAddress.address())),
       new Bytes20(mcAddr.bytes()),
       new Uint256(withdrawalAmount),
-      new Uint32(epochNum))
+      new Uint32(epochNum)
+    )
   }
 }
