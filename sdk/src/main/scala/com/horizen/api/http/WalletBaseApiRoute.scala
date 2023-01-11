@@ -52,7 +52,7 @@ abstract class WalletBaseApiRoute[
     withAuth {
       entity(as[ReqCreateKey]) { _ =>
         withNodeView { sidechainNodeView =>
-          val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(VrfKeyGenerator)
+          val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(VrfKeyGenerator.getInstance)
           Await.result(secretFuture, timeout.duration).asInstanceOf[Try[VrfSecretKey]] match {
             case Success(secret: VrfSecretKey) =>
               val public = secret.publicImage()
@@ -78,7 +78,7 @@ abstract class WalletBaseApiRoute[
     withAuth {
       entity(as[ReqCreateKey]) { _ =>
         withNodeView { sidechainNodeView =>
-          val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(PrivateKey25519Creator)
+          val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(PrivateKey25519Creator.getInstance)
           Await.result(secretFuture, timeout.duration).asInstanceOf[Try[PrivateKey25519]] match {
             case Success(secret: PrivateKey25519) =>
               val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
