@@ -1,20 +1,30 @@
 package com.horizen.sc2sc;
 
+import com.horizen.proposition.Proposition;
+
+import java.util.Arrays;
+
 public class CrossChainMessageImpl implements CrossChainMessage{
 
     private int messageType;
     private byte[] senderSidechain;
-    private byte[] senderAddress;
+    private Proposition sender;
     private byte[] receiverSidechain;
-    private byte[] receiverAddress;
+    private Proposition receiver;
     private byte[] payload;
 
-    public CrossChainMessageImpl(int msgType, byte[] senderSidechain, byte[] sender, byte[] receiverSidechain, byte[] receiverAddress, byte[] payload) {
+    public CrossChainMessageImpl(int msgType, byte[] senderSidechain, Proposition sender, byte[] receiverSidechain, Proposition receiver, byte[] payload) {
         this.messageType = msgType;
         this.senderSidechain = senderSidechain;
+        this.sender = sender;
         this.receiverSidechain = receiverSidechain;
-        this.receiverAddress = receiverAddress;
+        this.receiver = receiver;
         this.payload = payload;
+    }
+
+    @Override
+    public CrossChainProtocolVersion getProtocolVersion() {
+        return CrossChainProtocolVersion.VERSION_1;
     }
 
     @Override
@@ -36,12 +46,12 @@ public class CrossChainMessageImpl implements CrossChainMessage{
     }
 
     @Override
-    public byte[] getSenderAddress() {
-        return senderAddress;
+    public Proposition getSender() {
+        return sender;
     }
 
-    public void setSenderAddress(byte[] senderAddress) {
-        this.senderAddress = senderAddress;
+    public void setSender(Proposition sender) {
+        this.sender = sender;
     }
 
     @Override
@@ -54,12 +64,12 @@ public class CrossChainMessageImpl implements CrossChainMessage{
     }
 
     @Override
-    public byte[] getReceiverAddress() {
-        return receiverAddress;
+    public Proposition getReceiver() {
+        return receiver;
     }
 
-    public void setReceiverAddress(byte[] receiverAddress) {
-        this.receiverAddress = receiverAddress;
+    public void setReceiver(Proposition receiver) {
+        this.receiver = receiver;
     }
 
     @Override
@@ -71,4 +81,15 @@ public class CrossChainMessageImpl implements CrossChainMessage{
         this.payload = payload;
     }
 
+    @Override
+    public String toString() {
+        return "CrossChainMessage{" +
+                "messageType=" + messageType +
+                ", senderSidechain=" + Arrays.toString(senderSidechain) +
+                ", sender=" + sender +
+                ", receiverSidechain=" + Arrays.toString(receiverSidechain) +
+                ", receiver=" + receiver +
+                ", payload=" + Arrays.toString(payload) +
+                '}';
+    }
 }

@@ -1,11 +1,17 @@
 package com.horizen.sc2sc;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.horizen.proposition.Proposition;
+import com.horizen.serialization.Views;
+
+@JsonView(Views.Default.class)
 public interface CrossChainMessage {
 
+    CrossChainProtocolVersion getProtocolVersion(); //version of the protocol for future extensions
     int getMessageType();
     byte[] getSenderSidechain();
-    byte[] getSenderAddress(); //we keep it generic because the format may change based on the sidechain type
+    Proposition getSender();
     byte[] getReceiverSidechain();
-    byte[] getReceiverAddress(); //we keep it generic because the format may change based on the sidechain type
+    Proposition getReceiver();
     byte[] getPayload();
 }

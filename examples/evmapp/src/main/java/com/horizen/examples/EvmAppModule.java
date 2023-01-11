@@ -100,6 +100,6 @@ public class EvmAppModule extends AccountAppModule {
 
         bind(Sc2ScConfigurator.class)
                 .annotatedWith(Names.named("Sc2ScConfiguration"))
-                .toInstance(new Sc2ScConfigurator(true, true, true) );
+                .toInstance(new Sc2ScConfigurator(true, true) );
     }
 }
