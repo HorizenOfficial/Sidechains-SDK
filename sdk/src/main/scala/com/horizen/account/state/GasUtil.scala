@@ -18,6 +18,12 @@ object GasUtil {
   val WarmStorageReadCostEIP2929: BigInteger = BigInteger.valueOf(100)
   val ColdSloadCostEIP2929: BigInteger = BigInteger.valueOf(2100)
 
+  val SstoreSentryGasEIP2200: BigInteger = BigInteger.valueOf(2300)
+  val SstoreSetGasEIP2200: BigInteger = BigInteger.valueOf(20000)
+  val SstoreResetGasEIP2200: BigInteger = BigInteger.valueOf(5000)
+
+  val SstoreClearsScheduleRefundEIP3529: BigInteger = BigInteger.valueOf(4800)
+
   val CopyGas: BigInteger = BigInteger.valueOf(3)
 
   val LogGas: BigInteger = BigInteger.valueOf(375)
@@ -62,10 +68,8 @@ object GasUtil {
     .add(LogDataGas.multiply(BigInteger.valueOf(evmLog.data.length)))
 
   def codeCopy(size: Int): BigInteger = {
-    val _31 = BigInteger.valueOf(31)
-    val _32 = BigInteger.valueOf(32)
-    // size in number of 256-bit words
-    val words = BigInteger.valueOf(size).add(_31).divide(_32)
+    // code size in number of 256-bit words (round up division)
+    val words = BigInteger.valueOf((size + 31) / 32)
     CopyGas.multiply(words)
   }
 
@@ -86,5 +90,4 @@ object GasUtil {
       (baseFeePerGas, tx.getGasPrice.subtract(baseFeePerGas))
     }
   }
-
 }

@@ -5,6 +5,7 @@ import com.horizen.evm.StateDB
 import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
+import java.util
 
 /**
  * Wrapper for AccountStateView to help with tracking gas consumption.
@@ -35,9 +36,69 @@ class AccountStateViewGasTracked(
    *   - charge WarmStorageReadCostEIP2929 if account storage slot was already accessed
    */
   @throws(classOf[OutOfGasException])
-  private def slotRead(address: Array[Byte], slot: Array[Byte]): Unit = {
+  private def storageAccess(address: Array[Byte], slot: Array[Byte]): Unit = {
     val warm = stateDb.accessSlot(address, slot)
     gas.subGas(if (warm) GasUtil.WarmStorageReadCostEIP2929 else GasUtil.ColdSloadCostEIP2929)
+  }
+
+  /**
+   * Implements gas cost for SSTORE according to EIP-3529. For test cases see EIP-3529 document:
+   * @see
+   *   https://github.com/ethereum/EIPs/blob/master/EIPS/eip-3529.md#with-reduced-refunds
+   * @see
+   *   github.com/ethereum/go-ethereum@v1.10.26/core/vm/operations_acl.go:27
+   */
+  @throws(classOf[OutOfGasException])
+  private def storageWriteAccess(address: Array[Byte], key: Array[Byte], value: Array[Byte]): BigInteger = {
+    // If we fail the minimum gas availability invariant, fail (0)
+    if (gas.getGas.compareTo(GasUtil.SstoreSentryGasEIP2200) <= 0) throw new OutOfGasException()
+    // Gas sentry honoured, do the actual gas calculation based on the stored value
+    var cost = BigInteger.ZERO
+    if (!stateDb.accessSlot(address, key)) {
+      cost = GasUtil.ColdSloadCostEIP2929
+    }
+    val current = stateDb.getStorage(address, key)
+    if (util.Arrays.equals(value, current)) {
+      // noop (1)
+      return cost.add(GasUtil.WarmStorageReadCostEIP2929)
+    }
+    val original = stateDb.getCommittedStorage(address, key)
+    if (util.Arrays.equals(original, current)) {
+      if (original.forall(_ == 0)) {
+        // create slot (2.1.1)
+        return cost.add(GasUtil.SstoreSetGasEIP2200)
+      }
+      if (value.forall(_ == 0)) {
+        // delete slot (2.1.2b)
+        stateDb.addRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
+      }
+      // write existing slot (2.1.2)
+      return cost.add(GasUtil.SstoreResetGasEIP2200).subtract(GasUtil.ColdSloadCostEIP2929)
+    }
+    if (!original.forall(_ == 0)) {
+      if (current.forall(_ == 0)) {
+        // recreate slot (2.2.1.1)
+        stateDb.subRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
+      } else if (value.forall(_ == 0)) {
+        // delete slot (2.2.1.2)
+        stateDb.addRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
+      }
+    }
+    if (util.Arrays.equals(original, value)) {
+      if (original.forall(_ == 0)) {
+        // reset to original inexistent slot (2.2.2.1)
+        stateDb.addRefund(GasUtil.SstoreSetGasEIP2200.subtract(GasUtil.WarmStorageReadCostEIP2929))
+      } else {
+        // reset to original existing slot (2.2.2.2)
+        stateDb.addRefund(
+          GasUtil.SstoreResetGasEIP2200
+            .subtract(GasUtil.ColdSloadCostEIP2929)
+            .subtract(GasUtil.WarmStorageReadCostEIP2929)
+        )
+      }
+    }
+    // dirty update (2.2)
+    cost.add(GasUtil.WarmStorageReadCostEIP2929)
   }
 
   override def accountExists(address: Array[Byte]): Boolean = {
@@ -67,8 +128,9 @@ class AccountStateViewGasTracked(
   override def getCode(address: Array[Byte]): Array[Byte] = {
     accountAccess(address)
     val code = super.getCode(address)
-    // cosume additional gas proportional to the code size,
-    // this should preferably be done before acutally copying the code, but we don't know the size beforehand
+    // cosume additional gas proportional to the code size:
+    // this should preferably be done before acutally copying the code,
+    // but currently we don't have a cheaper way to find out the size beforehand
     gas.subGas(GasUtil.codeCopy(code.length))
     code
   }
@@ -103,15 +165,13 @@ class AccountStateViewGasTracked(
 
   @throws(classOf[OutOfGasException])
   override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
-    slotRead(address, key)
+    storageAccess(address, key)
     super.getAccountStorage(address, key)
   }
 
   @throws(classOf[OutOfGasException])
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    // TODO: complicated SSTORE gas usage + refunds handling
-    //  see /home/gigo/go/pkg/mod/github.com/ethereum/go-ethereum@v1.10.26/core/vm/operations_acl.go:27
-//    gas.subGas(GasUtil.GasTBD)
+    gas.subGas(storageWriteAccess(address, key, value))
     super.updateAccountStorage(address, key, value)
   }
 
