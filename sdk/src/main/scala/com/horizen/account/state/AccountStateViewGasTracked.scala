@@ -8,7 +8,7 @@ import java.math.BigInteger
 import java.util
 
 /**
- * Wrapper for AccountStateView to help with tracking gas consumption.
+ * Extension of AccountStateView to help with tracking gas consumption.
  * @param gas
  *   GasPool instance to deduct gas from
  */
@@ -42,12 +42,9 @@ class AccountStateViewGasTracked(
   }
 
   /**
-   * Implements gas cost for SSTORE according to EIP-3529.
+   * Consume gas for SSTORE according to EIP-3529.
    * @see
-   *   github.com/ethereum/go-ethereum@v1.10.26/core/vm/operations_acl.go:27
-   * @see
-   *   For test cases see EIP-3529 document:
-   *   https://github.com/ethereum/EIPs/blob/master/EIPS/eip-3529.md#with-reduced-refunds
+   *   original implementation in GETH: github.com/ethereum/go-ethereum@v1.10.26/core/vm/operations_acl.go:27
    */
   @throws(classOf[OutOfGasException])
   private def storageWriteAccess(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
@@ -135,7 +132,7 @@ class AccountStateViewGasTracked(
   override def getCode(address: Array[Byte]): Array[Byte] = {
     accountAccess(address)
     val code = super.getCode(address)
-    // cosume additional gas proportional to the code size:
+    // consume additional gas proportional to the code size:
     // this should preferably be done before acutally copying the code,
     // but currently we don't have a cheaper way to find out the size beforehand
     gas.subGas(GasUtil.codeCopy(code.length))

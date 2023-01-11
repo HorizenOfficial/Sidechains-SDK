@@ -7,7 +7,7 @@ import com.horizen.evm.interop.EvmLog
 import java.math.BigInteger
 
 // numbers based on geth implementation:
-// https://github.com/ethereum/go-ethereum/blob/v1.10.16/params/protocol_params.go
+// https://github.com/ethereum/go-ethereum/blob/v1.10.26/params/protocol_params.go
 object GasUtil {
   val TxGas: BigInteger = BigInteger.valueOf(21000)
   val TxGasContractCreation: BigInteger = BigInteger.valueOf(53000)
