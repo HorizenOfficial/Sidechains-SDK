@@ -42,63 +42,70 @@ class AccountStateViewGasTracked(
   }
 
   /**
-   * Implements gas cost for SSTORE according to EIP-3529. For test cases see EIP-3529 document:
-   * @see
-   *   https://github.com/ethereum/EIPs/blob/master/EIPS/eip-3529.md#with-reduced-refunds
+   * Implements gas cost for SSTORE according to EIP-3529.
    * @see
    *   github.com/ethereum/go-ethereum@v1.10.26/core/vm/operations_acl.go:27
+   * @see
+   *   For test cases see EIP-3529 document:
+   *   https://github.com/ethereum/EIPs/blob/master/EIPS/eip-3529.md#with-reduced-refunds
    */
   @throws(classOf[OutOfGasException])
-  private def storageWriteAccess(address: Array[Byte], key: Array[Byte], value: Array[Byte]): BigInteger = {
+  private def storageWriteAccess(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
     // If we fail the minimum gas availability invariant, fail (0)
     if (gas.getGas.compareTo(GasUtil.SstoreSentryGasEIP2200) <= 0) throw new OutOfGasException()
     // Gas sentry honoured, do the actual gas calculation based on the stored value
-    var cost = BigInteger.ZERO
     if (!stateDb.accessSlot(address, key)) {
-      cost = GasUtil.ColdSloadCostEIP2929
+      gas.subGas(GasUtil.ColdSloadCostEIP2929)
     }
-    val current = stateDb.getStorage(address, key)
-    if (util.Arrays.equals(value, current)) {
-      // noop (1)
-      return cost.add(GasUtil.WarmStorageReadCostEIP2929)
-    }
-    val original = stateDb.getCommittedStorage(address, key)
-    if (util.Arrays.equals(original, current)) {
-      if (original.forall(_ == 0)) {
-        // create slot (2.1.1)
-        return cost.add(GasUtil.SstoreSetGasEIP2200)
-      }
-      if (value.forall(_ == 0)) {
-        // delete slot (2.1.2b)
-        stateDb.addRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
-      }
-      // write existing slot (2.1.2)
-      return cost.add(GasUtil.SstoreResetGasEIP2200).subtract(GasUtil.ColdSloadCostEIP2929)
-    }
-    if (!original.forall(_ == 0)) {
-      if (current.forall(_ == 0)) {
-        // recreate slot (2.2.1.1)
-        stateDb.subRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
-      } else if (value.forall(_ == 0)) {
-        // delete slot (2.2.1.2)
-        stateDb.addRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
-      }
-    }
-    if (util.Arrays.equals(original, value)) {
-      if (original.forall(_ == 0)) {
-        // reset to original inexistent slot (2.2.2.1)
-        stateDb.addRefund(GasUtil.SstoreSetGasEIP2200.subtract(GasUtil.WarmStorageReadCostEIP2929))
+    val writeGasCost = {
+      val current = stateDb.getStorage(address, key)
+      if (util.Arrays.equals(value, current)) {
+        // noop (1)
+        GasUtil.WarmStorageReadCostEIP2929
       } else {
-        // reset to original existing slot (2.2.2.2)
-        stateDb.addRefund(
-          GasUtil.SstoreResetGasEIP2200
-            .subtract(GasUtil.ColdSloadCostEIP2929)
-            .subtract(GasUtil.WarmStorageReadCostEIP2929)
-        )
+        val original = stateDb.getCommittedStorage(address, key)
+        if (util.Arrays.equals(original, current)) {
+          if (original.forall(_ == 0)) {
+            // create slot (2.1.1)
+            GasUtil.SstoreSetGasEIP2200
+          } else {
+            if (value.forall(_ == 0)) {
+              // delete slot (2.1.2b)
+              stateDb.addRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
+            }
+            // write existing slot (2.1.2)
+            GasUtil.SstoreResetGasEIP2200.subtract(GasUtil.ColdSloadCostEIP2929)
+          }
+        } else {
+          if (!original.forall(_ == 0)) {
+            if (current.forall(_ == 0)) {
+              // recreate slot (2.2.1.1)
+              stateDb.subRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
+            } else if (value.forall(_ == 0)) {
+              // delete slot (2.2.1.2)
+              stateDb.addRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
+            }
+          }
+          if (util.Arrays.equals(original, value)) {
+            if (original.forall(_ == 0)) {
+              // reset to original inexistent slot (2.2.2.1)
+              stateDb.addRefund(GasUtil.SstoreSetGasEIP2200.subtract(GasUtil.WarmStorageReadCostEIP2929))
+            } else {
+              // reset to original existing slot (2.2.2.2)
+              stateDb.addRefund(
+                GasUtil.SstoreResetGasEIP2200
+                  .subtract(GasUtil.ColdSloadCostEIP2929)
+                  .subtract(GasUtil.WarmStorageReadCostEIP2929)
+              )
+            }
+          }
+          // dirty update (2.2)
+          GasUtil.WarmStorageReadCostEIP2929
+        }
       }
     }
-    // dirty update (2.2)
-    cost.add(GasUtil.WarmStorageReadCostEIP2929)
+    // consume gas
+    gas.subGas(writeGasCost)
   }
 
   override def accountExists(address: Array[Byte]): Boolean = {
@@ -171,7 +178,7 @@ class AccountStateViewGasTracked(
 
   @throws(classOf[OutOfGasException])
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    gas.subGas(storageWriteAccess(address, key, value))
+    storageWriteAccess(address, key, value)
     super.updateAccountStorage(address, key, value)
   }
 
