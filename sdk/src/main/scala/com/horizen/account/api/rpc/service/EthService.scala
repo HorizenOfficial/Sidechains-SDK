@@ -34,7 +34,6 @@ import sparkz.core.{NodeViewHolder, bytesToId}
 
 import java.math.BigInteger
 import java.util
-import java.util.Arrays
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -564,6 +563,7 @@ class EthService(
 
         // apply all transaction, collecting traces on the way
         val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
+          blockContext.setEvmResult(EvmResult.emptyEvmResult())
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
           blockContext.getEvmResult
         })
