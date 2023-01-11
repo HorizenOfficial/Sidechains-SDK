@@ -11,7 +11,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.transaction.MemoryPool
 
@@ -22,7 +22,7 @@ abstract class CircuitStrategy[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
-  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{
+  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends SparkzLogging{
   
   def generateProof(certificateData: T, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 

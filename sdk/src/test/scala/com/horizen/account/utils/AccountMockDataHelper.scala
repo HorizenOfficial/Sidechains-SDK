@@ -37,7 +37,7 @@ import org.mockito.ArgumentMatchers
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
@@ -183,8 +183,8 @@ case class AccountMockDataHelper(genesis: Boolean)
       baseFee: BigInteger = FeeUtils.INITIAL_BASE_FEE,
       gasUsed: Long = 0L,
       gasLimit: Long = FeeUtils.GAS_LIMIT,
-      blockId: scorex.util.ModifierId = null,
-      parentBlockId: scorex.util.ModifierId = null,
+      blockId: sparkz.util.ModifierId = null,
+      parentBlockId: sparkz.util.ModifierId = null,
       txs: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
   ): AccountBlock = {
     val block: AccountBlock = mock[AccountBlock]

@@ -12,7 +12,7 @@ import com.horizen.consensus._
 import com.horizen.secret.VrfKeyGenerator
 import org.junit.Test
 import sparkz.core.block.Block
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 
 class sc_node_holder_fixter_settings extends CompanionsFixture {

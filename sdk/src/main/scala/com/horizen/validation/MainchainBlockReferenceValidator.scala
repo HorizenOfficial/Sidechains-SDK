@@ -5,7 +5,7 @@ import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, Sidechai
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._

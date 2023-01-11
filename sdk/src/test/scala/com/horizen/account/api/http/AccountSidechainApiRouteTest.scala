@@ -82,11 +82,11 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"))
 
 
-  //  val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
-//  Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {
-//    val mockedScorexSettings: ScorexSettings = mock[ScorexSettings]
-//    Mockito.when(mockedScorexSettings.restApi).thenAnswer(_ => mockedRESTSettings)
-//    mockedScorexSettings
+//  val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
+//  Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
+//    val mockedSparkzSettings: SparkzSettings = mock[SparkzSettings]
+//    Mockito.when(mockedSparkzSettings.restApi).thenAnswer(_ => mockedRESTSettings)
+//    mockedSparkzSettings
 //  })
 //
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")

@@ -1,8 +1,8 @@
 package com.horizen.customtypes;
 
 import com.horizen.box.data.BoxDataSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public class CustomBoxDataSerializer implements BoxDataSerializer<CustomBoxData> {
 

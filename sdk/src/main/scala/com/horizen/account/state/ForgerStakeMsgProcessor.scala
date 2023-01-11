@@ -13,7 +13,13 @@ import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.BytesUtils
-import scorex.crypto.hash.{Blake2b256, Keccak256}
+import org.web3j.abi.TypeReference
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
+import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
+import org.web3j.utils.Numeric
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import sparkz.crypto.hash.{Blake2b256, Keccak256}
+import sparkz.util.serialization.{Reader, Writer}
 import com.horizen.proof.Signature25519
 import java.math.BigInteger
 import scala.collection.JavaConverters.seqAsJavaListConverter

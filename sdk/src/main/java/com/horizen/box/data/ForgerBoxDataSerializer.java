@@ -4,8 +4,8 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.proposition.VrfPublicKeySerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 
 public final class ForgerBoxDataSerializer implements BoxDataSerializer<ForgerBoxData> {

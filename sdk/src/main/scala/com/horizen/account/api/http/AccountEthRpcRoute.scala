@@ -22,7 +22,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.api.http.ApiDirectives
 import sparkz.core.settings.RESTApiSettings
 
@@ -54,7 +54,7 @@ case class AccountEthRpcRoute(
     ]
       with SidechainTypes
       with ClosableResourceHandler
-      with ScorexLogging
+      with SparkzLogging
       with ApiDirectives {
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])

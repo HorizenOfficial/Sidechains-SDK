@@ -11,8 +11,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.TimeToEpochUtils
-import com.horizen._
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import sparkz.core.NodeViewHolder.{CurrentView, ReceivableMessages}
 import sparkz.core.transaction.MemoryPool
@@ -32,7 +31,7 @@ abstract class AbstractForger[
              viewHolderRef: ActorRef,
              forgeMessageBuilder: AbstractForgeMessageBuilder[TX, H, PM],
              timeProvider: NetworkTimeProvider,
-             val params: NetworkParams) extends Actor with ScorexLogging
+             val params: NetworkParams) extends Actor with SparkzLogging
 {
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
@@ -202,7 +201,7 @@ abstract class AbstractForger[
   }
 }
 
-object AbstractForger extends ScorexLogging {
+object AbstractForger extends SparkzLogging {
   object ReceivableMessages {
     case object StartForging
     case object StopForging

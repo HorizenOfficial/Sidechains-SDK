@@ -10,8 +10,8 @@ import com.horizen.evm.StateDB
 import com.horizen.state.StateView
 import com.horizen.utils.WithdrawalEpochInfo
 import sparkz.core.VersionTag
-import scorex.util.ScorexLogging
-import scorex.util.ModifierId
+import sparkz.util.{ModifierId, SparkzLogging}
+
 import java.math.BigInteger
 
 // this class extends 2 main hierarchies, which are kept separate:
@@ -26,7 +26,7 @@ class AccountStateView(
   extends StateDbAccountStateView(stateDb, messageProcessors)
     with StateView[SidechainTypes#SCAT]
     with AutoCloseable
-    with ScorexLogging {
+    with SparkzLogging {
 
 
   def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {

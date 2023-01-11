@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 
@@ -10,7 +10,7 @@ class StateTransition(
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
     blockContext: BlockContext
-) extends ScorexLogging {
+) extends SparkzLogging {
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])

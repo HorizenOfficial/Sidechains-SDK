@@ -2,8 +2,8 @@ package com.horizen.box;
 
 import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxDataSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public final class WithdrawalRequestBoxSerializer
     implements BoxSerializer<WithdrawalRequestBox>
