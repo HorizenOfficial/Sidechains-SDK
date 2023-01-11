@@ -14,7 +14,7 @@ import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.node._
 import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
+import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.{SidechainNodeViewBase, SidechainTypes}
@@ -50,16 +50,19 @@ abstract class WalletBaseApiRoute[
     withAuth {
       entity(as[ReqCreateKey]) { _ =>
         withNodeView { sidechainNodeView =>
-          //replace to VRFKeyGenerator.generateNextSecret(wallet)
-          val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
-          val public = secret.publicImage()
-
-          val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
-          Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-            case Success(_) =>
-              ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
+          val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(VrfKeyGenerator)
+          Await.result(secretFuture, timeout.duration).asInstanceOf[Try[VrfSecretKey]] match {
+            case Success(secret: VrfSecretKey) =>
+              val public = secret.publicImage()
+              val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
+              Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+                case Success(_) =>
+                  ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
+                case Failure(e) =>
+                  ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+              }
             case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+              ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create secret.", JOptional.of(e)))
           }
         }
       }
