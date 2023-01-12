@@ -18,7 +18,7 @@ public class PrivateKeySecp256k1SerializerTest {
     }
 
     @Test
-    public void signatureSecp256k1SerializeTest() {
+    public void privateKeySecp256k1SerializeTest() {
         // Get secret serializer and serialize
         SecretSerializer serializer = privateKeySecp256k1.serializer();
         byte[] bytes = serializer.toBytes(privateKeySecp256k1);
