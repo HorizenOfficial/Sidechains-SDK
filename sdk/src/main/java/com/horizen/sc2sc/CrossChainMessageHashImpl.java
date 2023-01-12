@@ -14,12 +14,17 @@ public class CrossChainMessageHashImpl implements CrossChainMessageHash {
     }
 
     @Override
-    public byte[] bytes() {
-        return val;
+    public byte[] getValue(){
+        return this.val;
     }
 
     @Override
-    public SparkzSerializer<BytesSerializable> serializer() {
+    public byte[] bytes() {
+        return serializer().toBytes(this);
+    }
+
+    @Override
+    public CrossChainMessageHashSerializer serializer() {
         return CrossChainMessageHashSerializer.getSerializer();
     }
 

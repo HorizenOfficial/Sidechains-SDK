@@ -1,11 +1,11 @@
 package com.horizen.sc2sc;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
+import sparkz.core.serialization.BytesSerializable;
 
 @JsonView(Views.Default.class)
-public interface CrossChainMessage {
+public interface CrossChainMessage  extends BytesSerializable {
 
     CrossChainProtocolVersion getProtocolVersion(); //version of the protocol for future extensions
     int getMessageType();

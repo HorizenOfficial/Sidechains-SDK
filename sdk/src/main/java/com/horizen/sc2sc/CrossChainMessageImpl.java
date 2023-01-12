@@ -2,11 +2,14 @@ package com.horizen.sc2sc;
 
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.BytesUtils;
+import sparkz.core.serialization.BytesSerializable;
+import sparkz.core.serialization.SparkzSerializer;
 
 import java.util.Arrays;
 
 public class CrossChainMessageImpl implements CrossChainMessage{
 
+    private CrossChainProtocolVersion version;
     private int messageType;
     private byte[] senderSidechain;
     private byte[] sender;
@@ -14,7 +17,8 @@ public class CrossChainMessageImpl implements CrossChainMessage{
     private byte[] receiver;
     private byte[] payload;
 
-    public CrossChainMessageImpl(int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
+    public CrossChainMessageImpl(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
+        this.version = version;
         this.messageType = msgType;
         this.senderSidechain = senderSidechain;
         this.sender = sender;
@@ -25,7 +29,7 @@ public class CrossChainMessageImpl implements CrossChainMessage{
 
     @Override
     public CrossChainProtocolVersion getProtocolVersion() {
-        return CrossChainProtocolVersion.VERSION_1;
+        return this.version;
     }
 
     @Override
@@ -80,6 +84,16 @@ public class CrossChainMessageImpl implements CrossChainMessage{
 
     public void setPayload(byte[] payload) {
         this.payload = payload;
+    }
+
+    @Override
+    public byte[] bytes() {
+        return serializer().toBytes(this);
+    }
+
+    @Override
+    public CrossChainMessageSerializer serializer() {
+        return CrossChainMessageSerializer.getSerializer();
     }
 
     @Override

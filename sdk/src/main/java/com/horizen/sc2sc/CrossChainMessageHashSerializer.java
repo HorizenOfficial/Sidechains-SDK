@@ -15,8 +15,8 @@ public class CrossChainMessageHashSerializer<T extends  CrossChainMessageHash> i
 
     @Override
     public void serialize(T s, Writer w) {
-        w.putInt(s.bytes().length);
-        w.putBytes(s.bytes());
+        w.putInt(s.getValue().length);
+        w.putBytes(s.getValue());
     }
 
     @Override
@@ -24,7 +24,7 @@ public class CrossChainMessageHashSerializer<T extends  CrossChainMessageHash> i
         return (T)new CrossChainMessageHashImpl(reader.getBytes(reader.getInt()));
     }
 
-    public static SparkzSerializer<BytesSerializable> getSerializer(){
+    public static CrossChainMessageHashSerializer<CrossChainMessageHash> getSerializer(){
         return serializer;
     }
 }
