@@ -1,6 +1,8 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
+import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.{Address, Hash}
 import org.junit.Assert.assertEquals
 import org.junit._
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -13,9 +15,7 @@ class StateDbAccountStateViewGasTrackedTest
       with MessageProcessorFixture
       with TableDrivenPropertyChecks {
   @Test
-  def testUpdateAccountStorageGasAndRefund(): Unit = {
-    // all operations below are performed on the same storage key in the same account
-    val key = hashNull
+  def testAccountStorageEIP3529GasAndRefunds(): Unit = {
 
     /**
      * Test cases from EIP-3529 document:
@@ -42,6 +42,9 @@ class StateDbAccountStateViewGasTrackedTest
       (1, Seq(0, 1, 0), 5918, 7600)
     )
 
+    // all operations below are performed on the same storage key in the same account
+    val key = hashNull
+
     forAll(testCases) { (original, sequence, expectedUsedGas, expectedRefund) =>
       usingView { view =>
         // prevent the account from being "empty" and pruned on commit
@@ -64,8 +67,8 @@ class StateDbAccountStateViewGasTrackedTest
         /**
          * Note: Within the EVM, prior to the SSTORE opcode, two PUSH opcodes have to be used to prepare the stack for
          * the call. These consume 3 gas each, resulting in an additional 6 gas used for each value in the sequence. We
-         * don't consume gas on a instruction level, but we would like to use the exact expected gas values from the
-         * EIP, hence the little correction here.
+         * don't consume gas on an instruction level, but we would like to test against the exact expected gas values
+         * from the EIP, hence the little correction here.
          */
         val pushGas = sequence.length * 6
         assertEquals("should have expected gas use", expectedUsedGas - pushGas, gas.getUsedGas.intValueExact())
@@ -75,15 +78,94 @@ class StateDbAccountStateViewGasTrackedTest
   }
 
   @Test
-  def testBalanceGas(): Unit = {
-    usingView { view =>
-      // setup gas tracking
-      val gas = new GasPool(1000000)
-      val gasView = view.getGasTrackedView(gas)
-      gasView.addBalance(origin, BigInteger.ONE)
-      assertEquals("unexpected gas usage for cold account access", 2600, gas.getUsedGas.intValueExact())
-      gasView.addBalance(origin, BigInteger.ONE)
-      assertEquals("unexpected gas usage for warm account access", 2700, gas.getUsedGas.intValueExact())
+  def testAccountAccess(): Unit = {
+
+    val (slot1, slot2) = (randomHash, randomHash)
+
+    val testCases = Table[Int, Seq[BaseAccountStateView => Unit]](
+      ("Expected used gas", "Access sequence"),
+      // cold account access
+      (2600, Seq(_.accountExists(origin))),
+      (2600, Seq(_.isEoaAccount(origin))),
+      (2600, Seq(_.isSmartContractAccount(origin))),
+      (2600, Seq(_.getNonce(origin))),
+      (2600, Seq(_.getBalance(origin))),
+      (2600, Seq(_.getCodeHash(origin))),
+      (2600, Seq(_.getCode(origin))),
+      (2600, Seq(_.addBalance(origin, BigInteger.ONE))),
+      // warm account access
+      (2700, Seq(_.getNonce(origin), _.getNonce(origin))),
+      (2700, Seq(_.getNonce(origin), _.getBalance(origin))),
+      (2700, Seq(_.getNonce(origin), _.getCodeHash(origin))),
+      (2700, Seq(_.getNonce(origin), _.getCode(origin))),
+      (2700, Seq(_.addBalance(origin, BigInteger.TEN), _.subBalance(origin, BigInteger.ONE))),
+      // increasing the nonce contains two accesses: read value, increment, write value
+      (2700, Seq(_.increaseNonce(origin))),
+      (2900, Seq(_.increaseNonce(origin), _.increaseNonce(origin))),
+      // cold and warm account storage slot access
+      (2100, Seq(_.getAccountStorage(origin, slot1))),
+      (2100, Seq(_.getAccountStorage(origin, slot2))),
+      (2200, Seq(_.getAccountStorage(origin, slot1), _.getAccountStorage(origin, slot1))),
+      (4200, Seq(_.getAccountStorage(origin, slot1), _.getAccountStorage(origin, slot2))),
+      (
+        4300,
+        Seq(_.getAccountStorage(origin, slot1), _.getAccountStorage(origin, slot2), _.getAccountStorage(origin, slot1))
+      ),
+      (4700, Seq(_.getNonce(origin), _.getAccountStorage(origin, slot1))),
+      (4800, Seq(_.getNonce(origin), _.getAccountStorage(origin, slot1), _.getAccountStorage(origin, slot1))),
+      (2300, Seq(_.getAccountStorage(origin, slot1), _.getAccountStorage(origin, slot1), _.getNonce(origin))),
+      // account storage modification
+      (24800, Seq(_.increaseNonce(origin), _.updateAccountStorage(origin, slot1, randomHash))),
+      (24800, Seq(_.increaseNonce(origin), _.removeAccountStorage(origin, slot1)))
+    )
+
+    forAll(testCases) { (expectedGas, sequence) =>
+      usingView { view =>
+        // setup gas tracking
+        val gas = new GasPool(1000000)
+        val gasView = view.getGasTrackedView(gas)
+        // execute access sequence
+        sequence.foreach(_(gasView))
+        // verify gas usage
+        assertEquals("unexpected gas usage for state access", expectedGas, gas.getUsedGas.intValueExact())
+      }
+    }
+  }
+
+  private def randomLog(topics: Int, data: Int): EvmLog = {
+    new EvmLog(Address.fromBytes(randomAddress), Array.fill(topics)(Hash.fromBytes(randomHash)), randomBytes(data))
+  }
+
+  @Test
+  def testLogGas(): Unit = {
+    val testCases = Table(
+      ("Expected used gas", "Evm Log"),
+      (375, randomLog(0, 0)),
+      (750, randomLog(1, 0)),
+      (1125, randomLog(2, 0)),
+      (1500, randomLog(3, 0)),
+      (1875, randomLog(4, 0)),
+      (8567, randomLog(0, 1024)),
+      (886, randomLog(1, 17)),
+      (1557, randomLog(2, 54)),
+      (2732, randomLog(3, 154)),
+      (1883, randomLog(4, 1))
+    )
+
+    forAll(testCases) { (expectedGas, log) =>
+      usingView { view =>
+        // setup gas tracking
+        val gas = new GasPool(1000000)
+        val gasView = view.getGasTrackedView(gas)
+        // emit log and verify gas usage
+        gasView.addLog(log)
+        assertEquals("unexpected gas usage for one event log", expectedGas, gas.getUsedGas.intValueExact())
+        // gas usage of multiple logs (even if identical) should increase linearly
+        gasView.addLog(log)
+        assertEquals("unexpected gas usage for two event logs", expectedGas * 2, gas.getUsedGas.intValueExact())
+        gasView.addLog(log)
+        assertEquals("unexpected gas usage for three event logs", expectedGas * 3, gas.getUsedGas.intValueExact())
+      }
     }
   }
 }

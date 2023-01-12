@@ -128,10 +128,12 @@ class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq
   override def getCode(address: Array[Byte]): Array[Byte] = {
     accountAccess(address)
     val code = super.getCode(address)
-    // consume additional gas proportional to the code size:
-    // this should preferably be done before acutally copying the code,
-    // but currently we don't have a cheaper way to find out the size beforehand
-    gas.subGas(GasUtil.codeCopy(code.length))
+    if (code != null) {
+      // consume additional gas proportional to the code size:
+      // this should preferably be done before acutally copying the code,
+      // but currently we don't have a cheaper way to find out the size beforehand
+      gas.subGas(GasUtil.codeCopy(code.length))
+    }
     code
   }
 
