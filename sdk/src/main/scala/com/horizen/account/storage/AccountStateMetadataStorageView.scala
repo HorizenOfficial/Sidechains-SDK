@@ -33,7 +33,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private val undefinedBlockFeeInfoCounter: Int = -1
 
   private[horizen] var hasCeasedOpt: Option[Boolean] = None
-  private[horizen] var isForgersListOpenOpt: Option[Boolean] = None
 
   private[horizen] var withdrawalEpochInfoOpt: Option[WithdrawalEpochInfo] = None
   private[horizen] var topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = None
@@ -262,7 +261,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   private[horizen] def cleanUpCache(): Unit = {
     hasCeasedOpt = None
-    isForgersListOpenOpt = None
     withdrawalEpochInfoOpt = None
     topQualityCertificateOpt = None
     lastCertificateReferencedEpochOpt = None
