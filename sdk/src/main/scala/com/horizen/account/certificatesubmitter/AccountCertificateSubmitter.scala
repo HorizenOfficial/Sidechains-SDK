@@ -18,7 +18,6 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.mainchain.api.MainchainNodeCertificateApi
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.client.MainchainNodeChannel
-
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -44,7 +43,6 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
   override type HIS = AccountHistory
   override type MS = AccountState
   override type MP = AccountMemoryPool
-
 }
 
 object AccountCertificateSubmitterRef {

@@ -179,6 +179,7 @@ object SidechainBlockBase {
   // Also it is more than enough to process Ommers for very long MC forks (2000+)
   val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 3.toByte
   val BlockIdHexStringLength = 64
+  val GENESIS_BLOCK_PARENT_ID = new Array[Byte](32)
 
   def calculateMainchainMerkleRootHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                                        mainchainHeaders: Seq[MainchainHeader]): Array[Byte] = {
