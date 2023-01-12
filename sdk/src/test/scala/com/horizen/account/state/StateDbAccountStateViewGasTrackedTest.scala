@@ -8,7 +8,7 @@ import org.scalatestplus.junit.JUnitSuite
 
 import java.math.BigInteger
 
-class AccountStateViewGasTrackedTest extends JUnitSuite with MessageProcessorFixture with TableDrivenPropertyChecks {
+class StateDbAccountStateViewGasTrackedTest extends JUnitSuite with MessageProcessorFixture with TableDrivenPropertyChecks {
   @Test
   def testUpdateAccountStorageGasAndRefund(): Unit = {
     // all operations below are performed on the same storage key in the same account
@@ -45,7 +45,7 @@ class AccountStateViewGasTrackedTest extends JUnitSuite with MessageProcessorFix
         view.increaseNonce(origin)
         // setup gas tracking
         val gas = new GasPool(1000000)
-        val gasView = view.getGasTrackedView(gas).asInstanceOf[AccountStateViewGasTracked]
+        val gasView = view.getGasTrackedView(gas).asInstanceOf[StateDbAccountStateViewGasTracked]
         // push state into the "original" slot
         gasView.updateAccountStorage(origin, key, BigIntegerUtil.toUint256Bytes(original))
         gasView.finalizeChanges()

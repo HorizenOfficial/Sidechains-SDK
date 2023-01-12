@@ -1,6 +1,5 @@
 package com.horizen.account.state
 
-import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.evm.StateDB
 import com.horizen.evm.interop.EvmLog
 
@@ -12,12 +11,11 @@ import java.util
  * @param gas
  *   GasPool instance to deduct gas from
  */
-class AccountStateViewGasTracked(
-    metadataStorageView: AccountStateMetadataStorageView,
+class StateDbAccountStateViewGasTracked(
     stateDb: StateDB,
     messageProcessors: Seq[MessageProcessor],
     gas: GasPool
-) extends AccountStateView(metadataStorageView, stateDb, messageProcessors) {
+) extends StateDbAccountStateView(stateDb, messageProcessors) {
 
   /**
    * Consume gas for account access:
@@ -49,7 +47,8 @@ class AccountStateViewGasTracked(
   @throws(classOf[OutOfGasException])
   private def storageWriteAccess(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
     // If we fail the minimum gas availability invariant, fail (0)
-    if (gas.getGas.compareTo(GasUtil.SstoreSentryGasEIP2200) <= 0) throw new OutOfGasException()
+    if (gas.getGas.compareTo(GasUtil.SstoreSentryGasEIP2200) <= 0)
+      throw new OutOfGasException("account storage write gas sentry fail")
     // Gas sentry honoured, do the actual gas calculation based on the stored value
     if (!stateDb.accessSlot(address, key)) {
       gas.subGas(GasUtil.ColdSloadCostEIP2929)
