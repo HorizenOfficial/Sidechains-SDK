@@ -92,7 +92,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     // helper: mock balance call and assert that the withdrawal request throws
     val withdraw = (balance: BigInteger, withdrawalAmount: BigInteger, blockContext: BlockContext) => {
       val msg = addWithdrawalRequestMessage(withdrawalAmount)
-      Mockito.when(mockStateView.getBalance(msg.getFrom.address())).thenReturn(balance)
+      Mockito.when(mockStateView.getBalance(msg.getFromAddressBytes)).thenReturn(balance)
       assertThrows[ExecutionFailedException](
         withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, blockContext))
       )
@@ -124,7 +124,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
 
     // Invalid data
     var msg = getMessage(WithdrawalMsgProcessor.contractAddress, BigInteger.ZERO, Array.emptyByteArray)
-    Mockito.when(mockStateView.accountExists(msg.getTo.address())).thenReturn(true)
+    Mockito.when(mockStateView.accountExists(msg.getToAddressBytes)).thenReturn(true)
 
     // Withdrawal request list with invalid data should throw ExecutionFailedException
     assertThrows[ExecutionFailedException](

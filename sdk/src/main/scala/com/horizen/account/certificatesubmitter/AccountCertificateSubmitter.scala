@@ -13,13 +13,11 @@ import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies._
-import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.mainchain.api.MainchainNodeCertificateApi
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.client.MainchainNodeChannel
-
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -38,14 +36,13 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
     AccountBlock,
     T
   ](settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy) {
-  type FPI = AccountFeePaymentsInfo
-  type HSTOR = AccountHistoryStorage
-  type VL = AccountWallet
-  type HIS = AccountHistory
-  type MS = AccountState
-  type MP = AccountMemoryPool
-  type PM = AccountBlock
 
+  override type FPI = AccountFeePaymentsInfo
+  override type HSTOR = AccountHistoryStorage
+  override type VL = AccountWallet
+  override type HIS = AccountHistory
+  override type MS = AccountState
+  override type MP = AccountMemoryPool
 }
 
 object AccountCertificateSubmitterRef {
@@ -71,13 +68,17 @@ object AccountCertificateSubmitterRef {
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel)
-      .withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel))
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel)
-      .withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel), name)
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 }

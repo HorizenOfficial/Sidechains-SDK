@@ -17,14 +17,14 @@ import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.fork.{ForkConfigurator, ForkManager}
 import com.horizen.helper.TransactionSubmitProvider
+import com.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl}
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.storage._
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
+import com.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
 import com.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -67,7 +67,9 @@ abstract class AbstractSidechainApp
   override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
   override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
-  private val storageList = mutable.ListBuffer[Storage]()
+  private val closableResourceList = mutable.ListBuffer[AutoCloseable]()
+  protected val sidechainTransactionsCompanion: DynamicTypedSerializer[TX, TransactionSerializer[TX]]
+
 
   log.info(s"Starting application with settings \n$sidechainSettings")
 
@@ -77,7 +79,7 @@ abstract class AbstractSidechainApp
 
   override protected lazy val features: Seq[PeerFeature] = Seq()
 
-  val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
+  val stopAllInProgress: AtomicBoolean = new AtomicBoolean(false)
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(
     SidechainSyncInfoMessageSpec,
@@ -293,35 +295,19 @@ abstract class AbstractSidechainApp
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
 
-  /*
-   * TODO this should be common code but nodeViewHolderRef here is still null, and lazy initialization does not always apply
-   *  One possible approach could be to add some init() function in this base class and call it from concrete instances.
-   *
-  // Init Certificate Submitter
-  lazy val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  lazy val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
+  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
-   * Moreover, for the time being we decide not to use ws server for accounts
-  //Websocket server for the Explorer
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
-  }
+//  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
+//  val applicationApiRoutes: Seq[ApplicationApiRoute]
 
   // Init API
-  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
-  rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
+  lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
-  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
-  customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
-  */
+  lazy val applicationApiRoutes: Seq[ApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
-
-  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
-  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
-  var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
+  val coreApiRoutes: Seq[ApiRoute]
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
@@ -329,6 +315,9 @@ abstract class AbstractSidechainApp
     .union(rejectedApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)
+
+  lazy val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
+  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   val shutdownHookThread: Thread = new Thread("ShutdownHook-Thread") {
     override def run(): Unit = {
@@ -340,16 +329,15 @@ abstract class AbstractSidechainApp
   // we rewrite (by overriding) the base class run() method, just to customizing the shutdown hook thread
   // not to call the stopAll() method
   override def run(): Unit = {
-    require(settings.network.agentName.length <= Application.ApplicationNameLimit)
+    require(settings.network.agentName.length <= Application.ApplicationNameLimit,
+      s"Agent name ${settings.network.agentName} length exceeds limit ${Application.ApplicationNameLimit}")
 
     log.debug(s"Available processors: ${Runtime.getRuntime.availableProcessors}")
     log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")
     log.debug(s"RPC is allowed at ${settings.restApi.bindAddress.toString}")
 
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
     val bindAddress = settings.restApi.bindAddress
-
-    Http().bindAndHandle(combinedRoute, bindAddress.getAddress.getHostAddress, bindAddress.getPort)
+    Http().newServerAt(bindAddress.getAddress.getHostAddress,bindAddress.getPort).bind(combinedRoute)
 
     //Remove the Logger shutdown hook
     val factory = LogManager.getFactory
@@ -389,8 +377,8 @@ abstract class AbstractSidechainApp
       log.info("Calling custom application stopAll...")
       applicationStopper.stopAll()
 
-      log.info("Closing all data storages...")
-      storageList.foreach(_.close())
+      log.info("Closing all closable resources...")
+      closableResourceList.foreach(_.close())
 
       log.info("Shutdown the logger...")
       LogManager.shutdown()
@@ -401,9 +389,9 @@ abstract class AbstractSidechainApp
     }
   }
 
-  protected def registerStorage(storage: Storage) : Storage = {
-    storageList += storage
-    storage
+  protected def registerClosableResource[S <: AutoCloseable](closableResource: S) : S = {
+    closableResourceList += closableResource
+    closableResource
   }
 
   def getTransactionSubmitProvider: TransactionSubmitProvider[TX]

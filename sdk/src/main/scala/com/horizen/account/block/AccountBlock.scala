@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, Bloom}
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt, Bloom}
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
@@ -17,7 +17,6 @@ import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
 import scorex.util.ScorexLogging
 import sparkz.core.utils.SparkzEncoding
-
 import java.math.BigInteger
 import scala.util.Try
 
@@ -29,7 +28,13 @@ class AccountBlock(override val header: AccountBlockHeader,
                    override val mainchainHeaders: Seq[MainchainHeader],
                    override val ommers: Seq[Ommer[AccountBlockHeader]],
                    companion: SidechainAccountTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader] with ScorexLogging {
+  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader](
+    header,
+    sidechainTransactions,
+    mainchainBlockReferencesData,
+    mainchainHeaders,
+    ommers)
+    with ScorexLogging {
   override type M = AccountBlock
 
   override lazy val serializer = new AccountBlockSerializer(companion)
@@ -68,9 +73,24 @@ class AccountBlock(override val header: AccountBlockHeader,
     }
   }
 
+  @throws(classOf[InconsistentSidechainBlockDataException])
+  def verifyLogsBloomConsistency(receipts: Seq[EthereumReceipt]): Unit = {
+    val logsBloom = Bloom.fromReceipts(receipts.map{r => r.consensusDataReceipt})
+    if (!logsBloom.equals(header.logsBloom)) {
+      val reason = s"Invalid logs bloom"
+      log.error(reason)
+      throw new InconsistentSidechainBlockDataException(reason)
+    }
+  }
+
   override def versionIsValid(): Boolean = version == AccountBlock.ACCOUNT_BLOCK_VERSION
 
-  override def transactionsListExceedsSizeLimit(): Boolean = false
+  //Number of transactions doesn't have a limit in an AccountBlock because txs are limited using block gas limit
+  override def transactionsListExceedsSizeLimit: Boolean = false
+
+  //AccountBlock size doesn't have a limit in an AccountBlock because block gas limit control the number of txs included
+  override def blockExceedsSizeLimit(blockSize: Int): Boolean = false
+
 }
 
 

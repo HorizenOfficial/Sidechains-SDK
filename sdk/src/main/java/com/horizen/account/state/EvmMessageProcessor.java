@@ -22,8 +22,8 @@ public class EvmMessageProcessor implements MessageProcessor {
     @Override
     public boolean canProcess(Message msg, BaseAccountStateView view) {
         // contract deployment to a new account
-        if (msg.getTo() == null) return true;
-        var to = msg.getTo().address();
+        if (msg.getTo().isEmpty()) return true;
+        var to = msg.getTo().get().address();
         return view.isSmartContractAccount(to);
     }
 
@@ -44,8 +44,8 @@ public class EvmMessageProcessor implements MessageProcessor {
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),
-                msg.getFrom().address(),
-                msg.getTo() == null ? null : msg.getTo().address(),
+                msg.getFromAddressBytes(),
+                msg.getToAddressBytes(),
                 msg.getValue(),
                 msg.getData(),
                 // use gas from the pool not the message, because intrinsic gas was already spent at this point

@@ -12,7 +12,6 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.Cert
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies.{CertificateSubmissionStrategy, CircuitStrategy, SubmissionWindowStatus}
-import com.horizen.certnative.BackwardTransfer
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.fork.ForkManager
@@ -60,6 +59,7 @@ abstract class AbstractCertificateSubmitter[
                         keyRotationStrategy: CircuitStrategy[TX, H, PM, T])
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
+
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
   type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
@@ -85,7 +85,6 @@ abstract class AbstractCertificateSubmitter[
   override def preStart(): Unit = {
     super.preStart()
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[PM]])
-    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     context.system.eventStream.subscribe(self, CertificateSubmissionStarted.getClass)
     context.system.eventStream.subscribe(self, CertificateSubmissionStopped.getClass)
@@ -464,6 +463,7 @@ abstract class AbstractCertificateSubmitter[
 }
 
 object AbstractCertificateSubmitter {
+
   // Events:
   sealed trait SubmitterEvent
 

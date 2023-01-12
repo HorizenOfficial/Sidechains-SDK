@@ -1,9 +1,10 @@
 package com.horizen.fixtures
 
-import com.horizen.block.MainchainTxForwardTransferCrosschainOutput
+import com.horizen.block.{MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.transaction.mainchain.ForwardTransfer
+import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
+import org.scalatestplus.mockito.MockitoSugar.mock
 
 import scala.util.Random
 
@@ -16,5 +17,10 @@ trait SidechainRelatedMainchainOutputFixture extends SecretFixture {
     Random.nextBytes(forwardTransferHash)
 
     new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))
+  }
+
+  def getDummyScCreation(sidechainId: Array[Byte]): SidechainCreation = {
+    val output = new MainchainTxSidechainCreationCrosschainOutput(sidechainId, mock[MainchainTxSidechainCreationCrosschainOutput])
+    new SidechainCreation(output, new Array[Byte](32), 0)
   }
 }
