@@ -562,6 +562,7 @@ class EthService(
 
         // apply all transaction, collecting traces on the way
         val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
+          blockContext.setEvmResult(EvmResult.emptyEvmResult())
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
           blockContext.getEvmResult
         })
