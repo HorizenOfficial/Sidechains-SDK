@@ -18,15 +18,18 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
 import scorex.util.ScorexLogging
-
 import java.math.BigInteger
 import java.util.Optional
+
+import com.horizen.account.sc2sc.{AccountCrossChainMessage, CrossChainMessageProvider}
+import com.horizen.sc2sc.{CrossChainMessageHash, CrossChainMessage}
+
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 
 class StateDbAccountStateView(
-               stateDb: StateDB,
-               messageProcessors: Seq[MessageProcessor])
+                               stateDb: StateDB,
+                               messageProcessors: Seq[MessageProcessor])
   extends BaseAccountStateView
     with AutoCloseable
     with ScorexLogging {
@@ -34,7 +37,7 @@ class StateDbAccountStateView(
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
   lazy val certificateKeysProvider: CertificateKeysProvider = messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
-
+  lazy val crossChainMessageProviders: Seq[CrossChainMessageProvider] = messageProcessors.filter(_.isInstanceOf[CrossChainMessageProvider]).map(_.asInstanceOf[CrossChainMessageProvider])
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
@@ -58,6 +61,17 @@ class StateDbAccountStateView(
 
   override def getAllowedForgerList: Seq[Int] =
     forgerStakesProvider.getAllowedForgerListIndexes(this)
+
+  override def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage] =
+    crossChainMessageProviders.flatMap(_.getCrossChainMesssages(withdrawalEpoch, this))
+
+  override def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash): Option[Int] = {
+    val providerWithMessage : Option[CrossChainMessageProvider] =  crossChainMessageProviders.find(_.getCrossChainMessageHashEpoch(msgHash, this).nonEmpty)
+    providerWithMessage  match {
+      case Some(x) => x.getCrossChainMessageHashEpoch(msgHash, this)
+      case None => Option.empty
+    }
+  }
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {

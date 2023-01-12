@@ -3,8 +3,8 @@ package com.horizen.account.state
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.evm.ResourceHandle
 import com.horizen.evm.interop.EvmLog
-
 import java.math.BigInteger
+import com.horizen.sc2sc.{CrossChainMessageHash, CrossChainMessage}
 
 /**
  * Wrapper for AccountStateView to help with tracking gas consumption.
@@ -129,4 +129,8 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
   override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = view.certifiersKeys(withdrawalEpoch)
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = view.keyRotationProof(withdrawalEpoch, indexOfSigner, keyType)
+
+  override def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage] = view.getCrossChainMessages(withdrawalEpoch)
+
+  override def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash): Option[Int] = view.getCrossChainMessageHashEpoch(msgHash)
 }

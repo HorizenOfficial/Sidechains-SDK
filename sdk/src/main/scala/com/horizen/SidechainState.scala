@@ -2,7 +2,7 @@ package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.backup.BoxIterator
-import com.horizen.block.{SidechainBlock, SidechainBlockHeader, WithdrawalEpochCertificate}
+import com.horizen.block.{MainchainBlockReferenceData, MainchainHeader, SidechainBlock, SidechainBlockBase, SidechainBlockHeader, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
@@ -26,11 +26,13 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core._
 import sparkz.core.transaction.state._
-
 import java.io.File
 import java.math.{BigDecimal, MathContext}
 import java.util
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
+
+import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageImpl, Sc2ScConfigurator}
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -40,6 +42,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        forgerBoxStorage: SidechainStateForgerBoxStorage,
                                        utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                        val params: NetworkParams,
+                                       val sc2scConfig : Sc2ScConfigurator,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
   extends AbstractState[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainState]
@@ -97,6 +100,19 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getWithdrawalRequests(withdrawalEpoch)
       .map(box => new BackwardTransfer(box.proposition.bytes, box.value))
   }
+
+  override def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage] = {
+    if (sc2scConfig.canSendMessages) stateStorage.getCrossChainMessagesPerEpoch(withdrawalEpoch) else Seq()
+  }
+
+  override def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int] = {
+    if (sc2scConfig.canSendMessages) stateStorage.getCrossChainMessageHashEpoch(messageHash) else  None
+  }
+
+  override def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[Array[Byte]] = {
+    stateStorage.getTopQualityCertificateMainchainHeaderHash(withdrawalEpoch)
+  }
+
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     stateStorage.getKeyRotationProof(withdrawalEpoch, indexOfSigner, keyType)
@@ -220,6 +236,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
+
     applicationState.validate(this, mod)
   }
 
@@ -248,6 +265,29 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       })
     }
+
+
+    //crosschain messages validation: not possible to create the same message more than one time in the same block
+    val allCrossMessagesBox = mod.transactions.flatMap(tx => tx.newBoxes().asScala.filter(box => box.isInstanceOf[CrossChainMessageBox]))
+    if (allCrossMessagesBox.size > 0){
+      if (!sc2scConfig.canSendMessages){
+        throw new IllegalArgumentException(s"CrossChainMessages not allowed in this sidechain")
+      }else {
+        val allCrossMessagesHashes = new JArrayList[CrossChainMessageHash]()
+        allCrossMessagesBox.foreach(box => {
+          val currentHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(SidechainState.buildCrosschainMessageFromUTXO(box.asInstanceOf[CrossChainMessageBox], params))
+          if (allCrossMessagesHashes.contains(currentHash)) {
+            throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated CrossChainMessageBox")
+          } else {
+            allCrossMessagesHashes.add(currentHash)
+          }
+        })
+        //crosschain messages validation: check max number of boxes per epoch
+        checkCrosschainMessagesBoxesAllowed(mod, allCrossMessagesBox.size)
+      }
+    }
+
+
 
     if (params.circuitType == NaiveThresholdSignatureCircuitWithKeyRotation) {
       val keyTypeMap = new JHashMap[KeyRotationProofType, Seq[Int]]()
@@ -296,6 +336,25 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       (params.maxWBsAllowed * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
   }
 
+  private def checkCrosschainMessagesBoxesAllowed(mod: SidechainBlock, boxInThisBlock: Int): Unit = {
+    val alreadyMined = getAlreadyMinedCrosschainMessagesInCurrentEpoch
+    val mainchainBlockReferenceInBlock = mod.mainchainBlockReferencesData.size
+    val allowed = getAllowedCrosschainMessageBoxes(mainchainBlockReferenceInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate)
+    val total = alreadyMined + boxInThisBlock
+    if (total > allowed) {
+      throw new IllegalStateException(s"Exceeded the maximum number of CrosschainMessages allowed!")
+    }
+  }
+
+  def getAlreadyMinedCrosschainMessagesInCurrentEpoch: Int = {
+    stateStorage.getCrossChainMessagesPerEpoch(getWithdrawalEpochInfo.epoch).size
+  }
+
+  def getAllowedCrosschainMessageBoxes(numberOfMainchainBlockReferenceInBlock: Int, maxMessagesPerCertificate: Int): Int = {
+    Math.min(maxMessagesPerCertificate,
+      (maxMessagesPerCertificate * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
+  }
+
   def openStakeTransactionEnabled(consensusEpochNumber: Option[ConsensusEpochNumber]): Boolean = {
     consensusEpochNumber match {
       case Some(consensusEpochNumber) =>
@@ -328,6 +387,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
         }
+    }
+
+    //sc2sc validation
+    if (sc2scConfig.canSendMessages){
+      validateTopQualityCertificateForSc2Sc(topQualityCertificate, certReferencedEpochNumber, params.sidechainCreationVersion)
     }
 
     if (params.circuitType == CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation) {
@@ -493,6 +557,24 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
             }
           }
         })
+
+
+
+      //crosschain message validation: not possible to post again a message already seen before
+      var ccBoxes = newBoxes.filter(box => box.isInstanceOf[CrossChainMessageBox])
+      if (!sc2scConfig.canSendMessages && ccBoxes.size > 0){
+        throw new Exception(s"CrossChainMessages not allowed in this sidechain")
+      }else{
+        ccBoxes.foreach(cmBox => {
+          val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(SidechainState.buildCrosschainMessageFromUTXO(cmBox.asInstanceOf[CrossChainMessageBox], params))
+          if (stateStorage.getCrossChainMessageHashEpoch(messageHash).isDefined){
+              throw new Exception("CrossChainMessage already found in state")
+          }
+        })
+      }
+
+
+
     }
 
     applicationState.validate(this, tx)
@@ -524,7 +606,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod.mainchainBlockReferencesData.size, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
-          mod.topQualityCertificateOpt,
+          SidechainBlockBase.getTopQualityCertsWithMainChainHash(mod.mainchainBlockReferencesData),
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions),
           getKeyRotationProofsToAdd(mod.sidechainTransactions)
@@ -572,7 +654,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                    newVersion: VersionTag,
                    withdrawalEpochInfo: WithdrawalEpochInfo,
                    consensusEpoch: ConsensusEpochNumber,
-                   topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
+                   topQualityCerts: Seq[(WithdrawalEpochCertificate, Array[Byte])],
                    blockFeeInfo: BlockFeeInfo,
                    forgerListIndexes: Array[Int],
                    keyRotationProofsToAdd: Seq[KeyRotationProof]
@@ -581,8 +663,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     var boxesToAppend = changes.toAppend.map(_.box)
 
     val withdrawalRequestsToAppend: ListBuffer[WithdrawalRequestBox] = ListBuffer()
+    val crossChainMessagesToAppend: ListBuffer[CrossChainMessage] = ListBuffer()
     val forgerBoxesToAppend: ListBuffer[ForgerBox] = ListBuffer()
     val otherBoxesToAppend: ListBuffer[SidechainTypes#SCB] = ListBuffer()
+
+    val topQualityCertificateOpt : Option[WithdrawalEpochCertificate] = topQualityCerts.lastOption.map(_._1)
 
     // Check if current block application will lead to ceasing the sidechain
     val hasReachedCertificateSubmissionWindowEnd: Boolean = WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(
@@ -626,9 +711,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     boxesToAppend.foreach(box => {
       if(box.isInstanceOf[ForgerBox])
         forgerBoxesToAppend.append(box)
-      else if(box.isInstanceOf[WithdrawalRequestBox])
+      else if(box.isInstanceOf[WithdrawalRequestBox]) {
         withdrawalRequestsToAppend.append(box)
-      else
+      } else if(box.isInstanceOf[CrossChainMessageBox]) {
+        crossChainMessagesToAppend.append(SidechainState.buildCrosschainMessageFromUTXO(box.asInstanceOf[CrossChainMessageBox],params))
+      } else
         otherBoxesToAppend.append(box)
     })
 
@@ -646,13 +733,17 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           None
         }
 
+
+
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt,
+            withdrawalRequestsToAppend, crossChainMessagesToAppend, consensusEpoch, topQualityCerts,
+            blockFeeInfo, utxoMerkleTreeRootOpt,
             scHasCeased, forgerListIndexes, params.allowedForgersList.size, keyRotationProofsToAdd, actualCertifiersKeys).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           updatedUtxoMerkleTreeProvider,
           params,
+          sc2scConfig,
           newVersion,
           appState
         )
@@ -688,6 +779,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           forgerBoxStorageNew,
           utxoMerkleTreeProviderNew,
           params,
+          sc2scConfig,
           to,
           appState)
       }
@@ -841,6 +933,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 }
 
+
 object SidechainState
 {
   def changes(mod: SidechainBlock) : Try[BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB]] = Try {
@@ -870,11 +963,12 @@ object SidechainState
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
                                     utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                     params: NetworkParams,
+                                    sc2scConfig: Sc2ScConfigurator,
                                     applicationState: ApplicationState): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty) {
       Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider,
-        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
+        params, sc2scConfig, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
     } else
       None
   }
@@ -884,11 +978,12 @@ object SidechainState
                                           utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                           backupStorage: BackupStorage,
                                           params: NetworkParams,
+                                          sc2scConfig: Sc2ScConfigurator,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty) {
-      var state = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, idToVersion(genesisBlock.parentId), applicationState)
+      var state = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, sc2scConfig, idToVersion(genesisBlock.parentId), applicationState)
       if (!backupStorage.isEmpty) {
         state = state.restoreBackup(backupStorage.getBoxIterator, versionToBytes(idToVersion(genesisBlock.parentId))).get
       }
@@ -900,5 +995,17 @@ object SidechainState
   private[horizen] def calculateFeePaymentBoxNonce(withdrawalEpochNumber: Int, index: Int): Long = {
     val hash = Blake2b256.hash(Bytes.concat(Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(index)))
     BytesUtils.getLong(hash, 0)
+  }
+
+  private[horizen] def buildCrosschainMessageFromUTXO(box: CrossChainMessageBox, params: NetworkParams): CrossChainMessage = {
+    new CrossChainMessageImpl(
+      box.getProtocolVersion,
+      box.getMessageType,
+      params.sidechainId,
+      box.proposition().pubKeyBytes(),
+      box.getReceiverSidechain,
+      box.getReceiverAddress,
+      box.getPayload
+    )
   }
 }

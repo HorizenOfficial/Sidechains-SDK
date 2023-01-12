@@ -26,6 +26,7 @@ class MockedAccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     null,
     null,
     null,
+    null,
     null ) {
 
   override def dumpStorages(): Unit = {}

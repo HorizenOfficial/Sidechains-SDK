@@ -1,27 +1,30 @@
 package com.horizen.storage
 
 import com.google.common.primitives.Ints
-import com.horizen.SidechainTypes
+import com.horizen.{SidechainState, SidechainTypes}
 import com.horizen.backup.{BackupBox, BoxIterator}
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{BoxSerializer, CoinsBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
-import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.fixtures.{BoxFixture, SecretFixture, StoreFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, BytesUtils, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, BytesUtils, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import scorex.crypto.hash.Blake2b256
-
 import java.lang.{Byte => JByte}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
+
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageSerializer}
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -37,9 +40,10 @@ class SidechainStateStorageTest
     with MockitoSugar
     with SidechainTypes
     with WithdrawalEpochCertificateFixture
+    with BoxFixture
 {
   val mockedPhysicalStorage: Storage = mock[VersionedLevelDbStorageAdapter]
-
+  val crossChainMessagesSerializer = new ListSerializer[CrossChainMessage](CrossChainMessageSerializer.getSerializer)
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
   val customStoredBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
@@ -50,13 +54,19 @@ class SidechainStateStorageTest
 
   val withdrawalEpochInfo = WithdrawalEpochInfo(1, 2)
 
+  val params: NetworkParams = MainNetParams()
+
+
+
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
 
   val _temporaryFolder = new TemporaryFolder()
 
-  val params: NetworkParams = MainNetParams()
-
   val nonCeasingParams: NetworkParams = MainNetParams(isNonCeasing = true)
+
+  val crossChainMessages : Seq[CrossChainMessage] = Seq(
+    SidechainState.buildCrosschainMessageFromUTXO(getRandomCrossMessageBox(System.currentTimeMillis()), nonCeasingParams)
+  )
 
   @Rule  def temporaryFolder = _temporaryFolder
 
@@ -146,7 +156,7 @@ class SidechainStateStorageTest
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
-      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0)
+      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
@@ -154,7 +164,7 @@ class SidechainStateStorageTest
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box),
-      Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0)
+      Set(new ByteArrayWrapper(boxList(3).id())), Seq(),  Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
@@ -188,6 +198,7 @@ class SidechainStateStorageTest
     // Certificate
     val referenceEpochNumber = 0
     val cert: WithdrawalEpochCertificate = generateWithdrawalEpochCertificate(epochNumber = Some(referenceEpochNumber))
+    val mainChainHash: Array[Byte] =  generateRandomMainchainHash()
 
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateSidechainBlockIdKey), version))
 
@@ -196,6 +207,21 @@ class SidechainStateStorageTest
 
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getTopQualityCertificateKey(referenceEpochNumber)),
       new ByteArrayWrapper(WithdrawalEpochCertificateSerializer.toBytes(cert))))
+
+    //crosschain messages
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getCrosschainMessagesEpochCounterKey(withdrawalEpochInfo.epoch)),
+      new ByteArrayWrapper(Ints.toByteArray(0))))
+    val ccMessages = new JArrayList[CrossChainMessage]()
+    ccMessages.add(crossChainMessages.last)
+    //store also every  single hash separately with its epoch
+    val singleMessageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(ccMessages.get(0))
+    toUpdate.add(new Pair(stateStorage.getCrosschainMessageSingleKey(singleMessageHash),
+        new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
+    toUpdate.add(new Pair(stateStorage.getCrosschainMessagesKey(withdrawalEpochInfo.epoch, 0),
+      new ByteArrayWrapper(crossChainMessagesSerializer.toBytes(ccMessages))))
+    //mainchain hashes
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getTopQualityCertificateMainchainHeaderKey(referenceEpochNumber)),
+      new ByteArrayWrapper(mainChainHash)))
 
     // block fee info
     val nextBlockFeeInfoCounter: Int = 0
@@ -230,14 +256,14 @@ class SidechainStateStorageTest
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
-      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), consensusEpoch, Some(cert), blockFeeInfo, None, false, new Array[Int](0), 0)
+      Set(new ByteArrayWrapper(boxList(2).id())), Seq(),  crossChainMessages, consensusEpoch, Seq((cert, mainChainHash)),  blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if (tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box),
-      Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0)
+      Set(new ByteArrayWrapper(boxList(3).id())), Seq(), Seq(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)

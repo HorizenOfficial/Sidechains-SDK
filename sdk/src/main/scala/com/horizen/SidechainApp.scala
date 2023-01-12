@@ -174,6 +174,7 @@ class SidechainApp @Inject()
     sidechainWalletCswDataProvider,
     backupStorage,
     params,
+    sc2scConfigurator,
     timeProvider,
     applicationWallet,
     applicationState,
@@ -197,7 +198,7 @@ class SidechainApp @Inject()
 
   // Init Certificate Submitter
   // Depends on params.isNonCeasing submitter will choose a proper strategy.
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, sc2scConfigurator, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init CSW manager

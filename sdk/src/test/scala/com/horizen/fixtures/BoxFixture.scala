@@ -6,11 +6,13 @@ import com.horizen.box._
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import java.util.{ArrayList => JArrayList, List => JList}
-import com.horizen.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+
+import com.horizen.box.data.{CrossChainMessageBoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.{SidechainTypes, WalletBox}
 
 import scala.util.Random
 import com.horizen.customtypes._
+import com.horizen.sc2sc.CrossChainProtocolVersion
 import com.horizen.utils.ZenCoinsUtils
 
 import scala.collection.JavaConverters._
@@ -46,6 +48,34 @@ trait BoxFixture
     new ZenBox(new ZenBoxData(proposition, value), nonce)
   }
 
+  def getCrossMessageBox(proposition: PublicKey25519Proposition,
+                         protocolVersion: CrossChainProtocolVersion,
+                         messageType: Integer,
+                         receiverSidechain: Array[Byte],
+                         receiverAddress: Array[Byte],
+                         payload: Array[Byte],
+                         nonce: Long
+                        ): CrossChainMessageBox = {
+    new CrossChainMessageBox(new CrossChainMessageBoxData(proposition, protocolVersion,
+      messageType, receiverSidechain, receiverAddress, payload), nonce)
+  }
+
+  def getRandomCrossMessageBox(seed: Long): CrossChainMessageBox ={
+    val random: Random = new Random(seed)
+    val receiverSidechain = new Array[Byte](32)
+    random.nextBytes(receiverSidechain)
+    val receiverAddress = new Array[Byte](16)
+    random.nextBytes(receiverAddress)
+    getCrossMessageBox(
+      getPrivateKey25519(Longs.toByteArray(random.nextLong())).publicImage(),
+      CrossChainProtocolVersion.VERSION_1,
+      1,
+      receiverSidechain,
+      receiverAddress,
+      "my payload".getBytes,
+      random.nextLong()
+    )
+  }
 
   def getZenBoxList(count: Int): JList[ZenBox] = {
     val boxList: JList[ZenBox] = new JArrayList[ZenBox]()

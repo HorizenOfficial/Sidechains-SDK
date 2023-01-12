@@ -3,7 +3,8 @@ package com.horizen.box;
 public enum CoreBoxesIdsEnum {
     ZenBoxId((byte)1),
     WithdrawalRequestBoxId((byte)2),
-    ForgerBoxId((byte)3);
+    ForgerBoxId((byte)3),
+    CrossChainMessageBoxId((byte)4);
 
     private final byte id;
 

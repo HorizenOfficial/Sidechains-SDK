@@ -4,6 +4,7 @@ import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.Box;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.cryptolibprovider.CommonCircuit;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.cryptolibprovider.CswCircuit;
 import com.horizen.cswnative.CswFtProverData;
 import com.horizen.cswnative.CswProof;
@@ -48,9 +49,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
 
     @Override
     public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) throws Exception {
-        try(WithdrawalCertificate wc = CommonCircuit.createWithdrawalCertificate(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
-            return hashFe.serializeFieldElement();
-        }
+        return CryptoLibProvider.commonCircuitFunctions().getCertDataHash(cert, sidechainCreationVersion);
     }
 
     @Override

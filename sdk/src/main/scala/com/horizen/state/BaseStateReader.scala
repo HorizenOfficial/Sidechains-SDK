@@ -11,6 +11,7 @@ import java.math.BigInteger
 trait BaseStateReader {
   def getWithdrawalEpochInfo: WithdrawalEpochInfo
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
+  def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[Array[Byte]] //hash of mainchain block that published the top quality cert of this epoch
   def getFeePaymentsInfo(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment]
   def getConsensusEpochNumber: Option[ConsensusEpochNumber]
   def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt]

@@ -1,11 +1,5 @@
 package com.horizen.sc2sc;
-
-import com.horizen.proposition.Proposition;
 import com.horizen.utils.BytesUtils;
-import sparkz.core.serialization.BytesSerializable;
-import sparkz.core.serialization.SparkzSerializer;
-
-import java.util.Arrays;
 
 public class CrossChainMessageImpl implements CrossChainMessage{
 

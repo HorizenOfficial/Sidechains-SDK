@@ -14,7 +14,7 @@ import java.math.BigInteger
 trait StateView[TX <: Transaction] extends BaseStateReader {
 
   def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit
-  def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit
+  def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, mainChainHash: Array[Byte], blockId: ModifierId): Unit
   def updateFeePaymentInfo(info: AccountBlockFeeInfo): Unit
   def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit
   def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit

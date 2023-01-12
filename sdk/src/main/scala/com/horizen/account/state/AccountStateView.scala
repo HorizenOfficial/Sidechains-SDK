@@ -14,6 +14,9 @@ import scorex.util.ScorexLogging
 import scorex.util.ModifierId
 import java.math.BigInteger
 
+import com.horizen.account.sc2sc.{AccountCrossChainMessage, CrossChainMessageProvider}
+import com.horizen.sc2sc.CrossChainMessageHash
+
 // this class extends 2 main hierarchies, which are kept separate:
 //  - StateView (trait): metadata read/write
 //      Implements the methods via metadataStorageView
@@ -32,16 +35,20 @@ class AccountStateView(
   def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {
     refData.topQualityCertificate.foreach(cert => {
       log.debug(s"adding top quality cert to state: $cert.")
-      updateTopQualityCertificate(cert, blockId)
+      updateTopQualityCertificate(cert, refData.headerHash, blockId)
     })
   }
 
   // out-of-the-box helpers
-  override def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit = {
+  override def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, mainChainHash: Array[Byte], blockId: ModifierId): Unit = {
     metadataStorageView.updateTopQualityCertificate(cert)
     metadataStorageView.updateLastCertificateReferencedEpoch(cert.epochNumber)
     metadataStorageView.updateLastCertificateSidechainBlockIdOpt(blockId)
+    metadataStorageView.addTopCertificateMainchainHash(cert.epochNumber, mainChainHash)
   }
+
+  override def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[Array[Byte]] =
+    metadataStorageView.getTopCertificateMainchainHash(referencedWithdrawalEpoch)
 
   override def updateFeePaymentInfo(info: AccountBlockFeeInfo): Unit = {
     metadataStorageView.updateFeePaymentInfo(info)

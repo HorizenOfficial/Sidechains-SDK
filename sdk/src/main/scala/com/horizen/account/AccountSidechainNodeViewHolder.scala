@@ -13,6 +13,7 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
 import com.horizen.evm.Database
 import com.horizen.params.NetworkParams
+import com.horizen.sc2sc.Sc2ScConfigurator
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
@@ -21,10 +22,12 @@ import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.RollbackFailed
 import sparkz.core.utils.NetworkTimeProvider
 
+
 import scala.util.{Failure, Success}
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      params: NetworkParams,
+                                     sc2ScConfig: Sc2ScConfigurator,
                                      timeProvider: NetworkTimeProvider,
                                      historyStorage: AccountHistoryStorage,
                                      consensusDataStorage: ConsensusDataStorage,
@@ -122,7 +125,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     val restoredData = for {
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
+      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, sc2ScConfig, timeProvider)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
       pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
     } yield (history, state, wallet, pool)
@@ -133,7 +136,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, genesisBlock)
+      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, sc2ScConfig, timeProvider, genesisBlock)
 
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
 
@@ -196,9 +199,10 @@ object AccountNodeViewHolderRef {
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
+            sc2scConfig: Sc2ScConfigurator,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock): Props =
-    Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
+    Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, sc2scConfig, timeProvider, historyStorage,
       consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
@@ -209,11 +213,12 @@ object AccountNodeViewHolderRef {
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
+            sc2scConfig: Sc2ScConfigurator,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock))
+      customMessageProcessors, secretStorage, params, sc2scConfig, timeProvider, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -224,10 +229,11 @@ object AccountNodeViewHolderRef {
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
+            sc2scConfig: Sc2ScConfigurator,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
+      customMessageProcessors, secretStorage, params, sc2scConfig, timeProvider, genesisBlock), name)
 
 }
