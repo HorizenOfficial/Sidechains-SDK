@@ -7,15 +7,12 @@ import java.math.BigInteger
 import java.util
 
 /**
- * Extension of AccountStateView to help with tracking gas consumption.
+ * Extension to help with tracking gas consumption.
  * @param gas
  *   GasPool instance to deduct gas from
  */
-class StateDbAccountStateViewGasTracked(
-    stateDb: StateDB,
-    messageProcessors: Seq[MessageProcessor],
-    gas: GasPool
-) extends StateDbAccountStateView(stateDb, messageProcessors) {
+class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq[MessageProcessor], gas: GasPool)
+    extends StateDbAccountStateView(stateDb, messageProcessors) {
 
   /**
    * Consume gas for account access:

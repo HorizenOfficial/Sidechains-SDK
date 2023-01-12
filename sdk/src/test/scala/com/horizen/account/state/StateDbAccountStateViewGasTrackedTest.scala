@@ -8,7 +8,10 @@ import org.scalatestplus.junit.JUnitSuite
 
 import java.math.BigInteger
 
-class StateDbAccountStateViewGasTrackedTest extends JUnitSuite with MessageProcessorFixture with TableDrivenPropertyChecks {
+class StateDbAccountStateViewGasTrackedTest
+    extends JUnitSuite
+      with MessageProcessorFixture
+      with TableDrivenPropertyChecks {
   @Test
   def testUpdateAccountStorageGasAndRefund(): Unit = {
     // all operations below are performed on the same storage key in the same account

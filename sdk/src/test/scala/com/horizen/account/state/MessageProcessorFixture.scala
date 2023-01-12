@@ -1,9 +1,8 @@
 package com.horizen.account.state
 
-import com.horizen.account.utils.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.account.utils.Account
+import com.horizen.account.utils.{Account, FeeUtils}
 import com.horizen.evm.utils.Hash
 import com.horizen.evm.{MemoryDatabase, StateDB}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}

@@ -20,13 +20,13 @@ import java.math.BigInteger
 //  - StateDbAccountStateView (concrete class) : evm stateDb read/write
 //      Inherits its methods
 class AccountStateView(
-  metadataStorageView: AccountStateMetadataStorageView,
-  stateDb: StateDB,
-  messageProcessors: Seq[MessageProcessor])
-  extends StateDbAccountStateView(stateDb, messageProcessors)
-    with StateView[SidechainTypes#SCAT]
-    with AutoCloseable
-    with ScorexLogging {
+    metadataStorageView: AccountStateMetadataStorageView,
+    stateDb: StateDB,
+    messageProcessors: Seq[MessageProcessor]
+) extends StateDbAccountStateView(stateDb, messageProcessors)
+      with StateView[SidechainTypes#SCAT]
+      with AutoCloseable
+      with ScorexLogging {
 
   def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {
     refData.topQualityCertificate.foreach(cert => {
@@ -80,7 +80,10 @@ class AccountStateView(
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
-  override def getFeePaymentsInfo(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+  override def getFeePaymentsInfo(
+      withdrawalEpoch: Int,
+      blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None
+  ): Seq[AccountPayment] = {
     var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
     blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
     AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq)
