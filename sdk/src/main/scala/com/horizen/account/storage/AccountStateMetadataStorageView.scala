@@ -34,6 +34,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private val undefinedBlockFeeInfoCounter: Int = -1
 
   private[horizen] var hasCeasedOpt: Option[Boolean] = None
+
   private[horizen] var withdrawalEpochInfoOpt: Option[WithdrawalEpochInfo] = None
   private[horizen] var topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = None
   private[horizen] var lastCertificateReferencedEpochOpt: Option[Int] = None

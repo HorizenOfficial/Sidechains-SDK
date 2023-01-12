@@ -47,11 +47,17 @@ class StateDbAccountStateView(
   override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
 
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] =
-    forgerStakesProvider.getListOfForgers(this)
-
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
+
+  override def isForgingOpen: Boolean =
+    forgerStakesProvider.isForgerListOpen(this)
+
+  override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] =
+    forgerStakesProvider.getListOfForgersStakes(this)
+
+  override def getAllowedForgerList: Seq[Int] =
+    forgerStakesProvider.getAllowedForgerListIndexes(this)
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
@@ -116,7 +122,7 @@ class StateDbAccountStateView(
 
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     // get forger stakes list view (scala lazy collection)
-    getListOfForgerStakes.view
+    getListOfForgersStakes.view
 
       // group delegation stakes by blockSignPublicKey/vrfPublicKey pairs
       .groupBy(stake => (stake.forgerStakeData.forgerPublicKeys.blockSignPublicKey,

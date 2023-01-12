@@ -3,9 +3,12 @@ package com.horizen.account.api.http
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.account.api.http.AccountTransactionRestScheme._
+import com.horizen.params.{MainNetParams, TestNetParams}
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
+import org.mockito.Mockito
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.asScalaIteratorConverter
@@ -220,6 +223,28 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         val result = mapper.readTree(entityAs[String]).get("result")
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transactionId").isTextual)
+
+      }
+    }
+
+    // setup a mocked conf with a restricted forger list
+    Mockito.when(params.restrictForgers).thenReturn(true)
+    val blockSignerProposition = utilMocks.signerSecret.publicImage()
+    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
+    Mockito.when(params.allowedForgersList).thenReturn(Seq((blockSignerProposition, vrfPublicKey)))
+
+    "reply at /openForgerList" in {
+      val outAsTransactionObj = ReqOpenStakeForgerList(Some(BigInteger.ONE), utilMocks.forgerIndex, None)
+
+      Post(basePath + "openForgerList").withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail(s"Serialization failed for object SidechainApiResponseBody: ${mapper.readTree(entityAs[String])}")
 
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("transactionId").isTextual)
