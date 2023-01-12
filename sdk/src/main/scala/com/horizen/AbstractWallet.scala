@@ -5,7 +5,7 @@ import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
+import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, SecretCreator, VrfSecretKey}
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import scorex.crypto.hash.Blake2b256

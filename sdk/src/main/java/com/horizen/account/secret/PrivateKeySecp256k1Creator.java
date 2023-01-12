@@ -1,18 +1,7 @@
 package com.horizen.account.secret;
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
 import com.horizen.account.utils.Secp256k1;
-import com.horizen.node.NodeWalletBase;
-import com.horizen.secret.Secret;
 import com.horizen.secret.SecretCreator;
-import org.web3j.crypto.ECKeyPair;
-import org.web3j.crypto.Keys;
-import scorex.crypto.hash.Keccak256;
-
-import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.List;
 
 public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKeySecp256k1> {
     private static PrivateKeySecp256k1Creator instance;
