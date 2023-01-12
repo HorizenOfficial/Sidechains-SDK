@@ -6,7 +6,7 @@ import com.horizen.proposition.PropositionSerializer;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
-import static org.junit.Assert.assertEquals;
+
 import static org.junit.Assert.assertTrue;
 
 public class AddressPropositionSerializerTest {
@@ -26,8 +26,8 @@ public class AddressPropositionSerializerTest {
 
         // Test 1: Correct bytes deserialization
         Try<AddressProposition> t = serializer.parseBytesTry(bytes);
-        assertTrue("Proposition serialization failed.", t.isSuccess());
-        assertEquals("Deserialized proposition expected to be equal", addressProposition.toString(), t.get().toString());
+        assertTrue("Deserialized proposition expected to be equal, but was " + t.get().toString() + " instead of " + addressProposition.toString(),
+                addressProposition.equals(t.get()));
 
         // Test 2: try to parse broken bytes
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
