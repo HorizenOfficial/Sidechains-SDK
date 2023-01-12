@@ -60,7 +60,7 @@ class SidechainStateStorageTest
     // Test insert operation (empty storage).
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set(), Seq(),
-        consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
+        consensusEpoch, Seq(), Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
     assertEquals("Version in storage must be - " + version1,
       version1, sidechainStateStorage.lastVersionId.get)
     assertEquals("Storage must contain 1 version.",
@@ -77,7 +77,7 @@ class SidechainStateStorageTest
     val boxIdsToRemoveSet: Set[ByteArrayWrapper] = Set(new ByteArrayWrapper(bList1.head.id()), new ByteArrayWrapper(bList2.head.id()))
     assertTrue("Update(delete) operation must be successful.",
       sidechainStateStorage.update(version2, withdrawalEpochInfo, Set(),
-        boxIdsToRemoveSet, Seq(), consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
+        boxIdsToRemoveSet, Seq(), consensusEpoch,  Seq(), Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
 
     assertEquals("Version in storage must be - " + version2,
       version2, sidechainStateStorage.lastVersionId.get)

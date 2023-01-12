@@ -16,6 +16,8 @@ trait AccountStateMetadataStorageReader {
 
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
 
+  def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[Array[Byte]]
+
   def lastCertificateReferencedEpoch: Option[Int]
 
   def lastCertificateSidechainBlockId: Option[ModifierId]

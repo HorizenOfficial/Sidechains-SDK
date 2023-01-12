@@ -15,6 +15,7 @@ case class SidechainBoxesCompanion(customBoxSerializers: JHashMap[JByte, BoxSeri
         put(ZenBoxId.id(), ZenBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
         put(WithdrawalRequestBoxId.id(), WithdrawalRequestBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
         put(ForgerBoxId.id(), ForgerBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
+        put(CrossChainMessageBoxId.id(), CrossChainMessageBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
     }},
     customBoxSerializers)
 

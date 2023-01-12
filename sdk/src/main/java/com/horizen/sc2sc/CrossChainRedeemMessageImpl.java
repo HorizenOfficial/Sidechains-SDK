@@ -2,8 +2,6 @@ package com.horizen.sc2sc;
 
 import com.horizen.utils.BytesUtils;
 
-import java.util.Arrays;
-
 public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
 
     private CrossChainMessage message;
@@ -12,6 +10,20 @@ public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
     private byte[] scCommitmentTreeRoot;
     private byte[] nextScCommitmentTreeRoot;
     private byte[] proof;
+
+    public CrossChainRedeemMessageImpl(CrossChainMessage message,
+             byte[] certificateDataHash,
+             byte[] nextCertificateDataHash,
+             byte[] scCommitmentTreeRoot,
+             byte[] nextScCommitmentTreeRoot,
+             byte[] proof){
+        this.message = message;
+        this.certificateDataHash = certificateDataHash;
+        this.nextCertificateDataHash = nextCertificateDataHash;
+        this.scCommitmentTreeRoot = scCommitmentTreeRoot;
+        this.nextScCommitmentTreeRoot = nextScCommitmentTreeRoot;
+        this.proof = proof;
+    }
 
     @Override
     public CrossChainMessage getMessage() {

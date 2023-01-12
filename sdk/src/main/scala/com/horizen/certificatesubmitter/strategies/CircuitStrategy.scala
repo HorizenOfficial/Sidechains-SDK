@@ -8,6 +8,8 @@ import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
+import com.horizen.sc2sc.Sc2ScUtils
+import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import scorex.util.ScorexLogging
@@ -21,8 +23,11 @@ abstract class CircuitStrategy[
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
   MS <: AbstractState[TX, H, PM, MS],
-  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{
-  
+  MS <: AbstractState[TX, H, PM, MS],
+  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging
+  with Sc2ScUtils[TX, H, PM, MS]
+{
+
   def generateProof(certificateData: T, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
   def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): T

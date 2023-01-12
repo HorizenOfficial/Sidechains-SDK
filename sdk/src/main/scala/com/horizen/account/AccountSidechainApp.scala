@@ -124,6 +124,7 @@ class AccountSidechainApp @Inject()
     customMessageProcessors.asScala,
     sidechainSecretStorage,
     params,
+    sc2scConfigurator,
     timeProvider,
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure

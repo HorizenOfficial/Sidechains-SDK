@@ -38,9 +38,7 @@ class AccountStateMetadataStorage(storage: Storage)
 
   override def getFeePayments(withdrawalEpochNumber: Int): Seq[AccountBlockFeeInfo] = getView.getFeePayments(withdrawalEpochNumber)
 
-  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = getView.getTopQualityCertificate(referencedWithdrawalEpoch)
-
-  override def lastCertificateReferencedEpoch: Option[Int] = getView.lastCertificateReferencedEpoch
+   override def lastCertificateReferencedEpoch: Option[Int] = getView.lastCertificateReferencedEpoch
 
   override def lastCertificateSidechainBlockId: Option[ModifierId] = getView.lastCertificateSidechainBlockId
 

@@ -174,6 +174,7 @@ class SidechainApp @Inject()
     sidechainWalletCswDataProvider,
     backupStorage,
     params,
+    sc2scConfigurator,
     timeProvider,
     applicationWallet,
     applicationState,

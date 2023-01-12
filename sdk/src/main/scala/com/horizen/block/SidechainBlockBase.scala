@@ -1,6 +1,8 @@
 package com.horizen.block
 
 
+import java.util
+
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
@@ -211,4 +213,15 @@ object SidechainBlockBase {
     else
       Utils.ZEROS_HASH
   }
+
+
+  def getTopQualityCertsWithMainChianHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]): Seq[(WithdrawalEpochCertificate,Array[Byte])] = {
+    mainchainBlockReferencesData.flatMap(_.topQualityCertificate).map(
+      topCert => {
+        val brefData : MainchainBlockReferenceData = mainchainBlockReferencesData.find(ele => (ele.topQualityCertificate.nonEmpty && util.Arrays.equals(ele.topQualityCertificate.get.hash, topCert.hash))).get
+        (topCert, brefData.headerHash)
+      }
+    )
+  }
+
 }

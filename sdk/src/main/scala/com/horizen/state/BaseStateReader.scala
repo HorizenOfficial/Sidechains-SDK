@@ -1,5 +1,7 @@
 package com.horizen.state
 
+import com.horizen.sc2sc.CrossChainMessage
+import com.horizen.account.state.WithdrawalRequest
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import com.horizen.block.WithdrawalEpochCertificate

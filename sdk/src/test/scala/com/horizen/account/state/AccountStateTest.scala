@@ -15,6 +15,8 @@ import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
 import java.math.BigInteger
 
+import com.horizen.sc2sc.Sc2ScConfigurator
+
 
 class AccountStateTest
   extends JUnitSuite
@@ -26,6 +28,7 @@ class AccountStateTest
 {
 
   val params: MainNetParams = MainNetParams()
+  val sc2ScConfigurator: Sc2ScConfigurator = Sc2ScConfigurator(false, false)
   var state: AccountState = _
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
 
@@ -37,7 +40,7 @@ class AccountStateTest
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
     val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
-    state = new AccountState(params, mockedTimeProvider, versionTag, metadataStorage, stateDbStorege, messageProcessors)
+    state = new AccountState(params, sc2ScConfigurator, mockedTimeProvider, versionTag, metadataStorage, stateDbStorege, messageProcessors)
   }
 
   @Test

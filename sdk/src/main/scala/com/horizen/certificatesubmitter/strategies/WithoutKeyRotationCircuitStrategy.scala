@@ -8,8 +8,8 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
-
 import java.util.Optional
+import com.horizen.sc2sc.Sc2ScDataForCertificate
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
@@ -64,6 +64,7 @@ class WithoutKeyRotationCircuitStrategy[
     val sidechainId = params.sidechainId
     val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(state, status.referencedEpoch)
 
+    val sc2ScDataForCertificate: Sc2ScDataForCertificate = getDataForCertificateCreation(status.referencedEpoch, state, params)
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
@@ -75,6 +76,7 @@ class WithoutKeyRotationCircuitStrategy[
       sidechainId,
       backwardTransfers,
       endEpochCumCommTreeHash,
+      sc2ScDataForCertificate,
       btrFee,
       ftMinAmount,
       signersPublicKeyWithSignatures,
@@ -90,6 +92,9 @@ class WithoutKeyRotationCircuitStrategy[
 
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
+
+    val sc2ScDataForCertificate: Sc2ScDataForCertificate = getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, params)
+    //TODO: sc2ScDataForCertificate must be used in below circuits..
 
     val utxoMerkleTreeRoot: Option[Array[Byte]] = {
       Try {

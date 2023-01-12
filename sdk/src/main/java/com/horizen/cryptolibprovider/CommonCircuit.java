@@ -70,6 +70,12 @@ public class  CommonCircuit {
         );
     }
 
+    public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) throws Exception {
+        try(WithdrawalCertificate wc = createWithdrawalCertificate(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
+            return hashFe.serializeFieldElement();
+        }
+    }
+
     public static List<SchnorrSignature> getSignatures(List<Optional<byte[]>> schnorrSignatureBytesList){
         return schnorrSignatureBytesList
                 .stream()
