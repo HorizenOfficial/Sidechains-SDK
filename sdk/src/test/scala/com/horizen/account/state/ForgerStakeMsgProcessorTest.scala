@@ -239,7 +239,7 @@ class ForgerStakeMsgProcessorTest
       var msg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
-      var returnData = assertGas(1625) {
+      var returnData = assertGas(45937) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
       }
 
@@ -318,7 +318,7 @@ class ForgerStakeMsgProcessorTest
       msg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
-      returnData = assertGas(1875) {
+      returnData = assertGas(2237) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
       }
 
@@ -347,7 +347,7 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because the list now is open
-      assertGas(500) { gas =>
+      assertGas(300) { gas =>
         assertThrows[ExecutionRevertedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
@@ -439,7 +439,7 @@ class ForgerStakeMsgProcessorTest
       val msg = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
 
       // positive case, verify we can add the stake to view
-      val returnData = assertGas(186512) {
+      val returnData = assertGas(188612) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
       }
       assertNotNull(returnData)
@@ -476,7 +476,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
           ownerAddressProposition, validWeiAmount))
 
-      val returnData2 = assertGas(180412) {
+      val returnData2 = assertGas(180512) {
         forgerStakeMessageProcessor.process(msg2, view, _, defaultBlockContext)
       }
       assertNotNull(returnData2)
@@ -572,7 +572,7 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because forger is not in the allowed list
-      assertGas(5200) { gas =>
+      assertGas(7300) { gas =>
         assertThrows[ExecutionFailedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
