@@ -24,6 +24,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
+import scorex.util.bytesToId
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -401,7 +402,9 @@ class AccountState(
 
   override def getNonce(address: Array[Byte]): BigInteger = using(getView)(_.getNonce(address))
 
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgerStakes)
+  override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgersStakes)
+
+  override def getAllowedForgerList: Seq[Int] = using(getView)(_.getAllowedForgerList)
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
@@ -478,6 +481,13 @@ class AccountState(
   // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
   override def isWithdrawalEpochLastIndex: Boolean = {
     WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
+  }
+
+  override def isForgingOpen: Boolean = {
+    if (params.restrictForgers)
+      using(getView)(_.isForgingOpen)
+    else
+      true
   }
 
   override def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
