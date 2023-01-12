@@ -28,12 +28,14 @@ abstract class AbstractState[
 
   //Check if the majority of the allowed forgers opened the stake to everyone
   def isForgingOpen: Boolean
+
   def lastCertificateReferencedEpoch: Option[Int]
   def lastCertificateSidechainBlockId(): Option[ModifierId]
   def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof]
   def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys]
-  def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
   def backwardTransfers(withdrawalEpoch: Int): Seq[BackwardTransfer]
+
+  def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
   def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]]
 }
 

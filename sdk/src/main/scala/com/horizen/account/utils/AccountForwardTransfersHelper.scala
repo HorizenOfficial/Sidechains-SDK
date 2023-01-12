@@ -9,7 +9,9 @@ object AccountForwardTransfersHelper {
   def getForwardTransfersForBlock(block: AccountBlock): Seq[ForwardTransfer] = {
     block.mainchainBlockReferencesData.flatMap(mcBlockRefData =>
       mcBlockRefData.sidechainRelatedAggregatedTransaction
-        .map(_.mc2scTransactionsOutputs.filter(_.isInstanceOf[ForwardTransfer]).map(_.asInstanceOf[ForwardTransfer]))
+        .map(_.mc2scTransactionsOutputs
+          .withFilter(_.isInstanceOf[ForwardTransfer])
+          .map(_.asInstanceOf[ForwardTransfer]))
         .getOrElse(Seq.empty)
     )
   }

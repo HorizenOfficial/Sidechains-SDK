@@ -17,14 +17,14 @@ import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.fork.{ForkConfigurator, ForkManager}
 import com.horizen.helper.TransactionSubmitProvider
+import com.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl}
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.storage._
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
+import com.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
 import com.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -67,7 +67,9 @@ abstract class AbstractSidechainApp
   override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
   override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
-  private val storageList = mutable.ListBuffer[Storage]()
+  private val closableResourceList = mutable.ListBuffer[AutoCloseable]()
+  protected val sidechainTransactionsCompanion: DynamicTypedSerializer[TX, TransactionSerializer[TX]]
+
 
   log.info(s"Starting application with settings \n$sidechainSettings")
 
@@ -77,7 +79,7 @@ abstract class AbstractSidechainApp
 
   override protected lazy val features: Seq[PeerFeature] = Seq()
 
-  val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
+  val stopAllInProgress: AtomicBoolean = new AtomicBoolean(false)
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(
     SidechainSyncInfoMessageSpec,
@@ -295,9 +297,17 @@ abstract class AbstractSidechainApp
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
-  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
-  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
-  var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
+//  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
+//  val applicationApiRoutes: Seq[ApplicationApiRoute]
+
+  // Init API
+  lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
+
+  // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
+  // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
+  lazy val applicationApiRoutes: Seq[ApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
+
+  val coreApiRoutes: Seq[ApiRoute]
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
@@ -305,6 +315,9 @@ abstract class AbstractSidechainApp
     .union(rejectedApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)
+
+  lazy val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
+  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   val shutdownHookThread: Thread = new Thread("ShutdownHook-Thread") {
     override def run(): Unit = {
@@ -364,8 +377,8 @@ abstract class AbstractSidechainApp
       log.info("Calling custom application stopAll...")
       applicationStopper.stopAll()
 
-      log.info("Closing all data storages...")
-      storageList.foreach(_.close())
+      log.info("Closing all closable resources...")
+      closableResourceList.foreach(_.close())
 
       log.info("Shutdown the logger...")
       LogManager.shutdown()
@@ -376,9 +389,9 @@ abstract class AbstractSidechainApp
     }
   }
 
-  protected def registerStorage(storage: Storage) : Storage = {
-    storageList += storage
-    storage
+  protected def registerClosableResource[S <: AutoCloseable](closableResource: S) : S = {
+    closableResourceList += closableResource
+    closableResource
   }
 
   def getTransactionSubmitProvider: TransactionSubmitProvider[TX]

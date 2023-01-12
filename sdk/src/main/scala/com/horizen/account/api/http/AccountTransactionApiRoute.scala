@@ -34,7 +34,6 @@ import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 import com.horizen.secret.PrivateKey25519
-
 import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -327,7 +326,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           applyOnNodeView { sidechainNodeView =>
             val valueInWei = BigInteger.ZERO
             // default gas related params
-            val baseFee = sidechainNodeView.getNodeState.nextBaseFee
+            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
             var maxPriorityFeePerGas = BigInteger.valueOf(120)
             var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
             var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -414,7 +413,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
 
           // default gas related params
-          val baseFee = sidechainNodeView.getNodeState.nextBaseFee
+          val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
           var maxPriorityFeePerGas = GasUtil.GasForgerStakeMaxPriorityFee
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
           var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -464,7 +463,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         applyOnNodeView { sidechainNodeView =>
           val valueInWei = BigInteger.ZERO
           // default gas related params
-          val baseFee = sidechainNodeView.getNodeState.nextBaseFee
+          val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
           var maxPriorityFeePerGas = BigInteger.valueOf(120)
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
           var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -581,7 +580,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val gasInfo = body.gasInfo
 
           // default gas related params
-          val baseFee = sidechainNodeView.getNodeState.nextBaseFee
+          val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
           var maxPriorityFeePerGas = BigInteger.valueOf(120)
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
           var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -623,7 +622,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqAllWithdrawalRequests]) { body =>
       withNodeView { sidechainNodeView =>
         val accountState = sidechainNodeView.getNodeState
-        val listOfWithdrawalRequests = accountState.withdrawalRequests(body.epochNum)
+        val listOfWithdrawalRequests = accountState.getWithdrawalRequests(body.epochNum)
         ApiResponseUtil.toResponse(RespAllWithdrawalRequests(listOfWithdrawalRequests.toList))
       }
     }

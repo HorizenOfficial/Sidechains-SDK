@@ -16,8 +16,6 @@ import com.horizen.secret
 import com.horizen.utils.BytesUtils
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
-import sparkz.core.transaction.state.PrivateKey25519
-
 import java.math.BigInteger
 import java.util
 import java.util.Optional
@@ -58,7 +56,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountState = {
     val accountState = mock[NodeAccountState]
     Mockito.when(accountState.getListOfForgersStakes).thenAnswer(_ => listOfStakes)
-    Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => listOfWithdrawalRequests)
+    Mockito.when(accountState.getWithdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => listOfWithdrawalRequests)
     Mockito
       .when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]]))
       .thenAnswer(_ => ZenWeiConverter.MAX_MONEY_IN_WEI) // It has always enough money
@@ -66,7 +64,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
       .when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]]))
       .thenAnswer(_ => BigInteger.ONE) // It has always enough money
     Mockito
-      .when(accountState.nextBaseFee)
+      .when(accountState.getNextBaseFee)
       .thenAnswer(_ => BigInteger.valueOf(1234))
     Mockito
       .when(accountState.getForgerStakeData(ArgumentMatchers.anyString()))

@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.evm.ResourceHandle
 import com.horizen.evm.interop.EvmLog
 
@@ -111,8 +112,6 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
     view.addLog(evmLog)
   }
 
-  override def getAccountStateRoot: Array[Byte] = view.getAccountStateRoot
-
   override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] = view.getListOfForgersStakes
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = view.getForgerStakeData(stakeId)
@@ -121,9 +120,13 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
 
   override def getIntermediateRoot: Array[Byte] = view.getIntermediateRoot
 
-  override def nextBaseFee: BigInteger = view.nextBaseFee
+  override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] = view.getWithdrawalRequests(withdrawalEpoch)
 
   override def isForgingOpen: Boolean = view.isForgingOpen
 
   override def getAllowedForgerList: Seq[Int] = view.getAllowedForgerList
+
+  override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = view.certifiersKeys(withdrawalEpoch)
+
+  override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = view.keyRotationProof(withdrawalEpoch, indexOfSigner, keyType)
 }
