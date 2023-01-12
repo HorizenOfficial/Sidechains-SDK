@@ -8,7 +8,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, Bloom}
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
@@ -44,8 +44,7 @@ class AccountForgeMessageBuilder(
       params,
       allowNoWebsocketConnectionInRegtest
     )
-      with ClosableResourceHandler
-      with ScorexLogging {
+      with ClosableResourceHandler {
   type FPI = AccountFeePaymentsInfo
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
@@ -176,8 +175,7 @@ class AccountForgeMessageBuilder(
 
     // 1. As forger address take first address from the wallet
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
-    if (addressList.size() == 0)
-      throw new IllegalArgumentException("No addresses in wallet!")
+    if (addressList.isEmpty) throw new IllegalArgumentException("No addresses in wallet!")
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
     // 2. calculate baseFee
@@ -297,9 +295,9 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      // stateRoot TODO add constant
+      // stateRoot
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      // forgerAddress: PublicKeySecp256k1Proposition TODO add constant
+      // forgerAddress: PublicKeySecp256k1Proposition
       new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),
       BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
       Long.MaxValue,

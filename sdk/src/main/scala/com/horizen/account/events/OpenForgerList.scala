@@ -9,16 +9,20 @@ import org.web3j.abi.datatypes.generated.{Bytes32, Uint32}
 
 import scala.annotation.meta.getter
 
-
-case class OpenForgerList(@(Parameter@getter)(1) @(Indexed@getter) forgerIndex: Uint32,
-                          @(Parameter@getter)(2) from: Address,
-                          @(Parameter@getter)(3) blockSignProposition: Bytes32)
+case class OpenForgerList(
+    @(Parameter @getter)(1) @(Indexed @getter) forgerIndex: Uint32,
+    @(Parameter @getter)(2) from: Address,
+    @(Parameter @getter)(3) blockSignProposition: Bytes32
+)
 
 object OpenForgerList {
-  def apply(forgerIndex: Int, from: AddressProposition, blockSignProposition: PublicKey25519Proposition): OpenForgerList = {
-    new OpenForgerList(
-      new Uint32(forgerIndex),
-      new Address(BytesUtils.toHexString(from.address())),
-      new Bytes32(blockSignProposition.pubKeyBytes()))
-  }
+  def apply(
+      forgerIndex: Int,
+      from: AddressProposition,
+      blockSignProposition: PublicKey25519Proposition
+  ): OpenForgerList = OpenForgerList(
+    new Uint32(forgerIndex),
+    new Address(BytesUtils.toHexString(from.address())),
+    new Bytes32(blockSignProposition.pubKeyBytes())
+  )
 }
