@@ -51,33 +51,6 @@ case class GasUintOverflowException() extends InvalidMessageException("gas uint6
 case class IntrinsicGasException(have: BigInteger, want: BigInteger)
   extends InvalidMessageException(s"intrinsic gas too low: have $have, want $want")
 
-/*** TODO check this:
- * No one is currently throwing these three exceptions.
- * We check those conditions in EthereumTransaction.semanticValidity() method,
- * but throwing `TransactionSemanticValidityException`. We could use them there instead, but
- * then we would break the uniformity of the code and would not add anything useful since the
- * exception message is already detailed
-
-/** ErrTipAboveFeeCap is a sanity error to ensure no one is able to specify a transaction with a tip higher than the total fee cap. */
-case class TipAboveFeeCapException(address: Array[Byte], maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger)
-  extends InvalidMessageException(s"max priority fee per gas higher than max fee per gas: address ${toAddress(address)}, maxPriorityFeePerGas $maxPriorityFeePerGas, maxFeePerGas $maxFeePerGas")
-
-/** ErrTipVeryHigh is a sanity error to avoid extremely big numbers specified in the tip field. */
-case class TipVeryHighException(address: Array[Byte], maxPriorityFeePerGas: BigInteger) extends InvalidMessageException(
-  s"max priority fee per gas higher than 2^256-1: address ${toAddress(address)}, maxPriorityFeePerGas bit length ${
-    maxPriorityFeePerGas.bitLength()
-  }"
-)
-
-/** ErrFeeCapVeryHigh is a sanity error to avoid extremely big numbers specified in the fee cap field. */
-case class FeeCapVeryHighException(address: Array[Byte], maxFeePerGas: BigInteger)
-  extends InvalidMessageException(
-    s"max fee per gas higher than 2^256-1: address ${toAddress(address)}, maxFeePerGas bit length ${
-      maxFeePerGas.bitLength()
-    }"
-)
-*/
-
 /** ErrFeeCapTooLow is returned if the transaction fee cap is less than the	base fee of the block. */
 case class FeeCapTooLowException(address: Array[Byte], maxFeePerGas: BigInteger, baseFee: BigInteger)
   extends InvalidMessageException(s"max fee per gas less than block base fee: address ${toAddress(address)}, maxFeePerGas $maxFeePerGas, baseFee $baseFee")
