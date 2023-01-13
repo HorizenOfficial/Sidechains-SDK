@@ -40,9 +40,9 @@ class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with Acco
     val bytes = header.bytes
 
 
-    // Test 1: try to deserializer valid bytes
+    // Test 1: try to deserialize valid bytes
     val serializedHeaderTry = AccountBlockHeaderSerializer.parseBytesTry(bytes)
-    assertTrue("AccountBlockHeader expected to by parsed.", serializedHeaderTry.isSuccess)
+    assertTrue("AccountBlockHeader expected to be parsed.", serializedHeaderTry.isSuccess)
 
     val serializedHeader = serializedHeaderTry.get
     assertEquals("AccountBlockHeader version is different", header.version, serializedHeader.version)
@@ -76,19 +76,12 @@ class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with Acco
   @Test
   def serializationRegression(): Unit = {
     var bytes: Array[Byte] = null
-    try {
       val classLoader = getClass.getClassLoader
       val file = new FileReader(classLoader.getResource("accountblockheader_hex").getFile)
       bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
-    }
-    catch {
-      case e: Exception =>
-        jFail(e.toString)
-    }
-
 
     val deserializedHeaderTry = AccountBlockHeaderSerializer.parseBytesTry(bytes)
-    assertTrue("AccountBlockHeader expected to by parsed.", deserializedHeaderTry.isSuccess)
+    assertTrue("AccountBlockHeader expected to be parsed.", deserializedHeaderTry.isSuccess)
 
     val deserializedHeader = deserializedHeaderTry.get
     assertEquals("AccountBlockHeader version is different", header.version, deserializedHeader.version)

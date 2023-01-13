@@ -60,8 +60,8 @@ public class EthereumBlockView {
         receiptsRoot = Numeric.toHexString(header.receiptsRoot());
         miner = Numeric.toHexString(header.forgerAddress().address());
         size = Numeric.encodeQuantity(BigInteger.valueOf(header.bytes().length));
-        this.gasLimit = Numeric.toHexStringWithPrefix(header.gasLimit());
-        this.gasUsed = Numeric.toHexStringWithPrefix(header.gasUsed());
+        this.gasLimit = Numeric.encodeQuantity(header.gasLimit());
+        this.gasUsed = Numeric.encodeQuantity(header.gasUsed());
         timestamp = Numeric.encodeQuantity(BigInteger.valueOf(block.timestamp()));
         baseFeePerGas = Numeric.encodeQuantity(header.baseFee());
         transactions = txs;
