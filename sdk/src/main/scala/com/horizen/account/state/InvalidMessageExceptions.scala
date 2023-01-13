@@ -77,3 +77,7 @@ case class FeeCapTooLowException(address: Array[Byte], maxFeePerGas: BigInteger,
 /** ErrSenderNoEOA is returned if the sender of a transaction is a contract. */
 case class SenderNotEoaException(address: Array[Byte], codeHash: Array[Byte])
   extends InvalidMessageException(s"sender not an eoa: address ${toAddress(address)}, codeHash ${toHex(codeHash)}")
+
+/** ErrOversizedData is returned if the transaction size exceeds maximum size (128 KB). */
+case class TxOversizedException(address: Array[Byte], txSize: Long)
+  extends InvalidMessageException(s"transaction size exceeds maximum size: address ${toAddress(address)}, size $txSize")

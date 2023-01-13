@@ -2,9 +2,12 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider}
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, GasUtil, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.EthereumTransactionUtils
+import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -13,7 +16,7 @@ import org.scalatestplus.mockito._
 import scorex.util.ModifierId
 
 import java.math.BigInteger
-import scala.util.Random
+import scala.util.{Failure, Random, Success}
 
 class MempoolMapTest
     extends JUnitSuite
@@ -1024,5 +1027,63 @@ class MempoolMapTest
     assertFalse(iter.hasNext)
     assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.removeAndSkipAccount())
 
+  }
+
+  @Test
+  def txSizeInSlotTest(): Unit = {
+
+    val invalidNegativeSize = -1L
+    assertThrows[IllegalArgumentException]("Negative size values are not allowed", MempoolMap.bytesToSlot(invalidNegativeSize))
+
+    var size: Long = 0
+    assertEquals("Wrong number of slots", 0,  MempoolMap.bytesToSlot(size))
+
+    size = 1
+    assertEquals("Wrong number of slots", 1,  MempoolMap.bytesToSlot(size))
+
+    size = MempoolMap.TxSlotSize
+    assertEquals("Wrong number of slots", 1,  MempoolMap.bytesToSlot(size))
+
+    size = MempoolMap.TxSlotSize + 1
+    assertEquals("Wrong number of slots", 2,  MempoolMap.bytesToSlot(size))
+
+    size = 2 * MempoolMap.TxSlotSize + 1
+    assertEquals("Wrong number of slots", 3, MempoolMap.bytesToSlot(size))
+
+
+    val tx = mock[EthereumTransaction]
+    Mockito.when(tx.size()).thenReturn(MempoolMap.TxSlotSize / 2)
+    assertEquals("Wrong number of slots for transaction", 1,  MempoolMap.txSizeInSlot(tx))
+
+    val expectedNumOfSlots = 3
+    Mockito.when(tx.size()).thenReturn( expectedNumOfSlots * MempoolMap.TxSlotSize - 1)
+    assertEquals("Wrong number of slots for transaction", expectedNumOfSlots, MempoolMap.txSizeInSlot(tx))
+
+  }
+
+  @Test
+  def testAddTooBigTx(): Unit = {
+
+    var mempoolMap = new MempoolMap(stateProvider)
+    val normalTx = createMockTxWithSize(MempoolMap.MaxTxSize)
+
+    val res = mempoolMap.add(normalTx)
+    assertTrue(s"Adding transaction failed $res", res.isSuccess)
+
+    mempoolMap = res.get
+
+    val tooBigTx = createMockTxWithSize(MempoolMap.MaxTxSize + 1)
+    mempoolMap.add(tooBigTx) match {
+      case Success(_) => fail("Adding transaction too big should have failed")
+      case Failure(e) => assertTrue(s"Wrong exception type: ${e.getClass}", e.isInstanceOf[TxOversizedException])
+    }
+
+  }
+
+  private def createMockTxWithSize(size: Long): EthereumTransaction = {
+    val dummyTx = createEIP1559Transaction(BigInteger.ONE)
+    val tx = Mockito.spy[EthereumTransaction](dummyTx)
+    Mockito.when(tx.size()).thenReturn(size)
+    tx
   }
 }

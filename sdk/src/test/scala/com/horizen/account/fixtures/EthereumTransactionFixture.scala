@@ -46,12 +46,13 @@ trait EthereumTransactionFixture {
                                keyOpt: Option[PrivateKeySecp256k1] = None,
                                gasFee: BigInteger = BigInteger.valueOf(10000),
                                priorityGasFee: BigInteger = BigInteger.valueOf(10000),
-                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
+                               gasLimit: BigInteger = GasUtil.TxGas,
+                               data: Array[Byte] = new Array[Byte](0)): EthereumTransaction = {
 
     val unsignedTx = new EthereumTransaction(
       1997L,
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
-      nonce, gasLimit, priorityGasFee, gasFee, value, new Array[Byte](0), null)
+      nonce, gasLimit, priorityGasFee, gasFee, value, data, null)
     createSignedTransaction(unsignedTx, keyOpt)
   }
 

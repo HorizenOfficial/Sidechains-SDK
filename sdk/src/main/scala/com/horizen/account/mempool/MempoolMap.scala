@@ -2,8 +2,9 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.mempool.MempoolMap.MaxTxSize
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.AccountStateReaderProvider
+import com.horizen.account.state.{AccountStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -30,8 +31,15 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
+
     val account = ethTransaction.getFrom
     if (!contains(ethTransaction.id)) {
+
+      if (ethTransaction.size() > MaxTxSize) {
+        log.trace(s"Transaction $ethTransaction size exceeds maximum allowed size: current size ${ethTransaction.size()}, " +
+          s"maximum size: $MaxTxSize")
+        throw TxOversizedException(account.asInstanceOf[AddressProposition].address(), ethTransaction.size())
+      }
 
       val expectedNonce = nonces.getOrElseUpdate(
         account,
@@ -242,7 +250,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
     txsFromRejectedBlocks
       .foreach { tx =>
-        if (balance.compareTo(tx.maxCost) >= 0) {
+        if (tx.size() <= MaxTxSize && balance.compareTo(tx.maxCost) >= 0) {
           all.put(tx.id, tx)
           destMap.put(tx.getNonce, tx.id)
         } else {
@@ -282,8 +290,12 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
       }
     }
 
-    nonces.put(account, newExecTxs.lastKey.add(BigInteger.ONE))
-    executableTxs.put(account, newExecTxs)
+    if (newExecTxs.nonEmpty) {
+      nonces.put(account, newExecTxs.lastKey.add(BigInteger.ONE))
+      executableTxs.put(account, newExecTxs)
+    } else
+      nonces.put(account, txsFromRejectedBlocks.head.getNonce)
+
     if (newNonExecTxs.nonEmpty) {
       nonExecutableTxs.put(account, newNonExecTxs)
     }
@@ -317,7 +329,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
     if (existRejectedTxsWithValidNonce(txsFromRejectedBlocks, newExpectedNonce)) {
       txsFromRejectedBlocks.withFilter(tx => tx.getNonce.compareTo(newExpectedNonce) >= 0).foreach { tx =>
-        if (balance.compareTo(tx.maxCost) >= 0) {
+        if (tx.size() <= MaxTxSize && balance.compareTo(tx.maxCost) >= 0) {
           all.put(tx.id, tx)
           destMap.put(tx.getNonce, tx.id)
         } else {
@@ -445,6 +457,20 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     }
   }
 }
+
+object MempoolMap {
+  val TxSlotSize: Int = 32 * 1024
+  val MaxNumOfSlotsForTx = 4
+  val MaxTxSize = MaxNumOfSlotsForTx * TxSlotSize
+
+  def txSizeInSlot(tx: SidechainTypes#SCAT): Long = bytesToSlot(tx.size())
+
+  def bytesToSlot(numOfBytes: Long): Long = {
+    require(numOfBytes >= 0, "Illegal negative size value")
+    (numOfBytes + TxSlotSize - 1) / TxSlotSize
+  }
+}
+
 
 trait TransactionsByPriceAndNonceIter extends Iterator[SidechainTypes#SCAT] {
   def peek: SidechainTypes#SCAT
