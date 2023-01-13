@@ -7,6 +7,7 @@ import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
+import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.ZenCoinsUtils
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
@@ -28,25 +29,16 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
 
   val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getWithdrawalRequests(uint32)")
   val AddNewWithdrawalReqCmdSig: String = getABIMethodId("submitWithdrawalRequest(bytes20)")
-
-  //TODO Define a proper amount of gas spent for each operation
-  val GasSpentForGetListOfWithdrawalReqsCmd: BigInteger = BigInteger.ONE
-  val GasSpentForAddNewWithdrawalReqCmd: BigInteger = BigInteger.ONE
-
-  val MaxWithdrawalReqsNumPerEpoch = 3999
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
     val gasView = new AccountStateViewGasTracked(view, gas)
     getFunctionSignature(msg.getData) match {
       case GetListOfWithdrawalReqsCmdSig =>
-        gas.subGas(GasSpentForGetListOfWithdrawalReqsCmd)
         execGetListOfWithdrawalReqRecords(msg, gasView)
 
       case AddNewWithdrawalReqCmdSig =>
-        gas.subGas(GasSpentForAddNewWithdrawalReqCmd)
         execAddWithdrawalRequest(msg, gasView, blockContext.withdrawalEpochNumber)
 
       case functionSig =>
@@ -54,22 +46,17 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
     }
   }
 
-  private def getWithdrawalEpochCounter(view: BaseAccountStateView, epochNum: Int) = {
+  private def getWithdrawalEpochCounter(view: BaseAccountStateView, epochNum: Int): Int = {
     val key = getWithdrawalEpochCounterKey(epochNum)
     val wrCounterInBytesPadded = view.getAccountStorage(contractAddress, key)
-    val wrCounterInBytes = wrCounterInBytesPadded.drop(wrCounterInBytesPadded.length - Ints.BYTES)
-    val numOfWithdrawalReqs = Ints.fromByteArray(wrCounterInBytes)
-
-    numOfWithdrawalReqs
+    org.web3j.utils.Numeric.toBigInt(wrCounterInBytesPadded).intValueExact()
   }
 
   private[horizen] def setWithdrawalEpochCounter(view: BaseAccountStateView, currentEpochNum: Int, nextNumOfWithdrawalReqs: Int): Unit = {
-    val nextNumOfWithdrawalReqsBytes = Ints.toByteArray(nextNumOfWithdrawalReqs)
-    val paddedNextNumOfWithdrawalReqs = Bytes.concat(new Array[Byte](32 - nextNumOfWithdrawalReqsBytes.length), nextNumOfWithdrawalReqsBytes)
+    val paddedNextNumOfWithdrawalReqs = org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(nextNumOfWithdrawalReqs), 32)
     val wrCounterKey = getWithdrawalEpochCounterKey(currentEpochNum)
     view.updateAccountStorage(contractAddress, wrCounterKey, paddedNextNumOfWithdrawalReqs)
   }
-
 
   override private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: BaseAccountStateView): Seq[WithdrawalRequest] = {
     val numOfWithdrawalReqs: Int = getWithdrawalEpochCounter(view, epochNum)
@@ -86,14 +73,12 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
-    //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
     if (msg.getData.length != METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
       throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
     val inputParams = GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
     val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(inputParams.epochNum, view)
     WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
   }
-
 
   private[horizen] def checkWithdrawalRequestValidity(msg: Message): Unit = {
     val withdrawalAmount = msg.getValue
@@ -143,8 +128,6 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int, counter: Int): Array[Byte] = {
     calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
-
-
 }
 
 object AddWithdrawalRequestCmdInputDecoder extends ABIDecoder[AddWithdrawalRequestCmdInput] {
