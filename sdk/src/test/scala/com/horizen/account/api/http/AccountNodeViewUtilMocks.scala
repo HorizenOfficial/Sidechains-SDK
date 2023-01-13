@@ -23,8 +23,6 @@ import scala.collection.JavaConverters._
 import scala.util.Random
 
 class AccountNodeViewUtilMocks extends MockitoSugar
-  with BoxFixture
-  with CompanionsFixture
   with EthereumTransactionFixture
   with SecretFixture {
 
@@ -44,22 +42,22 @@ class AccountNodeViewUtilMocks extends MockitoSugar
     val history = mock[NodeAccountHistory]
     val block = mock[AccountBlock]
     val header = mock[AccountBlockHeader]
-    Mockito.when(history.getBestBlock).thenAnswer(_ => block)
-    Mockito.when(block.header).thenAnswer(_ => header)
-    Mockito.when(header.baseFee).thenAnswer(_ => BigInteger.valueOf(1234))
+    Mockito.when(history.getBestBlock).thenReturn(block)
+    Mockito.when(block.header).thenReturn(header)
+    Mockito.when(header.baseFee).thenReturn(BigInteger.valueOf(1234))
     history
   }
 
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountState = {
     val accountState = mock[NodeAccountState]
-    Mockito.when(accountState.getListOfForgerStakes).thenAnswer(_ => listOfStakes)
-    Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => listOfWithdrawalRequests)
+    Mockito.when(accountState.getListOfForgerStakes).thenReturn(listOfStakes)
+    Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenReturn(listOfWithdrawalRequests)
     Mockito
       .when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]]))
-      .thenAnswer(_ => ZenWeiConverter.MAX_MONEY_IN_WEI) // It has always enough money
+      .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // It has always enough money
     Mockito
       .when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]]))
-      .thenAnswer(_ => BigInteger.ONE) // It has always enough money
+      .thenReturn(BigInteger.ONE)
     Mockito
       .when(accountState.getForgerStakeData(ArgumentMatchers.anyString()))
       .thenAnswer(myStakeId =>
