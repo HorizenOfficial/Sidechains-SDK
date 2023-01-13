@@ -2,6 +2,9 @@ package com.horizen.account.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
+import com.horizen.account.api.http.AccountWalletRestScheme.ReqGetBalance
+import com.horizen.serialization.SerializationUtil
+import org.junit.Assert.assertTrue
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 class AccountWalletApiRouteTest extends AccountSidechainApiRouteTest with TableDrivenPropertyChecks {
@@ -50,6 +53,24 @@ class AccountWalletApiRouteTest extends AccountSidechainApiRouteTest with TableD
         Post(path).withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
           rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
         }
+      }
+    }
+
+    "reply at /getBalance" in {
+      val path = basePath + "getBalance"
+
+      Post(path).withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqGetBalance("123"))) ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("error")
+        assertTrue(result != null)
+      }
+
+      Post(path).withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqGetBalance("1234567890123456789012345678901234567890"))) ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertTrue(result != null)
       }
     }
   }

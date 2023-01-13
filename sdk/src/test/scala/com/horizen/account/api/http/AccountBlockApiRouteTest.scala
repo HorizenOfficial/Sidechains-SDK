@@ -59,5 +59,33 @@ class AccountBlockApiRouteTest extends AccountSidechainApiRouteTest with TableDr
         }
       }
     }
+
+    "reply at /getForwardTransfers" in {
+      val path = basePath + "getForwardTransfers"
+      var json = """{"blockId": "0000000000000000000000000000000000000000000000000000000000000000"}"""
+      Post(path).withHeaders(apiTokenHeader).withEntity(json) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+      json = """{"blockId": "123"}"""
+      Post(path).withHeaders(apiTokenHeader).withEntity(json) ~> sidechainBlockApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
+      }
+    }
+
+    "reply at /getFeePayments" in {
+      val path = basePath + "getFeePayments"
+      var json = """{"blockId": "0000000000000000000000000000000000000000000000000000000000000000"}"""
+      Post(path).withHeaders(apiTokenHeader).withEntity(json) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+      json = """{"blockId": "123"}"""
+      Post(path).withHeaders(apiTokenHeader).withEntity(json) ~> sidechainBlockApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
+      }
+    }
   }
 }
