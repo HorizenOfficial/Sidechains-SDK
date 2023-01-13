@@ -7,19 +7,18 @@ import akka.util.Timeout
 import com.google.common.primitives.Longs
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion1
 import com.horizen.block.{MainchainHeader, WithdrawalEpochCertificate}
-import com.horizen.chain.{MainchainHeaderHash, MainchainHeaderInfo}
+import com.horizen.chain.MainchainHeaderInfo
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
+import com.horizen.csw.CswManager.ReceivableMessages._
+import com.horizen.csw.CswManager.Responses._
 import com.horizen.csw.CswManager.{ProofInProcess, ProofInQueue}
-import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
-import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, GenerateCswProofStatus, Generated, InProcess, InQueue, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
 import com.horizen.fixtures.{CswDataFixture, MainchainBlockReferenceFixture, SidechainBlockFixture}
-import com.horizen.librustsidechains.FieldElement
-import com.horizen.{SidechainAppEvents, SidechainHistory, SidechainMemoryPool, SidechainSettings, SidechainState, SidechainWallet}
 import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.{PrivateKey25519Creator, Secret}
 import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochInfo}
+import com.horizen._
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -82,6 +81,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
     val cswManagerRef: TestActorRef[CswManager] = TestActorRef(
       Props(new CswManager(mockedSettings, params, mockedSidechainNodeViewHolderRef)))
+    actorSystem.eventStream.subscribe(cswManagerRef, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     val deathWatch = TestProbe()
     deathWatch.watch(cswManagerRef)
@@ -117,6 +117,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
     val cswManagerRef: TestActorRef[CswManager] = TestActorRef(
       Props(new CswManager(mockedSettings, params, mockedSidechainNodeViewHolderRef)))
+    actorSystem.eventStream.subscribe(cswManagerRef, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     val cswManager: CswManager = cswManagerRef.underlyingActor
 
@@ -202,6 +203,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
     val cswManagerRef: TestActorRef[CswManager] = TestActorRef(
       Props(new CswManager(mockedSettings, params, mockedSidechainNodeViewHolderRef)))
+    actorSystem.eventStream.subscribe(cswManagerRef, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     val cswManager: CswManager = cswManagerRef.underlyingActor
 

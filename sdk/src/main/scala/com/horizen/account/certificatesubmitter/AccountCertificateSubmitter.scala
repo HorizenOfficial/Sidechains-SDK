@@ -18,7 +18,6 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.mainchain.api.MainchainNodeCertificateApi
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.client.MainchainNodeChannel
-
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -44,7 +43,6 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
   override type HIS = AccountHistory
   override type MS = AccountState
   override type MP = AccountMemoryPool
-
 }
 
 object AccountCertificateSubmitterRef {
@@ -70,13 +68,17 @@ object AccountCertificateSubmitterRef {
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel)
-      .withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel))
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel)
-      .withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel), name)
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 }
