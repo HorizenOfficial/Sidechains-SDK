@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable}
 import com.horizen.account.events.SubmitKeyRotation
 import com.horizen.account.state.CertificateKeyRotationMsgProcessor.{CertificateKeyRotationContractAddress, CertificateKeyRotationContractCode, SubmitKeyRotationReqCmdSig}
@@ -11,7 +11,6 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, 
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
-import com.horizen.schnorrnative.SchnorrPublicKey
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
@@ -171,7 +170,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
   private def checkMessageValidity(msg: Message): Unit = {
     val msgValue = msg.getValue
 
-    if (msg.getData.length != METHOD_CODE_LENGTH + SubmitKeyRotationCmdInputDecoder.getABIDataParamsLengthInBytes) {
+    if (msg.getData.length != METHOD_ID_LENGTH + SubmitKeyRotationCmdInputDecoder.getABIDataParamsLengthInBytes) {
       throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
     } else if (msgValue.signum() != 0) {
       throw new ExecutionRevertedException(s"SubmitKeyRotation message value is non-zero: $msg")

@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake, OpenForgerList}
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.proof.SignatureSecp256k1
@@ -203,7 +203,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   private def checkGetListOfForgersCmd(msg: Message): Unit = {
     // check we have no other bytes after the op code in the msg data
     if (getArgumentsFromData(msg.getData).length > 0) {
-      val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $METHOD_CODE_LENGTH"
+      val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $METHOD_ID_LENGTH"
       log.debug(msgStr)
       throw new ExecutionRevertedException(msgStr)
     }
@@ -407,10 +407,10 @@ object ForgerStakeMsgProcessor {
 
   // ensure we have strings consistent with size of opcode
   require(
-    GetListOfForgersCmd.length == 2 * METHOD_CODE_LENGTH &&
-      AddNewStakeCmd.length == 2 * METHOD_CODE_LENGTH &&
-      RemoveStakeCmd.length == 2 * METHOD_CODE_LENGTH &&
-      OpenStakeForgerListCmd.length == 2 * METHOD_CODE_LENGTH
+    GetListOfForgersCmd.length == 2 * METHOD_ID_LENGTH &&
+      AddNewStakeCmd.length == 2 * METHOD_ID_LENGTH &&
+      RemoveStakeCmd.length == 2 * METHOD_ID_LENGTH &&
+      OpenStakeForgerListCmd.length == 2 * METHOD_ID_LENGTH
   )
 
   def getRemoveStakeCmdMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
