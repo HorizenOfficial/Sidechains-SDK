@@ -4,15 +4,17 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
 import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
 import org.web3j.utils.Numeric
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
+
 import java.math.BigInteger
 import java.util
 
@@ -199,6 +201,50 @@ object RemoveStakeCmdInputDecoder extends ABIDecoder[RemoveStakeCmdInput] {
 
   private[horizen] def decodeSignature(v: Bytes1, r: Bytes32, s: Bytes32): SignatureSecp256k1 = {
     new SignatureSecp256k1(v.getValue, r.getValue, s.getValue)
+  }
+}
+
+
+case class OpenStakeForgerListCmdInput(
+                                        forgerIndex: Int, signature: Signature25519) extends ABIEncodable[StaticStruct] {
+
+  require(!(forgerIndex <0))
+
+  override def asABIType(): StaticStruct = {
+    val signatureBytes = signature.bytes
+    new StaticStruct(
+      new Uint32(forgerIndex),
+      new Bytes32(util.Arrays.copyOfRange(signatureBytes, 0, 32)),
+      new Bytes32(util.Arrays.copyOfRange(signatureBytes, 32, Ed25519.signatureLength()))
+    )
+  }
+
+  override def toString: String = "%s(forgerIndex: %d, signature: %s)"
+    .format(this.getClass.toString, forgerIndex, signature)
+
+}
+
+object OpenStakeForgerListCmdInputDecoder extends ABIDecoder[OpenStakeForgerListCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[Uint32]() {}, // forgerIndex, we use 4 bytes for big values, just in case
+      new TypeReference[Bytes32]() {}, // first 32 bytes of signature
+      new TypeReference[Bytes32]() {}  // second 32 bytes (signature is 64 in total)
+    ))
+
+  override def createType(listOfParams: util.List[Type[_]]): OpenStakeForgerListCmdInput = {
+    val forgerIndex = listOfParams.get(0).asInstanceOf[Uint32].getValue
+    val signature = decodeSignature(
+      listOfParams.get(1).asInstanceOf[Bytes32],
+      listOfParams.get(2).asInstanceOf[Bytes32])
+
+    OpenStakeForgerListCmdInput(forgerIndex.intValueExact(), signature)
+  }
+
+  private[horizen] def decodeSignature(signaturePart1: Bytes32, signaturePart2: Bytes32): Signature25519 = {
+    val totalBytes = signaturePart1.getValue ++ signaturePart2.getValue
+    new Signature25519(totalBytes)
   }
 }
 

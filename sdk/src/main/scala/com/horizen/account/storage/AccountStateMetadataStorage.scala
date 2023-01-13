@@ -53,4 +53,5 @@ class AccountStateMetadataStorage(storage: Storage)
   override def getAccountStateRoot: Array[Byte] = getView.getAccountStateRoot
 
   override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = getView.getTransactionReceipt(txHash)
+
 }
