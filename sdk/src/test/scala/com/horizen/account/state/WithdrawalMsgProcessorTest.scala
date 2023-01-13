@@ -3,6 +3,7 @@ package com.horizen.account.state
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.proposition.MCPublicKeyHashProposition
+import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert._
 import org.junit._
@@ -110,7 +111,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     val key = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
     val numOfWithdrawalReqs = Bytes.concat(
       new Array[Byte](32 - Ints.BYTES),
-      Ints.toByteArray(WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch)
+      Ints.toByteArray(MaxWithdrawalReqsNumPerEpoch)
     )
     Mockito
       .when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.contractAddress, key))
@@ -145,7 +146,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), returnData)
 
     // With 3999 withdrawal requests
-    val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
+    val maxNumOfWithdrawalReqs = MaxWithdrawalReqsNumPerEpoch
     val numOfWithdrawalReqsInBytes =
       Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(maxNumOfWithdrawalReqs))
     Mockito
