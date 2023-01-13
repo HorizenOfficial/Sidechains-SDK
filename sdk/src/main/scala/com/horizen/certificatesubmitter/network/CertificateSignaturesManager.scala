@@ -50,8 +50,6 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
 
   override def preStart: Unit = {
     super.preStart()
-    // subscribe on Application Start event to be sure that Submitter itself was initialized.
-    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
   }
 
   override def postStop(): Unit = {
@@ -211,10 +209,18 @@ object CertificateSignaturesManagerRef {
     Props(new CertificateSignaturesManager(networkControllerRef, certificateSubmitterRef, params, settings))
 
   def apply(networkControllerRef: ActorRef, certificateSubmitterRef: ActorRef,
-            params: NetworkParams, settings: NetworkSettings)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(networkControllerRef, certificateSubmitterRef, params, settings))
+            params: NetworkParams, settings: NetworkSettings)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(networkControllerRef, certificateSubmitterRef, params, settings))
+    // subscribe on Application Start event to be sure that Submitter itself was initialized.
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 
   def apply(name: String, networkControllerRef: ActorRef, certificateSubmitterRef: ActorRef,
-            params: NetworkParams, settings: NetworkSettings)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(networkControllerRef, certificateSubmitterRef, params, settings), name)
+            params: NetworkParams, settings: NetworkSettings)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(networkControllerRef, certificateSubmitterRef, params, settings), name)
+    // subscribe on Application Start event to be sure that Submitter itself was initialized.
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 }

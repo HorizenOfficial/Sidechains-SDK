@@ -1,10 +1,10 @@
 package com.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.google.common.primitives.Bytes
+import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
-import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake}
+import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
@@ -13,14 +13,15 @@ import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
 import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
 import org.web3j.utils.Numeric
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.crypto.hash.{Blake2b256, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
+import com.horizen.proof.Signature25519
 
 import java.math.BigInteger
 import java.util
@@ -28,11 +29,15 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success}
 
 trait ForgerStakesProvider {
-  private[horizen] def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
+  private[horizen] def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
 
   private[horizen] def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): Array[Byte]
 
   private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData]
+
+  private[horizen] def isForgerListOpen(view: BaseAccountStateView): Boolean
+
+  private[horizen] def getAllowedForgerListIndexes(view: BaseAccountStateView): Seq[Int]
 }
 
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with ForgerStakesProvider {
@@ -68,6 +73,13 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new MessageProcessorInitializationException("initial tip already set")
 
     view.updateAccountStorage(contractAddress, LinkedListTipKey, LinkedListNullValue)
+
+    // forger list
+    /* Do not initialize it here since bootstrapping tool can not do the same as of now. That would result in
+       a different state root in the genesis block creation  */
+    val restrictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
+    if (!restrictForgerList.sameElements(NULL_HEX_STRING_32))
+      throw new MessageProcessorInitializationException("restrictForgerList already set")
   }
 
   def existsStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Boolean = {
@@ -253,11 +265,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException(s"Owner account is not an EOA")
     }
 
-    // TODO decide whether we need to check also genesis case (also UTXO model)
-    if (!isGenesisScCreation && networkParams.restrictForgers) {
-      // check that the delegation arguments satisfy the restricted list of forgers.
-      if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
-        throw new ExecutionRevertedException("Forger is not in the allowed list")
+    if (!isGenesisScCreation) {
+      // check that the delegation arguments satisfy the restricted list of forgers if we have any.
+      if (!isForgerListOpen(view)) {
+        if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
+          throw new ExecutionRevertedException("Forger is not in the allowed list")
+        }
       }
     }
 
@@ -303,7 +316,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     }
   }
 
-  override def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
+  override def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
     var stakeList = Seq[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
@@ -315,8 +328,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     stakeList
   }
 
-  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): Array[Byte] = {
-    val stakeList = getListOfForgers(view)
+  def doUncheckedGetListOfForgersStakesCmd(view: BaseAccountStateView): Array[Byte] = {
+    val stakeList = getListOfForgersStakes(view)
     AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
   }
 
@@ -326,7 +339,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     }
 
     checkGetListOfForgersCmd(msg)
-    doUncheckedGetListOfForgersCmd(view)
+    doUncheckedGetListOfForgersStakesCmd(view)
   }
 
   def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
@@ -354,7 +367,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       .getOrElse(throw new ExecutionRevertedException("No such stake id in state-db"))
 
     // check signature
-    val msgToSign = getMessageToSign(stakeId, msg.getFrom.get().address(), msg.getNonce.toByteArray)
+    val msgToSign = getRemoveStakeCmdMessageToSign(stakeId, msg.getFrom.get().address(), msg.getNonce.toByteArray)
     if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
       throw new ExecutionRevertedException("Invalid signature")
     }
@@ -376,6 +389,79 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     stakeId
   }
 
+  private def getAllowedForgersIndexList(view: BaseAccountStateView): Array[Byte] = {
+
+    if (networkParams.allowedForgersList.isEmpty){
+      throw new IllegalStateException("Illegal call when list of forger is empty")
+    }
+
+    // get the forger list. Lazy init
+    val restrictForgerList = view.getAccountStorage(contractAddress, RestrictedForgerFlagsList)
+    if (restrictForgerList.sameElements(NULL_HEX_STRING_32)) {
+      // it is the first time we access this item, do the init now
+      new Array[Byte](networkParams.allowedForgersList.size)
+    } else {
+      view.getAccountStorageBytes(contractAddress, RestrictedForgerFlagsList)
+    }
+  }
+
+  def doOpenStakeForgerListCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+
+    if (!networkParams.restrictForgers) {
+      throw new ExecutionRevertedException("Illegal call when list of forger is not restricted")
+    }
+
+    if (networkParams.allowedForgersList.isEmpty){
+      throw new ExecutionRevertedException("Illegal call when list of forger is empty")
+    }
+
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
+    val inputParams = getArgumentsFromData(msg.getData)
+    val cmdInput = OpenStakeForgerListCmdInputDecoder.decode(inputParams)
+    val forgerIndex: Int = cmdInput.forgerIndex
+    val signature: Signature25519 = cmdInput.signature
+
+    // check consistency of input.
+    if (networkParams.allowedForgersList.size < forgerIndex+1) {
+      throw new ExecutionRevertedException(
+        s"Invalid forgerIndex=$forgerIndex: allowedForgersList size=${networkParams.allowedForgersList.size}")
+    }
+
+    // check signature
+    val blockSignerProposition = networkParams.allowedForgersList(forgerIndex)._1
+
+    val msgToSign = getOpenStakeForgerListCmdMessageToSign(forgerIndex, msg.getFrom.get().address(), msg.getNonce.toByteArray)
+    if (!signature.isValid(blockSignerProposition, msgToSign)) {
+      throw new ExecutionRevertedException(s"Invalid signature, could not validate against blockSignerProposition=$blockSignerProposition")
+    }
+
+    // get the forger list. Lazy init
+    val restrictForgerList = getAllowedForgersIndexList(view)
+
+    // check that the forger list is not already open
+    if (isForgerListOpenUnchecked(restrictForgerList)) {
+      throw new ExecutionRevertedException("Forger list already open")
+    }
+
+    // check that the index has not been already processed
+    if (restrictForgerList(forgerIndex) == 1) {
+      throw new ExecutionRevertedException("Forger index already processed")
+    }
+
+    // modify the list
+    restrictForgerList(forgerIndex) = 1
+    view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, restrictForgerList)
+
+    val addOpenStakeForgerListEvt = OpenForgerList(forgerIndex, msg.getFrom.get(), blockSignerProposition)
+    val evmLog = getEvmLog(addOpenStakeForgerListEvt)
+    view.addLog(evmLog)
+
+    restrictForgerList
+  }
+
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     val gasView = new AccountStateViewGasTracked(view, gas)
@@ -383,29 +469,61 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       case GetListOfForgersCmd => doGetListOfForgersCmd(msg, gasView)
       case AddNewStakeCmd => doAddNewStakeCmd(msg, gasView)
       case RemoveStakeCmd => doRemoveStakeCmd(msg, gasView)
+      case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(msg, gasView)
       case opCodeHex => throw new ExecutionRevertedException(s"op code $opCodeHex not supported")
     }
   }
+
+  override private[horizen] def isForgerListOpen(view: BaseAccountStateView) = {
+    if (params.restrictForgers) {
+      val restrictForgerList = getAllowedForgersIndexList(view)
+      isForgerListOpenUnchecked(restrictForgerList)
+    } else {
+      true
+    }
+  }
+
+  // length is not checked, useful when the list has already been fetched and the gas paid
+  private def isForgerListOpenUnchecked(list: Array[Byte]) : Boolean = {
+    list.sum > list.length/2
+  }
+
+  override private[horizen] def getAllowedForgerListIndexes(view: BaseAccountStateView): Seq[Int] =
+    if (params.restrictForgers) {
+      val restrictForgerList = getAllowedForgersIndexList(view)
+      restrictForgerList.map(_.toInt)
+    } else {
+      Seq()
+    }
 }
 
 object ForgerStakeMsgProcessor {
 
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
+  val RestrictedForgerFlagsList: Array[Byte] = Blake2b256.hash("ClosedForgerList")
+
 
   val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes()")
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
+  val OpenStakeForgerListCmd: String  = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32")
 
   // ensure we have strings consistent with size of opcode
   require(
     GetListOfForgersCmd.length == 2 * METHOD_CODE_LENGTH &&
       AddNewStakeCmd.length == 2 * METHOD_CODE_LENGTH &&
-      RemoveStakeCmd.length == 2 * METHOD_CODE_LENGTH
+      RemoveStakeCmd.length == 2 * METHOD_CODE_LENGTH &&
+      OpenStakeForgerListCmd.length == 2 * METHOD_CODE_LENGTH
   )
 
-  def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
+  def getRemoveStakeCmdMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
     Bytes.concat(from, nonce, stakeId)
+  }
+
+  def getOpenStakeForgerListCmdMessageToSign(forgerIndex: Int, from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
+    require(!(forgerIndex <0))
+    Bytes.concat(Ints.toByteArray(forgerIndex), from, nonce)
   }
 }
 
@@ -538,6 +656,7 @@ case class AddNewStakeCmdInput(
 
 }
 
+
 object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
@@ -598,8 +717,53 @@ object RemoveStakeCmdInputDecoder extends ABIDecoder[RemoveStakeCmdInput] {
   private[horizen] def decodeSignature(v: Bytes1, r: Bytes32, s: Bytes32): SignatureSecp256k1 = {
     new SignatureSecp256k1(v.getValue, r.getValue, s.getValue)
   }
+}
+
+
+case class OpenStakeForgerListCmdInput(
+          forgerIndex: Int, signature: Signature25519) extends ABIEncodable[StaticStruct] {
+
+  require(!(forgerIndex <0))
+
+  override def asABIType(): StaticStruct = {
+    val signatureBytes = signature.bytes
+    new StaticStruct(
+      new Uint32(forgerIndex),
+      new Bytes32(util.Arrays.copyOfRange(signatureBytes, 0, 32)),
+      new Bytes32(util.Arrays.copyOfRange(signatureBytes, 32, Ed25519.signatureLength()))
+    )
+  }
+
+  override def toString: String = "%s(forgerIndex: %d, signature: %s)"
+    .format(this.getClass.toString, forgerIndex, signature)
 
 }
+
+object OpenStakeForgerListCmdInputDecoder extends ABIDecoder[OpenStakeForgerListCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[Uint32]() {}, // forgerIndex, we use 4 bytes for big values, just in case
+      new TypeReference[Bytes32]() {}, // first 32 bytes of signature
+      new TypeReference[Bytes32]() {}  // second 32 bytes (signature is 64 in total)
+    ))
+
+  override def createType(listOfParams: util.List[Type[_]]): OpenStakeForgerListCmdInput = {
+    val forgerIndex = listOfParams.get(0).asInstanceOf[Uint32].getValue
+    val signature = decodeSignature(
+      listOfParams.get(1).asInstanceOf[Bytes32],
+      listOfParams.get(2).asInstanceOf[Bytes32])
+
+    OpenStakeForgerListCmdInput(forgerIndex.intValueExact(), signature)
+  }
+
+  private[horizen] def decodeSignature(signaturePart1: Bytes32, signaturePart2: Bytes32): Signature25519 = {
+    val totalBytes = signaturePart1.getValue ++ signaturePart2.getValue
+    new Signature25519(totalBytes)
+  }
+}
+
+
 
 // the forger stake data record, stored in stateDb as: key=stakeId / value=data
 @JsonView(Array(classOf[Views.Default]))

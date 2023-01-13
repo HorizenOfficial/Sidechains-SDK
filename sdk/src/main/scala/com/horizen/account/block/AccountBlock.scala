@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
@@ -67,6 +67,16 @@ class AccountBlock(override val header: AccountBlockHeader,
   def verifyStateRootDataConsistency(stateRoot: Array[Byte]): Unit = {
     if (!java.util.Arrays.equals(stateRoot, header.stateRoot)) {
       val reason = s"Invalid state root hash: actual ${BytesUtils.toHexString(header.stateRoot)}, expected ${BytesUtils.toHexString(stateRoot)}"
+      log.error(reason)
+      throw new InconsistentSidechainBlockDataException(reason)
+    }
+  }
+
+  @throws(classOf[InconsistentSidechainBlockDataException])
+  def verifyLogsBloomConsistency(receipts: Seq[EthereumReceipt]): Unit = {
+    val logsBloom = Bloom.fromReceipts(receipts.map{r => r.consensusDataReceipt})
+    if (!logsBloom.equals(header.logsBloom)) {
+      val reason = s"Invalid logs bloom"
       log.error(reason)
       throw new InconsistentSidechainBlockDataException(reason)
     }

@@ -370,7 +370,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
           s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
     }
-
   }
 
   def validateWithWithdrawalEpoch(tx: SidechainTypes#SCBT, withdrawalEpoch: Int): Try[Unit] = Try {
@@ -502,7 +501,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
 
   //Check if the majority of the allowed forgers opened the stake to everyone
-  def isForgingOpen(): Boolean = {
+  override def isForgingOpen(): Boolean = {
     if (!params.restrictForgers)
       true
     else {
@@ -576,7 +575,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                    topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
                    blockFeeInfo: BlockFeeInfo,
                    forgerListIndexes: Array[Int],
-                   keyRotationProofsToAdd: Seq[KeyRotationProof],
+                   keyRotationProofsToAdd: Seq[KeyRotationProof]
                   ): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     var boxesToAppend = changes.toAppend.map(_.box)
