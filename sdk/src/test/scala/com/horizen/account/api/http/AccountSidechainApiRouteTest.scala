@@ -15,8 +15,7 @@ import com.horizen.account.node.AccountNodeView
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.http._
-import com.horizen.consensus.ConsensusEpochAndSlot
+import com.horizen.api.http.{SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}

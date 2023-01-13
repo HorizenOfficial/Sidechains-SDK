@@ -232,7 +232,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeGetUncleCountByBlockHash = mapper.readTree(batchRequestJsonGetUncleCountByBlockHash)
     "reply at /ethv1 - uncle block - eth_getUncleCountByBlockHash" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleCountByBlockHash)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -246,7 +246,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeGetUncleCountByBlockNumber = mapper.readTree(batchRequestJsonGetUncleCountByBlockNumber)
     "reply at /ethv1 - uncle block - eth_getUncleCountByBlockNumber" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleCountByBlockNumber)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -260,7 +260,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeGetUncleByBlockHashAndIndex = mapper.readTree(batchRequestJsonGetUncleByBlockHashAndIndex)
     "reply at /ethv1 - uncle block - eth_getUncleByBlockHashAndIndex" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleByBlockHashAndIndex)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -274,7 +274,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeGetUncleByBlockNumberAndIndex = mapper.readTree(batchRequestJsonGetUncleByBlockNumberAndIndex)
     "reply at /ethv1 - uncle block - eth_getUncleByBlockNumberAndIndex" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleByBlockNumberAndIndex)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

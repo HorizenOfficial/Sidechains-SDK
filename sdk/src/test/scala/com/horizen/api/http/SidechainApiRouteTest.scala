@@ -123,13 +123,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val listOfStorageVersions = utilMocks.listOfNodeStorageVersion
   val sidechainId = utilMocks.sidechainId
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
-<<<<<<< HEAD
   val keyRotationProof = utilMocks.keyRotationProof
   val certifiersKeys = utilMocks.certifiersKeys
-=======
   val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
   val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
->>>>>>> Added basic authentication inside HTTP interface
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)

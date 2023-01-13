@@ -493,7 +493,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             val secret = getFittingSecret(sidechainNodeView, None, txCost)
             secret match {
               case Some(txCreatorSecret) =>
-                val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
+                val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
                 val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
                 val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
                 stakeDataOpt match {

@@ -488,51 +488,53 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   def createKeyRotationTransaction: Route = (post & path("createKeyRotationTransaction")) {
-     {
-      entity(as[ReqCreateKeyRotationTransaction]) { body =>
-        circuitType match {
-          case NaiveThresholdSignatureCircuit =>
-            ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
-          case NaiveThresholdSignatureCircuitWithKeyRotation =>
-            applyOnNodeView { sidechainNodeView =>
-              val wallet = sidechainNodeView.getNodeWallet
-              val fee = body.fee.getOrElse(0L)
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateKeyRotationTransaction]) { body =>
+          circuitType match {
+            case NaiveThresholdSignatureCircuit =>
+              ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
+            case NaiveThresholdSignatureCircuitWithKeyRotation =>
+              applyOnNodeView { sidechainNodeView =>
+                val wallet = sidechainNodeView.getNodeWallet
+                val fee = body.fee.getOrElse(0L)
 
-              val memoryPool = sidechainNodeView.getNodeMemoryPool
-              val boxIdsToExclude: JArrayList[Array[scala.Byte]] = new JArrayList()
-              for(transaction <- memoryPool.getTransactions().asScala)
-                for(id <- transaction.boxIdsToOpen().asScala) {
-                  boxIdsToExclude.add(id.data)
+                val memoryPool = sidechainNodeView.getNodeMemoryPool
+                val boxIdsToExclude: JArrayList[Array[scala.Byte]] = new JArrayList()
+                for(transaction <- memoryPool.getTransactions().asScala)
+                  for(id <- transaction.boxIdsToOpen().asScala) {
+                    boxIdsToExclude.add(id.data)
+                  }
+
+                //Collect input box
+                wallet.allBoxes().asScala.find(box => box.isInstanceOf[ZenBox] && box.value() >= fee && !boxIdsToExclude.contains(box.id())) match {
+                  case Some(inputBox) =>
+                    val keyRotationTransaction = CertificateKeyRotationTransaction.create(
+                      new JPair[ZenBox, PrivateKey25519](inputBox.asInstanceOf[ZenBox], wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get()),
+                      inputBox.proposition().asInstanceOf[PublicKey25519Proposition],
+                      fee,
+                      body.keyType,
+                      body.keyIndex,
+                      SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey)),
+                      SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.signingKeySignature)),
+                      SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.masterKeySignature)),
+                      SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature)),
+                    )
+                    if (body.automaticSend.getOrElse(true)) {
+                      validateAndSendTransaction(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+                    } else {
+                      if (body.format.getOrElse(false)) {
+                        ApiResponseUtil.toResponse(TransactionDTO(keyRotationTransaction.asInstanceOf[SCBT]))
+                      } else {
+                        ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(keyRotationTransaction.asInstanceOf[SCBT]))))
+                      }
+                    }
+                  case None =>
+                    ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput("Not found input box to pay the fee", JOptional.empty()))
                 }
 
-              //Collect input box
-              wallet.allBoxes().asScala.find(box => box.isInstanceOf[ZenBox] && box.value() >= fee && !boxIdsToExclude.contains(box.id())) match {
-                case Some(inputBox) =>
-                  val keyRotationTransaction = CertificateKeyRotationTransaction.create(
-                    new JPair[ZenBox, PrivateKey25519](inputBox.asInstanceOf[ZenBox], wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get()),
-                    inputBox.proposition().asInstanceOf[PublicKey25519Proposition],
-                    fee,
-                    body.keyType,
-                    body.keyIndex,
-                    SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey)),
-                    SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.signingKeySignature)),
-                    SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.masterKeySignature)),
-                    SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature)),
-                  )
-                  if (body.automaticSend.getOrElse(true)) {
-                    validateAndSendTransaction(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
-                  } else {
-                    if (body.format.getOrElse(false)) {
-                      ApiResponseUtil.toResponse(TransactionDTO(keyRotationTransaction.asInstanceOf[SCBT]))
-                    } else {
-                      ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(keyRotationTransaction.asInstanceOf[SCBT]))))
-                    }
-                  }
-                case None =>
-                  ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput("Not found input box to pay the fee", JOptional.empty()))
               }
-
-            }
+          }
         }
       }
     }
