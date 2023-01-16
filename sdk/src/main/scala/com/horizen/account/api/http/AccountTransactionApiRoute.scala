@@ -255,7 +255,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  /**
+   /**
    * Decode the input raw eth transaction bytes into an obj, sign it using the input 'from' address
    * and return the resulting signed raw eth transaction bytes
    */
