@@ -59,17 +59,11 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
   def createPrivateKeySecp256k1: Route = (post & path("createPrivateKeySecp256k1")) {
     withAuth {
       entity(as[ReqCreateKey]) { _ =>
-        withNodeView { sidechainNodeView =>
+        withNodeView { _ =>
           val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(PrivateKeySecp256k1Creator.getInstance)
           Await.result(secretFuture, timeout.duration).asInstanceOf[Try[PrivateKeySecp256k1]] match {
             case Success(secret: PrivateKeySecp256k1) =>
-              val future = sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret)
-              Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-                case Success(_) =>
-                  ApiResponseUtil.toResponse(RespCreatePrivateKeySecp256k1(secret.publicImage()))
-                case Failure(e) =>
-                  ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
-              }
+              ApiResponseUtil.toResponse(RespCreatePrivateKeySecp256k1(secret.publicImage()))
             case Failure(e) =>
               ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create secret.", JOptional.of(e)))
           }

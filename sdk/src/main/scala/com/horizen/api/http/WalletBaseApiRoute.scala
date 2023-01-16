@@ -56,13 +56,7 @@ abstract class WalletBaseApiRoute[
           Await.result(secretFuture, timeout.duration).asInstanceOf[Try[VrfSecretKey]] match {
             case Success(secret: VrfSecretKey) =>
               val public = secret.publicImage()
-              val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
-              Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-                case Success(_) =>
-                  ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
-                case Failure(e) =>
-                  ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
-              }
+              ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
             case Failure(e) =>
               ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create secret.", JOptional.of(e)))
           }
@@ -81,13 +75,7 @@ abstract class WalletBaseApiRoute[
           val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(PrivateKey25519Creator.getInstance)
           Await.result(secretFuture, timeout.duration).asInstanceOf[Try[PrivateKey25519]] match {
             case Success(secret: PrivateKey25519) =>
-              val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
-              Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-                case Success(_) =>
-                  ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
-                case Failure(e) =>
-                  ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
-              }
+              ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
             case Failure(e) =>
               ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create secret.", JOptional.of(e)))
           }
