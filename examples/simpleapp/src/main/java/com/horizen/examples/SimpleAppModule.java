@@ -5,10 +5,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-
 import com.horizen.SidechainAppModule;
 import com.horizen.SidechainAppStopper;
 import com.horizen.SidechainSettings;

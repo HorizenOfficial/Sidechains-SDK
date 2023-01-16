@@ -4,61 +4,68 @@ import java.lang
 import java.util.{Collections, ArrayList => JArrayList, List => JList}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{ForgerBoxData, BoxData, WithdrawalRequestBoxData, ZenBoxData}
-import com.horizen.box.{Box, ZenBox, ForgerBox}
+import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+import com.horizen.box.{Box, ZenBox}
+import com.horizen.box.ForgerBox
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.node.{NodeWallet, SidechainNodeView}
+import com.horizen.node._
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Proof
+import com.horizen.proof.{Proof, SchnorrSignatureSerializer}
 import com.horizen.proposition._
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction._
+import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
 import sparkz.core.settings.RESTApiSettings
+
+import java.util.{Optional => JOptional}
+import com.horizen.utils.{Pair => JPair}
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 import scala.util.control.Breaks._
 import scala.util.{Failure, Success, Try}
-import java.util.{Optional => JOptional}
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef,
                                         companion: SidechainTransactionsCompanion,
-                                        params: NetworkParams)
-                                       (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute with SidechainTypes {
+                                        params: NetworkParams,
+                                        circuitType: CircuitTypes)
+                                       (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends TransactionBaseApiRoute[
+    SidechainTypes#SCBT,
+    SidechainBlockHeader,
+    SidechainBlock,
+    SidechainFeePaymentsInfo,
+    NodeHistory,
+    NodeState,
+    NodeWallet,
+    NodeMemoryPool,
+    SidechainNodeView](sidechainTransactionActorRef, companion)  with SidechainTypes {
 
-  override val route: Route = (pathPrefix("transaction")) {
+  override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
+
+  override val route: Route = pathPrefix("transaction") {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ createOpenStakeTransaction ~ createOpenStakeTransactionSimplified
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~
+      createOpenStakeTransaction ~ createOpenStakeTransactionSimplified ~ createKeyRotationTransaction
   }
 
-  /**
-    * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
-    */
-  def allTransactions: Route = (post & path("allTransactions")) {
-    entity(as[ReqAllTransactions]) { body =>
-      withNodeView { sidechainNodeView =>
-        val unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
-        if (body.format.getOrElse(true)) {
-          ApiResponseUtil.toResponse(RespAllTransactions(unconfirmedTxs.asScala.toList))
-        } else {
-          ApiResponseUtil.toResponse(RespAllTransactionIds(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString)))
-        }
-      }
-    }
-  }
 
   /**
     * Follows the same behaviour as the corresponding RPC call in zend: by default it will look for
@@ -66,12 +73,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     * -format: if true a JSON representation of transaction is returned, otherwise return the transaction serialized as
     * a hex string. If format is not specified, false behaviour is assumed as default;
     * -blockHash: If specified, will look for tx in the corresponding block
-    * -txIndex: If specified will look for transaction in all blockchain blocks;
     *
     * All the possible behaviours are be:
-    * 1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
-    * 2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
-    * 3) blockHash not set, txIndex = false -> Search in memory pool
+    * 1) blockHash set -> Search in block referenced by blockHash
+    * 2) blockHash not set -> Search in memory pool
     */
   def findById: Route = (post & path("findById")) {
     entity(as[ReqFindById]) { body =>
@@ -93,45 +98,23 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           else None
         }
 
-        def searchTransactionInBlockchain(id: String): Option[SidechainTypes#SCBT] = {
-          val opt = history.searchTransactionInsideBlockchain(id)
-          if (opt.isPresent)
-            Option(opt.get())
-          else None
-        }
-
         val txId = body.transactionId
         val format = body.format.getOrElse(false)
-        val blockHash = body.blockHash.getOrElse("")
-        val txIndex = body.transactionIndex.getOrElse(false)
         var transaction: Option[SidechainTypes#SCBT] = None
         var error: String = ""
 
+        body.blockHash match {
+          case Some(hash) =>
+            // Search in block referenced by blockHash
+            transaction = searchTransactionInBlock(txId, hash)
+            if (transaction.isEmpty)
+              error = s"Transaction $txId not found in specified block"
 
-        // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
-        if (blockHash.isEmpty && txIndex) {
-          // Search first in memory pool
-          transaction = searchTransactionInMemoryPool(txId)
-          // If not found search in the whole blockchain
-          if (transaction.isEmpty)
-            transaction = searchTransactionInBlockchain(txId)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in memory pool and blockchain"
-        }
-
-        // Case --> blockHash not set, txIndex = false -> Search in memory pool
-        else if (blockHash.isEmpty && !txIndex) {
-          // Search in memory pool
-          transaction = searchTransactionInMemoryPool(txId)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in memory pool"
-        }
-
-        // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
-        else if (!blockHash.isEmpty) {
-          transaction = searchTransactionInBlock(txId, blockHash)
-          if (transaction.isEmpty)
-            error = s"Transaction $txId not found in specified block"
+          case None =>
+            // Search in memory pool
+            transaction = searchTransactionInMemoryPool(txId)
+            if (transaction.isEmpty)
+              error = s"Transaction $txId not found in memory pool"
         }
 
         transaction match {
@@ -146,21 +129,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             // TO-DO Change the errorCode
             ApiResponseUtil.toResponse(ErrorNotFoundTransactionId(error, JOptional.empty()))
         }
-      }
-    }
-  }
-
-  /**
-    * Return a JSON representation of a transaction given its byte serialization.
-    */
-  def decodeTransactionBytes: Route = (post & path("decodeTransactionBytes")) {
-    entity(as[ReqDecodeTransactionBytes]) { body =>
-      companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes)) match {
-        case Success(tx) =>
-          //TO-DO JSON representation of transaction
-          ApiResponseUtil.toResponse(RespDecodeTransactionBytes(tx))
-        case Failure(exp) =>
-          ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, JOptional.of(exp)))
       }
     }
   }
@@ -443,25 +411,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val defaultTransactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = {
-    transaction => TransactionIdDTO(transaction.id)
-  }
-
-  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT,
-                                         transactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
-    val barrier = Await.result(
-      sidechainTransactionActorRef ? BroadcastTransaction(transaction),
-      settings.timeout).asInstanceOf[Future[Unit]]
-    onComplete(barrier) {
-      case Success(_) =>
-        ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-      case Failure(exp) =>
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp))
-        )
-    }
-  }
-
   /**
     * Validate and send a transaction, given its serialization as input.
     * Return error in case of invalid transaction or parsing error, otherwise return the id of the transaction.
@@ -515,6 +464,57 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             }
           case Failure(exception) =>
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))     }
+      }
+    }
+  }
+
+  def createKeyRotationTransaction: Route = (post & path("createKeyRotationTransaction")) {
+    withAuth {
+      entity(as[ReqCreateKeyRotationTransaction]) { body =>
+        circuitType match {
+          case NaiveThresholdSignatureCircuit =>
+            ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
+          case NaiveThresholdSignatureCircuitWithKeyRotation =>
+            applyOnNodeView { sidechainNodeView =>
+              val wallet = sidechainNodeView.getNodeWallet
+              val fee = body.fee.getOrElse(0L)
+
+              val memoryPool = sidechainNodeView.getNodeMemoryPool
+              val boxIdsToExclude: JArrayList[Array[scala.Byte]] = new JArrayList()
+              for(transaction <- memoryPool.getTransactions().asScala)
+                for(id <- transaction.boxIdsToOpen().asScala) {
+                  boxIdsToExclude.add(id.data)
+                }
+
+              //Collect input box
+              wallet.allBoxes().asScala.find(box => box.isInstanceOf[ZenBox] && box.value() >= fee && !boxIdsToExclude.contains(box.id())) match {
+                case Some(inputBox) =>
+                  val keyRotationTransaction = CertificateKeyRotationTransaction.create(
+                    new JPair[ZenBox, PrivateKey25519](inputBox.asInstanceOf[ZenBox], wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get()),
+                    inputBox.proposition().asInstanceOf[PublicKey25519Proposition],
+                    fee,
+                    body.keyType,
+                    body.keyIndex,
+                    SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey)),
+                    SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.signingKeySignature)),
+                    SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.masterKeySignature)),
+                    SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature)),
+                  )
+                  if (body.automaticSend.getOrElse(true)) {
+                    validateAndSendTransaction(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+                  } else {
+                    if (body.format.getOrElse(false)) {
+                      ApiResponseUtil.toResponse(TransactionDTO(keyRotationTransaction.asInstanceOf[SCBT]))
+                    } else {
+                      ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(keyRotationTransaction.asInstanceOf[SCBT]))))
+                    }
+                  }
+                case None =>
+                  ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput("Not found input box to pay the fee", JOptional.empty()))
+              }
+
+            }
+        }
       }
     }
   }
@@ -671,6 +671,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
+
 }
 
 
@@ -686,7 +687,7 @@ object SidechainTransactionRestScheme {
   private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
+  private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionDTO(transaction: SidechainTypes#SCBT) extends SuccessResponse
@@ -790,6 +791,23 @@ object SidechainTransactionRestScheme {
                                        @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(forgerProposition.nonEmpty, "Empty forgerProposition")
     require(forgerIndex >= 0, "Forger list index negative")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateKeyRotationTransaction(keyType: Int,
+                                                          keyIndex: Int,
+                                                          newKey: String,
+                                                          signingKeySignature: String,
+                                                          masterKeySignature: String,
+                                                          newKeySignature: String,
+                                                          format: Option[Boolean],
+                                                          automaticSend: Option[Boolean],
+                                                 @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(keyIndex >= 0, "Key index negative")
+    require(newKey.nonEmpty, "newKey is empty")
+    require(signingKeySignature.nonEmpty, "signingKeySignature is empty")
+    require(masterKeySignature.nonEmpty, "masterKeySignature is empty")
+    require(newKeySignature.nonEmpty, "newKeySignature is empty")
   }
 }
 

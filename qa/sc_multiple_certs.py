@@ -5,7 +5,7 @@ import time
 import math
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import fail, assert_false, assert_true, start_nodes, \
@@ -27,6 +27,11 @@ Configuration:
     SC node 2 has less schnorr private keys than SC node 1 for cert submission.
     SC nodes are connected.
 
+Note:
+    This test can be executed in two modes:
+    1. using no key rotation circuit (by default)
+    2. using key rotation circuit (with --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation)
+
 Test:
     - create and enable forger stakes for the SC node 2.
     - generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
@@ -46,8 +51,9 @@ Test:
         * SC node 2 can't grow SC chain, because it follows wrong cert data.
     - Connect SC nodes again and check that SC node 2 synced to the state of SC Node 1
 """
-class SCMultipleCerts(SidechainTestFramework):
 
+
+class SCMultipleCerts(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
 
@@ -59,7 +65,8 @@ class SCMultipleCerts(SidechainTestFramework):
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1',
+                                        '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -71,14 +78,22 @@ class SCMultipleCerts(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             True, True, list(range(6))  # certificate submitter is enabled with 6 schnorr PKs
         )
+        circuit_type=self.options.certcircuittype
+        if (circuit_type == KEY_ROTATION_CIRCUIT):
+            sc_creation_version = SC_CREATION_VERSION_2
+        else:
+            sc_creation_version = SC_CREATION_VERSION_1
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length),
+            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length,
+                           sc_creation_version = sc_creation_version,
+                           csw_enabled=False,
+                           circuit_type=circuit_type),
             sc_node_1_configuration,
             sc_node_2_configuration)
 
         # rewind sc genesis block timestamp for 5 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 5)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
@@ -187,8 +202,8 @@ class SCMultipleCerts(SidechainTestFramework):
         error_occur = False
         try:
             generate_next_block(sc_node2, "second node")
-        except SCAPIException as e:
-            logging.info("Expected SCAPIException: " + e.error)
+        except Exception as e:
+            logging.info("We had an exception as expected: {}".format(str(e)))
             error_occur = True
 
         assert_true(error_occur, "Node 2 wrongly verified top quality cert as a valid one.")

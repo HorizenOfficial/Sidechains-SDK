@@ -40,6 +40,7 @@ Test:
 class SCCswCeasedAtEpoch1(SidechainTestFramework):
     sidechain_id = None
     sc_withdrawal_epoch_length = 10
+    MaxWithdrawalReqsNumPerEpoch = 3999
 
     def setup_nodes(self):
         num_nodes = 1

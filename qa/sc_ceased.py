@@ -106,8 +106,8 @@ class SCCeased(SidechainTestFramework):
         error_occur = False
         try:
             generate_next_block(sc_node, "first node")
-        except SCAPIException as e:
-            logging.info("Expected SCAPIException: " + e.error)
+        except Exception as e:
+            logging.info("We had an exception as expected: {}".format(str(e)))
             error_occur = True
 
         assert_true(error_occur,

@@ -1,11 +1,13 @@
 package com.horizen.chain
 
-import com.fasterxml.jackson.annotation._
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.block.SidechainBlock
-import com.horizen.serialization.{ModifierSemanticValiditySerializer, Views}
+import com.horizen.account.block.AccountBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
+import com.horizen.transaction.Transaction
+import com.fasterxml.jackson.annotation._
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.horizen.serialization.{ModifierSemanticValiditySerializer, Views}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -37,11 +39,20 @@ case class SidechainBlockInfo(height: Int,
 }
 
 object SidechainBlockInfo {
+  // clone these methods
   def mainchainHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
     sidechainBlock.mainchainHeaders.map(header => byteArrayToMainchainHeaderHash(header.hash))
   }
 
+  def mainchainReferenceDataHeaderHashesFromBlock[TX <: Transaction](b: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]): Seq[MainchainHeaderHash] =
+    {
+      b.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
+    }
+
   def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
+    sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
+  }
+  def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: AccountBlock): Seq[MainchainHeaderHash] = {
     sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
   }
 }

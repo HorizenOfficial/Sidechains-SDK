@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build libevm" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="libevm" />
+    <working_directory value="$PROJECT_DIR$/libevm" />
+    <go_parameters value="-buildmode=c-shared -o bin/linux-x86-64/libevm.so" />
+    <kind value="DIRECTORY" />
+    <directory value="$PROJECT_DIR$/libevm" />
+    <filePath value="$PROJECT_DIR$" />
+    <method v="2" />
+  </configuration>
+</component>

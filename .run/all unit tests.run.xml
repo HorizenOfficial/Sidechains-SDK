@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All tests SDK Core" type="JUnit" factoryName="JUnit">
+    <module name="sidechains-sdk" />
+    <option name="MAIN_CLASS_NAME" value="" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="package" />
+    <dir value="$PROJECT_DIR$/sdk/src/test/scala/com/horizen/account/state" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
