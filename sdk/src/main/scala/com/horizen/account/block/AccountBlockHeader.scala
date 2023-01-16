@@ -11,7 +11,7 @@ import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
-import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerklePathSerializer, MerkleTree}
+import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.util.ModifierId
@@ -165,9 +165,13 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
     w.putInt(baseFee.length)
     w.putBytes(baseFee)
 
-    // longValueExact throws exception if overflows
-    w.putLong(obj.gasUsed.longValueExact())
-    w.putLong(obj.gasLimit.longValueExact())
+    val gasUsed = obj.gasUsed.toByteArray
+    w.putInt(gasUsed.length)
+    w.putBytes(gasUsed)
+
+    val gasLimit = obj.gasLimit.toByteArray
+    w.putInt(gasLimit.length)
+    w.putBytes(gasLimit)
 
     w.putBytes(obj.ommersMerkleRootHash)
 
@@ -209,9 +213,11 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
     val baseFeeSize = r.getInt()
     val baseFee = new BigInteger(r.getBytes(baseFeeSize))
 
-    val gasUsed = BigInteger.valueOf(r.getLong())
+    val gasUsedSize = r.getInt()
+    val gasUsed = new BigInteger(r.getBytes(gasUsedSize))
 
-    val gasLimit = BigInteger.valueOf(r.getLong())
+    val gasLimitSize = r.getInt()
+    val gasLimit = new BigInteger(r.getBytes(gasLimitSize))
 
     val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
