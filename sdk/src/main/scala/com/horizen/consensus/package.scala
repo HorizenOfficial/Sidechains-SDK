@@ -4,6 +4,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.cryptolibprovider.utils.FieldElementUtils.fieldElementLength
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.vrf.VrfOutput
 import scorex.util.ModifierId
@@ -75,7 +76,11 @@ package object consensus {
   private def generateHashAndCleanUp(elements: Array[Byte]*): Array[Byte] = {
     val digest = PoseidonHash.getInstanceConstantLength(elements.length)
     elements.foreach { message =>
-      val fieldElement = FieldElementUtils.messageToFieldElement(util.Arrays.copyOf(message, fieldElementLength()))
+      if (message.length > fieldElementLength) {
+        throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
+          message.length + " but it shall be less than " + fieldElementLength)
+      }
+      val fieldElement = FieldElement.deserialize(util.Arrays.copyOf(message, fieldElementLength))
       digest.update(fieldElement)
       fieldElement.freeFieldElement()
     }
