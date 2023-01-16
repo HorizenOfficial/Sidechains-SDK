@@ -3,15 +3,18 @@ package com.horizen.account.api.http
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.account.api.http.AccountTransactionRestScheme._
+import com.horizen.account.node.AccountNodeView
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
+import org.mockito.{ArgumentMatchers, Mockito}
+import org.scalatestplus.mockito.MockitoSugar
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.util.Random
 
-class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
+class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with MockitoSugar {
 
   override val basePath = "/transaction/"
 
@@ -245,5 +248,17 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
     }
 
+    "reply at /createEIP1559Transaction" in {
+      Post(basePath + "createEIP1559Transaction")
+        .withHeaders(apiTokenHeader)
+        .withEntity(
+          SerializationUtil.serialize(ReqEIP1559Transaction(None, Some("9835f7746494fcb0f81638480d46d03cb95922ff"),
+            None, BigInteger.valueOf(230000), BigInteger.valueOf(900000000),
+            BigInteger.valueOf(900000000), BigInteger.valueOf(5000), "", None, None, None))
+        ) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+    }
   }
 }

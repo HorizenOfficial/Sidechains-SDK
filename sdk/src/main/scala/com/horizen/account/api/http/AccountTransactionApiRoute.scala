@@ -72,6 +72,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
     val wallet = nodeView.getNodeWallet
     val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+
     val secret = allAccounts.find(
       a => (fromAddress.isEmpty ||
         BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
@@ -171,7 +172,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       entity(as[ReqEIP1559Transaction]) { body =>
         // lock the view and try to create CoreTransaction
         applyOnNodeView { sidechainNodeView =>
-          val secret = getFittingSecret(sidechainNodeView, body.from, body.value)
+          val tx_cost = body.value.add(body.gasLimit.multiply(body.maxFeePerGas))
+          val secret = getFittingSecret(sidechainNodeView, body.from, tx_cost)
 
           val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.get.publicImage.address))
 
@@ -193,10 +195,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               null
           )
           if (!signedTx.isSigned) {
-            val txCost = signedTx.maxCost
-
-            val secret =
-              getFittingSecret(sidechainNodeView, body.from, txCost)
             secret match {
               case Some(secret) =>
                 signedTx = signTransactionWithSecret(secret, signedTx)
