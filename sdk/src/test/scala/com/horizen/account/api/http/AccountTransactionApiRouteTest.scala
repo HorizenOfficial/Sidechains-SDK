@@ -4,7 +4,6 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.utils.FeeUtils
-import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
