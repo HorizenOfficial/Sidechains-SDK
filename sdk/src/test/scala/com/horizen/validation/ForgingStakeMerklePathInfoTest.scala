@@ -86,7 +86,7 @@ class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
     }
 
     val boxMerklePathInfoTry = ForgerBoxMerklePathInfoSerializer.parseBytesTry(bytes)
-    assertTrue("ForgingStakeMerklePathInfo expected to by parsed.", boxMerklePathInfoTry.isSuccess)
+    assertTrue("ForgingStakeMerklePathInfo expected to be parsed.", boxMerklePathInfoTry.isSuccess)
 
     val boxWithNonEmptyPath = ForgingStakeMerklePathInfo(forgingStakeInfo, nonEmptyMerklePath)
     assertEquals("Parsed info is different to original.", boxWithNonEmptyPath, boxMerklePathInfoTry.get)

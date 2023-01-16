@@ -989,7 +989,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     }
 
     val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytesFromFile)
-    assertTrue("MainchainBlockReferenceData expected to by parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
+    assertTrue("MainchainBlockReferenceData expected to be parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
     assertTrue("Block reference data must not contain transaction.", mcBlockReferenceData.sidechainRelatedAggregatedTransaction.isEmpty)
@@ -1018,7 +1018,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     }
 
     val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytesFromFile)
-    assertTrue("MainchainBlockReferenceData expected to by parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
+    assertTrue("MainchainBlockReferenceData expected to be parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
     assertTrue("Block reference data must not contain transaction.", mcBlockReferenceData.sidechainRelatedAggregatedTransaction.isEmpty)
@@ -1048,7 +1048,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     }
 
     val deserializedMcBlockReferenceDataTry = MainchainBlockReferenceDataSerializer.parseBytesTry(bytesFromFile)
-    assertTrue("MainchainBlockReferenceData expected to by parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
+    assertTrue("MainchainBlockReferenceData expected to be parsed.", deserializedMcBlockReferenceDataTry.isSuccess)
     val mcBlockReferenceData = deserializedMcBlockReferenceDataTry.get
 
     assertTrue("Block reference data must contain 1 top quality certificate.", mcBlockReferenceData.topQualityCertificate.nonEmpty)
