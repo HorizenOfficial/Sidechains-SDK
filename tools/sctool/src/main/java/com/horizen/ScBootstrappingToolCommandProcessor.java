@@ -20,7 +20,6 @@ import com.horizen.account.state.MessageProcessorUtil;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.account.utils.AccountFeePaymentsUtils;
-import com.horizen.account.utils.FeeUtils;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.block.*;
 import com.horizen.box.Box;
@@ -53,7 +52,6 @@ import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
-
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -62,7 +60,6 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -844,9 +841,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 BigInteger baseFee = FeeUtils.INITIAL_BASE_FEE();
 
-                long gasUsed = 0L;
+                BigInteger gasUsed = BigInteger.ZERO;
 
-                long gasLimit = FeeUtils.GAS_LIMIT();
+                BigInteger gasLimit = FeeUtils.GAS_LIMIT();
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 
@@ -995,9 +992,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             // apply sc creation output, this will call forger stake msg processor
             for(MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
-                // Since forger still doesn't know the candidate block id we may pass random one.
-                String dummyBlockId = BytesUtils.toHexString(new byte[32]);
-                view.applyMainchainBlockReferenceData(mcBlockRefData, dummyBlockId).get();
+                view.applyMainchainBlockReferenceData(mcBlockRefData);
             }
 
             // get the state root after all state-changing operations

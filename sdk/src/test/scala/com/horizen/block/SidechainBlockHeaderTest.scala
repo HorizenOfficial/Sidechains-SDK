@@ -40,9 +40,9 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
     val bytes = header.bytes
 
 
-    // Test 1: try to deserializer valid bytes
+    // Test 1: try to deserialize valid bytes
     val serializedHeaderTry = SidechainBlockHeaderSerializer.parseBytesTry(bytes)
-    assertTrue("SidechainBlockHeader expected to by parsed.", serializedHeaderTry.isSuccess)
+    assertTrue("SidechainBlockHeader expected to be parsed.", serializedHeaderTry.isSuccess)
 
     val serializedHeader = serializedHeaderTry.get
     assertEquals("SidechainBlockHeader version is different", header.version, serializedHeader.version)
@@ -83,7 +83,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
 
 
     val deserializedHeaderTry = SidechainBlockHeaderSerializer.parseBytesTry(bytes)
-    assertTrue("SidechainBlockHeader expected to by parsed.", deserializedHeaderTry.isSuccess)
+    assertTrue("SidechainBlockHeader expected to be parsed.", deserializedHeaderTry.isSuccess)
 
     val deserializedHeader = deserializedHeaderTry.get
     assertEquals("SidechainBlockHeader version is different", header.version, deserializedHeader.version)

@@ -45,7 +45,7 @@ class AccountStateTest
 
     // Test 1: No block fee info record in the storage
     Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq())
-    var feePayments : Seq[AccountPayment] = state.getFeePayments(0)
+    var feePayments : Seq[AccountPayment] = state.getFeePaymentsInfo(0)
     assertEquals(s"Fee payments size expected to be different.", 0, feePayments.size)
 
 
@@ -56,7 +56,7 @@ class AccountStateTest
 
     Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq(blockFeeInfo1))
 
-    feePayments = state.getFeePayments(0)
+    feePayments = state.getFeePaymentsInfo(0)
     assertEquals(s"Fee payments size expected to be different.", 1, feePayments.size)
     assertEquals(s"Fee value for baseFee ${feePayments.head.value} is wrong",
       blockFeeInfo1.baseFee.add(blockFeeInfo1.forgerTips), feePayments.head.value)
@@ -84,7 +84,7 @@ class AccountStateTest
     Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3))
 
-    feePayments = state.getFeePayments(0)
+    feePayments = state.getFeePaymentsInfo(0)
     assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
 
     var forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, payment) => sum.add(payment.value))
@@ -115,7 +115,7 @@ class AccountStateTest
     Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3, blockFeeInfo4))
 
-    feePayments = state.getFeePayments(0)
+    feePayments = state.getFeePaymentsInfo(0)
 
     assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
 
@@ -155,7 +155,7 @@ class AccountStateTest
               bfi5.baseFee.add(bfi5.forgerTips)))))
 
 
-    feePayments = state.getFeePayments(0)
+    feePayments = state.getFeePaymentsInfo(0)
 
     assertEquals(s"Fee payments size expected to be different.", 2, feePayments.size)
 

@@ -85,7 +85,6 @@ abstract class AbstractCertificateSubmitter[
   override def preStart(): Unit = {
     super.preStart()
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[PM]])
-    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     context.system.eventStream.subscribe(self, CertificateSubmissionStarted.getClass)
     context.system.eventStream.subscribe(self, CertificateSubmissionStopped.getClass)
@@ -464,6 +463,7 @@ abstract class AbstractCertificateSubmitter[
 }
 
 object AbstractCertificateSubmitter {
+
   // Events:
   sealed trait SubmitterEvent
 

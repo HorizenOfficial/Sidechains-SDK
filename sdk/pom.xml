@@ -310,6 +310,8 @@
           <include>sidechainsyncinfo_hex</include>
           <include>sidechainblock_hex</include>
           <include>sidechainblockheader_hex</include>
+          <include>accountblock_hex</include>
+          <include>accountblockheader_hex</include>
           <include>ommer_hex</include>
           <include>mcblock473173_mainnet</include>
           <include>mcblock473174_mainnet</include>
@@ -329,6 +331,7 @@
           <include>ethereumtransaction_eoa2eoa_eip155_legacy_partially_signed_hex</include>
           <include>ethereumtransaction_contract_deployment_eip1559_hex</include>
           <include>ethereumtransaction_contract_call_eip155_legacy_hex</include>
+          <include>mc_ccout_evm_address_hex</include>
           <include>schnorr_sk01_hex</include>
           <include>schnorr_sk02_hex</include>
           <include>schnorr_sk03_hex</include>

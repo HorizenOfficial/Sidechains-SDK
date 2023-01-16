@@ -3,6 +3,9 @@ package com.horizen.account.utils
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
+import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
+import com.horizen.params.NetworkParams
+import org.mockito.Mockito
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
@@ -22,7 +25,7 @@ import com.horizen.evm.utils.Address
 import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.fixtures.SidechainBlockFixture.generateMainchainBlockReference
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
-import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{Secret, SecretSerializer}
 import com.horizen.storage.{SidechainSecretStorage, Storage}
@@ -30,13 +33,12 @@ import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair, WithdrawalEpochInfo}
 import org.mockito.ArgumentMatchers.any
-import org.mockito.{ArgumentMatchers, Mockito}
+import org.mockito.ArgumentMatchers
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
-
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
 import java.util.{Optional, HashMap => JHashMap}
@@ -52,7 +54,7 @@ case class AccountMockDataHelper(genesis: Boolean)
       with SidechainRelatedMainchainOutputFixture
       with MessageProcessorFixture {
 
-  def getMockedAccoutMemoryPool(): AccountMemoryPool = {
+  def getMockedAccoutMemoryPool: AccountMemoryPool = {
     val memoryPool: AccountMemoryPool = mock[AccountMemoryPool]
 
     // executable transaction IDs list
@@ -142,6 +144,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))
 
     if (genesis) {
+      Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
       Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(new Array[Byte](32)))
       Mockito.when(history.blockIdByHeight(1)).thenReturn(genesisBlockId)
     }
@@ -176,14 +179,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     history
   }
 
-  def getMockedBlock(
-      baseFee: BigInteger = FeeUtils.INITIAL_BASE_FEE,
-      gasUsed: Long = 0L,
-      gasLimit: Long = FeeUtils.GAS_LIMIT,
-      blockId: scorex.util.ModifierId = null,
-      parentBlockId: scorex.util.ModifierId = null,
-      txs: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
-  ): AccountBlock = {
+  def getMockedBlock(baseFee: BigInteger = FeeUtils.INITIAL_BASE_FEE, gasUsed: Long = 0L, gasLimit: BigInteger = FeeUtils.GAS_LIMIT, blockId: ModifierId = null, parentBlockId: ModifierId = null, txs: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]): AccountBlock = {
     val block: AccountBlock = mock[AccountBlock]
 
     val scCr1: SidechainCreation = mock[SidechainCreation]

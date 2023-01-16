@@ -31,10 +31,8 @@ import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.{NodeViewHolder, bytesToId}
-
 import java.math.BigInteger
 import java.util
-import java.util.Arrays
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -94,7 +92,7 @@ class EthService(
 
   @RpcMethod("txpool_content")
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
-    new TxPoolContent(getPoolTxs(nodeView, true), getPoolTxs(nodeView, false))
+    new TxPoolContent(getPoolTxs(nodeView, executable = true), getPoolTxs(nodeView, executable = false))
   }
 
   private def getPoolTxs(nodeView: NV, executable: Boolean): util.Map[String,util.Map[BigInteger,TxPoolTransaction]] = {
@@ -269,7 +267,7 @@ class EthService(
       var highBound = params.gas
       getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
         if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
-          highBound = BigInteger.valueOf(blockContext.blockGasLimit)
+          highBound = blockContext.blockGasLimit
         }
         // Normalize the max fee per gas the call is willing to spend.
         var feeCap = BigInteger.ZERO
@@ -376,7 +374,7 @@ class EthService(
     (block, blockInfo)
   }
 
-  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (AccountStateView, BlockContext) ⇒ A): A = {
+  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, BlockContext) ⇒ A): A = {
     val (block, blockInfo) = getBlockByTag(nodeView, tag)
     val blockContext = new BlockContext(
       block.header,
@@ -557,13 +555,14 @@ class EthService(
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData, block.id).get
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
         }
 
-        val gasPool = new GasPool(BigInteger.valueOf(block.header.gasLimit))
+        val gasPool = new GasPool(block.header.gasLimit)
 
         // apply all transaction, collecting traces on the way
         val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
+          blockContext.setEvmResult(EvmResult.emptyEvmResult())
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
           blockContext.getEvmResult
         })
@@ -589,10 +588,10 @@ class EthService(
       getStateViewAtTag(nodeView, (blockNumber - 1).toString) { (tagStateView, blockContext) =>
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData, block.id).get
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
         }
 
-        val gasPool = new GasPool(BigInteger.valueOf(block.header.gasLimit))
+        val gasPool = new GasPool(block.header.gasLimit)
 
         // separate transactions within the block to the ones before the requested Tx and the rest
         val (previousTransactions, followingTransactions) = block.transactions.span(_.id != requestedTransactionHash)
@@ -706,7 +705,7 @@ class EthService(
             .flatMap(nodeView.history.getStorageBlockById)
             .get
           baseFeePerGas(i) = block.header.baseFee
-          gasUsedRatio(i) = block.header.gasUsed.toDouble / block.header.gasLimit.toDouble
+          gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
           if (percentiles.nonEmpty) reward(i) = getRewardsForBlock(block, stateView, percentiles)
         }
       }
@@ -760,7 +759,7 @@ class EthService(
     var sumGasUsed = current.gasUsed
     val rewards = new Array[BigInteger](percentiles.length)
     for (i <- percentiles.indices) {
-      val thresholdGasUsed = (block.header.gasUsed.toDouble * percentiles(i) / 100).toLong
+      val thresholdGasUsed = (block.header.gasUsed.doubleValue() * percentiles(i) / 100).toLong
       // continue summation as long as the total is below the percentile threshold
       while (sumGasUsed < thresholdGasUsed && sortedRewards.hasNext) {
         current = sortedRewards.next()

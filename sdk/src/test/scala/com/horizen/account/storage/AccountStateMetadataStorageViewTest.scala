@@ -70,7 +70,7 @@ class AccountStateMetadataStorageViewTest
     assertTrue("Only default epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.epoch == 0)
     assertTrue("Only default epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.lastEpochIndex == 0)
 
-    storageView.addFeePayment(AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(8333).publicImage()))
+    storageView.updateFeePaymentInfo(AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(8333).publicImage()))
     assertEquals("Block fee is not present in view", 1, storageView.getFeePayments(currentEpoch).size)
     assertEquals("Block fee is present in storage", 0, stateMetadataStorage.getFeePayments(currentEpoch).size)
 
@@ -141,8 +141,8 @@ class AccountStateMetadataStorageViewTest
     (firstEpochToProcess to lastEpochToProcess).foreach(epochNumber => {
       storageView.updateWithdrawalEpochInfo(WithdrawalEpochInfo(epochNumber, 1))
       storageView.updateTopQualityCertificate(generateCertificateWithEpochNumber(epochNumber))
+      storageView.updateFeePaymentInfo(AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(8333).publicImage()))
       storageView.updateLastCertificateReferencedEpoch((epochNumber))
-      storageView.addFeePayment(AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(8333).publicImage()))
       storageView.updateAccountStateRoot(getRandomAccountStateRoot)
       storageView.commit(bytesToVersion(getVersion.data()))
 

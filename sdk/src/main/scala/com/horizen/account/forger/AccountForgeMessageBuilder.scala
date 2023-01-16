@@ -77,10 +77,12 @@ class AccountForgeMessageBuilder(
       blockContext: BlockContext
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
+
     for (mcBlockRefData <- mainchainBlockReferencesData) {
       // Since forger still doesn't know the candidate block id we may pass random one.
       val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData, dummyBlockId).get
+      stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData)
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
@@ -91,7 +93,7 @@ class AccountForgeMessageBuilder(
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
     var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
-    val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
+    val blockGasPool = new GasPool(blockContext.blockGasLimit)
 
     val iter = sidechainTransactions.iterator
     while (iter.hasNext) {
@@ -182,7 +184,7 @@ class AccountForgeMessageBuilder(
     val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 3. Set gasLimit
-    val gasLimit = FeeUtils.GAS_LIMIT
+    val gasLimit : BigInteger = FeeUtils.GAS_LIMIT
 
     // 4. create a context for the new block
     // this will throw if parent block was not found
@@ -225,7 +227,7 @@ class AccountForgeMessageBuilder(
               val withdrawalEpochNumber: Int = dummyView.getWithdrawalEpochInfo.epoch
 
               // get all previous payments for current ending epoch and append the one of the current block
-              val feePayments = dummyView.getFeePayments(withdrawalEpochNumber, Some(currentBlockPayments))
+              val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
 
               // add rewards to forgers balance
               feePayments.foreach(payment => dummyView.addBalance(payment.addressBytes, payment.value))
@@ -243,7 +245,7 @@ class AccountForgeMessageBuilder(
     val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
 
     // 7. Get cumulativeGasUsed from last receipt in list if available
-    val gasUsed: Long = receiptList.lastOption.map(_.cumulativeGasUsed.longValueExact()).getOrElse(0)
+    val gasUsed: BigInteger = receiptList.lastOption.map(_.cumulativeGasUsed).getOrElse(BigInteger.ZERO)
 
     // 8. set the fee payments hash
     val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
@@ -295,13 +297,11 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      // stateRoot TODO add constant
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      // forgerAddress: PublicKeySecp256k1Proposition TODO add constant
       new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),
       BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
-      Long.MaxValue,
-      Long.MaxValue,
+      BigInteger.valueOf(Long.MaxValue),
+      BigInteger.valueOf(Long.MaxValue),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),

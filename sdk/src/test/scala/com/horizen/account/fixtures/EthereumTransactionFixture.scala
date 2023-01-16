@@ -204,6 +204,25 @@ trait EthereumTransactionFixture {
     )
   }
 
+  def getBigDataTransaction(dataSize: Int, gasLimit: BigInteger): EthereumTransaction = {
+
+    val randomData = Array.fill(dataSize)((scala.util.Random.nextInt(256) - 128).toByte)
+    new EthereumTransaction(
+      1L,
+      EthereumTransactionUtils.getToAddressFromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
+      BigInteger.valueOf(0x15), // nonce
+      new BigInteger(BytesUtils.fromHexString("0a02ffee00")), // gasPrice
+      gasLimit,
+      BigInteger.ONE, // value
+      randomData,
+      new SignatureSecp256k1(
+        BytesUtils.fromHexString("1b"),
+        BytesUtils.fromHexString("b83e51baa9bb20d7b281032f44c1ed75f25f69ac47ac26d97e66859ea80c1295"),
+        BytesUtils.fromHexString("22d794fa14567f77d7a6e6e9f780094010d70991c3028b4ea50faf62f1631e52"))
+    )
+  }
+
+
   def copyEip1599EthereumTransaction(
                                       inTx: EthereumTransaction,
                                       inChainId: lang.Long = null,
