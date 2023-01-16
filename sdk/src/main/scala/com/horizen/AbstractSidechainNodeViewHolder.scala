@@ -143,9 +143,9 @@ abstract class AbstractSidechainNodeViewHolder[
   protected def processGenerateSecret: Receive = {
     case AbstractSidechainNodeViewHolder.ReceivableMessages.GenerateSecret(secretCreator) =>
       vault().generateNextSecret(secretCreator) match {
-        case Success(newVault) =>
+        case Success((newVault, secret)) =>
           updateNodeView(updatedVault = Some(newVault))
-          sender() ! Success(Unit)
+          sender() ! Success(secret)
         case Failure(ex) =>
           sender() ! Failure(ex)
       }

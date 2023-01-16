@@ -14,7 +14,7 @@ import scorex.util.ScorexLogging
 import java.util.{List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks.break
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
@@ -105,7 +105,7 @@ abstract class AbstractWallet[
 
   def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): W
 
-  def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[W] = Try {
+  def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)] = Try {
     require(secretCreator != null, "AbstractWallet: Secret creator must be NOT NULL.")
     var nonce = this.secrets().size
     val salt: Array[Byte] = secretCreator.salt()
@@ -114,12 +114,12 @@ abstract class AbstractWallet[
       val secret: T = secretCreator.generateSecret(seed)
       val trySecret = secretStorage.add(secret)
       if(trySecret.isSuccess) {
-        break
+        return Success(this, secret)
       } else {
         nonce += 1
       }
     }
-    this
+    (this, None.get) // TODO
   }
 
   override def secretByPublicKey25519Proposition(publicKey: PublicKey25519Proposition): JOptional[PrivateKey25519] = {

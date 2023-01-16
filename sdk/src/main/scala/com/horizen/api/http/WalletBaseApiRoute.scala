@@ -77,7 +77,7 @@ abstract class WalletBaseApiRoute[
   def createPrivateKey25519: Route = (post & path("createPrivateKey25519")) {
     withAuth {
       entity(as[ReqCreateKey]) { _ =>
-        withNodeView { sidechainNodeView =>
+        withNodeView { _ =>
           val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(PrivateKey25519Creator.getInstance)
           Await.result(secretFuture, timeout.duration).asInstanceOf[Try[PrivateKey25519]] match {
             case Success(secret: PrivateKey25519) =>
