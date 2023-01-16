@@ -3,12 +3,14 @@ package com.horizen
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils.fieldElementLength
 import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.vrf.VrfOutput
 import scorex.util.ModifierId
 import supertagged.TaggedType
 
 import java.math.{BigDecimal, BigInteger, MathContext}
+import java.util
 
 package object consensus {
   val merkleTreeHashLen: Int = 32
@@ -73,7 +75,7 @@ package object consensus {
   private def generateHashAndCleanUp(elements: Array[Byte]*): Array[Byte] = {
     val digest = PoseidonHash.getInstanceConstantLength(elements.length)
     elements.foreach { message =>
-      val fieldElement = FieldElementUtils.messageToFieldElement(message)
+      val fieldElement = FieldElementUtils.messageToFieldElement(util.Arrays.copyOf(message, fieldElementLength()))
       digest.update(fieldElement)
       fieldElement.freeFieldElement()
     }
