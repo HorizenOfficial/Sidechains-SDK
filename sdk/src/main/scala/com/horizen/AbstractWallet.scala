@@ -109,7 +109,8 @@ abstract class AbstractWallet[
     require(secretCreator != null, "AbstractWallet: Secret creator must be NOT NULL.")
     var nonce = this.secrets().size
     val salt: Array[Byte] = secretCreator.salt()
-    while(true) {
+    val secretStorageSize = secretStorage.getAll.size
+    for(_ <- 0 to secretStorageSize) {
       val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
       val secret: T = secretCreator.generateSecret(seed)
       val trySecret = secretStorage.add(secret)
@@ -119,7 +120,7 @@ abstract class AbstractWallet[
         nonce += 1
       }
     }
-    (this, None.get) // TODO
+    throw new RuntimeException("Exceeded number of attempts generating secret")
   }
 
   override def secretByPublicKey25519Proposition(publicKey: PublicKey25519Proposition): JOptional[PrivateKey25519] = {
