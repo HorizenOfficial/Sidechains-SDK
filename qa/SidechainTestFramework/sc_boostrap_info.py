@@ -119,7 +119,9 @@ class SCNodeConfiguration(object):
                  cert_submitter_enabled=True,
                  cert_signing_enabled=True,
                  submitter_private_keys_indexes=None,
-                 max_connections=100,
+                 max_incoming_connections=100,
+                 max_outgoing_connections=100,
+                 get_peers_interval="2m",
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
                  forger_options=SCForgerConfiguration(),
@@ -136,7 +138,9 @@ class SCNodeConfiguration(object):
         self.cert_submitter_enabled = cert_submitter_enabled
         self.cert_signing_enabled = cert_signing_enabled
         self.submitter_private_keys_indexes = submitter_private_keys_indexes
-        self.max_connections = max_connections
+        self.max_incoming_connections = max_incoming_connections
+        self.max_outgoing_connections = max_outgoing_connections
+        self.get_peers_interval = get_peers_interval
         self.automatic_fee_computation = automatic_fee_computation
         self.certificate_fee = certificate_fee
         self.forger_options = forger_options

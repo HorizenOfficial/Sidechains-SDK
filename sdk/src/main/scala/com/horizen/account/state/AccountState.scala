@@ -24,7 +24,7 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.util.bytesToId
+import sparkz.util.bytesToId
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter

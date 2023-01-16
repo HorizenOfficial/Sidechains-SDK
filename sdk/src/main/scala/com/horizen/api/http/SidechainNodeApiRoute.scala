@@ -17,7 +17,7 @@ import com.horizen.utils.BytesUtils
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, RemovePeer}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
 
@@ -128,7 +128,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
             // Disconnect the connection if present and active.
             // Note: `Blacklisted` name is misleading, because the message supposed to be used only during peer penalize
             // procedure. Actually inside NetworkController it looks for connection and emits `CloseConnection`.
-            networkController ! Blacklisted(peerAddress)
+            networkController ! DisconnectFromAddress(peerAddress)
             ApiResponseUtil.toResponse(RespDisconnect(host + ":" + port))
         }
     }
