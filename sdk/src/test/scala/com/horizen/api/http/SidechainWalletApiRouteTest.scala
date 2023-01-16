@@ -217,7 +217,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         assertTrue(node.isTextual)
       }
       // secret is not added
-      sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GenerateSecret_reply(false)
       Post(basePath + "createVrfSecret").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
