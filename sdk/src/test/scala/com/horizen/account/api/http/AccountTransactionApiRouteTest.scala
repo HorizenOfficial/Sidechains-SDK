@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.utils.FeeUtils
+import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
@@ -332,6 +333,23 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
           fail("Serialization failed for object SidechainApiResponseBody")
 
         assertEquals("0205", result.get("code").asText())
+      }
+    }
+
+    "reply at /createKeyRotationTransaction" in {
+      Post(basePath + "createKeyRotationTransaction").withHeaders(apiTokenHeader)
+        .withEntity(SerializationUtil.serialize(ReqCreateKeyRotationTransaction(1, 0, "123",
+          "123", "123", "123",
+          Option.apply(BigInteger.ONE), Option.apply(EIP1559GasInfo(
+            BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, BigInteger.ONE)
+          )))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("error")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals("0404", result.get("code").asText())
       }
     }
   }
