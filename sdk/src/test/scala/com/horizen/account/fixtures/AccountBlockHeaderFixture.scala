@@ -38,7 +38,7 @@ trait AccountBlockHeaderFixture {
     val forgerAddress : AddressProposition = accountPayment.address
     val baseFee: BigInteger = INITIAL_BASE_FEE
     val gasUsed: BigInteger = BigInteger.valueOf(21000)
-    val gasLimit: BigInteger = BigInteger.valueOf(GAS_LIMIT)
+    val gasLimit: BigInteger = GAS_LIMIT
     val ommersRootHash = Utils.ZEROS_HASH
     val ommersCumulativeScore : Long = 0L;
     val feePaymentHash = new Array[Byte](32)

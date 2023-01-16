@@ -267,7 +267,7 @@ class EthService(
       var highBound = params.gas
       getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
         if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
-          highBound = BigInteger.valueOf(blockContext.blockGasLimit)
+          highBound = blockContext.blockGasLimit
         }
         // Normalize the max fee per gas the call is willing to spend.
         var feeCap = BigInteger.ZERO

@@ -41,7 +41,7 @@ case class AccountBlockHeader(
                                gasLimit: BigInteger,
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
-                               override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. By default StateDB.EMPTY_ROOT_HASH.
+                               override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. By default AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH.
                                logsBloom: Bloom,
                                override val signature: Signature25519
                                ) extends SidechainBlockHeaderBase with BytesSerializable {
@@ -114,11 +114,11 @@ case class AccountBlockHeader(
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: baseFee=$baseFee is non positive and therefore invalid.")
 
         // check, that gas limit is valid
-        if(gasLimit.longValue() != FeeUtils.GAS_LIMIT)
+        if(gasLimit.compareTo(FeeUtils.GAS_LIMIT) != 0)
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasLimit=$gasLimit is invalid.")
         if(gasUsed.signum() < 0)
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed=$gasUsed is below zero and therefore invalid.")
-        if(gasUsed.longValue() > gasLimit.longValue())
+        if(gasUsed.compareTo(gasLimit) > 0)
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed=$gasUsed is greater than gasLimit=$gasLimit and therefore invalid.")
 
 

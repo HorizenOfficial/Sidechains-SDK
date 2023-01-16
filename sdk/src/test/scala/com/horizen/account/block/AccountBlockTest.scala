@@ -189,7 +189,8 @@ class AccountBlockTest
     var validBlock = createBlock()
     validBlock.semanticValidity(params) match {
       case Success(_) =>
-      case Failure(e) => jFail(s"AccountBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+      case Failure(e) =>
+        jFail(s"AccountBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
     }
 
     // Test2: AccountBlock with invalid AccountBlockHeader must to be invalid.
@@ -870,7 +871,7 @@ class AccountBlockTest
     val forgerAddress: AddressProposition = accountPayment.address
     val baseFee: BigInteger = INITIAL_BASE_FEE
     val gasUsed: BigInteger = BigInteger.valueOf(21000)
-    val gasLimit: BigInteger = BigInteger.valueOf(GAS_LIMIT)
+    val gasLimit: BigInteger = GAS_LIMIT
     val logsBloom: Bloom = new Bloom()
 
     AccountBlock.create(

@@ -93,7 +93,7 @@ class AccountForgeMessageBuilder(
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
     var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
-    val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
+    val blockGasPool = new GasPool(blockContext.blockGasLimit)
 
     val iter = sidechainTransactions.iterator
     while (iter.hasNext) {
@@ -184,7 +184,7 @@ class AccountForgeMessageBuilder(
     val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 3. Set gasLimit
-    val gasLimit : BigInteger = BigInteger.valueOf(FeeUtils.GAS_LIMIT)
+    val gasLimit : BigInteger = FeeUtils.GAS_LIMIT
 
     // 4. create a context for the new block
     // this will throw if parent block was not found
@@ -193,7 +193,7 @@ class AccountForgeMessageBuilder(
       forgerAddress.address(),
       timestamp,
       baseFee,
-      gasLimit.longValueExact(),
+      gasLimit,
       parentInfo.height + 1,
       TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
       WithdrawalEpochUtils

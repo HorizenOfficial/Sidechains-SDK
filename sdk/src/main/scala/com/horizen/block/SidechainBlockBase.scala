@@ -135,8 +135,6 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id sidechain transactions amount exceeds the limit.")
 
     // Check Block size
-    // TODO in account model this should not be checked.
-    //      An option would be to handle it like the check above on number of TXs
     val blockSize: Int = bytes.length
     if(blockExceedsSizeLimit(blockSize))
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id size exceeds the limit.")
