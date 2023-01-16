@@ -8,13 +8,12 @@ import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.mockito.Mockito
-import org.scalatest.prop.TableDrivenPropertyChecks
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.util.Random
 
-class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with TableDrivenPropertyChecks {
+class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
   override val basePath = "/transaction/"
 
@@ -29,48 +28,70 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with T
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
-      val cases = Table(
-        ("Route", "Expected response code"),
-        ("allTransactions", StatusCodes.OK.intValue),
-        ("allWithdrawalRequests", StatusCodes.OK.intValue),
-        ("allForgingStakes", StatusCodes.OK.intValue),
-        ("sendCoinsToAddress", StatusCodes.BadRequest.intValue),
-        ("createEIP1559Transaction", StatusCodes.BadRequest.intValue),
-        ("createLegacyTransaction", StatusCodes.BadRequest.intValue),
-        ("sendRawTransaction", StatusCodes.InternalServerError.intValue),
-        ("signTransaction", StatusCodes.InternalServerError.intValue),
-        ("makeForgerStake", StatusCodes.BadRequest.intValue),
-        ("withdrawCoins", StatusCodes.BadRequest.intValue),
-        ("spendForgingStake", StatusCodes.BadRequest.intValue),
-        ("createSmartContract", StatusCodes.BadRequest.intValue),
-        ("decodeTransactionBytes", StatusCodes.InternalServerError.intValue),
-        ("createKeyRotationTransaction", StatusCodes.BadRequest.intValue)
-      )
+      Post(basePath + "allTransactions").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "allTransactions").withEntity("maybe_a_json") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
 
-      forAll(cases) { (route, expectedCode) =>
-        val path = basePath + route
 
-        if (expectedCode == StatusCodes.BadRequest.intValue) {
-          Post(path).withHeaders(apiTokenHeader) ~> sidechainTransactionApiRoute ~> check {
-            rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
-          }
-          Post(path).withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-            rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
-          }
-        }
+      Post(basePath + "sendCoinsToAddress").withHeaders(apiTokenHeader) ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "sendCoinsToAddress").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "sendCoinsToAddress").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "sendCoinsToAddress").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
 
-        Post(path).withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
-          status.intValue() shouldBe expectedCode
-          if (expectedCode != StatusCodes.InternalServerError.intValue && expectedCode != StatusCodes.NotFound.intValue) {
-            responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-          }
-        }
+      Post(basePath + "makeForgerStake") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "makeForgerStake").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "makeForgerStake").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
 
-        if (expectedCode != StatusCodes.NotFound.intValue && route != "allWithdrawalRequests" && route != "allForgingStakes") {
-          Post(path).withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-            rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
-          }
-        }
+      Post(basePath + "spendForgingStake") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "spendForgingStake").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "spendForgingStake").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+      Post(basePath + "withdrawCoins") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "withdrawCoins").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "withdrawCoins").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+      Post(basePath + "createSmartContract") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "createSmartContract").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "createSmartContract").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
 
@@ -236,7 +257,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with T
       val contractCode = BytesUtils.toHexString(contractCodeBytes)
       Post(basePath + "createSmartContract").withHeaders(apiTokenHeader)
         .withEntity(SerializationUtil.serialize(ReqCreateContract(Some(BigInteger.ONE),
-        contractCode, None))) ~> sidechainTransactionApiRoute ~> check {
+          contractCode, None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
