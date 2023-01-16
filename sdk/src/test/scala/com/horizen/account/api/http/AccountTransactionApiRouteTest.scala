@@ -3,11 +3,11 @@ package com.horizen.account.api.http
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.account.api.http.AccountTransactionRestScheme._
-import com.horizen.params.{MainNetParams, TestNetParams}
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.proposition.VrfPublicKey
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
+import org.mockito.Mockito
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 import java.math.BigInteger
@@ -32,6 +32,8 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with T
       val cases = Table(
         ("Route", "Expected response code"),
         ("allTransactions", StatusCodes.OK.intValue),
+        ("allWithdrawalRequests", StatusCodes.OK.intValue),
+        ("allForgingStakes", StatusCodes.OK.intValue),
         ("sendCoinsToAddress", StatusCodes.BadRequest.intValue),
         ("createEIP1559Transaction", StatusCodes.BadRequest.intValue),
         ("createLegacyTransaction", StatusCodes.BadRequest.intValue),
@@ -64,7 +66,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with T
           }
         }
 
-        if (expectedCode != StatusCodes.NotFound.intValue) {
+        if (expectedCode != StatusCodes.NotFound.intValue && route != "allWithdrawalRequests" && route != "allForgingStakes") {
           Post(path).withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
             rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
           }

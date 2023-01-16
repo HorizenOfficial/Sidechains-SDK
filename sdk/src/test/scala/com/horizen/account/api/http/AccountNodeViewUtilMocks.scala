@@ -54,8 +54,8 @@ class AccountNodeViewUtilMocks extends MockitoSugar
 
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountState = {
     val accountState = mock[NodeAccountState]
-    Mockito.when(accountState.getListOfForgerStakes).thenReturn(listOfStakes)
-    Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenReturn(listOfWithdrawalRequests)
+    Mockito.when(accountState.getListOfForgersStakes).thenReturn(listOfStakes)
+    Mockito.when(accountState.getWithdrawalRequests(ArgumentMatchers.anyInt())).thenReturn(listOfWithdrawalRequests)
     Mockito
       .when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // It has always enough money
