@@ -6,7 +6,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GenerateSecret, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
@@ -25,7 +25,7 @@ import com.horizen.forge.AbstractForger
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
-import com.horizen.secret.SecretSerializer
+import com.horizen.secret.{SecretSerializer, VrfKeyGenerator}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.storage.StorageIterator
 import com.horizen.transaction._
@@ -195,6 +195,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply())
                 sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration), funParameter)
           }
+        case GenerateSecret(_) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GenerateSecret_reply())
+            sender ! Success(VrfKeyGenerator.getInstance().generateSecret("some_seed".getBytes))
+          else sender ! Failure(new Exception("Secret not generated."))
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success(Unit)

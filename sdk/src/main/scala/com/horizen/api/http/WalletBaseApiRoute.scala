@@ -51,7 +51,7 @@ abstract class WalletBaseApiRoute[
   def createVrfSecret: Route = (post & path("createVrfSecret")) {
     withAuth {
       entity(as[ReqCreateKey]) { _ =>
-        withNodeView { sidechainNodeView =>
+        withNodeView { _ =>
           val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(VrfKeyGenerator.getInstance)
           Await.result(secretFuture, timeout.duration).asInstanceOf[Try[VrfSecretKey]] match {
             case Success(secret: VrfSecretKey) =>
