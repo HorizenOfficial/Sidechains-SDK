@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
@@ -73,7 +73,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
-    if (msg.getData.length != METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
+    if (msg.getData.length != METHOD_ID_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
       throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
     val inputParams = GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
     val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(inputParams.epochNum, view)
@@ -83,7 +83,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   private[horizen] def checkWithdrawalRequestValidity(msg: Message): Unit = {
     val withdrawalAmount = msg.getValue
 
-    if (msg.getData.length != METHOD_CODE_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsLengthInBytes) {
+    if (msg.getData.length != METHOD_ID_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsLengthInBytes) {
       throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
     } else if (!ZenWeiConverter.isValidZenAmount(withdrawalAmount)) {
       throw new ExecutionRevertedException(s"Withdrawal amount is not a valid Zen amount: $withdrawalAmount")

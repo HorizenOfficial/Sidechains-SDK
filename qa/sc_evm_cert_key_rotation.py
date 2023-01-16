@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-import multiprocessing
 import time
 
 import requests
 
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_cert_signer_secrets
@@ -12,8 +13,6 @@ from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
 from httpCalls.submitter.getSchnorrPublicKeyHash import http_get_schnorr_public_key_hash
 from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction_evm
-from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from test_framework.util import assert_equal, assert_true
 
 """
@@ -130,10 +129,7 @@ class SCKeyRotationTest(AccountChainSetup):
             private_master_keys.append(new_m_key.secret)
             public_master_keys.append(new_m_key.publicKey)
 
-        api_server = SecureEnclaveApiServer(private_master_keys, public_master_keys)
-
-        api_server_thread = multiprocessing.Process(target=lambda: api_server.start())
-        api_server_thread.start()
+        SecureEnclaveApiServer(private_master_keys, public_master_keys).start()
 
         current_epoch_number = 0
         list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)
@@ -628,8 +624,6 @@ class SCKeyRotationTest(AccountChainSetup):
         assert_equal(epoch_three_keys_root_hash, cert['vFieldElementCertificateField'][0],
                      "Certificate Keys Root Hash incorrect")
         assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
-
-        api_server_thread.terminate()
 
 
 if __name__ == "__main__":
