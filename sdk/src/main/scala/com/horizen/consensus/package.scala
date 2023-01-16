@@ -75,12 +75,12 @@ package object consensus {
 
   private def generateHashAndCleanUp(elements: Array[Byte]*): Array[Byte] = {
     val digest = PoseidonHash.getInstanceConstantLength(elements.length)
-    elements.foreach { message =>
-      if (message.length > fieldElementLength) {
-        throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
-          message.length + " but it shall be less than " + fieldElementLength)
+    elements.foreach { element =>
+      if (element.length > fieldElementLength) {
+        throw new IllegalArgumentException("Element length is exceed allowed message len. Element len " +
+          element.length + " but it shall be less than " + fieldElementLength)
       }
-      val fieldElement = FieldElement.deserialize(util.Arrays.copyOf(message, fieldElementLength))
+      val fieldElement = FieldElement.deserialize(util.Arrays.copyOf(element, fieldElementLength))
       digest.update(fieldElement)
       fieldElement.freeFieldElement()
     }
