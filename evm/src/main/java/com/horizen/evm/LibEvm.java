@@ -217,6 +217,10 @@ final class LibEvm {
         return invoke("HashRoot", new HashParams(values), Hash.class).toBytes();
     }
 
+    public static void accessSetup(int handle, byte[] sender, byte[] destination) {
+        invoke("AccessSetup", new AccessParams(handle, sender, destination));
+    }
+
     public static boolean accessAccount(int handle, byte[] address) {
         return invoke("AccessAccount", new AccountParams(handle, address), Boolean.class);
     }

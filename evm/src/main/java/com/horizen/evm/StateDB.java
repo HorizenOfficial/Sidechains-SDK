@@ -218,8 +218,8 @@ public class StateDB extends ResourceHandle {
     /**
      * Read storage trie of given account.
      *
-     * @param address  account address
-     * @param key      storage key
+     * @param address account address
+     * @param key     storage key
      * @return storage value, always 32 bytes
      */
     public byte[] getStorage(byte[] address, byte[] key) {
@@ -242,9 +242,9 @@ public class StateDB extends ResourceHandle {
      * Note: Do not mix RAW and CHUNKED strategies for the same key,
      * this can potentially lead to dangling nodes in the storage Trie and de facto infinite-loops.
      *
-     * @param address  account address
-     * @param key      storage key
-     * @param value    value to store
+     * @param address account address
+     * @param key     storage key
+     * @param value   value to store
      */
     public void setStorage(byte[] address, byte[] key, byte[] value) {
         LibEvm.stateSetStorage(handle, address, key, value);
@@ -308,10 +308,33 @@ public class StateDB extends ResourceHandle {
         LibEvm.stateSetTxContext(handle, txHash, txIndex);
     }
 
+    /**
+     * Reset and prepare account access list.
+     *
+     * @param sender      sender account
+     * @param destination destination account
+     */
+    public void accessSetup(byte[] sender, byte[] destination) {
+        LibEvm.accessSetup(handle, sender, destination);
+    }
+
+    /**
+     * Add the given account to the access list.
+     *
+     * @param address account to access
+     * @return true if the account was already on the access list, false otherwise
+     */
     public boolean accessAccount(byte[] address) {
         return LibEvm.accessAccount(handle, address);
     }
 
+    /**
+     * Add given account storage slot to the access list.
+     *
+     * @param address account to access
+     * @param slot    storage slot to access
+     * @return true if the slot was already on the access list, false otherwise
+     */
     public boolean accessSlot(byte[] address, byte[] slot) {
         return LibEvm.accessSlot(handle, address, slot);
     }

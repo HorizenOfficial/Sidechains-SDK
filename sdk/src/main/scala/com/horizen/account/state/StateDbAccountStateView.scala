@@ -156,11 +156,6 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
       .sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
-  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = {
-    // set context for the created events/logs assignment
-    stateDb.setTxContext(txHash, idx)
-  }
-
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
   def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
@@ -335,6 +330,12 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
   override def getStateDbHandle: ResourceHandle = stateDb
 
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
+
+  // set context for the created events/logs assignment
+  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = stateDb.setTxContext(txHash, idx)
+
+  // reset and prepare account access list
+  def setupAccessList(msg: Message): Unit = stateDb.accessSetup(msg.getFromAddressBytes, msg.getToAddressBytes)
 
   def getRefund: BigInteger = stateDb.getRefund
 
