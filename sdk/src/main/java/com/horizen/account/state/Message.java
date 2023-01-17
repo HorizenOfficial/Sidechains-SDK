@@ -1,6 +1,7 @@
 package com.horizen.account.state;
 
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.evm.utils.Address;
 import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 
@@ -51,7 +52,9 @@ public class Message {
         return from;
     }
 
-    public byte[] getFromAddressBytes() { return from.isEmpty() ? null : from.get().address(); }
+    public byte[] getFromAddressBytes() {
+        return from.map(AddressProposition::address).orElseGet(() -> new byte[Address.LENGTH]);
+    }
 
     public Optional<AddressProposition> getTo() {
         return to;
