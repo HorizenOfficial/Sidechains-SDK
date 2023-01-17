@@ -310,6 +310,8 @@
           <include>sidechainsyncinfo_hex</include>
           <include>sidechainblock_hex</include>
           <include>sidechainblockheader_hex</include>
+          <include>accountblock_hex</include>
+          <include>accountblockheader_hex</include>
           <include>ommer_hex</include>
           <include>mcblock473173_mainnet</include>
           <include>mcblock473174_mainnet</include>
