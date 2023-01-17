@@ -121,7 +121,6 @@ class AccountForgeMessageBuilder(
           priceAndNonceIter.next()
 
         case Failure(err) =>
-          // TODO: remove revert logic here, assuming applyTransaction is either successfull or does not do any changes?
           log.trace(s"Could not apply tx, reason: ${err.getMessage}")
           err match {
             case _: GasLimitReached =>
