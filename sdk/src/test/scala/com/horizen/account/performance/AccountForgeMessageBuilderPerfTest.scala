@@ -120,7 +120,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
       val (_, appliedTxs, _) = forger.computeBlockInfo(stateView, listOfExecTxs, Seq.empty, blockContext, null)
       val totalTime = System.currentTimeMillis() - startTime
 
-      val maxNumOfTxsInBlock = BigInteger.valueOf(blockContext.blockGasLimit).divide(GasUtil.TxGas).intValue()
+      val maxNumOfTxsInBlock = blockContext.blockGasLimit.divide(GasUtil.TxGas).intValue()
       val expectedNumOfAppliedTxs = if (numOfTxs < maxNumOfTxsInBlock) numOfTxs else maxNumOfTxsInBlock
 
       assertEquals(expectedNumOfAppliedTxs, appliedTxs.size)

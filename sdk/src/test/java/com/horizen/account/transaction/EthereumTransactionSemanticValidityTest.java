@@ -407,4 +407,11 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         );
     }
 
+    @Test
+    public void testBigTxValidity() throws TransactionSemanticValidityException {
+        // data are charged with gas therefore we must set a gasLimt large enough.
+        // As of now check on block max gas limit is not made in tx.semanticValidity (it is made in state.validate(tx))
+        var goodTx = getBigDataTransaction(5000000, BigInteger.valueOf(100000000));
+        goodTx.semanticValidity();
+    }
 }

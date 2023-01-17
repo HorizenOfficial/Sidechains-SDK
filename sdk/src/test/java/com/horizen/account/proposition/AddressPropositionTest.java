@@ -4,9 +4,10 @@ import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.secret.PrivateKeySecp256k1Creator;
 import com.horizen.account.secret.PrivateKeySecp256k1Serializer;
 import com.horizen.utils.BytesUtils;
-
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
@@ -26,7 +27,7 @@ public class AddressPropositionTest {
     @Test
     public void addressPropositionTest() {
         // Test 1: Returns hash code correctly
-        assertEquals("Hashcode is different", -1448559331, addressProposition.hashCode());
+        assertEquals("Hashcode is different", Arrays.hashCode(addressProposition.address()), addressProposition.hashCode());
 
         // Test 2: Returns true as the object is the same
         assertEquals(addressProposition, addressProposition);

@@ -69,10 +69,10 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     val bytes = info.bytes
 
 
-    // Test 1: try to deserializer valid bytes
+    // Test 1: try to deserialize valid bytes
     val serializedInfoTry = SidechainBlockInfoSerializer.parseBytesTry(bytes)
 
-    assertTrue("SidechainBlockInfo expected to by parsed.", serializedInfoTry.isSuccess)
+    assertTrue("SidechainBlockInfo expected to be parsed.", serializedInfoTry.isSuccess)
     assertEquals("SidechainBlockInfo height is different", info.height, serializedInfoTry.get.height)
     assertEquals("SidechainBlockInfo score is different", info.score, serializedInfoTry.get.score)
     assertEquals("SidechainBlockInfo timestamp is different", info.timestamp, serializedInfoTry.get.timestamp)
@@ -116,7 +116,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     }
 
     val serializedInfoTry = SidechainBlockInfoSerializer.parseBytesTry(bytes)
-    assertTrue("SidechainBlockInfo expected to by parsed.", serializedInfoTry.isSuccess)
+    assertTrue("SidechainBlockInfo expected to be parsed.", serializedInfoTry.isSuccess)
     assertEquals("SidechainBlockInfo height is different", height, serializedInfoTry.get.height)
     assertEquals("SidechainBlockInfo score is different", score, serializedInfoTry.get.score)
     assertEquals("SidechainBlockInfo parentId is different", parentId, serializedInfoTry.get.parentId)

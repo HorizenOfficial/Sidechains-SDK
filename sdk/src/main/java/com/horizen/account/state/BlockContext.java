@@ -10,7 +10,7 @@ public class BlockContext {
     public final byte[] forgerAddress;
     public final long timestamp;
     public final BigInteger baseFee;
-    public final long blockGasLimit;
+    public final BigInteger blockGasLimit;
     public final int blockNumber;
     public final int consensusEpochNumber;
     public final int withdrawalEpochNumber;
@@ -22,7 +22,7 @@ public class BlockContext {
         byte[] forgerAddress,
         long timestamp,
         BigInteger baseFee,
-        long blockGasLimit,
+        BigInteger blockGasLimit,
         int blockNumber,
         int consensusEpochNumber,
         int withdrawalEpochNumber,

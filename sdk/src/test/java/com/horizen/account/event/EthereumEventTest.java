@@ -25,9 +25,10 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class EthereumEventTest {
-
     @Test
     public void ethereumEventTest() throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException {
+        // if not described in the related test comment, the expected result was calculated with an online ABI encoder
+
         // Test 1: Test usage of EVM log creation utility with java class, annotated fields, any order
         ClassTestEvent1 event1 = new ClassTestEvent1(new Address(BigInteger.TEN), new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
         checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event1), Numeric.hexStringToByteArray("0xf899941122334455667788990011223344556677889900a0e08885b895621acf4890c3c582ae58fff9a23a95e827c7128ef8632f2dc74541a0000000000000000000000000000000000000000000000000000000000000000aa00000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002"));

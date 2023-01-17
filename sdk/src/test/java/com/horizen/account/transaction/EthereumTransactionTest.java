@@ -13,10 +13,12 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
+
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
 public class EthereumTransactionTest {
+
 
     public void checkEthTx(EthereumTransaction tx) {
         assertTrue(tx.getSignature().isValid(tx.getFrom(), tx.messageToSign()));
@@ -33,6 +35,8 @@ public class EthereumTransactionTest {
 
     @Test
     public void transactionIdTests() {
+        // expected ids were calculated using rlp encoder
+
         // EIP-1559
         var eipSignedTx = new EthereumTransaction(
                 31337L,
@@ -42,8 +46,8 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
-                new byte[] {},
-                new SignatureSecp256k1(new byte[] {0x1b},
+                new byte[]{},
+                new SignatureSecp256k1(new byte[]{0x1b},
                         BytesUtils.fromHexString("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023"),
                         BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"))
         );
@@ -57,8 +61,8 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
                 BigInteger.valueOf(1),
-                new byte[] {},
-                new SignatureSecp256k1(new byte[] {0x1c},
+                new byte[]{},
+                new SignatureSecp256k1(new byte[]{0x1c},
                         BytesUtils.fromHexString("2a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5"),
                         BytesUtils.fromHexString("7ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"))
         );
@@ -73,7 +77,7 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                 BigInteger.valueOf(21000),
                 BigInteger.TEN.pow(18),
-                new byte[] {},
+                new byte[]{},
                 null
         );
         var eip155Tx = new EthereumTransaction(
@@ -83,8 +87,8 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                 BigInteger.valueOf(21000),
                 BigInteger.TEN.pow(18),
-                new byte[] {},
-                new SignatureSecp256k1(new byte[] {0x1b},
+                new byte[]{},
+                new SignatureSecp256k1(new byte[]{0x1b},
                         BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
                         BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83"))
         );
@@ -106,11 +110,11 @@ public class EthereumTransactionTest {
                 BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
                 BigInteger.valueOf(21000),
                 BigInteger.TEN.pow(18),
-                new byte[] {},
+                new byte[]{},
                 null
         );
-        assertEquals("Chainid was not correct", someTx.getChainId(), chainId);
-        assertEquals("EIP-155 message to sign is incorrect", "0x" + BytesUtils.toHexString(someTx.messageToSign()), "0xec098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a764000080018080");
+        assertEquals("Chainid was not correct", chainId, someTx.getChainId());
+        assertEquals("EIP-155 message to sign is incorrect", "0xec098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a764000080018080", "0x" + BytesUtils.toHexString(someTx.messageToSign()));
 
 
         // metamask eip155 tx:
@@ -123,7 +127,7 @@ public class EthereumTransactionTest {
         EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(metamaskHexStr));
         long chainId2 = decodedTx.getChainId();
         byte[] fromAddress = decodedTx.getFrom().address();
-        byte[] toAddress = new byte[] {};
+        byte[] toAddress = new byte[]{};
         if (decodedTx.getTo().isPresent())
             toAddress = decodedTx.getTo().get().address();
 
@@ -136,20 +140,6 @@ public class EthereumTransactionTest {
         // re-encode and check it is the same
         byte[] encodedTx = EthereumTransactionSerializer.getSerializer().toBytes(decodedTx);
         assertEquals(metamaskHexStr, BytesUtils.toHexString(encodedTx));
-    }
-
-    @Test
-    public void ethereumTransactionConversionUtilsTest() {
-        long lv = 1997;
-        byte[] res = EthereumTransactionUtils.convertToBytes(lv);
-        long lv2 = EthereumTransactionUtils.convertToLong(res);
-        assertEquals(lv, lv2);
-
-        byte[] bv = BytesUtils.fromHexString("01");
-        long lv3 = EthereumTransactionUtils.convertToLong(bv);
-        assertEquals(lv3, 1);
-        byte[] bv2 = EthereumTransactionUtils.convertToBytes(lv3);
-        assertEquals("0000000000000001", BytesUtils.toHexString(bv2));
     }
 
     private EthereumTransaction[] generateTransactions(int count) {
@@ -220,8 +210,8 @@ public class EthereumTransactionTest {
 
         // similar test adding the signature and comparing ids
         var expectedTx2 = new EthereumTransaction(expectedTx, new SignatureSecp256k1(new byte[]{0x1b},
-                        BytesUtils.fromHexString("20d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04"),
-                        BytesUtils.fromHexString("7c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb")));
+                BytesUtils.fromHexString("20d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04"),
+                BytesUtils.fromHexString("7c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb")));
 
         assertEquals(expectedTx2.id(), actualTx.id());
 
@@ -243,7 +233,7 @@ public class EthereumTransactionTest {
                 Numeric.toBigInt("0xf224d4a00"),
                 Numeric.toBigInt("0x57a0"),
                 Numeric.toBigInt("0x110d9316ec000"),
-                new byte[] {},
+                new byte[]{},
                 null);
 
         assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
@@ -253,7 +243,7 @@ public class EthereumTransactionTest {
                 new byte[]{0x1c},
                 BytesUtils.fromHexString("a4e306691e16bbaa67faafeb00d81431b13194dcb39d97cf7dde47a6874d92d8"),
                 BytesUtils.fromHexString("3b3b6a4500ff90d25022616d237de8559ab79cb294905cf79cadcdf076b50a2a")
-            );
+        );
         var expectedTx2 = new EthereumTransaction(expectedTx, signature);
 
         assertEquals(expectedTx2.id(), actualTx.id());
@@ -270,7 +260,7 @@ public class EthereumTransactionTest {
                 Numeric.toBigInt("0xba43b7400"),
                 Numeric.toBigInt("0x15f90"),
                 Numeric.toBigInt("0x29b1c422c243fe"),
-                new byte[] {},
+                new byte[]{},
                 null);
 
         assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
