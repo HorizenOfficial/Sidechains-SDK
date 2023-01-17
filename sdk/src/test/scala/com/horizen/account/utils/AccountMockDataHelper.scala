@@ -179,14 +179,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     history
   }
 
-  def getMockedBlock(
-      baseFee: BigInteger = FeeUtils.INITIAL_BASE_FEE,
-      gasUsed: Long = 0L,
-      gasLimit: Long = FeeUtils.GAS_LIMIT,
-      blockId: scorex.util.ModifierId = null,
-      parentBlockId: scorex.util.ModifierId = null,
-      txs: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
-  ): AccountBlock = {
+  def getMockedBlock(baseFee: BigInteger = FeeUtils.INITIAL_BASE_FEE, gasUsed: Long = 0L, gasLimit: BigInteger = FeeUtils.GAS_LIMIT, blockId: ModifierId = null, parentBlockId: ModifierId = null, txs: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]): AccountBlock = {
     val block: AccountBlock = mock[AccountBlock]
 
     val scCr1: SidechainCreation = mock[SidechainCreation]

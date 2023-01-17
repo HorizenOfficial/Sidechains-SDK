@@ -126,16 +126,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       0,
       FeeUtils.GAS_LIMIT,
       genesisBlockId,
-      bytesToId(new Array[Byte](32))
-    )
+      bytesToId(new Array[Byte](32)))
     val mockedBlock: AccountBlock = mockHelper.getMockedBlock(
       BigInteger.valueOf(875000000),
       txEip1559.getEffectiveGasPrice(FeeUtils.INITIAL_BASE_FEE).longValueExact(),
       FeeUtils.GAS_LIMIT,
-      bytesToId(Numeric.hexStringToByteArray("dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")),
-      genesisBlockId,
-      txs
-    )
+      bytesToId(Numeric.hexStringToByteArray("dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")), genesisBlockId, txs)
     val mockedHistory: AccountHistory = mockHelper.getMockedAccountHistory(
       Some(mockedBlock),
       Some(genesisBlock),

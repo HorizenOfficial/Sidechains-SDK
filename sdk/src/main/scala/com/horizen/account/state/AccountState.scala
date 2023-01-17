@@ -140,7 +140,7 @@ class AccountState(
       var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
       var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
-      val blockGasPool = new GasPool(BigInteger.valueOf(mod.header.gasLimit))
+      val blockGasPool = new GasPool(mod.header.gasLimit)
       val blockContext =
         new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch, params.chainId)
 
@@ -199,9 +199,8 @@ class AccountState(
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
       evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
 
-      val logsBloom = Bloom.fromReceipts(receiptList.map(_.consensusDataReceipt))
-
-      require(logsBloom.equals(mod.header.logsBloom), "Provided logs bloom doesn't match the calculated one")
+      // check logs bloom consistency with block header
+      mod.verifyLogsBloomConsistency(receiptList)
 
       // check stateRoot and receiptRoot against block header
       mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
@@ -449,7 +448,7 @@ class AccountState(
 
     ethTx.semanticValidity()
 
-    if (BigInteger.valueOf(FeeUtils.GAS_LIMIT).compareTo(ethTx.getGasLimit) < 0)
+    if (FeeUtils.GAS_LIMIT.compareTo(ethTx.getGasLimit) < 0)
       throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")
 
     using(getView) { stateView =>

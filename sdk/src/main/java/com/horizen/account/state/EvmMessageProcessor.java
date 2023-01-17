@@ -35,7 +35,7 @@ public class EvmMessageProcessor implements MessageProcessor {
 
         context.chainID = BigInteger.valueOf(blockContext.chainID);
         context.coinbase = Address.fromBytes(blockContext.forgerAddress);
-        context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);
+        context.gasLimit = blockContext.blockGasLimit;
         context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
         context.time = BigInteger.valueOf(blockContext.timestamp);
         context.baseFee = blockContext.baseFee;
