@@ -505,7 +505,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     else {
                       val stakeOwnerSecret = stakeOwnerSecretOpt.get().asInstanceOf[PrivateKeySecp256k1]
 
-                      val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
+                      val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
                       val signature = stakeOwnerSecret.sign(msgToSign)
                       val dataBytes = encodeSpendStakeCmdRequest(signature, body.stakeId)
                       val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -608,7 +608,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               maxPriorityFeePerGas = gasInfo.get.maxPriorityFeePerGas
               gasLimit = gasInfo.get.gasLimit
             }
-wi
+
             val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
             val secret = getFittingSecret(sidechainNodeView, None, txCost)
             secret match {
