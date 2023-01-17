@@ -285,7 +285,8 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 //
   implicit def default() = RouteTestTimeout(3.second)
 
-  val params = MainNetParams()
+  val params = mock[MainNetParams]
+  Mockito.when(params.chainId).thenReturn(1997L)
 
   val sidechainTransactionApiRoute: Route = AccountTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,sidechainTransactionsCompanion, params, CircuitTypes.NaiveThresholdSignatureCircuit).route
 //  val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route

@@ -124,7 +124,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
       state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState()))
+      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
     } yield (history, state, wallet, pool)
 
     val result = checkAndRecoverStorages(restoredData)
@@ -142,7 +142,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
 
-      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState()))
+      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
     } yield (history, state, wallet, pool)
 
     result.get
@@ -151,7 +151,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
   override def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI = {
-    val feePayments = state.getFeePayments(epochNumber)
+    val feePayments = state.getFeePaymentsInfo(epochNumber)
     AccountFeePaymentsInfo(feePayments)
   }
 
@@ -213,7 +213,7 @@ object AccountNodeViewHolderRef {
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -228,6 +228,6 @@ object AccountNodeViewHolderRef {
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
 
 }

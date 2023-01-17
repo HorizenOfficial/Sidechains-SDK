@@ -6,6 +6,8 @@ import com.horizen.transaction.Transaction
 
 object WithdrawalEpochUtils {
 
+  val MaxWithdrawalReqsNumPerEpoch = 3999
+
   def getWithdrawalEpochInfo(
       mainchainBlockReferenceSize: Int,
       parentEpochInfo: WithdrawalEpochInfo,

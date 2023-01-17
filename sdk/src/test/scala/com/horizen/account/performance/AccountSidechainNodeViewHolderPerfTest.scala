@@ -60,7 +60,7 @@ class AccountSidechainNodeViewHolderPerfTest
       .when(stateViewMock.getBalance(ArgumentMatchers.any[Array[Byte]]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
     Mockito.when(stateViewMock.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenReturn(true)
-    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(stateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
     Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer { answer =>
       {
@@ -154,7 +154,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("Starting test reverse order")
       // Resetting MemPool
-      mempool = AccountMemoryPool.createEmptyMempool(() => state)
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
 
       val reverseList = listOfTxs.reverse
       listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
@@ -580,6 +580,7 @@ class AccountSidechainNodeViewHolderPerfTest
     Mockito.when(mockWalletSettings.maxTxFee).thenReturn(100L)
     Mockito.when(sidechainSettings.wallet).thenReturn(mockWalletSettings)
     val params: NetworkParams = mock[NetworkParams]
+    Mockito.when(params.chainId).thenReturn(1997)
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]
@@ -597,7 +598,7 @@ class AccountSidechainNodeViewHolderPerfTest
       override def getView: AccountStateView = stateViewMock
     }
 
-    mempool = AccountMemoryPool.createEmptyMempool(() => state)
+    mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
 
     val nodeViewHolderRef: TestActorRef[MockedAccountSidechainNodeViewHolder] = TestActorRef(
       Props(

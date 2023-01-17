@@ -2,12 +2,10 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, GasUtil, TxOversizedException}
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.EthereumTransactionUtils
-import com.horizen.utils.BytesUtils
+import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -24,8 +22,10 @@ class MempoolMapTest
     with SidechainTypes
     with MockitoSugar {
 
-  val stateViewMock: AccountStateReader = mock[AccountStateReader]
-  val stateProvider: AccountStateReaderProvider = () => stateViewMock
+  val accountStateViewMock: AccountStateReader = mock[AccountStateReader]
+  val accountStateProvider: AccountStateReaderProvider = () => accountStateViewMock
+  val baseStateViewMock: BaseStateReader = mock[BaseStateReader]
+  val baseStateProvider: BaseStateReaderProvider = () => baseStateViewMock
 
   val account1KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes()))
   val account2KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
@@ -33,17 +33,17 @@ class MempoolMapTest
   
   @Before
   def setUp(): Unit = {
-    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.ZERO)
+    Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
     Mockito
-      .when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
       .thenReturn(BigInteger.ZERO)
 
   }
 
   @Test
   def testCanPayHigherFee(): Unit = {
-    val mempoolMap = new MempoolMap(stateProvider)
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     val nonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -84,7 +84,7 @@ class MempoolMapTest
 
   @Test
   def testAddExecutableTx(): Unit = {
-    var mempoolMap = new MempoolMap(stateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     var expectedNumOfTxs = 0
     assertEquals(
@@ -196,7 +196,7 @@ class MempoolMapTest
     )
 
     Mockito
-      .when(stateViewMock.getNonce(account2ExecTransaction0.getFrom.address()))
+      .when(accountStateViewMock.getNonce(account2ExecTransaction0.getFrom.address()))
       .thenReturn(account2InitialStateNonce)
     expectedNumOfTxs += 1
     res = mempoolMap.add(account2ExecTransaction0)
@@ -235,7 +235,7 @@ class MempoolMapTest
   @Test
   def testAddNonExecutableTx(): Unit = {
 
-    var mempoolMap = new MempoolMap(stateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
     var expectedNumOfTxs = 0
     var expectedNumOfExecutableTxs = 0
     assertEquals(
@@ -440,7 +440,9 @@ class MempoolMapTest
 
   @Test
   def testAddSameNonce(): Unit = {
-    var mempoolMap = new MempoolMap(stateProvider)
+
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
 
@@ -604,7 +606,7 @@ class MempoolMapTest
 
   @Test
   def testRemove(): Unit = {
-    var mempoolMap = new MempoolMap(stateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -715,8 +717,8 @@ class MempoolMapTest
   def testTakeExecutableTxs(): Unit = {
 
     val initialStateNonce = BigInteger.ZERO
-    Mockito.when(stateViewMock.nextBaseFee).thenReturn(BigInteger.TEN)
-    var mempoolMap = new MempoolMap(stateProvider)
+    Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.TEN)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     var listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertTrue(
@@ -868,8 +870,8 @@ class MempoolMapTest
     iter = listOfExecTxs.iterator
     assertEquals(
       "Wrong tx ",
-      account1ExecTransaction0.id(),
-      iter.removeAndSkipAccount.id
+      account1ExecTransaction0.id,
+      iter.removeAndSkipAccount().id
     )
     assertThrows[NoSuchElementException]("Pop should skip all txs from the same account", iter.removeAndSkipAccount())
 
@@ -1064,7 +1066,7 @@ class MempoolMapTest
   @Test
   def testAddTooBigTx(): Unit = {
 
-    var mempoolMap = new MempoolMap(stateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
     val normalTx = createMockTxWithSize(MempoolMap.MaxTxSize)
 
     val res = mempoolMap.add(normalTx)
