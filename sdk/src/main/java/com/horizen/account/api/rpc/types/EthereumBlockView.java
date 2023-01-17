@@ -7,7 +7,6 @@ import com.horizen.account.utils.AccountBlockUtil;
 import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
-
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,8 +60,8 @@ public class EthereumBlockView {
         receiptsRoot = Numeric.toHexString(header.receiptsRoot());
         miner = Numeric.toHexString(header.forgerAddress().address());
         size = Numeric.encodeQuantity(BigInteger.valueOf(header.bytes().length));
-        gasLimit = Numeric.encodeQuantity(BigInteger.valueOf(header.gasLimit()));
-        gasUsed = Numeric.encodeQuantity(BigInteger.valueOf(header.gasUsed()));
+        this.gasLimit = Numeric.encodeQuantity(header.gasLimit());
+        this.gasUsed = Numeric.encodeQuantity(header.gasUsed());
         timestamp = Numeric.encodeQuantity(BigInteger.valueOf(block.timestamp()));
         baseFeePerGas = Numeric.encodeQuantity(header.baseFee());
         transactions = txs;
