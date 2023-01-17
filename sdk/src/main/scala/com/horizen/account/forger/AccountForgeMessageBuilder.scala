@@ -76,7 +76,6 @@ class AccountForgeMessageBuilder(
       blockContext: BlockContext
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
-
     for (mcBlockRefData <- mainchainBlockReferencesData) {
       // Since forger still doesn't know the candidate block id we may pass random one.
       val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
@@ -100,54 +99,49 @@ class AccountForgeMessageBuilder(
         log.trace(s"Finishing forging because block cannot contain any additional tx")
         return Success(receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
       }
-      val revisionId = stateView.snapshot
-      val initialBlockGas = blockGasPool.getGas
+
       val priceAndNonceIter = iter.asInstanceOf[TransactionsByPriceAndNonceIter]
 
-      try {
-        val tx = priceAndNonceIter.peek
-        stateView.applyTransaction(tx, listOfTxsInBlock.size, blockGasPool, blockContext, finalizeChanges = false) match {
-          case Success(consensusDataReceipt) =>
-            val ethTx = tx.asInstanceOf[EthereumTransaction]
+      val tx = priceAndNonceIter.peek
+      stateView.applyTransaction(tx, listOfTxsInBlock.size, blockGasPool, blockContext) match {
+        case Success(consensusDataReceipt) =>
+          val ethTx = tx.asInstanceOf[EthereumTransaction]
 
-            receiptList += consensusDataReceipt
-            listOfTxsInBlock += tx
+          receiptList += consensusDataReceipt
+          listOfTxsInBlock += tx
 
-            val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
-            // update cumulative gas used so far
-            cumGasUsed = consensusDataReceipt.cumulativeGasUsed
+          val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
+          // update cumulative gas used so far
+          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
             val baseFeePerGas = blockContext.baseFee
             val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
-            cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
-            cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
-            priceAndNonceIter.next()
-          case Failure(e: GasLimitReached) =>
-            // block gas limit reached
-            // keep trying to fit transactions into the block: this TX did not fit, but another one might
-            log.trace(s"Could not apply tx, reason: ${e.getMessage}")
-            // skip all txs from the same account
-            priceAndNonceIter.removeAndSkipAccount()
-          case Failure(e: FeeCapTooLowException) =>
-            // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
-            // if they are from other accounts, they will have a lower fee cap
-            log.trace(s"Could not apply tx, reason: ${e.getMessage}")
-            return Success(receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
-          case Failure(e: NonceTooLowException) =>
-            // SHOULD NEVER HAPPEN, but in case just skip this tx
-            log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
-            priceAndNonceIter.next()
-          case Failure(e) =>
-            // skip all txs from the same account but remove any changes caused by the rejected tx
-            log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
-            priceAndNonceIter.removeAndSkipAccount()
-            stateView.revertToSnapshot(revisionId)
-            // Restore gas
-            val usedGas = initialBlockGas.subtract(blockGasPool.getGas)
-            blockGasPool.addGas(usedGas)
-        }
-      } finally {
-        stateView.finalizeChanges()
+          cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
+          cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
+          priceAndNonceIter.next()
+
+        case Failure(err) =>
+          // TODO: remove revert logic here, assuming applyTransaction is either successfull or does not do any changes?
+          log.trace(s"Could not apply tx, reason: ${err.getMessage}")
+          err match {
+            case _: GasLimitReached =>
+              // block gas limit reached
+              // keep trying to fit transactions into the block: this TX did not fit, but another one might
+              // skip all txs from the same account
+              priceAndNonceIter.removeAndSkipAccount()
+            case _: FeeCapTooLowException =>
+              // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the
+              // same account, or, if they are from other accounts, they will have a lower fee cap
+              return Success(receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
+            case e: NonceTooLowException =>
+              // SHOULD NEVER HAPPEN, but in case just skip this tx
+              log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
+              priceAndNonceIter.next()
+            case e =>
+              // skip all txs from the same account but remove any changes caused by the rejected tx
+              log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
+              priceAndNonceIter.removeAndSkipAccount()
+          }
       }
 
     }

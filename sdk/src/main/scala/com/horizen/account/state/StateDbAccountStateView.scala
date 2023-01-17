@@ -171,8 +171,7 @@ class StateDbAccountStateView(
                         tx: SidechainTypes#SCAT,
                         txIndex: Int,
                         blockGasPool: GasPool,
-                        blockContext: BlockContext,
-                        finalizeChanges: Boolean = true
+      blockContext: BlockContext
                       ): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
@@ -196,7 +195,6 @@ class StateDbAccountStateView(
         ReceiptStatus.FAILED
     } finally {
       // finalize pending changes, clear the journal and reset refund counter
-      if (finalizeChanges)
         stateDb.finalizeChanges()
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(

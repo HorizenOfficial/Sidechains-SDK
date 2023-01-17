@@ -12,6 +12,8 @@ class GasPool(initialGas: BigInteger) extends ScorexLogging {
 
   def getUsedGas: BigInteger = initialGas.subtract(currentGas)
 
+  def getInitialGas: BigInteger = initialGas
+
   @throws(classOf[OutOfGasException])
   def subGas(gas: BigInteger): Unit = {
     if (gas.signum() == -1)

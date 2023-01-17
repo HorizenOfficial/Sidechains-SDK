@@ -12,43 +12,70 @@ class StateTransition(
     blockContext: BlockContext
 ) extends ScorexLogging {
 
+  /**
+   * Perform a state transition by applying the given message to the current state view. Afterwards, the state will
+   * always be in a consistent state, possible outcomes are:
+   *   - The message was applied successfully, return value is the data returned by the executed message processor
+   *   - The message processor aborted by throwing any ExecutionFailedException (e.g. also ExecutionRevertedException).
+   *     This means the message is valid but application failed. Any changes by the message processor are reverted, but
+   *     the senders nonce is incremented and used gas is still paid.
+   *   - Any other exception was thrown: Any and all changes are reverted. This means the message is invalid.
+   */
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
   def transition(msg: Message): Array[Byte] = {
     // do preliminary checks
     preCheck(msg)
+    // create a snapshot before any changes are made
+    val revisionStart = view.snapshot
     // allocate gas for processing this message
     val gasPool = buyGas(msg)
-    // consume intrinsic gas
-    val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
-    if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
-    gasPool.subGas(intrinsicGas)
-    // find and execute the first matching processor
-    messageProcessors.find(_.canProcess(msg, view)) match {
-      case None =>
-        log.error(s"No message processor found for executing message $msg")
-        throw new IllegalArgumentException("Unable to process message.")
-      case Some(processor) =>
-        // increase the nonce by 1
-        view.increaseNonce(msg.getFromAddressBytes)
-        // create a snapshot to rollback to in case of execution errors
-        val revisionId = view.snapshot
-        try {
-          processor.process(msg, view, gasPool, blockContext)
-        } catch {
-          // if the processor throws ExecutionRevertedException we revert all changes
-          case err: ExecutionRevertedException =>
-            view.revertToSnapshot(revisionId)
-            throw err
-          // if the processor throws ExecutionFailedException we revert all changes and consume any remaining gas
-          case err: ExecutionFailedException =>
-            view.revertToSnapshot(revisionId)
-            gasPool.subGas(gasPool.getGas)
-            throw err
-          // any other exception will bubble up and invalidate the block
-        } finally {
-          refundGas(msg, gasPool)
-        }
+    try {
+      // consume intrinsic gas
+      val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
+      if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
+      gasPool.subGas(intrinsicGas)
+      // find and execute the first matching processor
+      messageProcessors.find(_.canProcess(msg, view)) match {
+        case None =>
+          log.error(s"No message processor found for executing message $msg")
+          throw new IllegalArgumentException("Unable to process message.")
+        case Some(processor) =>
+          // increase the nonce by 1
+          view.increaseNonce(msg.getFromAddressBytes)
+          // create a snapshot before any changes are made by the processor
+          val revisionProcessor = view.snapshot
+          var skipRefund = false
+          try {
+            processor.process(msg, view, gasPool, blockContext)
+          } catch {
+            // if the processor throws ExecutionRevertedException we revert changes
+            case err: ExecutionRevertedException =>
+              view.revertToSnapshot(revisionProcessor)
+              throw err
+            // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
+            case err: ExecutionFailedException =>
+              view.revertToSnapshot(revisionProcessor)
+              gasPool.subGas(gasPool.getGas)
+              throw err
+            case err =>
+              // do not process refunds in this case, all changes will be reverted
+              skipRefund = true
+              throw err
+          } finally {
+            if (!skipRefund) refundGas(msg, gasPool)
+          }
+      }
+    } catch {
+      // execution failed was already handled
+      case err: ExecutionFailedException => throw err
+      // any other exception will bubble up and invalidate the block
+      case err =>
+        // revert all changes, even buying gas and increasing the nonce
+        view.revertToSnapshot(revisionStart)
+        // restore gas to the block gas pool
+        blockGasPool.addGas(gasPool.getInitialGas)
+        throw err
     }
   }
 
