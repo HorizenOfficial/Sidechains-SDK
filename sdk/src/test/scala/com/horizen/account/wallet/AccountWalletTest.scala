@@ -203,9 +203,12 @@ class AccountWalletTest
       "seed".getBytes(),
       mockedSecretStorage)
 
-    val beforeSecret1 = getPrivateKey25519("beforeSeed1".getBytes())
-    val beforeSecret2 = getPrivateKey25519("beforeSeed2".getBytes())
-    Mockito.when(mockedSecretStorage.getAll).thenReturn(List(beforeSecret1, beforeSecret2))
+    val storageList = ListBuffer[Secret]()
+    val secret1 = getPrivateKey25519("seed1".getBytes())
+    val secret2 = getPrivateKey25519("seed2".getBytes())
+    storageList += secret1
+    storageList += secret2
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
     Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Try{mockedSecretStorage})
 
     // Prepare block ID and corresponding version
@@ -214,14 +217,17 @@ class AccountWalletTest
 
     val privateKey25519Creator = PrivateKey25519Creator.getInstance()
 
-    val result1 = accountWallet.generateNextSecret(privateKey25519Creator)
-    val result2 = accountWallet.generateNextSecret(privateKey25519Creator)
+    val result3 = accountWallet.generateNextSecret(privateKey25519Creator)
+    assertTrue("Generation of first key should be successful", result3.isSuccess)
+    val secret3 = result3.get._2
+    storageList += secret3
+    storageList -= secret1
 
-    assertTrue("Generation of first key should be successful", result1.isSuccess)
-    assertTrue("Generation of second key should be successful", result2.isSuccess)
+    val result4 = accountWallet.generateNextSecret(privateKey25519Creator)
 
-    val publicKey1 = result1.get._2.publicImage()
-    val publicKey2 = result2.get._2.publicImage()
-    assertEquals("keys should not be the same", publicKey1, publicKey2)
+    assertTrue("Generation of second key should be successful", result4.isSuccess)
+    val secret4 = result4.get._2
+
+    assertEquals("keys should not be the same", secret3, secret4)
   }
 }
