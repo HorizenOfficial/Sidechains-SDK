@@ -223,6 +223,7 @@ class AccountWalletTest
     storageList += secret3
     storageList -= secret1
 
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
     val result4 = accountWallet.generateNextSecret(privateKey25519Creator)
 
     assertTrue("Generation of second key should be successful", result4.isSuccess)

@@ -107,9 +107,10 @@ abstract class AbstractWallet[
 
   def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)] = Try {
     require(secretCreator != null, "AbstractWallet: Secret creator must be NOT NULL.")
-    var nonce = this.secrets().size
+    val allSecrets = this.secrets()
+    var nonce = allSecrets.size
     val salt: Array[Byte] = secretCreator.salt()
-    val secretStorageSize = this.secrets().count(_.isInstanceOf[T])
+    val secretStorageSize = allSecrets.count(_.isInstanceOf[T])
     for(_ <- 0 to secretStorageSize) {
       val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
       val secret: T = secretCreator.generateSecret(seed)
