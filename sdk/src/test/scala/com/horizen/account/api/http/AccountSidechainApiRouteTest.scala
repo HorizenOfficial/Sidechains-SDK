@@ -28,7 +28,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.bytesToId
 import sparkz.core.settings.RESTApiSettings
 
