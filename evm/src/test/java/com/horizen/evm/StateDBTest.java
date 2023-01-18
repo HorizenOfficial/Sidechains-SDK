@@ -110,8 +110,6 @@ public class StateDBTest extends LibEvmTestBase {
         final var databaseFolder = tempFolder.newFolder("account-db");
         final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
-        // TODO: add some negative cases: e.g. trying to store a value that is not 32 bytes should throw
-        //  32 bytes of zeros and null should be identical
         final byte[][] values = {
             bytes("0000000000000000000000000000000000000000000000000000000000000000"),
             bytes("0000000000000000000000001234000000000000000000000000000000000000"),
@@ -127,7 +125,7 @@ public class StateDBTest extends LibEvmTestBase {
                 assertTrue("account must not exist in an empty state", statedb.isEmpty(origin));
                 // make sure the account is not "empty"
                 statedb.setNonce(origin, BigInteger.ONE);
-                assertFalse("account must exist after setting code hash", statedb.isEmpty(origin));
+                assertFalse("account must exist after nonce increment", statedb.isEmpty(origin));
                 initialRoot = statedb.getIntermediateRoot();
                 for (var value : values) {
                     statedb.setStorage(origin, key, value);
@@ -151,6 +149,55 @@ public class StateDBTest extends LibEvmTestBase {
                     statedb.setStorage(origin, key, null);
                     assertArrayEquals(initialRoot, statedb.getIntermediateRoot());
                 }
+            }
+        }
+    }
+
+    @Test
+    public void accountStorageEdgeCases() throws Exception {
+        final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
+        final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
+        // test some negative cases:
+        // - trying to store a value that is not 32 bytes should throw
+        // - writing 32 bytes of zeros and null should behave identical (remove the key-value pair)
+        final byte[] validValue = bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
+        final byte[][] invalidValues = {
+            bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddee"),
+            bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00"),
+            bytes(
+                "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
+        };
+
+        try (var db = new MemoryDatabase()) {
+            try (var statedb = new StateDB(db, hashEmpty)) {
+                assertTrue("account must not exist in an empty state", statedb.isEmpty(origin));
+                // writing to an "empty" account should fail:
+                // this is a safety precaution, because empty accounts will be pruned, even if the storage is not empty
+                assertThrows(InvokeException.class, () -> statedb.setStorage(origin, key, validValue));
+                // make sure the account is not "empty"
+                statedb.setNonce(origin, BigInteger.ONE);
+                assertArrayEquals(
+                    "reading a non-existent key should return all zeroes",
+                    hashNull,
+                    statedb.getStorage(origin, key)
+                );
+                // make sure this does not throw anymore and the value can be read correctly
+                statedb.setStorage(origin, key, validValue);
+                assertArrayEquals("value was not written correctly", validValue, statedb.getStorage(origin, key));
+                // test invalid values (length not 32)
+                for (var value : invalidValues) {
+                    assertThrows(IllegalArgumentException.class, () -> statedb.setStorage(origin, key, value));
+                }
+                // make sure the value did not change after invalid write attempts
+                assertArrayEquals("unexpected change of written value", validValue, statedb.getStorage(origin, key));
+                // test removal of the key by using null
+                statedb.setStorage(origin, key, null);
+                assertArrayEquals("value should be all zeroes", hashNull, statedb.getStorage(origin, key));
+                // write the value again
+                statedb.setStorage(origin, key, validValue);
+                // test removal of the key by using all zeros
+                statedb.setStorage(origin, key, hashNull);
+                assertArrayEquals("value should be all zeroes", hashNull, statedb.getStorage(origin, key));
             }
         }
     }
@@ -251,7 +298,8 @@ public class StateDBTest extends LibEvmTestBase {
 
         try (var db = new MemoryDatabase()) {
             try (var statedb = new StateDB(db, hashNull)) {
-                statedb.setStorage(address,
+                statedb.setStorage(
+                    address,
                     (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000000")),
                     pad(
                         RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))),
