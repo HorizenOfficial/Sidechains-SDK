@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes._
 import com.horizen.fixtures._
-import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret, SecretSerializer}
 import com.horizen.storage._
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair}
 import org.junit.Assert._
@@ -195,4 +195,33 @@ class AccountWalletTest
     assertEquals("SidechainWallet different exception expected during removing new Secret.", expectedException, failureResult.failed.get)
   }
 
+  @Test
+  def testGenerateNextSecret(): Unit = {
+    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
+
+    val accountWallet = new AccountWallet(
+      "seed".getBytes(),
+      mockedSecretStorage)
+
+    val beforeSecret1 = getPrivateKey25519("beforeSeed1".getBytes())
+    val beforeSecret2 = getPrivateKey25519("beforeSeed2".getBytes())
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(List(beforeSecret1, beforeSecret2))
+    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Try{mockedSecretStorage})
+
+    // Prepare block ID and corresponding version
+    val blockId = new Array[Byte](32)
+    Random.nextBytes(blockId)
+
+    val privateKey25519Creator = PrivateKey25519Creator.getInstance()
+
+    val result1 = accountWallet.generateNextSecret(privateKey25519Creator)
+    val result2 = accountWallet.generateNextSecret(privateKey25519Creator)
+
+    assertTrue("Generation of first key should be successful", result1.isSuccess)
+    assertTrue("Generation of second key should be successful", result2.isSuccess)
+
+    val publicKey1 = result1.get._2.publicImage()
+    val publicKey2 = result2.get._2.publicImage()
+    assertEquals("keys should not be the same", publicKey1, publicKey2)
+  }
 }
