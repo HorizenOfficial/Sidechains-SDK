@@ -56,6 +56,18 @@ The following command-line options can be used in addition:
 
 Additional options can be found in sc_test_framework.py file.
 
+**Debug 
+1. Open PyCharm
+2. Open Run Configuration of Python script that you want to debug
+3. Put in parameters: --debugnode=0 --restapitimeout=99999
+   (instead of 0 you can put any number of node present in Python script you want to debug)
+4. Click debug
+5. Open Intellij Idea
+6. Put a breakpoint in Java/Scala code in the beginning of API method
+7. In upper menu of Intellij Idea go Run->"Attach to process..."
+8. Select the process containing "node" and select the node with proper number
+9. Wait a little, execution should stop on breakpoint in Java/Scala code
+
 **Template configuration files**
 
 Template configuration files located in resources directory. 
