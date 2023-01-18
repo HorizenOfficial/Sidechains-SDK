@@ -54,7 +54,9 @@ public class StateDBTest extends LibEvmTestBase {
         try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
             try (var statedb = new StateDB(db, hashNull)) {
                 var intermediateRoot = statedb.getIntermediateRoot();
-                assertArrayEquals("empty state should give the hash of an empty string as the root hash", hashEmpty, intermediateRoot);
+                assertArrayEquals("empty state should give the hash of an empty string as the root hash", hashEmpty,
+                    intermediateRoot
+                );
 
                 var committedRoot = statedb.commit();
                 assertArrayEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
@@ -62,7 +64,9 @@ public class StateDBTest extends LibEvmTestBase {
 
                 statedb.addBalance(origin, v1234);
                 assertEquals(v1234, statedb.getBalance(origin));
-                assertNotEquals("intermediate root should not equal committed root anymore", committedRoot, statedb.getIntermediateRoot());
+                assertNotEquals("intermediate root should not equal committed root anymore", committedRoot,
+                    statedb.getIntermediateRoot()
+                );
                 rootWithBalance1234 = statedb.commit();
 
                 var revisionId = statedb.snapshot();
@@ -109,10 +113,10 @@ public class StateDBTest extends LibEvmTestBase {
         // TODO: add some negative cases: e.g. trying to store a value that is not 32 bytes should throw
         //  32 bytes of zeros and null should be identical
         final byte[][] values = {
-                bytes("0000000000000000000000000000000000000000000000000000000000000000"),
-                bytes("0000000000000000000000001234000000000000000000000000000000000000"),
-                bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-                bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
+            bytes("0000000000000000000000000000000000000000000000000000000000000000"),
+            bytes("0000000000000000000000001234000000000000000000000000000000000000"),
+            bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
         };
 
         byte[] initialRoot;
@@ -151,6 +155,68 @@ public class StateDBTest extends LibEvmTestBase {
         }
     }
 
+    private void testAccessListAccounts(StateDB statedb, byte[] sender, byte[] destination, byte[] other) {
+        final var key1 = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff000000000000000000000001");
+        final var key2 = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff000000000000000000000002");
+
+        statedb.accessSetup(sender, destination);
+        assertTrue("sender must be on access list", statedb.accessAccount(sender));
+        assertTrue("destination must be on access list", statedb.accessAccount(destination));
+        assertFalse(
+            "sender storage slot must not be on access list before first access",
+            statedb.accessSlot(sender, key1)
+        );
+        assertTrue(
+            "sender storage slot must be on access list after first access",
+            statedb.accessSlot(sender, key1)
+        );
+        assertFalse(
+            "sender storage slot must not be on access list before first access",
+            statedb.accessSlot(sender, key2)
+        );
+        assertTrue(
+            "sender storage slot must be on access list after first access",
+            statedb.accessSlot(sender, key2)
+        );
+
+        assertFalse(
+            "other account must not be on access list before first access",
+            statedb.accessAccount(other)
+        );
+        assertTrue(
+            "other account must be on access list after first acccess",
+            statedb.accessAccount(other)
+        );
+        assertFalse(
+            "other storage slot must not be on access list before first access",
+            statedb.accessSlot(other, key1)
+        );
+        assertTrue(
+            "other storage slot must be on access list after first access",
+            statedb.accessSlot(other, key1)
+        );
+    }
+
+    @Test
+    public void accessList() throws Exception {
+        final var accounts = new byte[][] {
+            bytes("0011001100110011001100110011001100110011"),
+            bytes("0022002200220022002200220022002200220022"),
+            bytes("0033003300330033003300330033003300330033"),
+        };
+
+        try (var db = new MemoryDatabase()) {
+            try (var statedb = new StateDB(db, hashEmpty)) {
+                // test multiple permutations of the accounts in a row to make sure the access list is correctly reset
+                testAccessListAccounts(statedb, accounts[0], accounts[1], accounts[2]);
+                testAccessListAccounts(statedb, accounts[1], accounts[2], accounts[0]);
+                testAccessListAccounts(statedb, accounts[2], accounts[0], accounts[1]);
+                testAccessListAccounts(statedb, accounts[0], accounts[2], accounts[1]);
+                testAccessListAccounts(statedb, accounts[1], accounts[0], accounts[2]);
+            }
+        }
+    }
+
     @Test
     public void TestAccountTypes() throws Exception {
         final byte[] code = Converter.fromHexString("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
@@ -185,18 +251,27 @@ public class StateDBTest extends LibEvmTestBase {
 
         try (var db = new MemoryDatabase()) {
             try (var statedb = new StateDB(db, hashNull)) {
-                statedb.setStorage(address, (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000000")),
-                        pad(RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))), paddingByte, paddingLength)
+                statedb.setStorage(address,
+                    (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000000")),
+                    pad(
+                        RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))),
+                        paddingByte, paddingLength
+                    )
                 );
-                statedb.setStorage(address, (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000001")),
-                        pad(RlpEncoder.encode(RlpString.create(bytes("02"))), paddingByte, paddingLength)
+                statedb.setStorage(
+                    address,
+                    (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000001")),
+                    pad(RlpEncoder.encode(RlpString.create(bytes("02"))), paddingByte, paddingLength)
                 );
 
                 statedb.commit();
 
                 // this should return the proof for the 0th slot in smart contract identified by address
                 // storageProof's length is always 0
-                var proofAccountResult = statedb.getProof(address, new byte[][]{bytes("0000000000000000000000000000000000000000000000000000000000000001")});
+                var proofAccountResult = statedb.getProof(
+                    address,
+                    new byte[][] { bytes("0000000000000000000000000000000000000000000000000000000000000001") }
+                );
 
                 // after successful proof retrieval, we should verify the root hash
             }
