@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-import json
 import logging
 from decimal import Decimal
 
 from eth_utils import remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.utils import convertZenToZennies
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
+from SidechainTestFramework.account.utils import convertZenToWei
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_account_proposition
-from test_framework.util import assert_equal, assert_true
+from test_framework.util import assert_equal
 
 """
 Check the EVM SC block header values gasUsed and baseFee.
@@ -46,38 +46,31 @@ class SCEvmBaseFee(AccountChainSetup):
         assert_equal(765625000, sc_best_block['block']['header']['baseFee'])
 
         # Create an EOA to EOA transaction moving some fund to a new address not known by wallet.
-        # Amount should be expressed in zennies
         transferred_amount = Decimal(2)
-        transferred_amount_in_zennies = convertZenToZennies(transferred_amount)
+        transferred_amount_in_wei = convertZenToWei(transferred_amount)
 
         recipient_keys = generate_account_proposition("seed3", 1)[0]
         recipient_proposition = recipient_keys.proposition
         logging.info("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
 
-        j = {
-            "from": evm_hex_address,
-            "to": recipient_proposition,
-            "value": transferred_amount_in_zennies,
-            "nonce": 0
-        }
-        request = json.dumps(j)
-        response = sc_node.transaction_sendCoinsToAddress(request)
-        assert_true('transactionId' in response['result'], "Transaction failed")
+        createLegacyTransaction(sc_node,
+            fromAddress=evm_hex_address,
+            toAddress=recipient_proposition,
+            value=transferred_amount_in_wei,
+            nonce=0
+        )
 
         # send more zen to have more than one transaction in block
         recipient_keys = generate_account_proposition("seed4", 1)[0]
         recipient_proposition = recipient_keys.proposition
         logging.info("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
 
-        j = {
-            "from": evm_hex_address,
-            "to": recipient_proposition,
-            "value": transferred_amount_in_zennies,
-            "nonce": 1
-        }
-        request = json.dumps(j)
-        response = sc_node.transaction_sendCoinsToAddress(request)
-        assert_true('transactionId' in response['result'], "Transaction failed")
+        createLegacyTransaction(sc_node,
+            fromAddress=evm_hex_address,
+            toAddress=recipient_proposition,
+            value=transferred_amount_in_wei,
+            nonce=1
+        )
 
         generate_next_blocks(sc_node, "first node", 1)
 

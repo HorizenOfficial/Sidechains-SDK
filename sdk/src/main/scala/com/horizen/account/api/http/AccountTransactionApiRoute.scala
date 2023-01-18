@@ -18,7 +18,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
-import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
+import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
@@ -34,7 +34,6 @@ import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 import com.horizen.secret.PrivateKey25519
-import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -64,7 +63,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   override val route: Route = pathPrefix("transaction") {
-    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
+    allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction
   }
@@ -104,58 +103,79 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-   * Create and sign a core transaction, specifying regular outputs and fee. Search for and spend proper amount of regular coins. Then validate and send the transaction.
-   * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+   * Create an unsigned legacy evm transaction, and then:
+   *  - if the optional input parameter 'outputRawBytes'=True is set in ReqLegacyTransaction just return the raw hex bytes representation
+   *  - otherwise sign it and send the resulting tx to the network and return the transaction id
    */
-  def sendCoinsToAddress: Route = (post & path("sendCoinsToAddress")) {
+  def createLegacyTransaction: Route = (post & path("createLegacyTransaction")) {
     withAuth {
-      entity(as[ReqSendCoinsToAddress]) { body =>
-        // lock the view and try to create EvmTransaction
+      entity(as[ReqLegacyTransaction]) { body =>
+        val txCost = body.value.getOrElse(BigInteger.ZERO)
+          .add(body.gasLimit.multiply(body.gasPrice))
+
         applyOnNodeView { sidechainNodeView =>
-          val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
-          val destAddress = body.to
-          // TODO actual gas implementation
-          var gasLimit = GasUtil.TxGas
-          var gasPrice = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
-
-          if (body.gasInfo.isDefined) {
-            gasPrice = body.gasInfo.get.maxFeePerGas
-            gasLimit = body.gasInfo.get.gasLimit
-          }
-
-          // check if the fromAddress is either empty or it fits and the value is high enough
-          val txCost = valueInWei.add(gasPrice.multiply(gasLimit))
-
           val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
-          val dataBytes = Array[Byte]()
           secret match {
             case Some(secret) =>
+              // compute the nonce if not specified in the params
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-              val isEIP155 = body.EIP155.getOrElse(false)
-              val response = if (isEIP155) {
-                val tmpTx = new EthereumTransaction(
-                  params.chainId,
-                  EthereumTransactionUtils.getToAddressFromString(destAddress),
-                  nonce,
-                  gasPrice,
-                  gasLimit,
-                  valueInWei,
-                  dataBytes,
-                  null
-                )
-                validateAndSendTransaction(signTransactionEIP155WithSecret(secret, tmpTx))
+
+              val unsignedTx = new EthereumTransaction(
+                EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
+                nonce,
+                body.gasPrice,
+                body.gasLimit,
+                body.value.orNull,
+                EthereumTransactionUtils.getDataFromString(body.data),
+                null
+              )
+              val resp = if (body.outputRawBytes.getOrElse(false)) {
+                ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
               } else {
-                val tmpTx = new EthereumTransaction(
-                  EthereumTransactionUtils.getToAddressFromString(destAddress),
-                  nonce,
-                  gasPrice,
-                  gasLimit,
-                  valueInWei,
-                  dataBytes,
-                  null)
-                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                validateAndSendTransaction(signedTx)
               }
-              response
+              resp
+
+            case None =>
+              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+          }
+        }
+      }
+    }
+  }
+
+
+  /**
+   * Create a EIP155 (Simple replay attack protection) legacy evm transaction, sign it and send it to the network.
+   * Returns a result JSON obj containing the transaction id or the raw hex bytes representation if the optional input
+   * parameter 'outputRawBytes'=True is set in ReqLegacyTransaction
+   */
+  def createLegacyEIP155Transaction: Route = (post & path("createLegacyEIP155Transaction")) {
+    withAuth {
+      entity(as[ReqLegacyTransaction]) { body =>
+        val txCost = body.value.getOrElse(BigInteger.ZERO)
+          .add(body.gasLimit.multiply(body.gasPrice))
+
+        applyOnNodeView { sidechainNodeView =>
+
+          val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+          secret match {
+            case Some(secret) =>
+              // compute the nonce if not specified in the params
+              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+
+              val unsignedTx = new EthereumTransaction(
+                params.chainId,
+                EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
+                nonce,
+                body.gasPrice,
+                body.gasLimit,
+                body.value.orNull,
+                EthereumTransactionUtils.getDataFromString(body.data),
+                null
+              )
+              validateAndSendTransaction(signTransactionEIP155WithSecret(secret, unsignedTx))
             case None =>
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
@@ -165,121 +185,41 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-   * Create and sign a core transaction, specifying regular outputs and fee. Search for and spend proper amount of regular coins. Then validate and send the transaction.
-   * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+   * Create a EIP1559 evm transaction, sign it and send it to the network.
+   * Returns a result JSON obj containing the transaction id or the raw hex bytes representation if the optional input
+   * parameter 'outputRawBytes'=True is set in ReqLegacyTransaction
    */
   def createEIP1559Transaction: Route = (post & path("createEIP1559Transaction")) {
     withAuth {
       entity(as[ReqEIP1559Transaction]) { body =>
+
+        val txCost = body.value
+          .add(body.gasLimit.multiply(body.maxFeePerGas))
+
         // lock the view and try to create CoreTransaction
         applyOnNodeView { sidechainNodeView =>
-          val secret = getFittingSecret(sidechainNodeView, body.from, body.value)
+          val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+          secret match {
+            case Some(secret) =>
+              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
 
-          val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.get.publicImage.address))
+              val unsignedTx: EthereumTransaction = new EthereumTransaction(
+                params.chainId,
+                EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
+                nonce,
+                body.gasLimit,
+                body.maxPriorityFeePerGas,
+                body.maxFeePerGas,
+                body.value,
+                EthereumTransactionUtils.getDataFromString(body.data),
+                null
+              )
 
-          var signedTx: EthereumTransaction = new EthereumTransaction(
-            params.chainId,
-            EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
-            nonce,
-            body.gasLimit,
-            body.maxPriorityFeePerGas,
-            body.maxFeePerGas,
-            body.value,
-            EthereumTransactionUtils.getDataFromString(body.data),
-            if (body.signature_v.isDefined)
-              new SignatureSecp256k1(
-                body.signature_v.get,
-                body.signature_r.get,
-                body.signature_s.get)
-            else
-              null
-          )
-          if (!signedTx.isSigned) {
-            val txCost = signedTx.maxCost
-
-            val secret =
-              getFittingSecret(sidechainNodeView, body.from, txCost)
-            secret match {
-              case Some(secret) =>
-                signedTx = signTransactionWithSecret(secret, signedTx)
-                validateAndSendTransaction(signedTx)
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
-            }
+              val signedTx = signTransactionWithSecret(secret, unsignedTx)
+              validateAndSendTransaction(signedTx)
+            case None =>
+              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
-          else
-            validateAndSendTransaction(signedTx)
-        }
-      }
-    }
-  }
-
-  /**
-   * Create a legacy evm transaction, specifying inputs.
-   */
-  def createLegacyTransaction: Route = (post & path("createLegacyTransaction")) {
-    withAuth {
-      entity(as[ReqLegacyTransaction]) { body =>
-        // lock the view and try to send the tx
-        applyOnNodeView { sidechainNodeView =>
-          var signedTx = new EthereumTransaction(
-            EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
-            body.nonce,
-            body.gasPrice,
-            body.gasLimit,
-            body.value.orNull,
-            EthereumTransactionUtils.getDataFromString(body.data),
-            if (body.signature_v.isDefined)
-              new SignatureSecp256k1(
-                body.signature_v.get,
-                body.signature_r.get,
-                body.signature_s.get)
-            else
-              null
-          )
-          if (!signedTx.isSigned) {
-            val txCost = signedTx.maxCost
-
-            val secret =
-              getFittingSecret(sidechainNodeView, body.from, txCost)
-            secret match {
-              case Some(secret) =>
-                signedTx = signTransactionWithSecret(secret, signedTx)
-                validateAndSendTransaction(signedTx)
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
-            }
-          }
-          else
-            validateAndSendTransaction(signedTx)
-        }
-      }
-    }
-  }
-
-  /**
-   * Create a raw evm transaction, specifying the bytes.
-   */
-  def sendRawTransaction: Route = (post & path("sendRawTransaction")) {
-    withAuth {
-      entity(as[ReqRawTransaction]) { body =>
-        // lock the view and try to create CoreTransaction
-        applyOnNodeView { sidechainNodeView =>
-          var signedTx = EthereumTransactionDecoder.decode(body.payload)
-          if (!signedTx.isSigned) {
-            val txCost = signedTx.maxCost
-            val secret =
-              getFittingSecret(sidechainNodeView, body.from, txCost)
-            secret match {
-              case Some(secret) =>
-                signedTx = signTransactionWithSecret(secret, signedTx)
-                validateAndSendTransaction(signedTx)
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
-            }
-          }
-          else
-            validateAndSendTransaction(signedTx)
         }
       }
     }
@@ -287,16 +227,15 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
   def signTransaction: Route = (post & path("signTransaction")) {
     withAuth {
-      entity(as[ReqRawTransaction]) {
+      entity(as[ReqSignTransaction]) {
         body => {
           applyOnNodeView { sidechainNodeView =>
-            var signedTx = EthereumTransactionDecoder.decode(body.payload)
-            val txCost = signedTx.maxCost
-            val secret =
-              getFittingSecret(sidechainNodeView, body.from, txCost)
+            val unsignedTx : EthereumTransaction = companion.parseBytes(BytesUtils.fromHexString(body.transactionBytes)).asInstanceOf[EthereumTransaction]
+            val txCost = unsignedTx.maxCost
+            val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
             secret match {
               case Some(secret) =>
-                signedTx = signTransactionWithSecret(secret, signedTx)
+                val signedTx = signTransactionWithSecret(secret, unsignedTx)
                 ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
               case None =>
                 ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
@@ -752,13 +691,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
   }
 
-  //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val rawTransactionResponseRepresentation: EthereumTransaction => SuccessResponse = {
-    transaction =>
-      RawTransactionOutput("0x" + BytesUtils.toHexString(transaction.encode(transaction.isSigned))
-      )
-  }
-
   private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction): Unit = {
     val index = body.keyIndex
     val keyType = body.keyType
@@ -813,18 +745,6 @@ object AccountTransactionRestScheme {
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(maxPriorityFeePerGas.signum() > 0, "MaxPriorityFeePerGas must be greater than 0")
     require(maxFeePerGas.signum() > 0, "MaxFeePerGas must be greater than 0")
-  }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendCoinsToAddress(from: Option[String],
-                                                nonce: Option[BigInteger],
-                                                to: String,
-                                                @JsonDeserialize(contentAs = classOf[lang.Long]) value: Long,
-                                                EIP155: Option[Boolean],
-                                                gasInfo: Option[EIP1559GasInfo]
-                                               ) {
-    require(to.nonEmpty, "Empty destination address")
-    require(value >= 0, "Negative value. Value must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
@@ -902,12 +822,6 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RawTransactionOutput(transactionData: String) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSpendForgingStake(
                                                 nonce: Option[BigInteger],
                                                 stakeId: String,
@@ -917,22 +831,16 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqEIP1559Transaction(
-                                                 from: Option[String],
-                                                 to: Option[String],
-                                                 nonce: Option[BigInteger],
-                                                 gasLimit: BigInteger,
-                                                 maxPriorityFeePerGas: BigInteger,
-                                                 maxFeePerGas: BigInteger,
-                                                 value: BigInteger,
-                                                 data: String,
-                                                 signature_v: Option[Array[Byte]],
-                                                 signature_r: Option[Array[Byte]],
-                                                 signature_s: Option[Array[Byte]]) {
-    require(
-      (signature_v.nonEmpty && signature_r.nonEmpty && signature_s.nonEmpty)
-        || (signature_v.isEmpty && signature_r.isEmpty && signature_s.isEmpty),
-      "Signature can not be partial"
-    )
+                                           from: Option[String],
+                                           to: Option[String],
+                                           nonce: Option[BigInteger],
+                                           gasLimit: BigInteger,
+                                           maxPriorityFeePerGas: BigInteger,
+                                           maxFeePerGas: BigInteger,
+                                           value: BigInteger,
+                                           data: String,
+                                           outputRawBytes: Option[Boolean] = None) {
+
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(maxPriorityFeePerGas.signum() > 0, "MaxPriorityFeePerGas must be greater than 0")
     require(maxFeePerGas.signum() > 0, "MaxFeePerGas must be greater than 0")
@@ -941,21 +849,16 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqLegacyTransaction(to: Option[String],
-                                               from: Option[String],
-                                               nonce: BigInteger,
-                                               gasLimit: BigInteger,
-                                               gasPrice: BigInteger,
-                                               value: Option[BigInteger],
-                                               data: String,
-                                               signature_v: Option[Array[Byte]],
-                                               signature_r: Option[Array[Byte]],
-                                               signature_s: Option[Array[Byte]]) {
-    require(
-      (signature_v.nonEmpty && signature_r.nonEmpty && signature_s.nonEmpty)
-        || (signature_v.isEmpty && signature_r.isEmpty && signature_s.isEmpty),
-      "Signature can not be partial"
-    )
+  private[api] case class ReqLegacyTransaction(
+                                                to: Option[String],
+                                                from: Option[String],
+                                                nonce: Option[BigInteger],
+                                                gasLimit: BigInteger,
+                                                gasPrice: BigInteger,
+                                                value: Option[BigInteger],
+                                                data: String,
+                                                outputRawBytes: Option[Boolean] = None) {
+
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(gasPrice.signum() > 0, "Gas price can not be 0")
     require(to.isEmpty || to.get.length == 40 /* address length without prefix 0x */ , "to is not empty but has the wrong length - do not use a 0x prefix")
@@ -963,7 +866,7 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqRawTransaction(from: Option[String], payload: String)
+  private[api] case class ReqSignTransaction(from: Option[String], transactionBytes: String)
 
 
 }

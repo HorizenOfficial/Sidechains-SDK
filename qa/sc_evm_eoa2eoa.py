@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-import json
 import logging
 from decimal import Decimal
 
 from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyEIP155Transaction import \
+    createLegacyEIP155Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.scutil import generate_next_block
 
 from httpCalls.transaction.allTransactions import allTransactions
@@ -41,21 +43,25 @@ class SCEvmEOA2EOA(AccountChainSetup):
         amount_in_zennies = convertZenToZennies(amount_in_zen)
         amount_in_wei = convertZenToWei(amount_in_zen)
 
-        j = {
-            "from": from_addr,
-            "to": to_addr,
-            "value": amount_in_zennies,
-        }
-        if nonce is not None:
-            j["nonce"] = nonce
-        if isEIP155:
-            j["EIP155"] = True
+        try:
+            if isEIP155:
+                tx_hash = createLegacyEIP155Transaction(from_sc_node,
+                    fromAddress=from_addr,
+                    toAddress=to_addr,
+                    value=amount_in_wei,
+                    nonce=nonce
+                )
+            else:
+                tx_hash = createLegacyTransaction(from_sc_node,
+                    fromAddress=from_addr,
+                    toAddress=to_addr,
+                    value=amount_in_wei,
+                    nonce=nonce
+                )
+        except RuntimeError as err:
+            logging.info("Expected exception thrown: {}".format(err))
+            return False, "send failed: " + str(err), None
 
-        response = from_sc_node.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            return False, "send failed: " + str(response), None
-
-        tx_hash = response['result']["transactionId"]
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
