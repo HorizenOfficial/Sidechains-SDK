@@ -18,7 +18,7 @@ import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.{SidechainSettings, SidechainTypes, WalletSettings}
+import com.horizen.{AccountMempoolSettings, SidechainSettings, SidechainTypes, WalletSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -92,7 +92,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
 
       val numOfTxs = 10000
       val numOfTxsPerSpammerAccounts = 100
@@ -109,6 +108,9 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Number of transactions for each spammer account: $numOfTxsPerSpammerAccounts\n")
       out.write(s"Number of normal accounts:                       $numOfNormalAccount\n")
       out.write(s"Number of transactions for each normal account:  $numOfTxsPerNormalAccounts\n")
+
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts)
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = scala.collection.mutable.ListBuffer[EthereumTransaction]()
 
@@ -154,7 +156,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("Starting test reverse order")
       // Resetting MemPool
-      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
 
       val reverseList = listOfTxs.reverse
       listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
@@ -210,7 +212,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
 
       val numOfTxs = 10000
       val numOfTxsPerSpammerAccounts = 100
@@ -227,6 +228,7 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Number of transactions for each normal account:  $numOfTxsPerNormalAccounts\n")
       out.write(s"Number of transactions for each block:           $numOfTxsInBlock\n")
 
+
       assertTrue(
         "Invalid test parameters",
         numOfTxs % (numOfTxsPerSpammerAccounts + normalSpammerRatio * numOfTxsPerNormalAccounts) == 0
@@ -236,6 +238,9 @@ class AccountSidechainNodeViewHolderPerfTest
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
       val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
+
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts + 1)//+1 because there are orphans, so max nonce > num of txs
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
       //Adding txs to the initial mem pool
@@ -316,8 +321,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
-
       val numOfTxs = 10000
       val numOfTxsPerSpammerAccounts = 100
       val numOfTxsPerNormalAccounts = 5
@@ -350,6 +353,9 @@ class AccountSidechainNodeViewHolderPerfTest
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
       val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
+
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts + 1) //+1 because there are orphans, so max nonce > num of txs
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
       listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
@@ -439,8 +445,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
-
       val numOfTxs = 12000
       val numOfNormalAccount = 1
       val numOfTxsInBlock = 1400
@@ -451,6 +455,8 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("************** Testing with one block to apply **************")
 
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxs)
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
       val listOfTxs = createTransactions(numOfNormalAccount, numOfTxs)
 
       listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
@@ -493,7 +499,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(AccountMempoolSettings())
 
       val numOfTxs = 10000
       val numOfTxsPerAccount = 5
@@ -572,7 +578,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
   }
 
-  def getMockedAccountSidechainNodeViewHolder()(implicit
+  def getMockedAccountSidechainNodeViewHolder(mempoolSettings: AccountMempoolSettings)(implicit
       actorSystem: ActorSystem
   ): MockedAccountSidechainNodeViewHolder = {
     val sidechainSettings = mock[SidechainSettings]
@@ -598,7 +604,7 @@ class AccountSidechainNodeViewHolderPerfTest
       override def getView: AccountStateView = stateViewMock
     }
 
-    mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
+    mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
 
     val nodeViewHolderRef: TestActorRef[MockedAccountSidechainNodeViewHolder] = TestActorRef(
       Props(

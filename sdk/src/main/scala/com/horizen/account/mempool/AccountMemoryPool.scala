@@ -1,24 +1,23 @@
 package com.horizen.account.mempool
 
-import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountMemoryPool
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
+import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.transaction.MempoolReader
 
-import java.math.BigInteger
 import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
                          unconfirmed: MempoolMap,
                          accountStateReaderProvider: AccountStateReaderProvider,
-                         baseStateReaderProvider: BaseStateReaderProvider
+                         baseStateReaderProvider: BaseStateReaderProvider,
+                         mempoolSettings: AccountMempoolSettings
                        ) extends sparkz.core.transaction.MemoryPool[
   SidechainTypes#SCAT,
   AccountMemoryPool
@@ -64,7 +63,7 @@ class AccountMemoryPool(
   ): AccountMemoryPool = {
     val filteredTxs = unconfirmed.values.filter(tx => condition(tx))
     //Reset everything
-    val newMemPool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider)
+    val newMemPool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
     filteredTxs.foreach(tx => newMemPool.put(tx))
     newMemPool
   }
@@ -79,7 +78,7 @@ class AccountMemoryPool(
 
   override def put(tx: SidechainTypes#SCAT): Try[AccountMemoryPool] = {
     Try {
-      new AccountMemoryPool(unconfirmed.add(tx).get, accountStateReaderProvider, baseStateReaderProvider)
+      new AccountMemoryPool(unconfirmed.add(tx).get, accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
     }
   }
 
@@ -104,7 +103,7 @@ class AccountMemoryPool(
 
   override def remove(tx: SidechainTypes#SCAT): AccountMemoryPool = {
     unconfirmed.remove(tx) match {
-      case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, accountStateReaderProvider, baseStateReaderProvider)
+      case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
       case Failure(e) =>
         log.error(s"Exception while removing transaction $tx from MemPool", e)
         throw e
@@ -147,12 +146,18 @@ class AccountMemoryPool(
 
   def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): AccountMemoryPool = {
     unconfirmed.updateMemPool(removedBlocks, appliedBlocks)
-    new AccountMemoryPool(unconfirmed, accountStateReaderProvider, baseStateReaderProvider)
+    new AccountMemoryPool(unconfirmed, accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
   }
 }
 
 object AccountMemoryPool {
-  def createEmptyMempool(accountStateReaderProvider: AccountStateReaderProvider, baseStateReaderProvider: BaseStateReaderProvider): AccountMemoryPool = {
-    new AccountMemoryPool(new MempoolMap(accountStateReaderProvider, baseStateReaderProvider), accountStateReaderProvider, baseStateReaderProvider)
+  def createEmptyMempool(accountStateReaderProvider: AccountStateReaderProvider,
+                         baseStateReaderProvider: BaseStateReaderProvider,
+                         mempoolSettings: AccountMempoolSettings): AccountMemoryPool = {
+    new AccountMemoryPool(
+      new MempoolMap(accountStateReaderProvider, baseStateReaderProvider, mempoolSettings),
+      accountStateReaderProvider,
+      baseStateReaderProvider,
+      mempoolSettings)
   }
 }

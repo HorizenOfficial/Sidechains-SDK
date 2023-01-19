@@ -3,6 +3,7 @@ package com.horizen.account
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
+import com.horizen.AccountMempoolSettings
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -62,7 +63,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     wallet = mock[AccountWallet]
     accountStateReaderProvider = mock[AccountStateReaderProvider]
     baseStateReaderProvider = mock[BaseStateReaderProvider]
-    mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider)
+    mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider, AccountMempoolSettings())
     mockedNodeViewHolderRef = getMockedAccountSidechainNodeViewHolderRef(history, state, wallet, mempool)
   }
 

@@ -26,13 +26,14 @@ object SidechainSettingsReader
     val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("sparkz.withdrawalEpochCertificate")
     val remoteKeysManagerSettings = config.as[RemoteKeysManagerSettings]("sparkz.remoteKeysManager")
     val mempoolSettings = config.as[MempoolSettings]("sparkz.mempool")
+    val accountMempoolSettings = config.as[AccountMempoolSettings]("sparkz.accountMempool")
     val walletSettings = config.as[WalletSettings]("sparkz.wallet")
     val forgerSettings = config.as[ForgerSettings]("sparkz.forger")
     val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("sparkz.csw")
     val logInfoSettings = config.as[LogInfoSettings]("sparkz.logInfo")
 
     SidechainSettings(sparkzSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
-      remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings)
+      remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings, accountMempoolSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

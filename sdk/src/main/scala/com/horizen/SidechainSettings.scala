@@ -62,6 +62,9 @@ case class LogInfoSettings(logFileName: String = "debug.log",
                            logFileLevel: String = "all",
                            logConsoleLevel: String = "error")
 
+
+case class AccountMempoolSettings(maxNonceGap: Int = 16)
+
 case class SidechainSettings(
                               sparkzSettings: SparkzSettings,
                               genesisData: GenesisDataSettings,
@@ -72,5 +75,6 @@ case class SidechainSettings(
                               wallet: WalletSettings,
                               forger: ForgerSettings,
                               csw: CeasedSidechainWithdrawalSettings,
-                              logInfo: LogInfoSettings
+                              logInfo: LogInfoSettings,
+                              accountMempool: AccountMempoolSettings
                             )

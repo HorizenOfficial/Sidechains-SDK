@@ -1,6 +1,6 @@
 package com.horizen.account.performance
 
-import com.horizen.SidechainTypes
+import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
@@ -55,7 +55,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
   Mockito.when(state.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
   Mockito.when(state.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(BigInteger.ZERO)
-  val mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
+  val mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, AccountMempoolSettings())
 
   val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool] =
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
