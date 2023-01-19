@@ -1,12 +1,12 @@
 package com.horizen.account.mempool
 
-import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.mempool.MempoolMap.MaxTxSize
 import com.horizen.account.mempool.exception.NonceGapTooWideException
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
@@ -48,7 +48,7 @@ class MempoolMap(
       }
 
       val stateNonce = accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
-      if (ethTransaction.getNonce.subtract(stateNonce).compareTo(MaxNonceGap) >= 0){
+      if (ethTransaction.getNonce.subtract(stateNonce).compareTo(MaxNonceGap) >= 0) {
         log.trace(s"Transaction $ethTransaction nonce gap respect state nonce exceeds maximum allowed size: tx nonce ${ethTransaction.getNonce()}, " +
           s"state nonce: $stateNonce")
         throw NonceGapTooWideException(ethTransaction.id, ethTransaction.getNonce, stateNonce)
@@ -183,7 +183,7 @@ class MempoolMap(
       for ((txNonce, txId) <- nonceIdsMap) {
         nonceTxsMap.put(txNonce, getTransaction(txId).get)
       }
-      txsMap.put(from,nonceTxsMap)
+      txsMap.put(from, nonceTxsMap)
     }
     txsMap
   }
@@ -201,7 +201,7 @@ class MempoolMap(
 
   def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
     (newTx.getMaxFeePerGas.compareTo(oldTx.getMaxFeePerGas) > 0) &&
-    (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
+      (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
   }
 
   def updateMemPool(rejectedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): Unit = {
@@ -238,14 +238,17 @@ class MempoolMap(
   }
 
   def restoreRejectedTransactions(
-      account: SidechainTypes#SCP,
-      txsFromRejectedBlocks: Seq[SidechainTypes#SCAT]
-  ): Unit = {
+                                   account: SidechainTypes#SCP,
+                                   txsFromRejectedBlocks: Seq[SidechainTypes#SCAT]
+                                 ): Unit = {
     // In this case, the current account state wasn't modified by new blocks
-    // but it was just reverted to an older state. So there is no need to check for nonce, because the txs were already
-    // verified for it. However we still need to check for balance because it is possible that both txs in mem pool and
-    // txs from reverted blocks were verified with a different balance respect the one restored. The only exception are
-    // txs from the oldest reverted block but for simplicity they are checked the same.
+    // but it was just reverted to an older state. So there is no need to check for nonce too low, because the txs were already
+    // verified for it. However we still need to check:
+    // - for balance because it is possible that both txs in mem pool and txs from reverted blocks were verified with a
+    //    different balance respect the one restored. The only exception are txs from the oldest reverted block but for
+    //    simplicity they are checked the same.
+    //- for tx size because the size is not a consensus rule so other nodes may have allowed bigger txs in their blocks
+    //- for max nonce gap because the stateNonce was reverted and it is lower than before, so some txs now need to be dropped
 
     val fromAddress = account.asInstanceOf[AddressProposition].address()
     val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
@@ -257,9 +260,10 @@ class MempoolMap(
     val maxAcceptableNonce = stateNonce.add(MaxNonceGap.subtract(BigInteger.ONE))
 
     // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
-    // They are by default directly added to the execTxs map, because the nonce is surely correct. If a tx is found invalid
-    // for balance, it is discarded. All the subsequent txs, if valid, will become not executable and they will be added
+    // They are by default directly added to the execTxs map, because the nonce is surely not too low. If a tx is found invalid
+    // for balance or size, it is discarded. All the subsequent txs, if valid, will become not executable and they will be added
     // to the nonExec map.
+    // In the (unlikely) case some rejected txs have a nonce gap too big, they and all the subsequent txs will be dropped.
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
     var maxNonceGapExceeded = false
@@ -277,16 +281,15 @@ class MempoolMap(
             }
           }
         }
-        else
-          if (!maxNonceGapExceeded)
-            maxNonceGapExceeded = true
+        else if (!maxNonceGapExceeded)
+          maxNonceGapExceeded = true
       }
 
     val execTxsOpt = executableTxs.remove(account)
 
     if (execTxsOpt.nonEmpty) {
       val execTxs = execTxsOpt.get
-      if (maxNonceGapExceeded){
+      if (maxNonceGapExceeded) {
         execTxs.foreach { case (_, id) =>
           all.remove(id)
         }
@@ -323,7 +326,7 @@ class MempoolMap(
       }
       else {
         nonExecTxs.foreach { case (nonce, id) =>
-          if (!maxNonceGapExceeded && nonce.compareTo(maxAcceptableNonce) <= 0){
+          if (!maxNonceGapExceeded && nonce.compareTo(maxAcceptableNonce) <= 0) {
             if (balance.compareTo(all(id).maxCost) >= 0) {
               newNonExecTxs.put(nonce, id)
             } else {
@@ -357,63 +360,36 @@ class MempoolMap(
   }
 
   def updateAccount(
-      account: SidechainTypes#SCP,
-      nonceOfTheLatestAppliedTx: BigInteger,
-      txsFromRejectedBlocks: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
-  ): Unit = {
+                     account: SidechainTypes#SCP,
+                     nonceOfTheLatestAppliedTx: BigInteger,
+                     txsFromRejectedBlocks: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
+                   ): Unit = {
     var newExpectedNonce = nonceOfTheLatestAppliedTx.add(BigInteger.ONE)
-    val maxAcceptableNonce = newExpectedNonce.add(MaxNonceGap.subtract(BigInteger.ONE))
-
-    val fromAddress = account.asInstanceOf[AddressProposition].address()
-    val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
-
-    val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
-    val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
-
-    // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
-    // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
-    // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, because
-    // they come from reverted blocks so it is impossible to have nonce gaps. They still need to be checked for balance.
-    // If a tx is found invalid for balance, it is discarded. All the subsequent txs, if valid, will become not executable
-    // and they will be added to the nonExec map.
-    var destMap = newExecTxs
-    var haveBecomeNonExecutable = false
-    var maxNonceGapExceeded = false
 
     if (existRejectedTxsWithValidNonce(txsFromRejectedBlocks, newExpectedNonce)) {
-      txsFromRejectedBlocks.withFilter(tx => tx.getNonce.compareTo(newExpectedNonce) >= 0).foreach { tx =>
-        if (!maxNonceGapExceeded && tx.getNonce.compareTo(maxAcceptableNonce) <= 0 ) {
-          if (tx.size() <= MaxTxSize && balance.compareTo(tx.maxCost) >= 0) {
-            all.put(tx.id, tx)
-            destMap.put(tx.getNonce, tx.id)
-          } else {
-            if (!haveBecomeNonExecutable) {
-              destMap = newNonExecTxs
-              haveBecomeNonExecutable = true
-            }
-          }
-        }
-        else {
-          if (!maxNonceGapExceeded)
-            maxNonceGapExceeded = true
-        }
-      }
-
+      restoreRejectedTransactions(account, txsFromRejectedBlocks.dropWhile(tx => tx.getNonce.compareTo(newExpectedNonce) < 0))
     }
+    else {
+      //The new expected nonce is at least the same as the old one, so I don't need to check the remaining txs
+      //for the nonce gap. No need to check for tx size too, because this check was already performed when they were added
+      // the first time in the mempool
+      val fromAddress = account.asInstanceOf[AddressProposition].address()
+      val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
 
-    // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
-    // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, unless
-    // a previous tx was found invalid. They remaining txs are checked for balance.
-    // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
-    // and they will be added to the nonExec map.
-    val execTxsOpt = executableTxs.remove(account)
-    if (execTxsOpt.nonEmpty) {
-      if (maxNonceGapExceeded) {
-        execTxsOpt.get.foreach { case (_, id) =>
-          all.remove(id)
-        }
-      }
-      else {
+      val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
+      val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
+
+      // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
+      // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
+      // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, unless
+      // a previous tx was found invalid. They remaining txs are checked for balance.
+      // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
+      // and they will be added to the nonExec map.
+      var destMap = newExecTxs
+      var haveBecomeNonExecutable = false
+
+      val execTxsOpt = executableTxs.remove(account)
+      if (execTxsOpt.nonEmpty) {
         execTxsOpt.get
           .withFilter {
             case (nonce, id) => {
@@ -424,40 +400,25 @@ class MempoolMap(
                 true
             }
           }.foreach { case (nonce, id) =>
-          if (!maxNonceGapExceeded && nonce.compareTo(maxAcceptableNonce) <= 0) {
-            if (balance.compareTo(all(id).maxCost) >= 0) {
-              destMap.put(nonce, id)
-            } else {
-              all.remove(id)
-              if (!haveBecomeNonExecutable) {
-                destMap = newNonExecTxs
-                haveBecomeNonExecutable = true
-              }
+          if (balance.compareTo(all(id).maxCost) >= 0) {
+            destMap.put(nonce, id)
+          } else {
+            all.remove(id)
+            if (!haveBecomeNonExecutable) {
+              destMap = newNonExecTxs
+              haveBecomeNonExecutable = true
             }
           }
-          else {
-            if (!maxNonceGapExceeded)
-              maxNonceGapExceeded = true
-            all.remove(id)
-          }
         }
       }
-    }
 
-    if (newExecTxs.nonEmpty)
-      newExpectedNonce = newExecTxs.lastKey.add(BigInteger.ONE)
+      if (newExecTxs.nonEmpty)
+        newExpectedNonce = newExecTxs.lastKey.add(BigInteger.ONE)
 
-    // Last we need to check txs in nonExec map. The checks are the same as the other txs with the only difference that
-    // some of them could have become executable, thanks to the txs in the applied block.
-    val nonExecTxs = nonExecutableTxs.remove(account)
-    if (nonExecTxs.nonEmpty) {
-      if (maxNonceGapExceeded) {
-        nonExecTxs.get.foreach { case (_, id) =>
-          all.remove(id)
-        }
-      }
-      else {
-
+      // Last we need to check txs in nonExec map. The checks are the same as the other txs with the only difference that
+      // some of them could have become executable, thanks to the txs in the applied block.
+      val nonExecTxs = nonExecutableTxs.remove(account)
+      if (nonExecTxs.nonEmpty) {
         nonExecTxs.get
           .withFilter {
             case (nonce, id) => {
@@ -469,39 +430,31 @@ class MempoolMap(
             }
           }
           .foreach { case (nonce, id) =>
-            if (!maxNonceGapExceeded && nonce.compareTo(maxAcceptableNonce) <= 0) {
-
-              if (balance.compareTo(all(id).maxCost) >= 0) {
-                if (nonce.compareTo(newExpectedNonce) == 0) {
-                  newExecTxs.put(nonce, id)
-                  newExpectedNonce = newExpectedNonce.add(BigInteger.ONE)
-                } else {
-                  newNonExecTxs.put(nonce, id)
-                }
+            if (balance.compareTo(all(id).maxCost) >= 0) {
+              if (nonce.compareTo(newExpectedNonce) == 0) {
+                newExecTxs.put(nonce, id)
+                newExpectedNonce = newExpectedNonce.add(BigInteger.ONE)
               } else {
-                all.remove(id)
+                newNonExecTxs.put(nonce, id)
               }
-            }
-            else {
-              if (!maxNonceGapExceeded)
-                maxNonceGapExceeded = true
+            } else {
               all.remove(id)
             }
 
           }
       }
 
-    }
 
-    if (newExecTxs.isEmpty && newNonExecTxs.isEmpty) {
-      nonces.remove(account)
-    } else {
-      nonces.put(account, newExpectedNonce)
-      if (newExecTxs.nonEmpty) {
-        executableTxs.put(account, newExecTxs)
-      }
-      if (newNonExecTxs.nonEmpty) {
-        nonExecutableTxs.put(account, newNonExecTxs)
+      if (newExecTxs.isEmpty && newNonExecTxs.isEmpty) {
+        nonces.remove(account)
+      } else {
+        nonces.put(account, newExpectedNonce)
+        if (newExecTxs.nonEmpty) {
+          executableTxs.put(account, newExecTxs)
+        }
+        if (newNonExecTxs.nonEmpty) {
+          nonExecutableTxs.put(account, newNonExecTxs)
+        }
       }
     }
   }
@@ -564,5 +517,6 @@ object MempoolMap {
 
 trait TransactionsByPriceAndNonceIter extends Iterator[SidechainTypes#SCAT] {
   def peek: SidechainTypes#SCAT
+
   def removeAndSkipAccount(): SidechainTypes#SCAT
 }
