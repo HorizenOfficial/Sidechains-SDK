@@ -1,8 +1,14 @@
 package com.horizen.evm;
 
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.horizen.evm.interop.AccountParams;
+import com.horizen.evm.interop.HandleParams;
+import com.horizen.evm.interop.StorageParams;
+import com.horizen.evm.utils.Hash;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+
+import java.math.BigInteger;
 
 final class LibEvm {
     static native void Free(Pointer ptr);
@@ -90,5 +96,33 @@ final class LibEvm {
      */
     static void invoke(String method) {
         invoke(method, null, Void.class);
+    }
+
+    public static byte[] stateGetCommittedStorage(int handle, byte[] address, byte[] key) {
+        return invoke("StateGetCommittedStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
+    }
+
+    public static void refundAdd(int handle, BigInteger gas) {
+        invoke("RefundAdd", new RefundParams(handle, gas), void.class);
+    }
+
+    public static void refundSub(int handle, BigInteger gas) {
+        invoke("RefundSub", new RefundParams(handle, gas), void.class);
+    }
+
+    public static BigInteger refundGet(int handle) {
+        return invoke("RefundGet", new HandleParams(handle), BigInteger.class);
+    }
+
+    public static void accessSetup(int handle, byte[] sender, byte[] destination) {
+        invoke("AccessSetup", new AccessParams(handle, sender, destination));
+    }
+
+    public static boolean accessAccount(int handle, byte[] address) {
+        return invoke("AccessAccount", new AccountParams(handle, address), Boolean.class);
+    }
+
+    public static boolean accessSlot(int handle, byte[] address, byte[] slot) {
+        return invoke("AccessSlot", new SlotParams(handle, address, slot), Boolean.class);
     }
 }

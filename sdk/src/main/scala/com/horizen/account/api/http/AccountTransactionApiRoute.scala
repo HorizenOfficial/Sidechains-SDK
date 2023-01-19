@@ -414,7 +414,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
           // default gas related params
           val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
-          var maxPriorityFeePerGas = GasUtil.GasForgerStakeMaxPriorityFee
+          var maxPriorityFeePerGas = BigInteger.valueOf(120)
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
           var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
 

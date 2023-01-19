@@ -30,9 +30,11 @@ object SidechainSettingsReader
     val forgerSettings = config.as[ForgerSettings]("sparkz.forger")
     val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("sparkz.csw")
     val logInfoSettings = config.as[LogInfoSettings]("sparkz.logInfo")
+    val ethServiceSettings = config.as[EthServiceSettings]("sparkz.ethService")
 
     SidechainSettings(sparkzSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
-      remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings)
+      remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings,
+      ethServiceSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

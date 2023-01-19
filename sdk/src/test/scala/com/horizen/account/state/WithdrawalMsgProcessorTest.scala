@@ -1,13 +1,13 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.utils.FeeUtils
-import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert._
 import org.junit._
+import org.mockito.ArgumentMatchers.any
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
@@ -18,8 +18,15 @@ import scala.util.Random
 
 class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with WithdrawalMsgProcessorFixture {
 
+  var mockStateView: AccountStateView = _
+
   @Before
-  def setUp(): Unit = {}
+  def setUp(): Unit = {
+    mockStateView = mock[AccountStateView]
+    Mockito
+      .when(mockStateView.getGasTrackedView(any()))
+      .thenReturn(mockStateView)
+  }
 
   @Test
   def testMethodIds(): Unit = {
@@ -34,7 +41,6 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
 
   @Test
   def testInit(): Unit = {
-    val mockStateView = mock[AccountStateView]
     Mockito
       .when(mockStateView.addAccount(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]]))
       .thenAnswer(args => {
@@ -47,7 +53,6 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
   @Test
   def testCanProcess(): Unit = {
     val msg = addWithdrawalRequestMessage(BigInteger.ONE)
-    val mockStateView = mock[AccountStateView]
     assertTrue(
       "Message for WithdrawalMsgProcessor cannot be processed",
       WithdrawalMsgProcessor.canProcess(msg, mockStateView)
@@ -63,7 +68,6 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
   @Test
   def testProcess(): Unit = {
     val value = BigInteger.valueOf(1000000000L) // 1 zenny and 1 wei
-    val mockStateView = mock[AccountStateView]
 
     // msgWithWrongFunctionCall processing should result in ExecutionFailed
     val data = BytesUtils.fromHexString("99")
@@ -75,7 +79,6 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
 
   @Test
   def testAddWithdrawalRequestFailures(): Unit = {
-    val mockStateView = mock[AccountStateView]
     Mockito
       .when(mockStateView.accountExists(WithdrawalMsgProcessor.contractAddress))
       .thenReturn(true)
@@ -118,8 +121,6 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
 
   @Test
   def testGetListOfWithdrawalReqs(): Unit = {
-    val mockStateView = mock[AccountStateView]
-
     val epochNum = 102
 
     // Invalid data
@@ -175,8 +176,6 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
 
   @Test
   def testRejectSendingInvalidValueToGetListOfWithdrawal(): Unit = {
-    val mockStateView = mock[AccountStateView]
-
     var msg = getMessage(
       WithdrawalMsgProcessor.contractAddress,
       BigInteger.ONE,
@@ -197,5 +196,4 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
       withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
   }
-
 }

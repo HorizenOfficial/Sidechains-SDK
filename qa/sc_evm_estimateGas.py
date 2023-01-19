@@ -74,7 +74,7 @@ class SCEvmBootstrap(AccountChainSetup):
         value = '0xE8D4A51000'
         nonce = '0x1'
         response = estimate_gas(sc_node, self.evm_address, to_address=to, data=data, value=value, nonce=nonce)
-        assert_equal('0x6fb6', response['result'])
+        assert_equal('0x35f84', response['result'])
 
         # Test estimating forging stake with invalid value - Execution reverted
         # -32000 = Execution reverted
@@ -90,7 +90,7 @@ class SCEvmBootstrap(AccountChainSetup):
         to = '0x0000000000000000000011111111111111111111'
         value = '0xE8D4A51000'
         response = estimate_gas(sc_node, self.evm_address, to_address=to, data=data, value=value)
-        assert_equal('0x5f3f', response['result'])
+        assert_equal('0x15ef4', response['result'])
 
 
 if __name__ == "__main__":

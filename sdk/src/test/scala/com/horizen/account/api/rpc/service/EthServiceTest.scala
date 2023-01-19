@@ -3,7 +3,7 @@ package com.horizen.account.api.rpc.service
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.horizen.SidechainTypes
+import com.horizen.{EthServiceSettings, SidechainTypes}
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.types.Quantity
@@ -172,7 +172,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-    ethService = new EthService(nodeViewHolderRef, new FiniteDuration(10, SECONDS), networkParams, transactionActorRef)
+    val ethServiceSettings = EthServiceSettings()
+    ethService = new EthService(nodeViewHolderRef, new FiniteDuration(10, SECONDS), networkParams, ethServiceSettings, transactionActorRef)
   }
 
   @Test
