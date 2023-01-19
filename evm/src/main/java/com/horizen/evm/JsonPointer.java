@@ -5,10 +5,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.BigIntDeserializer;
-import com.horizen.evm.utils.BigIntSerializer;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.utils.BigIntegerDeserializer;
+import com.horizen.evm.utils.BigIntegerSerializer;
 import com.sun.jna.FromNativeContext;
 import com.sun.jna.NativeMapped;
 import com.sun.jna.Pointer;
@@ -21,12 +19,8 @@ public class JsonPointer implements NativeMapped {
 
     static {
         var module = new SimpleModule();
-        module.addSerializer(BigInteger.class, new BigIntSerializer());
-        module.addSerializer(Address.class, new Address.Serializer());
-        module.addSerializer(Hash.class, new Hash.Serializer());
-        module.addDeserializer(BigInteger.class, new BigIntDeserializer());
-        module.addDeserializer(Address.class, new Address.Deserializer());
-        module.addDeserializer(Hash.class, new Hash.Deserializer());
+        module.addSerializer(BigInteger.class, new BigIntegerSerializer());
+        module.addDeserializer(BigInteger.class, new BigIntegerDeserializer());
         mapper = new ObjectMapper();
         mapper.registerModule(module);
         // do not serialize null or empty values
@@ -86,7 +80,7 @@ public class JsonPointer implements NativeMapped {
      * Deserialize json content into the given type.
      *
      * @param type target type to deserialize to
-     * @param <T> expected return type
+     * @param <T>  expected return type
      * @return object instance deserialized from json
      */
     public <T> T deserialize(JavaType type) {

@@ -7,10 +7,14 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.io.IOException;
 import java.util.Arrays;
 
+@JsonSerialize(using = Hash.Serializer.class)
+@JsonDeserialize(using = Hash.Deserializer.class)
 public class Hash {
     public static final int LENGTH = 32;
     private final byte[] bytes;
@@ -54,16 +58,18 @@ public class Hash {
 
     public static class Serializer extends JsonSerializer<Hash> {
         @Override
-        public void serialize(Hash hash, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
-                throws IOException {
+        public void serialize(
+            Hash hash, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
+        ) throws IOException {
             jsonGenerator.writeString(hash.toString());
         }
     }
 
     public static class Deserializer extends JsonDeserializer<Hash> {
         @Override
-        public Hash deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-                throws IOException {
+        public Hash deserialize(
+            JsonParser jsonParser, DeserializationContext deserializationContext
+        ) throws IOException {
             var text = jsonParser.getText();
             if (!text.startsWith("0x")) {
                 throw new IOException("hash must be prefixed with 0x");

@@ -8,10 +8,8 @@ import com.horizen.account.api.rpc.handler.RpcException;
 import com.horizen.account.api.rpc.request.RpcRequest;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.BigIntDeserializer;
-import com.horizen.evm.utils.BigIntSerializer;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.utils.BigIntegerDeserializer;
+import com.horizen.evm.utils.BigIntegerSerializer;
 import org.apache.logging.log4j.LogManager;
 
 import java.lang.reflect.InvocationTargetException;
@@ -32,12 +30,8 @@ public class RpcService {
             rpcMethods.put(annotation.value(), method);
         }
         var module = new SimpleModule();
-        module.addSerializer(BigInteger.class, new BigIntSerializer());
-        module.addSerializer(Address.class, new Address.Serializer());
-        module.addSerializer(Hash.class, new Hash.Serializer());
-        module.addDeserializer(BigInteger.class, new BigIntDeserializer());
-        module.addDeserializer(Address.class, new Address.Deserializer());
-        module.addDeserializer(Hash.class, new Hash.Deserializer());
+        module.addSerializer(BigInteger.class, new BigIntegerSerializer());
+        module.addDeserializer(BigInteger.class, new BigIntegerDeserializer());
         mapper = new ObjectMapper();
         mapper.registerModule(module);
         // do not serialize null or empty values

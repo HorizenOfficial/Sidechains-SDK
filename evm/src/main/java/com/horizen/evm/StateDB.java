@@ -12,17 +12,18 @@ public class StateDB extends ResourceHandle {
      * Code hash of an empty byte array
      */
     public static final byte[] EMPTY_CODE_HASH =
-            Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+        Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
     /**
      * TrieHasher.Root() of an empty byte array
      */
     public static final byte[] EMPTY_ROOT_HASH =
-            Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+        Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
     /**
      * Opens a view on the state at the given state root hash.
-     * @param db database instance
+     *
+     * @param db   database instance
      * @param root root hash
      */
     public StateDB(Database db, byte[] root) {

@@ -16,7 +16,7 @@ public class EvmResult {
         var evmResult = new EvmResult();
 
         evmResult.usedGas = BigInteger.ZERO;
-        evmResult.returnData = new byte[] {0};
+        evmResult.returnData = new byte[] { 0 };
         evmResult.traceLogs = new EvmTraceLog[] {};
 
         return evmResult;

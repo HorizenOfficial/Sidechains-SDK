@@ -10,7 +10,9 @@ import java.math.BigInteger;
 
 final class LibEvm {
     static native void Free(Pointer ptr);
+
     static native void SetLogCallback(LibEvmLogCallback callback);
+
     static native void SetLogLevel(String level);
 
     private static native JsonPointer Invoke(String method, JsonPointer args);
@@ -60,10 +62,10 @@ final class LibEvm {
         InteropResult<R> response = json.deserialize(type);
         if (response.isError()) {
             var message = String.format(
-                    "Error: \"%s\" occurred for method %s, with arguments %s",
-                    response.error,
-                    method,
-                    args == null ? null : args.toNative()
+                "Error: \"%s\" occurred for method %s, with arguments %s",
+                response.error,
+                method,
+                args == null ? null : args.toNative()
             );
             throw new InvokeException(message);
         }
@@ -203,15 +205,15 @@ final class LibEvm {
     }
 
     public static EvmResult evmApply(
-            int handle,
-            byte[] from,
-            byte[] to,
-            BigInteger value,
-            byte[] input,
-            BigInteger gasLimit,
-            BigInteger gasPrice,
-            EvmContext context,
-            TraceOptions traceOptions
+        int handle,
+        byte[] from,
+        byte[] to,
+        BigInteger value,
+        byte[] input,
+        BigInteger gasLimit,
+        BigInteger gasPrice,
+        EvmContext context,
+        TraceOptions traceOptions
     ) {
         var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions);
         return invoke("EvmApply", params, EvmResult.class);
