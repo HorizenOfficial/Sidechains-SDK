@@ -54,7 +54,7 @@ class WithdrawalMsgProcessorIntegrationTest
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
 
       // Invalid request for insufficient balance
-      view.subBalance(msgForListOfWR.getFrom.address(), view.getBalance(msgForListOfWR.getFrom.address()))
+      view.subBalance(msgForListOfWR.getFromAddressBytes, view.getBalance(msgForListOfWR.getFromAddressBytes))
       val withdrawalAmount = ZenWeiConverter.convertZenniesToWei(10)
       val msgBalance = addWithdrawalRequestMessage(withdrawalAmount)
       // Withdrawal request with insufficient balance should result in ExecutionFailed
@@ -64,7 +64,7 @@ class WithdrawalMsgProcessorIntegrationTest
       val withdrawalAmount1 = ZenWeiConverter.convertZenniesToWei(123)
       var msg = addWithdrawalRequestMessage(withdrawalAmount1)
       val initialBalance = ZenWeiConverter.convertZenniesToWei(1300)
-      view.addBalance(msg.getFrom.address(), initialBalance)
+      view.addBalance(msg.getFromAddressBytes, initialBalance)
       var newExpectedWR = WithdrawalRequest(mcAddr, msg.getValue)
       expectedListOfWR.add(newExpectedWR)
 
@@ -73,13 +73,13 @@ class WithdrawalMsgProcessorIntegrationTest
 
       val wrInBytes = withGas(WithdrawalMsgProcessor.process(msg, view, _, blockContext))
       assertArrayEquals(newExpectedWR.encode(), wrInBytes)
-      val newBalance = view.getBalance(msg.getFrom.address())
+      val newBalance = view.getBalance(msg.getFromAddressBytes)
       assertEquals("Wrong value in account balance", 1177, ZenWeiConverter.convertWeiToZennies(newBalance))
 
       // Checking log
       var listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      var expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount1, withdrawalEpoch)
+      var expectedEvent = AddWithdrawalRequest(msg.getFrom.get(), mcAddr, withdrawalAmount1, withdrawalEpoch)
       checkEvent(expectedEvent, listOfLogs(0))
 
       val txHash2 = Keccak256.hash("second tx")
@@ -105,14 +105,14 @@ class WithdrawalMsgProcessorIntegrationTest
       val wrInBytes2 = withGas(WithdrawalMsgProcessor.process(msg, view, _, blockContext))
       assertArrayEquals(newExpectedWR.encode(), wrInBytes2)
 
-      val newBalanceAfterSecondWR = view.getBalance(msg.getFrom.address())
+      val newBalanceAfterSecondWR = view.getBalance(msg.getFromAddressBytes)
       val expectedBalance = newBalance.subtract(withdrawalAmount2)
       assertEquals("Wrong value in account balance", expectedBalance, newBalanceAfterSecondWR)
 
       // Checking log
       listOfLogs = view.getLogs(txHash3.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount2, withdrawalEpoch)
+      expectedEvent = AddWithdrawalRequest(msg.getFrom.get(), mcAddr, withdrawalAmount2, withdrawalEpoch)
       checkEvent(expectedEvent, listOfLogs(0))
 
       // GetListOfWithdrawalRequest after second withdrawal request creation

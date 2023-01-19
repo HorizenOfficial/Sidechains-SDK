@@ -35,8 +35,8 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.co
 
 abstract class AbstractWallet[
   TX <: Transaction,
-  PM <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase],
-  W <: AbstractWallet[TX, PM, W]] private[horizen]
+  PMOD <: sparkz.core.PersistentNodeViewModifier,
+  W <: AbstractWallet[TX, PMOD, W]] private[horizen]
 (
   seed: Array[Byte],
   secretStorage: SidechainSecretStorage
@@ -44,7 +44,7 @@ abstract class AbstractWallet[
   extends Wallet[SidechainTypes#SCS,
     SidechainTypes#SCP,
     TX,
-    PM,
+    PMOD,
     W]
     with ScorexLogging
     with NodeWalletBase

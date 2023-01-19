@@ -162,7 +162,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       .filter(tx => {
         val txSize = tx.bytes.length + 4 // placeholder for Tx length
         txsCounter += 1
-        if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+        if (txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
           false // stop data collection
         else {
           blockSize += txSize
