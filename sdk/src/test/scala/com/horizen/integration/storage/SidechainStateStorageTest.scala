@@ -9,6 +9,7 @@ import com.horizen.companion._
 import com.horizen.consensus._
 import com.horizen.customtypes._
 import com.horizen.fixtures._
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage._
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, WithdrawalEpochInfo}
 import org.junit.Assert._
@@ -34,10 +35,11 @@ class SidechainStateStorageTest
   val nextConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(2)
 
   val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+  val params: NetworkParams = MainNetParams()
 
   @Test
   def mainFlowTest() : Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     // Verify that withdrawal epoch info and consensus info is not defined
     assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
@@ -110,7 +112,7 @@ class SidechainStateStorageTest
   @Test
   def withdrawalRequestsFlow() : Unit = {
     val rnd = new Random(90)
-    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     // Verify that withdrawal requests info is not defined
     assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
@@ -220,7 +222,7 @@ class SidechainStateStorageTest
 
   @Test
   def feePaymentsFlow() : Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     val withdrawalEpoch0: Int = 0
 
@@ -311,7 +313,7 @@ class SidechainStateStorageTest
 
   @Test
   def testUtxoMerkleTreeRootUpdate() : Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     val withdrawalEpoch1: Int = 0
 
@@ -363,7 +365,7 @@ class SidechainStateStorageTest
 
   @Test
   def testHasCeased() : Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     val withdrawalEpoch0: Int = 0
 
@@ -403,7 +405,7 @@ class SidechainStateStorageTest
 
   @Test
   def testExceptions(): Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     val bList1 = getZenBoxList(5).asScala.toSet
     val version1 = getVersion

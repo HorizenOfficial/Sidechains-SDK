@@ -2,7 +2,7 @@ package com.horizen.chain
 
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.transaction.Transaction
@@ -30,7 +30,7 @@ case class MainchainHeaderBaseInfo (hash: MainchainHeaderHash,
 }
 
 object MainchainHeaderBaseInfo {
-  def getMainchainHeaderBaseInfoSeqFromBlock[TX <: Transaction](sidechainBlock: SidechainBlockBase[TX, _<: SidechainBlockHeaderBase], initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
+  def getMainchainHeaderBaseInfoSeqFromBlock(sidechainBlock: SidechainBlockBase[_ <: Transaction, _<: SidechainBlockHeaderBase], initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
     val mcHeaderBaseInfoList: ArrayBuffer[MainchainHeaderBaseInfo] = ArrayBuffer()
     var prevCumulativeHash: Array[Byte] = initialCumulativeHash
 

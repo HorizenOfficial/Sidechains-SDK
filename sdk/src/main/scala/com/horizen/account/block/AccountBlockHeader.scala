@@ -3,9 +3,9 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.account.utils.FeeUtils
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.receipt.{LogsBloom, LogsBloomSerializer}
+import com.horizen.account.receipt.{Bloom, BloomSerializer}
+import com.horizen.account.utils.FeeUtils
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
@@ -14,13 +14,11 @@ import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSeri
 import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
+import scorex.util.ModifierId
+import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
-
 import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
 
@@ -28,10 +26,10 @@ import scala.util.{Failure, Success, Try}
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
 case class AccountBlockHeader(
                                override val version: Block.Version,
-                               @JsonSerialize(using = classOf[ScorexModifierIdSerializer])override val parentId: ModifierId,
+                               @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) override val parentId: ModifierId,
                                override val timestamp: Block.Timestamp,
                                override val forgingStakeInfo: ForgingStakeInfo,
-                               @JsonSerialize(using = classOf[MerklePathJsonSerializer])override val forgingStakeMerklePath: MerklePath,
+                               @JsonSerialize(using = classOf[MerklePathJsonSerializer]) override val forgingStakeMerklePath: MerklePath,
                                override val vrfProof: VrfProof,
                                override val sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
                                override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
@@ -39,21 +37,18 @@ case class AccountBlockHeader(
                                receiptsRoot: Array[Byte],
                                forgerAddress: AddressProposition,
                                baseFee: BigInteger,
-                               gasUsed: Long,
-                               gasLimit: Long,
+                               gasUsed: BigInteger,
+                               gasLimit: BigInteger,
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
-                               override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
-                               logsBloom: LogsBloom,
+                               override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. By default AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH.
+                               logsBloom: Bloom,
                                override val signature: Signature25519
                                ) extends SidechainBlockHeaderBase with BytesSerializable {
 
   override type M = AccountBlockHeader
 
   override def serializer: SparkzSerializer[AccountBlockHeader] = AccountBlockHeaderSerializer
-
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
-  override lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
@@ -69,12 +64,12 @@ case class AccountBlockHeader(
       receiptsRoot,
       forgerAddress.bytes(),
       baseFee.toByteArray,
-      Longs.toByteArray(gasUsed),
-      Longs.toByteArray(gasLimit),
+      gasUsed.toByteArray,
+      gasLimit.toByteArray,
       ommersMerkleRootHash,
       Longs.toByteArray(ommersCumulativeScore),
       feePaymentsHash,
-      logsBloom.getBloomFilter()
+      logsBloom.getBytes
     )
   }
 
@@ -82,26 +77,51 @@ case class AccountBlockHeader(
     super.semanticValidity(params) match {
       case Success(_) =>
 
-        if (stateRoot.length != MerkleTree.ROOT_HASH_LENGTH
-          || receiptsRoot.length != MerkleTree.ROOT_HASH_LENGTH)
-          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id contains out of bound fields.")
+        if (stateRoot.length != MerkleTree.ROOT_HASH_LENGTH)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: invalid stateRoot.length ${stateRoot.length} != ${MerkleTree.ROOT_HASH_LENGTH}.")
+
+        if (receiptsRoot.length != MerkleTree.ROOT_HASH_LENGTH)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: invalid receiptsRoot.length ${receiptsRoot.length} != ${MerkleTree.ROOT_HASH_LENGTH}.")
 
         if (version != AccountBlock.ACCOUNT_BLOCK_VERSION)
-          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id version $version is invalid.")
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: version $version is invalid.")
 
         // check, that signature is valid
         if (!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
-          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id signature is invalid.")
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: signature is invalid.")
+
+        // Check gasLimit and gasUsed are in the expected bound in their BigInteger representation
+        // If the value of the BigInteger is out of the range of the long type, then an ArithmeticException is thrown.
+        // --
+        // this check is actually stricter than !BigIntegerUtil.isUint64(gas) since in java we can not handle unsigned
+        // long values
+        Try {
+          gasLimit.longValueExact()
+        } match {
+          case Success(_) =>
+          case Failure(exception) =>
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasLimit size overflows. " + exception.getMessage)
+        }
+        Try {
+          gasUsed.longValueExact()
+        } match {
+          case Success(_) =>
+          case Failure(exception) =>
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed size overflows.. " + exception.getMessage)
+        }
+
+        if (baseFee.signum() < 1)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: baseFee=$baseFee is non positive and therefore invalid.")
 
         // check, that gas limit is valid
-        if (baseFee.signum() == 1) {
-          if(gasLimit != FeeUtils.GAS_LIMIT)
-            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasLimit is invalid.")
-          if(gasUsed < 0)
-            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasUsed is below zero and therefore invalid.")
-          if(gasUsed > gasLimit)
-            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasUsed is greater than $gasLimit and therefore invalid.")
-        }
+        if(gasLimit.compareTo(FeeUtils.GAS_LIMIT) != 0)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasLimit=$gasLimit is invalid.")
+        if(gasUsed.signum() < 0)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed=$gasUsed is below zero and therefore invalid.")
+        if(gasUsed.compareTo(gasLimit) > 0)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed=$gasUsed is greater than gasLimit=$gasLimit and therefore invalid.")
+
+
       case Failure(exception) =>
         throw exception
     }
@@ -145,9 +165,13 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
     w.putInt(baseFee.length)
     w.putBytes(baseFee)
 
-    w.putLong(obj.gasUsed)
+    val gasUsed = obj.gasUsed.toByteArray
+    w.putInt(gasUsed.length)
+    w.putBytes(gasUsed)
 
-    w.putLong(obj.gasLimit)
+    val gasLimit = obj.gasLimit.toByteArray
+    w.putInt(gasLimit.length)
+    w.putBytes(gasLimit)
 
     w.putBytes(obj.ommersMerkleRootHash)
 
@@ -155,7 +179,7 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     w.putBytes(obj.feePaymentsHash)
 
-    LogsBloomSerializer.serialize(obj.logsBloom, w)
+    BloomSerializer.serialize(obj.logsBloom, w)
 
     Signature25519Serializer.getSerializer.serialize(obj.signature, w)
   }
@@ -176,30 +200,32 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
 
-    val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val sidechainTransactionsMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val mainchainMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val stateRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
+    val stateRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val receiptsRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
+    val receiptsRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
     val baseFeeSize = r.getInt()
     val baseFee = new BigInteger(r.getBytes(baseFeeSize))
 
-    val gasUsed = r.getLong()
+    val gasUsedSize = r.getInt()
+    val gasUsed = new BigInteger(r.getBytes(gasUsedSize))
 
-    val gasLimit = r.getLong()
+    val gasLimitSize = r.getInt()
+    val gasLimit = new BigInteger(r.getBytes(gasLimitSize))
 
-    val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val ommersCumulativeScore: Long = r.getLong()
 
     val feePaymentsHash: Array[Byte] = r.getBytes(NodeViewModifier.ModifierIdSize)
 
-    val logsBloom: LogsBloom = LogsBloomSerializer.parse(r)
+    val logsBloom: Bloom = BloomSerializer.parse(r)
 
     val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(r)
 

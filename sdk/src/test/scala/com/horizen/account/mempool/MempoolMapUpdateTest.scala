@@ -4,36 +4,41 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider}
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
+import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import org.web3j.crypto.{ECKeyPair, Keys}
-
 import java.math.BigInteger
 
 class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture with SidechainTypes with MockitoSugar {
 
-  val stateViewMock: AccountStateReader = mock[AccountStateReader]
-  val stateProvider: AccountStateReaderProvider = () => stateViewMock
+  val accountStateViewMock: AccountStateReader = mock[AccountStateReader]
+  val baseStateViewMock: BaseStateReader = mock[BaseStateReader]
+
+  val accountStateProvider: AccountStateReaderProvider = () => accountStateViewMock
+  val baseStateProvider: BaseStateReaderProvider = () => baseStateViewMock
+
   val rejectedBlock: AccountBlock = mock[AccountBlock]
   val appliedBlock: AccountBlock = mock[AccountBlock]
 
   val listOfRejectedBlocks = Seq(rejectedBlock)
   val listOfAppliedBlocks = Seq(appliedBlock)
 
+  val accountKeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes()))
 
   @Before
   def setUp(): Unit = {
     Mockito
-      .when(stateViewMock.getBalance(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getBalance(ArgumentMatchers.any[Array[Byte]]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
 
     Mockito
-      .when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
       .thenReturn(BigInteger.ZERO)
     Mockito.reset(rejectedBlock)
     Mockito.reset(appliedBlock)
@@ -42,12 +47,10 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testEmptyMemPool(): Unit = {
-    var mempoolMap = new MempoolMap(stateProvider)
-
-    val account = Keys.createEcKeyPair()
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     val expectedNumOfTxs = 7
-    val listOfTxs = createTransactionsForAccount(account, expectedNumOfTxs).toSeq
+    val listOfTxs = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfTxs).toSeq
 
     // Try with only txs from reverted blocks
     var listOfTxsToReAdd = listOfTxs
@@ -63,10 +66,10 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     // Try with only txs from applied blocks
     // Reset mempool
-    mempoolMap = new MempoolMap(stateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
     //Update the nonce in the state db
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(expectedNumOfTxs))
 
     listOfTxsToReAdd = Seq.empty[SidechainTypes#SCAT]
@@ -79,7 +82,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     // Try with txs from applied and reverted blocks
     // Reset mempool
-    mempoolMap = new MempoolMap(stateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
     listOfTxsToReAdd = listOfTxs.take(3)
     listOfTxsToRemove = listOfTxs
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
@@ -89,14 +92,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of txs in the mempool", 0, mempoolMap.size)
 
     // Reset mempool
-    mempoolMap = new MempoolMap(stateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
     listOfTxsToReAdd = listOfTxs
     listOfTxsToRemove = listOfTxs.take(4)
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
     //Update the nonce in the state db
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(4))
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
@@ -105,18 +108,18 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of executable transactions", listOfTxsToReAdd.size - listOfTxsToRemove.size, executableTxs.size)
 
     //With orphans for balance
-    mempoolMap = new MempoolMap(stateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
     val invalidTx = createEIP1559Transaction(BigInteger.valueOf(20000), nonce = BigInteger.valueOf(expectedNumOfTxs),
-      Some(account), gasLimit = BigInteger.valueOf(1000000), gasFee = BigInteger.valueOf(1000000))
+      accountKeyOpt, gasLimit = BigInteger.valueOf(1000000), gasFee = BigInteger.valueOf(1000000))
     val validTx = createEIP1559Transaction(BigInteger.valueOf(12), nonce = BigInteger.valueOf(expectedNumOfTxs + 1),
-      Some(account))
+      accountKeyOpt)
     listOfTxsToReAdd = listOfTxsToReAdd :+ invalidTx.asInstanceOf[SidechainTypes#SCAT]
     listOfTxsToReAdd = listOfTxsToReAdd :+ validTx.asInstanceOf[SidechainTypes#SCAT]
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
     assertTrue(invalidTx.maxCost().compareTo(listOfTxsToReAdd.head.maxCost()) > 0)
     Mockito
-      .when(stateViewMock.getBalance(invalidTx.getFrom.address()))
+      .when(accountStateViewMock.getBalance(invalidTx.getFrom.address()))
       .thenReturn(listOfTxsToReAdd.head.maxCost())
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
@@ -127,13 +130,11 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testWithTxsInMemPool(): Unit = {
-    val mempoolMap = new MempoolMap(stateProvider)
-
-    val account = Keys.createEcKeyPair()
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
     val expectedNumOfTxs = 5
     val expectedNumOfExecutableTxs = 3
-    val listOfTxs = createTransactionsForAccount(account, expectedNumOfTxs, expectedNumOfExecutableTxs).toSeq
+    val listOfTxs = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfTxs, expectedNumOfExecutableTxs).toSeq
 
     //initialize mem pool
     listOfTxs.foreach(tx => mempoolMap.add(tx))
@@ -148,7 +149,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
     //Update the nonce in the state db
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(expectedNumOfExecutableTxs))
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
@@ -164,7 +165,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
     //Update the nonce in the state db
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.ZERO)
 
 
@@ -182,7 +183,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
     //Update the nonce in the state db
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(2))
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
@@ -197,7 +198,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.ZERO)
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs, mempoolMap.size)
@@ -206,11 +207,11 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     //Apply enough txs so that the non executable txs become executable
     listOfTxsToReAdd = Seq.empty[SidechainTypes#SCAT]
-    listOfTxsToRemove = createTransactionsForAccount(account, expectedNumOfExecutableTxs + 1).toSeq //creates expectedNumOfExecutableTxs + 1 consecutive txs
+    listOfTxsToRemove = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfExecutableTxs + 1).toSeq //creates expectedNumOfExecutableTxs + 1 consecutive txs
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(expectedNumOfExecutableTxs + 1))
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
@@ -222,23 +223,22 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testWithTxsInvalidForBalance(): Unit = {
-    val mempoolMap = new MempoolMap(stateProvider)
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
 
-    val accountOpt = Some(Keys.createEcKeyPair())
     val limitOfGas = BigInteger.valueOf(1000000)
     val maxGasFee = BigInteger.valueOf(1000000)
     val tx0 = createEIP1559Transaction(BigInteger.valueOf(10000), BigInteger.valueOf(0),
-      accountOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
+      accountKeyOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
     val tx1 = createEIP1559Transaction(BigInteger.valueOf(20000), BigInteger.valueOf(1),
-      accountOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
+      accountKeyOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
     val tx2 = createEIP1559Transaction(BigInteger.valueOf(50000), BigInteger.valueOf(2),
-      accountOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
+      accountKeyOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
     val tx3 = createEIP1559Transaction(BigInteger.valueOf(200), BigInteger.valueOf(3),
-      accountOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
+      accountKeyOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
     val tx5 = createEIP1559Transaction(BigInteger.valueOf(30000), BigInteger.valueOf(5),
-      accountOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
+      accountKeyOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
     val tx6 = createEIP1559Transaction(BigInteger.valueOf(10), BigInteger.valueOf(6),
-      accountOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
+      accountKeyOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
 
 
     val expectedNumOfTxs = 6
@@ -260,12 +260,12 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Update the nonce in the state db
     val address = listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()
     Mockito
-      .when(stateViewMock.getNonce(address))
+      .when(accountStateViewMock.getNonce(address))
       .thenReturn(tx2.getNonce)
 
     //Reduce the balance so tx2 and tx5 are no valid anymore and the txs in the mempool are all non exec
     Mockito
-      .when(stateViewMock.getBalance(address))
+      .when(accountStateViewMock.getBalance(address))
       .thenReturn(tx1.maxCost().subtract(BigInteger.ONE))
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
@@ -283,7 +283,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     //Update the nonce in the state db
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(tx1.getNonce)
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
@@ -293,9 +293,9 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     //Apply txs with nonce 0, 1 and 2 => tx3 becomes executable
     val newTx1 = createEIP1559Transaction(BigInteger.valueOf(500), BigInteger.valueOf(1),
-      accountOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
+      accountKeyOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
     val newTx2 = createEIP1559Transaction(BigInteger.valueOf(500), BigInteger.valueOf(2),
-      accountOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
+      accountKeyOpt, gasLimit = limitOfGas, gasFee = maxGasFee)
 
     listOfTxsToReAdd = Seq.empty[SidechainTypes#SCAT]
     listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx0, newTx1, newTx2)
@@ -303,7 +303,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
     //Update the nonce in the state db
     Mockito
-      .when(stateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
+      .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(tx3.getNonce)
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
@@ -316,7 +316,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
 
   private def createTransactionsForAccount(
-      keys: ECKeyPair,
+      key: PrivateKeySecp256k1,
       numOfTxsPerAccount: Int,
       orphanIdx: Int = -1
   ): scala.collection.mutable.ListBuffer[SidechainTypes#SCAT] = {
@@ -330,10 +330,10 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
         listOfTxs += createEIP1559Transaction(
           value,
           nonce = BigInteger.valueOf(nonceTx + 1),
-          pairOpt = Some(keys)
+          keyOpt = Some(key)
         )
       } else
-        listOfTxs += createEIP1559Transaction(value, nonce = currentNonce, pairOpt = Some(keys))
+        listOfTxs += createEIP1559Transaction(value, nonce = currentNonce, keyOpt = Some(key))
     })
     listOfTxs
   }

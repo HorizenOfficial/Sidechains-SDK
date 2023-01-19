@@ -3,16 +3,13 @@ package com.horizen.account.transaction;
 import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.state.GasUtil;
-import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
-import org.web3j.crypto.Sign;
 
 import java.math.BigInteger;
 import java.util.Optional;
 
-import static com.horizen.account.utils.EthereumTransactionUtils.convertToLong;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -410,4 +407,11 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         );
     }
 
+    @Test
+    public void testBigTxValidity() throws TransactionSemanticValidityException {
+        // data are charged with gas therefore we must set a gasLimt large enough.
+        // As of now check on block max gas limit is not made in tx.semanticValidity (it is made in state.validate(tx))
+        var goodTx = getBigDataTransaction(5000000, BigInteger.valueOf(100000000));
+        goodTx.semanticValidity();
+    }
 }

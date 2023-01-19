@@ -6,7 +6,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.storage.{SidechainStorageInfo, Storage}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -40,6 +40,10 @@ class AccountStateMetadataStorage(storage: Storage)
 
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = getView.getTopQualityCertificate(referencedWithdrawalEpoch)
 
+  override def lastCertificateReferencedEpoch: Option[Int] = getView.lastCertificateReferencedEpoch
+
+  override def lastCertificateSidechainBlockId: Option[ModifierId] = getView.lastCertificateSidechainBlockId
+
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
 
   override def hasCeased: Boolean = getView.hasCeased
@@ -49,4 +53,5 @@ class AccountStateMetadataStorage(storage: Storage)
   override def getAccountStateRoot: Array[Byte] = getView.getAccountStateRoot
 
   override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = getView.getTransactionReceipt(txHash)
+
 }

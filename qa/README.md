@@ -46,11 +46,13 @@ python3 <test.py>
 ```
 
 The following command-line options can be used in addition:
-- `--nocleanup`: Do not remove sc_test.* datadirs on exit or error
-- `--noshutdown`: Don't stop Mainchain and Sidechain nodes after the test execution
-- `--restapitimeout=<timeout>`: Timeout in seconds for rest API execution
-- `--logfilelevel=<log level>`: log4j log level for logging on log file.  
-- `--logconsolelevel=<log level>`: log4j log level for logging on console
+- `--nocleanup`: Do not remove sc_test.* datadirs on exit or error.
+- `--noshutdown`: Don't stop Mainchain and Sidechain nodes after the test execution.
+- `--restapitimeout=<timeout>`: Timeout in seconds for rest API execution.
+- `--logfilelevel=<log level>`: log4j log level for sidechain node logging on log file. Valid values are: fatal, error, warn, info, debug, trace, off, all 
+- `--logconsolelevel=<log level>`: log4j log level for sidechain node logging on console.Valid values are: fatal, error, warn, info, debug, off, all
+- `--testlogfilelevel=<log level>`: log level for test logging on log file. Valid values are: fatal, error, warn, info, debug, notset
+- `--testlogconsolelevel=<log level>`: log level for test logging on console. Valid values are: fatal, error, warn, info, debug, notset
 
 Additional options can be found in sc_test_framework.py file.
 

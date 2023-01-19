@@ -3,17 +3,21 @@ package com.horizen.account.mempool
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.AccountStateReaderProvider
+import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
-class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends ScorexLogging {
+class MempoolMap(
+                  accountStateReaderProvider: AccountStateReaderProvider,
+                  baseStateReaderProvider: BaseStateReaderProvider) extends ScorexLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
+  type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap.empty[ModifierId, SidechainTypes#SCAT]
@@ -33,7 +37,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
       val expectedNonce = nonces.getOrElseUpdate(
         account,
-        stateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
+        accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
       )
       expectedNonce.compareTo(ethTransaction.getNonce) match {
         case 0 =>
@@ -58,8 +62,9 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
             })
           nonces.put(account, nextNonce)
         case -1 =>
-          val nonExecTxsPerAccount =
+          val nonExecTxsPerAccount = {
             nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
+          }
           val existingTxWithSameNonceIdOpt = nonExecTxsPerAccount.get(ethTransaction.getNonce)
           if (existingTxWithSameNonceIdOpt.isDefined) {
             val existingTxWithSameNonceId = existingTxWithSameNonceIdOpt.get
@@ -137,13 +142,41 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
 
   def values: Iterable[SidechainTypes#SCAT] = all.values
 
+  def mempoolTransactions(executable: Boolean): Iterable[ModifierId] = {
+    val txsList = new ListBuffer[ModifierId]
+    var mempoolIdsMap = TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
+    if (executable) mempoolIdsMap = executableTxs
+    else mempoolIdsMap = nonExecutableTxs
+    for ((_, v) <- mempoolIdsMap) {
+      for ((_, innerV) <- v) {
+        txsList += innerV
+      }
+    }
+    txsList
+  }
+
+  def mempoolTransactionsMap(executable: Boolean): TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
+    val txsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
+    var mempoolIdsMap = TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
+    if (executable) mempoolIdsMap = executableTxs
+    else mempoolIdsMap = nonExecutableTxs
+    for ((from, nonceIdsMap) <- mempoolIdsMap) {
+      val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+      for ((txNonce, txId) <- nonceIdsMap) {
+        nonceTxsMap.put(txNonce, getTransaction(txId).get)
+      }
+      txsMap.put(from,nonceTxsMap)
+    }
+    txsMap
+  }
+
   /**
    * Returns executable transactions sorted by gas tip (descending) and nonce. The ordering is performed in a semi-lazy
    * way.
    */
   def takeExecutableTxs(): TransactionsByPriceAndNonce = {
 
-    val baseFee = stateReaderProvider.getAccountStateReader().nextBaseFee
+    val baseFee = baseStateReaderProvider.getBaseStateReader().getNextBaseFee
 
     new TransactionsByPriceAndNonce(baseFee)
   }
@@ -197,7 +230,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
     // txs from the oldest reverted block but for simplicity they are checked the same.
 
     val fromAddress = account.asInstanceOf[AddressProposition].address()
-    val balance = stateReaderProvider.getAccountStateReader().getBalance(fromAddress)
+    val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
 
     val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
     val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
@@ -270,7 +303,7 @@ class MempoolMap(stateReaderProvider: AccountStateReaderProvider) extends Scorex
   ): Unit = {
     var newExpectedNonce = nonceOfTheLatestAppliedTx.add(BigInteger.ONE)
     val fromAddress = account.asInstanceOf[AddressProposition].address()
-    val balance = stateReaderProvider.getAccountStateReader().getBalance(fromAddress)
+    val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
 
     val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
     val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()

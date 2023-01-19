@@ -22,15 +22,17 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo", "forgerPublicKey"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo", "forgerPublicKey", "topQualityCertificateOpt"))
 class SidechainBlock(override val header: SidechainBlockHeader,
                      override val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
                      override val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                      override val mainchainHeaders: Seq[MainchainHeader],
                      override val ommers: Seq[Ommer[SidechainBlockHeader]],
                      companion: SidechainTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]
+  extends SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader](header, sidechainTransactions,mainchainBlockReferencesData, mainchainHeaders, ommers)
 {
+  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
+
   override type M = SidechainBlock
 
   override lazy val serializer = new SidechainBlockSerializer(companion)
@@ -42,8 +44,6 @@ class SidechainBlock(override val header: SidechainBlockHeader,
   }
 
   lazy val feeInfo: BlockFeeInfo = BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
-
-  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   override def verifyTransactionsDataConsistency(): Unit = {
@@ -63,6 +63,11 @@ class SidechainBlock(override val header: SidechainBlockHeader,
   }
 
   override def versionIsValid(): Boolean = version == SidechainBlock.BLOCK_VERSION
+
+  override def transactionsListExceedsSizeLimit: Boolean = sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
+
+  override def blockExceedsSizeLimit(blockSize: Int): Boolean = blockSize > SidechainBlock.MAX_BLOCK_SIZE
+
 }
 
 
@@ -70,6 +75,9 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 object SidechainBlock extends SparkzEncoding {
 
   val BLOCK_VERSION: Block.Version = 1: Byte
+  val MAX_BLOCK_SIZE: Int = 5000000
+  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
+
 
   def create(parentId: Block.BlockId,
              blockVersion: Block.Version,
@@ -169,7 +177,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
   private val sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCBT] = new ListSerializer[SidechainTypes#SCBT](
     companion,
-    SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER
+    SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
   )
 
   private val mainchainHeadersSerializer: ListSerializer[MainchainHeader] = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
@@ -185,7 +193,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
   }
 
   override def parse(r: Reader): SidechainBlock = {
-    require(r.remaining <= SidechainBlockBase.MAX_BLOCK_SIZE)
+    require(r.remaining <= SidechainBlock.MAX_BLOCK_SIZE)
 
     val sidechainBlockHeader: SidechainBlockHeader = SidechainBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r)

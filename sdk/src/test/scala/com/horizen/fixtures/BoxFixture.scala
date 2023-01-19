@@ -56,11 +56,11 @@ trait BoxFixture
     boxList
   }
 
-  def getZenBoxList(secretList: JList[PrivateKey25519]): JList[ZenBox] = {
+  def getZenBoxList(secretList: JList[PrivateKey25519], minBoxAmount:Int = 0): JList[ZenBox] = {
     val boxList: JList[ZenBox] = new JArrayList[ZenBox]()
 
     for (s <- secretList.asScala)
-      boxList.add(getZenBox(s.publicImage(), 1, Random.nextInt(10000)))
+      boxList.add(getZenBox(s.publicImage(), 1, minBoxAmount + Random.nextInt(10000)))
 
     boxList
   }

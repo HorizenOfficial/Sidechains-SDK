@@ -10,7 +10,7 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.{Transaction, TransactionSerializer}
-import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils}
+import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils, WithdrawalEpochInfo}
 import com.horizen.vrf.VrfOutput
 import com.horizen.{AbstractHistory, AbstractWallet}
 import sparkz.core.NodeViewHolder.CurrentView
@@ -254,14 +254,12 @@ abstract class AbstractForgeMessageBuilder[
     var ommers: Seq[Ommer[H]] = Seq()
     var blockId = nodeView.history.bestBlockId
     while (blockId != parentBlockId) {
-      val block = nodeView.history.getBlockById(blockId).get // TODO: replace with method blockById with no Option
+      val block = nodeView.history.getBlockById(blockId).get
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers
     }
 
     // Update block size with Ommers
-    //val ommersSerializer = new ListSerializer[Ommer[H]](OmmerSerializer)
-    //blockSize += ommersSerializer.toBytes(ommers.asJava).length
     blockSize += getOmmersSize(ommers)
 
     // Get all needed MainchainBlockReferences from the MC Node
@@ -277,7 +275,7 @@ abstract class AbstractForgeMessageBuilder[
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if (blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+          if (blockSize + refDataSize > SidechainBlock.MAX_BLOCK_SIZE)
             false // stop data collection
           else {
             mainchainReferenceData.append(ref.data)
@@ -302,7 +300,7 @@ abstract class AbstractForgeMessageBuilder[
       // For example the ommerred Block contains Tx which output is going to be spent by another Tx in the Mempool.
       Iterable.empty[TX]
     } else {
-      collectTransactionsFromMemPool(nodeView, blockSize, mainchainReferenceData, timestamp, forcedTx)
+      collectTransactionsFromMemPool(nodeView, blockSize, mainchainReferenceData, parentBlockInfo.withdrawalEpochInfo, timestamp, forcedTx)
     }
 
     log.trace(s"Transactions to apply $transactions")
@@ -358,6 +356,7 @@ abstract class AbstractForgeMessageBuilder[
 
   def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int,
                                      mainchainBlockReferenceData: Seq[MainchainBlockReferenceData],
+                                     withdrawalEpochInfo: WithdrawalEpochInfo,
                                      timestamp: Long,
                                      forcedTx: Iterable[TX]): Iterable[TX]
 

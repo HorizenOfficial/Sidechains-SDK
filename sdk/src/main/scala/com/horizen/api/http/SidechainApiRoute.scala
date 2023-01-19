@@ -1,7 +1,6 @@
 package com.horizen.api.http
 
 import akka.actor.ActorRef
-
 import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import akka.pattern.ask
@@ -10,10 +9,8 @@ import com.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.transaction.Transaction
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -73,7 +70,7 @@ trait SidechainApiRoute[
   }
 
 
-  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
+  type View = CurrentView[NH, S, W, P]
 
   def withView(f: View => Route): Route = onSuccess(sidechainViewAsync())(f)
 

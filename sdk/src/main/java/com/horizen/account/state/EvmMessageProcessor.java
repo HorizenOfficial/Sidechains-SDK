@@ -22,8 +22,8 @@ public class EvmMessageProcessor implements MessageProcessor {
     @Override
     public boolean canProcess(Message msg, BaseAccountStateView view) {
         // contract deployment to a new account
-        if (msg.getTo() == null) return true;
-        var to = msg.getTo().address();
+        if (msg.getTo().isEmpty()) return true;
+        var to = msg.getTo().get().address();
         return view.isSmartContractAccount(to);
     }
 
@@ -35,7 +35,7 @@ public class EvmMessageProcessor implements MessageProcessor {
 
         context.chainID = BigInteger.valueOf(blockContext.chainID);
         context.coinbase = Address.fromBytes(blockContext.forgerAddress);
-        context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);
+        context.gasLimit = blockContext.blockGasLimit;
         context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
         context.time = BigInteger.valueOf(blockContext.timestamp);
         context.baseFee = blockContext.baseFee;
@@ -44,8 +44,8 @@ public class EvmMessageProcessor implements MessageProcessor {
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),
-                msg.getFrom().address(),
-                msg.getTo() == null ? null : msg.getTo().address(),
+                msg.getFromAddressBytes(),
+                msg.getToAddressBytes(),
                 msg.getValue(),
                 msg.getData(),
                 // use gas from the pool not the message, because intrinsic gas was already spent at this point

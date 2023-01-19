@@ -9,13 +9,12 @@ trait WithdrawalEpochCertificateFixture {
     bytes
   }
 
-  def generateWithdrawalEpochCertificate(previousMcBlockHashOpt: Option[Array[Byte]] = None, rnd: Random = new Random(), epoch: Option[Int] = None): WithdrawalEpochCertificate = {
-    val epochNumber = epoch.getOrElse(rnd.nextInt())
+  def generateWithdrawalEpochCertificate(previousMcBlockHashOpt: Option[Array[Byte]] = None, rnd: Random = new Random(), epochNumber: Option[Int] = None): WithdrawalEpochCertificate = {
     WithdrawalEpochCertificate(
       getBytes(),
       rnd.nextInt,
       getBytes(32),
-      epochNumber,
+      epochNumber.getOrElse(rnd.nextInt()),
       rnd.nextLong(),
       getBytes(),
       Seq(),

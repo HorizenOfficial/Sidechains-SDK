@@ -10,7 +10,7 @@ from test_framework.util import check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, LEVEL_INFO
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, APP_LEVEL_INFO
 import os
 import tempfile
 import traceback
@@ -19,7 +19,7 @@ import shutil
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 
-from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG
+from SidechainTestFramework.scutil import APP_LEVEL_ERROR, APP_LEVEL_DEBUG, TEST_LEVEL_INFO, TEST_LEVEL_DEBUG
 
 
 '''
@@ -112,8 +112,8 @@ class SidechainTestFramework(BitcoinTestFramework):
             filehandler.setLevel(logging.DEBUG)
             streamhandler.setLevel(logging.DEBUG)
         else:
-            filehandler.setLevel(options.logfilelevel.upper())
-            streamhandler.setLevel(options.logconsolelevel.upper())
+            filehandler.setLevel(options.testlogfilelevel.upper())
+            streamhandler.setLevel(options.testlogconsolelevel.upper())
 
         logging.basicConfig(format="[%(asctime)s] : [%(levelname)s] : %(message)s",
                             handlers=[filehandler, streamhandler],
@@ -147,7 +147,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
         examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
-        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0.jar;{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar;{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="sc_test"),
                           help="Root directory for datadirs")
@@ -155,12 +155,21 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Print out all RPC calls as they are made")
         parser.add_option("--restapitimeout", dest="restapitimeout", default=5, action="store",
                           help="timeout in seconds for rest API execution, might be useful when debugging")
-        parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_DEBUG, action="store",
+        parser.add_option("--logfilelevel", dest="logfilelevel", default=APP_LEVEL_DEBUG, action="store",
                           help="log4j log level for application log file")
-        parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_INFO, action="store",
+        parser.add_option("--logconsolelevel", dest="logconsolelevel", default=APP_LEVEL_INFO, action="store",
                           help="log4j log level for application console")
+        parser.add_option("--testlogfilelevel", dest="testlogfilelevel", default=TEST_LEVEL_DEBUG, action="store",
+                          help="log level for test log file")
+        parser.add_option("--testlogconsolelevel", dest="testlogconsolelevel", default=TEST_LEVEL_INFO, action="store",
+                          help="log level for test console")
         parser.add_option("--debugnode", dest="debugnode", default=None, action="store",
                           help="Index of the SC node to debug. Adds -agentlib option to java VM")
+        parser.add_option("--nonceasing", dest="nonceasing", default=False, action="store_true",
+                          help="Specify if sidechain is non-ceasing. By default, it is ceasing.")
+        parser.add_option("--certcircuittype", dest="certcircuittype", default="NaiveThresholdSignatureCircuit", action="store",
+                          help="Type of certificate circuit: NaiveThresholdSignatureCircuit"
+                               "/NaiveThresholdSignatureCircuitWithKeyRotation")
 
         self.add_options(parser)
         self.sc_add_options(parser)

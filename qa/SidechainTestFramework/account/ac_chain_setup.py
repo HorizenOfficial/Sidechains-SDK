@@ -10,12 +10,17 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, DEFAULT_EVM
 from test_framework.util import start_nodes, websocket_port_by_mc_node_index, assert_equal, assert_true, \
     forward_transfer_to_sidechain
 
+from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
+    SC_CREATION_VERSION_1
+
 
 class AccountChainSetup(SidechainTestFramework):
 
     def __init__(self, API_KEY='Horizen', number_of_mc_nodes=1, number_of_sidechain_nodes=1,
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
-                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None):
+                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
+                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False):
+
         self.evm_address = None
         self.sc_nodes = None
         self.sc_nodes_bootstrap_info = None
@@ -29,6 +34,10 @@ class AccountChainSetup(SidechainTestFramework):
         self.forward_amount = forward_amount
         self.block_timestamp_rewind = block_timestamp_rewind
         self.forger_options = forger_options
+        self.initial_private_keys = initial_private_keys
+        self.circuittype_override = circuittype_override
+        self.remote_keys_manager_enabled = remote_keys_manager_enabled
+
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -52,14 +61,31 @@ class AccountChainSetup(SidechainTestFramework):
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-                    api_key=self.API_KEY))
+                    api_key=self.API_KEY,
+                    remote_keys_manager_enabled=self.remote_keys_manager_enabled))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     forger_options=self.forger_options,
-                    api_key=self.API_KEY))
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, self.withdrawalEpochLength),
+                    api_key=self.API_KEY,
+                    initial_private_keys=self.initial_private_keys,
+                    remote_keys_manager_enabled=self.remote_keys_manager_enabled))
+
+        if self.circuittype_override is not None:
+            circuit_type = self.circuittype_override
+        else:
+            circuit_type = self.options.certcircuittype
+
+        if circuit_type == KEY_ROTATION_CIRCUIT:
+            sc_creation_version = SC_CREATION_VERSION_2  # non-ceasing could be only SC_CREATION_VERSION_2>=2
+        else:
+            sc_creation_version = SC_CREATION_VERSION_1
+
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, self.withdrawalEpochLength,
+                                                        sc_creation_version=sc_creation_version,
+                                                        is_non_ceasing=self.options.nonceasing,
+                                                        circuit_type=circuit_type),
                                          *sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
                                                                  block_timestamp_rewind=self.block_timestamp_rewind,

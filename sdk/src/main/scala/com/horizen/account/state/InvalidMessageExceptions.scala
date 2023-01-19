@@ -1,10 +1,9 @@
 package com.horizen.account.state
 
 import com.horizen.account.state.InvalidMessageException.{toAddress, toHex}
+import com.horizen.account.utils.Secp256k1
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Keys
-import org.web3j.utils.Numeric
 
 import java.math.BigInteger
 
@@ -21,7 +20,7 @@ import java.math.BigInteger
 class InvalidMessageException(message: String) extends TransactionSemanticValidityException(message)
 
 private object InvalidMessageException {
-  def toAddress(address: Array[Byte]): String = Keys.toChecksumAddress(Numeric.toHexString(address))
+  def toAddress(address: Array[Byte]): String = Secp256k1.checksumAddress(address)
 
   def toHex(data: Array[Byte]): String = BytesUtils.toHexString(data)
 }
@@ -51,25 +50,6 @@ case class GasUintOverflowException() extends InvalidMessageException("gas uint6
 /** ErrIntrinsicGas is returned if the transaction is specified to use less gas than required to start the invocation. */
 case class IntrinsicGasException(have: BigInteger, want: BigInteger)
   extends InvalidMessageException(s"intrinsic gas too low: have $have, want $want")
-
-/** ErrTipAboveFeeCap is a sanity error to ensure no one is able to specify a transaction with a tip higher than the total fee cap. */
-case class TipAboveFeeCapException(address: Array[Byte], maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger)
-  extends InvalidMessageException(s"max priority fee per gas higher than max fee per gas: address ${toAddress(address)}, maxPriorityFeePerGas $maxPriorityFeePerGas, maxFeePerGas $maxFeePerGas")
-
-/** ErrTipVeryHigh is a sanity error to avoid extremely big numbers specified in the tip field. */
-case class TipVeryHighException(address: Array[Byte], maxPriorityFeePerGas: BigInteger) extends InvalidMessageException(
-  s"max priority fee per gas higher than 2^256-1: address ${toAddress(address)}, maxPriorityFeePerGas bit length ${
-    maxPriorityFeePerGas.bitLength()
-  }"
-)
-
-/** ErrFeeCapVeryHigh is a sanity error to avoid extremely big numbers specified in the fee cap field. */
-case class FeeCapVeryHighException(address: Array[Byte], maxPriorityFeePerGas: BigInteger)
-  extends InvalidMessageException(
-    s"max fee per gas higher than 2^256-1: address ${toAddress(address)}, maxPriorityFeePerGas bit length ${
-      maxPriorityFeePerGas.bitLength()
-    }"
-  )
 
 /** ErrFeeCapTooLow is returned if the transaction fee cap is less than the	base fee of the block. */
 case class FeeCapTooLowException(address: Array[Byte], maxFeePerGas: BigInteger, baseFee: BigInteger)

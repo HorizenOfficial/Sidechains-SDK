@@ -9,8 +9,6 @@ import scorex.util.ScorexLogging
 
 abstract class FakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
 
-  val NULL_HEX_STRING_32: Array[Byte] = Array.fill(32)(0)
-
   val contractAddress: Array[Byte]
   val contractCode: Array[Byte]
   lazy val contractCodeHash: Array[Byte] = Keccak256.hash(contractCode)
@@ -29,10 +27,14 @@ abstract class FakeSmartContractMsgProcessor extends MessageProcessor with Score
 
   override def canProcess(msg: Message, view: BaseAccountStateView): Boolean = {
     // we rely on the condition that init() has already been called at this point
-    msg.getTo != null && contractAddress.sameElements(msg.getTo.address())
+    msg.getTo.isPresent && contractAddress.sameElements(msg.getToAddressBytes)
   }
 
   def getEvmLog(event: Any): EvmLog = {
     EthereumEvent.getEvmLog(new Address(BytesUtils.toHexString(contractAddress)), event)
   }
+}
+
+object FakeSmartContractMsgProcessor {
+  val NULL_HEX_STRING_32: Array[Byte] = Array.fill(32)(0)
 }

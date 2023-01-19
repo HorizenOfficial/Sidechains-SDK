@@ -6,33 +6,36 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
 import com.horizen.api.http._
+import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.fork.{ForkConfigurator, ForkManager}
-import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl}
+import com.horizen.helper.TransactionSubmitProvider
+import com.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl}
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.storage._
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
+import com.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
 import com.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
 import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry
+import scorex.util.ScorexLogging
+import sparkz.core.api.http.ApiRoute
 import sparkz.core.app.Application
+import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 import sparkz.core.network.PeerFeature
 import sparkz.core.network.message.MessageSpec
 import sparkz.core.settings.SparkzSettings
-import scorex.util.ScorexLogging
-import sparkz.core.api.http.ApiRoute
-import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
@@ -64,7 +67,9 @@ abstract class AbstractSidechainApp
   override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
   override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
-  private val storageList = mutable.ListBuffer[Storage]()
+  private val closableResourceList = mutable.ListBuffer[AutoCloseable]()
+  protected val sidechainTransactionsCompanion: DynamicTypedSerializer[TX, TransactionSerializer[TX]]
+
 
   log.info(s"Starting application with settings \n$sidechainSettings")
 
@@ -74,7 +79,7 @@ abstract class AbstractSidechainApp
 
   override protected lazy val features: Seq[PeerFeature] = Seq()
 
-  val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
+  val stopAllInProgress: AtomicBoolean = new AtomicBoolean(false)
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(
     SidechainSyncInfoMessageSpec,
@@ -82,6 +87,9 @@ abstract class AbstractSidechainApp
     new GetCertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size),
     new CertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size)
   )
+
+  val circuitType: CircuitTypes = sidechainSettings.withdrawalEpochCertificateSettings.circuitType
+
 
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
@@ -93,7 +101,16 @@ abstract class AbstractSidechainApp
   val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
     .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
-  val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+  var mastersPublicKeys: Seq[SchnorrProposition] = Seq()
+
+  val calculatedSysDataConstant: Array[Byte] = circuitType match {
+    case NaiveThresholdSignatureCircuit =>
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+    case NaiveThresholdSignatureCircuitWithKeyRotation =>
+      mastersPublicKeys = sidechainSettings.withdrawalEpochCertificateSettings.mastersPublicKeys
+        .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
+      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, mastersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+  }
   log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
 
@@ -103,6 +120,12 @@ abstract class AbstractSidechainApp
   }
 
   lazy val isCSWEnabled: Boolean = sidechainCreationOutput.getScCrOutput.ceasedVkOpt.isDefined
+
+  if (circuitType.equals(CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation) && isCSWEnabled)
+    throw new IllegalArgumentException("Invalid Configuration file: With key rotation circuit CSW feature is not allowed.")
+
+  // Init Secure Enclave Api Client
+  val secureEnclaveApiClient = new SecureEnclaveApiClient(sidechainSettings.remoteKeysManagerSettings)
 
   lazy val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
@@ -124,6 +147,8 @@ abstract class AbstractSidechainApp
       consensusSecondsInSlot = consensusSecondsInSlot,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      circuitType = circuitType,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -135,7 +160,8 @@ abstract class AbstractSidechainApp
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.regtestId,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
 
     case "testnet" => TestNetParams(
@@ -149,6 +175,8 @@ abstract class AbstractSidechainApp
       consensusSecondsInSlot = consensusSecondsInSlot,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      circuitType = circuitType,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -160,7 +188,8 @@ abstract class AbstractSidechainApp
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.testnetId,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
 
     case "mainnet" => MainNetParams(
@@ -174,6 +203,8 @@ abstract class AbstractSidechainApp
       consensusSecondsInSlot = consensusSecondsInSlot,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
+      mastersPublicKeys = mastersPublicKeys,
+      circuitType = circuitType,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
       certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
@@ -185,9 +216,19 @@ abstract class AbstractSidechainApp
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.mainnetId,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
+  }
+
+  if (params.isNonCeasing) {
+    if (params.withdrawalEpochLength < params.minVirtualWithdrawalEpochLength)
+      throw new IllegalArgumentException("Virtual withdrawal epoch length is too short.")
+
+    log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")
+  } else {
+    log.info(s"Sidechain is ceasing, withdrawal epoch length is ${params.withdrawalEpochLength}.")
   }
 
   // Configure Horizen address json serializer specifying proper network type.
@@ -202,10 +243,24 @@ abstract class AbstractSidechainApp
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
-    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)) {
-      throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
+    val expectedNumOfCustomFields = circuitType match {
+      case NaiveThresholdSignatureCircuitWithKeyRotation =>
+        CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION
+      case NaiveThresholdSignatureCircuit =>
+        if (params.isCSWEnabled) {
+          CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW
+        } else {
+          CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION
+        }
     }
+    val result: Boolean = circuitType match {
+      case NaiveThresholdSignatureCircuit =>
+        CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)
+      case NaiveThresholdSignatureCircuitWithKeyRotation =>
+        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath)
+    }
+    if (!result)
+      throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
   }
 
   // Init ForkManager
@@ -240,35 +295,19 @@ abstract class AbstractSidechainApp
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
 
-  /*
-   * TODO this should be common code but nodeViewHolderRef here is still null, and lazy initialization does not always apply
-   *  One possible approach could be to add some init() function in this base class and call it from concrete instances.
-   *
-  // Init Certificate Submitter
-  lazy val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  lazy val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
+  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
-   * Moreover, for the time being we decide not to use ws server for accounts
-  //Websocket server for the Explorer
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
-  }
+//  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
+//  val applicationApiRoutes: Seq[ApplicationApiRoute]
 
   // Init API
-  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
-  rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
+  lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
-  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
-  customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
-  */
+  lazy val applicationApiRoutes: Seq[ApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
-
-  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
-  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
-  var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
+  val coreApiRoutes: Seq[ApiRoute]
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
@@ -276,6 +315,9 @@ abstract class AbstractSidechainApp
     .union(rejectedApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)
+
+  lazy val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
+  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   val shutdownHookThread: Thread = new Thread("ShutdownHook-Thread") {
     override def run(): Unit = {
@@ -287,16 +329,15 @@ abstract class AbstractSidechainApp
   // we rewrite (by overriding) the base class run() method, just to customizing the shutdown hook thread
   // not to call the stopAll() method
   override def run(): Unit = {
-    require(settings.network.agentName.length <= Application.ApplicationNameLimit)
+    require(settings.network.agentName.length <= Application.ApplicationNameLimit,
+      s"Agent name ${settings.network.agentName} length exceeds limit ${Application.ApplicationNameLimit}")
 
     log.debug(s"Available processors: ${Runtime.getRuntime.availableProcessors}")
     log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")
     log.debug(s"RPC is allowed at ${settings.restApi.bindAddress.toString}")
 
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
     val bindAddress = settings.restApi.bindAddress
-
-    Http().bindAndHandle(combinedRoute, bindAddress.getAddress.getHostAddress, bindAddress.getPort)
+    Http().newServerAt(bindAddress.getAddress.getHostAddress,bindAddress.getPort).bind(combinedRoute)
 
     //Remove the Logger shutdown hook
     val factory = LogManager.getFactory
@@ -336,8 +377,8 @@ abstract class AbstractSidechainApp
       log.info("Calling custom application stopAll...")
       applicationStopper.stopAll()
 
-      log.info("Closing all data storages...")
-      storageList.foreach(_.close())
+      log.info("Closing all closable resources...")
+      closableResourceList.foreach(_.close())
 
       log.info("Shutdown the logger...")
       LogManager.shutdown()
@@ -348,8 +389,11 @@ abstract class AbstractSidechainApp
     }
   }
 
-  protected def registerStorage(storage: Storage) : Storage = {
-    storageList += storage
-    storage
+  protected def registerClosableResource[S <: AutoCloseable](closableResource: S) : S = {
+    closableResourceList += closableResource
+    closableResource
   }
+
+  def getTransactionSubmitProvider: TransactionSubmitProvider[TX]
+
 }

@@ -4,6 +4,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.utils.FeeUtils
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
+import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert._
 import org.junit._
@@ -89,7 +90,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     // helper: mock balance call and assert that the withdrawal request throws
     val withdraw = (balance: BigInteger, withdrawalAmount: BigInteger, blockContext: BlockContext) => {
       val msg = addWithdrawalRequestMessage(withdrawalAmount)
-      Mockito.when(mockStateView.getBalance(msg.getFrom.address())).thenReturn(balance)
+      Mockito.when(mockStateView.getBalance(msg.getFromAddressBytes)).thenReturn(balance)
       assertThrows[ExecutionFailedException](
         withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, blockContext))
       )
@@ -107,7 +108,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     val key = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
     val numOfWithdrawalReqs = Bytes.concat(
       new Array[Byte](32 - Ints.BYTES),
-      Ints.toByteArray(WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch)
+      Ints.toByteArray(MaxWithdrawalReqsNumPerEpoch)
     )
     Mockito
       .when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.contractAddress, key))
@@ -123,7 +124,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
 
     // Invalid data
     var msg = getMessage(WithdrawalMsgProcessor.contractAddress, BigInteger.ZERO, Array.emptyByteArray)
-    Mockito.when(mockStateView.accountExists(msg.getTo.address())).thenReturn(true)
+    Mockito.when(mockStateView.accountExists(msg.getToAddressBytes)).thenReturn(true)
 
     // Withdrawal request list with invalid data should throw ExecutionFailedException
     assertThrows[ExecutionFailedException](
@@ -144,7 +145,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), returnData)
 
     // With 3999 withdrawal requests
-    val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
+    val maxNumOfWithdrawalReqs = MaxWithdrawalReqsNumPerEpoch
     val numOfWithdrawalReqsInBytes =
       Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(maxNumOfWithdrawalReqs))
     Mockito

@@ -17,15 +17,16 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
-    private MainchainTxSidechainCreationCrosschainOutput output;
-    private byte[] containingTxHash;
-    private int index;
+    private final MainchainTxSidechainCreationCrosschainOutput output;
+    private final byte[] containingTxHash;
+    private final int index;
 
     public SidechainCreation(MainchainTxSidechainCreationCrosschainOutput output, byte[] containingTxHash, int index) {
         this.output = output;
         this.containingTxHash = containingTxHash;
         this.index = index;
     }
+
     @Override
     public byte[] hash() {
         return BytesUtils.reverseBytes(Utils.doubleSHA256Hash(Bytes.concat(
@@ -45,8 +46,20 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         return output.sidechainId();
     }
 
+    /*
+    This method creates a ForgerBox with the information about forger contained in UTXO Sidechain creation MC transaction.
+     */
     @Override
     public ForgerBox getBox() {
+        //TODO This method should fail when called in an Account Sidechain and at the moment the only way to tell if we are in
+        // an Account or UTXO model is by checking the customCreationData() length. However, this check is commented because
+        // this method is called by the Json serializer when a block is retrieved with our APIs, even for an AccountBlock.
+        // A possible solution is to create a custom Json serializer for the AccountBlock that doesn't call this method.
+        //to know if we are in Account or UTXO model, except for the length of customCreationData.
+//        if (output.customCreationData().length != VrfPublicKey.KEY_LENGTH) {
+//            throw new IllegalArgumentException("Invalid sidechain creation custom data size, expected:" +
+//                    VrfPublicKey.KEY_LENGTH + ", actual: " + output.customCreationData().length);
+//        }
         // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(BytesUtils.reverseBytes(output.address()));
         long value = output.amount();
@@ -62,7 +75,16 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         return forgerBoxData.getBox(nonce);
     }
 
+    /*
+    This method creates a ForgingStakeInfo object with the information about forger contained in Account Sidechain creation MC transaction.
+    For account model, the forger address and the blockSignProposition differs, while in UTXO model they are the same. So the blockSignProposition
+    is appended in customCreationData field, after the vrfPublicKey.
+     */
     public ForgingStakeInfo getAccountForgerStakeInfo() {
+        if (output.customCreationData().length != VrfPublicKey.KEY_LENGTH + PublicKey25519Proposition.KEY_LENGTH) {
+            throw new IllegalArgumentException("Invalid sidechain creation custom data size, expected: " +
+                    VrfPublicKey.KEY_LENGTH + PublicKey25519Proposition.KEY_LENGTH + ", actual: " + output.customCreationData().length);
+        }
         // custom data = vfr key bytes | block signer pub key
         VrfPublicKey vrfPublicKey = new VrfPublicKey(Arrays.copyOfRange(output.customCreationData(),
                 0, VrfPublicKey.KEY_LENGTH));

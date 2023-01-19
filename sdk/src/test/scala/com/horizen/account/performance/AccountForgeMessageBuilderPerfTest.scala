@@ -12,6 +12,7 @@ import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
 import com.horizen.evm.interop.EvmLog
+import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -51,10 +52,10 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
   Mockito
     .when(state.getBalance(ArgumentMatchers.any[Array[Byte]]))
     .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
-  Mockito.when(state.nextBaseFee).thenReturn(BigInteger.ZERO)
+  Mockito.when(state.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
   Mockito.when(state.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(BigInteger.ZERO)
-  val mempool = AccountMemoryPool.createEmptyMempool(() => state)
+  val mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
 
   val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool] =
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
@@ -111,6 +112,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         nodeView,
         1500,
         Seq.empty[MainchainBlockReferenceData],
+        WithdrawalEpochInfo(0,0),
         100,
         Seq.empty[SidechainTypes#SCAT]
       )
@@ -118,7 +120,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
       val (_, appliedTxs, _) = forger.computeBlockInfo(stateView, listOfExecTxs, Seq.empty, blockContext, null)
       val totalTime = System.currentTimeMillis() - startTime
 
-      val maxNumOfTxsInBlock = BigInteger.valueOf(blockContext.blockGasLimit).divide(GasUtil.TxGas).intValue()
+      val maxNumOfTxsInBlock = blockContext.blockGasLimit.divide(GasUtil.TxGas).intValue()
       val expectedNumOfAppliedTxs = if (numOfTxs < maxNumOfTxsInBlock) numOfTxs else maxNumOfTxsInBlock
 
       assertEquals(expectedNumOfAppliedTxs, appliedTxs.size)
