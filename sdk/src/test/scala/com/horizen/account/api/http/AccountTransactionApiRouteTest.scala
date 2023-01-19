@@ -245,7 +245,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     "reply at /openForgerList" in {
       val outAsTransactionObj = ReqOpenStakeForgerList(Some(BigInteger.ONE), utilMocks.forgerIndex, None)
 
-      Post(basePath + "openForgerList").withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "openForgerList").addCredentials(credentials).withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
