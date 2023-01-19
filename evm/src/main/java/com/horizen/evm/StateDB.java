@@ -1,10 +1,7 @@
 package com.horizen.evm;
 
 import com.horizen.evm.interop.*;
-import com.horizen.evm.interop.SetStorageParams;
-import com.horizen.evm.interop.StorageParams;
 import com.horizen.evm.utils.Converter;
-import com.horizen.evm.utils.Hash;
 import com.horizen.evm.utils.Hash;
 
 import java.math.BigInteger;
@@ -197,7 +194,7 @@ public class StateDB extends ResourceHandle {
      * @param gas amount to add to refund counter
      */
     public void addRefund(BigInteger gas) {
-        LibEvm.refundAdd(handle, gas);
+        LibEvm.invoke("RefundAdd", new RefundParams(handle, gas), void.class);
     }
 
     /**
@@ -206,7 +203,7 @@ public class StateDB extends ResourceHandle {
      * @param gas amount to remove from refund counter
      */
     public void subRefund(BigInteger gas) {
-        LibEvm.refundSub(handle, gas);
+        LibEvm.invoke("RefundSub", new RefundParams(handle, gas), void.class);
     }
 
     /**
@@ -215,7 +212,7 @@ public class StateDB extends ResourceHandle {
      * @return refunded gas
      */
     public BigInteger getRefund() {
-        return LibEvm.refundGet(handle);
+        return LibEvm.invoke("RefundGet", new HandleParams(handle), BigInteger.class);
     }
 
     /**
@@ -237,7 +234,7 @@ public class StateDB extends ResourceHandle {
      * @return comitted storage value, always 32 bytes
      */
     public byte[] getCommittedStorage(byte[] address, byte[] key) {
-        return LibEvm.stateGetCommittedStorage(handle, address, key);
+        return LibEvm.invoke("StateGetCommittedStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
     }
 
     /**
@@ -318,7 +315,7 @@ public class StateDB extends ResourceHandle {
      * @param destination destination account
      */
     public void accessSetup(byte[] sender, byte[] destination) {
-        LibEvm.accessSetup(handle, sender, destination);
+        LibEvm.invoke("AccessSetup", new AccessParams(handle, sender, destination));
     }
 
     /**
@@ -328,7 +325,7 @@ public class StateDB extends ResourceHandle {
      * @return true if the account was already on the access list, false otherwise
      */
     public boolean accessAccount(byte[] address) {
-        return LibEvm.accessAccount(handle, address);
+        return LibEvm.invoke("AccessAccount", new AccountParams(handle, address), Boolean.class);
     }
 
     /**
@@ -339,7 +336,7 @@ public class StateDB extends ResourceHandle {
      * @return true if the slot was already on the access list, false otherwise
      */
     public boolean accessSlot(byte[] address, byte[] slot) {
-        return LibEvm.accessSlot(handle, address, slot);
+        return LibEvm.invoke("AccessSlot", new SlotParams(handle, address, slot), Boolean.class);
     }
 
     @Override
