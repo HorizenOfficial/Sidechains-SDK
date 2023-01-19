@@ -156,8 +156,8 @@ public class TransactionArgs {
             }
         }
         return new Message(
-            new AddressProposition(getFrom()),
-            to == null ? null : new AddressProposition(to.toBytes()),
+            from == null ? Optional.empty() : Optional.of(new AddressProposition(from.toBytes())),
+            to == null ? Optional.empty() : Optional.of(new AddressProposition(to.toBytes())),
             effectiveGasPrice,
             gasFeeCap,
             gasTipCap,
