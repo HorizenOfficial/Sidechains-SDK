@@ -1,6 +1,7 @@
 package com.horizen.evm;
 
 import com.horizen.evm.interop.EvmContext;
+import com.horizen.evm.interop.EvmParams;
 import com.horizen.evm.interop.EvmResult;
 import com.horizen.evm.interop.TraceOptions;
 
@@ -20,6 +21,7 @@ public final class Evm {
         EvmContext context,
         TraceOptions traceOptions
     ) {
-        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions);
+        var params = new EvmParams(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions);
+        return LibEvm.invoke("EvmApply", params, EvmResult.class);
     }
 }

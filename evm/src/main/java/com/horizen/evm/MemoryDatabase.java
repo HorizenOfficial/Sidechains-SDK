@@ -5,7 +5,7 @@ public class MemoryDatabase extends Database {
      * Open an ephemeral key-value database in memory.
      */
     public MemoryDatabase() {
-        super(LibEvm.openMemoryDB());
+        super(LibEvm.invoke("OpenMemoryDB", int.class));
     }
 
     @Override

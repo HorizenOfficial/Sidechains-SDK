@@ -1,6 +1,9 @@
 package com.horizen.evm;
 
+import com.horizen.evm.interop.HandleParams;
+import com.horizen.evm.interop.OpenStateParams;
 import com.horizen.evm.utils.Converter;
+import com.horizen.evm.utils.Hash;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -85,10 +88,14 @@ public class StateDBTest extends LibEvmTestBase {
             }
             // Verify that automatic resource management worked and StateDB.close() was called.
             // If it was, the handle is invalid now and this should throw.
-            assertThrows(Exception.class, () -> LibEvm.stateIntermediateRoot(1));
+            assertThrows(Exception.class,
+                () -> LibEvm.invoke("StateIntermediateRoot", new HandleParams(1), Hash.class).toBytes()
+            );
         }
         // also verify that the database was closed
-        assertThrows(Exception.class, () -> LibEvm.stateOpen(1, hashNull));
+        assertThrows(Exception.class,
+            () -> LibEvm.invoke("StateOpen", new OpenStateParams(1, Hash.fromBytes(hashNull)), int.class)
+        );
 
         try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
             try (var statedb = new StateDB(db, rootWithBalance1234)) {

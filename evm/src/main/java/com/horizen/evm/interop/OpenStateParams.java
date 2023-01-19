@@ -5,8 +5,8 @@ import com.horizen.evm.utils.Hash;
 public class OpenStateParams extends DatabaseParams {
     public Hash root;
 
-    public OpenStateParams(int databaseHandle, byte[] root) {
+    public OpenStateParams(int databaseHandle, Hash root) {
         super(databaseHandle);
-        this.root = Hash.fromBytes(root);
+        this.root = root;
     }
 }

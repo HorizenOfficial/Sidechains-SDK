@@ -1,8 +1,8 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.EvmLog;
-import com.horizen.evm.interop.ProofAccountResult;
+import com.horizen.evm.interop.*;
 import com.horizen.evm.utils.Converter;
+import com.horizen.evm.utils.Hash;
 
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -27,7 +27,7 @@ public class StateDB extends ResourceHandle {
      * @param root root hash
      */
     public StateDB(Database db, byte[] root) {
-        super(LibEvm.stateOpen(db.handle, root));
+        super(LibEvm.invoke("StateOpen", new OpenStateParams(db.handle, Hash.fromBytes(root)), int.class));
     }
 
     /**
@@ -35,7 +35,7 @@ public class StateDB extends ResourceHandle {
      */
     @Override
     public void close() throws Exception {
-        LibEvm.stateClose(handle);
+        LibEvm.invoke("StateClose", new HandleParams(handle));
     }
 
     /**
@@ -44,7 +44,7 @@ public class StateDB extends ResourceHandle {
      * therefore also invalidates all snapshots.
      */
     public void finalizeChanges() {
-        LibEvm.stateFinalize(handle);
+        LibEvm.invoke("StateFinalize", new HandleParams(handle));
     }
 
     /**
@@ -53,7 +53,7 @@ public class StateDB extends ResourceHandle {
      * @return state root hash
      */
     public byte[] getIntermediateRoot() {
-        return LibEvm.stateIntermediateRoot(handle);
+        return LibEvm.invoke("StateIntermediateRoot", new HandleParams(handle), Hash.class).toBytes();
     }
 
     /**
@@ -62,7 +62,7 @@ public class StateDB extends ResourceHandle {
      * @return updated state root hash
      */
     public byte[] commit() {
-        return LibEvm.stateCommit(handle);
+        return LibEvm.invoke("StateCommit", new HandleParams(handle), Hash.class).toBytes();
     }
 
     /**
@@ -72,7 +72,7 @@ public class StateDB extends ResourceHandle {
      * @return true if account state is empty, otherwise false
      */
     public boolean isEmpty(byte[] address) {
-        return LibEvm.stateEmpty(handle, address);
+        return LibEvm.invoke("StateEmpty", new AccountParams(handle, address), boolean.class);
     }
 
     /**
@@ -106,7 +106,7 @@ public class StateDB extends ResourceHandle {
      * @return account balance, 0 if account not exist
      */
     public BigInteger getBalance(byte[] address) {
-        return LibEvm.stateGetBalance(handle, address);
+        return LibEvm.invoke("StateGetBalance", new AccountParams(handle, address), BigInteger.class);
     }
 
     /**
@@ -116,7 +116,7 @@ public class StateDB extends ResourceHandle {
      * @param amount  amount to add to account balance
      */
     public void addBalance(byte[] address, BigInteger amount) {
-        LibEvm.stateAddBalance(handle, address, amount);
+        LibEvm.invoke("StateAddBalance", new BalanceParams(handle, address, amount));
     }
 
     /**
@@ -126,7 +126,7 @@ public class StateDB extends ResourceHandle {
      * @param amount  amount to subtract from account balance
      */
     public void subBalance(byte[] address, BigInteger amount) {
-        LibEvm.stateSubBalance(handle, address, amount);
+        LibEvm.invoke("StateSubBalance", new BalanceParams(handle, address, amount));
     }
 
     /**
@@ -136,7 +136,7 @@ public class StateDB extends ResourceHandle {
      * @param amount  amount to assign to the account balance
      */
     public void setBalance(byte[] address, BigInteger amount) {
-        LibEvm.stateSetBalance(handle, address, amount);
+        LibEvm.invoke("StateSetBalance", new BalanceParams(handle, address, amount));
     }
 
     /**
@@ -146,7 +146,7 @@ public class StateDB extends ResourceHandle {
      * @return account nonce
      */
     public BigInteger getNonce(byte[] address) {
-        return LibEvm.stateGetNonce(handle, address);
+        return LibEvm.invoke("StateGetNonce", new AccountParams(handle, address), BigInteger.class);
     }
 
     /**
@@ -156,7 +156,7 @@ public class StateDB extends ResourceHandle {
      * @param nonce   value to set account nonce to
      */
     public void setNonce(byte[] address, BigInteger nonce) {
-        LibEvm.stateSetNonce(handle, address, nonce);
+        LibEvm.invoke("StateSetNonce", new NonceParams(handle, address, nonce));
     }
 
     /**
@@ -166,7 +166,7 @@ public class StateDB extends ResourceHandle {
      * @return code hash
      */
     public byte[] getCodeHash(byte[] address) {
-        return LibEvm.stateGetCodeHash(handle, address);
+        return LibEvm.invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class).toBytes();
     }
 
     /**
@@ -175,7 +175,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      */
     public byte[] getCode(byte[] address) {
-        return LibEvm.stateGetCode(handle, address);
+        return LibEvm.invoke("StateGetCode", new AccountParams(handle, address), byte[].class);
     }
 
     /**
@@ -185,7 +185,7 @@ public class StateDB extends ResourceHandle {
      * @param code    code binary
      */
     public void setCode(byte[] address, byte[] code) {
-        LibEvm.stateSetCode(handle, address, code);
+        LibEvm.invoke("StateSetCode", new CodeParams(handle, address, code));
     }
 
     /**
@@ -194,7 +194,7 @@ public class StateDB extends ResourceHandle {
      * @return refunded gas
      */
     public BigInteger getRefund() {
-        return LibEvm.stateGetRefund(handle);
+        return LibEvm.invoke("StateGetRefund", new HandleParams(handle), BigInteger.class);
     }
 
     /**
@@ -208,9 +208,9 @@ public class StateDB extends ResourceHandle {
     public byte[] getStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
         switch (strategy) {
             case RAW:
-                return LibEvm.stateGetStorage(handle, address, key);
+                return LibEvm.invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
             case CHUNKED:
-                return LibEvm.stateGetStorageBytes(handle, address, key);
+                return LibEvm.invoke("StateGetStorageBytes", new StorageParams(handle, address, key), byte[].class);
             default:
                 throw new RuntimeException("invalid storage strategy");
         }
@@ -229,10 +229,10 @@ public class StateDB extends ResourceHandle {
     public void setStorage(byte[] address, byte[] key, byte[] value, StateStorageStrategy strategy) {
         switch (strategy) {
             case RAW:
-                LibEvm.stateSetStorage(handle, address, key, value);
+                LibEvm.invoke("StateSetStorage", new SetStorageParams(handle, address, key, value));
                 return;
             case CHUNKED:
-                LibEvm.stateSetStorageBytes(handle, address, key, value);
+                LibEvm.invoke("StateSetStorageBytes", new SetStorageBytesParams(handle, address, key, value));
                 return;
             default:
                 throw new RuntimeException("invalid storage strategy");
@@ -249,10 +249,10 @@ public class StateDB extends ResourceHandle {
     public void removeStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
         switch (strategy) {
             case RAW:
-                LibEvm.stateRemoveStorage(handle, address, key);
+                LibEvm.invoke("StateRemoveStorage", new StorageParams(handle, address, key));
                 return;
             case CHUNKED:
-                LibEvm.stateRemoveStorageBytes(handle, address, key);
+                LibEvm.invoke("StateRemoveStorageBytes", new StorageParams(handle, address, key));
                 return;
             default:
                 throw new RuntimeException("invalid storage strategy");
@@ -267,7 +267,7 @@ public class StateDB extends ResourceHandle {
      * @return proofs
      */
     public ProofAccountResult getProof(byte[] address, byte[][] keys) {
-        return LibEvm.stateGetProof(handle, address, keys);
+        return LibEvm.invoke("StateGetProof", new ProofParams(handle, address, keys), ProofAccountResult.class);
     }
 
     /**
@@ -276,7 +276,7 @@ public class StateDB extends ResourceHandle {
      * @return revision id of the snapshot
      */
     public int snapshot() {
-        return LibEvm.stateSnapshot(handle);
+        return LibEvm.invoke("StateSnapshot", new HandleParams(handle), int.class);
     }
 
     /**
@@ -285,7 +285,7 @@ public class StateDB extends ResourceHandle {
      * @param revisionId revision id of the snapshot to revert to
      */
     public void revertToSnapshot(int revisionId) {
-        LibEvm.stateRevertToSnapshot(handle, revisionId);
+        LibEvm.invoke("StateRevertToSnapshot", new SnapshotParams(handle, revisionId));
     }
 
     /**
@@ -295,7 +295,7 @@ public class StateDB extends ResourceHandle {
      * @return log entries related to given transaction hash
      */
     public EvmLog[] getLogs(byte[] txHash) {
-        return LibEvm.stateGetLogs(handle, txHash);
+        return LibEvm.invoke("StateGetLogs", new GetLogsParams(handle, txHash), EvmLog[].class);
     }
 
     /**
@@ -304,7 +304,7 @@ public class StateDB extends ResourceHandle {
      * @param evmLog log entry
      */
     public void addLog(EvmLog evmLog) {
-        LibEvm.stateAddLog(handle, evmLog);
+        LibEvm.invoke("StateAddLog", new AddLogParams(handle, evmLog));
     }
 
     /**
@@ -314,7 +314,7 @@ public class StateDB extends ResourceHandle {
      * @param txIndex the index of the transaction in the block
      */
     public void setTxContext(byte[] txHash, int txIndex) {
-        LibEvm.stateSetTxContext(handle, txHash, txIndex);
+        LibEvm.invoke("StateSetTxContext", new SetTxContextParams(handle, txHash, txIndex));
     }
 
     @Override
