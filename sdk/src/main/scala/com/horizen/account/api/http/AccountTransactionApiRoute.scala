@@ -68,7 +68,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction
   }
 
-  def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
+  private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
   : Option[PrivateKeySecp256k1] = {
 
     val wallet = nodeView.getNodeWallet
@@ -84,16 +84,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     else Option.empty[PrivateKeySecp256k1]
   }
 
-  def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
-    val messageToSign = tx.messageToSign()
-    val msgSignature = secret.sign(messageToSign)
-    new EthereumTransaction(
-        tx,
-        new SignatureSecp256k1(msgSignature.getV, msgSignature.getR, msgSignature.getS)
-    )
-  }
-
-  def signTransactionEIP155WithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
+  private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
     val messageToSign = tx.messageToSign()
     val msgSignature = secret.sign(messageToSign)
     new EthereumTransaction(
@@ -175,7 +166,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 EthereumTransactionUtils.getDataFromString(body.data),
                 null
               )
-              validateAndSendTransaction(signTransactionEIP155WithSecret(secret, unsignedTx))
+              validateAndSendTransaction(signTransactionWithSecret(secret, unsignedTx))
             case None =>
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
@@ -363,7 +354,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             gasLimit = body.gasInfo.get.gasLimit
           }
 
-          //getFittingSecret needs to take into account also gas
           val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
 
           val secret = getFittingSecret(sidechainNodeView, None, txCost)
@@ -573,10 +563,12 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         // lock the view and try to create CoreTransaction
         applyOnNodeView { sidechainNodeView =>
           val valueInWei = BigInteger.ZERO
-          // TODO actual gas implementation
-          var maxFeePerGas = BigInteger.ONE
-          var maxPriorityFeePerGas = BigInteger.ONE
-          var gasLimit = BigInteger.ONE
+
+          val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+          var maxPriorityFeePerGas = GasUtil.TxGasContractCreation
+          var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+          var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+
           if (body.gasInfo.isDefined) {
             maxFeePerGas = body.gasInfo.get.maxFeePerGas
             maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas

@@ -2,13 +2,14 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent}
+import com.horizen.api.http.WalletBaseErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent}
 import com.horizen.api.http.SidechainWalletRestScheme._
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.WalletBaseRestScheme.ReqAllPropositions
+import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpWallet, ReqExportSecret, ReqImportSecret}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
+
 import java.io.File
 import scala.collection.JavaConverters._
 import java.util.{Scanner, Optional => JOptional}

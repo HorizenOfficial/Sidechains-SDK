@@ -52,7 +52,6 @@ import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, Outgoing, Pee
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 
