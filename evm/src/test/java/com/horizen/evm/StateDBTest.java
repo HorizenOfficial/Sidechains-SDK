@@ -2,6 +2,7 @@ package com.horizen.evm;
 
 import com.horizen.evm.interop.HandleParams;
 import com.horizen.evm.interop.OpenStateParams;
+import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
 import org.junit.Ignore;
@@ -43,7 +44,7 @@ public class StateDBTest extends LibEvmTestBase {
     public void accountManipulation() throws Exception {
         final var databaseFolder = tempFolder.newFolder("evm-db");
 
-        final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5c0b");
+        final var origin = address("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b");
 
         final var v1234 = BigInteger.valueOf(1234);
         final var v432 = BigInteger.valueOf(432);
@@ -90,12 +91,14 @@ public class StateDBTest extends LibEvmTestBase {
             }
             // Verify that automatic resource management worked and StateDB.close() was called.
             // If it was, the handle is invalid now and this should throw.
-            assertThrows(Exception.class,
+            assertThrows(
+                Exception.class,
                 () -> LibEvm.invoke("StateIntermediateRoot", new HandleParams(1), Hash.class).toBytes()
             );
         }
         // also verify that the database was closed
-        assertThrows(Exception.class,
+        assertThrows(
+            Exception.class,
             () -> LibEvm.invoke("StateOpen", new OpenStateParams(1, Hash.fromBytes(hashNull)), int.class)
         );
 
@@ -115,7 +118,7 @@ public class StateDBTest extends LibEvmTestBase {
     @Test
     public void accountStorage() throws Exception {
         final var databaseFolder = tempFolder.newFolder("account-db");
-        final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
+        final var origin = address("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
         final byte[][] values = {
             bytes("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -162,7 +165,7 @@ public class StateDBTest extends LibEvmTestBase {
 
     @Test
     public void accountStorageEdgeCases() throws Exception {
-        final var origin = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
+        final var origin = address("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
         // test some negative cases:
         // - trying to store a value that is not 32 bytes should throw
@@ -209,7 +212,7 @@ public class StateDBTest extends LibEvmTestBase {
         }
     }
 
-    private void testAccessListAccounts(StateDB statedb, byte[] sender, byte[] destination, byte[] other) {
+    private void testAccessListAccounts(StateDB statedb, Address sender, Address destination, Address other) {
         final var key1 = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff000000000000000000000001");
         final var key2 = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff000000000000000000000002");
 
@@ -253,10 +256,10 @@ public class StateDBTest extends LibEvmTestBase {
 
     @Test
     public void accessList() throws Exception {
-        final var accounts = new byte[][] {
-            bytes("0011001100110011001100110011001100110011"),
-            bytes("0022002200220022002200220022002200220022"),
-            bytes("0033003300330033003300330033003300330033"),
+        final var accounts = new Address[] {
+            address("0x0011001100110011001100110011001100110011"),
+            address("0x0022002200220022002200220022002200220022"),
+            address("0x0033003300330033003300330033003300330033"),
         };
 
         try (var db = new MemoryDatabase()) {
@@ -273,8 +276,8 @@ public class StateDBTest extends LibEvmTestBase {
 
     @Test
     public void TestAccountTypes() throws Exception {
-        final byte[] code = Converter.fromHexString("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
-        final byte[] addr1 = Converter.fromHexString("1234561234561234561234561234561234561230");
+        final var code = Converter.fromHexString("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
+        final var addr1 = address("0x1234561234561234561234561234561234561230");
 
         try (var db = new MemoryDatabase()) {
             try (var statedb = new StateDB(db, hashNull)) {
@@ -299,7 +302,7 @@ public class StateDBTest extends LibEvmTestBase {
     @Test
     @Ignore
     public void proof() throws Exception {
-        final var address = bytes("cca577ee56d30a444c73f8fc8d5ce34ed1c7da8b");
+        final var address = address("cca577ee56d30a444c73f8fc8d5ce34ed1c7da8b");
         final int paddingLength = 32;
         final byte paddingByte = 0;
 
@@ -325,7 +328,7 @@ public class StateDBTest extends LibEvmTestBase {
                 // storageProof's length is always 0
                 var proofAccountResult = statedb.getProof(
                     address,
-                    new byte[][] { bytes("0000000000000000000000000000000000000000000000000000000000000001") }
+                    new byte[][] {bytes("0000000000000000000000000000000000000000000000000000000000000001")}
                 );
 
                 // after successful proof retrieval, we should verify the root hash

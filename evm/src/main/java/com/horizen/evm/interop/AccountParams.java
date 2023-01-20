@@ -5,8 +5,8 @@ import com.horizen.evm.utils.Address;
 public class AccountParams extends HandleParams {
     public Address address;
 
-    public AccountParams(int handle, byte[] address) {
+    public AccountParams(int handle, Address address) {
         super(handle);
-        this.address = Address.fromBytes(address);
+        this.address = address;
     }
 }

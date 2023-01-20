@@ -1,5 +1,6 @@
 package com.horizen.evm;
 
+import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Converter;
 
 import java.util.Arrays;
@@ -7,6 +8,10 @@ import java.util.Arrays;
 public class LibEvmTestBase {
     static final byte[] hashNull = bytes("0000000000000000000000000000000000000000000000000000000000000000");
     static final byte[] hashEmpty = bytes("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+
+    protected static Address address(String hex) {
+        return Address.fromHex(hex);
+    }
 
     protected static byte[] bytes(String hex) {
         return Converter.fromHexString(hex);

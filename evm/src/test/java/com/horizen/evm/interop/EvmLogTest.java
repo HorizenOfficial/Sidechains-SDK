@@ -18,13 +18,13 @@ public class EvmLogTest extends LibEvmTestBase {
         new Random().nextBytes(addressBytes);
         var topics = new Hash[4];
         topics[0] = Hash.fromBytes(
-                Converter.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"));
+            Converter.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"));
         topics[1] = Hash.fromBytes(
-                Converter.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"));
+            Converter.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"));
         topics[2] = Hash.fromBytes(
-                Converter.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"));
+            Converter.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"));
         topics[3] = Hash.fromBytes(
-                Converter.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"));
+            Converter.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"));
 
         var data = Converter.fromHexString("aabbccddeeff22");
 

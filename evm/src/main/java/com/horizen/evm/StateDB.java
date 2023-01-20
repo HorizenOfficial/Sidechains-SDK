@@ -1,6 +1,7 @@
 package com.horizen.evm;
 
 import com.horizen.evm.interop.*;
+import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
 
@@ -71,7 +72,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @return true if account state is empty, otherwise false
      */
-    public boolean isEmpty(byte[] address) {
+    public boolean isEmpty(Address address) {
         return LibEvm.invoke("StateEmpty", new AccountParams(handle, address), boolean.class);
     }
 
@@ -85,7 +86,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @return true if account is EOA, otherwise false
      */
-    public boolean isEoaAccount(byte[] address) {
+    public boolean isEoaAccount(Address address) {
         return isEmpty(address) || Arrays.equals(getCodeHash(address), EMPTY_CODE_HASH);
     }
 
@@ -95,7 +96,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @return true if account is a smart contract one, otherwise false
      */
-    public boolean isSmartContractAccount(byte[] address) {
+    public boolean isSmartContractAccount(Address address) {
         return !isEoaAccount(address);
     }
 
@@ -105,7 +106,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @return account balance, 0 if account not exist
      */
-    public BigInteger getBalance(byte[] address) {
+    public BigInteger getBalance(Address address) {
         return LibEvm.invoke("StateGetBalance", new AccountParams(handle, address), BigInteger.class);
     }
 
@@ -115,7 +116,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @param amount  amount to add to account balance
      */
-    public void addBalance(byte[] address, BigInteger amount) {
+    public void addBalance(Address address, BigInteger amount) {
         LibEvm.invoke("StateAddBalance", new BalanceParams(handle, address, amount));
     }
 
@@ -125,7 +126,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @param amount  amount to subtract from account balance
      */
-    public void subBalance(byte[] address, BigInteger amount) {
+    public void subBalance(Address address, BigInteger amount) {
         LibEvm.invoke("StateSubBalance", new BalanceParams(handle, address, amount));
     }
 
@@ -135,7 +136,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @param amount  amount to assign to the account balance
      */
-    public void setBalance(byte[] address, BigInteger amount) {
+    public void setBalance(Address address, BigInteger amount) {
         LibEvm.invoke("StateSetBalance", new BalanceParams(handle, address, amount));
     }
 
@@ -145,7 +146,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @return account nonce
      */
-    public BigInteger getNonce(byte[] address) {
+    public BigInteger getNonce(Address address) {
         return LibEvm.invoke("StateGetNonce", new AccountParams(handle, address), BigInteger.class);
     }
 
@@ -155,7 +156,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @param nonce   value to set account nonce to
      */
-    public void setNonce(byte[] address, BigInteger nonce) {
+    public void setNonce(Address address, BigInteger nonce) {
         LibEvm.invoke("StateSetNonce", new NonceParams(handle, address, nonce));
     }
 
@@ -165,7 +166,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @return code hash
      */
-    public byte[] getCodeHash(byte[] address) {
+    public byte[] getCodeHash(Address address) {
         return LibEvm.invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class).toBytes();
     }
 
@@ -174,7 +175,7 @@ public class StateDB extends ResourceHandle {
      *
      * @param address account address
      */
-    public byte[] getCode(byte[] address) {
+    public byte[] getCode(Address address) {
         return LibEvm.invoke("StateGetCode", new AccountParams(handle, address), byte[].class);
     }
 
@@ -184,7 +185,7 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @param code    code binary
      */
-    public void setCode(byte[] address, byte[] code) {
+    public void setCode(Address address, byte[] code) {
         LibEvm.invoke("StateSetCode", new CodeParams(handle, address, code));
     }
 
@@ -222,7 +223,7 @@ public class StateDB extends ResourceHandle {
      * @param key     storage key
      * @return storage value, always 32 bytes
      */
-    public byte[] getStorage(byte[] address, byte[] key) {
+    public byte[] getStorage(Address address, byte[] key) {
         return LibEvm.invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
     }
 
@@ -233,7 +234,7 @@ public class StateDB extends ResourceHandle {
      * @param key     storage key
      * @return comitted storage value, always 32 bytes
      */
-    public byte[] getCommittedStorage(byte[] address, byte[] key) {
+    public byte[] getCommittedStorage(Address address, byte[] key) {
         return LibEvm.invoke("StateGetCommittedStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
     }
 
@@ -246,7 +247,7 @@ public class StateDB extends ResourceHandle {
      * @param key     storage key
      * @param value   value to store
      */
-    public void setStorage(byte[] address, byte[] key, byte[] value) {
+    public void setStorage(Address address, byte[] key, byte[] value) {
         LibEvm.invoke("StateSetStorage", new SetStorageParams(handle, address, key, value));
     }
 
@@ -257,7 +258,7 @@ public class StateDB extends ResourceHandle {
      * @param keys    storage keys
      * @return proofs
      */
-    public ProofAccountResult getProof(byte[] address, byte[][] keys) {
+    public ProofAccountResult getProof(Address address, byte[][] keys) {
         return LibEvm.invoke("StateGetProof", new ProofParams(handle, address, keys), ProofAccountResult.class);
     }
 
@@ -314,7 +315,7 @@ public class StateDB extends ResourceHandle {
      * @param sender      sender account
      * @param destination destination account
      */
-    public void accessSetup(byte[] sender, byte[] destination) {
+    public void accessSetup(Address sender, Address destination) {
         LibEvm.invoke("AccessSetup", new AccessParams(handle, sender, destination));
     }
 
@@ -324,7 +325,7 @@ public class StateDB extends ResourceHandle {
      * @param address account to access
      * @return true if the account was already on the access list, false otherwise
      */
-    public boolean accessAccount(byte[] address) {
+    public boolean accessAccount(Address address) {
         return LibEvm.invoke("AccessAccount", new AccountParams(handle, address), Boolean.class);
     }
 
@@ -335,7 +336,7 @@ public class StateDB extends ResourceHandle {
      * @param slot    storage slot to access
      * @return true if the slot was already on the access list, false otherwise
      */
-    public boolean accessSlot(byte[] address, byte[] slot) {
+    public boolean accessSlot(Address address, byte[] slot) {
         return LibEvm.invoke("AccessSlot", new SlotParams(handle, address, slot), Boolean.class);
     }
 

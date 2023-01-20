@@ -18,6 +18,11 @@ public class Address {
     public static final int LENGTH = 20;
     private final byte[] bytes;
 
+    /**
+     * Zero address: 0x000...000
+     */
+    public final static Address ZERO = new Address(new byte[LENGTH]);
+
     private Address(byte[] bytes) {
         if (bytes.length != LENGTH) {
             throw new IllegalArgumentException("address must have a length of " + LENGTH);
@@ -37,8 +42,11 @@ public class Address {
         return new Address(bytes);
     }
 
-    public static Address addressZero() {
-        return new Address(new byte[LENGTH]);
+    public static Address fromHex(String hex) {
+        if (!hex.startsWith("0x")) {
+            throw new IllegalArgumentException("address must be prefixed with 0x");
+        }
+        return Address.fromBytes(Converter.fromHexString(hex.substring(2)));
     }
 
     public byte[] toBytes() {
@@ -59,11 +67,7 @@ public class Address {
         public Address deserialize(
             JsonParser jsonParser, DeserializationContext deserializationContext
         ) throws IOException {
-            var text = jsonParser.getText();
-            if (!text.startsWith("0x")) {
-                throw new IOException("address must be prefixed with 0x");
-            }
-            return Address.fromBytes(Converter.fromHexString(text.substring(2)));
+            return Address.fromHex(jsonParser.getText());
         }
     }
 }

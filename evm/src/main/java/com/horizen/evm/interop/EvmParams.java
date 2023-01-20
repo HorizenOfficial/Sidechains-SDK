@@ -18,8 +18,8 @@ public class EvmParams extends HandleParams {
 
     public EvmParams(
         int handle,
-        byte[] from,
-        byte[] to,
+        Address from,
+        Address to,
         BigInteger value,
         byte[] input,
         BigInteger availableGas,
@@ -28,8 +28,8 @@ public class EvmParams extends HandleParams {
         TraceOptions traceOptions
     ) {
         super(handle);
-        this.from = Address.fromBytes(from);
-        this.to = Address.fromBytes(to);
+        this.from = from;
+        this.to = to;
         this.value = value;
         this.input = input;
         this.availableGas = availableGas;

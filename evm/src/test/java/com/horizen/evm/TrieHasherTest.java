@@ -22,12 +22,12 @@ public class TrieHasherTest extends LibEvmTestBase {
         // - different root hashes for different inputs
         var hashEmptyTest = TrieHasher.Root(null);
         var hashEmptyTest2 = TrieHasher.Root(new byte[0][0]);
-        var hashA = TrieHasher.Root(new byte[][]{{1}, {2}, {3}});
-        var hashA2 = TrieHasher.Root(new byte[][]{{1}, {2}, {3}});
-        var hashB = TrieHasher.Root(new byte[][]{{1, 2, 3}});
-        var hashC = TrieHasher.Root(new byte[][]{{1, 2}, {3, 4}, {1}});
-        var hashD = TrieHasher.Root(new byte[][]{{1, 2}, {3, 4}, {2}});
-        var hashE = TrieHasher.Root(new byte[][]{{-127, 127}, {3, 4}, {0, 0}});
+        var hashA = TrieHasher.Root(new byte[][] {{1}, {2}, {3}});
+        var hashA2 = TrieHasher.Root(new byte[][] {{1}, {2}, {3}});
+        var hashB = TrieHasher.Root(new byte[][] {{1, 2, 3}});
+        var hashC = TrieHasher.Root(new byte[][] {{1, 2}, {3, 4}, {1}});
+        var hashD = TrieHasher.Root(new byte[][] {{1, 2}, {3, 4}, {2}});
+        var hashE = TrieHasher.Root(new byte[][] {{-127, 127}, {3, 4}, {0, 0}});
         var hashF = TrieHasher.Root(new byte[200][1]);
         var hashG = TrieHasher.Root(new byte[1000][67]);
 
