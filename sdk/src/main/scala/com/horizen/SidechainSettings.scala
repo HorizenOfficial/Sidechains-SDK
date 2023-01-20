@@ -4,6 +4,7 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
 import sparkz.core.settings.SparkzSettings
 
+import java.math.BigInteger
 import scala.concurrent.duration.FiniteDuration
 
 case class ForgerKeysData(
@@ -86,7 +87,7 @@ case class EthServiceSettings(
      * Global gas limit when executing messages via RPC calls this can be larger than the block gas limit, getter's
      * might require more gas than is ever required during a transaction.
      */
-    globalRpcGasCap: Long = 50000000,
+    globalRpcGasCap: BigInteger = BigInteger.valueOf(50000000),
 )
 
 case class SidechainSettings(
