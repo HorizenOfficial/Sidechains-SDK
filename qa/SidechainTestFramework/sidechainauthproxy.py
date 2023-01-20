@@ -53,23 +53,11 @@ class SidechainAuthServiceProxy(object):
             port = 80
         else:
             port = self.__url.port
-        (user, passwd) = (self.__url.username, self.__url.password)
-        try:
-            user = user.encode('utf8')
-        except AttributeError:
-            pass
-        try:
-            passwd = passwd.encode('utf8')
-        except AttributeError:
-            pass
-        #Still to identify which kind of authentication we will have
-        authpair = user + b':' + passwd
-        self.__auth_header = b'Basic ' + base64.b64encode(authpair)
 
-        (self._user, self._passwd) = (self.__url.username, self.__url.password)
         if auth_api_key != None:
+            self._user = "user"
             self._passwd = auth_api_key
-        self.__auth_header = basic_auth(self._user, self._passwd).encode('utf8')
+            self.__auth_header = basic_auth(self._user, self._passwd).encode('utf8')
 
         if connection:
             # Callables re-use the connection of the original proxy
@@ -95,10 +83,11 @@ class SidechainAuthServiceProxy(object):
         
         headers = {'Host': self.__url.hostname,
                    'User-Agent': USER_AGENT,
-                   'Authorization': self.__auth_header,
                    'Content-type': 'application/json',}
         if api_key != None:
             headers.update({"Authorization": basic_auth(self._user, api_key)})
+        elif self.__auth_header != None:
+            headers.update({"Authorization": self.__auth_header})
 
         try:
             self.__conn.request(method, path, postdata, headers)

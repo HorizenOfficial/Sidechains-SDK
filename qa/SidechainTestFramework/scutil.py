@@ -632,8 +632,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
     else:
         sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
-
-    url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
+    url = "http://%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url, auth_api_key=auth_api_key)
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir  # store the name of the datadir
