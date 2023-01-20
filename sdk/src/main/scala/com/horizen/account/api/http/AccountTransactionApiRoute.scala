@@ -94,8 +94,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-   * Create an unsigned legacy evm transaction, and then:
-   *  - if the optional input parameter 'outputRawBytes'=True is set in ReqLegacyTransaction just return the raw hex bytes representation
+   * Create an unsigned legacy eth transaction, and then:
+   *  - if the optional input parameter 'outputRawBytes'=True is set in ReqLegacyTransaction just
+   *    return the raw hex bytes representation
    *  - otherwise sign it and send the resulting tx to the network and return the transaction id
    */
   def createLegacyTransaction: Route = (post & path("createLegacyTransaction")) {
@@ -138,9 +139,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   /**
-   * Create a EIP155 (Simple replay attack protection) legacy evm transaction, sign it and send it to the network.
-   * Returns a result JSON obj containing the transaction id or the raw hex bytes representation if the optional input
-   * parameter 'outputRawBytes'=True is set in ReqLegacyTransaction
+   * Create an unsigned EIP155 (Simple replay attack protection) legacy eth transaction, and then:
+   *  - if the optional input parameter 'outputRawBytes'=True is set in ReqLegacyTransaction just 
+   *    return the raw hex bytes representation
+   *  - otherwise sign it and send the resulting tx to the network and return the transaction id
    */
   def createLegacyEIP155Transaction: Route = (post & path("createLegacyEIP155Transaction")) {
     withAuth {
@@ -166,7 +168,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 EthereumTransactionUtils.getDataFromString(body.data),
                 null
               )
-              validateAndSendTransaction(signTransactionWithSecret(secret, unsignedTx))
+              val resp = if (body.outputRawBytes.getOrElse(false)) {
+                ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
+              } else {
+                val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                validateAndSendTransaction(signedTx)
+              }
+              resp
+              
             case None =>
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
@@ -176,9 +185,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-   * Create a EIP1559 evm transaction, sign it and send it to the network.
-   * Returns a result JSON obj containing the transaction id or the raw hex bytes representation if the optional input
-   * parameter 'outputRawBytes'=True is set in ReqLegacyTransaction
+   * Create an unsigned EIP1559 eth transaction, and then:
+   *  - if the optional input parameter 'outputRawBytes'=True is set in ReqLegacyTransaction just 
+   *    return the raw hex bytes representation
+   *  - otherwise sign it and send the resulting tx to the network and return the transaction id
    */
   def createEIP1559Transaction: Route = (post & path("createEIP1559Transaction")) {
     withAuth {
@@ -205,9 +215,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 EthereumTransactionUtils.getDataFromString(body.data),
                 null
               )
+              val resp = if (body.outputRawBytes.getOrElse(false)) {
+                ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
+              } else {
+                val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                validateAndSendTransaction(signedTx)
+              }
+              resp
 
-              val signedTx = signTransactionWithSecret(secret, unsignedTx)
-              validateAndSendTransaction(signedTx)
             case None =>
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
@@ -216,6 +231,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  /**
+   * Decode the input raw eth transaction bytes into an obj, sign it using the input 'from' address
+   * and return the resulting signed raw eth transaction bytes
+   */
   def signTransaction: Route = (post & path("signTransaction")) {
     withAuth {
       entity(as[ReqSignTransaction]) {
