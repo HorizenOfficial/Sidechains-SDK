@@ -53,9 +53,10 @@ import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, Outgoing, Pee
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.crypto.hash.Blake2b256
-import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import com.horizen.cryptolibprovider.utils.CircuitTypes
+import org.mindrot.jbcrypt
+import org.mindrot.jbcrypt.BCrypt
 
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
@@ -127,10 +128,11 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val certifiersKeys = utilMocks.certifiersKeys
   val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
   val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
+  val apiKeyHash = BCrypt.hashpw(credentials.password(), BCrypt.gensalt())
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
-  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("$2a$10$O5FAloC/gNuwpeoVKiV41.EcIlpOlk5hzsqYpleSmOEEKgj0j7BX6"))
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some(apiKeyHash))
 
   val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
   Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {

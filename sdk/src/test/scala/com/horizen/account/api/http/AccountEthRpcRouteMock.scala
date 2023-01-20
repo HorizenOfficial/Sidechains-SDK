@@ -21,6 +21,7 @@ import com.horizen.params.MainNetParams
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.runner.RunWith
+import org.mindrot.jbcrypt.BCrypt
 import org.mockito.Mockito
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -48,12 +49,16 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
 
   val utilMocks = new AccountNodeViewUtilMocks()
 
-  val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
-  val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
-  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
-  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("$2a$10$O5FAloC/gNuwpeoVKiV41.EcIlpOlk5hzsqYpleSmOEEKgj0j7BX6"))
   val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
   val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
+  val apiKeyHash = BCrypt.hashpw(credentials.password(), BCrypt.gensalt())
+
+  val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
+  val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
+
+  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some(apiKeyHash))
+
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")
 
   val mockedSidechainNodeViewHolder = TestProbe()
