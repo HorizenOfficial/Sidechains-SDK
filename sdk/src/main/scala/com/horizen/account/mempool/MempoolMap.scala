@@ -174,11 +174,11 @@ class MempoolMap(
    * Returns executable transactions sorted by gas tip (descending) and nonce. The ordering is performed in a semi-lazy
    * way.
    */
-  def takeExecutableTxs(): TransactionsByPriceAndNonce = {
+  def takeExecutableTxs(forcedTx: Iterable[SidechainTypes#SCAT] = Seq()): TransactionsByPriceAndNonce = {
 
     val baseFee = baseStateReaderProvider.getBaseStateReader().getNextBaseFee
 
-    new TransactionsByPriceAndNonce(baseFee)
+    new TransactionsByPriceAndNonce(baseFee, forcedTx)
   }
 
   def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
@@ -406,38 +406,60 @@ class MempoolMap(
     }
   }
 
-  class TransactionsByPriceAndNonce(baseFee: BigInteger) extends Iterable[SidechainTypes#SCAT] {
+  class TransactionsByPriceAndNonce(baseFee: BigInteger, forcedTx: Iterable[SidechainTypes#SCAT]) extends Iterable[SidechainTypes#SCAT] {
 
     class Iter extends TransactionsByPriceAndNonceIter {
 
-      def txOrder(tx: SidechainTypes#SCAT) = {
+      def txOrder(tx: SidechainTypes#SCAT): BigInteger = {
         tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
       }
 
       val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
+      val forcedTxQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
+
+
       executableTxs.foreach { case (_, mapOfTxsPerAccount) =>
         val tx = getTransaction(mapOfTxsPerAccount.values.head).get
         orderedQueue.enqueue(tx)
       }
+      // TODO check there are not duplicates in orderedQueue
+      forcedTx.foreach(
+        forcedTxQueue.enqueue(_)
+      )
 
-      override def hasNext: Boolean = orderedQueue.nonEmpty
+      override def hasNext: Boolean = orderedQueue.nonEmpty || forcedTxQueue.nonEmpty
 
       override def next(): SidechainTypes#SCAT = {
-        val bestTx = orderedQueue.dequeue()
-        val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
-        if (nextTxIdOpt.nonEmpty) {
-          val tx = getTransaction(nextTxIdOpt.get).get
-          orderedQueue.enqueue(tx)
+        val nextTx = if (orderedQueue.nonEmpty) {
+          val bestTx = orderedQueue.dequeue()
+          val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
+          if (nextTxIdOpt.nonEmpty) {
+            val tx = getTransaction(nextTxIdOpt.get).get
+            orderedQueue.enqueue(tx)
+          }
+          bestTx
+        } else {
+          forcedTxQueue.dequeue()
         }
-        bestTx
+        nextTx
       }
 
       def peek: SidechainTypes#SCAT = {
-        orderedQueue.head
+        val peek = if (orderedQueue.nonEmpty) {
+          orderedQueue.head
+        } else {
+          forcedTxQueue.head
+        }
+        peek
       }
 
       def removeAndSkipAccount(): SidechainTypes#SCAT = {
-        orderedQueue.dequeue()
+        val removed = if (orderedQueue.nonEmpty) {
+          orderedQueue.dequeue()
+        } else {
+          forcedTxQueue.dequeue()
+        }
+        removed
       }
 
     }

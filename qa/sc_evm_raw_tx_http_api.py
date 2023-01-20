@@ -13,6 +13,7 @@ from SidechainTestFramework.account.httpCalls.transaction.decodeTransaction impo
 from SidechainTestFramework.account.httpCalls.transaction.sendTransaction import sendTransaction
 from SidechainTestFramework.account.httpCalls.transaction.signTransaction import signTransaction
 from SidechainTestFramework.scutil import generate_next_block
+from httpCalls.block.best import http_block_best
 from httpCalls.transaction.allTransactions import allTransactions
 from SidechainTestFramework.account.utils import convertZenToWei
 from test_framework.util import (assert_equal, assert_true, fail)
@@ -33,9 +34,8 @@ Test:
     - Try send an tx with invalid signature to mempool
     - Try send an unsigned tx to mempool
     - Try send a tx with bad chainid to mempool
-    TODO:
-    - try to forge a block with an unsigned tx (see api)
-    - Try the same with bad chainid
+    - Try to forge a block forcing an unsigned tx (see api)
+    - Try the same with a tx with bad chainid
      
 """
 
@@ -69,9 +69,6 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
 
         generate_next_block(sc_node, "first node")
         self.sc_sync_all()
-
-        sc_best_block = sc_node.block_best()["result"]
-        pprint.pprint(sc_best_block)
 
         receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
 
@@ -183,16 +180,16 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
         self.sc_sync_all()
 
 
-        # 3) try sending an unsigned tx
-        raw_tx = createRawLegacyEIP155Transaction(sc_node_1,
+        # 3.1) try sending an unsigned tx
+        unsigned_raw_tx = createRawLegacyEIP155Transaction(sc_node_1,
                                             fromAddress=evm_address_sc1,
                                             toAddress=evm_address_sc2,
                                             value=convertZenToWei(Decimal('0.1')))
-        tx_json = decodeTransaction(sc_node_2, payload=raw_tx)
+        tx_json = decodeTransaction(sc_node_2, payload=unsigned_raw_tx)
         assert_equal(tx_json['signed'], False)
 
         try:
-            sendTransaction(sc_node_1, payload=raw_tx)
+            sendTransaction(sc_node_1, payload=unsigned_raw_tx)
             fail("Valid but wrong signature should not work")
         except RuntimeError as err:
             print("Expected exception thrown: {}".format(err))
@@ -201,7 +198,19 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
 
         self.sc_sync_all()
 
-        # 4) try sending a tx with wrong chainId
+
+        # 3.2) try forging a block with the same unsigned tx.
+        #      The block is forged but the tx is not included in the block because is not signed
+        bhash = generate_next_block(sc_node_1, "first node", forced_tx=[unsigned_raw_tx])
+        self.sc_sync_all()
+        block_json = http_block_best(sc_node_1)
+        assert_equal(block_json["header"]["id"], bhash)
+        assert_true(len(block_json["sidechainTransactions"]) == 0)
+
+
+        self.sc_sync_all()
+
+        # 4.1) try sending a tx with wrong chainId
         raw_tx = createRawLegacyEIP155Transaction(sc_node_1,
                                             fromAddress=evm_address_sc1,
                                             toAddress=evm_address_sc2,
@@ -230,19 +239,19 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
 
         self.sc_sync_all()
 
-        '''
-        # 5) try forging a block with the same tx
+
+
+        # 4.2) try forging a block with the same tx
         try:
-            bhash = generate_next_block(sc_node_1, "first node", forced_tx=[bad_chainid_raw_tx])
+            ret = generate_next_block(sc_node_1, "first node", forced_tx=[bad_chainid_raw_tx])
+            fail("Wrong chainId should not work")
         except Exception as e:
             logging.info("We had an exception as expected: {}".format(str(e)))
             assert_true("does not match network chain ID " in str(e))
 
         self.sc_sync_all()
 
-        sc_best_block = sc_node_1.block_best()["result"]
-        pprint.pprint(sc_best_block)
-        '''
+
 
 
 
