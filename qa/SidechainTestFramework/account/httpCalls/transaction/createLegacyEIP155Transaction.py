@@ -2,7 +2,8 @@ import json
 
 
 def createLegacyEIP155Transaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce=None, gasLimit=21000,
-                            gasPrice=1000000000, value=0, data='', api_key=None):
+                            gasPrice=1000000000, value=0, data='',
+                             signature_v=None, signature_r=None, signature_s=None, api_key=None):
 
     j = {
         "from": fromAddress,
@@ -11,7 +12,10 @@ def createLegacyEIP155Transaction(sidechainNode, *, fromAddress=None, toAddress=
         "gasLimit": gasLimit,
         "gasPrice": gasPrice,
         "value": value,
-        "data": data
+        "data": data,
+        "signature_v": signature_v,
+        "signature_r": signature_r,
+        "signature_s": signature_s
     }
     request = json.dumps(j)
     if api_key is not None:

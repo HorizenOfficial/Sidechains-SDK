@@ -40,7 +40,6 @@ class SCEvmEOA2EOA(AccountChainSetup):
 
         # Create an EOA to EOA transaction.
         # Amount should be expressed in zennies
-        amount_in_zennies = convertZenToZennies(amount_in_zen)
         amount_in_wei = convertZenToWei(amount_in_zen)
 
         try:

@@ -119,7 +119,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 body.gasLimit,
                 body.value.orNull,
                 EthereumTransactionUtils.getDataFromString(body.data),
-                null
+                if (body.signature_v.isDefined)
+                  new SignatureSecp256k1(
+                    BytesUtils.fromHexString(body.signature_v.get),
+                    BytesUtils.fromHexString(body.signature_r.get),
+                    BytesUtils.fromHexString(body.signature_s.get))
+                else
+                  null
               )
               val resp = if (body.outputRawBytes.getOrElse(false)) {
                 ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
@@ -166,7 +172,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 body.gasLimit,
                 body.value.orNull,
                 EthereumTransactionUtils.getDataFromString(body.data),
-                null
+                if (body.signature_v.isDefined)
+                  new SignatureSecp256k1(
+                    BytesUtils.fromHexString(body.signature_v.get),
+                    BytesUtils.fromHexString(body.signature_r.get),
+                    BytesUtils.fromHexString(body.signature_s.get))
+                else
+                  null
               )
               val resp = if (body.outputRawBytes.getOrElse(false)) {
                 ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
@@ -213,8 +225,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 body.maxFeePerGas,
                 body.value,
                 EthereumTransactionUtils.getDataFromString(body.data),
-                null
-              )
+                if (body.signature_v.isDefined)
+                  new SignatureSecp256k1(
+                    BytesUtils.fromHexString(body.signature_v.get),
+                    BytesUtils.fromHexString(body.signature_r.get),
+                    BytesUtils.fromHexString(body.signature_s.get))
+                else
+                  null              )
               val resp = if (body.outputRawBytes.getOrElse(false)) {
                 ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
               } else {
@@ -842,16 +859,23 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqEIP1559Transaction(
-                                           from: Option[String],
-                                           to: Option[String],
-                                           nonce: Option[BigInteger],
-                                           gasLimit: BigInteger,
-                                           maxPriorityFeePerGas: BigInteger,
-                                           maxFeePerGas: BigInteger,
-                                           value: BigInteger,
-                                           data: String,
-                                           outputRawBytes: Option[Boolean] = None) {
-
+                                                 from: Option[String],
+                                                 to: Option[String],
+                                                 nonce: Option[BigInteger],
+                                                 gasLimit: BigInteger,
+                                                 maxPriorityFeePerGas: BigInteger,
+                                                 maxFeePerGas: BigInteger,
+                                                 value: BigInteger,
+                                                 data: String,
+                                                 signature_v: Option[String] = None,
+                                                 signature_r: Option[String] = None,
+                                                 signature_s: Option[String] = None,
+                                                 outputRawBytes: Option[Boolean] = None) {
+    require(
+      (signature_v.nonEmpty && signature_r.nonEmpty && signature_s.nonEmpty)
+        || (signature_v.isEmpty && signature_r.isEmpty && signature_s.isEmpty),
+      "Signature can not be partial"
+    )
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(maxPriorityFeePerGas.signum() > 0, "MaxPriorityFeePerGas must be greater than 0")
     require(maxFeePerGas.signum() > 0, "MaxFeePerGas must be greater than 0")
@@ -868,8 +892,15 @@ object AccountTransactionRestScheme {
                                                 gasPrice: BigInteger,
                                                 value: Option[BigInteger],
                                                 data: String,
+                                                signature_v: Option[String] = None,
+                                                signature_r: Option[String] = None,
+                                                signature_s: Option[String] = None,
                                                 outputRawBytes: Option[Boolean] = None) {
-
+    require(
+      (signature_v.nonEmpty && signature_r.nonEmpty && signature_s.nonEmpty)
+        || (signature_v.isEmpty && signature_r.isEmpty && signature_s.isEmpty),
+      "Signature can not be partial"
+    )
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(gasPrice.signum() > 0, "Gas price can not be 0")
     require(to.isEmpty || to.get.length == 40 /* address length without prefix 0x */ , "to is not empty but has the wrong length - do not use a 0x prefix")

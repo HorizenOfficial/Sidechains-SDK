@@ -2,7 +2,8 @@ import json
 
 
 def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce=None, gasLimit=230000,
-                             maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=0, data='', api_key=None):
+                             maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=0, data='',
+                             signature_v=None, signature_r=None, signature_s=None, api_key=None):
     j = {
         "from": fromAddress,
         "to": toAddress,
@@ -11,7 +12,10 @@ def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None,
         "maxPriorityFeePerGas": maxPriorityFeePerGas,
         "maxFeePerGas": maxFeePerGas,
         "value": value,
-        "data": data
+        "data": data,
+        "signature_v": signature_v,
+        "signature_r": signature_r,
+        "signature_s": signature_s
     }
 
     request = json.dumps(j)
