@@ -53,6 +53,19 @@ public class Address {
         return Arrays.copyOf(bytes, LENGTH);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Address address = (Address) o;
+        return Arrays.equals(bytes, address.bytes);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(bytes);
+    }
+
     public static class Serializer extends JsonSerializer<Address> {
         @Override
         public void serialize(
