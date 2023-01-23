@@ -76,6 +76,11 @@ public final class PrivateKeySecp256k1 implements Secret {
     }
 
     @Override
+    public Boolean isPublicKeyValid() {
+        return true;
+    }
+
+    @Override
     public String toString() {
         // Show only the first 4 bytes to protect the key
         return String.format("PrivateKeySecp256k1{privateKey=%s}", BytesUtils.toHexString(privateKey).substring(0, 8));

@@ -104,6 +104,7 @@ public class VrfSecretKey implements Secret {
         return String.format("VrfSecretKey{secret=%s}", BytesUtils.toHexString(secretBytes).substring(0, 8));
     }
 
+    @Override
     public Boolean isPublicKeyValid() {
         byte[] correctPublicKey = CryptoLibProvider.vrfFunctions().getPublicKey(secretBytes);
         return Arrays.equals(publicBytes, correctPublicKey);

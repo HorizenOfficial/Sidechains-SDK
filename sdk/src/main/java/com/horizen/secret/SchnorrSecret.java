@@ -92,6 +92,7 @@ public class SchnorrSecret implements Secret {
         return String.format("SchnorrSecret{privateKey=%s}", BytesUtils.toHexString(secretBytes).substring(0, 8));
     }
 
+    @Override
     public Boolean isPublicKeyValid() {
         byte[] correctPublicKey = CryptoLibProvider.schnorrFunctions().getPublicKey(secretBytes);
         return Arrays.equals(publicBytes, correctPublicKey);

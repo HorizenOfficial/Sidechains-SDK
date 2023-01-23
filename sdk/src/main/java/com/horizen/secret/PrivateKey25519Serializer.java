@@ -32,6 +32,11 @@ public final class PrivateKey25519Serializer implements SecretSerializer<Private
         byte[] privateKeyBytes = reader.getBytes(PrivateKey25519.PRIVATE_KEY_LENGTH);
         byte[] publicKeyBytes = reader.getBytes(PrivateKey25519.PUBLIC_KEY_LENGTH);
 
-        return new PrivateKey25519(privateKeyBytes, publicKeyBytes);
+        PrivateKey25519 privateKey25519 = new PrivateKey25519(privateKeyBytes, publicKeyBytes);
+        if (!privateKey25519.isPublicKeyValid()) {
+            throw new IllegalArgumentException("The public key is not corresponds to the secret key.");
+        }
+
+        return privateKey25519;
     }
 }
