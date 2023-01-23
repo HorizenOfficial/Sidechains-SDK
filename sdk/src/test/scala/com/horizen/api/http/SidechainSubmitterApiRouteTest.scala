@@ -1,6 +1,6 @@
 package com.horizen.api.http
 
-import akka.http.scaladsl.server.{MalformedRequestContentRejection}
+import akka.http.scaladsl.server.MalformedRequestContentRejection
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
 import com.horizen.api.http.SidechainDebugErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.SidechainDebugRestScheme.ReqKeyRotationProof
@@ -21,7 +21,7 @@ class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
     "reply at /getKeyRotationProofs" in {
       //Malformed request
       Post(basePath + "getKeyRotationProof").withEntity("maybe_a_json") ~> sidechainSubmitterApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       //Bad circuit
@@ -64,7 +64,7 @@ class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
         val result = mapper.readTree(entityAs[String]).get("result")
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
-        assertEquals(1, result.elements.asScala.length)
+        assertEquals(2, result.elements.asScala.length)
 
         val certifiersKeysJson = result.get("certifiersKeys")
         assertTrue(certifiersKeysJson.has("signingKeys"))

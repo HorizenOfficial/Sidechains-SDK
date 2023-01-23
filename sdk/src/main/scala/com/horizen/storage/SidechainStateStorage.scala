@@ -13,8 +13,7 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.util.{ModifierId, ScorexLogging, idToBytes, bytesToId}
-
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -379,11 +378,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     if (params.isNonCeasing) {
       topQualityCertificateOpt.foreach(certificate => {
-        // For non-ceasing sidechain store referenced epoch number of the top certificate
-        updateList.add(new JPair(getLastCertificateEpochNumberKey,
-          new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
-        updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
-          WithdrawalEpochCertificateSerializer.toBytes(certificate)))
         // For non-ceasing sidechain store the id of the SC block which contains the certificate.
         // It is used to detect if certificate was included into the MC till the end of the "virtual withdrawal epoch"
         // or with some delay, so will have an impact on the value of the next certificate `endEpochCumScTxCommTreeRoot`.
@@ -410,16 +404,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           }
         }
       })
-    } else {
-      // For ceasing sidechain store referenced epoch number and the top quality cert for epoch if present
-      topQualityCertificateOpt.foreach(certificate => {
-        updateList.add(new JPair(getLastCertificateEpochNumberKey,
-         new ByteArrayWrapper(Ints.toByteArray(topQualityCertificateOpt.get.epochNumber))))
-
-        updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
-          WithdrawalEpochCertificateSerializer.toBytes(certificate)))
-      })
     }
+    // Store referenced epoch number and the top quality cert for epoch if present
+    topQualityCertificateOpt.foreach(certificate => {
+      updateList.add(new JPair(getLastCertificateEpochNumberKey,
+       new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
+
+      updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
+        WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+    })
 
     // Update BlockFeeInfo data
     val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfo.epoch) + 1

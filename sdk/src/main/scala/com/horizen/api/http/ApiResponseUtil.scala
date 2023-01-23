@@ -18,13 +18,16 @@ object ApiResponseUtil {
         e.exception.asScala match {
           case Some(thr) =>
             val msg = thr.getMessage
-            if (msg != null && !msg.isEmpty)
+            if (msg != null && msg.nonEmpty)
               SidechainApiResponse(SerializationUtil.serializeErrorWithResult(e.code, e.description, msg))
             else SidechainApiResponse(SerializationUtil.serializeErrorWithResult(e.code, e.description, ""))
           case None => SidechainApiResponse(SerializationUtil.serializeErrorWithResult(e.code, e.description, ""))
         }
     }
   }
+
+  def toResponseWithoutResultWrapper(response: ApiResponse): Route =
+    SidechainApiResponse(SerializationUtil.serialize(response))
 
   def toResponseAsJava(response: ApiResponse): server.Route = {
     response match {

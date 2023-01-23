@@ -1,5 +1,6 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.block.MainchainBackwardTransferCertificateOutput;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certnative.BackwardTransfer;
@@ -10,6 +11,7 @@ import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.BytesUtils;
 import scala.Enumeration;
+import scala.collection.Seq;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -58,7 +60,8 @@ public class  CommonCircuit {
         return new WithdrawalCertificate(
                 FieldElement.deserialize(cert.sidechainId()),
                 cert.epochNumber(),
-                scala.collection.JavaConverters.seqAsJavaList(cert.backwardTransferOutputs()).stream().map(bto -> new BackwardTransfer(bto.pubKeyHash(), bto.amount())).collect(Collectors.toList()),
+                scala.collection.JavaConverters.<MainchainBackwardTransferCertificateOutput>seqAsJavaList(cert.backwardTransferOutputs())
+                        .stream().map(bto -> new BackwardTransfer(bto.pubKeyHash(), bto.amount())).collect(Collectors.toList()),
                 cert.quality(),
                 FieldElement.deserialize(cert.endCumulativeScTxCommitmentTreeRoot()),
                 cert.ftMinAmount(),
@@ -77,5 +80,9 @@ public class  CommonCircuit {
     public static List<BackwardTransfer> getBackwardTransfers(List<WithdrawalRequestBox> withdrawalRequestBoxes){
         return withdrawalRequestBoxes.stream()
                 .map(box -> new BackwardTransfer(box.proposition().bytes(), box.value())).collect(Collectors.toList());
+    }
+
+    public static List<BackwardTransfer> getBackwardTransfers(Seq<WithdrawalRequestBox> withdrawalRequestBoxes){
+        return getBackwardTransfers(scala.collection.JavaConverters.<WithdrawalRequestBox>seqAsJavaList(withdrawalRequestBoxes));
     }
 }

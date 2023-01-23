@@ -3,9 +3,8 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
+import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
-
-import scala.concurrent.ExecutionContext
 
 /**
   * A developer can disable some core api.
@@ -22,12 +21,12 @@ import scala.concurrent.ExecutionContext
   */
 case class SidechainRejectionApiRoute(basePath: String, path: String,
                                       override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                     (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute {
+                                     (implicit val context: ActorRefFactory)
+  extends ApiRoute with ApiDirectives {
 
   override def route: Route =
     if (path.isEmpty)
-      (pathPrefix(basePath)) {
+      pathPrefix(basePath) {
         SidechainApiError(StatusCodes.NotFound, "NotFound").complete("The requested resource could not be found.")
       }
     else (pathPrefix(basePath) & path(path)) {

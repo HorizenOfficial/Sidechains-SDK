@@ -7,7 +7,8 @@ from decimal import Decimal
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import start_nodes
 from SidechainTestFramework.scutil import create_sidechain, cert_proof_keys_paths, \
-    generate_random_field_element_hex, csw_proof_keys_paths
+    generate_random_field_element_hex, csw_proof_keys_paths, AccountModelBlockVersion, \
+    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, LARGE_WITHDRAWAL_EPOCH_LENGTH
 
 """
@@ -85,6 +86,30 @@ class McTxsData(SidechainTestFramework):
               .format(str(sc_creation_tx_id), len(sc_creation_tx_hex) / 2, str(sc_creation_tx_hex),
                       sidechain_id, creation_amount, withdrawal_epoch_length))
 
+        # Generate Tx with version -4 with single Account SidechainCreation output
+        # Use the same amount and withdrawal epoch length as for unit test
+        creation_amount = 50
+        withdrawal_epoch_length = LARGE_WITHDRAWAL_EPOCH_LENGTH
+        btr_data_length = 2
+
+        sc_creation_info = SCCreationInfo(mc_node, creation_amount, withdrawal_epoch_length, btr_data_length)
+        ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
+        if not os.path.isdir(ps_keys_dir):
+            os.makedirs(ps_keys_dir)
+        boot_info = create_sidechain(sc_creation_info,
+                                     DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
+                                     cert_proof_keys_paths(ps_keys_dir),
+                                     csw_keys_paths=None,
+                                     blockversion=AccountModelBlockVersion)
+
+        sidechain_id = boot_info.sidechain_id
+        sc_creation_tx_id = mc_node.getblock(mc_node.getbestblockhash())["tx"][-1]
+        sc_creation_tx_hex = mc_node.getrawtransaction(sc_creation_tx_id)
+
+        print("MC Transaction with version -4 with single Account SidechainCreation output: \nHash = {0}\nSize = {1}\nHex = {2}"
+              "\nsidechain_id = {3}\ncreation_amount = {4}, withdrawal_epoch_length = {5}\n"
+              .format(str(sc_creation_tx_id), len(sc_creation_tx_hex) / 2, str(sc_creation_tx_hex),
+                      sidechain_id, creation_amount, withdrawal_epoch_length))
 
         # Generate Tx with version -4 with single ForwardTransfer output
         forward_transfer_amount = 10
@@ -150,6 +175,9 @@ class McTxsData(SidechainTestFramework):
         print("MC Transaction with version -4 with single MBTR output: \nHash = {0}\nSize = {1}\n"
               "Hex = {2}\nMBTR: = {3}\n"
               .format(str(mbtr_tx_id), len(mbtr_tx_hex) / 2, str(mbtr_tx_hex), json.dumps(mbtrOuts, indent=4)))
+
+
+
 
 
 if __name__ == "__main__":

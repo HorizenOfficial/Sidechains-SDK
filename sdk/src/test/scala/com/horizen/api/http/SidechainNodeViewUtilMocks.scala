@@ -161,14 +161,6 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
       }
       else Optional.empty())
 
-    Mockito.when(history.searchTransactionInsideBlockchain(ArgumentMatchers.any[String])).thenAnswer(asw => {
-      if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlockchain_return_value()) {
-        val id = asw.getArgument(0).asInstanceOf[String]
-        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(ModifierId @@ tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
-      } else
-        Optional.empty()
-    })
-
     Mockito.when(history.searchTransactionInsideSidechainBlock(ArgumentMatchers.any[String], ArgumentMatchers.any[String])).thenAnswer(asw => {
       if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlock_return_value()) {
         val id = asw.getArgument(0).asInstanceOf[String]

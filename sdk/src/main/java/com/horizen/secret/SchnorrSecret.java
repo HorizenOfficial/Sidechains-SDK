@@ -4,6 +4,8 @@ import com.horizen.proof.SchnorrProof;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.SchnorrProposition;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.utils.BytesUtils;
+
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -76,4 +78,10 @@ public class SchnorrSecret implements Secret {
 
     @Override
     public Boolean isCustom() { return false; }
+
+    @Override
+    public String toString() {
+        // Show only the first 4 bytes to protect the key
+        return String.format("SchnorrSecret{privateKey=%s}", BytesUtils.toHexString(secretBytes).substring(0, 8));
+    }
 }

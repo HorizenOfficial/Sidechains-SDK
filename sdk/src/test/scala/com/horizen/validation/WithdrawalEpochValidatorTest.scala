@@ -1,10 +1,10 @@
 package com.horizen.validation
 
 import java.time.Instant
-import com.horizen.SidechainHistory
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.{SidechainHistory, SidechainTypes}
+import com.horizen.block.{MainchainBlockReference, SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{SidechainBlockInfo, SidechainFeePaymentsInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.fixtures.{VrfGenerator, _}
@@ -23,7 +23,14 @@ import scorex.util.{ModifierId, bytesToId}
 
 import scala.io.Source
 
-class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with TransactionFixture with CompanionsFixture{
+class WithdrawalEpochValidatorTest
+  extends JUnitSuite
+    with MockitoSugar
+    with MainchainBlockReferenceFixture
+    with TransactionFixture
+    with CompanionsFixture {
+
+  type BoxWithdrawalEpochValidator = WithdrawalEpochValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage, SidechainHistory]
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
@@ -42,7 +49,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
   @Test
   def genesisBlockValidation(): Unit = {
-    val validator = new WithdrawalEpochValidator(params)
+    val validator = new BoxWithdrawalEpochValidator(params)
 
     // Test 1: invalid genesis block - no MainchainBlockReferenceData
     val (forgerBox1, forgerMeta1) = ForgerBoxFixture.generateForgerBox(32)
@@ -168,7 +175,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
   @Test
   def blockValidation(): Unit = {
-    val validator = new WithdrawalEpochValidator(params)
+    val validator = new BoxWithdrawalEpochValidator(params)
     val withdrawalEpochLength = 100
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(bytesToId(new Array[Byte](32)))
     Mockito.when(params.withdrawalEpochLength).thenReturn(withdrawalEpochLength)

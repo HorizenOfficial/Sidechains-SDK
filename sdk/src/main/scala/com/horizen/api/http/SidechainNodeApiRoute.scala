@@ -1,15 +1,18 @@
 package com.horizen.api.http
 
+
+import java.net.{InetAddress, InetSocketAddress}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainApp
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
+import com.horizen.{AbstractSidechainApp, SidechainApp}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
+import sparkz.core.api.http.ApiRoute
 import com.horizen.utils.BytesUtils
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
@@ -19,7 +22,6 @@ import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
 
 import java.lang.Thread.sleep
-import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success, Try}
@@ -27,8 +29,9 @@ import scala.util.{Failure, Success, Try}
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp, params: NetworkParams)
-                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
+                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: AbstractSidechainApp, params: NetworkParams)
+                                (implicit val context: ActorRefFactory, val ec: ExecutionContext) extends ApiRoute {
+
 
   override val route: Route = pathPrefix("node") {
 

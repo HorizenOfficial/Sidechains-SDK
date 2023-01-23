@@ -4,36 +4,55 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
-import com.horizen.SidechainTypes
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorFailedToParseSecret, ErrorPropositionNotFound, ErrorPropositionNotMatch, ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
-import com.horizen.api.http.SidechainWalletRestScheme.{ReqDumpWallet, ReqExportSecret, ReqImportSecret, RespDumpSecrets, RespExportSecret, RespImportSecrets, _}
+import com.horizen.api.http.SidechainWalletRestScheme._
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519Creator, Secret, VrfKeyGenerator}
+import com.horizen.node._
+import com.horizen.proposition.Proposition
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
+import com.horizen.SidechainTypes
 import sparkz.core.settings.RESTApiSettings
+import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorFailedToParseSecret, ErrorPropositionNotFound, ErrorPropositionNotMatch, ErrorSecretAlreadyPresent}
+import com.horizen.companion.SidechainSecretsCompanion
+import com.horizen.secret.Secret
+import com.horizen.chain.SidechainFeePaymentsInfo
+
 
 import java.io.{File, PrintWriter}
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
+import scala.util.Try
+import scala.concurrent.Await
+import scala.util.{Failure, Success}
 import java.util.{Scanner, Optional => JOptional}
 import java.util.{ArrayList => JArrayList}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef,
-                                   sidechainSecretsCompanion: SidechainSecretsCompanion)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute {
+                                   sidechainSecretsCompanion: SidechainSecretsCompanion)(implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends WalletBaseApiRoute[
+    SidechainTypes#SCBT,
+    SidechainBlockHeader,
+    SidechainBlock,
+    SidechainFeePaymentsInfo,
+    NodeHistory,
+    NodeState,
+    NodeWallet,
+    NodeMemoryPool,
+    SidechainNodeView] (settings, sidechainNodeViewHolderRef) {
+
 
   //Please don't forget to add Auth for every new method of the wallet.
   override val route: Route = pathPrefix("wallet") {
     allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets
   }
+
+  override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
+
 
   /**
     * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list. Filter boxes of a given type
@@ -87,73 +106,6 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
             case Success(clazz) =>
               val balance = wallet.boxesBalance(clazz)
               ApiResponseUtil.toResponse(RespBalance(balance))
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Create new Vrf secret and return corresponding public key
-   */
-  def createVrfSecret: Route = (post & path("createVrfSecret")) {
-    withAuth {
-      withNodeView { sidechainNodeView =>
-        //replace to VRFKeyGenerator.generateNextSecret(wallet)
-        val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
-        val public = secret.publicImage()
-
-        val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
-        Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-          case Success(_) =>
-            ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
-          case Failure(e) =>
-            ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
-        }
-      }
-    }
-  }
-
-  /**
-    * Create new secret and return corresponding address (public key)
-    */
-  def createPrivateKey25519: Route = (post & path("createPrivateKey25519")) {
-    withAuth {
-      withNodeView { sidechainNodeView =>
-        val wallet = sidechainNodeView.getNodeWallet
-        val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
-        val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
-        Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-          case Success(_) =>
-            ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
-          case Failure(e) =>
-            ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
-        }
-      }
-    }
-  }
-
-  /**
-    * Returns the list of all wallet’s propositions (public keys). Filter propositions of the given type
-    */
-  def allPublicKeys: Route = (post & path("allPublicKeys")) {
-    withAuth {
-      entity(as[ReqAllPropositions]) { body =>
-        withNodeView { sidechainNodeView =>
-          val wallet = sidechainNodeView.getNodeWallet
-          val optPropType = body.proptype
-          if (optPropType.isEmpty) {
-            val listOfPropositions = wallet.allSecrets().asScala.map(s =>
-              s.publicImage().asInstanceOf[SidechainTypes#SCP])
-            ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
-          } else {
-            getClassBySecretClassName(optPropType.get) match {
-              case Failure(exception) => SidechainApiError(exception)
-              case Success(clazz) =>
-                val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
-                  secret.publicImage().asInstanceOf[SidechainTypes#SCP])
-                ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
-            }
           }
         }
       }
@@ -238,16 +190,16 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
               case Success(value) =>
                 if(!BytesUtils.toHexString(value.publicImage().bytes()).equals(keyPair(1))) {
                   log.error(s"Import Wallet: Public key doesn't match: ${BytesUtils.toHexString(value.publicImage().bytes())}  ${keyPair(1)}")
-                  error = JOptional.of(ErrorPropositionNotMatch(s"Public key doesn't match on line ${lineNumber}", JOptional.empty()))
+                  error = JOptional.of(ErrorPropositionNotMatch(s"Public key doesn't match on line $lineNumber", JOptional.empty()))
                 } else {
                   secrets.add((value, lineNumber))
                 }
               case Failure(e) =>
                 log.error(s"Import Wallet: Failed to parse the secret: ${keyPair(0)}")
-                error = JOptional.of(ErrorFailedToParseSecret(s"Failed to parse the secret at line ${lineNumber}", JOptional.of(e)))
+                error = JOptional.of(ErrorFailedToParseSecret(s"Failed to parse the secret at line $lineNumber", JOptional.of(e)))
             }
           }
-          lineNumber += 1;
+          lineNumber += 1
         }
 
         if(error.isPresent) {
@@ -275,11 +227,6 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  def getClassBySecretClassName(className: String): Try[java.lang.Class[_ <: SidechainTypes#SCS]] = {
-    Try(Class.forName(className).asSubclass(classOf[SidechainTypes#SCS])) orElse
-      Try(Class.forName("com.horizen.secret." + className).asSubclass(classOf[SidechainTypes#SCS]))
-  }
-
   def getClassByBoxClassName(className: String): Try[java.lang.Class[_ <: SidechainTypes#SCB]] = {
     Try(Class.forName(className).asSubclass(classOf[SidechainTypes#SCB])) orElse
       Try(Class.forName("com.horizen.box." + className).asSubclass(classOf[SidechainTypes#SCB]))
@@ -302,15 +249,6 @@ object SidechainWalletRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespCreatePrivateKey(proposition: Proposition) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreateVrfSecret(proposition: VrfPublicKey) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqAllPropositions(proptype: Option[String])
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqImportSecret(privKey: String) {
@@ -338,10 +276,6 @@ object SidechainWalletRestScheme {
 }
 
 object SidechainWalletErrorResponse {
-
-  case class ErrorSecretNotAdded(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0301"
-  }
 
   case class ErrorSecretAlreadyPresent(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0302"

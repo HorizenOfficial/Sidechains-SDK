@@ -70,6 +70,10 @@ trait NetworkParams {
   val restrictForgers: Boolean = false
   val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
 
+  // Account chain params
+  val chainId : Long
+
   //Max Withdrawal Boxes per certificate
   final val maxWBsAllowed: Int = 3999
+
 }

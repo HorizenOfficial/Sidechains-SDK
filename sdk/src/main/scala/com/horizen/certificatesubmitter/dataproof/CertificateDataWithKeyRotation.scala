@@ -3,6 +3,7 @@ package com.horizen.certificatesubmitter.dataproof
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
@@ -13,7 +14,7 @@ import scala.collection.JavaConverters._
 
 case class CertificateDataWithKeyRotation(override val referencedEpochNumber: Int,
                                           override val sidechainId: Array[Byte],
-                                          override val withdrawalRequests: Seq[WithdrawalRequestBox],
+                                          override val backwardTransfers: Seq[BackwardTransfer],
                                           override val endEpochCumCommTreeHash: Array[Byte],
                                           override val btrFee: Long,
                                           override val ftMinAmount: Long,
@@ -22,7 +23,7 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
                                           previousCertificateOption: Option[WithdrawalEpochCertificate],
                                           genesisKeysRootHash: Array[Byte]
                                          )
-  extends CertificateData(referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
+  extends CertificateData(referencedEpochNumber, sidechainId, backwardTransfers, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
     val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getSchnorrKeysHash(schnorrKeysSignatures)
@@ -34,7 +35,7 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
     "CertificateDataWithoutKeyRotation(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +
       s"sidechainId = ${sidechainId.mkString("Array(", ", ", ")")}, " +
-      s"withdrawalRequests = {${withdrawalRequests.mkString(",")}}, " +
+      s"withdrawalRequests = {${backwardTransfers.mkString(",")}}, " +
       s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
       s"btrFee = $btrFee, " +
       s"ftMinAmount = $ftMinAmount, " +

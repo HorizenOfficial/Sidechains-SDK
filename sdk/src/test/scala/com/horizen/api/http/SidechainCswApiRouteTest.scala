@@ -95,11 +95,12 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         assertTrue(result.get("state").asBoolean)
       }
       //Testing response in case of internal error
-      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(false)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentNodeView_reply(false)
       Post(basePath + "hasCeased") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
+        println(mapper.readTree(entityAs[String]))
         if (result == null)
           fail("Serialization failed for object ErrorRetrievingCeasingState")
         assertEquals(3, result.elements().asScala.length)
@@ -216,7 +217,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
     val sidechainCswApiRouteWithDisabledCSW = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,params).route
 
     "reply at /hasCeased" in {
-      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(true)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentNodeView_reply(true)
       Post(basePath + "hasCeased") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

@@ -3,7 +3,7 @@ package com.horizen.certificatesubmitter.strategy
 import akka.actor.{ActorRef, ActorSystem}
 import com.horizen.{MempoolSettings, SidechainHistory, SidechainMemoryPool, SidechainSettings, SidechainState, SidechainWallet}
 import com.horizen.block.SidechainBlock
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, NonCeasingSidechain, SubmissionWindowStatus}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.fixtures.SidechainBlockFixture.sidechainTransactionsCompanion
@@ -29,7 +29,6 @@ class CeasingSidechainTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
   with SidechainBlockFixture
 {
-  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
   var history: SidechainHistory = _
   var state: SidechainState = _
@@ -39,7 +38,7 @@ class CeasingSidechainTest extends JUnitSuite
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   var settings: SidechainSettings = _
-  var mockedNodeViewHolder: View = _
+  var mockedNodeViewHolder: CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool] = _
   val mainchainChannel = mock[MainchainNodeChannel]
 
   val withdrawalEpochLength= 100
@@ -53,7 +52,7 @@ class CeasingSidechainTest extends JUnitSuite
     wallet = mock[SidechainWallet]
     mempool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(300))
     settings = mock[SidechainSettings]
-    mockedNodeViewHolder = new View(history, state, wallet, mempool)
+    mockedNodeViewHolder = CurrentView(history, state, wallet, mempool)
   }
 
   private def getMockedMempoolSettings(maxSize: Int): MempoolSettings = {
@@ -179,7 +178,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    var status: SubmissionWindowStatus = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    var status: SubmissionWindowStatus = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertFalse("Epoch 0 block 1 must not be in withdrawal window", status.isInWindow)
 
@@ -192,7 +191,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertFalse("Epoch 0 block 20 must not be in withdrawal window", status.isInWindow)
 
@@ -205,7 +204,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertTrue("Epoch 1 block 0 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -219,7 +218,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertTrue("Epoch 1 block 20 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -233,7 +232,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertFalse("Epoch 1 block 21 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)

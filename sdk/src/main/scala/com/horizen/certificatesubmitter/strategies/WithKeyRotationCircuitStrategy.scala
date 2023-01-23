@@ -1,25 +1,44 @@
 package com.horizen.certificatesubmitter.strategies
 
+import com.horizen._
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.block.WithdrawalEpochCertificate
-import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
+import com.horizen.certnative.BackwardTransfer
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
-import com.horizen.{SidechainSettings, SidechainState}
+import com.horizen.storage.AbstractHistoryStorage
+import com.horizen.transaction.Transaction
+import sparkz.core.transaction.MemoryPool
 
-import java.util
 import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.Try
 
-class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: NetworkParams,
-                                     cryptolibCircuit: ThresholdSignatureCircuitWithKeyRotation
-                                    ) extends CircuitStrategy[CertificateDataWithKeyRotation](settings, params) {
+class WithKeyRotationCircuitStrategy[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  _FPI <: AbstractFeePaymentsInfo,
+  _HSTOR <: AbstractHistoryStorage[PM, _FPI, _HSTOR],
+  _HIS <: AbstractHistory[TX, H, PM, _FPI, _HSTOR, _HIS],
+  _MS <: AbstractState[TX, H, PM, _MS],
+  _VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, _VL],
+  _MP <: MemoryPool[TX, _MP]](settings: SidechainSettings, params: NetworkParams,
+                              cryptolibCircuit: ThresholdSignatureCircuitWithKeyRotation
+                             ) extends CircuitStrategy[TX, H, PM, CertificateDataWithKeyRotation](settings, params) {
+
+  type FPI = _FPI
+  type HSTOR = _HSTOR
+  type HIS = _HIS
+  type MS = _MS
+  type VL = _VL
+  type MP = _MP
 
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
@@ -37,7 +56,7 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
     cryptolibCircuit.createProof(
-      certificateData.withdrawalRequests.asJava,
+      certificateData.backwardTransfers.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
       certificateData.endEpochCumCommTreeHash,
@@ -57,9 +76,9 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
 
   override def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithKeyRotation = {
     val history = sidechainNodeView.history
-    val state: SidechainState = sidechainNodeView.state
+    val state = sidechainNodeView.state
 
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(status.referencedEpoch)
+    val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(status.referencedEpoch)
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
@@ -79,7 +98,7 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
     CertificateDataWithKeyRotation(
       status.referencedEpoch,
       sidechainId,
-      withdrawalRequests,
+      backwardTransfers,
       endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount,
@@ -96,7 +115,7 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
+    val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
     val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
@@ -108,12 +127,12 @@ class WithKeyRotationCircuitStrategy(settings: SidechainSettings, params: Networ
       .getSchnorrKeysHash(getSchnorrKeysSignaturesListBytes(state, referencedWithdrawalEpochNumber))
 
     val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
+      .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
         endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
     message
   }
 
-  private def getSchnorrKeysSignaturesListBytes(state: SidechainState, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {
+  private def getSchnorrKeysSignaturesListBytes(state: MS, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {
     val prevCertifierKeys: CertifiersKeys = state.certifiersKeys(referencedWithdrawalEpochNumber - 1)
       .getOrElse(throw new RuntimeException(s"Certifiers keys for previous withdrawal epoch are not present"))
     val newCertifierKeys: CertifiersKeys = state.certifiersKeys(referencedWithdrawalEpochNumber)

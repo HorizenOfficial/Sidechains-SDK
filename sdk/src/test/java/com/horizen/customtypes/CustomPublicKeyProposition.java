@@ -9,7 +9,7 @@ import java.util.Arrays;
 
 
 @JsonView(Views.Default.class)
-public class CustomPublicKeyProposition extends AbstractSingleSecretProofOfKnowledgeProposition<CustomPrivateKey> {
+public class CustomPublicKeyProposition implements SingleSecretProofOfKnowledgeProposition<CustomPrivateKey> {
     public static final int PUBLIC_KEY_LENGTH = 128;
 
     @JsonProperty("publicKey")

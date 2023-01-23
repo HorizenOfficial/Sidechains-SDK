@@ -1,15 +1,36 @@
 package com.horizen.node;
 
+import com.horizen.SidechainNodeViewBase;
+import com.horizen.block.SidechainBlock;
+import com.horizen.block.SidechainBlockHeader;
+import com.horizen.box.Box;
+import com.horizen.chain.SidechainFeePaymentsInfo;
+import com.horizen.proposition.Proposition;
 import com.horizen.state.ApplicationState;
+import com.horizen.transaction.BoxTransaction;
 import com.horizen.wallet.ApplicationWallet;
 
-public class SidechainNodeView {
-    private NodeWallet nodeWallet;
-    private NodeHistory nodeHistory;
-    private NodeState nodeState;
-    private NodeMemoryPool nodeMemoryPool;
-    private ApplicationState applicationState;
-    private ApplicationWallet applicationWallet;
+public class SidechainNodeView implements
+        SidechainNodeViewBase<
+                BoxTransaction<Proposition, Box<Proposition>>,
+                SidechainBlockHeader,
+                SidechainBlock,
+                SidechainFeePaymentsInfo,
+                NodeHistory,
+                NodeState,
+                NodeWallet,
+                NodeMemoryPool> {
+    private final ApplicationState applicationState;
+    private final ApplicationWallet applicationWallet;
+
+    private final NodeHistory nodeHistory;
+
+    private final NodeState nodeState;
+
+    private final NodeWallet nodeWallet;
+
+    private final NodeMemoryPool nodeMemoryPool;
+
 
     public SidechainNodeView(NodeHistory nodeHistory,
                              NodeState nodeState,
@@ -17,29 +38,14 @@ public class SidechainNodeView {
                              NodeMemoryPool nodeMemoryPool,
                              ApplicationState applicationState,
                              ApplicationWallet applicationWallet) {
-        this.nodeWallet = nodeWallet;
-        this.nodeHistory = nodeHistory;
-        this.nodeState = nodeState;
-        this.nodeMemoryPool = nodeMemoryPool;
         this.applicationState = applicationState;
         this.applicationWallet = applicationWallet;
+        this.nodeHistory = nodeHistory;
+        this.nodeState = nodeState;
+        this.nodeWallet = nodeWallet;
+        this.nodeMemoryPool = nodeMemoryPool;
     }
 
-    public NodeWallet getNodeWallet() {
-        return nodeWallet;
-    }
-
-    public NodeHistory getNodeHistory() {
-        return nodeHistory;
-    }
-
-    public NodeState getNodeState() {
-        return nodeState;
-    }
-
-    public NodeMemoryPool getNodeMemoryPool() {
-        return nodeMemoryPool;
-    }
 
     public ApplicationState getApplicationState() {
         return applicationState;
@@ -47,5 +53,25 @@ public class SidechainNodeView {
 
     public ApplicationWallet getApplicationWallet() {
         return applicationWallet;
+    }
+
+    @Override
+    public NodeHistory getNodeHistory() {
+        return nodeHistory;
+    }
+
+    @Override
+    public NodeState getNodeState() {
+        return nodeState;
+    }
+
+    @Override
+    public NodeMemoryPool getNodeMemoryPool() {
+        return nodeMemoryPool;
+    }
+
+    @Override
+    public NodeWallet getNodeWallet() {
+        return nodeWallet;
     }
 }

@@ -1,27 +1,25 @@
 package com.horizen;
-import java.io.File;
-import java.util.Scanner;
 
+import com.horizen.settings.LogInitializer;
 import com.horizen.tools.utils.ConsolePrinter;
 import com.horizen.tools.utils.MessagePrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Scanner;
+
 public class ScBootstrappingTool {
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
 
         // initialize log properties since this app uses log4j from sdk libraries
-        // - no log dir here
-        System.setProperty("logDir", "");
+        // - temporary log dir
+        String logDir = System.getProperty("java.io.tmpdir");
         // - default name for the log file
-        String logFileName = System.getProperty("java.io.tmpdir") + File.separator + "sc_bootstrapping_tool.log";
-        System.setProperty("logFilename", logFileName);
+        String logFileName = "sc_bootstrapping_tool.log";
         // - default levels: all in the file and just errors on console
-        System.setProperty("logFileLevel", "all");
-        System.setProperty("logConsoleLevel", "error");
-
-        Logger logger = LogManager.getLogger(com.horizen.ScBootstrappingTool.class);
+        LogInitializer.initLogManager(logDir, logFileName, "all", "error");
+        Logger logger = LogManager.getLogger(ScBootstrappingTool.class);
 
         MessagePrinter printer = new ConsolePrinter();
         ScBootstrappingToolCommandProcessor processor = new ScBootstrappingToolCommandProcessor(printer);

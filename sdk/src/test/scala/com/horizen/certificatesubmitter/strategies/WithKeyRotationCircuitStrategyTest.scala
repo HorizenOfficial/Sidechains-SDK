@@ -2,12 +2,13 @@ package com.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
 import com.horizen._
-import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader, SidechainCreationVersions, WithdrawalEpochCertificate}
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
-import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
+import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignatures}
 import com.horizen.certificatesubmitter.strategies.WithoutKeyRotationCircuitStrategyTest.{master, signing}
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.chain.MainchainHeaderInfo
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -70,9 +71,9 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
     )
 
     val mockedCryptolibCircuit = mock[ThresholdSignatureCircuitWithKeyRotation]
-    val keyRotationStrategy: CircuitStrategy[CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     val certificateDataWithKeyRotation: CertificateDataWithKeyRotation =
-      keyRotationStrategy.buildCertificateData(sidechainNodeView(), signaturesStatus)
+      keyRotationStrategy.buildCertificateData(sidechainNodeView().asInstanceOf[keyRotationStrategy.View], signaturesStatus)
 
     assert(certificateDataWithKeyRotation.btrFee == 0)
     assert(certificateDataWithKeyRotation.schnorrKeysSignatures.updatedSigningKeysSkSignatures.length == 1)
@@ -128,7 +129,7 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
     val certificateData = CertificateDataWithKeyRotation(
       referencedEpochNumber = WithKeyRotationCircuitStrategyTest.epochNumber,
       sidechainId = FieldElement.createRandom.serializeFieldElement(),
-      withdrawalRequests = Seq[WithdrawalRequestBox](),
+      backwardTransfers = Seq[BackwardTransfer](),
       endEpochCumCommTreeHash = FieldElement.createRandom.serializeFieldElement(),
       btrFee = WithKeyRotationCircuitStrategyTest.btrFee,
       ftMinAmount = WithKeyRotationCircuitStrategyTest.ftMinAmount,
@@ -165,7 +166,7 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
       assertResult(true)(answer.getArgument(13).asInstanceOf[Boolean])
       new com.horizen.utils.Pair(key, 429L)
     })
-    val keyRotationStrategy: CircuitStrategy[CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     val pair: utils.Pair[Array[Byte], lang.Long] = keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")
     assert(pair.getValue == 429L)
     info.foreach(element => {
@@ -190,8 +191,8 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
       assertResult(32)(answer.getArgument(6).asInstanceOf[Array[Byte]].length)
       new com.horizen.utils.Pair(Array(73.toByte), 425L)
     })
-    val keyRotationStrategy: CircuitStrategy[CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
-    keyRotationStrategy.getMessageToSign(sidechainNodeView(), WithKeyRotationCircuitStrategyTest.epochNumber)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
+    keyRotationStrategy.getMessageToSign(sidechainNodeView().asInstanceOf[keyRotationStrategy.View], WithKeyRotationCircuitStrategyTest.epochNumber)
   }
 
   private def settings(): SidechainSettings = {

@@ -1,21 +1,22 @@
 package com.horizen.certificatesubmitter.strategies
-import com.horizen.block.SidechainBlock
-import com.horizen.certificatesubmitter.CertificateSubmitter.{ObsoleteWithdrawalEpochException, SignaturesStatus}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{ObsoleteWithdrawalEpochException, SignaturesStatus}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
-import scorex.util.ScorexLogging
+import com.horizen.{AbstractHistory, AbstractState}
+import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.util.{Failure, Success, Try}
 
 class CeasingSidechain(mainchainChannel: MainchainNodeChannel, params: NetworkParams)
   extends CertificateSubmissionStrategy with ScorexLogging {
 
-  override def getStatus(sidechainNodeView: View, block: SidechainBlock): SubmissionWindowStatus = {
+  override def getStatus[H <: AbstractHistory[_, _, _, _, _, _], S <: AbstractState[_, _, _, _]](sidechainNodeView: CurrentView[H, S, _, _], id: ModifierId): SubmissionWindowStatus = {
     // Take withdrawal epoch info for block from the History.
     // Note: We can't rely on `State.getWithdrawalEpochInfo`, because it shows the tip info,
     // but the older block may being applied at the moment.
-    val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
+    val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(id).withdrawalEpochInfo
     val referencedWithdrawalEpochNumber: Int = withdrawalEpochInfo.epoch - 1
 
     SubmissionWindowStatus(referencedWithdrawalEpochNumber, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))

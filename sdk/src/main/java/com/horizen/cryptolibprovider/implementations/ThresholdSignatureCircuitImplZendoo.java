@@ -1,6 +1,6 @@
 package com.horizen.cryptolibprovider.implementations;
 
-import com.horizen.box.WithdrawalRequestBox;
+
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.CreateProofResult;
 import com.horizen.certnative.NaiveThresholdSigProof;
@@ -11,7 +11,6 @@ import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.Pair;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +20,8 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     // Note: supportedSegmentSize should correlate with the snark circuit complexity,
     // but is always less or equal the one defined in the MC network (maxSegmentSize).
     private static final int supportedSegmentSize = (1 << 17);
+
+    private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
 
     @Override
     public List<byte[]> getCertificateCustomFields(Optional<byte[]> utxoMerkleTreeRoot) {
@@ -69,7 +70,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
+    public byte[] generateMessageToBeSigned(List<BackwardTransfer> bt,
                                             byte[] sidechainId,
                                             int epochNumber,
                                             byte[] endCumulativeScTxCommTreeRoot,
@@ -82,7 +83,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
         FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(
-                CommonCircuit.getBackwardTransfers(bt).toArray(BackwardTransfer[]::new), sidechainIdFe,
+                bt.toArray(BackwardTransfer[]::new), sidechainIdFe,
                 epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, customFe);
         byte[] messageAsBytes = messageToSign.serializeFieldElement();
 
@@ -95,7 +96,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt,
+    public Pair<byte[], Long> createProof(List<BackwardTransfer> bt,
                                           byte[] sidechainId,
                                           int epochNumber,
                                           byte[] endCumulativeScTxCommTreeRoot,
@@ -118,7 +119,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
-                CommonCircuit.getBackwardTransfers(bt), sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe,
+                bt, sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe,
                 btrFee, ftMinAmount, signatures, publicKeys, threshold, customFe, Optional.of(supportedSegmentSize),
                 provingKeyPath, checkProvingKey, zk);
 
@@ -133,7 +134,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Boolean verifyProof(List<WithdrawalRequestBox> bt,
+    public Boolean verifyProof(List<BackwardTransfer> bt,
                                byte[] sidechainId,
                                int epochNumber,
                                byte[] endCumulativeScTxCommTreeRoot,
@@ -150,7 +151,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
         List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
-        boolean verificationResult = NaiveThresholdSigProof.verifyProof(CommonCircuit.getBackwardTransfers(bt),
+        boolean verificationResult = NaiveThresholdSigProof.verifyProof(bt,
                 sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, constantFe, quality,
                 customFe, proof, checkProof, verificationKeyPath, checkVerificationKey);
 

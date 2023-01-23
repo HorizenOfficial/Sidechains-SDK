@@ -3,9 +3,6 @@ package com.horizen.transaction.mainchain;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
 
-import java.util.List;
-import java.util.Optional;
-
 public interface SidechainRelatedMainchainOutput<B extends Box<? extends Proposition>> extends sparkz.core.serialization.BytesSerializable
 {
     byte[] hash();

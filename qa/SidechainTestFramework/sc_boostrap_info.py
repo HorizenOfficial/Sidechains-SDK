@@ -207,11 +207,14 @@ VrfAccount : {
 
 
 class VrfAccount(object):
-
     def __init__(self, secret, publicKey):
         self.secret = secret
         self.publicKey = publicKey
 
+class AccountKey(object):
+    def __init__(self, secret, proposition):
+        self.secret = secret
+        self.proposition = proposition
 
 """
 A Schnorr key.
@@ -278,16 +281,15 @@ SCBootstrapInfo: {
     "initial_cumulative_comm_tree_hash": CommTreeHash data for the genesis MC block
     "cert_keys_paths": an instance of ProofKeysPaths for certificate
     "csw_keys_paths": an instance of ProofKeysPaths for ceased sidechain withdrawal
+    "genesis_evm_account": an instance of Account for EVM Sidechain
 }
 """
-
-
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
                  sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account,
                  certificate_proof_info, initial_cumulative_comm_tree_hash, is_non_ceasing, cert_keys_paths, csw_keys_paths,
-                 circuit_type):
+                 genesis_evm_account, circuit_type):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -302,6 +304,7 @@ class SCBootstrapInfo(object):
         self.initial_cumulative_comm_tree_hash = initial_cumulative_comm_tree_hash
         self.cert_keys_paths = cert_keys_paths
         self.csw_keys_paths = csw_keys_paths
+        self.genesis_evm_account = genesis_evm_account
         self.circuit_type = circuit_type
 
 

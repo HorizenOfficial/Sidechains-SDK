@@ -202,8 +202,8 @@ class SCMultipleCerts(SidechainTestFramework):
         error_occur = False
         try:
             generate_next_block(sc_node2, "second node")
-        except SCAPIException as e:
-            logging.info("Expected SCAPIException: " + e.error)
+        except Exception as e:
+            logging.info("We had an exception as expected: {}".format(str(e)))
             error_occur = True
 
         assert_true(error_occur, "Node 2 wrongly verified top quality cert as a valid one.")

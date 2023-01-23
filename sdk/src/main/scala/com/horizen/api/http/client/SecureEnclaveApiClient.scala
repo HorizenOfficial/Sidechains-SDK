@@ -8,7 +8,7 @@ import akka.http.scaladsl.{Http, HttpExt}
 import com.horizen.RemoteKeysManagerSettings
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.client.SecureEnclaveApiClient.{CreateSignatureRequest, CreateSignatureResponse, ListPublicKeysRequest, ListPublicKeysResponse}
-import com.horizen.certificatesubmitter.CertificateSubmitter.CertificateSignatureInfo
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.CertificateSignatureInfo
 import com.horizen.proof.SchnorrSignatureSerializer
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
 import com.horizen.utils.BytesUtils

@@ -189,13 +189,13 @@ class SidechainStateStorageTest
     val referenceEpochNumber = 0
     val cert: WithdrawalEpochCertificate = generateWithdrawalEpochCertificate(epochNumber = Some(referenceEpochNumber))
 
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateSidechainBlockIdKey), version))
+
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateEpochNumberKey),
       new ByteArrayWrapper(new ByteArrayWrapper(Ints.toByteArray(referenceEpochNumber)))))
 
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getTopQualityCertificateKey(referenceEpochNumber)),
       new ByteArrayWrapper(WithdrawalEpochCertificateSerializer.toBytes(cert))))
-
-    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateSidechainBlockIdKey), version))
 
     // block fee info
     val nextBlockFeeInfoCounter: Int = 0

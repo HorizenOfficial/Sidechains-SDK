@@ -4,8 +4,8 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.SidechainAppEvents
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
-import com.horizen.certificatesubmitter.CertificateSubmitter._
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
 import com.horizen.params.NetworkParams
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
@@ -14,7 +14,6 @@ import sparkz.core.network.peer.PenaltyType
 import sparkz.core.network._
 import sparkz.core.settings.NetworkSettings
 import scorex.util.ScorexLogging
-
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}

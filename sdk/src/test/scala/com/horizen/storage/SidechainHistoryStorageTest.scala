@@ -31,6 +31,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
   val mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
+
   var params: NetworkParams = _
 
   val height = 10
@@ -580,7 +581,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     exceptionThrown = false
     try {
-      val stateStorage = new SidechainHistoryStorage(mockedStorage, null, params)
+      val histStorage = new SidechainHistoryStorage(mockedStorage, null, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }
@@ -590,7 +591,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     exceptionThrown = false
     try {
-      val stateStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, null)
+      val histStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, null)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }

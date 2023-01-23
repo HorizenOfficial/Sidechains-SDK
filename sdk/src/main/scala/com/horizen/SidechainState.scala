@@ -2,12 +2,15 @@ package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.backup.BoxIterator
-import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
@@ -23,8 +26,6 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core._
 import sparkz.core.transaction.state._
-import com.horizen.cryptolibprovider.utils.CircuitTypes
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 
 import java.io.File
 import java.math.{BigDecimal, MathContext}
@@ -41,7 +42,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
-  extends MinimalState[SidechainBlock, SidechainState]
+  extends AbstractState[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainState]
     with TransactionValidation[SidechainTypes#SCBT]
     with ModifierValidation[SidechainBlock]
     with SidechainTypes
@@ -92,7 +93,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getWithdrawalRequests(withdrawalEpoch)
   }
 
-  def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
+  def backwardTransfers(withdrawalEpoch: Int): Seq[BackwardTransfer] = {
+    stateStorage.getWithdrawalRequests(withdrawalEpoch)
+      .map(box => new BackwardTransfer(box.proposition.bytes, box.value))
+  }
+
+  override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     stateStorage.getKeyRotationProof(withdrawalEpoch, indexOfSigner, keyType)
   }
 
@@ -104,7 +110,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
    *         None otherwise.
    * @note in case {@code witdrawalEpoch == -1}, than returns the genesis set of certifiers keys from params.
    */
-  def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
+  override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     if (withdrawalEpoch == -1)
       Option.apply(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
     else {
@@ -120,7 +126,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     utxoMerkleTreeProvider.getMerklePath(boxId)
   }
 
-  def hasCeased: Boolean = stateStorage.hasCeased
+  override def hasCeased: Boolean = stateStorage.hasCeased
 
   def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     stateStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
@@ -133,7 +139,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  def lastCertificateReferencedEpoch(): Option[Int] = {
+  override def lastCertificateReferencedEpoch(): Option[Int] = {
     stateStorage.getLastCertificateReferencedEpoch()
   }
 
@@ -141,7 +147,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
    * Returns the id of Sidechain block with the last top quality certificate certificate.
    * Note: has sense only for non-ceasing sidechains. Always returns `None` for ceasing sidechains.
    */
-  def lastCertificateSidechainBlockId(): Option[ModifierId] = {
+  override def lastCertificateSidechainBlockId(): Option[ModifierId] = {
     stateStorage.getLastCertificateSidechainBlockId()
   }
 
@@ -696,8 +702,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     Failure(exception)
   }
 
-  def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = {
-    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+  def isSwitchingConsensusEpoch(blockTimestamp: Long): Boolean = {
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, blockTimestamp)
     val currentConsensusEpoch: ConsensusEpochNumber = stateStorage.getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
     blockConsensusEpoch != currentConsensusEpoch
@@ -727,7 +733,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Note: we consider ordering of the result to keep it deterministic for all Nodes.
   // From biggest stake to lowest, in case of equal compare vrf and block sign keys as well.
-  private def getOrderedForgingStakesInfoSeq(): Seq[ForgingStakeInfo] = {
+  def getOrderedForgingStakesInfoSeq(): Seq[ForgingStakeInfo] = {
     ForgingStakeInfo.fromForgerBoxes(forgerBoxStorage.getAllForgerBoxes).sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
@@ -798,7 +804,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     // The rest N satoshis must be paid to the first N forgers (1 satoshi each)
     val rest = poolFee % forgersBlockRewards.size
 
-    // Calculate final fee for foger considering forger fee, pool fee and the undistributed satoshis
+    // Calculate final fee for forger considering forger fee, pool fee and the undistributed satoshis
     val forgersRewards = forgersBlockRewards.zipWithIndex.map {
       case (forgerBlockReward: (PublicKey25519Proposition, Long), index: Int) =>
         val finalForgerFee = forgerBlockReward._2 + forgerPoolFee + (if(index < rest) 1 else 0)

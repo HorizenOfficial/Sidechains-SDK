@@ -3,16 +3,15 @@ package com.horizen.helper
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import akka.util.Timeout
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension}
 import com.horizen.secret.PrivateKey25519
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext}
 import scala.util.{Failure, Success, Try}
 import scala.language.postfixOps
 

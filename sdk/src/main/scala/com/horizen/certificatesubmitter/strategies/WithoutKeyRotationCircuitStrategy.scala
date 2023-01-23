@@ -1,20 +1,42 @@
 package com.horizen.certificatesubmitter.strategies
 
-import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
-import com.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuit}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
+import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
+import com.horizen.certnative.BackwardTransfer
+import com.horizen.chain.AbstractFeePaymentsInfo
+import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import com.horizen.params.NetworkParams
-import com.horizen.{SidechainSettings, SidechainState}
+import com.horizen.storage.AbstractHistoryStorage
+import com.horizen.transaction.Transaction
+import com.horizen._
+import sparkz.core.transaction.MemoryPool
 
 import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
 
-class WithoutKeyRotationCircuitStrategy(settings: SidechainSettings, params: NetworkParams,
-                                        cryptolibCircuit: ThresholdSignatureCircuit)
-  extends CircuitStrategy[CertificateDataWithoutKeyRotation](settings, params) {
+class WithoutKeyRotationCircuitStrategy[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  _FPI <: AbstractFeePaymentsInfo,
+  _HSTOR <: AbstractHistoryStorage[PM, _FPI, _HSTOR],
+  _HIS <: AbstractHistory[TX, H, PM, _FPI, _HSTOR, _HIS],
+  _MS <: AbstractState[TX, H, PM, _MS],
+  _VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, _VL],
+  _MP <: MemoryPool[TX, _MP]](settings: SidechainSettings, params: NetworkParams,
+                            cryptolibCircuit: ThresholdSignatureCircuit)
+  extends CircuitStrategy[TX, H, PM, CertificateDataWithoutKeyRotation](settings, params) {
+
+  type FPI = _FPI
+  type HSTOR = _HSTOR
+  type HIS = _HIS
+  type MS = _MS
+  type VL = _VL
+  type MP = _MP
+
   override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       certificateData.schnorrKeyPairs.map {
@@ -31,7 +53,7 @@ class WithoutKeyRotationCircuitStrategy(settings: SidechainSettings, params: Net
 
     //create and return proof with quality
     cryptolibCircuit.createProof(
-      certificateData.withdrawalRequests.asJava,
+      certificateData.backwardTransfers.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
       certificateData.endEpochCumCommTreeHash,
@@ -50,7 +72,7 @@ class WithoutKeyRotationCircuitStrategy(settings: SidechainSettings, params: Net
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(status.referencedEpoch)
+    val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(status.referencedEpoch)
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
     val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, state, status.referencedEpoch)
@@ -68,7 +90,7 @@ class WithoutKeyRotationCircuitStrategy(settings: SidechainSettings, params: Net
     CertificateDataWithoutKeyRotation(
       status.referencedEpoch,
       sidechainId,
-      withdrawalRequests,
+      backwardTransfers,
       endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount,
@@ -80,7 +102,7 @@ class WithoutKeyRotationCircuitStrategy(settings: SidechainSettings, params: Net
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
+    val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
     val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
@@ -104,7 +126,7 @@ class WithoutKeyRotationCircuitStrategy(settings: SidechainSettings, params: Net
     }
 
     cryptolibCircuit.generateMessageToBeSigned(
-      withdrawalRequests.asJava,
+      backwardTransfers.asJava,
       sidechainId,
       referencedWithdrawalEpochNumber,
       endEpochCumCommTreeHash,
@@ -114,7 +136,7 @@ class WithoutKeyRotationCircuitStrategy(settings: SidechainSettings, params: Net
     )
   }
 
-  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Option[Array[Byte]] = {
+  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: MS): Option[Array[Byte]] = {
     if (params.isCSWEnabled) {
       state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
         case x: Some[Array[Byte]] => x

@@ -3,7 +3,7 @@ package com.horizen.certificatesubmitter.strategy
 import akka.actor.{ActorRef, ActorSystem}
 import com.horizen.{MempoolSettings, SidechainHistory, SidechainMemoryPool, SidechainSettings, SidechainState, SidechainWallet}
 import com.horizen.block.SidechainBlock
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.strategies.{NonCeasingSidechain, SubmissionWindowStatus}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.fixtures.SidechainBlockFixture.sidechainTransactionsCompanion
@@ -27,7 +27,6 @@ class NonCeasingSidechainTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
   with SidechainBlockFixture
 {
-  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
   var history: SidechainHistory = _
   var state: SidechainState = _
@@ -37,7 +36,7 @@ class NonCeasingSidechainTest extends JUnitSuite
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   var settings: SidechainSettings = _
-  var mockedNodeViewHolder: View = _
+  var mockedNodeViewHolder: CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool] = _
 
   private val params = MainNetParams(signersThreshold = 2)
   private val nonCeasingSidechainStrategy = new NonCeasingSidechain(params)
@@ -49,7 +48,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     wallet = mock[SidechainWallet]
     mempool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(300))
     settings = mock[SidechainSettings]
-    mockedNodeViewHolder = new View(history, state, wallet, mempool)
+    mockedNodeViewHolder = CurrentView(history, state, wallet, mempool)
   }
 
   private def getMockedMempoolSettings(maxSize: Int): MempoolSettings = {
@@ -97,7 +96,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    var status: SubmissionWindowStatus = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    var status: SubmissionWindowStatus = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertFalse("Epoch 0 block 1 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -111,7 +110,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertFalse("Epoch 1 block 0 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -126,7 +125,7 @@ class NonCeasingSidechainTest extends JUnitSuite
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
 
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertTrue("Epoch 1 block 1 must be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -134,7 +133,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     // Withdral Epoch 1 block 1 with previous certificate
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => Some(0))
 
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertFalse("Epoch 1 block 1 with last certepoch = 0 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 1", status.referencedWithdrawalEpochNumber, 1)
@@ -148,7 +147,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     })
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
 
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertTrue("Epoch 2 block 0 without last certificate must be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -156,7 +155,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     // Withdral Epoch 2 block 0 with previous certificate
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => Some(0))
 
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
 
     assertFalse("Epoch 2 block 0 with last cert epoch = 0 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 1", status.referencedWithdrawalEpochNumber, 1)
