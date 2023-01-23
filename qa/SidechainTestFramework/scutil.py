@@ -525,16 +525,13 @@ def initialize_default_sc_datadir(dirname, n, api_key):
     resourcesDir = get_resources_dir()
     with open(resourcesDir + '/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
-    api_key_hash = ""
-    if api_key != "":
-        api_key_hash = calculateApiKeyHash(api_key)
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
-        'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': "5s",
         'BIND_PORT': str(bindPort),
         'MAX_INCOMING_CONNECTIONS': 100,
@@ -635,8 +632,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
     else:
         sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
-
-    url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
+    url = "http://%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url, auth_api_key=auth_api_key)
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir  # store the name of the datadir

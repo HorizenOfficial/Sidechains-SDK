@@ -47,19 +47,21 @@ abstract class WalletBaseApiRoute[
    * Create new Vrf secret and return corresponding public key
    */
   def createVrfSecret: Route = (post & path("createVrfSecret")) {
-    withAuth {
-      entity(as[ReqCreateKey]) { _ =>
-        withNodeView { sidechainNodeView =>
-          //replace to VRFKeyGenerator.generateNextSecret(wallet)
-          val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
-          val public = secret.publicImage()
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateKey]) { _ =>
+          withNodeView { sidechainNodeView =>
+            //replace to VRFKeyGenerator.generateNextSecret(wallet)
+            val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
+            val public = secret.publicImage()
 
-          val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
-          Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-            case Success(_) =>
-              ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
-            case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+            val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
+            Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+              case Success(_) =>
+                ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
+              case Failure(e) =>
+                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+            }
           }
         }
       }
@@ -70,17 +72,19 @@ abstract class WalletBaseApiRoute[
    * Create new secret and return corresponding address (public key)
    */
   def createPrivateKey25519: Route = (post & path("createPrivateKey25519")) {
-    withAuth {
-      entity(as[ReqCreateKey]) { _ =>
-        withNodeView { sidechainNodeView =>
-          val wallet = sidechainNodeView.getNodeWallet
-          val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
-          val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
-          Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-            case Success(_) =>
-              ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
-            case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateKey]) { _ =>
+          withNodeView { sidechainNodeView =>
+            val wallet = sidechainNodeView.getNodeWallet
+            val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
+            val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+            Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+              case Success(_) =>
+                ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
+              case Failure(e) =>
+                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+            }
           }
         }
       }
@@ -91,23 +95,25 @@ abstract class WalletBaseApiRoute[
     * Returns the list of all wallet’s propositions (public keys). Filter propositions of the given type
     */
   def allPublicKeys: Route = (post & path("allPublicKeys")) {
-    withAuth {
-      entity(as[ReqAllPropositions]) { body =>
-        withNodeView { sidechainNodeView =>
-          val wallet = sidechainNodeView.getNodeWallet
-          val optPropType = body.proptype
-          if (optPropType.isEmpty) {
-            val listOfPropositions = wallet.allSecrets().asScala.map(s =>
-              s.publicImage().asInstanceOf[SidechainTypes#SCP])
-            ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
-          } else {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqAllPropositions]) { body =>
+          withNodeView { sidechainNodeView =>
+            val wallet = sidechainNodeView.getNodeWallet
+            val optPropType = body.proptype
+            if (optPropType.isEmpty) {
+              val listOfPropositions = wallet.allSecrets().asScala.map(s =>
+                s.publicImage().asInstanceOf[SidechainTypes#SCP])
+              ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
+            } else {
 
-            getClassBySecretClassName(optPropType.get) match {
-              case Failure(exception) => SidechainApiError(exception)
-              case Success(clazz) =>
-                val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
-                  secret.publicImage().asInstanceOf[SidechainTypes#SCP])
-                ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
+              getClassBySecretClassName(optPropType.get) match {
+                case Failure(exception) => SidechainApiError(exception)
+                case Success(clazz) =>
+                  val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
+                    secret.publicImage().asInstanceOf[SidechainTypes#SCP])
+                  ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
+              }
             }
           }
         }
