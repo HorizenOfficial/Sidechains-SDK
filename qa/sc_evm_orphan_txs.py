@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import logging
 from decimal import Decimal
 
@@ -24,6 +25,24 @@ Test:
     has an higher effective gas tip
      
 """
+
+def checkNodeBalanceApi(sc_node):
+    allBalances = sc_node.wallet_getAllBalances()['result']['balances']
+    totBal = 0
+    for bal in allBalances:
+        address = bal['address']
+        balance = bal['balance']
+        assert_equal(
+            balance,
+            sc_node.wallet_getBalance(json.dumps({"address": address}))["result"]["balance"]
+        )
+        totBal += balance
+
+    assert_equal(
+        totBal,
+        sc_node.wallet_getTotalBalance()['result']['balance']
+    )
+
 
 
 class SCEvmOrphanTXS(AccountChainSetup):
@@ -265,6 +284,13 @@ class SCEvmOrphanTXS(AccountChainSetup):
         txs_in_block = sc_node_1.block_best()["result"]["block"]["sidechainTransactions"]
         assert_equal(1, len(txs_in_block), "Wrong number of transactions in the block")
         assert_equal(newTxId, txs_in_block[0]['id'])
+
+        # we have several addresses with balance for both nodes, take advantage from this scenario and test some
+        # balance-related api
+        checkNodeBalanceApi(sc_node_1)
+        checkNodeBalanceApi(sc_node_2)
+
+
 
 
 if __name__ == "__main__":
