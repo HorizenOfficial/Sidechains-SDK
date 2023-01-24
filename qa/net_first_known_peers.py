@@ -22,7 +22,7 @@ Test:
 """
 
 
-class SCFirstKnownPeers(SidechainTestFramework):
+class NetFirstKnownPeers(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 10
 
@@ -85,4 +85,4 @@ class SCFirstKnownPeers(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    SCFirstKnownPeers().main()
+    NetFirstKnownPeers().main()

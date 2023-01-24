@@ -22,7 +22,7 @@ Test:
 """
 
 
-class SCRingOfNodes(SidechainTestFramework):
+class NetRingOfNodes(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 10
 
@@ -76,4 +76,4 @@ class SCRingOfNodes(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    SCRingOfNodes().main()
+    NetRingOfNodes().main()
