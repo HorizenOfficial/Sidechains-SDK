@@ -41,6 +41,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.compat.java8.OptionConverters._
@@ -372,7 +373,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def keyRotationMessageToSign(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(FiniteDuration(4000L, TimeUnit.SECONDS), submitterIsEnabled = true, signerIsEnabled = true)
 
     val mockedSidechainNodeViewHolder = TestProbe()
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
@@ -389,14 +390,14 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
 
-    val schnorrPublicKey = ""
+    val schnorrPublicKey = "schnorrPublicKey"
     val referencedEpochNumber = 20
+
+//    val signingMessageToSign = Await.result(certificateSubmitterRef ? GetKeyRotationMessageToSign(schnorrPublicKey, keyType = 0, referencedEpochNumber), FiniteDuration(400L, TimeUnit.SECONDS)).asInstanceOf[MessageToSign]
+//    assertFalse("Signing message to sign should not be empty", signingMessageToSign.isEmpty)
 //
-//    val signingMessageToSign = Await.result(certificateSubmitterRef ? GetKeyRotationMessageToSign(schnorrPublicKey, keyType = 0, referencedEpochNumber), timeout.duration).asInstanceOf[String]
-//    assertFalse("Message to sign should not be empty", signingMessageToSign.isEmpty)
-//
-//    val masterMessageToSign = Await.result(certificateSubmitterRef ? GetKeyRotationMessageToSign(schnorrPublicKey, keyType = 1, referencedEpochNumber), timeout.duration).asInstanceOf[String]
-//    assertFalse("Message to sign should not be empty", masterMessageToSign.isEmpty)
+//    val masterMessageToSign = Await.result(certificateSubmitterRef ? GetKeyRotationMessageToSign(schnorrPublicKey, keyType = 1, referencedEpochNumber), FiniteDuration(400L, TimeUnit.SECONDS)).asInstanceOf[String]
+//    assertFalse("Master message to sign should not be empty", masterMessageToSign.isEmpty)
   }
 
   @Test

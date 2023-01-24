@@ -437,11 +437,12 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
 
   private def keyRotationMessageToSign: Receive = {
     case GetKeyRotationMessageToSign(schnorrPublicKey: String, keyType: Int, withdrawalEpoch: Int) =>
-      if(keyType == 0) {
+      val message = if(keyType == 0) {
         CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForSigningKeyUpdate(SchnorrPublicKey.deserialize(schnorrPublicKey.getBytes), withdrawalEpoch,  params.sidechainId)
-      } else if(keyType == 1) {
+      } else {
         CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForMasterKeyUpdate(SchnorrPublicKey.deserialize(schnorrPublicKey.getBytes), withdrawalEpoch,  params.sidechainId)
       }
+      sender() ! MessageToSign(message.toString)
   }
 
   def submitterStatus: Receive = {
@@ -548,6 +549,8 @@ object CertificateSubmitter {
     case object IsCertificateSigningEnabled
 
     case class GetKeyRotationMessageToSign(schnorrPublicKey: String, keyType: Int, withdrawalEpoch: Int)
+
+    case class MessageToSign(message: String)
   }
 }
 
