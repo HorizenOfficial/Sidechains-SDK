@@ -29,7 +29,7 @@ Test:
 """
 
 
-class SCRingOfNodes(SidechainTestFramework):
+class SCDeclaredAddress(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 6
 
@@ -114,4 +114,4 @@ class SCRingOfNodes(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    SCRingOfNodes().main()
+    SCDeclaredAddress().main()
