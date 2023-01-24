@@ -17,6 +17,7 @@ import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeCertif
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
+import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -117,7 +118,8 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
       getSignaturesStatus orElse
       submitterStatus orElse
       signerStatus orElse
-      reportStrangeInput
+      reportStrangeInput orElse
+      keyRotationMessageToSign
   }
 
   protected def checkSubmitter: Receive = {
@@ -433,6 +435,15 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
     }
   }
 
+  private def keyRotationMessageToSign: Receive = {
+    case GetKeyRotationMessageToSign(schnorrPublicKey: String, keyType: Int, withdrawalEpoch: Int) =>
+      if(keyType == 0) {
+        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForSigningKeyUpdate(SchnorrPublicKey.deserialize(schnorrPublicKey.getBytes), withdrawalEpoch,  params.sidechainId)
+      } else if(keyType == 1) {
+        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForMasterKeyUpdate(SchnorrPublicKey.deserialize(schnorrPublicKey.getBytes), withdrawalEpoch,  params.sidechainId)
+      }
+  }
+
   def submitterStatus: Receive = {
     case EnableSubmitter =>
       if (!submitterEnabled) {
@@ -535,6 +546,8 @@ object CertificateSubmitter {
     case object DisableCertificateSigner
 
     case object IsCertificateSigningEnabled
+
+    case class GetKeyRotationMessageToSign(schnorrPublicKey: String, keyType: Int, withdrawalEpoch: Int)
   }
 }
 

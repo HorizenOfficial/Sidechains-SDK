@@ -1894,13 +1894,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /submitter/getSchnorrPublicKeyHash:
+  /submitter/getKeyRotationMessageToSign:
     post:
       tags:
         - submitter
       summary: returns hash of public key
       description: Accepts public key and returns hash of the public key
-      operationId: getSchnorrPublicKeyHash
+      operationId: getKeyRotationMessageToSign
       requestBody:
         content:
           application/json:
@@ -1908,10 +1908,22 @@ paths:
               type: object
               required:
                 - schnorrPublicKey
+                - keyType
+                - withdrawalEpoch
               properties:
                 schnorrPublicKey:
                   type: string
                   description: public key of certificate signer
+                keyType:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  maximum: 1
+                  description: Key type - 0 for signers key, 1 for masters key
+                withdrawalEpoch:
+                  type: integer
+                  format: int32
+                  description: Number of withdrawal epoch
       responses:
         '200':
           description: successful operation
@@ -1923,7 +1935,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      schnorrPublicKeyHash:
+                      keyRotationMessageToSign:
                         type: string
                         description: Hash of public key of certificate signer
                   error:

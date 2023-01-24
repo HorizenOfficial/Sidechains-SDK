@@ -17,7 +17,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
 from SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
-from httpCalls.submitter.getSchnorrPublicKeyHash import http_get_schnorr_public_key_hash
+from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign
 from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress
@@ -163,7 +163,9 @@ class SCKeyRotationTest(SidechainTestFramework):
         # Try to change the signing key 0
         new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
         new_public_key = new_signing_key.publicKey
-        new_public_key_hash = http_get_schnorr_public_key_hash(sc_node, new_public_key)["schnorrPublicKeyHash"]
+        key_type = 0
+        withdrawal_epoch = self.sc_withdrawal_epoch_length
+        new_public_key_hash = http_get_key_rotation_message_to_sign(sc_node, new_public_key, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash,
@@ -300,7 +302,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         # Change again the same signature key
         new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
         new_public_key_2 = new_signing_key_2.publicKey
-        new_public_key_hash_2 = http_get_schnorr_public_key_hash(sc_node, new_public_key_2)["schnorrPublicKeyHash"]
+        new_public_key_hash_2 = http_get_key_rotation_message_to_sign(sc_node, new_public_key_2, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_2,
@@ -352,7 +354,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         # Try to update the master key 0
         new_master_key = generate_cert_signer_secrets("random_seed3", 1)[0]
         new_public_key_3 = new_master_key.publicKey
-        new_public_key_hash_3 = http_get_schnorr_public_key_hash(sc_node, new_public_key_3)["schnorrPublicKeyHash"]
+        new_public_key_hash_3 = http_get_key_rotation_message_to_sign(sc_node, new_public_key_3, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
 
 
         # Sign the new signing key with the old keys
@@ -426,7 +428,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         # Update again the signing key 0
         new_signing_key_4 = generate_cert_signer_secrets("random_seed4", 1)[0]
         new_public_key_4 = new_signing_key_4.publicKey
-        new_public_key_hash_4 = http_get_schnorr_public_key_hash(sc_node, new_public_key_4)["schnorrPublicKeyHash"]
+        new_public_key_hash_4 = http_get_key_rotation_message_to_sign(sc_node, new_public_key_4, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature_4 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_4,
@@ -503,11 +505,11 @@ class SCKeyRotationTest(SidechainTestFramework):
         for i in range(self.cert_max_keys):
             new_signing_key = generate_cert_signer_secrets("random_seed5", 1)[0]
             new_signing_keys += [new_signing_key]
-            new_signing_key_hash = http_get_schnorr_public_key_hash(sc_node, new_signing_key.publicKey)["schnorrPublicKeyHash"]
+            new_signing_key_hash = http_get_key_rotation_message_to_sign(sc_node, new_signing_key.publicKey, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
 
             new_m_key = generate_cert_signer_secrets("random_seed6", 1)[0]
             new_master_keys += [new_m_key]
-            new_master_key_hash = http_get_schnorr_public_key_hash(sc_node, new_m_key.publicKey)["schnorrPublicKeyHash"]
+            new_master_key_hash = http_get_key_rotation_message_to_sign(sc_node, new_m_key.publicKey, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
 
             if (i == 0):
                 # Signing key signatures

@@ -292,6 +292,40 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         return serializedHash;
     }
 
+    @Override
+    public byte[] getMsgToSignForSigningKeyUpdate(SchnorrPublicKey newSigningKey, int epochNumber, byte[] sidechainId) {
+        byte[] messageAsBytes;
+        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
+        try {
+            FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForSigningKeyUpdate(newSigningKey,
+                    epochNumber, sidechainIdFe);
+            messageAsBytes = messageToSign.serializeFieldElement();
+            messageToSign.freeFieldElement();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            sidechainIdFe.freeFieldElement();
+        }
+        return messageAsBytes;
+    }
+
+    @Override
+    public byte[] getMsgToSignForMasterKeyUpdate(SchnorrPublicKey newSigningKey, int epochNumber, byte[] sidechainId) {
+        byte[] messageAsBytes;
+        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
+        try {
+            FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForMasterKeyUpdate(newSigningKey,
+                    epochNumber, sidechainIdFe);
+            messageAsBytes = messageToSign.serializeFieldElement();
+            messageToSign.freeFieldElement();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            sidechainIdFe.freeFieldElement();
+        }
+        return messageAsBytes;
+    }
+
     private static List<SchnorrPublicKey> byteArrayToKeysList(Seq<SchnorrProposition> schnorrPublicKeysBytesList) {
         return scala.collection.JavaConverters.seqAsJavaList(schnorrPublicKeysBytesList)
                 .stream().map(SchnorrProposition::pubKeyBytes).map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
