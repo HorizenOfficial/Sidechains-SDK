@@ -8,13 +8,15 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import org.web3j.abi.datatypes.Type;
 
 import java.io.IOException;
 import java.util.Arrays;
 
 @JsonSerialize(using = Address.Serializer.class)
 @JsonDeserialize(using = Address.Deserializer.class)
-public class Address {
+public class Address implements Type<String> {
+    public static final String TYPE_NAME = "address";
     public static final int LENGTH = 20;
     private final byte[] bytes;
 
@@ -46,7 +48,7 @@ public class Address {
         if (!hex.startsWith("0x")) {
             throw new IllegalArgumentException("address must be prefixed with 0x");
         }
-        return Address.fromBytes(Converter.fromHexString(hex.substring(2)));
+        return new Address(Converter.fromHexString(hex.substring(2)));
     }
 
     public byte[] toBytes() {
@@ -64,6 +66,16 @@ public class Address {
     @Override
     public int hashCode() {
         return Arrays.hashCode(bytes);
+    }
+
+    @Override
+    public String getValue() {
+        return toString();
+    }
+
+    @Override
+    public String getTypeAsString() {
+        return TYPE_NAME;
     }
 
     public static class Serializer extends JsonSerializer<Address> {
