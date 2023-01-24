@@ -32,7 +32,7 @@ trait ReceiptFixture {
       new EvmLog(address, topics, data)
     }
 
-  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]] = None, address: Array[Byte] = Address.addressZero().toBytes,
+  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]] = None, address: Array[Byte] = Address.ZERO.toBytes,
                                 blockHash: String = "blockhash", blockNumber: Int = 22, transactionIndex: Int = 33): EthereumReceipt = {
     val txHashTemp: Array[Byte] = txHash.getOrElse(getRandomHash())
 

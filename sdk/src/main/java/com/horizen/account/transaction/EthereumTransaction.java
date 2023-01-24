@@ -368,7 +368,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonIgnore
     public String getToAddressString() {
         if (this.to == null) return null;
-        return Numeric.toHexString(this.to.address());
+        return this.to.address().toString();
     }
 
     @Override
@@ -385,6 +385,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                         )
                 );
             } catch (Exception e) {
+                // TODO: is this a valid case? what are supposed to do with a TX that has a signature we cannot process?
                 // whatever exception may result in processing the signature, we can not tell the from address
                 LogManager.getLogger().info("Could not find from address, Signature not valid:", e);
                 this.from = null;
@@ -396,7 +397,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonIgnore
     public String getFromAddressString() {
         if (this.getFrom() == null) return null;
-        return Numeric.toHexString(this.getFrom().address());
+        return this.getFrom().address().toString();
     }
 
     @Override
@@ -470,8 +471,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         // this will default to gasPrice if the transaction is not EIP-1559
         var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
-                Optional.ofNullable(this.from),
-                Optional.ofNullable(this.to),
+                getFrom().address(),
+                Optional.ofNullable(this.to.address()),
                 effectiveGasPrice,
                 gasFeeCap,
                 gasTipCap,

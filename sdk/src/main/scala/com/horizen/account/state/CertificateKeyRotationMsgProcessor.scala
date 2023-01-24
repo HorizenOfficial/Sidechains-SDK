@@ -8,6 +8,7 @@ import com.horizen.account.state.CertificateKeyRotationMsgProcessor.{Certificate
 import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
@@ -29,7 +30,7 @@ trait CertificateKeysProvider {
 
 case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with CertificateKeysProvider {
 
-  override val contractAddress: Array[Byte] = CertificateKeyRotationContractAddress
+  override val contractAddress: Address = CertificateKeyRotationContractAddress
   override val contractCode: Array[Byte] = CertificateKeyRotationContractCode
 
   @throws(classOf[ExecutionFailedException])
@@ -204,7 +205,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 }
 
 object CertificateKeyRotationMsgProcessor {
-  val CertificateKeyRotationContractAddress: Array[Byte] = CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
+  val CertificateKeyRotationContractAddress: Address = CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
   val CertificateKeyRotationContractCode: Digest32 = Keccak256.hash("KeyRotationSmartContractCode")
 
   val SubmitKeyRotationReqCmdSig: String = getABIMethodId("submitKeyRotation(uint32,uint32,bytes32,bytes1,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)")

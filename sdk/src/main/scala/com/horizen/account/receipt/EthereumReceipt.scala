@@ -1,6 +1,7 @@
 package com.horizen.account.receipt
 
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.utils.BytesUtils
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
@@ -16,7 +17,7 @@ case class EthereumReceipt(
     blockHash: Array[Byte],
     blockNumber: Int,
     gasUsed: BigInteger,
-    contractAddress: Option[Array[Byte]]
+    contractAddress: Option[Address]
 ) extends BytesSerializable {
   override type M = EthereumReceipt
 
@@ -24,17 +25,15 @@ case class EthereumReceipt(
 
   override def toString: String = {
 
-    val txHashStr: String = BytesUtils.toHexString(transactionHash)
-    val blockHashStr: String = BytesUtils.toHexString(blockHash)
-    val contractAddressStr = contractAddress match {
-      case Some(addr) => BytesUtils.toHexString(addr)
-      case None => BytesUtils.toHexString(Array.empty)
-    }
-
-    val infoNonConsensusStr: String =
+    val infoNonConsensusStr =
       String.format(
-        s" - (receipt non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, gasUsed=${gasUsed
-            .toString()}, contractAddress=$contractAddressStr}"
+        " - (receipt non consensus data) {txHash=%s, txIndex=%d, blockHash=%s, blockNumber=%d, gasUsed=%s, contractAddress=%s}",
+        BytesUtils.toHexString(transactionHash),
+        transactionIndex,
+        BytesUtils.toHexString(blockHash),
+        blockNumber,
+        gasUsed.toString(),
+        contractAddress.toString
       )
 
     consensusDataReceipt.toString.concat(infoNonConsensusStr)
@@ -43,16 +42,13 @@ case class EthereumReceipt(
   override def equals(obj: Any): Boolean = {
     obj match {
       case other: EthereumReceipt =>
-        consensusDataReceipt
-          .equals(other.consensusDataReceipt) && util.Arrays.equals(transactionHash, other.transactionHash) &&
+        consensusDataReceipt.equals(other.consensusDataReceipt) &&
+        util.Arrays.equals(transactionHash, other.transactionHash) &&
         transactionIndex.equals(other.transactionIndex) &&
         util.Arrays.equals(blockHash, other.blockHash) &&
         blockNumber.equals(other.blockNumber) &&
         gasUsed.equals(other.gasUsed) &&
-        util.Arrays.equals(
-          contractAddress.getOrElse(Array.empty),
-          other.contractAddress.getOrElse(Array.empty)
-        )
+        contractAddress.equals(other.contractAddress)
 
       case _ => false
     }
@@ -65,7 +61,7 @@ case class EthereumReceipt(
     result = 31 * result + util.Arrays.hashCode(blockHash)
     result = 31 * result + Integer.hashCode(blockNumber)
     result = 31 * result + gasUsed.hashCode()
-    result = 31 * result + util.Arrays.hashCode(contractAddress.getOrElse(Array.empty))
+    result = 31 * result + contractAddress.hashCode()
 
     result
   }
@@ -99,7 +95,7 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
     writer.putBytes(gasUsedBytes)
 
     // optional field
-    val addr = receipt.contractAddress.getOrElse(Array.empty)
+    val addr = receipt.contractAddress.map(_.toBytes).getOrElse(Array.empty)
     writer.putInt(addr.length)
     writer.putBytes(addr)
   }
@@ -129,7 +125,9 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
 
     // optional field
     val contractAddressLength = reader.getInt
-    val contractAddress: Option[Array[Byte]] = if(contractAddressLength == 0) None else Some(reader.getBytes(contractAddressLength))
+    val contractAddressBytes = reader.getBytes(contractAddressLength)
+    val contractAddress =
+      if (contractAddressLength == 0) None else Some(Address.fromBytes(contractAddressBytes))
 
     EthereumReceipt(receipt, txHash, txIndex, blockHash, blockNumber, gasUsed, contractAddress)
   }

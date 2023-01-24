@@ -1,5 +1,6 @@
 package com.horizen.account.utils;
 
+import com.horizen.evm.utils.Address;
 import org.web3j.crypto.ContractUtils;
 import org.web3j.crypto.Keys;
 import org.web3j.utils.Numeric;
@@ -15,8 +16,8 @@ public final class Account {
         // prevent instantiation
     }
 
-    public static byte[] generateContractAddress(byte[] fromAddress, BigInteger nonce) {
-        return ContractUtils.generateContractAddress(fromAddress, nonce);
+    public static Address generateContractAddress(Address from, BigInteger nonce) {
+        return Address.fromBytes(ContractUtils.generateContractAddress(from.toBytes(), nonce));
     }
 
     public static String checksumAddress(byte[] address) {

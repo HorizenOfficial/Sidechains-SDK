@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Secp256k1;
+import com.horizen.evm.utils.Address;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.serialization.Views;
@@ -50,7 +51,11 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
 
     @Override
     public boolean isValid(AddressProposition proposition, byte[] message) {
-        return Secp256k1.verify(message, this.v, this.r, this.s, proposition.address());
+        return Secp256k1.verify(message, this.v, this.r, this.s, proposition.address().toBytes());
+    }
+
+    public boolean isValid(Address address, byte[] message) {
+        return Secp256k1.verify(message, this.v, this.r, this.s, address.toBytes());
     }
 
     @Override

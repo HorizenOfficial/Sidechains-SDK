@@ -27,7 +27,7 @@ public class AddressPropositionTest {
     @Test
     public void addressPropositionTest() {
         // Test 1: Returns hash code correctly
-        assertEquals("Hashcode is different", Arrays.hashCode(addressProposition.address()), addressProposition.hashCode());
+        assertEquals("Hashcode is different", Arrays.hashCode(addressProposition.address().toBytes()), addressProposition.hashCode());
 
         // Test 2: Returns true as the object is the same
         assertEquals(addressProposition, addressProposition);
@@ -46,7 +46,7 @@ public class AddressPropositionTest {
         assertThrows(IllegalArgumentException.class, () -> new AddressProposition(BytesUtils.fromHexString("12345134")));
 
         // Test 7: Returns address correctly
-        assertEquals("e16c1623c1aa7d919cd2241d8b36d9e79c1be2a2", BytesUtils.toHexString(addressProposition.address()));
+        assertEquals("0xe16c1623c1aa7d919cd2241d8b36d9e79c1be2a2", addressProposition.address().toString());
 
         // Test 8: Returns checksum correctly
         assertEquals("0xe16C1623c1AA7D919cd2241d8b36d9E79C1Be2A2", addressProposition.checksumAddress());

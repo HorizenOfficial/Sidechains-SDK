@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.utils.AccountBlockUtil;
+import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
@@ -22,13 +23,13 @@ public class EthereumBlockView {
     public final String transactionsRoot;
     public final String stateRoot;
     public final String receiptsRoot;
-    public final String miner;
+    public final Address miner;
     public final String size;
     public final String gasLimit;
     public final String gasUsed;
     public final String timestamp;
     public final List<?> transactions;
-    public final String author;
+    public final Address author;
     public final String baseFeePerGas;
     public final List<String> uncles = new ArrayList<>();
     public final List<String> sealFields = new ArrayList<>();
@@ -50,7 +51,7 @@ public class EthereumBlockView {
 
     private EthereumBlockView(Long blockNumber, Hash blockHash, AccountBlock block, List<?> txs) {
         var header = block.header();
-        author = Numeric.toHexString(header.forgerAddress().address());
+        author = header.forgerAddress().address();
         number = Numeric.encodeQuantity(BigInteger.valueOf(blockNumber));
         hash = Numeric.toHexString(blockHash.toBytes());
         parentHash = Numeric.prependHexPrefix((String) block.parentId());
@@ -58,10 +59,10 @@ public class EthereumBlockView {
         transactionsRoot = Numeric.toHexString(header.sidechainTransactionsMerkleRootHash());
         stateRoot = Numeric.toHexString(header.stateRoot());
         receiptsRoot = Numeric.toHexString(header.receiptsRoot());
-        miner = Numeric.toHexString(header.forgerAddress().address());
+        miner = header.forgerAddress().address();
         size = Numeric.encodeQuantity(BigInteger.valueOf(header.bytes().length));
-        this.gasLimit = Numeric.encodeQuantity(header.gasLimit());
-        this.gasUsed = Numeric.encodeQuantity(header.gasUsed());
+        gasLimit = Numeric.encodeQuantity(header.gasLimit());
+        gasUsed = Numeric.encodeQuantity(header.gasUsed());
         timestamp = Numeric.encodeQuantity(BigInteger.valueOf(block.timestamp()));
         baseFeePerGas = Numeric.encodeQuantity(header.baseFee());
         transactions = txs;

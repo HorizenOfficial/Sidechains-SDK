@@ -64,7 +64,7 @@ class ForgerStakeMsgProcessorTest
   def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount): Message = {
     val data = Bytes.concat(opCode, arguments)
     new Message(
-      Optional.of(new AddressProposition(origin)),
+      origin,
       Optional.of(new AddressProposition(contractAddress)), // to
       dummyBigInteger, // gasPrice
       dummyBigInteger, // gasFeeCap
@@ -229,7 +229,7 @@ class ForgerStakeMsgProcessorTest
       var forgerIndex = 0
       var nonce = 0
       var msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+        forgerIndex, ownerAddressProposition, nonce.toByteArray)
 
       var signature = blockSignSecret1.sign(msgToSign)
       var cmdInput = OpenStakeForgerListCmdInput(
@@ -262,7 +262,7 @@ class ForgerStakeMsgProcessorTest
       forgerIndex = 10
       nonce = 1
       msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+        forgerIndex, ownerAddressProposition, nonce.toByteArray)
 
       signature = blockSignSecret2.sign(msgToSign)
       cmdInput = OpenStakeForgerListCmdInput(
@@ -284,14 +284,14 @@ class ForgerStakeMsgProcessorTest
       nonce = 1
       assertThrows[IllegalArgumentException] {
         msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-          forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+          forgerIndex, ownerAddressProposition, nonce.toByteArray)
       }
 
       // use a good index
       forgerIndex = 1
       nonce = 1
       msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+        forgerIndex, ownerAddressProposition, nonce.toByteArray)
 
       // negative test: use a wrong secret for signing
       signature = blockSignSecret1.sign(msgToSign)
@@ -336,7 +336,7 @@ class ForgerStakeMsgProcessorTest
       forgerIndex = 2
       nonce = 2
       msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+        forgerIndex, ownerAddressProposition, nonce.toByteArray)
 
       signature = blockSignSecret3.sign(msgToSign)
       cmdInput = OpenStakeForgerListCmdInput(
@@ -384,7 +384,7 @@ class ForgerStakeMsgProcessorTest
       val forgerIndex = 0
       val nonce = 0
       val msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+        forgerIndex, ownerAddressProposition, nonce.toByteArray)
 
       val signature = blockSignSecret.sign(msgToSign)
       val cmdInput = OpenStakeForgerListCmdInput(

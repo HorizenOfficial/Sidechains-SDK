@@ -34,6 +34,7 @@ import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 import com.horizen.secret.PrivateKey25519
+
 import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -77,7 +78,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val secret = allAccounts.find(
       a => (fromAddress.isEmpty ||
         BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
-          .address) == fromAddress.get) &&
+          .address.toBytes) == fromAddress.get) &&
         nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0 // TODO account for gas
     )
 
@@ -353,7 +354,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
                 secret match {
                   case Some(txCreatorSecret) =>
-                    val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
                     val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
 
                     val msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
@@ -364,7 +364,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     val dataBytes = encodeOpenStakeCmdRequest(body.forgerIndex, signature)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
                       params.chainId,
-                      EthereumTransactionUtils.getToAddressFromString(to),
+                      JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
                       nonce,
                       gasLimit,
                       maxPriorityFeePerGas,
@@ -432,12 +432,11 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           secret match {
             case Some(secret) =>
 
-              val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                EthereumTransactionUtils.getToAddressFromString(to),
+                JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
@@ -478,7 +477,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val secret = getFittingSecret(sidechainNodeView, None, txCost)
           secret match {
             case Some(txCreatorSecret) =>
-              val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
               val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
               stakeDataOpt match {
@@ -490,12 +488,12 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   else {
                     val stakeOwnerSecret = stakeOwnerSecretOpt.get().asInstanceOf[PrivateKeySecp256k1]
 
-                    val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
+                    val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage(), nonce.toByteArray)
                     val signature = stakeOwnerSecret.sign(msgToSign)
                     val dataBytes = encodeSpendStakeCmdRequest(signature, body.stakeId)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
                       params.chainId,
-                      EthereumTransactionUtils.getToAddressFromString(to),
+                      JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
                       nonce,
                       gasLimit,
                       maxPriorityFeePerGas,

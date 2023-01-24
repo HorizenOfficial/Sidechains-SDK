@@ -1,9 +1,8 @@
 package com.horizen.account.state
 
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.{Account, FeeUtils}
-import com.horizen.evm.utils.Hash
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.evm.{MemoryDatabase, StateDB}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
@@ -22,8 +21,8 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
 
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
   val hashNull: Array[Byte] = Array.fill(32)(0)
-  val origin: Array[Byte] = randomAddress
-  val defaultBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1)
+  val origin: Address = randomAddress
+  val defaultBlockContext = new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1)
 
   def randomBytes(n: Int): Array[Byte] = {
     val bytes = new Array[Byte](n)
@@ -35,7 +34,7 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
 
   def randomHash: Array[Byte] = randomBytes(32)
 
-  def randomAddress: Array[Byte] = randomBytes(Account.ADDRESS_SIZE)
+  def randomAddress: Address = Address.fromBytes(randomBytes(Account.ADDRESS_SIZE))
 
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>
@@ -53,25 +52,19 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   }
 
   def getMessage(
-      to: Array[Byte],
+      to: Address,
       value: BigInteger = BigInteger.ZERO,
       data: Array[Byte] = Array.emptyByteArray,
       nonce: BigInteger = BigInteger.ZERO,
-      from: Array[Byte] = null
+      from: Address = origin
   ): Message = {
     val gasPrice = BigInteger.ZERO
     val gasFeeCap = BigInteger.valueOf(1000001)
     val gasTipCap = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     new Message(
-      if (from == null)
-        Optional.of(new AddressProposition(origin))
-      else
-        Optional.of(new AddressProposition(from)),
-      if (to == null)
-        Optional.empty()
-      else
-        Optional.of(new AddressProposition(to)),
+      Optional.of(from),
+      Optional.ofNullable(to),
       gasPrice,
       gasFeeCap,
       gasTipCap,

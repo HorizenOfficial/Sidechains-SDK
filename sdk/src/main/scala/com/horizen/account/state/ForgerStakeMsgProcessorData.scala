@@ -3,17 +3,16 @@ package com.horizen.account.state
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import com.horizen.evm.utils.Address
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
-import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
-import org.web3j.utils.Numeric
-import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import org.web3j.abi.datatypes.{StaticStruct, Type}
 import scorex.util.serialization.{Reader, Writer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import java.math.BigInteger
 import java.util
@@ -39,7 +38,7 @@ case class AccountForgingStakeInfo(
 
     listOfParams.add(new Bytes32(stakeId))
     listOfParams.add(new Uint256(forgerStakeData.stakedAmount))
-    listOfParams.add(new Address(Numeric.toHexString(forgerStakeData.ownerPublicKey.address())))
+    listOfParams.add(forgerStakeData.ownerPublicKey)
 
     listOfParams.addAll(forgerPublicKeysParams)
 
@@ -130,13 +129,13 @@ object ForgerPublicKeysSerializer extends SparkzSerializer[ForgerPublicKeys] {
 
 case class AddNewStakeCmdInput(
             forgerPublicKeys: ForgerPublicKeys,
-            ownerAddress: AddressProposition) extends ABIEncodable[StaticStruct] {
+            ownerAddress: Address) extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
     val forgerPublicKeysAbi = forgerPublicKeys.asABIType()
     val listOfParams: util.List[Type[_]] = new util.ArrayList(forgerPublicKeysAbi.getValue.asInstanceOf[util.List[Type[_]]])
     //val listOfParams = new util.ArrayList(forgerPublicKeysAbi.getValue)
-    listOfParams.add(new Address(Numeric.toHexString(ownerAddress.address())))
+    listOfParams.add(ownerAddress)
     new StaticStruct(listOfParams)
   }
 
@@ -157,7 +156,7 @@ object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
     val forgerPublicKey = new PublicKey25519Proposition(listOfParams.get(0).asInstanceOf[Bytes32].getValue)
     val vrfKey = decodeVrfKey(listOfParams.get(1).asInstanceOf[Bytes32], listOfParams.get(2).asInstanceOf[Bytes1])
     val forgerPublicKeys = ForgerPublicKeys(forgerPublicKey, vrfKey)
-    val ownerPublicKey = new AddressProposition(org.web3j.utils.Numeric.hexStringToByteArray(listOfParams.get(3).asInstanceOf[Address].getValue))
+    val ownerPublicKey = listOfParams.get(3).asInstanceOf[Address]
 
     AddNewStakeCmdInput(forgerPublicKeys, ownerPublicKey)
   }
@@ -252,7 +251,7 @@ object OpenStakeForgerListCmdInputDecoder extends ABIDecoder[OpenStakeForgerList
 @JsonView(Array(classOf[Views.Default]))
 case class ForgerStakeData(
                             forgerPublicKeys: ForgerPublicKeys,
-                            ownerPublicKey: AddressProposition,
+                            ownerPublicKey: Address,
                             stakedAmount: BigInteger)
   extends BytesSerializable {
 
@@ -269,14 +268,14 @@ case class ForgerStakeData(
 object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
   override def serialize(s: ForgerStakeData, w: Writer): Unit = {
     ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
-    AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
+    w.putBytes(s.ownerPublicKey.toBytes)
     w.putInt(s.stakedAmount.toByteArray.length)
     w.putBytes(s.stakedAmount.toByteArray)
   }
 
   override def parse(r: Reader): ForgerStakeData = {
     val forgerPublicKeys = ForgerPublicKeysSerializer.parse(r)
-    val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
+    val ownerPublicKey = Address.fromBytes(r.getBytes(Address.LENGTH))
     val stakeAmountLength = r.getInt()
     val stakeAmount = new BigInteger(r.getBytes(stakeAmountLength))
 

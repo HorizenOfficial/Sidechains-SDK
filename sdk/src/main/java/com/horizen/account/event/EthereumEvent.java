@@ -4,11 +4,11 @@ import com.horizen.account.event.annotation.Anonymous;
 import com.horizen.account.event.annotation.Indexed;
 import com.horizen.account.event.annotation.Parameter;
 import com.horizen.evm.interop.EvmLog;
+import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
 import org.web3j.abi.EventEncoder;
 import org.web3j.abi.TypeEncoder;
 import org.web3j.abi.TypeReference;
-import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Event;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
@@ -75,7 +75,6 @@ public class EthereumEvent {
      * @throws IOException
      */
     private static EvmLog createEvmLog(Address contractAddress, Function eventFunction, Boolean anonymous) throws IOException {
-        var address = com.horizen.evm.utils.Address.fromBytes(Numeric.hexStringToByteArray(contractAddress.getValue()));
         List<Hash> topics = new ArrayList<>();
         ByteArrayOutputStream dataOutputStream = new ByteArrayOutputStream();
         var outputParameters = eventFunction.getOutputParameters();
@@ -98,7 +97,7 @@ public class EthereumEvent {
             }
         }
 
-        return new EvmLog(address, topics.toArray(new Hash[topics.size()]), dataOutputStream.toByteArray());
+        return new EvmLog(contractAddress, topics.toArray(new Hash[topics.size()]), dataOutputStream.toByteArray());
     }
 
     /**

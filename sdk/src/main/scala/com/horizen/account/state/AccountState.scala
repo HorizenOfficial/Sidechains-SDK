@@ -17,6 +17,7 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -25,6 +26,7 @@ import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.bytesToId
+
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -246,7 +248,7 @@ class AccountState(
       }
 
       // add rewards to forgers balance
-      feePayments.foreach(payment => stateView.addBalance(payment.addressBytes, payment.value))
+      feePayments.foreach(payment => stateView.addBalance(payment.address, payment.value))
 
     } else {
       // No fee payments expected
@@ -393,13 +395,13 @@ class AccountState(
   }
 
   // Account specific getters
-  override def getBalance(address: Array[Byte]): BigInteger = using(getView)(_.getBalance(address))
+  override def getBalance(address: Address): BigInteger = using(getView)(_.getBalance(address))
 
   override def getAccountStateRoot: Array[Byte] = stateMetadataStorage.getAccountStateRoot
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = using(getView)(_.getCodeHash(address))
+  override def getCodeHash(address: Address): Array[Byte] = using(getView)(_.getCodeHash(address))
 
-  override def getNonce(address: Array[Byte]): BigInteger = using(getView)(_.getNonce(address))
+  override def getNonce(address: Address): BigInteger = using(getView)(_.getNonce(address))
 
   override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgersStakes)
 
@@ -411,7 +413,7 @@ class AccountState(
 
   override def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
 
-  override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
+  override def getCode(address: Address): Array[Byte] = using(getView)(_.getCode(address))
 
   override def getNextBaseFee: BigInteger = using(getView)(_.getNextBaseFee)
 
@@ -419,15 +421,15 @@ class AccountState(
 
   override def getStateDbHandle: ResourceHandle = using(getView)(_.getStateDbHandle)
 
-  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorage(address, key))
+  override def getAccountStorage(address: Address, key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorage(address, key))
 
-  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorageBytes(address, key))
+  override def getAccountStorageBytes(address: Address, key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorageBytes(address, key))
 
-  override def accountExists(address: Array[Byte]): Boolean = using(getView)(_.accountExists(address))
+  override def accountExists(address: Address): Boolean = using(getView)(_.accountExists(address))
 
-  override def isEoaAccount(address: Array[Byte]): Boolean = using(getView)(_.isEoaAccount(address))
+  override def isEoaAccount(address: Address): Boolean = using(getView)(_.isEoaAccount(address))
 
-  override def isSmartContractAccount(address: Array[Byte]): Boolean = using(getView)(_.isSmartContractAccount(address))
+  override def isSmartContractAccount(address: Address): Boolean = using(getView)(_.isSmartContractAccount(address))
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
 

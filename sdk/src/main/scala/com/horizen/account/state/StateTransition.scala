@@ -32,7 +32,7 @@ class StateTransition(
         throw new IllegalArgumentException("Unable to process message.")
       case Some(processor) =>
         // increase the nonce by 1
-        view.increaseNonce(msg.getFromAddressBytes)
+        view.increaseNonce(msg.getFrom)
         // create a snapshot to rollback to in case of execution errors
         val revisionId = view.snapshot
         try {
@@ -58,8 +58,7 @@ class StateTransition(
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
-    // call these only once as they are not a simple getters
-    val sender = msg.getFromAddressBytes
+    val sender = msg.getFrom
 
     // Check the nonce
     if (!msg.getIsFakeMsg) {
@@ -91,7 +90,7 @@ class StateTransition(
     // maxFees is calculated using the feeCap, even if the cap was not reached, i.e. baseFee+tip < feeCap
     val maxFees = if (msg.getGasFeeCap == null) effectiveFees else gas.multiply(msg.getGasFeeCap)
     // make sure the sender has enough balance to cover max fees plus value
-    val sender = msg.getFromAddressBytes
+    val sender = msg.getFrom
     val have = view.getBalance(sender)
     val want = maxFees.add(msg.getValue)
     if (have.compareTo(want) < 0) throw InsufficientFundsException(sender, have, want)
@@ -113,7 +112,7 @@ class StateTransition(
     gas.addGas(view.getRefund.min(gas.getUsedGas.divide(GasUtil.RefundQuotientEIP3529)))
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = gas.getGas.multiply(msg.getGasPrice)
-    view.addBalance(msg.getFromAddressBytes, remaining)
+    view.addBalance(msg.getFrom, remaining)
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
     blockGasPool.addGas(gas.getGas)
   }
