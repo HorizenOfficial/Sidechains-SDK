@@ -208,6 +208,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
     val sidechainBlockInfo = mock[SidechainBlockInfo]
     val historyStorageMock: SidechainHistoryStorage = mock[SidechainHistoryStorage]
     when(history.storage).thenAnswer(_ => historyStorageMock)
+    when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => sidechainBlockInfo)
     when(historyStorageMock.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => sidechainBlockInfo)
     when(sidechainBlockInfo.timestamp).thenAnswer(_ => params.sidechainGenesisBlockTimestamp + 1)
     CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])

@@ -474,7 +474,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
       val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
       when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoInsideWindow)
-      when(blockInfo.timestamp).thenAnswer(_ => epochInfoInsideWindow)
+      when(blockInfo.timestamp).thenReturn(params.sidechainGenesisBlockTimestamp * 2)
       blockInfo
     })
     when(history.getMainchainBlockReferenceInfoByMainchainBlockHeight(ArgumentMatchers.any[Int])).thenAnswer(_ => {
