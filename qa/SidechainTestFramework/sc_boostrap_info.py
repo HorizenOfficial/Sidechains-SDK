@@ -130,8 +130,12 @@ class SCNodeConfiguration(object):
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  initial_private_keys=[],
+                 remote_keys_manager_enabled=False,
+                 known_peers=[],
+                 declared_address=None,
                  initial_signing_private_keys=[],
-                 remote_keys_manager_enabled=False):
+                 storage_backup_interval='15m',
+                 storage_backup_delay='5m'):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -151,6 +155,12 @@ class SCNodeConfiguration(object):
         self.initial_private_keys = initial_private_keys
         self.initial_signing_private_keys = initial_signing_private_keys
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
+        self.known_peers = known_peers
+        if declared_address is not None:
+            self.declared_address = declared_address
+        self.storage_backup_interval = storage_backup_interval
+        self.storage_backup_delay = storage_backup_delay
+
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.
