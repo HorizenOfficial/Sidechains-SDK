@@ -25,22 +25,20 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel,
                            submissionStrategy: CertificateSubmissionStrategy,
-                           keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, T])
+                           keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, T])
                           (implicit ec: ExecutionContext)
   extends AbstractCertificateSubmitter[
     SidechainTypes#SCBT,
     SidechainBlockHeader,
     SidechainBlock,
+    SidechainFeePaymentsInfo,
+    SidechainHistoryStorage,
+    SidechainHistory,
+    SidechainState,
+    SidechainWallet,
+    SidechainMemoryPool,
     T
   ](settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy) {
-
-  override type FPI = SidechainFeePaymentsInfo
-  override type HSTOR = SidechainHistoryStorage
-  override type VL = SidechainWallet
-  override type HIS = SidechainHistory
-  override type MS = SidechainState
-  override type MP = SidechainMemoryPool
-
 
   override type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 }
@@ -58,7 +56,7 @@ object CertificateSubmitterRef {
     } else {
       new CeasingSidechain(mainchainChannel, params)
     }
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, _ <: CertificateData] = if (params.circuitType.equals(CircuitTypes.NaiveThresholdSignatureCircuit)) {
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, _ <: CertificateData] = if (params.circuitType.equals(CircuitTypes.NaiveThresholdSignatureCircuit)) {
       new WithoutKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
     } else {
       new WithKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation)
