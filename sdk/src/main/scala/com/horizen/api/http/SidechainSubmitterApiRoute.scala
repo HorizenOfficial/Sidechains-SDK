@@ -43,10 +43,6 @@ case class SidechainSubmitterApiRoute[
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV]
   with ApiDirectives
 {
-
-  // TODO check this:
-  //  sidechainNodeViewHolderRef is not used, but we keep it since it is defined as an abstract member of the base class
-
   override val route: Route = pathPrefix("submitter") {
     isCertGenerationActive ~ isCertificateSubmitterEnabled ~ enableCertificateSubmitter ~ disableCertificateSubmitter ~
       isCertificateSignerEnabled ~ enableCertificateSigner ~ disableCertificateSigner~ getSchnorrPublicKeyHash ~ getCertifiersKeys ~ getKeyRotationProof
