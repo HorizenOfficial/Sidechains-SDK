@@ -1,8 +1,8 @@
 package com.horizen.account.mempool
 
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.mempool.MempoolMap.MaxTxSize
-import com.horizen.account.mempool.exception.NonceGapTooWideException
+import com.horizen.account.mempool.MempoolMap._
+import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
@@ -23,6 +23,7 @@ class MempoolMap(
   type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
   val MaxNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap)
+  val MaxSlotsPerAccount: Int = mempoolSettings.maxAccountSlots
 
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap.empty[ModifierId, SidechainTypes#SCAT]
@@ -49,20 +50,20 @@ class MempoolMap(
 
       val stateNonce = accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
       if (ethTransaction.getNonce.subtract(stateNonce).compareTo(MaxNonceGap) >= 0) {
-        log.trace(s"Transaction $ethTransaction nonce gap respect state nonce exceeds maximum allowed size: tx nonce ${ethTransaction.getNonce()}, " +
+        log.trace(s"Transaction $ethTransaction nonce gap respect state nonce exceeds maximum allowed size: tx nonce ${ethTransaction.getNonce}, " +
           s"state nonce: $stateNonce")
         throw NonceGapTooWideException(ethTransaction.id, ethTransaction.getNonce, stateNonce)
       }
+
       val expectedNonce = nonces.getOrElseUpdate(
         account,
         stateNonce)
 
       expectedNonce.compareTo(ethTransaction.getNonce) match {
-        case 0 =>
-          all.put(ethTransaction.id, ethTransaction)
+        case AddNewExecTransaction =>
           val executableTxsPerAccount =
             executableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
-          executableTxsPerAccount.put(ethTransaction.getNonce, ethTransaction.id)
+          addNewTransaction(executableTxsPerAccount, ethTransaction)
           var nextNonce = expectedNonce.add(BigInteger.ONE)
           nonExecutableTxs
             .get(account)
@@ -79,19 +80,17 @@ class MempoolMap(
               }
             })
           nonces.put(account, nextNonce)
-        case -1 =>
-          val nonExecTxsPerAccount = {
+        case AddReplaceNonExecTransaction =>
+          val nonExecTxsPerAccount =
             nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
-          }
           val existingTxWithSameNonceIdOpt = nonExecTxsPerAccount.get(ethTransaction.getNonce)
           if (existingTxWithSameNonceIdOpt.isDefined) {
             val existingTxWithSameNonceId = existingTxWithSameNonceIdOpt.get
             replaceIfCanPayHigherFee(existingTxWithSameNonceId, ethTransaction, nonExecTxsPerAccount)
           } else {
-            all.put(ethTransaction.id, ethTransaction)
-            nonExecTxsPerAccount.put(ethTransaction.getNonce, ethTransaction.id)
+            addNewTransaction(nonExecTxsPerAccount, ethTransaction)
           }
-        case 1 =>
+        case ReplaceExecTransaction =>
           // This case means there is already an executable tx with the same nonce in the mem pool
           val executableTxsPerAccount = executableTxs(account)
           val existingTxWithSameNonceId = executableTxsPerAccount(ethTransaction.getNonce)
@@ -101,8 +100,35 @@ class MempoolMap(
     this
   }
 
-  def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap) = {
+  private[mempool] def addNewTransaction(txByNonceMap: TxIdByNonceMap, ethTransaction: SidechainTypes#SCAT) = {
+    val account = ethTransaction.getFrom
+    val accountSize = getAccountSize(account)
+    if (accountSize + txSizeInSlot(ethTransaction) > MaxSlotsPerAccount) {
+      log.trace(s"Adding transaction $ethTransaction exceeds maximum allowed size per account")
+      throw AccountMemPoolOutOfBoundException(ethTransaction.id)
+    }
+    all.put(ethTransaction.id, ethTransaction)
+    txByNonceMap.put(ethTransaction.getNonce, ethTransaction.id)
+  }
+
+  def getAccountSize(account: SidechainTypes#SCP): Long = {
+    val execSize: Long = executableTxs.get(account).map(executableTxsPerAccount => executableTxsPerAccount.values.foldLeft(0L) { (sum, txId) => sum + txSizeInSlot(all(txId)) }).getOrElse(0L)
+    val accountSize: Long = nonExecutableTxs.get(account).map(nonExecTxsPerAccount => nonExecTxsPerAccount.values.foldLeft(execSize) { (sum, txId) => sum + txSizeInSlot(all(txId)) }).getOrElse(execSize)
+    accountSize
+  }
+
+  private[mempool] def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap) = {
     val existingTxWithSameNonce = all(existingTxId)
+    val diffSize = txSizeInSlot(newTx) - txSizeInSlot(existingTxWithSameNonce)
+    if (diffSize > 0){
+      val account = newTx.getFrom
+      val accountSize = getAccountSize(account)
+      if (accountSize + diffSize > MaxSlotsPerAccount) {
+        log.trace(s"Transaction $newTx cannot replace $existingTxId because it exceeds maximum allowed size per account")
+        throw AccountMemPoolOutOfBoundException(newTx.id)
+      }
+    }
+
     if (canPayHigherFee(newTx, existingTxWithSameNonce)) {
       log.trace(s"Replacing transaction $existingTxWithSameNonce with $newTx")
       all.remove(existingTxId)
@@ -229,7 +255,7 @@ class MempoolMap(
       if (latestNonceAfterAppliedTxs.isDefined)
         updateAccount(account, latestNonceAfterAppliedTxs.get, rejectedTxs)
       else
-        restoreRejectedTransactions(account, rejectedTxs)
+        updateAccountWithRevertedNonce(account, rejectedTxs)
     }
     appliedTxNoncesByAccount.foreach { case (account, nonce) =>
       updateAccount(account, nonce)
@@ -237,18 +263,21 @@ class MempoolMap(
     }
   }
 
-  def restoreRejectedTransactions(
+  private[mempool] def updateAccountWithRevertedNonce(
                                    account: SidechainTypes#SCP,
                                    txsFromRejectedBlocks: Seq[SidechainTypes#SCAT]
                                  ): Unit = {
-    // In this case, the current account state wasn't modified by new blocks
-    // but it was just reverted to an older state. So there is no need to check for nonce too low, because the txs were already
-    // verified for it. However we still need to check:
-    // - for balance because it is possible that both txs in mem pool and txs from reverted blocks were verified with a
-    //    different balance respect the one restored. The only exception are txs from the oldest reverted block but for
-    //    simplicity they are checked the same.
-    //- for tx size because the size is not a consensus rule so other nodes may have allowed bigger txs in their blocks
-    //- for max nonce gap because the stateNonce was reverted and it is lower than before, so some txs now need to be dropped
+    // In this case, we had a chain switch and the resulting state nonce for the current account is lower than before
+    // the switch.
+    // There is no need to check for nonce too low, because the txs in the mempool were already
+    // verified for it, while the txs from rejected blocks (txsFromRejectedBlocks) were already filtered for the new state nonce.
+    // However we still need to check:
+    // - both txs in mem pool and txs from reverted blocks for:
+    //    * balance because it is possible that they were verified with a different balance respect the one restored.
+    //    * max nonce gap because the stateNonce was reverted and it is lower than before, so some txs now need to be dropped
+    //    * account size because we're re-adding the txs from rejected blocks
+    // - only txs from reverted blocks for:
+    //    * tx size because the size is not a consensus rule so other nodes may have allowed bigger txs in their blocks
 
     val fromAddress = account.asInstanceOf[AddressProposition].address()
     val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
@@ -267,13 +296,20 @@ class MempoolMap(
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
     var maxNonceGapExceeded = false
+    var currAccountSlots = 0L
 
     txsFromRejectedBlocks.withFilter(_ => !maxNonceGapExceeded)
       .foreach { tx =>
         if (tx.getNonce.compareTo(maxAcceptableNonce) <= 0) {
-          if (tx.size() <= MaxTxSize && balance.compareTo(tx.maxCost) >= 0) {
+          val txSizeInSlots = txSizeInSlot(tx)
+          if (
+            (txSizeInSlots <= MaxNumOfSlotsForTx) &&
+            (balance.compareTo(tx.maxCost) >= 0) &&
+            (currAccountSlots + txSizeInSlots <= MaxSlotsPerAccount)
+          ) {
             all.put(tx.id, tx)
             destMap.put(tx.getNonce, tx.id)
+            currAccountSlots += txSizeInSlots
           } else {
             if (!haveBecomeNonExecutable) {
               destMap = newNonExecTxs
@@ -297,8 +333,11 @@ class MempoolMap(
       else {
         execTxs.foreach { case (nonce, id) =>
           if (!maxNonceGapExceeded && nonce.compareTo(maxAcceptableNonce) <= 0) {
-            if (balance.compareTo(all(id).maxCost) >= 0) {
+            val tx = all(id)
+            val txSizeInSlots = txSizeInSlot(tx)
+            if (balance.compareTo(tx.maxCost) >= 0 && ((currAccountSlots + txSizeInSlots) <= MaxSlotsPerAccount)) {
               destMap.put(nonce, id)
+              currAccountSlots += txSizeInSlots
             } else {
               all.remove(id)
               if (!haveBecomeNonExecutable) {
@@ -327,8 +366,14 @@ class MempoolMap(
       else {
         nonExecTxs.foreach { case (nonce, id) =>
           if (!maxNonceGapExceeded && nonce.compareTo(maxAcceptableNonce) <= 0) {
-            if (balance.compareTo(all(id).maxCost) >= 0) {
+            val tx = all(id)
+            val txSizeInSlots = txSizeInSlot(tx)
+            if (
+              (balance.compareTo(tx.maxCost) >= 0) &&
+              ((currAccountSlots + txSizeInSlots) <= MaxSlotsPerAccount)
+            ) {
               newNonExecTxs.put(nonce, id)
+              currAccountSlots += txSizeInSlots
             } else {
               all.remove(id)
             }
@@ -355,11 +400,11 @@ class MempoolMap(
 
   }
 
-  def existRejectedTxsWithValidNonce(rejectedTxs: Seq[SidechainTypes#SCAT], expectedNonce: BigInteger): Boolean = {
+  private[mempool]  def existRejectedTxsWithValidNonce(rejectedTxs: Seq[SidechainTypes#SCAT], expectedNonce: BigInteger): Boolean = {
     rejectedTxs.nonEmpty && rejectedTxs.last.getNonce.compareTo(expectedNonce) >= 0
   }
 
-  def updateAccount(
+  private[mempool] def updateAccount(
                      account: SidechainTypes#SCP,
                      nonceOfTheLatestAppliedTx: BigInteger,
                      txsFromRejectedBlocks: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]
@@ -367,22 +412,23 @@ class MempoolMap(
     var newExpectedNonce = nonceOfTheLatestAppliedTx.add(BigInteger.ONE)
 
     if (existRejectedTxsWithValidNonce(txsFromRejectedBlocks, newExpectedNonce)) {
-      restoreRejectedTransactions(account, txsFromRejectedBlocks.dropWhile(tx => tx.getNonce.compareTo(newExpectedNonce) < 0))
+      updateAccountWithRevertedNonce(account, txsFromRejectedBlocks.dropWhile(tx => tx.getNonce.compareTo(newExpectedNonce) < 0))
     }
     else {
-      //The new expected nonce is at least the same as the old one, so I don't need to check the remaining txs
-      //for the nonce gap. No need to check for tx size too, because this check was already performed when they were added
-      // the first time in the mempool
+      // The new expected nonce cannot be lower than the old one, so I don't need to check the remaining txs
+      // for the nonce gap. No need to check for tx size too, because this check was already performed when they were added
+      // the first time in the mempool. Because we're not adding new txs in the mempool, there is no need to check for
+      // account or mempool size.
       val fromAddress = account.asInstanceOf[AddressProposition].address()
       val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
 
       val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
       val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
 
-      // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
-      // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
-      // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, unless
-      // a previous tx was found invalid. They remaining txs are checked for balance.
+      // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from executable txs.
+      // First, all the txs with nonce lower than the new expected nonce are discarded. The subsequent txs don't need to
+      // be checked for nonce because they are ordered by increasing nonce. They are candidate to be added by default to
+      // the execTxs map, unless a previous tx was found invalid. The remaining txs are checked for balance.
       // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
       // and they will be added to the nonExec map.
       var destMap = newExecTxs
@@ -463,7 +509,7 @@ class MempoolMap(
 
     class Iter extends TransactionsByPriceAndNonceIter {
 
-      def txOrder(tx: SidechainTypes#SCAT) = {
+      def txOrder(tx: SidechainTypes#SCAT): BigInteger = {
         tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
       }
 
@@ -502,9 +548,14 @@ class MempoolMap(
 }
 
 object MempoolMap {
+  private val AddNewExecTransaction: Int = 0
+  private val AddReplaceNonExecTransaction: Int = -1
+  private val ReplaceExecTransaction: Int = 1
+
+
   val TxSlotSize: Int = 32 * 1024
-  val MaxNumOfSlotsForTx = 4
-  val MaxTxSize = MaxNumOfSlotsForTx * TxSlotSize
+  val MaxNumOfSlotsForTx: Int = 4
+  val MaxTxSize: Int = MaxNumOfSlotsForTx * TxSlotSize
 
   def txSizeInSlot(tx: SidechainTypes#SCAT): Long = bytesToSlot(tx.size())
 

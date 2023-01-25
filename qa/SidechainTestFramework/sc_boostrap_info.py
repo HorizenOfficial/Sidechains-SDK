@@ -130,7 +130,8 @@ class SCNodeConfiguration(object):
                  initial_private_keys=[],
                  initial_signing_private_keys=[],
                  remote_keys_manager_enabled=False,
-                 max_nonce_gap=16):
+                 max_nonce_gap=16,
+                 max_account_slots=16):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -149,6 +150,7 @@ class SCNodeConfiguration(object):
         self.initial_signing_private_keys = initial_signing_private_keys
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
         self.max_nonce_gap = max_nonce_gap
+        self.max_account_slots = max_account_slots
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

@@ -7,3 +7,6 @@ class MempoolException(message: String) extends Exception(message)
 
 case class NonceGapTooWideException(txId: ModifierId, txNonce: BigInteger, stateNonce: BigInteger)
   extends MempoolException(s"nonce gap too wide: txId $txId, tx $txNonce, state $stateNonce")
+
+case class AccountMemPoolOutOfBoundException(txId: ModifierId)
+  extends MempoolException(s"adding transaction with txId $txId exceeds account available space")
