@@ -1,16 +1,14 @@
 package com.horizen.api.http
 
-import akka.http.scaladsl.server.MalformedRequestContentRejection
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
+import akka.http.scaladsl.server.MalformedRequestContentRejection
 import com.horizen.api.http.SidechainDebugErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.SidechainDebugRestScheme.{ReqGetKeyRotationMessageToSign, ReqKeyRotationProof}
-import com.horizen.schnorrnative.SchnorrPublicKey
-import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 
-import java.util.{Random, Optional => JOptional}
+import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 
@@ -83,44 +81,66 @@ class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
 
     }
 
-//    "reply at /getKeyRotationMessageToSignForSigningKey" in {
-//      //Malformed request
-//      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity("maybe_a_json") ~> sidechainSubmitterApiRoute ~> check {
-//        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
-//      }
-//
-//      val byteArray: Array[Byte] = getSchnorrKey.getPublicBytes
-//      val key = BytesUtils.toHexString(SchnorrPublicKey.deserialize("333333333333333333333333333333333".getBytes).serializePublicKey(true))
-//      //Bad circuit
-//      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRoute ~> check {
-//        status.intValue shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBadCircuit("The current circuit doesn't support key rotation message to sign!", JOptional.empty()).code)
-//      }
-//
-//      //Should answer with a KeyRotationProof
-//      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRouteWithKeyRotation ~> check {
-//        status.intValue shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        val result = mapper.readTree(entityAs[String]).get("result")
-//        if (result == null)
-//          fail("Serialization failed for object SidechainApiResponseBody")
-//
-//        assertEquals(1, result.elements.asScala.length)
-//
-//        val keyRotationProofJson = result.get("keyRotationProof")
-//        assertTrue(keyRotationProofJson.has("keyType"))
-//        assertEquals("SigningKeyRotationProofType", keyRotationProofJson.get("keyType").get("value").asText())
-//        assertEquals(keyRotationProof.index, keyRotationProofJson.get("index").asInt())
-//        assertTrue(keyRotationProofJson.has("newKey"))
-//        assertEquals(BytesUtils.toHexString(keyRotationProof.newKey.pubKeyBytes()), keyRotationProofJson.get("newKey").get("publicKey").asText())
-//        assertTrue(keyRotationProofJson.has("signingKeySignature"))
-//        assertEquals(BytesUtils.toHexString(keyRotationProof.signingKeySignature.bytes()), keyRotationProofJson.get("signingKeySignature").get("signature").asText())
-//        assertTrue(keyRotationProofJson.has("masterKeySignature"))
-//        assertEquals(BytesUtils.toHexString(keyRotationProof.masterKeySignature.bytes()), keyRotationProofJson.get("masterKeySignature").get("signature").asText())
-//      }
-//    }
+    "reply at /getKeyRotationMessageToSignForSigningKey" in {
+      //Malformed request
+      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity("maybe_a_json") ~> sidechainSubmitterApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
+      }
 
+      val byteArray: Array[Byte] = getSchnorrKey.getPublicBytes
+      val key = BytesUtils.toHexString(byteArray)
+      //Bad circuit
+      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRoute ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBadCircuit("The current circuit doesn't support key rotation message to sign!", JOptional.empty()).code)
+      }
+
+      //Should answer with a KeyRotationProof
+      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRouteWithKeyRotation ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements.asScala.length)
+
+        val keyRotationMessageToSign = result.get("keyRotationMessageToSign")
+        assertTrue(keyRotationMessageToSign != null)
+        assertEquals("Length of message should be 64", 64, keyRotationMessageToSign.asText().length)
+      }
+    }
+
+    "reply at /getKeyRotationMessageToSignForMasterKey" in {
+      //Malformed request
+      Post(basePath + "getKeyRotationMessageToSignForMasterKey").withEntity("maybe_a_json") ~> sidechainSubmitterApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
+      }
+
+      val byteArray: Array[Byte] = getSchnorrKey.getPublicBytes
+      val key = BytesUtils.toHexString(byteArray)
+      //Bad circuit
+      Post(basePath + "getKeyRotationMessageToSignForMasterKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRoute ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBadCircuit("The current circuit doesn't support key rotation message to sign!", JOptional.empty()).code)
+      }
+
+      //Should answer with a KeyRotationProof
+      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRouteWithKeyRotation ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements.asScala.length)
+
+        val keyRotationMessageToSign = result.get("keyRotationMessageToSign")
+        assertTrue(keyRotationMessageToSign != null)
+        assertEquals("Length of message should be 64", 64, keyRotationMessageToSign.asText().length)
+      }
+    }
   }
-
 }
