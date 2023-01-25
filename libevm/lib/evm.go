@@ -13,9 +13,9 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"math"
 	"math/big"
-	"strconv"
 	"time"
 
+	// Force-load the tracer engines to trigger registration
 	_ "github.com/ethereum/go-ethereum/eth/tracers/native"
 )
 
@@ -42,18 +42,12 @@ type EvmContext struct {
 }
 
 type TraceOptions struct {
-	EnableMemory     bool          `json:"enableMemory"`
-	DisableStack     bool          `json:"disableStack"`
-	DisableStorage   bool          `json:"disableStorage"`
-	EnableReturnData bool          `json:"enableReturnData"`
-	Tracer           *string       `json:"tracer"`
-	Timeout          *string       `json:"timeout"`
-	TracerConfig     *TracerConfig `json:"tracerConfig"`
-}
-
-type TracerConfig struct {
-	OnlyTopCall bool `json:"onlyTopCall"`
-	WithLog     bool `json:"withLog"`
+	EnableMemory     bool            `json:"enableMemory"`
+	DisableStack     bool            `json:"disableStack"`
+	DisableStorage   bool            `json:"disableStorage"`
+	EnableReturnData bool            `json:"enableReturnData"`
+	Tracer           string          `json:"tracer"`
+	TracerConfig     json.RawMessage `json:"tracerConfig"`
 }
 
 type CallFrame struct {
@@ -140,16 +134,9 @@ func (t *TraceOptions) getTracer() tracers.Tracer {
 	if t == nil {
 		return nil
 	}
-	if t.Tracer != nil {
-		var onlyTopCall = "false"
-		var withLog = "false"
-		if t.TracerConfig != nil {
-			onlyTopCall = strconv.FormatBool(t.TracerConfig.OnlyTopCall)
-			withLog = strconv.FormatBool(t.TracerConfig.WithLog)
-		}
-		var TracerConfig = json.RawMessage(`{"onlyTopCall": ` + onlyTopCall + `,"withLog": ` + withLog + `}`)
+	if t.Tracer != "" {
 		var returnTracer tracers.Tracer
-		returnTracer, _ = tracers.New(*t.Tracer, nil, TracerConfig)
+		returnTracer, _ = tracers.New(t.Tracer, nil, t.TracerConfig)
 		return returnTracer
 	} else {
 		traceConfig := logger.Config{
@@ -168,14 +155,12 @@ func mockBlockHashFn(n uint64) common.Hash {
 }
 
 type EvmResult struct {
-	UsedGas            uint64                `json:"usedGas"`
-	EvmError           string                `json:"evmError"`
-	ReturnData         []byte                `json:"returnData"`
-	ContractAddress    *common.Address       `json:"contractAddress"`
-	TraceLogs          []logger.StructLogRes `json:"traceLogs,omitempty"`
-	FourByteTracerLogs map[string]int        `json:"fourByteTracerLogs,omitempty"`
-	CallTracerLogs     *CallFrame            `json:"callTracerLogs,omitempty"`
-	Reverted           bool                  `json:"reverted"`
+	UsedGas         uint64          `json:"usedGas"`
+	EvmError        string          `json:"evmError"`
+	ReturnData      []byte          `json:"returnData"`
+	ContractAddress *common.Address `json:"contractAddress"`
+	Reverted        bool            `json:"reverted"`
+	TracerResult    json.RawMessage `json:"tracerResult,omitempty"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -269,26 +254,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		if traceErr != nil {
 			return fmt.Errorf("trace error: %v", traceErr), nil
 		}
-
-		if params.TraceOptions.Tracer == nil { // Struct/opcode logger
-			var traceResult *logger.ExecutionResult
-			if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
-				return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
-			}
-			result.TraceLogs = traceResult.StructLogs
-		} else if *params.TraceOptions.Tracer == "4byteTracer" { // 4byteTracer logger
-			var traceResult map[string]int
-			if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
-				return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
-			}
-			result.FourByteTracerLogs = traceResult
-		} else if *params.TraceOptions.Tracer == "callTracer" { // callTracer logger
-			var traceResult *CallFrame
-			if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
-				return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
-			}
-			result.CallTracerLogs = traceResult
-		}
+		result.TracerResult = traceResultJson
 	}
 
 	return nil, &result

@@ -79,7 +79,6 @@ class SCEvmDebugMethods(AccountChainSetup):
         request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceTransaction", "id": 12, "params": [tx_hash, {"tracer": "callTracer"}]})
         res = sc_node.ethv1(request)['result']
         assert_true(res['type'] == "CALL", "callTracer type not CALL")
-        assert_true(res['error'] == "", "callTracer error not empty")
 
         # call tracer with tracer config parameters
         request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceTransaction", "id": 18,
@@ -90,7 +89,6 @@ class SCEvmDebugMethods(AccountChainSetup):
                     }}]})
         res = sc_node.ethv1(request)['result']
         assert_true(res['type'] == "CALL", "callTracer type not CALL")
-        assert_true(res['error'] == "", "callTracer error not empty")
 
         # 4byte tracer - native tracer
         request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceTransaction","id": 24, "params": [tx_hash, {"tracer": "4byteTracer"}]})
@@ -131,7 +129,6 @@ class SCEvmDebugMethods(AccountChainSetup):
         assert_true(len(res) == 1, "debug results have more than one element")
         res_item = res[0]
         assert_true(res_item['type'] == "CALL", "callTracer type not CALL")
-        assert_true(res_item['error'] == "", "callTracer error not empty")
 
         # call tracer with tracer config parameters
         request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceBlockByNumber", "id": 24,
@@ -144,7 +141,6 @@ class SCEvmDebugMethods(AccountChainSetup):
         assert_true(len(res) == 1, "debug results have more than one element")
         res_item = res[0]
         assert_true(res_item['type'] == "CALL", "callTracer type not CALL")
-        assert_true(res_item['error'] == "", "callTracer error not empty")
 
         # 4byte tracer - natve tracer
         request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceBlockByNumber","id": 32, "params": [block_number, {"tracer": "4byteTracer"}]})

@@ -21,7 +21,7 @@ import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.{EvmResult, NativeTracers, TraceOptions}
+import com.horizen.evm.interop.{EvmResult, TraceOptions}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -35,10 +35,8 @@ import sparkz.core.{NodeViewHolder, bytesToId}
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.collection.JavaConverters.mapAsScalaMap
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
@@ -570,27 +568,14 @@ class EthService(
           blockContext.getEvmResult
         })
 
-        if(config!=null && config.getTracer!=null) {
-          // callTracer
-          if (config.getTracer == NativeTracers.CALL_TRACER.toString) {
-            val callTracerBlockView = new CallTracerBlockView(evmResults.toArray)
-            callTracerBlockView.getCallTracerTransactionViews
-          }
-          // 4byteTracer
-          else if (config.getTracer == NativeTracers.FOUR_BYTE_TRACER.toString) {
-            val fourByteTracerReturnList = new ListBuffer[mutable.Map[String, Integer]]
-            for (evmResult <- evmResults) {
-              if(evmResult!=null)
-                fourByteTracerReturnList += mapAsScalaMap(evmResult.fourByteTracerLogs)
-            }
-            fourByteTracerReturnList
-          }
+        // return the list of tracer results from the evm
+        val tracerResultList = new ListBuffer[Any]
+        for(evmResult <- evmResults) {
+          if(evmResult!=null && evmResult.tracerResult!=null)
+            tracerResultList += evmResult.tracerResult
         }
-        // Struct/opcode logger
-        else {
-          val debugTraceBlockView = new DebugTraceBlockView(evmResults.toArray)
-          debugTraceBlockView.getDebugTraceTransactionViews
-        }
+        tracerResultList
+
       }
     }
   }
@@ -631,25 +616,10 @@ class EthService(
         blockContext.setEvmResult(EvmResult.emptyEvmResult())
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
-        if (config != null && config.getTracer != null) {
-          // callTracer
-          if (config.getTracer == NativeTracers.CALL_TRACER.toString) {
-            if (blockContext.getEvmResult.callTracerLogs != null) {
-              new CallTracerTransactionView(blockContext.getEvmResult)
-            } else Unit
-          }
-          // 4byteTracer
-          else if (config.getTracer == NativeTracers.FOUR_BYTE_TRACER.toString) {
-            if (blockContext.getEvmResult.fourByteTracerLogs != null) {
-              blockContext.getEvmResult.fourByteTracerLogs
-            } else Unit
-          }
-        }
-        // Struct/opcode logger
-        else {
-          if(blockContext.getEvmResult.traceLogs != null)
-            new DebugTraceTransactionView(blockContext.getEvmResult)
-        }
+        // return the tracer result from the evm
+        if(blockContext.getEvmResult.tracerResult != null) {
+          blockContext.getEvmResult.tracerResult
+        } else Unit
       }
     }
   }
