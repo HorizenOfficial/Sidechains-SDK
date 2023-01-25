@@ -23,7 +23,7 @@ public class Address implements Type<String> {
     /**
      * Zero address: 0x000...000
      */
-    public final static Address ZERO = new Address(new byte[LENGTH]);
+    public static final Address ZERO = new Address(new byte[LENGTH]);
 
     private Address(byte[] bytes) {
         if (bytes.length != LENGTH) {

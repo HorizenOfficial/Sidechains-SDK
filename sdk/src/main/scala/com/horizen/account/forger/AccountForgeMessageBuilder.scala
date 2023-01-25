@@ -18,7 +18,6 @@ import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
-import com.horizen.evm.utils.Address
 import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -59,7 +58,7 @@ class AccountForgeMessageBuilder(
       sidechainTransactions: Iterable[SidechainTypes#SCAT],
       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
       blockContext: BlockContext,
-      forgerAddress: Address
+      forgerAddress: AddressProposition
   ): (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = {
 
     // we must ensure that all the tx we get from mempool are applicable to current state view
@@ -178,7 +177,7 @@ class AccountForgeMessageBuilder(
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
     if (addressList.size() == 0)
       throw new IllegalArgumentException("No addresses in wallet!")
-    val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition].address()
+    val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
     // 2. calculate baseFee
     val baseFee = calculateBaseFee(nodeView.history, parentId)
@@ -190,7 +189,7 @@ class AccountForgeMessageBuilder(
     // this will throw if parent block was not found
     val parentInfo = nodeView.history.blockInfoById(parentId)
     val blockContext = new BlockContext(
-      forgerAddress,
+      forgerAddress.address(),
       timestamp,
       baseFee,
       gasLimit,
@@ -230,7 +229,7 @@ class AccountForgeMessageBuilder(
               val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
 
               // add rewards to forgers balance
-              feePayments.foreach(payment => dummyView.addBalance(payment.address, payment.value))
+              feePayments.foreach(payment => dummyView.addBalance(payment.address.address(), payment.value))
 
               feePayments
             } else {
@@ -298,7 +297,7 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      Address.ZERO,
+      AddressProposition.ZERO,
       BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
       BigInteger.valueOf(Long.MaxValue),
       BigInteger.valueOf(Long.MaxValue),

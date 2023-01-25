@@ -15,6 +15,8 @@ import java.util.Objects;
 public final class AddressProposition
     implements SingleSecretProofOfKnowledgeProposition<PrivateKeySecp256k1> {
 
+    public static final AddressProposition ZERO = new AddressProposition(Address.ZERO);
+
     @JsonProperty("address")
     private final Address address;
 
@@ -59,7 +61,7 @@ public final class AddressProposition
 
     @Override
     public String toString() {
-        return String.format("AddressProposition{address=%s}", address.toString());
+        return String.format("AddressProposition{address=%s}", address);
     }
 }
 

@@ -6,11 +6,9 @@ import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
-import com.horizen.account.validation.InvalidTransactionChainIdException
-import com.horizen.account.receipt.Bloom
-import com.horizen.account.utils.FeeUtils
 import com.horizen.account.utils.Account.generateContractAddress
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
+import com.horizen.account.validation.InvalidTransactionChainIdException
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
@@ -21,11 +19,10 @@ import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.util.bytesToId
 
 import java.math.BigInteger
 import java.util
@@ -248,7 +245,7 @@ class AccountState(
       }
 
       // add rewards to forgers balance
-      feePayments.foreach(payment => stateView.addBalance(payment.address, payment.value))
+      feePayments.foreach(payment => stateView.addBalance(payment.address.address(), payment.value))
 
     } else {
       // No fee payments expected

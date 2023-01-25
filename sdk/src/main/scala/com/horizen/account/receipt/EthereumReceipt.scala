@@ -23,21 +23,9 @@ case class EthereumReceipt(
 
   override def serializer: SparkzSerializer[EthereumReceipt] = EthereumReceiptSerializer
 
-  override def toString: String = {
-
-    val infoNonConsensusStr =
-      String.format(
-        " - (receipt non consensus data) {txHash=%s, txIndex=%d, blockHash=%s, blockNumber=%d, gasUsed=%s, contractAddress=%s}",
-        BytesUtils.toHexString(transactionHash),
-        transactionIndex,
-        BytesUtils.toHexString(blockHash),
-        blockNumber,
-        gasUsed.toString(),
-        contractAddress.toString
-      )
-
-    consensusDataReceipt.toString.concat(infoNonConsensusStr)
-  }
+  override def toString: String = consensusDataReceipt.toString.concat(
+    s" - (receipt non consensus data) {txHash=${BytesUtils.toHexString(transactionHash)}, txIndex=$transactionIndex, blockHash=${BytesUtils.toHexString(blockHash)}, blockNumber=$blockNumber, gasUsed=$gasUsed, contractAddress=$contractAddress}"
+  )
 
   override def equals(obj: Any): Boolean = {
     obj match {

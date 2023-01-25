@@ -3,11 +3,11 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
-import com.horizen.evm.utils.Address
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
@@ -41,7 +41,7 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override lazy val transactions: Seq[SidechainTypes#SCAT] = sidechainTransactions
 
-  def forgerPublicKey: Address = header.forgerAddress
+  def forgerPublicKey: AddressProposition = header.forgerAddress
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   override def verifyTransactionsDataConsistency(): Unit = {
@@ -112,7 +112,7 @@ object AccountBlock {
              feePaymentsHash: Array[Byte],
              stateRoot: Array[Byte],
              receiptsRoot: Array[Byte],
-             forgerAddress: Address,
+             forgerAddress: AddressProposition,
              baseFee: BigInteger,
              gasUsed: BigInteger,
              gasLimit: BigInteger,

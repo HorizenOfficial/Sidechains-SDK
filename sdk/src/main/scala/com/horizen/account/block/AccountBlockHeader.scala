@@ -3,11 +3,11 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
+import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.receipt.{Bloom, BloomSerializer}
 import com.horizen.account.utils.FeeUtils
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
-import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
@@ -19,7 +19,6 @@ import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-
 import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
 
@@ -36,7 +35,7 @@ case class AccountBlockHeader(
                                override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                stateRoot: Array[Byte],
                                receiptsRoot: Array[Byte],
-                               forgerAddress: Address,
+                               forgerAddress: AddressProposition,
                                baseFee: BigInteger,
                                gasUsed: BigInteger,
                                gasLimit: BigInteger,
@@ -63,7 +62,7 @@ case class AccountBlockHeader(
       mainchainMerkleRootHash,
       stateRoot,
       receiptsRoot,
-      forgerAddress.toBytes,
+      forgerAddress.bytes(),
       baseFee.toByteArray,
       gasUsed.toByteArray,
       gasLimit.toByteArray,
@@ -160,7 +159,7 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     w.putBytes(obj.receiptsRoot)
 
-    w.putBytes(obj.forgerAddress.toBytes)
+    AddressPropositionSerializer.getSerializer.serialize(obj.forgerAddress, w)
 
     val baseFee = obj.baseFee.toByteArray
     w.putInt(baseFee.length)
@@ -209,7 +208,7 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     val receiptsRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val forgerAddress = Address.fromBytes(r.getBytes(Address.LENGTH))
+    val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
     val baseFeeSize = r.getInt()
     val baseFee = new BigInteger(r.getBytes(baseFeeSize))

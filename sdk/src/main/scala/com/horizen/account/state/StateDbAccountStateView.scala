@@ -112,10 +112,11 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
             addBalance(recipientProposition.address(), value)
             log.debug(s"added FT amount = $value to address=$recipientProposition")
           } else {
+            val burnAddress = Address.ZERO
             log.warn(
-              s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was burned by sending balance to ${Address.ZERO.toString} address)"
+              s"ignored FT to non-EOA account, amount=$value to address=$recipientProposition (the amount was burned by sending balance to $burnAddress address)"
             )
-            addBalance(Address.ZERO, value)
+            addBalance(burnAddress, value)
             // TODO: we should return the amount back to mcReturnAddress instead of just burning it
           }
       }
