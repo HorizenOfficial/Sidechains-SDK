@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-import time
-from decimal import *
-import logging
-import requests
-import pprint
 import multiprocessing
+import time
+
+import requests
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
@@ -12,17 +10,17 @@ from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, generate_cert_signer_secrets
+from SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
+from httpCalls.block.best import http_block_best
+from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
+from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_signing_key
+from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
+from httpCalls.transaction.allTransactions import allTransactions
+from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction
+from httpCalls.transaction.sendTransaction import sendTransaction
+from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
-from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
-from SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
-from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign
-from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction
-from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
-from httpCalls.block.best import http_block_best
-from httpCalls.transaction.allTransactions import allTransactions
-from httpCalls.transaction.sendTransaction import sendTransaction
 
 """
 Configuration:
@@ -154,7 +152,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         new_public_key = new_signing_key.publicKey
         key_type = 0
         withdrawal_epoch = self.sc_withdrawal_epoch_length
-        new_public_key_hash = http_get_key_rotation_message_to_sign(sc_node, new_public_key, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_public_key_hash = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash,
@@ -192,7 +190,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
         new_private_key_2 = convertSecretToPrivateKey(new_signing_key_2.secret)
         new_public_key_2 = new_signing_key_2.publicKey
-        new_public_key_hash_2 = http_get_key_rotation_message_to_sign(sc_node, new_public_key_2, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_public_key_hash_2 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_2,
@@ -235,7 +233,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         new_public_key_3 = new_signing_key_3.publicKey
         key_type = 0
         withdrawal_epoch = self.sc_withdrawal_epoch_length
-        new_public_key_hash_3 = http_get_key_rotation_message_to_sign(sc_node, new_public_key_3, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_public_key_hash_3 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_3, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_3,

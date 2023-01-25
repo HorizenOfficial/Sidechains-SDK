@@ -14,6 +14,7 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThre
 import com.horizen.params.NetworkParams
 import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.serialization.Views
+import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
@@ -87,7 +88,7 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, pa
 
 
 
-  def getSigningKeyRotationMessageToSign: Route = (post & path("getSKeyRotationMessageToSignForSigningKey")) {
+  def getSigningKeyRotationMessageToSign: Route = (post & path("getKeyRotationMessageToSignForSigningKey")) {
     retrieveMessageToSign(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForSigningKeyUpdate)
   }
 
@@ -95,15 +96,15 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, pa
     retrieveMessageToSign(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForMasterKeyUpdate)
   }
 
-  private def retrieveMessageToSign(getMessageToSign: (SchnorrPublicKey, Int, Array[Byte]) => Array[Byte]) = {
+  private def retrieveMessageToSign(getMessageToSign: (Array[Byte], Int, Array[Byte]) => Array[Byte]) = {
     entity(as[ReqGetKeyRotationMessageToSign]) { body =>
       circuitType match {
         case NaiveThresholdSignatureCircuit =>
           ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation message to sign!", JOptional.empty()))
         case NaiveThresholdSignatureCircuitWithKeyRotation =>
           val message = getMessageToSign(
-            SchnorrPublicKey.deserialize(body.schnorrPublicKey.getBytes), body.withdrawalEpoch, params.sidechainId)
-          ApiResponseUtil.toResponse(RespKeyRotationMessageToSign(message.mkString("Array(", ", ", ")")))
+            body.schnorrPublicKey.getBytes, body.withdrawalEpoch, params.sidechainId)
+          ApiResponseUtil.toResponse(RespKeyRotationMessageToSign(message))
       }
     }
   }
@@ -183,7 +184,7 @@ object SidechainDebugRestScheme {
   private[api] case class RespGetKeyRotationProof(keyRotationProof: Option[KeyRotationProof]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespKeyRotationMessageToSign(keyRotationMessageToSign: String) extends SuccessResponse
+  private[api] case class RespKeyRotationMessageToSign(keyRotationMessageToSign: Array[Byte]) extends SuccessResponse
 }
 
 object SidechainDebugErrorResponse {
