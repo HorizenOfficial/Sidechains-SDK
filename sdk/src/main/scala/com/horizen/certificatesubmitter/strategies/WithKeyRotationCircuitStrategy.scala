@@ -7,13 +7,10 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesS
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
-import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
-import sparkz.core.transaction.MemoryPool
 
 import java.util.Optional
 import scala.collection.JavaConverters._
@@ -24,21 +21,10 @@ class WithKeyRotationCircuitStrategy[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
-  _FPI <: AbstractFeePaymentsInfo,
-  _HSTOR <: AbstractHistoryStorage[PM, _FPI, _HSTOR],
-  _HIS <: AbstractHistory[TX, H, PM, _FPI, _HSTOR, _HIS],
-  _MS <: AbstractState[TX, H, PM, _MS],
-  _VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, _VL],
-  _MP <: MemoryPool[TX, _MP]](settings: SidechainSettings, params: NetworkParams,
+  HIS <: AbstractHistory[TX, H, PM, _, _, _],
+  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings, params: NetworkParams,
                               cryptolibCircuit: ThresholdSignatureCircuitWithKeyRotation
-                             ) extends CircuitStrategy[TX, H, PM, CertificateDataWithKeyRotation](settings, params) {
-
-  type FPI = _FPI
-  type HSTOR = _HSTOR
-  type HIS = _HIS
-  type MS = _MS
-  type VL = _VL
-  type MP = _MP
+                             ) extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, params) {
 
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
@@ -74,9 +60,7 @@ class WithKeyRotationCircuitStrategy[
     )
   }
 
-  override def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithKeyRotation = {
-    val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
+  override def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): CertificateDataWithKeyRotation = {
 
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(status.referencedEpoch)
 
@@ -111,10 +95,7 @@ class WithKeyRotationCircuitStrategy[
     )
   }
 
-  override def getMessageToSign(sidechainNodeView: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
-
+  override def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)

@@ -96,7 +96,7 @@ class AccountState(
           // For non-ceasing sidechains certificate must be validated just when it has been received.
           // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
           // then the whole block is invalid.
-          mod.topQualityCertificateOpt.foreach(cert => validateTopQualityCertificate(cert, stateView))
+          mod.mainchainBlockReferencesData.flatMap(_.topQualityCertificate).foreach(cert => validateTopQualityCertificate(cert, stateView))
         } else {
           // For ceasing sidechains submission window concept is used.
           // If SC block has reached the certificate submission window end -> check the top quality certificate
