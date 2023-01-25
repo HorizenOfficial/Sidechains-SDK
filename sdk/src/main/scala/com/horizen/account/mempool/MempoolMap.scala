@@ -2,7 +2,7 @@ package com.horizen.account.mempool
 
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.mempool.MempoolMap._
-import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException}
+import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException, TransactionReplaceUnderpricedException}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
@@ -134,6 +134,10 @@ class MempoolMap(
       all.remove(existingTxId)
       all.put(newTx.id, newTx)
       mapOfTxsByNonce.put(newTx.getNonce, newTx.id)
+    }
+    else {
+      log.trace(s"Transaction $newTx cannot replace $existingTxWithSameNonce because it is underpriced")
+      throw TransactionReplaceUnderpricedException(newTx.id)
     }
 
   }

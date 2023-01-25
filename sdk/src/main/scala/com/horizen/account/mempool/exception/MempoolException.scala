@@ -10,3 +10,6 @@ case class NonceGapTooWideException(txId: ModifierId, txNonce: BigInteger, state
 
 case class AccountMemPoolOutOfBoundException(txId: ModifierId)
   extends MempoolException(s"adding transaction with txId $txId exceeds account available space")
+
+case class TransactionReplaceUnderpricedException(txId: ModifierId)
+  extends MempoolException(s"transaction with txId $txId cannot replace existing transaction because underpriced")

@@ -1,7 +1,7 @@
 package com.horizen.account.mempool
 
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException}
+import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException, TransactionReplaceUnderpricedException}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
@@ -481,11 +481,15 @@ class MempoolMapTest
       BigInteger.ONE
     )
     res = mempoolMap.add(account1NonExecTransactionSameNonceLowerFee)
-    assertTrue("Adding transaction failed", res.isSuccess)
-    mempoolMap = res.get
+
+    res match {
+      case Success(_) => fail("Adding underpriced transaction should have failed")
+      case Failure(e) => assertTrue(s"Wrong exception type: ${e.getClass}", e.isInstanceOf[TransactionReplaceUnderpricedException])
+    }
+
     assertFalse(
       "Mempool contains transaction with lower gas fee",
-      res.get.contains(
+      mempoolMap.contains(
         ModifierId @@ account1NonExecTransactionSameNonceLowerFee.id
       )
     )
@@ -498,8 +502,10 @@ class MempoolMapTest
       BigInteger.ONE
     )
     res = mempoolMap.add(account1NonExecTransactionSameNonceSameFee)
-    assertTrue("Adding transaction failed", res.isSuccess)
-    mempoolMap = res.get
+    res match {
+      case Success(_) => fail("Adding underpriced transaction should have failed")
+      case Failure(e) => assertTrue(s"Wrong exception type: ${e.getClass}", e.isInstanceOf[TransactionReplaceUnderpricedException])
+    }
     assertFalse(
       "Mempool contains transaction with same gas fee",
       mempoolMap.contains(
@@ -556,8 +562,11 @@ class MempoolMapTest
       BigInteger.ONE
     )
     res = mempoolMap.add(account1ExecTransactionSameNonceLowerFee)
-    assertTrue("Adding transaction failed", res.isSuccess)
-    mempoolMap = res.get
+    res match {
+      case Success(_) => fail("Adding underpriced transaction should have failed")
+      case Failure(e) => assertTrue(s"Wrong exception type: ${e.getClass}", e.isInstanceOf[TransactionReplaceUnderpricedException])
+    }
+
     assertFalse(
       "Mempool contains exec transaction with lower gas fee",
       mempoolMap.contains(
@@ -573,8 +582,10 @@ class MempoolMapTest
       account1ExecTransaction0.getGasPrice
     )
     res = mempoolMap.add(account1ExecTransactionSameNonceSameFee)
-    assertTrue("Adding transaction failed", res.isSuccess)
-    mempoolMap = res.get
+    res match {
+      case Success(_) => fail("Adding underpriced transaction should have failed")
+      case Failure(e) => assertTrue(s"Wrong exception type: ${e.getClass}", e.isInstanceOf[TransactionReplaceUnderpricedException])
+    }
     assertFalse(
       "Mempool contains transaction with same gas fee",
       mempoolMap.contains(
