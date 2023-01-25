@@ -5,6 +5,7 @@ import com.horizen.box._
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.{CircuitTypes, FieldElementUtils}
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.forge.ForgerList
@@ -119,7 +120,8 @@ class SidechainStateTest
 
   def getKeyRotationTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), typeOfKey: KeyRotationProofTypes.KeyRotationProofType, keyIndex: Int, newKeySecret: SchnorrSecret, oldSigningKeySecret: SchnorrSecret, oldMasterKeySecret: SchnorrSecret, wrongNewKey: Boolean = false): CertificateKeyRotationTransaction = {
     val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
-    val messageToSign = newKeySecret.publicImage().getHash
+    val messageToSign = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+      .getMsgToSignForSigningKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), 0, params.sidechainId)
     val oldSigningKeySignature = oldSigningKeySecret.sign(messageToSign)
     val newMasterKeySignature = oldMasterKeySecret.sign(messageToSign)
     val newKeySignature = wrongNewKey match {
