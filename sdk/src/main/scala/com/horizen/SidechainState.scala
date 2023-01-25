@@ -8,7 +8,7 @@ import com.horizen.box.data.ZenBoxData
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
@@ -376,7 +376,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       val keyRotationProof = keyRotationTransaction.getKeyRotationProof
       val oldCertifiersKeys = certifiersKeys(withdrawalEpoch - 1).get
 
-      val messageToSign = keyRotationProof.newKey.getHash
+      val messageToSign = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForSigningKeyUpdate(keyRotationProof.newKey.pubKeyBytes(), withdrawalEpoch, params.sidechainId)
 
       //Verify that the key index is in a valid range
       if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)

@@ -28,9 +28,6 @@ public class SchnorrProposition
     public boolean verify(byte[] message, SchnorrProof signature) {
         return CryptoLibProvider.schnorrFunctions().verify(message, pubKeyBytes(), signature.bytes());
     }
-    public byte[] getHash() {
-        return CryptoLibProvider.schnorrFunctions().getHash(publicBytes);
-    }
 
     @JsonProperty("publicKey")
     @Override
