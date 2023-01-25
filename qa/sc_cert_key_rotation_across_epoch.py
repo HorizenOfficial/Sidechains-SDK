@@ -148,14 +148,14 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
         new_public_key = new_signing_key.publicKey
         withdrawal_epoch = self.sc_withdrawal_epoch_length
-        new_public_key_hash = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_signing_key_message = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
-        master_signature = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash,
+        master_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message,
                                                                 public_key=public_master_keys[0])["signature"]
-        signing_signature = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash,
+        signing_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message,
                                                                 key=private_signing_keys[0])["signature"]   
-        new_key_signature = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash,
+        new_key_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message,
                                                                 key=new_signing_key.secret)["signature"]
 
 
@@ -185,14 +185,14 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         # Change again the same signature key
         new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
         new_public_key_2 = new_signing_key_2.publicKey
-        new_public_key_hash_2 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_signing_key_message_2 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
-        master_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_2,
+        master_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_2,
                                                                 public_key=public_master_keys[0])["signature"]
-        signing_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_2,
+        signing_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_2,
                                                                 key=private_signing_keys[0])["signature"]   
-        new_key_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_2,
+        new_key_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_2,
                                                                 key=new_signing_key_2.secret)["signature"]
 
         # Change again the signing key 0
@@ -227,14 +227,14 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         new_signing_key_3 = generate_cert_signer_secrets("random_seed3", 1)[0]
         new_public_key_3 = new_signing_key_3.publicKey
         withdrawal_epoch = self.sc_withdrawal_epoch_length
-        new_public_key_hash_3 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_3, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_signing_key_message_3 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_3, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
-        master_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_3,
+        master_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_3,
                                                                 public_key=public_master_keys[0])["signature"]
-        signing_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_3,
+        signing_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_3,
                                                                 key=private_signing_keys[0])["signature"]   
-        new_key_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_3,
+        new_key_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_3,
                                                                 key=new_signing_key_3.secret)["signature"]
 
         # Change the signer key 0
