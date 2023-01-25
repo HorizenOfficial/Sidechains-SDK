@@ -50,22 +50,21 @@ abstract class AbstractCertificateSubmitter[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H] : ClassTag,
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR],
+  HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS],
+  MS <: AbstractState[TX, H, PM, MS],
+  VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL],
+  MP <: MemoryPool[TX, MP],
   T <: CertificateData](settings: SidechainSettings,
                         sidechainNodeViewHolderRef: ActorRef,
                         secureEnclaveApiClient: SecureEnclaveApiClient,
                         params: NetworkParams,
                         mainchainChannel: MainchainNodeCertificateApi,
                         submissionStrategy: CertificateSubmissionStrategy,
-                        keyRotationStrategy: CircuitStrategy[TX, H, PM, T])
+                        keyRotationStrategy: CircuitStrategy[TX, H, PM, HIS, MS, T])
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
-
-  type FPI <: AbstractFeePaymentsInfo
-  type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
-  type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
-  type MS <: AbstractState[TX, H, PM, MS]
-  type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
-  type MP <: MemoryPool[TX, MP]
 
   type View = CurrentView[HIS, MS, VL, MP]
 
@@ -251,7 +250,7 @@ abstract class AbstractCertificateSubmitter[
   }
 
   private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(view => keyRotationStrategy.getMessageToSign(view, referencedWithdrawalEpochNumber)),
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => keyRotationStrategy.getMessageToSign(view.history, view.state, referencedWithdrawalEpochNumber)),
       timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
   }
 
@@ -259,7 +258,7 @@ abstract class AbstractCertificateSubmitter[
   // Note: We can't rely on `State.getWithdrawalEpochInfo`, because it shows the tip info,
   // but the older block may being applied at the moment.
   private def getSubmissionWindowStatus(block: PM): Try[SubmissionWindowStatus] = Try {
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(submissionStrategy.getStatus[HIS, MS](_, block.id)), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => submissionStrategy.getStatus(view.history, view.state, block.id)), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
 
   private[certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
@@ -374,7 +373,7 @@ abstract class AbstractCertificateSubmitter[
           // Check quality again, in case better Certificate appeared.
           if (submissionStrategy.checkQuality(status)) {
 
-            val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(keyRotationStrategy.buildCertificateData(_, status)), timeoutDuration)
+            val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => keyRotationStrategy.buildCertificateData(view.history, view.state, status)), timeoutDuration)
               .asInstanceOf[T]
             log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
 
