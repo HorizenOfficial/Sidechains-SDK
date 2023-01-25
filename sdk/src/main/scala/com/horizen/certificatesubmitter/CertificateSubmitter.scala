@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, ObsoleteWithdrawalEpochException, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.CertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies._
 import com.horizen.cryptolibprovider.CryptoLibProvider
@@ -17,11 +17,10 @@ import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeCertif
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
-import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
+import com.horizen.utils.BytesUtils
+import com.horizen.websocket.client.MainchainNodeChannel
 import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -118,8 +117,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
       getSignaturesStatus orElse
       submitterStatus orElse
       signerStatus orElse
-      reportStrangeInput orElse
-      keyRotationMessageToSign
+      reportStrangeInput
   }
 
   protected def checkSubmitter: Receive = {
@@ -434,17 +432,6 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
         context.system.eventStream.publish(CertificateSubmissionStopped)
     }
   }
-
-  private def keyRotationMessageToSign: Receive = {
-    case GetKeyRotationMessageToSign(schnorrPublicKey: String, keyType: Int, withdrawalEpoch: Int) =>
-      val message = if(keyType == 0) {
-        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForSigningKeyUpdate(SchnorrPublicKey.deserialize(schnorrPublicKey.getBytes), withdrawalEpoch,  params.sidechainId)
-      } else {
-        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForMasterKeyUpdate(SchnorrPublicKey.deserialize(schnorrPublicKey.getBytes), withdrawalEpoch,  params.sidechainId)
-      }
-      sender() ! MessageToSign(message.toString)
-  }
-
   def submitterStatus: Receive = {
     case EnableSubmitter =>
       if (!submitterEnabled) {
@@ -547,10 +534,6 @@ object CertificateSubmitter {
     case object DisableCertificateSigner
 
     case object IsCertificateSigningEnabled
-
-    case class GetKeyRotationMessageToSign(schnorrPublicKey: String, keyType: Int, withdrawalEpoch: Int)
-
-    case class MessageToSign(message: String)
   }
 }
 

@@ -370,36 +370,6 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertArrayEquals("Message to sign is different.", messageToSign, status.messageToSign)
     assertEquals("Known sigs array is different.", knownSigs, status.knownSigs)
   }
-
-  @Test
-  def keyRotationMessageToSign(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(FiniteDuration(4000L, TimeUnit.SECONDS), submitterIsEnabled = true, signerIsEnabled = true)
-
-    val mockedSidechainNodeViewHolder = TestProbe()
-    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
-
-    val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
-    val mockedSubmissionStrategy: CertificateSubmissionStrategy = mock[CertificateSubmissionStrategy]
-    val params: NetworkParams = mock[NetworkParams]
-    val keyRotationStrategy = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[SecureEnclaveApiClient], mock[NetworkParams], mainchainChannel, mockedSubmissionStrategy, keyRotationStrategy)))
-
-    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
-
-    // Skip initialization
-    submitter.context.become(submitter.workingCycle)
-
-    val schnorrPublicKey = "schnorrPublicKey"
-    val referencedEpochNumber = 20
-
-//    val signingMessageToSign = Await.result(certificateSubmitterRef ? GetKeyRotationMessageToSign(schnorrPublicKey, keyType = 0, referencedEpochNumber), FiniteDuration(400L, TimeUnit.SECONDS)).asInstanceOf[MessageToSign]
-//    assertFalse("Signing message to sign should not be empty", signingMessageToSign.isEmpty)
-//
-//    val masterMessageToSign = Await.result(certificateSubmitterRef ? GetKeyRotationMessageToSign(schnorrPublicKey, keyType = 1, referencedEpochNumber), FiniteDuration(400L, TimeUnit.SECONDS)).asInstanceOf[String]
-//    assertFalse("Master message to sign should not be empty", masterMessageToSign.isEmpty)
-  }
-
   @Test
   def newBlockArrived(): Unit = {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
