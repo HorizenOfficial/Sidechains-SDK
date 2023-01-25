@@ -13,8 +13,8 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
 from SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
-from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_master_key
 from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_signing_key
+from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_master_key
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
 from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction
 from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress
@@ -353,7 +353,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         # Try to update the master key 0
         new_master_key = generate_cert_signer_secrets("random_seed3", 1)[0]
         new_public_key_3 = new_master_key.publicKey
-        new_public_key_hash_3 = http_get_key_rotation_message_to_sign_for_master_key(sc_node, new_public_key_3, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_public_key_hash_3 = http_get_key_rotation_message_to_sign_for_master_key(sc_node, new_public_key_3, withdrawal_epoch)["keyRotationMessageToSign"]
 
 
         # Sign the new signing key with the old keys

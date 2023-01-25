@@ -145,12 +145,8 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
 
 
         # Try to change the signing key 0
-        old_signing_key = convertSecretToPrivateKey(private_signing_keys[0])
-        old_master_key = convertSecretToPrivateKey(private_master_keys[0])
         new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
-        new_private_key = convertSecretToPrivateKey(new_signing_key.secret)
         new_public_key = new_signing_key.publicKey
-        key_type = 0
         withdrawal_epoch = self.sc_withdrawal_epoch_length
         new_public_key_hash = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, withdrawal_epoch)["keyRotationMessageToSign"]
 
@@ -188,7 +184,6 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
 
         # Change again the same signature key
         new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
-        new_private_key_2 = convertSecretToPrivateKey(new_signing_key_2.secret)
         new_public_key_2 = new_signing_key_2.publicKey
         new_public_key_hash_2 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, withdrawal_epoch)["keyRotationMessageToSign"]
 
@@ -231,9 +226,8 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         # Try to update signing key 0
         new_signing_key_3 = generate_cert_signer_secrets("random_seed3", 1)[0]
         new_public_key_3 = new_signing_key_3.publicKey
-        key_type = 0
         withdrawal_epoch = self.sc_withdrawal_epoch_length
-        new_public_key_hash_3 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_3, key_type, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_public_key_hash_3 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_3, withdrawal_epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_public_key_hash_3,
