@@ -11,7 +11,7 @@ interface WithdrawalRequests {
         uint256 value;
     }
 
-    function getWithdrawalRequests(uint32 withdrawalEpoch) external view returns (WithdrawalRequest[] memory);
+    function getBackwardTransfers(uint32 withdrawalEpoch) external view returns (WithdrawalRequest[] memory);
 
-    function submitWithdrawalRequest(MCAddress mcAddress) external payable returns (WithdrawalRequest memory);
+    function backwardTransfer(MCAddress mcAddress) external payable returns (WithdrawalRequest memory);
 }
