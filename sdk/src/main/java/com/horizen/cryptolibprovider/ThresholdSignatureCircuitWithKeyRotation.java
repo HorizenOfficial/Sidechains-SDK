@@ -61,7 +61,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
 
     byte[] getSchnorrKeysHash(SchnorrKeysSignatures schnorrKeysSignatures);
 
-    byte[] getMsgToSignForSigningKeyUpdate(SchnorrPublicKey newSigningKey, int epochNumber, byte[] sidechainId);
+    byte[] getMsgToSignForSigningKeyUpdate(byte[] newSigningKeyBytes, int epochNumber, byte[] sidechainId);
 
-    byte[] getMsgToSignForMasterKeyUpdate(SchnorrPublicKey newSigningKey, int epochNumber, byte[] sidechainId);
+    byte[] getMsgToSignForMasterKeyUpdate(byte[] newMasterKeyBytes, int epochNumber, byte[] sidechainId);
 }

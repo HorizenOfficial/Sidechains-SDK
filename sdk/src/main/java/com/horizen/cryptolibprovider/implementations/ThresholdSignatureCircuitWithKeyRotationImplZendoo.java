@@ -293,9 +293,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     @Override
-    public byte[] getMsgToSignForSigningKeyUpdate(SchnorrPublicKey newSigningKey, int epochNumber, byte[] sidechainId) {
+    public byte[] getMsgToSignForSigningKeyUpdate(byte[] newSigningKeyBytes, int epochNumber, byte[] sidechainId) {
         byte[] messageAsBytes;
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
+        SchnorrPublicKey newSigningKey = SchnorrPublicKey.deserialize(newSigningKeyBytes);
         try {
             FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForSigningKeyUpdate(newSigningKey,
                     epochNumber, sidechainIdFe);
@@ -310,11 +311,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     @Override
-    public byte[] getMsgToSignForMasterKeyUpdate(SchnorrPublicKey newSigningKey, int epochNumber, byte[] sidechainId) {
+    public byte[] getMsgToSignForMasterKeyUpdate(byte[] newMasterKeyBytes, int epochNumber, byte[] sidechainId) {
         byte[] messageAsBytes;
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
+        SchnorrPublicKey newMasterKey = SchnorrPublicKey.deserialize(newMasterKeyBytes);
         try {
-            FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForMasterKeyUpdate(newSigningKey,
+            FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForMasterKeyUpdate(newMasterKey,
                     epochNumber, sidechainIdFe);
             messageAsBytes = messageToSign.serializeFieldElement();
             messageToSign.freeFieldElement();
@@ -322,6 +324,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
             throw new RuntimeException(e);
         } finally {
             sidechainIdFe.freeFieldElement();
+            newMasterKey.freePublicKey();
         }
         return messageAsBytes;
     }

@@ -103,7 +103,7 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, pa
           ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation message to sign!", JOptional.empty()))
         case NaiveThresholdSignatureCircuitWithKeyRotation =>
           val message = getMessageToSign(
-            body.schnorrPublicKey.getBytes, body.withdrawalEpoch, params.sidechainId)
+            BytesUtils.fromHexString(body.schnorrPublicKey), body.withdrawalEpoch, params.sidechainId)
           ApiResponseUtil.toResponse(RespKeyRotationMessageToSign(message))
       }
     }
