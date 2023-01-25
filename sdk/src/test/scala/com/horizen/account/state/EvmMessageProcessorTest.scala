@@ -23,9 +23,9 @@ class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSu
     Mockito
       .when(mockStateView.isSmartContractAccount(ArgumentMatchers.any[Address]()))
       .thenAnswer(args => {
-        val addressBytes: Address = args.getArgument(0)
-        assertNotNull("should not check the null address", addressBytes)
-        contractAddress.equals(addressBytes)
+        val address: Address = args.getArgument(0)
+        assertNotNull("should not check the null address", address)
+        contractAddress.equals(address)
       })
 
     assertTrue("should process smart contract deployment", processor.canProcess(getMessage(null), mockStateView))

@@ -2,7 +2,7 @@ package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.{Address, Hash}
+import com.horizen.evm.utils.Hash
 import org.junit.Assert.assertEquals
 import org.junit._
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -133,7 +133,7 @@ class StateDbAccountStateViewGasTrackedTest
   }
 
   private def randomLog(topics: Int, data: Int): EvmLog = {
-    new EvmLog(Address.fromBytes(randomAddress), Array.fill(topics)(Hash.fromBytes(randomHash)), randomBytes(data))
+    new EvmLog(randomAddress, Array.fill(topics)(Hash.fromBytes(randomHash)), randomBytes(data))
   }
 
   @Test

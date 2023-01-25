@@ -20,7 +20,7 @@ import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionTy
 import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActorRef
-import com.horizen.evm.utils.Hash
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
@@ -94,7 +94,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         EthereumTransactionType.DynamicFeeTxType.ordinal(),
         transactionIndex = 0,
         blockNumber = 2,
-        address = BytesUtils.fromHexString("d2a538a476aad6ecd245099df9297df6a129c2c5"),
+        address = Address.fromHex("0xd2a538a476aad6ecd245099df9297df6a129c2c5"),
         txHash = Some(BytesUtils.fromHexString("6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
         blockHash = "0456"
       )

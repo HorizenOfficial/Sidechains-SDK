@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.evm.utils.Address
 import com.horizen.fixtures.SecretFixture
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.Test
@@ -33,7 +34,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
 
     // Test 1: send to EOA account, tx with empty "data"
     Mockito
-      .when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]]))
+      .when(mockStateView.isEoaAccount(ArgumentMatchers.any[Address]))
       .thenAnswer(args => {
         assertArrayEquals("Different address found", msg.getToAddressBytes, args.getArgument(0))
         true
@@ -52,7 +53,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     // Test 3: Failure: send to smart contract account
     Mockito.reset(mockStateView)
     Mockito
-      .when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]]))
+      .when(mockStateView.isEoaAccount(ArgumentMatchers.any[Address]))
       .thenAnswer(args => {
         assertArrayEquals("Different address found", msg.getToAddressBytes, args.getArgument(0))
         false
@@ -76,14 +77,14 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
 
     // Test 1: Success: no failures during balance changes
     Mockito
-      .when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
+      .when(mockStateView.subBalance(ArgumentMatchers.any[Address], ArgumentMatchers.any[BigInteger]))
       .thenAnswer(args => {
         assertArrayEquals("Different address found", msg.getFromAddressBytes, args.getArgument(0))
         assertEquals("Different amount found", msg.getValue, args.getArgument(1))
       })
 
     Mockito
-      .when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
+      .when(mockStateView.addBalance(ArgumentMatchers.any[Address], ArgumentMatchers.any[BigInteger]))
       .thenAnswer(args => {
         assertArrayEquals("Different address found", msg.getToAddressBytes, args.getArgument(0))
         assertEquals("Different amount found", msg.getValue, args.getArgument(1))
@@ -95,7 +96,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     // Test 2: Failure during subBalance
     Mockito.reset(mockStateView)
     Mockito
-      .when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
+      .when(mockStateView.subBalance(ArgumentMatchers.any[Address], ArgumentMatchers.any[BigInteger]))
       .thenAnswer(_ => {
         throw new Exception("something went error")
       })
@@ -104,7 +105,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     // Test 3: Failure during addBalance
     Mockito.reset(mockStateView)
     Mockito
-      .when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
+      .when(mockStateView.addBalance(ArgumentMatchers.any[Address], ArgumentMatchers.any[BigInteger]))
       .thenAnswer(_ => {
         throw new Exception("something else went error")
       })

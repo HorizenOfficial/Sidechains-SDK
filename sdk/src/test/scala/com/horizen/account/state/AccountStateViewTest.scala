@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.account.AccountFixture
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.StateDB
@@ -11,9 +12,7 @@ import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
-import scala.util.Random
-
-class AccountStateViewTest extends JUnitSuite with MockitoSugar {
+class AccountStateViewTest extends JUnitSuite with MockitoSugar with AccountFixture {
 
   var stateView: AccountStateView = _
 
@@ -55,7 +54,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar {
     // With 3999 withdrawal requests
     val maxNumOfWithdrawalReqs = MaxWithdrawalReqsNumPerEpoch
 
-    val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
+    val destAddress = new MCPublicKeyHashProposition(randomBytes(20))
     val listOfWR = (1 to maxNumOfWithdrawalReqs).map(index => {
       WithdrawalRequest(destAddress, ZenWeiConverter.convertZenniesToWei(index))
     })

@@ -1,7 +1,8 @@
 package com.horizen.account.state
 
+import com.horizen.account.AccountFixture
 import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.account.utils.{Account, FeeUtils}
+import com.horizen.account.utils.FeeUtils
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.evm.{MemoryDatabase, StateDB}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
@@ -12,29 +13,11 @@ import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 
 import java.math.BigInteger
 import java.util.Optional
-import scala.language.implicitConversions
-import scala.util.Random
 
-trait MessageProcessorFixture extends ClosableResourceHandler {
-  // simplifies using BigIntegers within the tests
-  implicit def longToBigInteger(x: Long): BigInteger = BigInteger.valueOf(x)
-
+trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
-  val hashNull: Array[Byte] = Array.fill(32)(0)
   val origin: Address = randomAddress
   val defaultBlockContext = new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1)
-
-  def randomBytes(n: Int): Array[Byte] = {
-    val bytes = new Array[Byte](n)
-    Random.nextBytes(bytes)
-    bytes
-  }
-
-  def randomU256: BigInteger = new BigInteger(randomBytes(32))
-
-  def randomHash: Array[Byte] = randomBytes(32)
-
-  def randomAddress: Address = Address.fromBytes(randomBytes(Account.ADDRESS_SIZE))
 
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>
@@ -63,7 +46,7 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
     val gasTipCap = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     new Message(
-      Optional.of(from),
+      from,
       Optional.ofNullable(to),
       gasPrice,
       gasFeeCap,

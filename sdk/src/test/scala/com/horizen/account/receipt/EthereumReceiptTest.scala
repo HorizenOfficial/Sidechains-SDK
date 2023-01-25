@@ -4,13 +4,13 @@ package com.horizen.account.receipt
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.evm.TrieHasher
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.utils.Numeric
+
 import java.math.BigInteger
 import java.util
 import java.util.Map.entry
@@ -31,7 +31,6 @@ class EthereumReceiptTest
   @Test
   def receiptSimpleSerDeser(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal())
-    assertEquals(receipt.contractAddress.get.length, Address.LENGTH)
     val r1: String = receipt.toString
     //println(r1)
 
