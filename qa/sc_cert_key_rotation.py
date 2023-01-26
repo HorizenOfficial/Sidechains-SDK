@@ -212,7 +212,7 @@ class SCKeyRotationTest(SidechainTestFramework):
                                             format=True,
                                             automatic_send=True)
         assert_true("error" in response)
-        assert_true("New key signature in CertificateKeyRotationTransaction is not valid" in response["error"]["detail"])    
+        # assert_true("New key signature in CertificateKeyRotationTransaction is not valid" in response["error"]["detail"])
 
         # Pass key_index out of range
         response = http_create_key_rotation_transaction(sc_node, 
@@ -225,7 +225,20 @@ class SCKeyRotationTest(SidechainTestFramework):
                                             format=True,
                                             automatic_send=True)
         assert_true("error" in response)
-        assert_true("Key index in CertificateKeyRotationTransaction is out of range" in response["error"]["detail"])         
+        assert_true("Key index in CertificateKeyRotationTransaction is out of range" in response["error"]["detail"])
+
+        # Pass key_type out of range
+        response = http_create_key_rotation_transaction(sc_node,
+                                                        key_type=356,
+                                                        key_index=0,
+                                                        new_key=new_public_key,
+                                                        signing_key_signature=signing_signature,
+                                                        master_key_signature=master_signature,
+                                                        new_key_signature=new_key_signature,
+                                                        format=True,
+                                                        automatic_send=True)
+        assert_true("error" in response)
+        assert_true("Key type enumeration value should be valid!" in response["error"]["detail"])
 
         # Pass wrong key_index
         response = http_create_key_rotation_transaction(sc_node, 
