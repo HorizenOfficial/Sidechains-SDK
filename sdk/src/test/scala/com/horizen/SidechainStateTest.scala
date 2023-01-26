@@ -7,7 +7,7 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, 
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.{CircuitTypes, FieldElementUtils}
-import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import com.horizen.fixtures.{FieldElementFixture, SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
@@ -1208,6 +1208,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.signersPublicKeys).thenReturn(signingKeys.asScala.toVector.map(key => key.publicImage()))
     Mockito.when(mockedParams.mastersPublicKeys).thenReturn(masterKeys.asScala.toVector.map(key => key.publicImage()))
     Mockito.when(mockedParams.circuitType).thenReturn(CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation)
+    Mockito.when(mockedParams.sidechainId).thenReturn(FieldElementFixture.generateFieldElement())
 
     sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
