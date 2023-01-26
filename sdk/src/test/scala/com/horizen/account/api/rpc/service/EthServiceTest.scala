@@ -820,7 +820,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         senderWithSecret,
         "0x0000000000000000000011111111111111111111",
-        "0x9950a60fdbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+        "0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
         "0xE8D4A51000",
         "0x4B9ACA00",
         "0x1",
@@ -879,7 +879,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         senderWithSecret,
         "0x0000000000000000000011111111111111111111",
-        "0x9950a60fdbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+        "0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
         "0xE8D4A51000",
         "0x4B9ACA00",
         "0x1",
