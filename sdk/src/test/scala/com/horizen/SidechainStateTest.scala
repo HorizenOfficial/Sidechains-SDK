@@ -129,7 +129,6 @@ class SidechainStateTest
         CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
           .getMsgToSignForMasterKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), 0, params.sidechainId)
     }
-
     val oldSigningKeySignature = oldSigningKeySecret.sign(messageToSign)
     val newMasterKeySignature = oldMasterKeySecret.sign(messageToSign)
     val newKeySignature = if (wrongNewKey) {
