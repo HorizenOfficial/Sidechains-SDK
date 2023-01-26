@@ -376,8 +376,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       val keyRotationProof = keyRotationTransaction.getKeyRotationProof
       val oldCertifiersKeys = certifiersKeys(withdrawalEpoch - 1).get
 
-      val messageToSign = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-        .getMsgToSignForSigningKeyUpdate(keyRotationProof.newKey.pubKeyBytes(), withdrawalEpoch, params.sidechainId)
+      val messageToSign = keyRotationProof.keyType match {
+        case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+          .getMsgToSignForSigningKeyUpdate(keyRotationProof.newKey.pubKeyBytes(), withdrawalEpoch, params.sidechainId)
+        case MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+          .getMsgToSignForMasterKeyUpdate(keyRotationProof.newKey.pubKeyBytes(), withdrawalEpoch, params.sidechainId)
+      }
 
       //Verify that the key index is in a valid range
       if (keyRotationProof.index < 0 || keyRotationProof.index > oldCertifiersKeys.masterKeys.size)
