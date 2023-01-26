@@ -120,8 +120,12 @@ class SidechainStateTest
 
   def getKeyRotationTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), typeOfKey: KeyRotationProofTypes.KeyRotationProofType, keyIndex: Int, newKeySecret: SchnorrSecret, oldSigningKeySecret: SchnorrSecret, oldMasterKeySecret: SchnorrSecret, wrongNewKey: Boolean = false): CertificateKeyRotationTransaction = {
     val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
-    val messageToSign = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getMsgToSignForSigningKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), 0, params.sidechainId)
+    val messageToSign = typeOfKey match {
+      case com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForSigningKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), 0, params.sidechainId)
+      case com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForMasterKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), 0, params.sidechainId)
+    }
     val oldSigningKeySignature = oldSigningKeySecret.sign(messageToSign)
     val newMasterKeySignature = oldMasterKeySecret.sign(messageToSign)
     val newKeySignature = wrongNewKey match {
