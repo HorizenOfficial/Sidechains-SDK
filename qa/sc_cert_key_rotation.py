@@ -190,7 +190,7 @@ class SCKeyRotationTest(SidechainTestFramework):
 
         # Pass wrong master proof
         response = http_create_key_rotation_transaction(sc_node, 
-                                            key_type=0,
+                                            key_type=1,
                                             key_index=0,
                                             new_key=new_public_key,
                                             signing_key_signature=signing_signature,
