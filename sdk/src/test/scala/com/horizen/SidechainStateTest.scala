@@ -3,6 +3,7 @@ package com.horizen
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.cryptolibprovider.CryptoLibProvider
@@ -121,9 +122,9 @@ class SidechainStateTest
   def getKeyRotationTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), typeOfKey: KeyRotationProofTypes.KeyRotationProofType, keyIndex: Int, newKeySecret: SchnorrSecret, oldSigningKeySecret: SchnorrSecret, oldMasterKeySecret: SchnorrSecret, wrongNewKey: Boolean = false): CertificateKeyRotationTransaction = {
     val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
     val messageToSign = typeOfKey match {
-      case com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+      case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
         .getMsgToSignForSigningKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), 0, params.sidechainId)
-      case com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+      case MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
         .getMsgToSignForMasterKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), 0, params.sidechainId)
     }
     val oldSigningKeySignature = oldSigningKeySecret.sign(messageToSign)
