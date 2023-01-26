@@ -3,6 +3,8 @@ package com.horizen.account.api.rpc.service
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
+import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.SidechainTypes
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
@@ -569,7 +571,7 @@ class EthService(
         })
 
         // return the list of tracer results from the evm
-        val tracerResultList = new ListBuffer[Any]
+        val tracerResultList = new ListBuffer[JsonNode]
         for(evmResult <- evmResults) {
           if(evmResult!=null && evmResult.tracerResult!=null)
             tracerResultList += evmResult.tracerResult
@@ -613,11 +615,10 @@ class EthService(
         blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
         // apply requested transaction with tracing enabled
-        blockContext.setEvmResult(EvmResult.emptyEvmResult())
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         // return the tracer result from the evm
-        if(blockContext.getEvmResult.tracerResult != null) {
+        if(blockContext.getEvmResult != null) {
           blockContext.getEvmResult.tracerResult
         } else Unit
       }

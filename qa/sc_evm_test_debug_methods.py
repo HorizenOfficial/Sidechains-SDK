@@ -155,5 +155,19 @@ class SCEvmDebugMethods(AccountChainSetup):
         res = sc_node.rpc_debug_traceBlockByHash(block_hash)
         assert_true("error" not in res["result"], 'debug_traceBlockByHash failed')
 
+        # -------------------------------------------------------------------------------------
+        # generate a new block without transactions and call the debug methods to check if everything works
+        tx_status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
+        assert_equal(1, tx_status, "Error in tx - unrelated to debug methods")
+
+        block_number = sc_node.rpc_eth_blockNumber()["result"]
+        res = sc_node.rpc_debug_traceBlockByNumber(block_number)["result"]
+        assert_true(len(res) == 0, "debug results have more than zero element")
+
+        block_hash = sc_node.rpc_eth_getBlockByNumber(block_number,False)['result']['hash']
+        res = sc_node.rpc_debug_traceBlockByHash(block_hash)["result"]
+        assert_true(len(res) == 0, "debug results have more than zero element")
+
+
 if __name__ == "__main__":
     SCEvmDebugMethods().main()

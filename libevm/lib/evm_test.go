@@ -65,7 +65,6 @@ func TestEvmCallTracer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var TracerName = "callTracer"
 	err, _ = instance.EvmApply(EvmParams{
 		HandleParams: HandleParams{
 			Handle: stateDbHandle,
@@ -82,7 +81,7 @@ func TestEvmCallTracer(t *testing.T) {
 			DisableStack:     false,
 			DisableStorage:   false,
 			EnableReturnData: true,
-			Tracer:           TracerName,
+			Tracer:           "callTracer",
 		},
 	})
 	if err != nil {
@@ -107,8 +106,6 @@ func TestEvmCallTracerWithTracerConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var TracerName = "callTracer"
-	var TracerConfig = json.RawMessage(`{"onlyTopCall": true, "withLog": false}`)
 	err, _ = instance.EvmApply(EvmParams{
 		HandleParams: HandleParams{
 			Handle: stateDbHandle,
@@ -125,8 +122,8 @@ func TestEvmCallTracerWithTracerConfig(t *testing.T) {
 			DisableStack:     false,
 			DisableStorage:   false,
 			EnableReturnData: true,
-			Tracer:           TracerName,
-			TracerConfig:     TracerConfig,
+			Tracer:           "callTracer",
+			TracerConfig:     json.RawMessage(`{"onlyTopCall": true, "withLog": false}`),
 		},
 	})
 	if err != nil {
@@ -151,8 +148,6 @@ func TestEvmFourByteTrace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var TracerName = "4byteTracer"
-	var TracerConfig = json.RawMessage(`{"onlyTopCall": true, "withLog": false}`)
 	err, _ = instance.EvmApply(EvmParams{
 		HandleParams: HandleParams{
 			Handle: stateDbHandle,
@@ -169,8 +164,8 @@ func TestEvmFourByteTrace(t *testing.T) {
 			DisableStack:     false,
 			DisableStorage:   false,
 			EnableReturnData: true,
-			Tracer:           TracerName,
-			TracerConfig:     TracerConfig,
+			Tracer:           "4byteTracer",
+			TracerConfig:     json.RawMessage(`{"onlyTopCall": true, "withLog": false}`),
 		},
 	})
 	if err != nil {
