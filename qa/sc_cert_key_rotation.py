@@ -190,7 +190,7 @@ class SCKeyRotationTest(SidechainTestFramework):
 
         # Pass wrong master proof
         response = http_create_key_rotation_transaction(sc_node, 
-                                            key_type=1,
+                                            key_type=0,
                                             key_index=0,
                                             new_key=new_public_key,
                                             signing_key_signature=signing_signature,
@@ -212,7 +212,7 @@ class SCKeyRotationTest(SidechainTestFramework):
                                             format=True,
                                             automatic_send=True)
         assert_true("error" in response)
-        # assert_true("New key signature in CertificateKeyRotationTransaction is not valid" in response["error"]["detail"])
+        assert_true("New key signature in CertificateKeyRotationTransaction is not valid" in response["error"]["detail"])
 
         # Pass key_index out of range
         response = http_create_key_rotation_transaction(sc_node, 
