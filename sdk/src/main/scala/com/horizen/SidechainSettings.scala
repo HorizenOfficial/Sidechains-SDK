@@ -64,9 +64,11 @@ case class LogInfoSettings(logFileName: String = "debug.log",
 
 
 case class AccountMempoolSettings(maxNonceGap: Int = 16,
-                                  maxAccountSlots: Int = 16){
+                                  maxAccountSlots: Int = 16,
+                                  maxMemPoolSlots: Int = 6144){
   require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
   require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
+  require(maxMemPoolSlots > 0, s"Maximum Memory Pool Slots not positive: $maxMemPoolSlots")
 }
 
 case class SidechainSettings(

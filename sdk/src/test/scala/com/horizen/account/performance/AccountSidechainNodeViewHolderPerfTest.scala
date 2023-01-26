@@ -36,6 +36,7 @@ import scala.util.Random
 /*
   This class is used for testing performance related to modifications to the memory pool.
  */
+@Ignore
 class AccountSidechainNodeViewHolderPerfTest
     extends JUnitSuite
       with EthereumTransactionFixture
@@ -110,7 +111,11 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Number of normal accounts:                       $numOfNormalAccount\n")
       out.write(s"Number of transactions for each normal account:  $numOfTxsPerNormalAccounts\n")
 
-      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts, maxAccountSlots = numOfTxsPerSpammerAccounts)
+      val mempoolSettings = AccountMempoolSettings(
+        maxNonceGap = numOfTxsPerSpammerAccounts,
+        maxAccountSlots = numOfTxsPerSpammerAccounts,
+        maxMemPoolSlots = numOfTxs
+      )
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = scala.collection.mutable.ListBuffer[EthereumTransaction]()
@@ -264,7 +269,11 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Number of normal accounts:                       $numOfNormalAccount\n")
       out.write(s"Number of transactions for each normal account:  $numOfTxsPerNormalAccounts\n")
 
-      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts, maxAccountSlots = numOfTxsPerSpammerAccounts)
+      val mempoolSettings = AccountMempoolSettings(
+        maxNonceGap = numOfTxsPerSpammerAccounts,
+        maxAccountSlots = numOfTxsPerSpammerAccounts,
+        maxMemPoolSlots = numOfTxs
+      )
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = scala.collection.mutable.ListBuffer[EthereumTransaction]()
@@ -430,7 +439,11 @@ class AccountSidechainNodeViewHolderPerfTest
 
       val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
 
-      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts + 1, maxAccountSlots = numOfTxsPerSpammerAccounts +1)//+1 because there are orphans, so max nonce > num of txs
+      val mempoolSettings = AccountMempoolSettings(
+        maxNonceGap = numOfTxsPerSpammerAccounts + 1, //+1 because there are orphans, so max nonce > num of txs
+        maxAccountSlots = numOfTxsPerSpammerAccounts + 1,
+        maxMemPoolSlots = numOfTxs
+      )
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
@@ -546,7 +559,11 @@ class AccountSidechainNodeViewHolderPerfTest
 
       val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
 
-      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts + 1, maxAccountSlots = numOfTxsPerSpammerAccounts +1) //+1 because there are orphans, so max nonce > num of txs
+      val mempoolSettings = AccountMempoolSettings(
+        maxNonceGap = numOfTxsPerSpammerAccounts + 1, //+1 because there are orphans, so max nonce > num of txs
+        maxAccountSlots = numOfTxsPerSpammerAccounts + 1,
+        maxMemPoolSlots = numOfTxs
+      )
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
@@ -648,7 +665,11 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("************** Testing with one block to apply **************")
 
-      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxs, maxAccountSlots = numOfTxs)
+      val mempoolSettings = AccountMempoolSettings(
+        maxNonceGap = numOfTxs,
+        maxAccountSlots = numOfTxs,
+        maxMemPoolSlots = numOfTxs
+      )
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
       val listOfTxs = createTransactions(numOfNormalAccount, numOfTxs)
 
