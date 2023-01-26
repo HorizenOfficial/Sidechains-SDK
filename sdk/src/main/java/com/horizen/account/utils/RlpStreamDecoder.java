@@ -6,6 +6,9 @@ import scorex.util.serialization.Reader;
 
 import java.util.ArrayList;
 
+/**
+ * Adapted from org/web3j/rlp/RlpDecoder.java
+ */
 public class RlpStreamDecoder {
 
     /**
@@ -48,35 +51,43 @@ public class RlpStreamDecoder {
      */
     public static RlpList decode(Reader reader) {
         RlpList rlpList = new RlpList(new ArrayList<>());
-        if (reader != null)
-            traverse(reader, rlpList, reader.consumed(),-1);
+        if (reader != null) {
+            traverse(reader, -1, rlpList);
+        }
         return rlpList;
     }
 
-    private static long traverse(Reader reader, RlpList rlpList, int startConsumedBytes, int levelBytesToRead) {
+    /**
+     * Recursively parse and decode nested RLP data structures
+     * @param reader - RLP encoded byte stream
+     * @param levelBytesToRead - The number of bytes to read if this number is known, otherwise should be set to -1
+     * @param rlpList - the resulting list to fill with decoded items
+     */
+    private static void traverse(Reader reader, int levelBytesToRead, RlpList rlpList) {
 
         try {
             if (reader == null || reader.remaining() == 0) {
-                return 0L;
+                return;
             }
+            int startLevelConsumedBytes = reader.consumed();
 
-            while (true) {
+            while (reader.remaining() > 0) {
 
-                int cons = reader.consumed();
+                int consumedBytes = reader.consumed();
 
                 if (levelBytesToRead < 0) {
-                    if (cons > startConsumedBytes) {
-                       return cons;
+                    if (consumedBytes > startLevelConsumedBytes) {
+                        // we completed the reading of the start level
+                        return;
                     }
                 } else {
-                    if ((startConsumedBytes + levelBytesToRead) == cons) {
-                        return cons;
+                    if ((startLevelConsumedBytes + levelBytesToRead) == consumedBytes) {
+                        // we completed the reading of an internal level
+                        return;
                     }
                 }
 
-                //int prefix = data[startPos] & 0xff;
-                byte[] dataByte = new byte[]{reader.getByte()};
-                int prefix = dataByte[0] & 0xff;
+                int prefix = reader.getUByte();
 
                 if (prefix < OFFSET_SHORT_STRING) {
 
@@ -84,16 +95,13 @@ public class RlpStreamDecoder {
                     // first byte(i.e. prefix) is [0x00, 0x7f],
                     // and the string is the first byte itself exactly;
 
-                    //byte[] rlpData = {(byte) prefix};
                     byte[] rlpData = {(byte) prefix};
                     rlpList.getValues().add(RlpString.create(rlpData));
-                    //startPos += 1;
 
                 } else if (prefix == OFFSET_SHORT_STRING) {
 
                     // null
                     rlpList.getValues().add(RlpString.create(new byte[0]));
-                    //startPos += 1;
 
                 } else if (prefix > OFFSET_SHORT_STRING && prefix <= OFFSET_LONG_STRING) {
 
@@ -105,18 +113,12 @@ public class RlpStreamDecoder {
                     byte strLen = (byte) (prefix - OFFSET_SHORT_STRING);
 
                     // Input validation
-                    //if (strLen > endPos - (startPos + 1)) {
                     if (reader.remaining() < strLen) {
                         throw new RuntimeException("RLP length mismatch");
                     }
 
-                    //byte[] rlpData = new byte[strLen];
-                    //System.arraycopy(data, startPos + 1, rlpData, 0, strLen);
                     byte[] rlpData = reader.getBytes(strLen);
                     rlpList.getValues().add(RlpString.create(rlpData));
-
-                    //startPos += 1 + strLen;
-
 
                 } else if (prefix > OFFSET_LONG_STRING && prefix < OFFSET_SHORT_LIST) {
 
@@ -127,11 +129,9 @@ public class RlpStreamDecoder {
                     // and the string follows the length of the string;
 
                     byte lenOfStrLen = (byte) (prefix - OFFSET_LONG_STRING);
-                    //int strLen = calcLength(lenOfStrLen, data, startPos);
                     int strLen = calcLength(lenOfStrLen, reader);
 
                     // Input validation
-                    //if (strLen > endPos - (startPos + lenOfStrLen + 1)) {
                     if (reader.remaining() < strLen) {
                         throw new RuntimeException(
                                 "RLP length mismatch: remaining bytes in stream reader: " + reader.remaining() +
@@ -139,12 +139,9 @@ public class RlpStreamDecoder {
                     }
 
                     // now we can parse an item for data[1]..data[length]
-                    //byte[] rlpData = new byte[strLen];
-                    //System.arraycopy(data, startPos + lenOfStrLen + 1, rlpData, 0, strLen);
                     byte[] rlpData = reader.getBytes(strLen);
 
                     rlpList.getValues().add(RlpString.create(rlpData));
-                    //startPos += lenOfStrLen + strLen + 1;
 
                 } else if (prefix >= OFFSET_SHORT_LIST && prefix <= OFFSET_LONG_LIST) {
 
@@ -156,13 +153,8 @@ public class RlpStreamDecoder {
                     byte listLen = (byte) (prefix - OFFSET_SHORT_LIST);
 
                     RlpList newLevelList = new RlpList(new ArrayList<>());
-                    //traverse(data, startPos + 1, startPos + listLen + 1, newLevelList);
-                    int dum = reader.consumed();
-                    traverse(reader, newLevelList, reader.consumed(), listLen);
-
+                    traverse(reader, listLen, newLevelList);
                     rlpList.getValues().add(newLevelList);
-
-                    //startPos += 1 + listLen;
 
                 } else if (prefix > OFFSET_LONG_LIST) {
 
@@ -174,22 +166,12 @@ public class RlpStreamDecoder {
                     // the list follows the total payload of the list;
 
                     byte lenOfListLen = (byte) (prefix - OFFSET_LONG_LIST);
-                    //int listLen = calcLength(lenOfListLen, data, startPos);
                     int listLen = calcLength(lenOfListLen, reader);
 
                     RlpList newLevelList = new RlpList(new ArrayList<>());
-                    /*traverse(
-                            data,
-                            startPos + lenOfListLen + 1,
-                            startPos + lenOfListLen + listLen + 1,
-                            newLevelList);
-                    */
-                    int dum = reader.consumed();
-                    traverse(reader, newLevelList, dum, listLen);
-
+                    traverse(reader, listLen, newLevelList);
                     rlpList.getValues().add(newLevelList);
 
-                    //startPos += lenOfListLen + listLen + 1;
                 }
             }
         } catch (Exception e) {
@@ -201,9 +183,8 @@ public class RlpStreamDecoder {
         byte pow = (byte) (lengthOfLength - 1);
         long length = 0;
         for (int i = 1; i <= lengthOfLength; ++i) {
-            byte[] dataByte = new byte[]{reader.getByte()};
-            long val = dataByte[0] & 0xff;
-            length += ((long) val) << (8 * pow);
+            int val = reader.getUByte();
+            length += val << (8 * pow);
             pow--;
         }
         if (length < 0 || length > Integer.MAX_VALUE) {
@@ -212,4 +193,3 @@ public class RlpStreamDecoder {
         return (int) length;
     }
 }
-

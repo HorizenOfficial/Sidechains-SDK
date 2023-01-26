@@ -86,11 +86,11 @@ class SCEvmBootstrap(AccountChainSetup):
 
         # Test estimating SC to MC withdrawal
         # data from AccountTransactionApiRouteTest
-        data = '0x9950a60fdbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000'
+        data = '0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000'
         to = '0x0000000000000000000011111111111111111111'
         value = '0xE8D4A51000'
         response = estimate_gas(sc_node, self.evm_address, to_address=to, data=data, value=value)
-        assert_equal('0x5f3f', response['result'])
+        assert_equal('0x5f3e', response['result'])
 
 
 if __name__ == "__main__":
