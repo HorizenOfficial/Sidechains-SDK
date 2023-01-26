@@ -306,6 +306,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
             throw new RuntimeException(e);
         } finally {
             sidechainIdFe.freeFieldElement();
+            newSigningKey.freePublicKey();
         }
         return messageAsBytes;
     }
