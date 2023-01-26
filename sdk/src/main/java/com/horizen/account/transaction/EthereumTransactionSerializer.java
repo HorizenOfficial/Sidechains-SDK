@@ -26,16 +26,11 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
     // because of here used message length integer needed for decoding
     @Override
     public void serialize(EthereumTransaction tx, Writer writer) {
-        byte[] encodedMessage = tx.encode(tx.isSigned());
-
-        writer.putInt(encodedMessage.length);
-        writer.putBytes(encodedMessage);
+        tx.encode(tx.isSigned(), writer);
     }
 
     @Override
     public EthereumTransaction parse(Reader reader) {
-        var length = reader.getInt();
-        var encodedMessage = reader.getBytes(length);
-        return EthereumTransactionDecoder.decode(encodedMessage);
+        return EthereumTransactionDecoder.decode(reader);
     }
 }
