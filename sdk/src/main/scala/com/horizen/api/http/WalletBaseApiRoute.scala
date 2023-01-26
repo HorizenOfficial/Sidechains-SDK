@@ -8,7 +8,7 @@ import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages
 import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.WalletBaseErrorResponse.{ErrorFailedToParseSecret, ErrorPropositionNotFound, ErrorPropositionNotMatch, ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
-import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqCreateKey, ReqDumpWallet, ReqExportSecret, ReqImportSecret, RespAllPublicKeys, RespCreatePrivateKey, RespCreateVrfSecret, RespDumpSecrets, RespExportSecret, RespImportSecrets}
+import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqCreateKey, ReqDumpSecrets, ReqExportSecret, ReqImportSecret, ReqImportSecrets, RespAllPublicKeys, RespCreatePrivateKey, RespCreateVrfSecret, RespDumpSecrets, RespExportSecret, RespImportSecrets}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.companion.SidechainSecretsCompanion
@@ -166,7 +166,7 @@ abstract class WalletBaseApiRoute[
    */
   def dumpSecrets: Route = (post & path("dumpSecrets")) {
     withAuth {
-      entity(as[ReqDumpWallet]) { body =>
+      entity(as[ReqDumpSecrets]) { body =>
         val writer = new PrintWriter(new File(body.path))
         writer.write(s"# Secrets dump created on ${java.time.Instant.now()} \n")
         withNodeView { sidechainNodeView =>
@@ -187,7 +187,7 @@ abstract class WalletBaseApiRoute[
    */
   def importSecrets: Route = (post & path("importSecrets")) {
     withAuth {
-      entity(as[ReqDumpWallet]) { body =>
+      entity(as[ReqImportSecrets]) { body =>
         val reader = new Scanner(new File(body.path))
 
         //First collect every secrets and verify that their public image match with the corresponding public key in the file.
@@ -207,7 +207,7 @@ abstract class WalletBaseApiRoute[
                   secrets.add((value, lineNumber))
                 }
               case Failure(e) =>
-                log.error(s"Import Wallet: Failed to parse the secret: ${keyPair(0)}")
+                log.error(s"Import Wallet: Failed to parse the secret: ${keyPair(0)}", e)
                 error = JOptional.of(ErrorFailedToParseSecret(s"Failed to parse the secret at line $lineNumber", JOptional.of(e)))
             }
           }
@@ -228,7 +228,7 @@ abstract class WalletBaseApiRoute[
                 log.info("Import Wallet: Successfully added the proposition: "+BytesUtils.toHexString(secret._1.publicImage().bytes()))
                 successfullyAdded += 1
               case Failure(e) =>
-                log.error("Import Wallet: Failed to add the proposition: "+BytesUtils.toHexString(secret._1.publicImage().bytes()))
+                log.error("Import Wallet: Failed to add the proposition: "+BytesUtils.toHexString(secret._1.publicImage().bytes()), e)
                 failedToAdd += 1
                 errorDetail.add(ImportSecretsDetail(secret._2, e.getMessage))
             }
@@ -272,15 +272,20 @@ object WalletBaseRestScheme {
   case class RespExportSecret(privKey: String)  extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  case class ReqDumpWallet(path: String) {
+  case class ReqImportSecrets(path: String) {
+    require(path.nonEmpty, "Path cannot be empty!")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  case class RespImportSecrets(successfullyAdded: Int, failedToAdd: Int, summary: util.ArrayList[ImportSecretsDetail])  extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  case class ReqDumpSecrets(path: String) {
     require(path.nonEmpty, "Path cannot be empty!")
   }
 
   @JsonView(Array(classOf[Views.Default]))
   case class RespDumpSecrets(status: String)  extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  case class RespImportSecrets(successfullyAdded: Int, failedToAdd: Int, summary: util.ArrayList[ImportSecretsDetail])  extends SuccessResponse
 
 }
 

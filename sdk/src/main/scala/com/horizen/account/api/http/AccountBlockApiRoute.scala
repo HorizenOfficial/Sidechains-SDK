@@ -13,6 +13,7 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.serialization.Views
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.serialization.SparkzSerializer
+
 import java.util.{Optional => JOptional}
 import scala.concurrent.ExecutionContext
 import com.fasterxml.jackson.annotation.JsonUnwrapped
@@ -23,6 +24,8 @@ import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfe
 import com.horizen.account.utils.AccountPayment
 import com.horizen.api.http.BlockBaseErrorResponse.ErrorInvalidBlockId
 import com.horizen.api.http.SuccessResponse
+import com.horizen.params.NetworkParams
+
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
@@ -31,7 +34,8 @@ case class AccountBlockApiRoute(
                                   sidechainNodeViewHolderRef: ActorRef,
                                   sidechainBlockActorRef: ActorRef,
                                   companion: SparkzSerializer[SidechainTypes#SCAT],
-                                  forgerRef: ActorRef)
+                                  forgerRef: ActorRef,
+                                  params: NetworkParams)
                                  (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
   extends BlockBaseApiRoute[
     SidechainTypes#SCAT,
@@ -42,7 +46,7 @@ case class AccountBlockApiRoute(
     NodeAccountState,
     NodeWalletBase,
     NodeAccountMemoryPool,
-    AccountNodeView] (settings, sidechainBlockActorRef, companion, forgerRef){
+    AccountNodeView] (settings, sidechainBlockActorRef, companion, forgerRef, params){
 
   override val route: Route = pathPrefix("block") {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ getFeePayments ~ getForwardTransfers ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo

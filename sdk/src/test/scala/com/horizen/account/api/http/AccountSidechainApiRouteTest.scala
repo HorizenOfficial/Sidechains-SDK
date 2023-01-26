@@ -194,7 +194,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val sidechainTransactionApiRoute: Route = AccountTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,sidechainTransactionsCompanion, params, CircuitTypes.NaiveThresholdSignatureCircuit).route
   val sidechainWalletApiRoute: Route = AccountWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
-  val sidechainBlockApiRoute: Route = AccountBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef).route
+  val sidechainBlockApiRoute: Route = AccountBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params).route
 
   val basePath: String
 

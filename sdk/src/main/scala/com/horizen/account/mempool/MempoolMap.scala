@@ -414,23 +414,26 @@ class MempoolMap(
         tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
       }
 
-      val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
-      val forcedTxQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
+      // used in some scenario (only regtest) where use is made of http api 'generate' setting explicitly some
+      // transactions to be included in a forged block
+      val forcedTxQueue = new mutable.Queue[SidechainTypes#SCAT]()
 
+      val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
 
       executableTxs.foreach { case (_, mapOfTxsPerAccount) =>
         val tx = getTransaction(mapOfTxsPerAccount.values.head).get
         orderedQueue.enqueue(tx)
       }
-      // TODO check there are not duplicates in orderedQueue
       forcedTx.foreach(
         forcedTxQueue.enqueue(_)
       )
 
-      override def hasNext: Boolean = orderedQueue.nonEmpty || forcedTxQueue.nonEmpty
+      override def hasNext: Boolean = forcedTxQueue.nonEmpty || orderedQueue.nonEmpty
 
       override def next(): SidechainTypes#SCAT = {
-        val nextTx = if (orderedQueue.nonEmpty) {
+        if (forcedTxQueue.nonEmpty) {
+          forcedTxQueue.dequeue()
+        } else {
           val bestTx = orderedQueue.dequeue()
           val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
           if (nextTxIdOpt.nonEmpty) {
@@ -438,30 +441,24 @@ class MempoolMap(
             orderedQueue.enqueue(tx)
           }
           bestTx
-        } else {
-          forcedTxQueue.dequeue()
         }
-        nextTx
       }
 
       def peek: SidechainTypes#SCAT = {
-        val peek = if (orderedQueue.nonEmpty) {
-          orderedQueue.head
-        } else {
+        if (forcedTxQueue.nonEmpty) {
           forcedTxQueue.head
+        } else {
+          orderedQueue.head
         }
-        peek
       }
 
       def removeAndSkipAccount(): SidechainTypes#SCAT = {
-        val removed = if (orderedQueue.nonEmpty) {
-          orderedQueue.dequeue()
-        } else {
+        if (forcedTxQueue.nonEmpty) {
           forcedTxQueue.dequeue()
+        } else {
+          orderedQueue.dequeue()
         }
-        removed
       }
-
     }
 
     override def iterator: TransactionsByPriceAndNonceIter = {

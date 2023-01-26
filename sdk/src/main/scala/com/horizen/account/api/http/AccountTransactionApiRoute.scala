@@ -117,7 +117,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 nonce,
                 body.gasPrice,
                 body.gasLimit,
-                body.value.orNull,
+                body.value.getOrElse(BigInteger.ZERO),
                 EthereumTransactionUtils.getDataFromString(body.data),
                 if (body.signature_v.isDefined)
                   new SignatureSecp256k1(
@@ -170,7 +170,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 nonce,
                 body.gasPrice,
                 body.gasLimit,
-                body.value.orNull,
+                body.value.getOrElse(BigInteger.ZERO),
                 EthereumTransactionUtils.getDataFromString(body.data),
                 if (body.signature_v.isDefined)
                   new SignatureSecp256k1(
@@ -206,7 +206,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     withAuth {
       entity(as[ReqEIP1559Transaction]) { body =>
 
-        val txCost = body.value
+        val txCost = body.value.getOrElse(BigInteger.ZERO)
           .add(body.gasLimit.multiply(body.maxFeePerGas))
 
         // lock the view and try to create CoreTransaction
@@ -223,7 +223,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 body.gasLimit,
                 body.maxPriorityFeePerGas,
                 body.maxFeePerGas,
-                body.value,
+                body.value.getOrElse(BigInteger.ZERO),
                 EthereumTransactionUtils.getDataFromString(body.data),
                 if (body.signature_v.isDefined)
                   new SignatureSecp256k1(
@@ -859,13 +859,13 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqEIP1559Transaction(
-                                                 from: Option[String],
                                                  to: Option[String],
+                                                 from: Option[String],
                                                  nonce: Option[BigInteger],
                                                  gasLimit: BigInteger,
                                                  maxPriorityFeePerGas: BigInteger,
                                                  maxFeePerGas: BigInteger,
-                                                 value: BigInteger,
+                                                 value: Option[BigInteger],
                                                  data: String,
                                                  signature_v: Option[String] = None,
                                                  signature_r: Option[String] = None,

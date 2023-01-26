@@ -274,7 +274,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqEIP1559Transaction(Option.apply("1234567890123456789012345678901234567890"),
           Option.apply("2234567890123456789012345678901234567890"), Option.apply(BigInteger.ONE),
           BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, BigInteger.ONE,
-          BigInteger.ONE, "")))~> sidechainTransactionApiRoute ~> check {
+          Option.apply(BigInteger.ONE), "")))~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
@@ -310,7 +310,6 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        val qqq = mapper.readTree(entityAs[String])
         if (result == null)
           fail("Serialization failed for objecgit SidechainApiResponseBody")
 

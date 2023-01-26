@@ -11,9 +11,11 @@ import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.ZenBox
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.serialization.SparkzSerializer
+
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
@@ -24,7 +26,8 @@ case class SidechainBlockApiRoute(
                                    sidechainNodeViewHolderRef: ActorRef,
                                    sidechainBlockActorRef: ActorRef,
                                    companion: SparkzSerializer[SidechainTypes#SCBT],
-                                   forgerRef: ActorRef)
+                                   forgerRef: ActorRef,
+                                   params: NetworkParams)
                                  (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
   extends BlockBaseApiRoute[
     SidechainTypes#SCBT,
@@ -35,7 +38,7 @@ case class SidechainBlockApiRoute(
     NodeState,
     NodeWallet,
     NodeMemoryPool,
-    SidechainNodeView] (settings, sidechainBlockActorRef, companion, forgerRef){
+    SidechainNodeView] (settings, sidechainBlockActorRef, companion, forgerRef, params){
 
   override val route: Route = pathPrefix("block") {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ findBlockInfoById ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
