@@ -9,7 +9,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_blocks, generate_next_block, generate_cert_signer_secrets
+    start_sc_nodes, generate_next_blocks, generate_next_block, generate_cert_signer_secrets, get_withdrawal_epoch
 from SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
 from httpCalls.block.best import http_block_best
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
@@ -147,8 +147,8 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         # Try to change the signing key 0
         new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
         new_public_key = new_signing_key.publicKey
-        withdrawal_epoch = self.sc_withdrawal_epoch_length
-        new_signing_key_message = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, withdrawal_epoch)["keyRotationMessageToSign"]
+        epoch = get_withdrawal_epoch(sc_node)
+        new_signing_key_message = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message,
@@ -185,7 +185,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         # Change again the same signature key
         new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
         new_public_key_2 = new_signing_key_2.publicKey
-        new_signing_key_message_2 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_signing_key_message_2 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_2,
@@ -226,8 +226,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         # Try to update signing key 0
         new_signing_key_3 = generate_cert_signer_secrets("random_seed3", 1)[0]
         new_public_key_3 = new_signing_key_3.publicKey
-        withdrawal_epoch = self.sc_withdrawal_epoch_length
-        new_signing_key_message_3 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_3, withdrawal_epoch)["keyRotationMessageToSign"]
+        new_signing_key_message_3 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_3, epoch)["keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_3,
