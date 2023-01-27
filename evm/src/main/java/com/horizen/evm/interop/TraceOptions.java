@@ -19,7 +19,7 @@ public class TraceOptions {
         enableReturnData = false;
         tracer = null;
         timeout = null;
-        tracerConfig = null;
+        tracerConfig = new TracerConfig();
     }
 
     public boolean isEnableMemory() {

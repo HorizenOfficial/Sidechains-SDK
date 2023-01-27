@@ -8,11 +8,15 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/params"
 	"math"
 	"math/big"
+	"strconv"
 	"time"
+
+	_ "github.com/ethereum/go-ethereum/eth/tracers/native"
 )
 
 type EvmParams struct {
@@ -38,10 +42,31 @@ type EvmContext struct {
 }
 
 type TraceOptions struct {
-	EnableMemory     bool `json:"enableMemory"`
-	DisableStack     bool `json:"disableStack"`
-	DisableStorage   bool `json:"disableStorage"`
-	EnableReturnData bool `json:"enableReturnData"`
+	EnableMemory     bool          `json:"enableMemory"`
+	DisableStack     bool          `json:"disableStack"`
+	DisableStorage   bool          `json:"disableStorage"`
+	EnableReturnData bool          `json:"enableReturnData"`
+	Tracer           *string       `json:"tracer"`
+	Timeout          *string       `json:"timeout"`
+	TracerConfig     *TracerConfig `json:"tracerConfig"`
+}
+
+type TracerConfig struct {
+	OnlyTopCall bool `json:"onlyTopCall"`
+	WithLog     bool `json:"withLog"`
+}
+
+type CallFrame struct {
+	Type    string      `json:"type"`
+	From    string      `json:"from"`
+	To      string      `json:"to,omitempty"`
+	Value   string      `json:"value,omitempty"`
+	Gas     string      `json:"gas"`
+	GasUsed string      `json:"gasUsed"`
+	Input   string      `json:"input"`
+	Output  string      `json:"output,omitempty"`
+	Error   string      `json:"error,omitempty"`
+	Calls   []CallFrame `json:"calls,omitempty"`
 }
 
 // setDefaults for parameters that were omitted
@@ -111,17 +136,30 @@ func (c *EvmContext) getChainConfig() *params.ChainConfig {
 	}
 }
 
-func (t *TraceOptions) getTracer() *logger.StructLogger {
+func (t *TraceOptions) getTracer() tracers.Tracer {
 	if t == nil {
 		return nil
 	}
-	traceConfig := logger.Config{
-		EnableMemory:     t.EnableMemory,
-		DisableStack:     t.DisableStack,
-		DisableStorage:   t.DisableStorage,
-		EnableReturnData: t.EnableReturnData,
+	if t.Tracer != nil {
+		var onlyTopCall = "false"
+		var withLog = "false"
+		if t.TracerConfig != nil {
+			onlyTopCall = strconv.FormatBool(t.TracerConfig.OnlyTopCall)
+			withLog = strconv.FormatBool(t.TracerConfig.WithLog)
+		}
+		var TracerConfig = json.RawMessage(`{"onlyTopCall": ` + onlyTopCall + `,"withLog": ` + withLog + `}`)
+		var returnTracer tracers.Tracer
+		returnTracer, _ = tracers.New(*t.Tracer, nil, TracerConfig)
+		return returnTracer
+	} else {
+		traceConfig := logger.Config{
+			EnableMemory:     t.EnableMemory,
+			DisableStack:     t.DisableStack,
+			DisableStorage:   t.DisableStorage,
+			EnableReturnData: t.EnableReturnData,
+		}
+		return logger.NewStructLogger(&traceConfig)
 	}
-	return logger.NewStructLogger(&traceConfig)
 }
 
 func mockBlockHashFn(n uint64) common.Hash {
@@ -130,12 +168,14 @@ func mockBlockHashFn(n uint64) common.Hash {
 }
 
 type EvmResult struct {
-	UsedGas         uint64                `json:"usedGas"`
-	EvmError        string                `json:"evmError"`
-	ReturnData      []byte                `json:"returnData"`
-	ContractAddress *common.Address       `json:"contractAddress"`
-	TraceLogs       []logger.StructLogRes `json:"traceLogs,omitempty"`
-	Reverted        bool                  `json:"reverted"`
+	UsedGas            uint64                `json:"usedGas"`
+	EvmError           string                `json:"evmError"`
+	ReturnData         []byte                `json:"returnData"`
+	ContractAddress    *common.Address       `json:"contractAddress"`
+	TraceLogs          []logger.StructLogRes `json:"traceLogs,omitempty"`
+	FourByteTracerLogs map[string]int        `json:"fourByteTracerLogs,omitempty"`
+	CallTracerLogs     *CallFrame            `json:"callTracerLogs,omitempty"`
+	Reverted           bool                  `json:"reverted"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -229,12 +269,26 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		if traceErr != nil {
 			return fmt.Errorf("trace error: %v", traceErr), nil
 		}
-		// unfortunately, there is no way to get the tracer results without json marshaling, so we unmarshal again here
-		var traceResult *logger.ExecutionResult
-		if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
-			return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
+
+		if params.TraceOptions.Tracer == nil { // Struct/opcode logger
+			var traceResult *logger.ExecutionResult
+			if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
+				return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
+			}
+			result.TraceLogs = traceResult.StructLogs
+		} else if *params.TraceOptions.Tracer == "4byteTracer" { // 4byteTracer logger
+			var traceResult map[string]int
+			if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
+				return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
+			}
+			result.FourByteTracerLogs = traceResult
+		} else if *params.TraceOptions.Tracer == "callTracer" { // callTracer logger
+			var traceResult *CallFrame
+			if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
+				return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
+			}
+			result.CallTracerLogs = traceResult
 		}
-		result.TraceLogs = traceResult.StructLogs
 	}
 
 	return nil, &result

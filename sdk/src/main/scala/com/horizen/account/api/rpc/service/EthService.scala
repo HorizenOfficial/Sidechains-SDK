@@ -21,7 +21,7 @@ import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.{EvmResult, TraceOptions}
+import com.horizen.evm.interop.{EvmResult, NativeTracers, TraceOptions}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -35,8 +35,11 @@ import sparkz.core.{NodeViewHolder, bytesToId}
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.JavaConverters.mapAsScalaMap
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -533,16 +536,18 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
-  def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
+  def traceBlockByNumber(number: String, config: TraceOptions): Any = {
     val hash: Hash = {
       applyOnAccountView { nodeView =>
-        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))}}
+        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))
+      }
+    }
     traceBlockByHash(hash, config)
   }
 
   @RpcMethod("debug_traceBlockByHash")
   @RpcOptionalParameters(1)
-  def traceBlockByHash(hash: Hash, config: TraceOptions): DebugTraceBlockView = {
+  def traceBlockByHash(hash: Hash, config: TraceOptions): Any = {
     applyOnAccountView { nodeView =>
       // get block to trace
       val (block, blockInfo) = getBlockById(nodeView, bytesToId(hash.toBytes))
@@ -561,19 +566,38 @@ class EthService(
 
         // apply all transaction, collecting traces on the way
         val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
-          blockContext.setEvmResult(EvmResult.emptyEvmResult())
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
           blockContext.getEvmResult
         })
 
-        new DebugTraceBlockView(evmResults.toArray)
+        if(config!=null && config.getTracer!=null) {
+          // callTracer
+          if (config.getTracer == NativeTracers.CALL_TRACER.toString) {
+            val callTracerBlockView = new CallTracerBlockView(evmResults.toArray)
+            callTracerBlockView.getCallTracerTransactionViews
+          }
+          // 4byteTracer
+          else if (config.getTracer == NativeTracers.FOUR_BYTE_TRACER.toString) {
+            val fourByteTracerReturnList = new ListBuffer[mutable.Map[String, Integer]]
+            for (evmResult <- evmResults) {
+              if(evmResult!=null)
+                fourByteTracerReturnList += mapAsScalaMap(evmResult.fourByteTracerLogs)
+            }
+            fourByteTracerReturnList
+          }
+        }
+        // Struct/opcode logger
+        else {
+          val debugTraceBlockView = new DebugTraceBlockView(evmResults.toArray)
+          debugTraceBlockView.getDebugTraceTransactionViews
+        }
       }
     }
   }
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, config: TraceOptions): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: Hash, config: TraceOptions): Any = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -607,7 +631,25 @@ class EthService(
         blockContext.setEvmResult(EvmResult.emptyEvmResult())
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
-        new DebugTraceTransactionView(blockContext.getEvmResult)
+        if (config != null && config.getTracer != null) {
+          // callTracer
+          if (config.getTracer == NativeTracers.CALL_TRACER.toString) {
+            if (blockContext.getEvmResult.callTracerLogs != null) {
+              new CallTracerTransactionView(blockContext.getEvmResult)
+            } else Unit
+          }
+          // 4byteTracer
+          else if (config.getTracer == NativeTracers.FOUR_BYTE_TRACER.toString) {
+            if (blockContext.getEvmResult.fourByteTracerLogs != null) {
+              blockContext.getEvmResult.fourByteTracerLogs
+            } else Unit
+          }
+        }
+        // Struct/opcode logger
+        else {
+          if(blockContext.getEvmResult.traceLogs != null)
+            new DebugTraceTransactionView(blockContext.getEvmResult)
+        }
       }
     }
   }

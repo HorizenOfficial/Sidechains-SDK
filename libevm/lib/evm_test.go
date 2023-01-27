@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestEvmTrace(t *testing.T) {
+func TestEvmStructLogger(t *testing.T) {
 	var (
 		instance     = New()
 		err          error
@@ -68,6 +68,140 @@ func TestEvmTrace(t *testing.T) {
 	}
 }
 
+func TestEvmCallTracer(t *testing.T) {
+	var (
+		instance     = New()
+		err          error
+		initialValue = common.Big0
+		sender       = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
+	)
+	dbHandle := instance.OpenMemoryDB()
+	err, stateDbHandle := instance.StateOpen(StateParams{
+		DatabaseParams: DatabaseParams{
+			DatabaseHandle: dbHandle,
+		},
+		Root: common.Hash{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var TracerName = "callTracer"
+	err, _ = instance.EvmApply(EvmParams{
+		HandleParams: HandleParams{
+			Handle: stateDbHandle,
+		},
+		From:  sender,
+		To:    nil,
+		Input: test.StorageContractDeploy(initialValue),
+		Context: EvmContext{
+			Coinbase: common.Address{},
+			BaseFee:  (*hexutil.Big)(new(big.Int)),
+		},
+		TraceOptions: &TraceOptions{
+			EnableMemory:     true,
+			DisableStack:     false,
+			DisableStorage:   false,
+			EnableReturnData: true,
+			Tracer:           &TracerName,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestEvmCallTracerWithTracerConfig(t *testing.T) {
+	var (
+		instance     = New()
+		err          error
+		initialValue = common.Big0
+		sender       = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
+	)
+	dbHandle := instance.OpenMemoryDB()
+	err, stateDbHandle := instance.StateOpen(StateParams{
+		DatabaseParams: DatabaseParams{
+			DatabaseHandle: dbHandle,
+		},
+		Root: common.Hash{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var TracerName = "callTracer"
+	err, _ = instance.EvmApply(EvmParams{
+		HandleParams: HandleParams{
+			Handle: stateDbHandle,
+		},
+		From:  sender,
+		To:    nil,
+		Input: test.StorageContractDeploy(initialValue),
+		Context: EvmContext{
+			Coinbase: common.Address{},
+			BaseFee:  (*hexutil.Big)(new(big.Int)),
+		},
+		TraceOptions: &TraceOptions{
+			EnableMemory:     true,
+			DisableStack:     false,
+			DisableStorage:   false,
+			EnableReturnData: true,
+			Tracer:           &TracerName,
+			TracerConfig: &TracerConfig{
+				OnlyTopCall: true,
+				WithLog:     true,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestEvmFourByteTrace(t *testing.T) {
+	var (
+		instance     = New()
+		err          error
+		initialValue = common.Big0
+		sender       = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
+	)
+	dbHandle := instance.OpenMemoryDB()
+	err, stateDbHandle := instance.StateOpen(StateParams{
+		DatabaseParams: DatabaseParams{
+			DatabaseHandle: dbHandle,
+		},
+		Root: common.Hash{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var TracerName = "4byteTracer"
+	err, _ = instance.EvmApply(EvmParams{
+		HandleParams: HandleParams{
+			Handle: stateDbHandle,
+		},
+		From:  sender,
+		To:    nil,
+		Input: test.StorageContractDeploy(initialValue),
+		Context: EvmContext{
+			Coinbase: common.Address{},
+			BaseFee:  (*hexutil.Big)(new(big.Int)),
+		},
+		TraceOptions: &TraceOptions{
+			EnableMemory:     true,
+			DisableStack:     false,
+			DisableStorage:   false,
+			EnableReturnData: true,
+			Tracer:           &TracerName,
+			TracerConfig: &TracerConfig{
+				OnlyTopCall: true,
+				WithLog:     true,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestEvmOpCodes(t *testing.T) {
 	var (
 		instance = New()
@@ -81,13 +215,27 @@ func TestEvmOpCodes(t *testing.T) {
 	_, statedb := instance.statedbs.Get(stateHandle)
 
 	// deploy "OpCodes" contract
-	_, resultDeploy := instance.EvmApply(EvmParams{
+
+	var evmParamsTemp = EvmParams{
 		HandleParams: HandleParams{Handle: stateHandle},
 		From:         user,
 		To:           nil,
 		Input:        test.OpCodesContractDeploy(),
 		AvailableGas: 200000,
-	})
+	}
+	err, resultDeploy := instance.EvmApply(evmParamsTemp)
+	/*
+		err, resultDeploy := instance.EvmApply(EvmParams{
+			HandleParams: HandleParams{Handle: stateHandle},
+			From:         user,
+			To:           nil,
+			Input:        test.OpCodesContractDeploy(),
+			AvailableGas: 200000,
+		})
+	*/
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resultDeploy.EvmError != "" {
 		t.Fatalf("vm error: %v", resultDeploy.EvmError)
 	}
