@@ -1,11 +1,14 @@
 package com.horizen.account.transaction;
 
 import com.google.common.primitives.Bytes;
+import com.horizen.account.event.EthereumEvent;
 import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.RlpStreamDecoder;
 import com.horizen.utils.BytesUtils;
+import org.bouncycastle.util.Arrays;
 import org.junit.Test;
+import org.web3j.abi.datatypes.Address;
 import org.web3j.rlp.RlpEncoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
@@ -119,7 +122,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
     }
 
     @Test
-    public void rlpCodecSentence2() {
+    public void rlpCodecSentence() {
 
         // https://en.wikipedia.org/wiki/Lorem_ipsum
         // the string "Lorem ipsum dolor sit amet, consectetur adipiscing elit!" =
@@ -141,6 +144,31 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         checkRlpString(decodedSentence, sentence);
     }
 
+    @Test
+    public void rlpCodecConcatenatedSentences() {
+        ArrayList<String> sentences = new ArrayList<>();
+        sentences.add("Under the lying stone water does not flow");
+        sentences.add("Every man is sociable until a cow invades his garden");
+
+        RlpString rlpEncodedString1 = RlpString.create(sentences.get(0));
+        byte[] encodedBytes1 = RlpEncoder.encode(rlpEncodedString1);
+
+        RlpString rlpEncodedString2 = RlpString.create(sentences.get(1));
+        byte[] encodedBytes2 = RlpEncoder.encode(rlpEncodedString2);
+
+        byte[] joinedEcodedBytes = Bytes.concat(encodedBytes1, encodedBytes2);
+
+        Reader r = new VLQByteBufferReader(ByteBuffer.wrap(joinedEcodedBytes));
+
+        int count = 0;
+        while (r.remaining() > 0) {
+            RlpList rlpList = RlpStreamDecoder.decode(r);
+            var decodedSentence = (RlpString) rlpList.getValues().get(0);
+            checkRlpString(decodedSentence, sentences.get(count));
+            count += 1;
+        }
+
+    }
 
     private void checkRlpString(RlpString rlpString, String s) {
         String hexStr = Numeric.cleanHexPrefix(rlpString.asString());
@@ -246,4 +274,54 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         assertEquals(ethTxDecoded1, ethTxDecoded2);
         assertEquals(ethTx, ethTxDecoded1);
     }
+
+    @Test
+    public void rlpEthTxWithTrailingBytes() {
+        EthereumTransaction ethTx = getEoa2EoaLegacyTransaction();
+
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        ethTx.encode(true, writer);
+        byte[] encodedBytes = writer.result().toBytes();
+
+        byte[] encodedBytesWithTrailingData =
+                Bytes.concat(encodedBytes, BytesUtils.fromHexString("badcaffe"));
+
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(encodedBytesWithTrailingData));
+        assertThrows(
+                "Exception expected, because trailing data are not RLP encoded",
+                java.lang.RuntimeException.class,
+                () ->
+                {
+                    while (reader.remaining() > 0) {
+                        RlpStreamDecoder.decode(reader);
+                    }
+                }
+        );
+    }
+
+    @Test
+    public void rlpEthTxWithTrimmedBytes() {
+        EthereumTransaction ethTx = getEoa2EoaLegacyTransaction();
+
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        ethTx.encode(true, writer);
+        byte[] encodedBytes = writer.result().toBytes();
+
+        byte[] encodedBytesWithTrimmedData =
+                Arrays.copyOf(encodedBytes, encodedBytes.length-2);
+
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(encodedBytesWithTrimmedData));
+        assertThrows(
+                "Exception expected, because data are not a complete RLP encoded array",
+                java.lang.RuntimeException.class,
+                () ->
+                {
+                    while (reader.remaining() > 0) {
+                        RlpStreamDecoder.decode(reader);
+                    }
+                }
+        );
+    }
+
+
 }

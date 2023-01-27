@@ -114,7 +114,9 @@ public class RlpStreamDecoder {
 
                     // Input validation
                     if (reader.remaining() < strLen) {
-                        throw new RuntimeException("RLP length mismatch");
+                        throw new RuntimeException(
+                                "RLP length mismatch: remaining bytes in stream reader: " + reader.remaining() +
+                                ", wanted: " + strLen);
                     }
 
                     byte[] rlpData = reader.getBytes(strLen);
@@ -183,8 +185,7 @@ public class RlpStreamDecoder {
         byte pow = (byte) (lengthOfLength - 1);
         long length = 0;
         for (int i = 1; i <= lengthOfLength; ++i) {
-            int val = reader.getUByte();
-            length += val << (8 * pow);
+            length += reader.getUByte() << (8 * pow);
             pow--;
         }
         if (length < 0 || length > Integer.MAX_VALUE) {
