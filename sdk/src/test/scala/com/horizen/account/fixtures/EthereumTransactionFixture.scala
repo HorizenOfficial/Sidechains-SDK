@@ -7,6 +7,7 @@ import com.horizen.account.state.GasUtil
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.EthereumTransactionUtils
 import com.horizen.utils.BytesUtils
+import org.mockito.Mockito
 
 import java.lang
 import java.math.BigInteger
@@ -223,6 +224,11 @@ trait EthereumTransactionFixture {
     )
   }
 
+  def createMockTxWithSize(txToMock: EthereumTransaction, size: Long): EthereumTransaction = {
+    val tx = Mockito.spy[EthereumTransaction](txToMock)
+    Mockito.when(tx.size()).thenReturn(size)
+    tx
+  }
 
   def copyEip1599EthereumTransaction(
                                       inTx: EthereumTransaction,

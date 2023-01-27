@@ -94,6 +94,7 @@ class MempoolMapTest
       expectedNumOfTxs,
       mempoolMap.size
     )
+    assertEquals("Wrong mem pool size in slots", 0, mempoolMap.getMempoolSizeInSlots())
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -638,6 +639,7 @@ class MempoolMapTest
     assertTrue("Removing transaction failed", res.isSuccess)
     mempoolMap = res.get
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
+    assertEquals("Wrong mem pool size in slots", 0, mempoolMap.getMempoolSizeInSlots())
     assertEquals(
       "Wrong number of total transactions",
       expectedNumOfTxs,
@@ -666,6 +668,7 @@ class MempoolMapTest
     assertTrue("Removing transaction failed", res.isSuccess)
     mempoolMap = res.get
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
+    assertEquals("Wrong mem pool size in slots", 0, mempoolMap.getMempoolSizeInSlots())
     assertEquals(
       "Wrong number of total transactions",
       expectedNumOfTxs,
@@ -699,6 +702,8 @@ class MempoolMapTest
     assertTrue(s"Removing transaction failed $res", res.isSuccess)
     mempoolMap = res.get
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
+    assertEquals("Wrong mem pool size in slots", 5, mempoolMap.getMempoolSizeInSlots())
+
     assertEquals(
       "Wrong number of total transactions",
       expectedNumOfTxs,
@@ -1045,7 +1050,7 @@ class MempoolMapTest
   }
 
   @Test
-  def txSizeInSlotTest(): Unit = {
+  def testTxSizeInSlot(): Unit = {
 
     val invalidNegativeSize = -1L
     assertThrows[IllegalArgumentException]("Negative size values are not allowed", MempoolMap.bytesToSlot(invalidNegativeSize))
@@ -1154,7 +1159,7 @@ class MempoolMapTest
         "Adding transaction failed",
         mempoolMap.add(
           createMockTxWithSize(
-            Some(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt)),
+            createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt),
             MempoolMap.MaxTxSize
           )
         ).isSuccess
@@ -1164,7 +1169,7 @@ class MempoolMapTest
     assertEquals("Wrong account size in slots", 8, mempoolMap.getAccountSizeInSlots(exceedingTx.getFrom))
 
     exceedingTx = createMockTxWithSize(
-      Some(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account1KeyOpt)),
+      createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account1KeyOpt),
       MempoolMap.MaxTxSize
     )
 
@@ -1218,12 +1223,12 @@ class MempoolMapTest
     // (so it should be rejected)
 
     exceedingTx = createMockTxWithSize(
-      Some(createEIP1559Transaction(value = BigInteger.TWO,
+      createEIP1559Transaction(value = BigInteger.TWO,
         nonce = txToReplace.getNonce,
         keyOpt = account1KeyOpt,
         gasFee = txToReplace.getMaxFeePerGas.add(BigInteger.TEN),
         priorityGasFee = txToReplace.getMaxPriorityFeePerGas.add(BigInteger.TEN),
-    )),
+    ),
       MempoolMap.MaxTxSize
     )
 
@@ -1277,7 +1282,7 @@ class MempoolMapTest
     assertTrue("Adding transaction failed",
         mempoolMap.add(
           createMockTxWithSize(
-            Some(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account1KeyOpt)),
+            createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account1KeyOpt),
             MempoolMap.MaxTxSize
           )
         ).isSuccess
@@ -1285,7 +1290,7 @@ class MempoolMapTest
     assertTrue("Adding transaction failed",
       mempoolMap.add(
         createMockTxWithSize(
-          Some(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ONE, keyOpt = account2KeyOpt)),
+          createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ONE, keyOpt = account2KeyOpt),
           MempoolMap.MaxTxSize
         )
       ).isSuccess
@@ -1294,7 +1299,7 @@ class MempoolMapTest
     assertEquals("Wrong mempool size in slots", 8, mempoolMap.getMempoolSizeInSlots())
 
     exceedingTx = createMockTxWithSize(
-      Some(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account3KeyOpt)),
+      createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account3KeyOpt),
       MempoolMap.MaxTxSize
     )
 
@@ -1356,12 +1361,12 @@ class MempoolMapTest
     // (so it should be rejected)
 
     exceedingTx = createMockTxWithSize(
-      Some(createEIP1559Transaction(value = BigInteger.TWO,
+      createEIP1559Transaction(value = BigInteger.TWO,
         nonce = txToReplace2.getNonce,
         keyOpt = account2KeyOpt,
         gasFee = txToReplace2.getMaxFeePerGas.add(BigInteger.TEN),
         priorityGasFee = txToReplace2.getMaxPriorityFeePerGas.add(BigInteger.TEN),
-      )),
+      ),
       MempoolMap.MaxTxSize
     )
 
@@ -1376,11 +1381,8 @@ class MempoolMapTest
   }
 
 
-  private def createMockTxWithSize(txToMock: Option[EthereumTransaction] = None, size: Long): EthereumTransaction = {
-    val dummyTx = txToMock match {
-      case Some(tx) => tx
-      case None => createEIP1559Transaction(value = BigInteger.ONE)
-    }
+  private def createMockTxWithSize(size: Long): EthereumTransaction = {
+    val dummyTx = createEIP1559Transaction(value = BigInteger.ONE)
     val tx = Mockito.spy[EthereumTransaction](dummyTx)
     Mockito.when(tx.size()).thenReturn(size)
     tx

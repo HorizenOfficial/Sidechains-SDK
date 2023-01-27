@@ -281,8 +281,9 @@ class MempoolMap(
     }
     appliedTxNoncesByAccount.foreach { case (account, nonce) =>
       updateAccount(account, nonce)
-
     }
+
+    checkMempoolSize()
   }
 
   private[mempool] def updateAccountWithRevertedNonce(
@@ -422,7 +423,7 @@ class MempoolMap(
 
   }
 
-  private[mempool]  def existRejectedTxsWithValidNonce(rejectedTxs: Seq[SidechainTypes#SCAT], expectedNonce: BigInteger): Boolean = {
+  private[mempool] def existRejectedTxsWithValidNonce(rejectedTxs: Seq[SidechainTypes#SCAT], expectedNonce: BigInteger): Boolean = {
     rejectedTxs.nonEmpty && rejectedTxs.last.getNonce.compareTo(expectedNonce) >= 0
   }
 
@@ -524,6 +525,26 @@ class MempoolMap(
           nonExecutableTxs.put(account, newNonExecTxs)
         }
       }
+    }
+  }
+
+  private[mempool] def checkMempoolSize(): Unit = {
+    if (getMempoolSizeInSlots() > MaxMemPoolSlots){
+      log.warn(s"Memory pool size (${getMempoolSizeInSlots()} slots) exceeds maximum allowed size ($MaxMemPoolSlots slots). " +
+        s"Start evicting transactions")
+      while (getMempoolSizeInSlots() > MaxMemPoolSlots && nonExecutableTxs.nonEmpty) {
+        nonExecutableTxs.foreach {
+          case (_, listOfTxs) =>
+            remove(txCache(listOfTxs.last._2))
+         }
+      }
+      while (getMempoolSizeInSlots() > MaxMemPoolSlots) {
+        executableTxs.foreach {
+          case (_, listOfTxs) =>
+            remove(txCache(listOfTxs.last._2))
+        }
+      }
+
     }
   }
 
