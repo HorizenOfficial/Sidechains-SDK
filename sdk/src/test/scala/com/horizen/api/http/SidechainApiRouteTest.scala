@@ -52,7 +52,6 @@ import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, Outgoing, Pee
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 
@@ -381,7 +380,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
   val mockedSidechainApp: SidechainApp = mock[SidechainApp]
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params).route
-  val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef).route
+  val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
     SidechainBlockHeader,SidechainBlock,SidechainFeePaymentsInfo, NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route

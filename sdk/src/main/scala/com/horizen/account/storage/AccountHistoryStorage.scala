@@ -6,16 +6,16 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, Storage}
 
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 class AccountHistoryStorage(storage: Storage,
                             sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion,
                             params: NetworkParams)
-  extends AbstractHistoryStorage[AccountBlock, AccountFeePaymentsInfo, AccountHistoryStorage](
-    storage,
-    new AccountBlockSerializer(sidechainTransactionsCompanion),
+  extends AbstractHistoryStorage[
+    AccountBlock,
+    AccountFeePaymentsInfo,
+    AccountHistoryStorage](
+      storage,
+      new AccountBlockSerializer(sidechainTransactionsCompanion),
       AccountFeePaymentsInfoSerializer,
-    params)
-{
-
-}
+      params
+    ) {}

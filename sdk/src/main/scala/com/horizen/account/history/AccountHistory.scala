@@ -6,11 +6,9 @@ import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.NodeAccountHistory
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
-import com.horizen.params.{NetworkParams, NetworkParamsUtils}
+import com.horizen.params.NetworkParams
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.util.{ScorexEncoding, ScorexLogging}
-
-import java.util.{Optional => JOptional}
+import scorex.util.ScorexEncoding
 import scala.util.Try
 
 
@@ -32,13 +30,9 @@ extends com.horizen.AbstractHistory[
   AccountBlock,
   AccountFeePaymentsInfo,
   AccountHistoryStorage,
-  AccountHistory](
-    storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-  with NetworkParamsUtils
-  with ConsensusDataProvider
+  AccountHistory](storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   with ScorexEncoding
   with NodeAccountHistory
-  with ScorexLogging
 {
 
   override type NVCT = AccountHistory

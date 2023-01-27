@@ -113,8 +113,18 @@ public class EthereumTransactionDecoder {
             byte[] v = ((RlpString)values.getValues().get(6)).getBytes();
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(7)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(8)).getBytes()), 32);
-            SignatureSecp256k1 realSignature = new SignatureSecp256k1(getRealV(v), r, s);
-            Long chainId = decodeEip155ChainId(v);
+
+            Long chainId;
+            SignatureSecp256k1 realSignature;
+            if (Arrays.equals(r, new byte[32]) && Arrays.equals(s, new byte[32])) {
+                // if r and s are both 0 we assume that this signature stands for an unsigned eip155 tx object
+                // therefore v is the plain chainid and the signature is set to null
+                chainId = convertToLong(v);
+                realSignature = null;
+            } else {
+                chainId = decodeEip155ChainId(v);
+                realSignature = new SignatureSecp256k1(getRealV(v), r, s);
+            }
 
             if (chainId != null) {
                 // chain id is encoded into V part, this is an EIP 155

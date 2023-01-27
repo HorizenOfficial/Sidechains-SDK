@@ -7,38 +7,32 @@ import com.horizen.evm.interop.EvmLog
 import java.math.BigInteger
 
 // numbers based on geth implementation:
-// https://github.com/ethereum/go-ethereum/blob/v1.10.16/params/protocol_params.go
+// https://github.com/ethereum/go-ethereum/blob/v1.10.26/params/protocol_params.go
 object GasUtil {
   val TxGas: BigInteger = BigInteger.valueOf(21000)
   val TxGasContractCreation: BigInteger = BigInteger.valueOf(53000)
   val TxDataZeroGas: BigInteger = BigInteger.valueOf(4)
   val TxDataNonZeroGasEIP2028: BigInteger = BigInteger.valueOf(16)
 
-  val CallGasEIP150: BigInteger = BigInteger.valueOf(700)
-  val BalanceGasEIP1884: BigInteger = BigInteger.valueOf(700)
-  val ExtcodeHashGasEIP1884: BigInteger = BigInteger.valueOf(700)
+  val ColdAccountAccessCostEIP2929: BigInteger = BigInteger.valueOf(2600)
+  val WarmStorageReadCostEIP2929: BigInteger = BigInteger.valueOf(100)
+  val ColdSloadCostEIP2929: BigInteger = BigInteger.valueOf(2100)
+
+  val SstoreSentryGasEIP2200: BigInteger = BigInteger.valueOf(2300)
+  val SstoreSetGasEIP2200: BigInteger = BigInteger.valueOf(20000)
+  val SstoreResetGasEIP2200: BigInteger = BigInteger.valueOf(5000)
+
+  val SstoreClearsScheduleRefundEIP3529: BigInteger = BigInteger.valueOf(4800)
+
+  val CopyGas: BigInteger = BigInteger.valueOf(3)
 
   val LogGas: BigInteger = BigInteger.valueOf(375)
   val LogTopicGas: BigInteger = BigInteger.valueOf(375)
-
-  val GasTBD: BigInteger = BigInteger.valueOf(250)
-
-  // default value for the forger tip (max priority fee per gas) in the EIP1559 transaction invoking
-  // the fake smart contract for adding a new forger stake
-  // TODO set proper value.
-  val GasForgerStakeMaxPriorityFee: BigInteger = BigInteger.valueOf(120)
-
+  val LogDataGas: BigInteger = BigInteger.valueOf(8)
 
   // The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
   // up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
   val RefundQuotientEIP3529: BigInteger = BigInteger.valueOf(5)
-
-  /**
-   * Global gas limit when executing messages via RPC calls this can be larger than the block gas limit, getter's might
-   * require more gas than is ever required during a transaction.
-   * TODO: move to SidechainSettings
-   */
-  val RpcGlobalGasCap: BigInteger = BigInteger.valueOf(50000000)
 
   def intrinsicGas(data: Array[Byte], isContractCreation: Boolean): BigInteger = {
     // Set the starting gas for the raw transaction
@@ -63,10 +57,17 @@ object GasUtil {
     gas
   }
 
-  def logGas(evmLog: EvmLog): BigInteger = LogGas.add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
+  def logGas(evmLog: EvmLog): BigInteger = LogGas
+    .add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
+    .add(LogDataGas.multiply(BigInteger.valueOf(evmLog.data.length)))
+
+  def codeCopy(size: Int): BigInteger = {
+    // code size in number of 256-bit words (round up division)
+    val words = BigInteger.valueOf((size + 31) / 32)
+    CopyGas.multiply(words)
+  }
 
   def getTxFeesPerGas(tx: EthereumTransaction, baseFeePerGas: BigInteger): (BigInteger, BigInteger) = {
-
     if (tx.isEIP1559) {
       val maxFeePerGas = tx.getMaxFeePerGas
       val maxPriorityFeePerGas = tx.getMaxPriorityFeePerGas
@@ -83,5 +84,4 @@ object GasUtil {
       (baseFeePerGas, tx.getGasPrice.subtract(baseFeePerGas))
     }
   }
-
 }

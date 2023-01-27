@@ -8,9 +8,9 @@ from eth_utils import add_0x_prefix
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.account.utils import (computeForgedTxFee, convertZenToWei, convertZenToZennies,
-                                                  convertZenniesToWei)
+from SidechainTestFramework.account.utils import (computeForgedTxFee, convertZenToWei, convertZenToZennies)
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     generate_account_proposition, generate_next_block)
@@ -43,8 +43,7 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
         evm_address_sc_node_2 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
         ft_amount_in_zen = 2.0
-        ft_amount_in_zennies = convertZenToZennies(ft_amount_in_zen)
-        ft_amount_in_wei = convertZenniesToWei(ft_amount_in_zennies)
+        ft_amount_in_wei = convertZenToWei(ft_amount_in_zen)
 
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       mc_node,
@@ -119,16 +118,13 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
 
         # Create a legacy transaction moving some fund from SC2 address to an external address.
         transferred_amount_in_zen_1 = 0.022
-        transferred_amount_in_zennies_1 = convertZenToZennies(transferred_amount_in_zen_1)
-        transferred_amount_in_wei_1 = convertZenniesToWei(transferred_amount_in_zennies_1)
+        transferred_amount_in_wei_1 = convertZenToWei(transferred_amount_in_zen_1)
 
-        j = {
-            "from": evm_address_sc_node_2,
-            "to": recipient_proposition,
-            "value": transferred_amount_in_zennies_1
-        }
-        response = sc_node_2.transaction_sendCoinsToAddress(json.dumps(j))
-        tx_hash_1 = response['result']['transactionId']
+        tx_hash_1 = createLegacyTransaction(sc_node_2,
+            fromAddress=evm_address_sc_node_2,
+            toAddress=recipient_proposition,
+            value=transferred_amount_in_wei_1
+        )
         self.sc_sync_all()
 
         # Generate SC block on SC node 1
@@ -148,11 +144,13 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
             raise Exception('Unexpected error: block not found {}'.format(sc_middle_we_block_id))
         baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
 
-        tx_hash_2 = createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc_node_2,
-                                             toAddress=recipient_proposition,
-                                             gasLimit=123400, maxPriorityFeePerGas=56700,
-                                             maxFeePerGas=baseFeePerGas + 56690,
-                                             value=transferred_amount_in_wei_2)
+        tx_hash_2 = createEIP1559Transaction(sc_node_2,
+            fromAddress=evm_address_sc_node_2,
+            toAddress=recipient_proposition,
+            gasLimit=123400,
+            maxPriorityFeePerGas=56700,
+            maxFeePerGas=baseFeePerGas + 56690,
+            value=transferred_amount_in_wei_2)
         # self.sc_sync_all()
 
         # Generate SC block on SC node 2 for the next consensus epoch

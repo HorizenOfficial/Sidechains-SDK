@@ -5,10 +5,11 @@ from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
-from SidechainTestFramework.account.utils import convertZenToZennies
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
+from SidechainTestFramework.account.utils import convertZenToWei
 from SidechainTestFramework.scutil import generate_next_block
 from httpCalls.transaction.allTransactions import allTransactions
-from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, fail, assert_false
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, assert_false
 
 """
 Test that the Sidechain can manage orphan transactions correctly
@@ -24,6 +25,24 @@ Test:
     has an higher effective gas tip
      
 """
+
+def checkNodeBalanceApi(sc_node):
+    allBalances = sc_node.wallet_getAllBalances()['result']['balances']
+    totBal = 0
+    for bal in allBalances:
+        address = bal['address']
+        balance = bal['balance']
+        assert_equal(
+            balance,
+            sc_node.wallet_getBalance(json.dumps({"address": address}))["result"]["balance"]
+        )
+        totBal += balance
+
+    assert_equal(
+        totBal,
+        sc_node.wallet_getTotalBalance()['result']['balance']
+    )
+
 
 
 class SCEvmOrphanTXS(AccountChainSetup):
@@ -56,22 +75,16 @@ class SCEvmOrphanTXS(AccountChainSetup):
 
         logging.info("Create an orphan transaction and check it is not included in a block...")
         transferred_amount_in_zen = Decimal('11')
-        # Amount should be expressed in zennies
-        amount_in_zennies = convertZenToZennies(transferred_amount_in_zen)
+        # Amount should be expressed in wei
+        amount_in_wei = convertZenToWei(transferred_amount_in_zen)
 
-        j = {
-            "from": evm_address_sc1,
-            "to": evm_address_sc2,
-            "value": amount_in_zennies,
-        }
+        orphan_tx_hash = createLegacyTransaction(sc_node_1,
+            fromAddress=evm_address_sc1,
+            toAddress=evm_address_sc2,
+            value=amount_in_wei,
+            nonce=1
+        )
 
-        j["nonce"] = 1
-
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-
-        orphan_tx_hash = response['result']["transactionId"]
         logging.info(orphan_tx_hash)
         self.sc_sync_all()
 
@@ -89,13 +102,13 @@ class SCEvmOrphanTXS(AccountChainSetup):
         assert_true(orphan_tx_hash in response["transactionIds"])
 
         logging.info("Create the missing transaction and check that now both are included in a block...")
-        j["nonce"] = 0
 
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-
-        tx_hash_nonce_0 = response['result']["transactionId"]
+        tx_hash_nonce_0 = createLegacyTransaction(sc_node_1,
+            fromAddress=evm_address_sc1,
+            toAddress=evm_address_sc2,
+            value=amount_in_wei,
+            nonce=0
+        )
 
         self.sc_sync_all()
 
@@ -145,55 +158,63 @@ class SCEvmOrphanTXS(AccountChainSetup):
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
-        j = {
-            "to": evm_address_sc2,
-            "value": 1,
-            "gasInfo": {
-                "gasLimit": 230000
-            }
-        }
+        txA_0 = createLegacyTransaction(sc_node_1,
+            fromAddress=evm_address_scA,
+            toAddress=evm_address_sc2,
+            value=1,
+            nonce=0,
+            gasLimit=230000,
+            gasPrice=900000003
+        )
 
-        j["from"] = evm_address_scA
-        j["nonce"] = 0
-        j["gasInfo"]["maxFeePerGas"] = 900000003
-        j["gasInfo"]["maxPriorityFeePerGas"] = 900000003
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txA_0 = response['result']['transactionId']
+        txA_1 = createLegacyTransaction(sc_node_1,
+                fromAddress=evm_address_scA,
+                toAddress=evm_address_sc2,
+                value=1,
+                nonce=1,
+                gasLimit=230000,
+                gasPrice=900000001
+        )
 
-        j["nonce"] = 1
-        j["gasInfo"]["maxFeePerGas"] = 900000001
-        j["gasInfo"]["maxPriorityFeePerGas"] = 900000001
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txA_1 = response['result']['transactionId']
+        txA_2 = createEIP1559Transaction(sc_node_1,
+                fromAddress=evm_address_scA,
+                toAddress=evm_address_sc2,
+                value=1,
+                nonce=2,
+                gasLimit=230000,
+                maxPriorityFeePerGas=900000110,
+                maxFeePerGas=900001100
+        )
 
-        txA_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scA, toAddress=evm_address_sc2,
-                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=900000110,
-                                         maxFeePerGas=900001100, value=1)
+        txB_0 = createLegacyTransaction(sc_node_1,
+            fromAddress=evm_address_scB,
+            toAddress=evm_address_sc2,
+            value=1,
+            nonce=0,
+            gasLimit=230000,
+            gasPrice=900000005
+        )
 
-        j["from"] = evm_address_scB
-        j["nonce"] = 0
-        j["gasInfo"]["maxFeePerGas"] = 900000005
-        j["gasInfo"]["maxPriorityFeePerGas"] = 900000005
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txB_0 = response['result']['transactionId']
+        txB_1 = createEIP1559Transaction(
+            sc_node_1,
+            fromAddress=evm_address_scB,
+            toAddress=evm_address_sc2,
+            value=1,
+            nonce=1,
+            gasLimit=230000,
+            maxPriorityFeePerGas=900000002,
+            maxFeePerGas=900000002
+        )
 
-        txB_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scB, toAddress=evm_address_sc2,
-                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=900000002,
-                                         maxFeePerGas=900000002, value=1)
 
-        j["nonce"] = 2
-        j["gasInfo"]["maxFeePerGas"] = 900000190
-        j["gasInfo"]["maxPriorityFeePerGas"] = 900000190
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txB_2 = response['result']['transactionId']
+        txB_2 = createLegacyTransaction(sc_node_1,
+            fromAddress=evm_address_scB,
+            toAddress=evm_address_sc2,
+            value=1,
+            nonce=2,
+            gasLimit=230000,
+            gasPrice=900000190
+        )
 
         txC_0 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
                                          nonce=0, gasLimit=230000, maxPriorityFeePerGas=900000010,
@@ -228,23 +249,27 @@ class SCEvmOrphanTXS(AccountChainSetup):
         # Check that a transaction with the same nonce of a tx already in the mempool can replace the old one just if it
         # has an higher effective gas tip
 
-        j["from"] = evm_address_scA
-        j["nonce"] = 3
-        j["gasInfo"]["maxFeePerGas"] = 900000000
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        oldTxId = response['result']['transactionId']
+        oldTxId = createLegacyTransaction(sc_node_1,
+            fromAddress=evm_address_scA,
+            toAddress=evm_address_sc2,
+            value=1,
+            nonce=3,
+            gasLimit=230000,
+            gasPrice=900000000
+        )
 
         # check mempool contains oldTxId
         response = allTransactions(sc_node_1, False)
         assert_true(oldTxId in response["transactionIds"])
 
-        j["gasInfo"]["maxFeePerGas"] = 900000500
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        newTxId = response['result']['transactionId']
+        newTxId = createLegacyTransaction(sc_node_1,
+            fromAddress=evm_address_scA,
+            toAddress=evm_address_sc2,
+            value=1,
+            nonce=3,
+            gasLimit=230000,
+            gasPrice=900000500
+        )
 
         # check mempool contains newTxId
         response = allTransactions(sc_node_1, False)
@@ -259,6 +284,13 @@ class SCEvmOrphanTXS(AccountChainSetup):
         txs_in_block = sc_node_1.block_best()["result"]["block"]["sidechainTransactions"]
         assert_equal(1, len(txs_in_block), "Wrong number of transactions in the block")
         assert_equal(newTxId, txs_in_block[0]['id'])
+
+        # we have several addresses with balance for both nodes, take advantage from this scenario and test some
+        # balance-related api
+        checkNodeBalanceApi(sc_node_1)
+        checkNodeBalanceApi(sc_node_2)
+
+
 
 
 if __name__ == "__main__":
