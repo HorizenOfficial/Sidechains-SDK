@@ -2,13 +2,14 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent}
+import com.horizen.api.http.WalletBaseErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent}
 import com.horizen.api.http.SidechainWalletRestScheme._
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.WalletBaseRestScheme.ReqAllPropositions
+import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpSecrets, ReqExportSecret, ReqImportSecret}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
+
 import java.io.File
 import scala.collection.JavaConverters._
 import java.util.{Scanner, Optional => JOptional}
@@ -409,7 +410,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "dumpSecrets")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -448,7 +449,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecrets")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -485,7 +486,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecrets")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -504,7 +505,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecrets")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])

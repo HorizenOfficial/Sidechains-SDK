@@ -11,6 +11,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
+import com.horizen.api.http.TransactionBaseRestScheme.{TransactionBytesDTO, TransactionDTO}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
@@ -29,8 +30,6 @@ import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
 import com.horizen.utils.{Pair => JPair}
-import com.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
-import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 
 import scala.collection.JavaConverters._
@@ -411,24 +410,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  /**
-    * Validate and send a transaction, given its serialization as input.
-    * Return error in case of invalid transaction or parsing error, otherwise return the id of the transaction.
-    */
-  def sendTransaction: Route = (post & path("sendTransaction")) {
-    withAuth {
-      entity(as[ReqSendTransactionPost]) { body =>
-        val transactionBytes = BytesUtils.fromHexString(body.transactionBytes)
-        companion.parseBytesTry(transactionBytes) match {
-          case Success(transaction) =>
-            validateAndSendTransaction(transaction)
-          case Failure(exception) =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
-        }
-      }
-    }
-  }
-
   def createOpenStakeTransaction: Route = (post & path("createOpenStakeTransaction")) {
     withAuth {
       entity(as[ReqOpenStake]) { body =>
@@ -690,12 +671,6 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionDTO(transaction: SidechainTypes#SCBT) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
@@ -758,9 +733,6 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSendTransactionPost(transactionBytes: String)
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSpendForgingStake(transactionInputs: List[TransactionInput],

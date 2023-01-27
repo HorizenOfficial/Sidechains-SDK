@@ -33,11 +33,15 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
   def testMethodIds(): Unit = {
     // The expected methodIds were calcolated using this site: https://emn178.github.io/online-tools/keccak_256.html
     assertEquals(
-      "Wrong MethodId for GetListOfWithdrawalRequest",
-      "251b7baa",
+      "Wrong MethodId for GetListOfWithdrawalReqs",
+      "ed63ec62",
       WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig
     )
-    assertEquals("Wrong MethodId for AddNewWithdrawalReq", "9950a60f", WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig)
+    assertEquals(
+      "Wrong MethodId for AddNewWithdrawalReq",
+      "4267ec5e",
+      WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig
+    )
   }
 
   @Test

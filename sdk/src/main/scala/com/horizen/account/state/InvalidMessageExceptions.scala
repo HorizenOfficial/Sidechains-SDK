@@ -21,9 +21,17 @@ import java.math.BigInteger
 class InvalidMessageException(message: String) extends TransactionSemanticValidityException(message)
 
 private object InvalidMessageException {
-  def toAddress(address: Array[Byte]): String = Secp256k1.checksumAddress(address)
+  def toAddress(address: Array[Byte]): String = {
+    if (address != null)
+        Secp256k1.checksumAddress(address)
+    else "NULL"
+  }
 
-  def toHex(data: Array[Byte]): String = BytesUtils.toHexString(data)
+  def toHex(data: Array[Byte]): String = {
+    if (data != null)
+      BytesUtils.toHexString(data)
+    else "NULL"
+  }
 }
 
 /** ErrNonceTooLow is returned if the nonce of a transaction is lower than the one present in the local chain. */
