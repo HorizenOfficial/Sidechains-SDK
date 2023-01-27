@@ -118,8 +118,7 @@ class AccountForgeMessageBuilder(
             // update cumulative gas used so far
             cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-            val baseFeePerGas = blockContext.baseFee
-            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
+            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, blockContext.baseFee)
             cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
             cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
             priceAndNonceIter.next()

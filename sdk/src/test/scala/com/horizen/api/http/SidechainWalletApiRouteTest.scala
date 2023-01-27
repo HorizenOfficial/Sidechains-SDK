@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodReject
 import com.horizen.api.http.WalletBaseErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent}
 import com.horizen.api.http.SidechainWalletRestScheme._
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpWallet, ReqExportSecret, ReqImportSecret}
+import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpSecrets, ReqExportSecret, ReqImportSecret}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
@@ -410,7 +410,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "dumpSecrets")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -449,7 +449,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecrets")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -486,7 +486,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecrets")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -505,7 +505,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "importSecrets")
         .withHeaders(apiTokenHeader)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])

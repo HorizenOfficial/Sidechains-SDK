@@ -12,6 +12,7 @@ import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.utils.Address;
 import com.horizen.params.NetworkParams;
 import org.web3j.utils.Numeric;
+
 import java.math.BigInteger;
 import java.util.Optional;
 
@@ -73,20 +74,20 @@ public class TransactionArgs {
                 if (chainId != null) {
                     // eip155
                     return new EthereumTransaction(
-                            saneChainId,
-                            optionalToAddress,
-                            nonce, gasPrice, gas, value, dataBytes, null);
-
+                        saneChainId, optionalToAddress,
+                        nonce, gasPrice, gas, value, dataBytes, null
+                    );
                 } else {
                     return new EthereumTransaction(
-                            optionalToAddress,
-                            nonce, gasPrice, gas, value, dataBytes, null);
+                        optionalToAddress,
+                        nonce, gasPrice, gas, value, dataBytes, null
+                    );
                 }
             case 2: // EIP-1559
                 return new EthereumTransaction(
-                    saneChainId,
-                    optionalToAddress,
-                    nonce, gas, maxPriorityFeePerGas, maxFeePerGas, value, dataBytes,null);
+                    saneChainId, optionalToAddress,
+                    nonce, gas, maxPriorityFeePerGas, maxFeePerGas, value, dataBytes, null
+                );
             default:
                 // unsupported type
                 return null;
@@ -116,15 +117,15 @@ public class TransactionArgs {
      * This method is used in calls and traces that do not require a real live transaction.
      * Reimplementation of the same logic in GETH.
      */
-    public Message toMessage(BigInteger baseFee) throws RpcException {
+    public Message toMessage(BigInteger baseFee, BigInteger rpcGasCap) throws RpcException {
         if (gasPrice != null && (maxFeePerGas != null || maxPriorityFeePerGas != null)) {
             throw new RpcException(RpcError.fromCode(
                 RpcCode.InvalidParams,
                 "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"
             ));
         }
-        // global RPC gas cap (in geth this is a config variable)
-        var gasLimit = BigInteger.valueOf(50_000_000);
+        // global RPC gas cap
+        var gasLimit = rpcGasCap;
         // cap gas limit given by the caller
         if (gas != null) {
             if (!BigIntegerUtil.isUint64(gas)) {

@@ -3,7 +3,6 @@ package com.horizen.account.api.rpc.service
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.SidechainTypes
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
@@ -27,10 +26,12 @@ import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
+import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.{NodeViewHolder, bytesToId}
+
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -45,6 +46,7 @@ class EthService(
     scNodeViewHolderRef: ActorRef,
     nvtimeout: FiniteDuration,
     networkParams: NetworkParams,
+    settings: EthServiceSettings,
     sidechainTransactionActorRef: ActorRef
 ) extends RpcService
       with ClosableResourceHandler
@@ -173,7 +175,7 @@ class EthService(
 
   private def doCall(nodeView: NV, params: TransactionArgs, tag: String): Array[Byte] = {
     getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
-      val msg = params.toMessage(blockContext.baseFee)
+      val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
       tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
     }
   }
@@ -296,11 +298,8 @@ class EthService(
           }
         }
       }
-      // Recap the highest gas allowance with specified gascap.
-      // global RPC gas cap (in geth this is a config variable)
-      val rpcGasCap = GasUtil.RpcGlobalGasCap
-      if (highBound.compareTo(rpcGasCap) > 0) {
-        highBound = rpcGasCap
+      if (highBound.compareTo(settings.globalRpcGasCap) > 0) {
+        highBound = settings.globalRpcGasCap
       }
       // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
       // other exceptions are not caught as the call would not succeed with any amount of gas

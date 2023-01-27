@@ -66,6 +66,7 @@ case class AccountEthRpcRoute(
       sidechainNodeViewHolderRef,
       settings.timeout,
       params,
+      sidechainSettings.ethService,
       sidechainTransactionActorRef
     )
   )

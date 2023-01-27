@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
@@ -18,15 +17,14 @@ import (
 
 type EvmParams struct {
 	HandleParams
-	From         common.Address   `json:"from"`
-	To           *common.Address  `json:"to"`
-	Value        *hexutil.Big     `json:"value"`
-	Input        []byte           `json:"input"`
-	AvailableGas hexutil.Uint64   `json:"availableGas"`
-	GasPrice     *hexutil.Big     `json:"gasPrice"`
-	AccessList   types.AccessList `json:"accessList"`
-	Context      EvmContext       `json:"context"`
-	TraceOptions *TraceOptions    `json:"traceOptions"`
+	From         common.Address  `json:"from"`
+	To           *common.Address `json:"to"`
+	Value        *hexutil.Big    `json:"value"`
+	Input        []byte          `json:"input"`
+	AvailableGas hexutil.Uint64  `json:"availableGas"`
+	GasPrice     *hexutil.Big    `json:"gasPrice"`
+	Context      EvmContext      `json:"context"`
+	TraceOptions *TraceOptions   `json:"traceOptions"`
 }
 
 type EvmContext struct {
@@ -171,10 +169,6 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		contractCreation = params.To == nil
 	)
 
-	// Set up the initial access list.
-	if rules := evm.ChainConfig().Rules(evm.Context.BlockNumber, evm.Context.Random != nil); rules.IsBerlin {
-		statedb.PrepareAccessList(params.From, params.To, vm.ActivePrecompiles(rules), params.AccessList)
-	}
 	var (
 		returnData      []byte
 		vmerr           error

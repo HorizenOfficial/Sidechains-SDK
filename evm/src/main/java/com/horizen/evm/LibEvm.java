@@ -150,32 +150,16 @@ final class LibEvm {
         invoke("StateSetCode", new CodeParams(handle, address, code));
     }
 
-    public static BigInteger stateGetRefund(int handle) {
-        return invoke("StateGetRefund", new HandleParams(handle), BigInteger.class);
-    }
-
     public static byte[] stateGetStorage(int handle, byte[] address, byte[] key) {
         return invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
     }
 
+    public static byte[] stateGetCommittedStorage(int handle, byte[] address, byte[] key) {
+        return invoke("StateGetCommittedStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
+    }
+
     public static void stateSetStorage(int handle, byte[] address, byte[] key, byte[] value) {
         invoke("StateSetStorage", new SetStorageParams(handle, address, key, value));
-    }
-
-    public static void stateRemoveStorage(int handle, byte[] address, byte[] key) {
-        invoke("StateRemoveStorage", new StorageParams(handle, address, key));
-    }
-
-    public static byte[] stateGetStorageBytes(int handle, byte[] address, byte[] key) {
-        return invoke("StateGetStorageBytes", new StorageParams(handle, address, key), byte[].class);
-    }
-
-    public static void stateSetStorageBytes(int handle, byte[] address, byte[] key, byte[] value) {
-        invoke("StateSetStorageBytes", new SetStorageBytesParams(handle, address, key, value));
-    }
-
-    public static void stateRemoveStorageBytes(int handle, byte[] address, byte[] key) {
-        invoke("StateRemoveStorageBytes", new StorageParams(handle, address, key));
     }
 
     public static ProofAccountResult stateGetProof(int handle, byte[] address, byte[][] keys) {
@@ -202,6 +186,18 @@ final class LibEvm {
         invoke("StateSetTxContext", new SetTxContextParams(handle, txHash, txIndex));
     }
 
+    public static void refundAdd(int handle, BigInteger gas) {
+        invoke("RefundAdd", new RefundParams(handle, gas), void.class);
+    }
+
+    public static void refundSub(int handle, BigInteger gas) {
+        invoke("RefundSub", new RefundParams(handle, gas), void.class);
+    }
+
+    public static BigInteger refundGet(int handle) {
+        return invoke("RefundGet", new HandleParams(handle), BigInteger.class);
+    }
+
     public static EvmResult evmApply(
             int handle,
             byte[] from,
@@ -219,5 +215,17 @@ final class LibEvm {
 
     public static byte[] hashRoot(byte[][] values) {
         return invoke("HashRoot", new HashParams(values), Hash.class).toBytes();
+    }
+
+    public static void accessSetup(int handle, byte[] sender, byte[] destination) {
+        invoke("AccessSetup", new AccessParams(handle, sender, destination));
+    }
+
+    public static boolean accessAccount(int handle, byte[] address) {
+        return invoke("AccessAccount", new AccountParams(handle, address), Boolean.class);
+    }
+
+    public static boolean accessSlot(int handle, byte[] address, byte[] slot) {
+        return invoke("AccessSlot", new SlotParams(handle, address, slot), Boolean.class);
     }
 }
