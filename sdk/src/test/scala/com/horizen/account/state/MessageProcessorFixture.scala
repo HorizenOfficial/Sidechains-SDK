@@ -14,7 +14,7 @@ import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 import java.math.BigInteger
 import java.util.Optional
 import scala.language.implicitConversions
-import scala.util.Random
+import scala.util.{Failure, Random, Success, Try}
 
 trait MessageProcessorFixture extends ClosableResourceHandler {
   // simplifies using BigIntegers within the tests
@@ -62,7 +62,7 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
     val gasPrice = BigInteger.ZERO
     val gasFeeCap = BigInteger.valueOf(1000001)
     val gasTipCap = BigInteger.ZERO
-    val gasLimit = BigInteger.valueOf(1000000)
+    val gasLimit = BigInteger.valueOf(500000)
     new Message(
       if (from == null)
         Optional.of(new AddressProposition(origin))
@@ -107,6 +107,36 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
         }
       }
     }
+  }
+
+  def assertGas(
+      expectedGas: BigInteger,
+      msg: Message,
+      view: AccountStateView,
+      processor: MessageProcessor,
+      ctx: BlockContext,
+  ): Array[Byte] = {
+    // DEBUG: set to false to print gas usage and disable assertion
+    val enforce = true
+    view.setupAccessList(msg)
+    val gas = new GasPool(1000000)
+    val result = Try.apply(processor.process(msg, view, gas, ctx))
+    // verify gas usage in case of success or revert, in any other case the consumption does not matter:
+    // - in case of ExecutionFailedException all available gas will be burned anyway
+    // - any other exception will invalidate the message/transaction/block or in case of forging
+    //    will drop the tx from the new block
+    result match {
+      case Success(_) | Failure(_: ExecutionRevertedException) =>
+        if (enforce) {
+          assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+        } else {
+          println("consumed gas: " + gas.getUsedGas)
+          if (expectedGas != gas.getUsedGas)
+            println(" mismatch here, expected is: " + expectedGas)
+        }
+    }
+    // return result or rethrow any exception
+    result.get
   }
 
   def getEventSignature(eventABISignature: String): Array[Byte] =
