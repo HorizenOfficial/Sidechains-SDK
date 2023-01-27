@@ -253,26 +253,53 @@ class SCKeyRotationTest(SidechainTestFramework):
         assert_true("error" in response)
         assert_true("Signing key signature in CertificateKeyRotationTransaction is not valid" in response["error"]["detail"])
 
-        # Pass wrong key_type
-        error = False
-        try:
-            response = http_create_key_rotation_transaction(sc_node, 
-                                                key_type=3,
-                                                key_index=0,
-                                                new_key=new_public_key,
-                                                signing_key_signature=signing_signature,
-                                                master_key_signature=master_signature,
-                                                new_key_signature=new_key_signature,
-                                                format=True,
-                                                automatic_send=True)
-        except:
-            error = True
-        assert_true(error)
+        # Pass wrong message_to_sign: try to change signing_key with master_key_message_two_sign
+        wrong_signing_key_message = http_get_key_rotation_message_to_sign_for_master_key(
+            sc_node, new_public_key, epoch)["keyRotationMessageToSign"]
+        wrong_master_signature = self.secure_enclave_create_signature(message_to_sign=wrong_signing_key_message,
+                                                                public_key=public_master_keys[0])["signature"]
+        wrong_signing_signature = self.secure_enclave_create_signature(message_to_sign=wrong_signing_key_message,
+                                                                 key=private_signing_keys[0])["signature"]
+        wrong_new_key_signature = self.secure_enclave_create_signature(message_to_sign=wrong_signing_key_message,
+                                                                 key=new_signing_key.secret)["signature"]
+        response = http_create_key_rotation_transaction(sc_node,
+                                            key_type=0,
+                                            key_index=0,
+                                            new_key=new_public_key,
+                                            signing_key_signature=wrong_signing_signature,
+                                            master_key_signature=wrong_master_signature,
+                                            new_key_signature=wrong_new_key_signature,
+                                            format=True,
+                                            automatic_send=True)
+        assert_true("error" in response)
+        assert_true("Signing key signature in CertificateKeyRotationTransaction is not valid" in response["error"]["detail"])
+
+        # Pass wrong message_to_sign: wrong withdrawal epoch number
+        wrong_signing_key_message = http_get_key_rotation_message_to_sign_for_signing_key(
+            sc_node, new_public_key, epoch + 1)["keyRotationMessageToSign"]
+        wrong_master_signature = self.secure_enclave_create_signature(message_to_sign=wrong_signing_key_message,
+                                                                      public_key=public_master_keys[0])["signature"]
+        wrong_signing_signature = self.secure_enclave_create_signature(message_to_sign=wrong_signing_key_message,
+                                                                       key=private_signing_keys[0])["signature"]
+        wrong_new_key_signature = self.secure_enclave_create_signature(message_to_sign=wrong_signing_key_message,
+                                                                       key=new_signing_key.secret)["signature"]
+        response = http_create_key_rotation_transaction(sc_node,
+                                                        key_type=0,
+                                                        key_index=0,
+                                                        new_key=new_public_key,
+                                                        signing_key_signature=wrong_signing_signature,
+                                                        master_key_signature=wrong_master_signature,
+                                                        new_key_signature=wrong_new_key_signature,
+                                                        format=True,
+                                                        automatic_send=True)
+        assert_true("error" in response)
+        assert_true(
+            "Signing key signature in CertificateKeyRotationTransaction is not valid" in response["error"]["detail"])
 
         # POSITIVE CASE
 
         # Change the signing key 0
-        http_create_key_rotation_transaction(sc_node, 
+        http_create_key_rotation_transaction(sc_node,
                                             key_type=0,
                                             key_index=0,
                                             new_key=new_public_key,
@@ -437,6 +464,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         assert_equal(certificate_signers_keys["masterKeys"][0]["publicKey"], new_public_key_3)
 
         # Update again the signing key 0
+        epoch = get_withdrawal_epoch(sc_node)
         new_signing_key_4 = generate_cert_signer_secrets("random_seed4", 1)[0]
         new_public_key_4 = new_signing_key_4.publicKey
         signing_key_message_4 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_4, epoch)["keyRotationMessageToSign"]
@@ -511,6 +539,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         assert_equal(certificate_signers_keys["signingKeys"][0]["publicKey"], new_public_key_4)
 
         # Change ALL the signing keys and ALL tee master keys
+        epoch = get_withdrawal_epoch(sc_node)
         new_signing_keys = []
         new_master_keys = []
         for i in range(self.cert_max_keys):
