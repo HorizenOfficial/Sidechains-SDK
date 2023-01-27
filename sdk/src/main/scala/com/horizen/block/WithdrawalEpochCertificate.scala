@@ -4,13 +4,12 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
-import com.horizen.certnative.WithdrawalCertificate
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
-import com.horizen.utils.{BytesUtils, CompactSize, Utils}
+import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
-import com.horizen.librustsidechains.{FieldElement, Utils => ScCryptoUtils}
+import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
 import scorex.util.ScorexLogging
 
 import scala.util.Try

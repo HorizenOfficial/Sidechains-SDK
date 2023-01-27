@@ -2,7 +2,7 @@ package com.horizen.state
 
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.utils.AccountBlockFeeInfo
-import com.horizen.block.{MainchainBlockReferenceData, MainchainHeader, WithdrawalEpochCertificate}
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
 import com.horizen.utils.WithdrawalEpochInfo
