@@ -536,7 +536,7 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
-  def traceBlockByNumber(number: String, config: TraceOptions): Any = {
+  def traceBlockByNumber(number: String, config: TraceOptions): List[JsonNode] = {
     val hash: Hash = {
       applyOnAccountView { nodeView =>
         Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))
@@ -547,7 +547,7 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByHash")
   @RpcOptionalParameters(1)
-  def traceBlockByHash(hash: Hash, config: TraceOptions): Any = {
+  def traceBlockByHash(hash: Hash, config: TraceOptions): List[JsonNode] = {
     applyOnAccountView { nodeView =>
       // get block to trace
       val (block, blockInfo) = getBlockById(nodeView, bytesToId(hash.toBytes))
@@ -576,8 +576,7 @@ class EthService(
           if(evmResult!=null && evmResult.tracerResult!=null)
             tracerResultList += evmResult.tracerResult
         }
-        tracerResultList
-
+        tracerResultList.toList
       }
     }
   }

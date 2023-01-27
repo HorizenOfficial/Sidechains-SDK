@@ -50,19 +50,6 @@ type TraceOptions struct {
 	TracerConfig     json.RawMessage `json:"tracerConfig"`
 }
 
-type CallFrame struct {
-	Type    string      `json:"type"`
-	From    string      `json:"from"`
-	To      string      `json:"to,omitempty"`
-	Value   string      `json:"value,omitempty"`
-	Gas     string      `json:"gas"`
-	GasUsed string      `json:"gasUsed"`
-	Input   string      `json:"input"`
-	Output  string      `json:"output,omitempty"`
-	Error   string      `json:"error,omitempty"`
-	Calls   []CallFrame `json:"calls,omitempty"`
-}
-
 // setDefaults for parameters that were omitted
 func (p *EvmParams) setDefaults() {
 	if p.Value == nil {
