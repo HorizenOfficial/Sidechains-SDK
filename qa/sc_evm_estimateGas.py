@@ -90,7 +90,6 @@ class SCEvmBootstrap(AccountChainSetup):
         to = '0x0000000000000000000011111111111111111111'
         value = '0xE8D4A51000'
         response = estimate_gas(sc_node, self.evm_address, to_address=to, data=data, value=value)
-
         assert_equal('0x15ef4', response['result'])
 
 

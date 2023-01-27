@@ -1,6 +1,5 @@
 package com.horizen.account.transaction;
 
-import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.EthereumTransactionUtils;
@@ -10,11 +9,13 @@ import org.junit.Test;
 import org.web3j.utils.Numeric;
 import scorex.crypto.hash.Keccak256;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Map;
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
-public class EthereumTransactionTest implements EthereumTransactionFixture {
+public class EthereumTransactionTest {
 
 
     public void checkEthTx(EthereumTransaction tx) {

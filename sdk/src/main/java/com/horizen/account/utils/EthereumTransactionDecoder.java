@@ -69,10 +69,11 @@ public class EthereumTransactionDecoder {
     }
 
     private static EthereumTransaction decodeEIP1559Transaction(Reader reader) {
-        //byte[] encodedTx = Arrays.copyOfRange(transaction, 1, transaction.length);
+
         // consume the type byte
         reader.getByte();
         RlpList rlpList = RlpStreamDecoder.decode(reader);
+
         RlpList values = (RlpList)rlpList.getValues().get(0);
         long chainId = ((RlpString)values.getValues().get(0)).asPositiveBigInteger().longValueExact();
         BigInteger nonce = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
@@ -151,6 +152,7 @@ public class EthereumTransactionDecoder {
 
     private static EthereumTransaction decodeLegacyTransaction(Reader reader) {
         RlpList rlpList = RlpStreamDecoder.decode(reader);
+
         RlpList values = (RlpList)rlpList.getValues().get(0);
         BigInteger nonce = ((RlpString)values.getValues().get(0)).asPositiveBigInteger();
         BigInteger gasPrice = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
