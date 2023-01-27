@@ -13,7 +13,7 @@ from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import forward_transfer_to_sidechain
 
 """
-Check that invalid transactions are not added to the mem pool.
+Check all reasons why a transaction  cannot be added to the mem pool.
 
 Configuration:
     - 1 SC node
@@ -32,12 +32,13 @@ Test:
     - size too big
     - nonce gap too big
     - account size exceeded
+    - mempool size exceeded
 """
 
 
 class SCEvmMempoolInvalidTxs(AccountChainSetup):
     def __init__(self):
-        super().__init__()
+        super().__init__(max_mempool_slots=20)
 
     def run_test(self):
         mc_node = self.nodes[0]
@@ -55,6 +56,12 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
                                       mc_return_address=mc_node.getnewaddress(),
                                       generate_block=True)
 
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      mc_node,
+                                      evm_address_sc2,
+                                      1.0,
+                                      mc_return_address=mc_node.getnewaddress(),
+                                      generate_block=True)
 
         self.sync_all()
 
@@ -255,7 +262,7 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         assert_equal(0, len(response["transactionIds"]), "Transaction with nonce too low added to node 1 mempool")
 
         # Test that a transaction exceeding the account size is rejected by the mem pool
-        #Create as many txs of 1 slot as to almost fill the mempool
+        # Create as many txs of 1 slot as to almost fill the account mempool
         for i in range(9, 9 + (self.max_account_slots - 1)):
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc1,
                                      nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
@@ -275,10 +282,36 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
 
         assert_true(exception_occurs, "Adding a transaction exceeding the account size should fail")
         response = allTransactions(sc_node_1, False)
-        assert_equal(15, len(response["transactionIds"]),
+        assert_equal(self.max_account_slots - 1, len(response["transactionIds"]),
                      "Transaction exceeding the account size added to node 1 mempool")
 
+        # Test that a transaction exceeding the mempool size is rejected by the mem pool
+        # Create as many additional txs of 1 slot respect the previous test as to almost fill the mempool
 
+        num_of_txs_to_add = self.max_mempool_slots - (self.max_account_slots - 1)
+
+        nonce_addr_2 = 0
+        for i in range(num_of_txs_to_add):
+            createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc2, toAddress=evm_address_sc2,
+                                     nonce=nonce_addr_2, gasLimit=230000, maxPriorityFeePerGas=900000000,
+                                     maxFeePerGas=900000000, value=1)
+            nonce_addr_2 += 1
+
+
+        exception_occurs = False
+        try:
+            createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc2, toAddress=None,
+                                          nonce=nonce_addr_2, gasLimit=1691401, maxPriorityFeePerGas=900000000,
+                                            maxFeePerGas=900000000, value=1, data=str(big_data))
+        except RuntimeError as e:
+            exception_occurs = True
+            logging.info(
+                "Adding a transaction exceeding the mempool size had an exception as expected: {}".format(str(e)))
+
+        assert_true(exception_occurs, "Adding a transaction exceeding the mempool size should fail")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(self.max_mempool_slots, len(response["transactionIds"]),
+                     "Transaction exceeding the mempool size added to node 1 mempool")
 
 
 
