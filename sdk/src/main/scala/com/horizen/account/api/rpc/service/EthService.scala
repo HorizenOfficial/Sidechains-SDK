@@ -5,6 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.SidechainTypes
 import com.horizen.account.api.rpc.handler.RpcException
+import com.horizen.account.api.rpc.service.utils.{PendingBlock, PendingStateView}
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
@@ -30,7 +31,8 @@ import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
-import sparkz.core.{NodeViewHolder, bytesToId}
+import sparkz.core.{NodeViewHolder, bytesToId, idToVersion}
+
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -95,23 +97,39 @@ class EthService(
     new TxPoolContent(getPoolTxs(nodeView, executable = true), getPoolTxs(nodeView, executable = false))
   }
 
-  private def getPoolTxs(nodeView: NV, executable: Boolean): util.Map[String,util.Map[BigInteger,TxPoolTransaction]] = {
+  private def getPoolTxs(
+      nodeView: NV,
+      executable: Boolean
+  ): util.Map[String, util.Map[BigInteger, TxPoolTransaction]] = {
     val returnAddressNonceTxsMap = {
-      val addressNonceTxsMap = new java.util.HashMap[String,util.Map[BigInteger,TxPoolTransaction]]
+      val addressNonceTxsMap = new java.util.HashMap[String, util.Map[BigInteger, TxPoolTransaction]]
       var mempoolTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
-      if(executable) mempoolTxsMap = nodeView.pool.getExecutableTransactionsMap
+      if (executable) mempoolTxsMap = nodeView.pool.getExecutableTransactionsMap
       else mempoolTxsMap = nodeView.pool.getNonExecutableTransactionsMap
       for ((from, nonceTransactionsMap) <- mempoolTxsMap) {
         val returnNonceTxsMap = {
-          val nonceTxsMap = new java.util.HashMap[BigInteger,TxPoolTransaction]
+          val nonceTxsMap = new java.util.HashMap[BigInteger, TxPoolTransaction]
           for ((txNonce, tx) <- nonceTransactionsMap) {
-            nonceTxsMap.put(txNonce, new TxPoolTransaction(tx.getFrom.bytes(), tx.getGasLimit, tx.getGasPrice, tx.id.toBytes,
-              tx.getData, tx.getNonce, tx.getTo.get().bytes(), tx.getValue))
+            nonceTxsMap.put(
+              txNonce,
+              new TxPoolTransaction(
+                tx.getFrom.bytes(),
+                tx.getGasLimit,
+                tx.getGasPrice,
+                tx.id.toBytes,
+                tx.getData,
+                tx.getNonce,
+                tx.getTo.get().bytes(),
+                tx.getValue
+              )
+            )
           }
-          nonceTxsMap}
-        addressNonceTxsMap.put(Numeric.toHexString(from.bytes()),returnNonceTxsMap)
+          nonceTxsMap
+        }
+        addressNonceTxsMap.put(Numeric.toHexString(from.bytes()), returnNonceTxsMap)
       }
-      addressNonceTxsMap }
+      addressNonceTxsMap
+    }
     returnAddressNonceTxsMap
   }
 
@@ -134,20 +152,23 @@ class EthService(
       blockId: ModifierId,
       hydratedTx: Boolean
   ): EthereumBlockView = {
-    val blockNumber = nodeView.history.getBlockHeightById(blockId).get().toLong
-    val blockHash = Hash.fromBytes(blockId.toBytes)
-    using(nodeView.state.getView) { stateView =>
-      nodeView.history
-        .getStorageBlockById(blockId)
-        .map(block => {
-          if (hydratedTx) {
-            val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
-            EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
-          } else {
-            EthereumBlockView.notHydrated(blockNumber, blockHash, block)
-          }
-        })
-        .orNull
+    val (blockNumber, blockHash): (Long, Hash) = if (blockId == null) {
+      (nodeView.history.getCurrentHeight + 1, null)
+    } else {
+      (nodeView.history.getBlockHeightById(blockId).get().toLong, Hash.fromBytes(blockId.toBytes))
+    }
+
+    val block = getBlockById(nodeView, blockId)._1
+
+    val view: AccountStateView =
+      if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
+    using(view) { stateView =>
+      if (hydratedTx) {
+        val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
+        EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
+      } else {
+        EthereumBlockView.notHydrated(blockNumber, blockHash, block)
+      }
     }
   }
 
@@ -163,8 +184,8 @@ class EthService(
 
   private def blockTransactionCount(getBlockId: NV => ModifierId): Quantity = {
     applyOnAccountView { nodeView =>
-      nodeView.history
-        .getStorageBlockById(getBlockId(nodeView))
+      val block = Option.apply(getBlockById(nodeView, getBlockId(nodeView))._1)
+      block
         .map(_.transactions.size)
         .map(new Quantity(_))
         .orNull
@@ -361,10 +382,17 @@ class EthService(
   }
 
   private def getBlockById(nodeView: NV, blockId: ModifierId): (AccountBlock, SidechainBlockInfo) = {
-    val block = nodeView.history
-      .getStorageBlockById(blockId)
-      .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "Invalid block tag parameter.")))
-    val blockInfo = nodeView.history.blockInfoById(blockId)
+    val (block, blockInfo) = if (blockId == null) {
+      val pendingBlock = new PendingBlock(nodeView)
+      (pendingBlock.getPendingBlock, pendingBlock.getBlockInfo)
+    } else {
+      (
+        nodeView.history
+          .getStorageBlockById(blockId)
+          .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "Invalid block tag parameter."))),
+        nodeView.history.blockInfoById(blockId)
+      )
+    }
     (block, blockInfo)
   }
 
@@ -383,14 +411,28 @@ class EthService(
       blockInfo.withdrawalEpochInfo.epoch,
       networkParams.chainId
     )
-    using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
+    if (tag == "pending") {
+      val pendingState = nodeView.state.applyModifier(block).getOrElse(throw new RpcException(RpcError.fromCode(
+        RpcCode.InternalError,
+        "Failed to get pending block."
+      )))
+      val pendingStateDbView = pendingState.getStateDbViewFromRoot(block.header.stateRoot)
+      pendingState.rollbackTo(idToVersion(block.parentId))
+      using(pendingStateDbView)(fun(_, blockContext))
+    } else {
+      using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
+    }
   }
 
   private def parseBlockTag(nodeView: NV, tag: String): Int = {
     tag match {
       case "earliest" => 1
-      case "finalized" | "safe" => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
-      case "latest" | "pending" | null => nodeView.history.getCurrentHeight
+      case "finalized" | "safe" => nodeView.history.getCurrentHeight match {
+          case height if height <= 100 => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
+          case height if height > 100 => height - 100
+        }
+      case "latest" | null => nodeView.history.getCurrentHeight
+      case "pending" => nodeView.history.getCurrentHeight + 1
       case height =>
         Try
           .apply(Numeric.decodeQuantity(height).intValueExact())
@@ -400,7 +442,11 @@ class EthService(
   }
 
   private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
-    ModifierId(nodeView.history.blockIdByHeight(parseBlockTag(nodeView, tag)).get)
+    val blockId = parseBlockTag(nodeView, tag) match {
+      case height if height == nodeView.history.getCurrentHeight + 1 => null
+      case _ => ModifierId(nodeView.history.blockIdByHeight(parseBlockTag(nodeView, tag)).get)
+    }
+    blockId
   }
 
   @RpcMethod("net_version")
@@ -413,7 +459,8 @@ class EthService(
     }
   }
 
-  private def getTransactionAndReceipt(transactionHash: Hash): Option[(AccountBlock, EthereumTransaction, EthereumReceipt)] = {
+  private def getTransactionAndReceipt(transactionHash: Hash)
+      : Option[(AccountBlock, EthereumTransaction, EthereumReceipt)] = {
     applyOnAccountView { nodeView =>
       using(nodeView.state.getView) { stateView =>
         stateView
@@ -452,15 +499,18 @@ class EthService(
   private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: Quantity): EthereumTransactionView = {
     val txIndex = index.toNumber.intValueExact()
     applyOnAccountView { nodeView =>
-      nodeView.history
-        .getStorageBlockById(getBlockId(nodeView))
+      val blockId = getBlockId(nodeView)
+      val block = getBlockById(nodeView, blockId)._1
+      val view: AccountStateView =
+        if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
+      Option.apply(block)
         .flatMap(block => {
           block.transactions
             .drop(txIndex)
             .headOption
             .map(_.asInstanceOf[EthereumTransaction])
             .flatMap(tx =>
-              using(nodeView.state.getView)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
+              using(view)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
                 .map(new EthereumTransactionView(tx, _, block.header.baseFee))
             )
         })
@@ -537,7 +587,9 @@ class EthService(
   def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
     val hash: Hash = {
       applyOnAccountView { nodeView =>
-        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))}}
+        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))
+      }
+    }
     traceBlockByHash(hash, config)
   }
 
@@ -812,11 +864,15 @@ class EthService(
    * Get all logs of a block matching the given query. Replication of the original implementation in GETH, see:
    * github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:227
    */
-  private def getBlockLogs(stateView: AccountStateView, block: AccountBlock, query: FilterQuery): Seq[EthereumLogView] = {
+  private def getBlockLogs(
+      stateView: AccountStateView,
+      block: AccountBlock,
+      query: FilterQuery
+  ): Seq[EthereumLogView] = {
     val filtered = query.address.length > 0 || query.topics.length > 0
     if (filtered && !testBloom(block.header.logsBloom, query.address, query.topics)) {
-        // bail out if address or topic queries are given, but they fail the bloom filter test
-        return Seq.empty
+      // bail out if address or topic queries are given, but they fail the bloom filter test
+      return Seq.empty
     }
     // retrieve all logs of the given block
     var logIndex = 0
@@ -840,8 +896,8 @@ class EthService(
   }
 
   /**
-   * Tests if a bloom filter matches the given address and topic queries. Replication of the original implementation
-   * in GETH, see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:328
+   * Tests if a bloom filter matches the given address and topic queries. Replication of the original implementation in
+   * GETH, see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:328
    */
   private def testBloom(bloom: Bloom, addresses: Array[Address], topics: Array[Array[Hash]]): Boolean = {
     // bail out if an address filter is given and none of the addresses are contained in the bloom filter
@@ -856,13 +912,13 @@ class EthService(
   }
 
   /**
-   * Tests if a log matches the given address and topic queries. Replication of the original implementation in
-   * GETH, see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:293
+   * Tests if a log matches the given address and topic queries. Replication of the original implementation in GETH,
+   * see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:293
    */
   private def testLog(addresses: Array[Address], topics: Array[Array[Hash]])(log: EthereumLogView): Boolean = {
     if (addresses.length > 0 && addresses.map(_.toString).contains(log.address)) return false
     // skip if the number of filtered topics is greater than the amount of topics in the log
     if (topics.length > log.topics.length) return false
-    topics.zip(log.topics).forall({ case (sub, topic) => sub.length == 0 || sub.map(_.toString).contains(topic)})
+    topics.zip(log.topics).forall({ case (sub, topic) => sub.length == 0 || sub.map(_.toString).contains(topic) })
   }
 }
