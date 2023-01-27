@@ -1,7 +1,7 @@
 import json
 
 
-def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce=None, gasLimit=230000,
+def createRawEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce=None, gasLimit=230000,
                              maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=0, data='',
                              signature_v=None, signature_r=None, signature_s=None, api_key=None):
     j = {
@@ -15,7 +15,8 @@ def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None,
         "data": data,
         "signature_v": signature_v,
         "signature_r": signature_r,
-        "signature_s": signature_s
+        "signature_s": signature_s,
+        "outputRawBytes": True
     }
 
     request = json.dumps(j)
@@ -24,10 +25,9 @@ def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None,
     else:
         response = sidechainNode.transaction_createEIP1559Transaction(request)
 
-
     if "result" in response:
-        if "transactionId" in response["result"]:
-            return response["result"]["transactionId"]
+        if "transactionBytes" in response["result"]:
+            return response["result"]["transactionBytes"]
 
     raise RuntimeError("Something went wrong, see {}".format(str(response)))
 

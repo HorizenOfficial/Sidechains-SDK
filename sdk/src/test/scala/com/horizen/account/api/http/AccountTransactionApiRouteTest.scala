@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.utils.FeeUtils
+import com.horizen.api.http.TransactionBaseRestScheme.ReqSendTransaction
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
@@ -38,17 +39,17 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
 
 
-      Post(basePath + "sendCoinsToAddress").withHeaders(apiTokenHeader) ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "createLegacyEIP155Transaction").withHeaders(apiTokenHeader) ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "sendCoinsToAddress").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "createLegacyEIP155Transaction").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "sendCoinsToAddress").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+      Post(basePath + "createLegacyEIP155Transaction").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "sendCoinsToAddress").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "createLegacyEIP155Transaction").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
 
@@ -131,15 +132,13 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
     }
 
-
-    "reply at /sendCoinsToAddress" in {
-      sidechainApiMockConfiguration.setShould_history_getTransactionsSortedByFee_return_value(true)
-      Post(basePath + "sendCoinsToAddress")
+    "reply at /createLegacyEIP155Transaction" in {
+      Post(basePath + "createLegacyEIP155Transaction")
         .withHeaders(apiTokenHeader)
-        .withEntity(
-          SerializationUtil.serialize(ReqSendCoinsToAddress(Option.empty[String], None,
-            "00112233445566778899AABBCCDDEEFF01020304", 10, Option.empty[Boolean], Option.empty[EIP1559GasInfo]))
-        ) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqLegacyTransaction(Option.apply("1234567890123456789012345678901234567890"),
+          Option.apply("2234567890123456789012345678901234567890"), Some(BigInteger.ONE),
+          BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, Option.apply(BigInteger.ONE),
+          ""))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -275,8 +274,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqEIP1559Transaction(Option.apply("1234567890123456789012345678901234567890"),
           Option.apply("2234567890123456789012345678901234567890"), Option.apply(BigInteger.ONE),
           BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, BigInteger.ONE,
-          BigInteger.ONE, "", None, None,
-          None)))~> sidechainTransactionApiRoute ~> check {
+          Option.apply(BigInteger.ONE), "")))~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
@@ -290,10 +288,9 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     "reply at /createLegacyTransaction" in {
       Post(basePath + "createLegacyTransaction").withHeaders(apiTokenHeader)
         .withEntity(SerializationUtil.serialize(ReqLegacyTransaction(Option.apply("1234567890123456789012345678901234567890"),
-          Option.apply("2234567890123456789012345678901234567890"), BigInteger.ONE,
+          Option.apply("2234567890123456789012345678901234567890"), Some(BigInteger.ONE),
           BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, Option.apply(BigInteger.ONE),
-          "", None, None,
-          None))) ~> sidechainTransactionApiRoute ~> check {
+          ""))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
@@ -304,27 +301,28 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
     }
 
-    "reply at /sendRawTransaction" in {
-      //https://etherscan.io/tx/0xbb9f10e90640b689297e171694f11b7d8dc417f7d39a03ea9ccfa19d3ecd78b2
-      Post(basePath + "sendRawTransaction").withHeaders(apiTokenHeader)
-        .withEntity(SerializationUtil.serialize(ReqRawTransaction(Option.apply("dafea492d9c6733ae3d56b7ed1adb60692c98bc5"),
-        "02f871018302c64b8085037601bcd782565f94388c818ca8b9251b393131c08a736a67ccb192978744307408638cc980c080a0b914c0f8359e7dfa7a8d3712a22d699d5fa8b1fe2e0668deddb2e70f741d17f2a06d89bd666df886aa6d9a65f336568f0c406a61640c45b79af45a4c22e5e3ba2a"))) ~> sidechainTransactionApiRoute ~> check {
+    "reply at /sendTransaction" in {
+      //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_signed_hex
+      Post(basePath + "sendTransaction").withHeaders(apiTokenHeader)
+        .withEntity(SerializationUtil.serialize(ReqSendTransaction(
+          "01d601f86946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e80000801ca02a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5a07ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"
+        ))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
         if (result == null)
           fail("Serialization failed for objecgit SidechainApiResponseBody")
 
-        assertEquals("bb9f10e90640b689297e171694f11b7d8dc417f7d39a03ea9ccfa19d3ecd78b2", result.get("transactionId").asText())
+        assertEquals("6d4f0bc052e919019d392debb1a39724baa85b3d9c54836e9892170180793613", result.get("transactionId").asText())
       }
     }
 
     "reply at /signTransaction" in {
-      //https://etherscan.io/tx/0xbb9f10e90640b689297e171694f11b7d8dc417f7d39a03ea9ccfa19d3ecd78b2
-      // with insufficient balance
+      //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_unsigned_hex
+      // with insufficient balance on given 'from' address
       Post(basePath + "signTransaction").withHeaders(apiTokenHeader)
-        .withEntity(SerializationUtil.serialize(ReqRawTransaction(Option.apply("dafea492d9c6733ae3d56b7ed1adb60692c98bc5"),
-          "02f871018302c64b8085037601bcd782565f94388c818ca8b9251b393131c08a736a67ccb192978744307408638cc980c080a0b914c0f8359e7dfa7a8d3712a22d699d5fa8b1fe2e0668deddb2e70f741d17f2a06d89bd666df886aa6d9a65f336568f0c406a61640c45b79af45a4c22e5e3ba2a"))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqSignTransaction(Option.apply("dafea492d9c6733ae3d56b7ed1adb60692c98bc5"),
+          "014ee646824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e8000080"))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
