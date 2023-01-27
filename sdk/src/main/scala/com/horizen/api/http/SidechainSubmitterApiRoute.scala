@@ -1,29 +1,33 @@
 package com.horizen.api.http
 
-import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, IsCertificateSigningEnabled, IsSubmitterEnabled}
-import com.horizen.serialization.Views
-import sparkz.core.settings.RESTApiSettings
-
-import scala.concurrent.{Await, ExecutionContext}
-import scala.util.{Failure, Success, Try}
-import java.util.{Optional => JOptional}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorBadCircuit, ErrorRetrieveCertificateSigners, ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
-import com.horizen.api.http.SidechainDebugRestScheme._
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.utils.BytesUtils
+import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.proposition.SchnorrProposition
+import com.horizen.api.http.SidechainDebugErrorResponse._
+import com.horizen.api.http.SidechainDebugRestScheme._
+import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages._
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.params.NetworkParams
+import com.horizen.schnorrnative.SchnorrPublicKey
+import com.horizen.serialization.Views
+import com.horizen.utils.BytesUtils
+import sparkz.core.settings.RESTApiSettings
 
-case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef,  circuitType: CircuitTypes)
+import java.util.{Optional => JOptional}
+import scala.concurrent.{Await, ExecutionContext}
+import scala.util.{Failure, Success, Try}
+
+case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, params: NetworkParams,
+                                      certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef, circuitType: CircuitTypes)
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
   override val route: Route = pathPrefix("submitter") {
     isCertGenerationActive ~ isCertificateSubmitterEnabled ~ enableCertificateSubmitter ~ disableCertificateSubmitter ~
-      isCertificateSignerEnabled ~ enableCertificateSigner ~ disableCertificateSigner~ getSchnorrPublicKeyHash ~ getCertifiersKeys ~ getKeyRotationProof
+      isCertificateSignerEnabled ~ enableCertificateSigner ~ disableCertificateSigner ~ getKeyRotationProof ~
+      getSigningKeyRotationMessageToSign ~ getMasterKeyRotationMessageToSign ~ getCertifiersKeys
   }
 
   def isCertGenerationActive: Route = (post & path("isCertGenerationActive")) {
@@ -82,17 +86,25 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
     ApiResponseUtil.toResponse(RespSubmitterOk)
   }
 
-  def getSchnorrPublicKeyHash: Route = (post & path("getSchnorrPublicKeyHash")) {
-    entity(as[ReqGetSchnorrPublicKeyHash]) { body =>
-      try {
-        val schnorrPublicKey: SchnorrProposition = new SchnorrProposition(BytesUtils.fromHexString(body.schnorrPublicKey))
-        ApiResponseUtil.toResponse(
-          RespHashSchnorrPublicKey(
-            BytesUtils.toHexString(schnorrPublicKey.getHash)
-          )
-        )
-      } catch {
-        case e: Throwable => SidechainApiError(e)
+
+
+  def getSigningKeyRotationMessageToSign: Route = (post & path("getKeyRotationMessageToSignForSigningKey")) {
+    retrieveMessageToSign(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForSigningKeyUpdate)
+  }
+
+  def getMasterKeyRotationMessageToSign: Route = (post & path("getKeyRotationMessageToSignForMasterKey")) {
+    retrieveMessageToSign(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForMasterKeyUpdate)
+  }
+
+  private def retrieveMessageToSign(getMessageToSign: (Array[Byte], Int, Array[Byte]) => Array[Byte]) = {
+    entity(as[ReqGetKeyRotationMessageToSign]) { body =>
+      circuitType match {
+        case NaiveThresholdSignatureCircuit =>
+          ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation message to sign!", JOptional.empty()))
+        case NaiveThresholdSignatureCircuitWithKeyRotation =>
+          val message = getMessageToSign(
+            BytesUtils.fromHexString(body.schnorrPublicKey), body.withdrawalEpoch, params.sidechainId)
+          ApiResponseUtil.toResponse(RespKeyRotationMessageToSign(message))
       }
     }
   }
@@ -100,17 +112,16 @@ case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, ce
   def getCertifiersKeys: Route = (post & path("getCertifiersKeys")) {
     try {
       entity(as[ReqGetCertificateSigners]) { body =>
-          withView { sidechainNodeView =>
-            sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch) match {
-              case Some(certifiersKeys) =>
-                ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys))
-              case None =>
-                ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Can not find certifiers keys.", JOptional.empty()))
-            }
+        withView { sidechainNodeView =>
+          sidechainNodeView.state.certifiersKeys(body.withdrawalEpoch) match {
+            case Some(certifiersKeys) =>
+              ApiResponseUtil.toResponse(RespGetCertificateSigners(certifiersKeys))
+            case None =>
+              ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Can not find certifiers keys.", JOptional.empty()))
           }
+        }
       }
-    } catch
-    {
+    } catch {
       case e: Throwable => SidechainApiError(e)
     }
   }
@@ -147,8 +158,9 @@ object SidechainDebugRestScheme {
   private[api] object RespSubmitterOk extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGetSchnorrPublicKeyHash(schnorrPublicKey: String) {
+  private[api] case class ReqGetKeyRotationMessageToSign(schnorrPublicKey: String, withdrawalEpoch: Int) {
     require(schnorrPublicKey != null && schnorrPublicKey.nonEmpty, "Null key")
+    require(withdrawalEpoch >= 0, "Withdrawal epoch is negative")
   }
 
   @JsonView(Array(classOf[Views.Default]))
@@ -157,7 +169,7 @@ object SidechainDebugRestScheme {
                                               keyType: Int) {
     require(withdrawalEpoch >= 0, "Withdrawal epoch is negative")
     require(indexOfKey >= 0, "Key index is negative")
-    require(keyType >= 0, "Key type is negative")
+    require(keyType == 0 || keyType == 1, "Key type can be only 0 for signing and 1 for master key")
   }
 
   @JsonView(Array(classOf[Views.Default]))
@@ -172,7 +184,7 @@ object SidechainDebugRestScheme {
   private[api] case class RespGetKeyRotationProof(keyRotationProof: Option[KeyRotationProof]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespHashSchnorrPublicKey(schnorrPublicKeyHash: String) extends SuccessResponse
+  private[api] case class RespKeyRotationMessageToSign(keyRotationMessageToSign: Array[Byte]) extends SuccessResponse
 }
 
 object SidechainDebugErrorResponse {
