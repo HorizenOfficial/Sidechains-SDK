@@ -23,6 +23,8 @@ class StateTransition(
     val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
     if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
     gasPool.subGas(intrinsicGas)
+    // reset and prepare account access list
+    view.setupAccessList(msg)
     // find and execute the first matching processor
     messageProcessors.find(_.canProcess(msg, view)) match {
       case None =>

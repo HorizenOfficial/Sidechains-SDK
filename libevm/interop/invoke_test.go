@@ -112,9 +112,7 @@ func TestInvoke(t *testing.T) {
 		t.Fatalf("nonce was modified: expected 0, actual %v", nonce)
 	}
 	// cleanup
-	call(t, instance, "CloseDatabase", lib.DatabaseParams{
-		DatabaseHandle: dbHandle,
-	})
+	call(t, instance, "CloseDatabase", lib.DatabaseParams{DatabaseHandle: dbHandle})
 }
 
 type MockLibrary struct{}
