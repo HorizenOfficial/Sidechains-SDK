@@ -186,11 +186,11 @@ else
 fi
 
 testScriptsNetworking=(
-    'net_declared_address.py',
-    'net_first_known_peers.py',
-    'net_incoming_connections.py',
-    'net_peers_storage_persistence.py',
-    'net_ring_of_nodes.py',
+    'net_declared_address.py'
+    'net_first_known_peers.py'
+    'net_incoming_connections.py'
+    'net_peers_storage_persistence.py'
+    'net_ring_of_nodes.py'
     'net_skip_down_known_peer.py'
 )
 
