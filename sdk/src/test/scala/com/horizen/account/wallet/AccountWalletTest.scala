@@ -84,10 +84,6 @@ class AccountWalletTest
         }
         storedSecretList.appendAll(answer.getArgument(1).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
       })
-
-
-
-
   }
 
   @Test

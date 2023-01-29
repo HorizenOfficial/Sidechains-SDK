@@ -54,7 +54,7 @@ abstract class AbstractWallet[
 
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion
-  override def addSecret(secret: SidechainTypes#SCS): Try[W] = Try{
+  override def addSecret(secret: SidechainTypes#SCS): Try[W] = Try {
     require(secret != null, "AbstractWallet: Secret must be NOT NULL.")
     secretStorage.add(secret).get
     this
@@ -112,15 +112,16 @@ abstract class AbstractWallet[
     var nonce = allSecrets.size
     val salt: Array[Byte] = secretCreator.salt()
     val secretStorageSize = allSecrets.count(_.isInstanceOf[T])
-    for(_ <- 0 to secretStorageSize) {
+    for (_ <- 0 to secretStorageSize) {
       val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
       val secret: T = secretCreator.generateSecret(seed)
-      val trySecret = secretStorage.add(secret)
-      if(trySecret.isSuccess) {
-        return Success(this, secret)
-      } else {
-        nonce += 1
+      if (!secretStorage.contains(secret)) {
+        val trySecret = secretStorage.add(secret)
+        if (trySecret.isSuccess) {
+          return Success(this, secret)
+        }
       }
+      nonce += 1
     }
     throw new RuntimeException("Exceeded number of attempts generating secret")
   }

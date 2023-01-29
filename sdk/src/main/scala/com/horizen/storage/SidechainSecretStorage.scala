@@ -113,6 +113,12 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     this
   }
 
+  def contains(secret: SidechainTypes#SCS): Boolean = {
+    require(secret != null, "Can not check if contains in storage: Secret must be NOT NULL.")
+    val key = calculateKey(secret.publicImage())
+    secrets.contains(key)
+  }
+
   def isEmpty: Boolean = storage.isEmpty
 
   override def lastVersionId : Option[ByteArrayWrapper] = {
