@@ -1,11 +1,10 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
-import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, SecretCreator, VrfSecretKey}
+import com.horizen.proposition._
+import com.horizen.secret._
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import scorex.crypto.hash.Blake2b256
@@ -14,8 +13,7 @@ import scorex.util.ScorexLogging
 import java.util.{List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
-import scala.util.control.Breaks.break
+import scala.util.{Success, Try}
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
   extends sparkz.core.transaction.wallet.Vault[TX, PMOD, W] {
@@ -30,6 +28,8 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.co
   def secrets(): Set[S]
 
   def publicKeys(): Set[P]
+
+  def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)]
 }
 
 
@@ -105,6 +105,7 @@ abstract class AbstractWallet[
 
   def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): W
 
+  @Override
   def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)] = Try {
     require(secretCreator != null, "AbstractWallet: Secret creator must be NOT NULL.")
     val allSecrets = this.secrets()
