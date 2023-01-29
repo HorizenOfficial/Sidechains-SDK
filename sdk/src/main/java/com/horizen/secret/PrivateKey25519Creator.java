@@ -33,6 +33,12 @@ public final class PrivateKey25519Creator implements SecretCreator<PrivateKey255
         return new PrivateKey25519(keyPair.getKey(), keyPair.getValue());
     }
 
+    /**
+     * Method to get salt.
+     * In this case salt serves as a domain separation
+     *
+     * @return salt as byte array in UTF-8 encoding
+     */
     @Override
     public byte[] salt() {
         String domain = "PrivateKey25519";

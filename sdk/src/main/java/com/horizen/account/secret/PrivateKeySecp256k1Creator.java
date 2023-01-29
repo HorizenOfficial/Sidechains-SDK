@@ -27,6 +27,12 @@ public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKe
         return new PrivateKeySecp256k1(keyPair.getKey());
     }
 
+    /**
+     * Method to get salt.
+     * In this case salt serves as a domain separation
+     *
+     * @return salt as byte array in UTF-8 encoding
+     */
     @Override
     public byte[] salt() {
         String domain = "PrivateKeySecp25519k1";

@@ -28,6 +28,12 @@ public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
         return new SchnorrSecret(keys.get(SchnorrFunctions.KeyType.SECRET), keys.get(SchnorrFunctions.KeyType.PUBLIC));
     }
 
+    /**
+     * Method to get salt.
+     * In this case salt serves as a domain separation
+     *
+     * @return salt as byte array in UTF-8 encoding
+     */
     @Override
     public byte[] salt() {
         String domain = "SchnorrKey";

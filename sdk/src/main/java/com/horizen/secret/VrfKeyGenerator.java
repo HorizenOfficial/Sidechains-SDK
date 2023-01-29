@@ -28,6 +28,12 @@ public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
         return new VrfSecretKey(keys.get(KeyType.SECRET), keys.get(KeyType.PUBLIC));
     }
 
+    /**
+     * Method to get salt.
+     * In this case salt serves as a domain separation
+     *
+     * @return salt as byte array in UTF-8 encoding
+     */
     @Override
     public byte[] salt() {
         String domain = "VrfKey";
