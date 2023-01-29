@@ -3,12 +3,11 @@ package com.horizen.secret;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.cryptolibprovider.utils.SchnorrFunctions;
 
+import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 
 public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
     private static final SchnorrKeyGenerator instance;
-
-    private final String domain = "SchnorrKey";
 
     static {
         instance = new SchnorrKeyGenerator();
@@ -31,6 +30,7 @@ public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
 
     @Override
     public byte[] salt() {
-        return domain.getBytes();
+        String domain = "SchnorrKey";
+        return domain.getBytes(StandardCharsets.UTF_8);
     }
 }

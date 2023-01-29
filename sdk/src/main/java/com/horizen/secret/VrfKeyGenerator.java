@@ -3,12 +3,11 @@ package com.horizen.secret;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.cryptolibprovider.VrfFunctions.KeyType;
 
+import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 
 public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
     private static final VrfKeyGenerator instance;
-
-    private final String domain = "VrfKey";
 
     static {
         instance = new VrfKeyGenerator();
@@ -31,6 +30,7 @@ public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
 
     @Override
     public byte[] salt() {
-        return domain.getBytes();
+        String domain = "VrfKey";
+        return domain.getBytes(StandardCharsets.UTF_8);
     }
 }

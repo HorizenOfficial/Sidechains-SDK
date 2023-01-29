@@ -8,12 +8,12 @@ import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import scorex.crypto.hash.Blake2b256;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public final class PrivateKey25519Creator implements SecretCreator<PrivateKey25519>
 {
     private static final PrivateKey25519Creator instance;
-    private final String domain = "PrivateKey25519";
 
     static {
         instance = new PrivateKey25519Creator();
@@ -35,6 +35,7 @@ public final class PrivateKey25519Creator implements SecretCreator<PrivateKey255
 
     @Override
     public byte[] salt() {
-        return domain.getBytes();
+        String domain = "PrivateKey25519";
+        return domain.getBytes(StandardCharsets.UTF_8);
     }
 }

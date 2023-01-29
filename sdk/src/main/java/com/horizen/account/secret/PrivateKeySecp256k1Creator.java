@@ -3,10 +3,10 @@ package com.horizen.account.secret;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.secret.SecretCreator;
 
-public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKeySecp256k1> {
-    private static PrivateKeySecp256k1Creator instance;
+import java.nio.charset.StandardCharsets;
 
-    private final String domain = "PrivateKeySecp25519k1";
+public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKeySecp256k1> {
+    private static final PrivateKeySecp256k1Creator instance;
 
     static {
         instance = new PrivateKeySecp256k1Creator();
@@ -23,12 +23,13 @@ public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKe
     @Override
     public PrivateKeySecp256k1 generateSecret(byte[] seed) {
         var keyPair = Secp256k1.createKeyPair(seed);
-
+        assert keyPair != null;
         return new PrivateKeySecp256k1(keyPair.getKey());
     }
 
     @Override
     public byte[] salt() {
-        return domain.getBytes();
+        String domain = "PrivateKeySecp25519k1";
+        return domain.getBytes(StandardCharsets.UTF_8);
     }
 }
