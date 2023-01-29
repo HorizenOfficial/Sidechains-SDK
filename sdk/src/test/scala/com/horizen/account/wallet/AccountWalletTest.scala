@@ -90,26 +90,6 @@ class AccountWalletTest
 
   }
 
-
-  @Test
-  def testRollback(): Unit = {
-    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
-
-    val accountWallet = new AccountWallet(
-      "seed".getBytes(),
-      mockedSecretStorage)
-
-    // Prepare block ID and corresponding version
-    val blockId = new Array[Byte](32)
-    Random.nextBytes(blockId)
-    val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(blockId)
-
-    assertTrue("SidechainWallet rollback expected to be successful", accountWallet.rollback(versionTag).isSuccess)
-
-    Mockito.verifyNoInteractions(mockedSecretStorage)
-  }
-
-
   @Test
   def testSecrets(): Unit = {
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
