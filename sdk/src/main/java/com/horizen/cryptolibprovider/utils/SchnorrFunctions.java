@@ -10,7 +10,6 @@ public interface SchnorrFunctions {
         PUBLIC
     }
 
-    //JNI doesn't support seed at this moment
     EnumMap<KeyType, byte[]> generateSchnorrKeys(byte[] seed);
 
     //message is taken form createBackwardTransferMessage
