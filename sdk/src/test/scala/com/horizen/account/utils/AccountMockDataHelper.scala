@@ -4,9 +4,9 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
-import com.horizen.params.NetworkParams
+import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
 import org.mockito.Mockito
-import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
+import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{Bloom, EthereumReceipt}
@@ -17,15 +17,15 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData}
 import com.horizen.box.Box
-import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
+import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainSecretsCompanion
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
 import com.horizen.evm.StateDB
 import com.horizen.evm.interop.ProofAccountResult
 import com.horizen.evm.utils.Address
-import com.horizen.fixtures.SidechainBlockFixture.generateMainchainBlockReference
+import com.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
-import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{Secret, SecretSerializer}
 import com.horizen.storage.{SidechainSecretStorage, Storage}
@@ -39,6 +39,8 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
+import sparkz.core.transaction.MemoryPool
+
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
 import java.util.{Optional, HashMap => JHashMap}
@@ -137,6 +139,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     val history: AccountHistory = mock[AccountHistory]
     val blockId = block.get.id
     val height = if (genesis) 2 else 1
+    val mcHeaderInfo = Some(MainchainHeaderInfo(generateMainchainHeaderHash(height), generateMainchainHeaderHash(height - 1), height,
+      bytesToId(GENESIS_BLOCK_PARENT_ID), FieldElementUtils.randomFieldElementBytes(height)))
 
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
 
@@ -155,6 +159,15 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     Mockito.when(history.getStorageBlockById(any())).thenReturn(None)
     Mockito.when(history.getStorageBlockById(blockId)).thenReturn(Some(block.get))
+
+    Mockito.when(history.getBestMainchainHeaderInfo).thenReturn(mcHeaderInfo)
+    Mockito.when(history.missedMainchainReferenceDataHeaderHashes).thenReturn(Seq())
+
+    Mockito.when(history.bestBlockInfo).thenReturn(mock[SidechainBlockInfo])
+    Mockito.when(history.bestBlockInfo.withdrawalEpochInfo).thenReturn(mock[WithdrawalEpochInfo])
+    Mockito.when(history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex).thenReturn(1)
+    Mockito.when(history.bestBlockId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
+
     if (parentBlock.nonEmpty) {
       val parentId = parentBlock.get.id
       val blockInfo = new SidechainBlockInfo(
@@ -172,7 +185,7 @@ case class AccountMockDataHelper(genesis: Boolean)
       )
       Mockito.when(history.getBlockById(parentId)).thenReturn(Optional.of(parentBlock.get))
       Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Some(parentBlock.get))
-      Mockito.when(history.blockInfoById(blockId)).thenReturn(blockInfo)
+      Mockito.when(history.blockInfoById(any())).thenReturn(blockInfo)
     }
 
     Mockito.when(history.getBlockHeightById(any())).thenReturn(Optional.of[Integer](1))
@@ -252,6 +265,7 @@ case class AccountMockDataHelper(genesis: Boolean)
         msgProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
     }
+    Mockito.when(state.params).thenReturn(TestNetParams())
     Mockito.when(state.getView).thenReturn(stateView)
     Mockito.when(state.getView.getTransactionReceipt(any())).thenReturn(None)
     Mockito.when(state.getView.getTransactionReceipt(txHash)).thenReturn(Some(receipt))

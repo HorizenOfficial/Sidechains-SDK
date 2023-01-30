@@ -3,7 +3,6 @@ package com.horizen.account.api.rpc.service
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.SidechainTypes
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.service.utils.{PendingBlock, PendingStateView}
 import com.horizen.account.api.rpc.types._
@@ -154,24 +153,29 @@ class EthService(
       blockId: ModifierId,
       hydratedTx: Boolean
   ): EthereumBlockView = {
-    val (blockNumber, blockHash): (Long, Hash) = if (blockId == null) {
-      (nodeView.history.getCurrentHeight + 1, null)
+    val history = nodeView.history
+    val (blockNumber, blockHash, optBlock): (Long, Hash, Option[AccountBlock]) = if (blockId == null) {
+      (history.getCurrentHeight + 1, null, Option.apply(getBlockById(nodeView, blockId)._1))
     } else {
-      (nodeView.history.getBlockHeightById(blockId).get().toLong, Hash.fromBytes(blockId.toBytes))
+      (
+        history.getBlockHeightById(blockId).get().toLong,
+        Hash.fromBytes(blockId.toBytes),
+        history.getStorageBlockById(blockId)
+      )
     }
 
-    val block = getBlockById(nodeView, blockId)._1
-
-    val view: AccountStateView =
-      if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
-    using(view) { stateView =>
-      if (hydratedTx) {
-        val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
-        EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
-      } else {
-        EthereumBlockView.notHydrated(blockNumber, blockHash, block)
+    optBlock.map(block => {
+      val view: AccountStateView =
+        if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
+      using(view) { stateView =>
+        if (hydratedTx) {
+          val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
+          EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
+        } else {
+          EthereumBlockView.notHydrated(blockNumber, blockHash, block)
+        }
       }
-    }
+    }).orNull
   }
 
   @RpcMethod("eth_getBlockTransactionCountByHash")
@@ -186,8 +190,14 @@ class EthService(
 
   private def blockTransactionCount(getBlockId: NV => ModifierId): Quantity = {
     applyOnAccountView { nodeView =>
-      val block = Option.apply(getBlockById(nodeView, getBlockId(nodeView))._1)
-      block
+      val blockId = getBlockId(nodeView)
+      val history = nodeView.history
+      val optBlock: Option[AccountBlock] = if (blockId == null) {
+        Option.apply(getBlockById(nodeView, blockId)._1)
+      } else {
+        history.getStorageBlockById(blockId)
+      }
+      optBlock
         .map(_.transactions.size)
         .map(new Quantity(_))
         .orNull
@@ -499,21 +509,25 @@ class EthService(
     val txIndex = index.toNumber.intValueExact()
     applyOnAccountView { nodeView =>
       val blockId = getBlockId(nodeView)
-      val block = getBlockById(nodeView, blockId)._1
-      val view: AccountStateView =
-        if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
-      Option.apply(block)
-        .flatMap(block => {
-          block.transactions
-            .drop(txIndex)
-            .headOption
-            .map(_.asInstanceOf[EthereumTransaction])
-            .flatMap(tx =>
-              using(view)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
-                .map(new EthereumTransactionView(tx, _, block.header.baseFee))
-            )
-        })
-    }.orNull
+      val history = nodeView.history
+      val optBlock: Option[AccountBlock] = if (blockId == null) {
+        Option.apply(getBlockById(nodeView, blockId)._1)
+      } else {
+        history.getStorageBlockById(blockId)
+      }
+      optBlock.flatMap(block => {
+        val view: AccountStateView =
+          if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
+        block.transactions
+          .drop(txIndex)
+          .headOption
+          .map(_.asInstanceOf[EthereumTransaction])
+          .flatMap(tx =>
+            using(view)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
+              .map(new EthereumTransactionView(tx, _, block.header.baseFee))
+          )
+      }).orNull
+    }
   }
 
   @RpcMethod("eth_getTransactionReceipt")
