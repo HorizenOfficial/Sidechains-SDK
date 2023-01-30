@@ -224,7 +224,7 @@ trait EthereumTransactionFixture {
     )
   }
 
-  def createMockTxWithSize(txToMock: EthereumTransaction, size: Long): EthereumTransaction = {
+  def addMockSizeToTx(txToMock: EthereumTransaction, size: Long): EthereumTransaction = {
     val tx = Mockito.spy[EthereumTransaction](txToMock)
     Mockito.when(tx.size()).thenReturn(size)
     tx

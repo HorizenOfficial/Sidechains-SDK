@@ -1158,7 +1158,7 @@ class MempoolMapTest
       assertTrue(
         "Adding transaction failed",
         mempoolMap.add(
-          createMockTxWithSize(
+          addMockSizeToTx(
             createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt),
             MempoolMap.MaxTxSize
           )
@@ -1168,7 +1168,7 @@ class MempoolMapTest
     assertEquals("Wrong number of txs in mempool", 2, mempoolMap.size)
     assertEquals("Wrong account size in slots", 8, mempoolMap.getAccountSizeInSlots(exceedingTx.getFrom))
 
-    exceedingTx = createMockTxWithSize(
+    exceedingTx = addMockSizeToTx(
       createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account1KeyOpt),
       MempoolMap.MaxTxSize
     )
@@ -1222,7 +1222,7 @@ class MempoolMapTest
     //Create a tx with the same nonce of an existing one but with greater gas fee, tip (for allowing replacing) and size
     // (so it should be rejected)
 
-    exceedingTx = createMockTxWithSize(
+    exceedingTx = addMockSizeToTx(
       createEIP1559Transaction(value = BigInteger.TWO,
         nonce = txToReplace.getNonce,
         keyOpt = account1KeyOpt,
@@ -1254,10 +1254,10 @@ class MempoolMapTest
     (0 until MaxMempoolSlots).foreach(nonce => assertTrue("Adding transaction failed",
       mempoolMap.add(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt)).isSuccess))
     assertEquals("Wrong number of txs in mempool", MaxMempoolSlots, mempoolMap.size)
+    assertEquals("Wrong account size in slots", MaxMempoolSlots, mempoolMap.getAccountSizeInSlots(account1KeyOpt.get.publicImage()))
+    assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots())
 
     var exceedingTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(MaxMempoolSlots), keyOpt = account1KeyOpt)
-    assertEquals("Wrong account size in slots", MaxMempoolSlots, mempoolMap.getAccountSizeInSlots(exceedingTx.getFrom))
-    assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots())
 
     mempoolMap.add(exceedingTx) match {
       case Success(_) => fail("Adding exec transaction to a full mempool should have failed")
@@ -1281,7 +1281,7 @@ class MempoolMapTest
     mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
     assertTrue("Adding transaction failed",
         mempoolMap.add(
-          createMockTxWithSize(
+          addMockSizeToTx(
             createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account1KeyOpt),
             MempoolMap.MaxTxSize
           )
@@ -1289,7 +1289,7 @@ class MempoolMapTest
     )
     assertTrue("Adding transaction failed",
       mempoolMap.add(
-        createMockTxWithSize(
+        addMockSizeToTx(
           createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ONE, keyOpt = account2KeyOpt),
           MempoolMap.MaxTxSize
         )
@@ -1298,7 +1298,7 @@ class MempoolMapTest
     assertEquals("Wrong number of txs in mempool", 2, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 8, mempoolMap.getMempoolSizeInSlots())
 
-    exceedingTx = createMockTxWithSize(
+    exceedingTx = addMockSizeToTx(
       createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account3KeyOpt),
       MempoolMap.MaxTxSize
     )
@@ -1360,7 +1360,7 @@ class MempoolMapTest
     //Create a tx with the same nonce of an existing one but with greater gas fee, tip (for allowing replacing) and size
     // (so it should be rejected)
 
-    exceedingTx = createMockTxWithSize(
+    exceedingTx = addMockSizeToTx(
       createEIP1559Transaction(value = BigInteger.TWO,
         nonce = txToReplace2.getNonce,
         keyOpt = account2KeyOpt,
@@ -1383,8 +1383,6 @@ class MempoolMapTest
 
   private def createMockTxWithSize(size: Long): EthereumTransaction = {
     val dummyTx = createEIP1559Transaction(value = BigInteger.ONE)
-    val tx = Mockito.spy[EthereumTransaction](dummyTx)
-    Mockito.when(tx.size()).thenReturn(size)
-    tx
+    addMockSizeToTx(dummyTx, size)
   }
 }
