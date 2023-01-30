@@ -118,11 +118,7 @@ func TestEvmCallTracer(t *testing.T) {
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
 		},
 		TraceOptions: &TraceOptions{
-			EnableMemory:     true,
-			DisableStack:     false,
-			DisableStorage:   false,
-			EnableReturnData: true,
-			Tracer:           "callTracer",
+			Tracer: "callTracer",
 		},
 	})
 	if err != nil {
@@ -173,12 +169,8 @@ func TestEvmCallTracerWithTracerConfig(t *testing.T) {
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
 		},
 		TraceOptions: &TraceOptions{
-			EnableMemory:     true,
-			DisableStack:     false,
-			DisableStorage:   false,
-			EnableReturnData: true,
-			Tracer:           "callTracer",
-			TracerConfig:     json.RawMessage(`{"onlyTopCall": true, "withLog": false}`),
+			Tracer:       "callTracer",
+			TracerConfig: json.RawMessage(`{"onlyTopCall": true, "withLog": false}`),
 		},
 	})
 	if err != nil {
@@ -229,12 +221,8 @@ func TestEvmFourByteTrace(t *testing.T) {
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
 		},
 		TraceOptions: &TraceOptions{
-			EnableMemory:     true,
-			DisableStack:     false,
-			DisableStorage:   false,
-			EnableReturnData: true,
-			Tracer:           "4byteTracer",
-			TracerConfig:     json.RawMessage(`{"onlyTopCall": true, "withLog": false}`),
+			Tracer:       "4byteTracer",
+			TracerConfig: json.RawMessage(`{"onlyTopCall": true, "withLog": false}`),
 		},
 	})
 	if err != nil {
