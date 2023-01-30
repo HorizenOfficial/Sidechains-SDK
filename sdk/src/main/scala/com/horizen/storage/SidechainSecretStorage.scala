@@ -1,16 +1,20 @@
 package com.horizen.storage
 
+import com.google.common.primitives.{Bytes, Ints}
+
 import java.util.{ArrayList => JArrayList}
 import com.horizen.SidechainTypes
+import com.horizen.certificatesubmitter.keys.KeyRotationProofSerializer
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.utils.Utils.nextVersion
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
+import com.sun.tools.javac.resources.version
 import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
@@ -22,6 +26,10 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainSecretsCompanion != null, "SidechainSecretsCompanion must be NOT NULL.")
+
+  private[horizen] def getNonceKey(keyTypeSalt: Array[Byte]): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, keyTypeSalt))
+  }
 
   private val secrets = new mutable.LinkedHashMap[ByteArrayWrapper, SidechainTypes#SCS]()
 
@@ -123,5 +131,30 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   override def lastVersionId : Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
+  }
+
+  def getNonce(keyTypeSalt: Array[Byte]): Option[Int] = {
+    storage.get(getNonceKey(keyTypeSalt)).asScala match {
+      case Some(baw) =>
+        Try {
+          Ints.fromByteArray(baw.data)
+        } match {
+          case Success(epoch) => Some(epoch)
+          case Failure(exception) =>
+            log.error("Error while nonce information parsing.", exception)
+            Option.empty
+        }
+      case _ => Some(0)
+    }
+  }
+
+  def storeNonce(nonce: Int, keyTypeSalt: Array[Byte]): Try[SidechainSecretStorage] = Try{
+    require(nonce > 0, "Nonce must be not negative")
+    require(keyTypeSalt != null, "Key type salt must be NOT NULL")
+    val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
+    val removeList = new JArrayList[ByteArrayWrapper]()
+    updateList.add(new JPair(getNonceKey(keyTypeSalt), new ByteArrayWrapper(nonce)))
+    storage.update(new ByteArrayWrapper(1), updateList, removeList)
+    this
   }
 }
