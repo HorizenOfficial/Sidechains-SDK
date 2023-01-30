@@ -14,7 +14,7 @@ import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 import java.math.BigInteger
 import java.util.Optional
 import scala.language.implicitConversions
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Random, Try}
 
 trait MessageProcessorFixture extends ClosableResourceHandler {
   // simplifies using BigIntegers within the tests
@@ -93,22 +93,6 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   /**
    * Creates a large temporary gas pool and verifies the amount of total gas consumed.
    */
-  def assertGas[A](expectedGas: BigInteger, enforce: Boolean = true)(fun: GasPool => A): A = {
-    withGas { gas =>
-      try {
-        fun(gas)
-      } finally {
-        if (enforce) {
-          assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
-        } else {
-          println("consumed gas: " + gas.getUsedGas)
-          if (expectedGas != gas.getUsedGas)
-            println(" mismatch here, expected is: " + expectedGas)
-        }
-      }
-    }
-  }
-
   def assertGas(
       expectedGas: BigInteger,
       msg: Message,
@@ -116,25 +100,10 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
       processor: MessageProcessor,
       ctx: BlockContext,
   ): Array[Byte] = {
-    // DEBUG: set to false to print gas usage and disable assertion
-    val enforce = true
     view.setupAccessList(msg)
     val gas = new GasPool(1000000)
     val result = Try.apply(processor.process(msg, view, gas, ctx))
-    // verify gas usage in case of success or revert, in any other case the consumption does not matter:
-    // - in case of ExecutionFailedException all available gas will be burned anyway
-    // - any other exception will invalidate the message/transaction/block or in case of forging
-    //    will drop the tx from the new block
-    result match {
-      case Success(_) | Failure(_: ExecutionRevertedException) =>
-        if (enforce) {
-          assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
-        } else {
-          println("consumed gas: " + gas.getUsedGas)
-          if (expectedGas != gas.getUsedGas)
-            println(" mismatch here, expected is: " + expectedGas)
-        }
-    }
+    assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
     // return result or rethrow any exception
     result.get
   }
