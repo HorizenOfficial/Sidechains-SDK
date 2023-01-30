@@ -3,7 +3,6 @@ package com.horizen.account.utils;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.evm.utils.Address;
 import com.horizen.utils.Pair;
-import org.bouncycastle.crypto.prng.FixedSecureRandom;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
 import sparkz.crypto.hash.Keccak256;
@@ -47,8 +46,10 @@ public final class Secp256k1 {
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
         try {
-            byte[] hashedSeed = (byte[])Keccak256.hash(seed);
-            ECKeyPair keyPair = Keys.createEcKeyPair(new FixedSecureRandom(hashedSeed));
+            SecureRandom rnd = SecureRandom.getInstance("SHA1PRNG");
+            rnd.setSeed(seed);
+            ECKeyPair keyPair = Keys.createEcKeyPair(rnd);
+
             byte[] privateKey = Numeric.toBytesPadded(keyPair.getPrivateKey(), PRIVATE_KEY_SIZE);
             byte[] publicKey = Numeric.toBytesPadded(keyPair.getPublicKey(), PUBLIC_KEY_SIZE);
             return new Pair<>(privateKey, publicKey);

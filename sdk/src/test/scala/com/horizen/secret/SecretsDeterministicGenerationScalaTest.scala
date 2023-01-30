@@ -5,11 +5,9 @@ import com.horizen.account.utils.Secp256k1
 import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
 import com.horizen.cryptolibprovider.utils.SchnorrFunctions
 import com.horizen.utils.Ed25519
-import org.bouncycastle.crypto.prng.FixedSecureRandom
 import org.junit.Assert.{assertEquals, assertNotEquals}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-
 import java.nio.charset.StandardCharsets
 import java.util
 
@@ -85,5 +83,7 @@ class SecretsDeterministicGenerationScalaTest
     assertNotEquals("Secrets should NOT be equal", s1, anotherSecret)
 
     val s2 : Secret = localGetPrivateKeySecp256k1(constantTestSeed)
-    assertEquals("Secrets should be equal", s1, s2)  }
+    assertEquals("Secrets should be equal", s1, s2)
+  }
+
 }
