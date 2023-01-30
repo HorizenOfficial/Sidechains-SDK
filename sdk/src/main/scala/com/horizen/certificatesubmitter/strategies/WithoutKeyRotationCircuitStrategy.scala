@@ -1,16 +1,13 @@
 package com.horizen.certificatesubmitter.strategies
 
+import com.horizen._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import com.horizen.params.NetworkParams
-import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen._
-import sparkz.core.transaction.MemoryPool
 
 import java.util.Optional
 import scala.collection.JavaConverters._
@@ -21,21 +18,10 @@ class WithoutKeyRotationCircuitStrategy[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
-  _FPI <: AbstractFeePaymentsInfo,
-  _HSTOR <: AbstractHistoryStorage[PM, _FPI, _HSTOR],
-  _HIS <: AbstractHistory[TX, H, PM, _FPI, _HSTOR, _HIS],
-  _MS <: AbstractState[TX, H, PM, _MS],
-  _VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, _VL],
-  _MP <: MemoryPool[TX, _MP]](settings: SidechainSettings, params: NetworkParams,
+  HIS <: AbstractHistory[TX, H, PM, _, _, _],
+  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings, params: NetworkParams,
                             cryptolibCircuit: ThresholdSignatureCircuit)
-  extends CircuitStrategy[TX, H, PM, CertificateDataWithoutKeyRotation](settings, params) {
-
-  type FPI = _FPI
-  type HSTOR = _HSTOR
-  type HIS = _HIS
-  type MS = _MS
-  type VL = _VL
-  type MP = _MP
+  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithoutKeyRotation](settings, params) {
 
   override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
@@ -68,10 +54,7 @@ class WithoutKeyRotationCircuitStrategy[
       true)
   }
 
-  override def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithoutKeyRotation = {
-    val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
-
+  override def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): CertificateDataWithoutKeyRotation = {
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(status.referencedEpoch)
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
@@ -79,7 +62,7 @@ class WithoutKeyRotationCircuitStrategy[
     val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, status.referencedEpoch)
     val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
+    val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(state, status.referencedEpoch)
 
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
@@ -98,10 +81,7 @@ class WithoutKeyRotationCircuitStrategy[
       utxoMerkleTreeRoot)
   }
 
-  override def getMessageToSign(sidechainNodeView: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
-
+  override def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
@@ -113,7 +93,7 @@ class WithoutKeyRotationCircuitStrategy[
 
     val utxoMerkleTreeRoot: Option[Array[Byte]] = {
       Try {
-        getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
+        getUtxoMerkleTreeRoot(state, referencedWithdrawalEpochNumber)
       } match {
         case Failure(e: IllegalStateException) =>
           throw new Exception("CertificateSubmitter is too late against the State. " +
@@ -136,7 +116,7 @@ class WithoutKeyRotationCircuitStrategy[
     )
   }
 
-  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: MS): Option[Array[Byte]] = {
+  private def getUtxoMerkleTreeRoot(state: MS, referencedWithdrawalEpochNumber: Int): Option[Array[Byte]] = {
     if (params.isCSWEnabled) {
       state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
         case x: Some[Array[Byte]] => x

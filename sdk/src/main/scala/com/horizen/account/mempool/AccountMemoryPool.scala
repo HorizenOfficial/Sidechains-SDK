@@ -46,11 +46,11 @@ class AccountMemoryPool(
   }
 
   override def take(limit: Int): Iterable[SidechainTypes#SCAT] = {
-    unconfirmed.takeExecutableTxs().take(limit)
+    unconfirmed.takeExecutableTxs(Seq()).take(limit)
   }
 
-  def takeExecutableTxs(): MempoolMap#TransactionsByPriceAndNonce = {
-    unconfirmed.takeExecutableTxs()
+  def takeExecutableTxs(forcedTx: Iterable[SidechainTypes#SCAT] = Seq()): MempoolMap#TransactionsByPriceAndNonce = {
+    unconfirmed.takeExecutableTxs(forcedTx)
   }
 
   override def filter(txs: Seq[SidechainTypes#SCAT]): AccountMemoryPool = {

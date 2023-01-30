@@ -18,10 +18,8 @@ func TestEvmTrace(t *testing.T) {
 	)
 	dbHandle := instance.OpenMemoryDB()
 	err, stateDbHandle := instance.StateOpen(StateParams{
-		DatabaseParams: DatabaseParams{
-			DatabaseHandle: dbHandle,
-		},
-		Root: common.Hash{},
+		DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           common.Hash{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -77,10 +75,8 @@ func TestEvmOpCodes(t *testing.T) {
 	)
 	dbHandle := instance.OpenMemoryDB()
 	_, stateHandle := instance.StateOpen(StateParams{
-		DatabaseParams: DatabaseParams{
-			dbHandle,
-		},
-		Root: test.EmptyHash,
+		DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           test.EmptyHash,
 	})
 	_, statedb := instance.statedbs.Get(stateHandle)
 
@@ -171,10 +167,8 @@ func TestEvmErrors(t *testing.T) {
 	)
 	dbHandle := instance.OpenMemoryDB()
 	_, stateHandle := instance.StateOpen(StateParams{
-		DatabaseParams: DatabaseParams{
-			dbHandle,
-		},
-		Root: test.EmptyHash,
+		DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           test.EmptyHash,
 	})
 	_, statedb := instance.statedbs.Get(stateHandle)
 

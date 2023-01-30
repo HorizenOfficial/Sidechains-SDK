@@ -9,32 +9,39 @@ import java.math.BigInteger
 
 class GasUtilTest extends JUnitSuite with EthereumTransactionFixture {
 
+  private def zeroes(n: Int) = Array.fill(n) { 0.toByte }
+
   @Test
   def testIntrinsicGas(): Unit = {
     assertEquals(
       "eoa to eoa",
       BigInteger.valueOf(21000),
-      GasUtil.intrinsicGas(Array[Byte](), isContractCreation = false))
+      GasUtil.intrinsicGas(Array[Byte](), isContractCreation = false)
+    )
 
     assertEquals(
       "eoa to eoa with data",
       BigInteger.valueOf(24040),
-      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = false))
+      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = false)
+    )
 
     assertEquals(
       "eoa to eoa with data including zero bytes",
       BigInteger.valueOf(24240),
-      GasUtil.intrinsicGas(zeroes(25) ++ Array.range(10, 200).map(_.toByte) ++ zeroes(25), isContractCreation = false))
+      GasUtil.intrinsicGas(zeroes(25) ++ Array.range(10, 200).map(_.toByte) ++ zeroes(25), isContractCreation = false)
+    )
 
     assertEquals(
       "contract creation small",
       BigInteger.valueOf(56040),
-      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = true))
+      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = true)
+    )
 
     assertEquals(
       "contract creation big including zero bytes",
       BigInteger.valueOf(293200),
-      GasUtil.intrinsicGas(zeroes(8) ++ Array.fill(15000) { 0x83.toByte } ++ zeroes(42), isContractCreation = true))
+      GasUtil.intrinsicGas(zeroes(8) ++ Array.fill(15000) { 0x83.toByte } ++ zeroes(42), isContractCreation = true)
+    )
   }
 
   @Test
@@ -46,6 +53,4 @@ class GasUtilTest extends JUnitSuite with EthereumTransactionFixture {
     assertEquals(BigInteger.ONE, baseFee)
     assertEquals(maxFeePerGas.subtract(BigInteger.ONE), forgerTipPerGas)
   }
-
-  private def zeroes(n: Int) = Array.fill(n) { 0.toByte }
 }

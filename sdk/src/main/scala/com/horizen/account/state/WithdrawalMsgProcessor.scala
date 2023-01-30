@@ -27,13 +27,13 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   override val contractAddress: Array[Byte] = WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
   override val contractCode: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCode")
 
-  val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getWithdrawalRequests(uint32)")
-  val AddNewWithdrawalReqCmdSig: String = getABIMethodId("submitWithdrawalRequest(bytes20)")
+  val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getBackwardTransfers(uint32)")
+  val AddNewWithdrawalReqCmdSig: String = getABIMethodId("backwardTransfer(bytes20)")
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = new AccountStateViewGasTracked(view, gas)
+    val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case GetListOfWithdrawalReqsCmdSig =>
         execGetListOfWithdrawalReqRecords(msg, gasView)

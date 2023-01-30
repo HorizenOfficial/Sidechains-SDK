@@ -28,10 +28,9 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
   @Before
   def setUp(): Unit = {
     val mockWithdrawalReqProvider = mock[WithdrawalRequestProvider]
-    val messageProcessors: Seq[MessageProcessor] = Seq()
-    val metadataStorageView: AccountStateMetadataStorageView =
-      mock[AccountStateMetadataStorageView]
-    val stateDb: StateDB = mock[StateDB]
+    val messageProcessors = Seq[MessageProcessor]()
+    val metadataStorageView = mock[AccountStateMetadataStorageView]
+    val stateDb = mock[StateDB]
     stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors) {
       override lazy val withdrawalReqProvider: WithdrawalRequestProvider =
         mockWithdrawalReqProvider
@@ -40,20 +39,13 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
   @Test
   def testWithdrawalReqProviderFieldInitialization(): Unit = {
-    val messageProcessors: Seq[MessageProcessor] = Seq(
-      mock[MessageProcessor],
-      mock[MessageProcessor],
-      WithdrawalMsgProcessor,
-      mock[MessageProcessor])
-    val metadataStorageView: AccountStateMetadataStorageView =
-      mock[AccountStateMetadataStorageView]
-    val stateDb: StateDB = mock[StateDB]
+    val messageProcessors =
+      Seq(mock[MessageProcessor], mock[MessageProcessor], WithdrawalMsgProcessor, mock[MessageProcessor])
+    val metadataStorageView = mock[AccountStateMetadataStorageView]
+    val stateDb = mock[StateDB]
     stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
 
-    assertEquals(
-      "Wrong withdrawalReqProvider",
-      WithdrawalMsgProcessor,
-      stateView.withdrawalReqProvider)
+    assertEquals("Wrong withdrawalReqProvider", WithdrawalMsgProcessor, stateView.withdrawalReqProvider)
   }
 
   @Test

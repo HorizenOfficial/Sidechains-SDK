@@ -9,9 +9,9 @@ import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.evm.StateDB
 import com.horizen.state.StateView
 import com.horizen.utils.WithdrawalEpochInfo
+import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.VersionTag
-import scorex.util.ScorexLogging
-import scorex.util.ModifierId
+
 import java.math.BigInteger
 
 // this class extends 2 main hierarchies, which are kept separate:
@@ -20,14 +20,13 @@ import java.math.BigInteger
 //  - StateDbAccountStateView (concrete class) : evm stateDb read/write
 //      Inherits its methods
 class AccountStateView(
-  metadataStorageView: AccountStateMetadataStorageView,
-  stateDb: StateDB,
-  messageProcessors: Seq[MessageProcessor])
-  extends StateDbAccountStateView(stateDb, messageProcessors)
-    with StateView[SidechainTypes#SCAT]
-    with AutoCloseable
-    with ScorexLogging {
-
+    metadataStorageView: AccountStateMetadataStorageView,
+    stateDb: StateDB,
+    messageProcessors: Seq[MessageProcessor]
+) extends StateDbAccountStateView(stateDb, messageProcessors)
+      with StateView[SidechainTypes#SCAT]
+      with AutoCloseable
+      with ScorexLogging {
 
   def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {
     refData.topQualityCertificate.foreach(cert => {
@@ -72,8 +71,6 @@ class AccountStateView(
     metadataStorageView.commit(version)
   }
 
-  // getters
-
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
 
@@ -83,12 +80,14 @@ class AccountStateView(
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
-  override def getFeePaymentsInfo(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+  override def getFeePaymentsInfo(
+      withdrawalEpoch: Int,
+      blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None
+  ): Seq[AccountPayment] = {
     var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
     blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
     AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq)
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
-
 }

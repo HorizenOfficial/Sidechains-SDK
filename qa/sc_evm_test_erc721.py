@@ -7,7 +7,8 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
 from SidechainTestFramework.account.ac_utils import format_evm, format_eoa, contract_function_static_call, \
     contract_function_call, generate_block_and_get_tx_receipt, deploy_smart_contract, CallMethod
-from SidechainTestFramework.account.utils import convertZenToZennies, computeForgedTxFee
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
+from SidechainTestFramework.account.utils import convertZenToZennies, computeForgedTxFee, convertZenToWei
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
 from test_framework.util import assert_equal, assert_true
 
@@ -142,11 +143,12 @@ class SCEvmERC721Contract(AccountChainSetup):
         logging.info(sc_node.rpc_eth_getBalance(str(self.evm_address), "latest"))
         logging.info(sc_node.rpc_eth_getBalance(other_address, "latest"))
 
-        sc_node.transaction_sendCoinsToAddress(json.dumps({
-            'from': format_eoa(self.evm_address),
-            'to': format_eoa(other_address),
-            'value': convertZenToZennies(30)
-        }))
+        createLegacyTransaction(sc_node,
+              fromAddress=format_eoa(self.evm_address),
+              toAddress=format_eoa(other_address),
+              value=convertZenToWei(30)
+        )
+
         generate_next_block(sc_node, "first node", 1)
 
         logging.info(sc_node.rpc_eth_getBalance(other_address, "latest"))
