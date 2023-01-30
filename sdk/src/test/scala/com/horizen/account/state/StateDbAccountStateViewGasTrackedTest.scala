@@ -43,7 +43,7 @@ class StateDbAccountStateViewGasTrackedTest
     )
 
     // all operations below are performed on the same storage key in the same account
-    val key = hashNull
+    val key = Hash.ZERO.toBytes
 
     forAll(testCases) { (original, sequence, expectedUsedGas, expectedRefund) =>
       usingView { view =>

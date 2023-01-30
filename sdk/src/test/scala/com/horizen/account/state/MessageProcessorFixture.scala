@@ -21,7 +21,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
 
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>
-      val stateDb = new StateDB(db, hashNull)
+      val stateDb = new StateDB(db, Hash.ZERO.toBytes)
       using(new AccountStateView(metadataStorageView, stateDb, processors))(fun)
     }
   }

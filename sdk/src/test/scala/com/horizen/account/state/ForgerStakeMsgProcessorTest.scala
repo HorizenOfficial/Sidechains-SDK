@@ -3,8 +3,8 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
@@ -20,13 +20,12 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
-import sparkz.core.bytesToVersion
 import scorex.crypto.hash.Keccak256
+import sparkz.core.bytesToVersion
 
 import java.math.BigInteger
 import java.util
-import java.util.Random
-import java.util.Optional
+import java.util.{Optional, Random}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class ForgerStakeMsgProcessorTest
@@ -49,7 +48,7 @@ class ForgerStakeMsgProcessorTest
 
   // create private/public key pair
   val privateKey: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("fakemsgprocessortest".getBytes())
-  val ownerAddressProposition: Address = privateKey.publicImage().address()
+  val ownerAddressProposition: AddressProposition = privateKey.publicImage()
 
   val AddNewForgerStakeEventSig: Array[Byte] = getEventSignature("DelegateForgerStake(address,address,bytes32,uint256)")
   val NumOfIndexedAddNewStakeEvtParams = 2
@@ -67,7 +66,7 @@ class ForgerStakeMsgProcessorTest
     val data = Bytes.concat(opCode, arguments)
     new Message(
       origin,
-      Optional.of(new AddressProposition(contractAddress)), // to
+      Optional.of(contractAddress), // to
       dummyBigInteger, // gasPrice
       dummyBigInteger, // gasFeeCap
       dummyBigInteger, // gasTipCap
@@ -231,7 +230,7 @@ class ForgerStakeMsgProcessorTest
       var forgerIndex = 0
       var nonce = 0
       var msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition, nonce.toByteArray)
+        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
 
       var signature = blockSignSecret1.sign(msgToSign)
       var cmdInput = OpenStakeForgerListCmdInput(
@@ -239,7 +238,7 @@ class ForgerStakeMsgProcessorTest
       )
 
       var msg = getMessage(
-        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition)
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       var returnData = assertGas(45937) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
@@ -264,7 +263,7 @@ class ForgerStakeMsgProcessorTest
       forgerIndex = 10
       nonce = 1
       msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition, nonce.toByteArray)
+        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
 
       signature = blockSignSecret2.sign(msgToSign)
       cmdInput = OpenStakeForgerListCmdInput(
@@ -272,7 +271,7 @@ class ForgerStakeMsgProcessorTest
       )
 
       msg = getMessage(
-        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition)
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because index is out of bound
       assertGas(0) { gas =>
@@ -286,14 +285,14 @@ class ForgerStakeMsgProcessorTest
       nonce = 1
       assertThrows[IllegalArgumentException] {
         msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-          forgerIndex, ownerAddressProposition, nonce.toByteArray)
+          forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
       }
 
       // use a good index
       forgerIndex = 1
       nonce = 1
       msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition, nonce.toByteArray)
+        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
 
       // negative test: use a wrong secret for signing
       signature = blockSignSecret1.sign(msgToSign)
@@ -302,7 +301,7 @@ class ForgerStakeMsgProcessorTest
       )
 
       msg = getMessage(
-        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition)
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because signature is wrong
       assertGas(0) { gas =>
@@ -318,7 +317,7 @@ class ForgerStakeMsgProcessorTest
       )
 
       msg = getMessage(
-        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition)
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       returnData = assertGas(2237) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
@@ -338,7 +337,7 @@ class ForgerStakeMsgProcessorTest
       forgerIndex = 2
       nonce = 2
       msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition, nonce.toByteArray)
+        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
 
       signature = blockSignSecret3.sign(msgToSign)
       cmdInput = OpenStakeForgerListCmdInput(
@@ -346,7 +345,7 @@ class ForgerStakeMsgProcessorTest
       )
 
       msg = getMessage(
-        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition)
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because the list now is open
       assertGas(300) { gas =>
@@ -386,7 +385,7 @@ class ForgerStakeMsgProcessorTest
       val forgerIndex = 0
       val nonce = 0
       val msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
-        forgerIndex, ownerAddressProposition, nonce.toByteArray)
+        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
 
       val signature = blockSignSecret.sign(msgToSign)
       val cmdInput = OpenStakeForgerListCmdInput(
@@ -394,7 +393,7 @@ class ForgerStakeMsgProcessorTest
       )
 
       val msg = getMessage(
-        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition)
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because forger list is not restricted
       assertGas(0) { gas =>
@@ -434,7 +433,7 @@ class ForgerStakeMsgProcessorTest
 
       val cmdInput = AddNewStakeCmdInput(
         ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
-        ownerAddressProposition
+        ownerAddressProposition.address()
       )
 
       val data: Array[Byte] = cmdInput.encode()
@@ -456,7 +455,7 @@ class ForgerStakeMsgProcessorTest
       var listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
       var expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
-      var expectedAddStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddressProposition, expStakeId, msg.getValue)
+      var expectedAddStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddressProposition.address(), expStakeId, msg.getValue)
       checkAddNewForgerStakeEvent(expectedAddStakeEvt, listOfLogs(0))
 
       val txHash2 = Keccak256.hash("second tx")
@@ -492,7 +491,7 @@ class ForgerStakeMsgProcessorTest
       listOfLogs = view.getLogs(txHash3.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
       expStakeId = forgerStakeMessageProcessor.getStakeId(msg2)
-      expectedAddStakeEvt = DelegateForgerStake(msg2.getFrom, ownerAddressProposition, expStakeId, msg2.getValue)
+      expectedAddStakeEvt = DelegateForgerStake(msg2.getFrom, ownerAddressProposition.address(), expStakeId, msg2.getValue)
       checkAddNewForgerStakeEvent(expectedAddStakeEvt, listOfLogs(0))
 
       // remove first stake id
@@ -519,12 +518,12 @@ class ForgerStakeMsgProcessorTest
       // verify we removed the amount from smart contract and we added it to owner (sender is not concerned)
       assertEquals(validWeiAmount, view.getBalance(contractAddress))
       assertEquals(initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)), view.getBalance(origin))
-      assertEquals(validWeiAmount, view.getBalance(ownerAddressProposition))
+      assertEquals(validWeiAmount, view.getBalance(ownerAddressProposition.address()))
 
       // Checking log
       listOfLogs = view.getLogs(txHash4.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      val expectedRemoveStakeEvent = WithdrawForgerStake(ownerAddressProposition, stakeId)
+      val expectedRemoveStakeEvent = WithdrawForgerStake(ownerAddressProposition.address(), stakeId)
       checkRemoveForgerStakeEvent(expectedRemoveStakeEvent, listOfLogs(0))
 
       val msg4 = getDefaultMessage(BytesUtils.fromHexString(GetListOfForgersCmd), Array.emptyByteArray, randomNonce, BigInteger.ZERO)
@@ -565,7 +564,7 @@ class ForgerStakeMsgProcessorTest
 
       val cmdInput = AddNewStakeCmdInput(
         ForgerPublicKeys(notAllowedBlockSignerProposition, notAllowedVrfPublicKey),
-        ownerAddressProposition
+        ownerAddressProposition.address()
       )
 
       val data: Array[Byte] = cmdInput.encode()
@@ -746,7 +745,7 @@ class ForgerStakeMsgProcessorTest
 
       val cmdInput = AddNewStakeCmdInput(
         ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
-        ownerAddressProposition
+        ownerAddressProposition.address()
       )
       val data: Array[Byte] = cmdInput.encode()
 
@@ -799,7 +798,7 @@ class ForgerStakeMsgProcessorTest
 
       val cmdInput = AddNewStakeCmdInput(
         ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
-        ownerAddressProposition
+        ownerAddressProposition.address()
       )
       val data: Array[Byte] = cmdInput.encode()
 
@@ -863,7 +862,7 @@ class ForgerStakeMsgProcessorTest
 
       val cmdInput = AddNewStakeCmdInput(
         ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
-        ownerAddressProposition
+        ownerAddressProposition.address()
       )
       val addNewStakeData: Array[Byte] = cmdInput.encode()
 

@@ -27,7 +27,7 @@ public class MainchainTxCrosschainOutputAddressUtilTest {
 
                 BufferedWriter out = new BufferedWriter(new FileWriter(
                         "src/test/resources/mc_ccout_evm_address_hex"));
-                out.write(BytesUtils.toHexString(addressProposition.address()));
+                out.write(addressProposition.address().toStringNoPrefix());
                 out.close();
             } catch (Throwable e) {
                 fail(e.toString());

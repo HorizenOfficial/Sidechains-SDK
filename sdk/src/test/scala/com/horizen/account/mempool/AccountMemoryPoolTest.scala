@@ -4,6 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.AccountStateReader
+import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
@@ -30,7 +31,7 @@ class AccountMemoryPoolTest
     val accountStateViewMock = mock[AccountStateReader]
     val baseStateViewMock = mock[BaseStateReader]
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
-    Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(initialStateNonce)
+    Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address])).thenReturn(initialStateNonce)
 
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock, () => baseStateViewMock)
 

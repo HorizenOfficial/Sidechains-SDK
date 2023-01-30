@@ -19,6 +19,11 @@ public class Hash {
     public static final int LENGTH = 32;
     private final byte[] bytes;
 
+    /**
+     * Zero address: 0x000...000
+     */
+    public static final Hash ZERO = new Hash(new byte[LENGTH]);
+
     private Hash(byte[] bytes) {
         if (bytes.length != LENGTH) {
             throw new IllegalArgumentException("hash must have a length of " + LENGTH);

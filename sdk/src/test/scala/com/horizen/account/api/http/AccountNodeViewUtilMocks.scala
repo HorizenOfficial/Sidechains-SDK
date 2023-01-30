@@ -9,6 +9,7 @@ import com.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, For
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.api.http.SidechainApiMockConfiguration
+import com.horizen.evm.utils.Address
 import com.horizen.fixtures._
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
@@ -29,7 +30,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
 
   val ownerSecret: PrivateKeySecp256k1 = getPrivateKeySecp256k1(2222222)
   val signerSecret: secret.PrivateKey25519 = getPrivateKey25519("signer".getBytes())
-  val ownerPublicKeyString: String = BytesUtils.toHexString(ownerSecret.publicImage().address())
+  val ownerAddress: Address = ownerSecret.publicImage().address()
   val blockSignerPropositionString = "1122334455669988112233445566778811223344556677881122334455667788"
   val vrfPublicKeyString = "aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
   val stakeId = "9e26bd4ff89374e916b369024e882db68a49b824e71008b827c7794e9f4d0170"
@@ -57,10 +58,10 @@ class AccountNodeViewUtilMocks extends MockitoSugar
     Mockito.when(accountState.getListOfForgersStakes).thenReturn(listOfStakes)
     Mockito.when(accountState.getWithdrawalRequests(ArgumentMatchers.anyInt())).thenReturn(listOfWithdrawalRequests)
     Mockito
-      .when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountState.getBalance(ArgumentMatchers.any[Address]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // It has always enough money
     Mockito
-      .when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountState.getNonce(ArgumentMatchers.any[Address]))
       .thenReturn(BigInteger.ONE)
     Mockito
       .when(accountState.getNextBaseFee)
@@ -92,7 +93,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
 
   def getListOfStakes: Seq[AccountForgingStakeInfo] = {
     val list: util.List[AccountForgingStakeInfo] = new util.ArrayList[AccountForgingStakeInfo]()
-    val owner: AddressProposition = new AddressProposition(BytesUtils.fromHexString(ownerPublicKeyString))
+    val owner: AddressProposition = new AddressProposition(ownerAddress)
     val blockSignerProposition =
       new PublicKey25519Proposition(BytesUtils.fromHexString(blockSignerPropositionString)) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(vrfPublicKeyString)) // 33 bytes

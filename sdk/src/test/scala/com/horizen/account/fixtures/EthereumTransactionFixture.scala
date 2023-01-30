@@ -244,7 +244,7 @@ trait EthereumTransactionFixture {
       inTo.get()
     } else {
         if (inTx.getTo.isPresent) {
-          BytesUtils.toHexString(inTx.getTo.get().address())
+          inTx.getTo.get().address().toString
         }
         else
           ""
@@ -282,7 +282,7 @@ trait EthereumTransactionFixture {
       inTo.get()
     } else {
       if (inTx.getTo.isPresent) {
-        BytesUtils.toHexString(inTx.getTo.get().address())
+        inTx.getTo.get().address().toString
       }
       else
         ""
@@ -329,7 +329,7 @@ trait EthereumTransactionFixture {
       inTo.get()
     } else {
       if (inTx.getTo.isPresent) {
-        BytesUtils.toHexString(inTx.getTo.get().address())
+        inTx.getTo.get().address().toString
       }
       else
         ""

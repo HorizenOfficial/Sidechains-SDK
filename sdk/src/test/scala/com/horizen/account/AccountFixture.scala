@@ -10,12 +10,9 @@ trait AccountFixture {
   // simplifies using BigIntegers within the tests
   implicit def longToBigInteger(x: Long): BigInteger = BigInteger.valueOf(x)
 
-  val hashNull: Array[Byte] = Array.fill(32)(0)
-
-  private val rand = new Random(12345)
-
   def randomBytes(n: Int): Array[Byte] = {
     val bytes = new Array[Byte](n)
+    val rand = new Random()
     rand.nextBytes(bytes)
     bytes
   }

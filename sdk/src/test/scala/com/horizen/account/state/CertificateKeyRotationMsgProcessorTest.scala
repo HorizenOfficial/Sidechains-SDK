@@ -55,7 +55,7 @@ class CertificateKeyRotationMsgProcessorTest
     val data = Bytes.concat(opCode, arguments)
     new Message(
       origin,
-      Optional.of(new Address(contractAddress)), // to
+      Optional.of(contractAddress), // to
       0, // gasPrice
       0, // gasFeeCap
       0, // gasTipCap

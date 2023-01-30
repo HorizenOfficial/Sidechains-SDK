@@ -200,7 +200,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       val stakeAmountInZennies = 32
 
       Post(basePath + "makeForgerStake").withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqCreateForgerStake(Some(BigInteger.ONE),
-        TransactionForgerOutput(utilMocks.ownerPublicKeyString, Some(utilMocks.blockSignerPropositionString), utilMocks.vrfPublicKeyString, stakeAmountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
+        TransactionForgerOutput(utilMocks.ownerAddress.toStringNoPrefix, Some(utilMocks.blockSignerPropositionString), utilMocks.vrfPublicKeyString, stakeAmountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")

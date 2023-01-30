@@ -6,10 +6,12 @@ import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.mempool.TransactionsByPriceAndNonceIter
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.evm.utils.Address
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
+
 import java.math.BigInteger
 
 class AccountForgeMessageBuilderTest
@@ -20,7 +22,7 @@ class AccountForgeMessageBuilderTest
   @Test
   def testConsistentStateAfterMissingMsgProcessorError(): Unit = {
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       10000000000L,
@@ -72,7 +74,7 @@ class AccountForgeMessageBuilderTest
     val invalidTx = new BuggyTransaction(tmpTx, tmpTx.getSignature)
 
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       10000000000L,
@@ -133,7 +135,7 @@ class AccountForgeMessageBuilderTest
     )
 
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       gasLimit.longValueExact(),//Just enough for 1 tx
