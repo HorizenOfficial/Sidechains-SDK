@@ -377,7 +377,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             int duplicateIndex = signersPublicKeys.indexOf(pk);
             if (duplicateIndex != -1) {
-                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("duplicated keys in signers keys are found. SignersKey with index %d equals to signersKey with index %d", duplicateIndex + 1, index));
+                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("signersKeys contains duplicate values. SignersKey with index %d is identical to signersKey with index %d.", duplicateIndex + 1, index));
                 return;
             }
 
@@ -406,7 +406,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             int duplicateIndex = mastersPublicKeys.indexOf(masterKey);
             if (duplicateIndex != -1) {
-                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("duplicated keys in master keys are found. MasterKey with index %d equals to masterKey with index %d", duplicateIndex + 1, index));
+                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("masterKeys contains duplicate values. MasterKey with index %d is identical to masterKey with index %d.", duplicateIndex + 1, index));
                 return;
             }
 
@@ -415,7 +415,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
 
         if (mastersPublicKeys.size() != signersPublicKeys.size()) {
-            printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("an amount of the signer keys and the master keys must be equal."));
+            printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("the number of signer keys must be equal to the number of master keys."));
             return;
         }
 
@@ -435,7 +435,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         int threshold = json.get("threshold").asInt();
 
         if (threshold <= 0 || threshold > signersPublicKeys.size()) {
-            printGenerateCertWithKeyRotationProofInfoUsageMsg("threshold parameter should be greater than 0 and be less or equal to keyCount. Current value: " + threshold);
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("threshold parameter should be greater than 0 and be less than or equal to keyCount. Current value: " + threshold);
             return;
         }
 
