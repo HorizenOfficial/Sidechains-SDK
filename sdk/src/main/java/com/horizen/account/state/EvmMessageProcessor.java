@@ -2,7 +2,6 @@ package com.horizen.account.state;
 
 import com.horizen.evm.Evm;
 import com.horizen.evm.interop.EvmContext;
-import com.horizen.evm.utils.Address;
 
 import java.math.BigInteger;
 
@@ -34,7 +33,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         var context = new EvmContext();
 
         context.chainID = BigInteger.valueOf(blockContext.chainID);
-        context.coinbase = Address.fromBytes(blockContext.forgerAddress);
+        context.coinbase = blockContext.forgerAddress;
         context.gasLimit = blockContext.blockGasLimit;
         context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
         context.time = BigInteger.valueOf(blockContext.timestamp);
@@ -44,7 +43,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),
-                msg.getFrom().orElseThrow(),
+                msg.getFrom(),
                 msg.getTo().orElse(null),
                 msg.getValue(),
                 msg.getData(),

@@ -75,7 +75,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
   }
 
   override def parse(reader: Reader): EvmLog = {
-    val address: Array[Byte] = reader.getBytes(Address.LENGTH)
+    val address: Address = Address.fromBytes(reader.getBytes(Address.LENGTH))
 
     val topicsArraySize: Int = reader.getInt
     val topics: util.ArrayList[Hash] = new util.ArrayList[Hash]
@@ -86,7 +86,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
     val dataLength: Int = reader.getInt
     val data: Array[Byte] = reader.getBytes(dataLength)
 
-    new EvmLog(Address.fromBytes(address), topics.toArray(new Array[Hash](0)), data)
+    new EvmLog(address, topics.toArray(new Array[Hash](0)), data)
   }
 }
 

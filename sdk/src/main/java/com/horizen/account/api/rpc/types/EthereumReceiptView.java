@@ -3,9 +3,8 @@ package com.horizen.account.api.rpc.types;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.evm.utils.Address;
 import com.horizen.serialization.Views;
-import com.horizen.utils.BytesUtils;
-import org.glassfish.grizzly.http.util.HexUtils;
 import org.web3j.utils.Numeric;
 import scala.collection.JavaConverters;
 
@@ -20,11 +19,11 @@ public class EthereumReceiptView {
     public final String transactionIndex;
     public final String blockHash;
     public final String blockNumber;
-    public final String from;
-    public final String to;
+    public final Address from;
+    public final Address to;
     public final String cumulativeGasUsed;
     public final String gasUsed;
-    public final String contractAddress;
+    public final Address contractAddress;
     public final List<EthereumLogView> logs;
     public final String logsBloom;
     public final String status;
@@ -36,12 +35,11 @@ public class EthereumReceiptView {
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
-        from = tx.getFromAddressString();
-        to = tx.getToAddressString();
+        from = tx.getFromAddress();
+        to = tx.getToAddress();
         cumulativeGasUsed = Numeric.encodeQuantity(receipt.consensusDataReceipt().cumulativeGasUsed());
         gasUsed = Numeric.encodeQuantity(receipt.gasUsed());
-        contractAddress = receipt.contractAddress().isDefined() ?
-                "0x" + BytesUtils.toHexString(receipt.contractAddress().get()) : null;
+        contractAddress = receipt.contractAddress().getOrElse(null);
         var consensusLogs = JavaConverters.seqAsJavaList(receipt.consensusDataReceipt().logs());
         logs = new ArrayList<>(consensusLogs.size());
         for (var i = 0; i < consensusLogs.size(); i++) {

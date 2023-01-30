@@ -16,12 +16,12 @@ case class DelegateForgerStake(
 
 object DelegateForgerStake {
   def apply(
-      fromAddress: Address,
+      from: Address,
       owner: Address,
       stakeId: Array[Byte],
       value: BigInteger
   ): DelegateForgerStake = DelegateForgerStake(
-    fromAddress,
+    from,
     owner,
     new Bytes32(stakeId),
     new Uint256(value)

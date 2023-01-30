@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
@@ -15,7 +15,7 @@ object ForgerStakeLinkedList {
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
 
   def findLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte]): Option[LinkedListNode] = {
-    val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, nodeId)
+    val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, nodeId)
     if (data.length == 0) {
       // getting a not existing key from state DB using RAW strategy
       // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
@@ -31,7 +31,7 @@ object ForgerStakeLinkedList {
   }
 
   def addNewNodeToList(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
-    val oldTip = view.getAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, LinkedListTipKey)
+    val oldTip = view.getAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, LinkedListTipKey)
 
     val newTip = Blake2b256.hash(stakeId)
 
@@ -41,10 +41,10 @@ object ForgerStakeLinkedList {
     }
 
     // update list tip, now it is this newly added one
-    view.updateAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, LinkedListTipKey, newTip)
+    view.updateAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, LinkedListTipKey, newTip)
 
     // store the new node
-    view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, newTip,
+    view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, newTip,
       LinkedListNodeSerializer.toBytes(
         LinkedListNode(stakeId, oldTip, LinkedListNullValue)))
   }
@@ -62,11 +62,11 @@ object ForgerStakeLinkedList {
       // serialize modified node
       .map(LinkedListNodeSerializer.toBytes)
       // overwrite the modified node
-      .map(view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, nodeId, _))
+      .map(view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, nodeId, _))
   }
 
   def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
-    val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, stakeId)
+    val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId)
     if (data.length == 0) {
       // getting a not existing key from state DB using RAW strategy
       // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here

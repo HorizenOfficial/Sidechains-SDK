@@ -146,7 +146,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
               val accountBalances : List[AccountBalance] = addressPropositions.foldLeft(List.empty[AccountBalance]) {
                 (listToFill, addressProposition) =>
                   listToFill :+ AccountBalance(
-                    address = BytesUtils.toHexString(addressProposition.address()),
+                    address = addressProposition.address().toStringNoPrefix,
                     balance = sidechainNodeView.getNodeState.getBalance(addressProposition.address()))
               }
 

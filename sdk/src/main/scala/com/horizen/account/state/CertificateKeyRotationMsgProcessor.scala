@@ -5,7 +5,7 @@ import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArg
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable}
 import com.horizen.account.events.SubmitKeyRotation
 import com.horizen.account.state.CertificateKeyRotationMsgProcessor.{CertificateKeyRotationContractAddress, CertificateKeyRotationContractCode, SubmitKeyRotationReqCmdSig}
-import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
 import com.horizen.evm.utils.Address
@@ -205,7 +205,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 }
 
 object CertificateKeyRotationMsgProcessor {
-  val CertificateKeyRotationContractAddress: Address = CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
+  val CertificateKeyRotationContractAddress: Address = CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
   val CertificateKeyRotationContractCode: Digest32 = Keccak256.hash("KeyRotationSmartContractCode")
 
   val SubmitKeyRotationReqCmdSig: String = getABIMethodId("submitKeyRotation(uint32,uint32,bytes32,bytes1,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)")

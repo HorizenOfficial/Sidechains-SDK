@@ -17,14 +17,14 @@ case class AddWithdrawalRequest(
 
 object AddWithdrawalRequest {
   def apply(
-      fromAddress: Address,
-      mcAddr: MCPublicKeyHashProposition,
-      withdrawalAmount: BigInteger,
-      epochNum: Int
+      from: Address,
+      mcDest: MCPublicKeyHashProposition,
+      value: BigInteger,
+      epochNumber: Int
   ): AddWithdrawalRequest = AddWithdrawalRequest(
-    fromAddress,
-    new Bytes20(mcAddr.bytes()),
-    new Uint256(withdrawalAmount),
-    new Uint32(epochNum)
+    from,
+    new Bytes20(mcDest.bytes()),
+    new Uint256(value),
+    new Uint32(epochNumber)
   )
 }

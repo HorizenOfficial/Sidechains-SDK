@@ -17,13 +17,14 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
 import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.evm.utils.Address
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
@@ -331,7 +332,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     val dataBytes = encodeOpenStakeCmdRequest(body.forgerIndex, signature)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
                       params.chainId,
-                      JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
+                      JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
                       nonce,
                       gasLimit,
                       maxPriorityFeePerGas,
@@ -402,7 +403,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
+                JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
@@ -454,12 +455,12 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   else {
                     val stakeOwnerSecret = stakeOwnerSecretOpt.get().asInstanceOf[PrivateKeySecp256k1]
 
-                    val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage(), nonce.toByteArray)
+                    val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
                     val signature = stakeOwnerSecret.sign(msgToSign)
                     val dataBytes = encodeSpendStakeCmdRequest(signature, body.stakeId)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
                       params.chainId,
-                      JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
+                      JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
                       nonce,
                       gasLimit,
                       maxPriorityFeePerGas,
@@ -538,7 +539,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       entity(as[ReqWithdrawCoins]) { body =>
         // lock the view and try to create CoreTransaction
         applyOnNodeView { sidechainNodeView =>
-          val to = BytesUtils.toHexString(WithdrawalMsgProcessor.contractAddress)
           val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
           val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
           val gasInfo = body.gasInfo
@@ -563,7 +563,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                EthereumTransactionUtils.getToAddressFromString(to),
+                JOptional.of(new AddressProposition(WithdrawalMsgProcessor.contractAddress)),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
@@ -646,7 +646,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
           case NaiveThresholdSignatureCircuitWithKeyRotation =>
             applyOnNodeView { sidechainNodeView =>
-              val to = BytesUtils.toHexString(CertificateKeyRotationMsgProcessor.CertificateKeyRotationContractAddress)
               checkKeyRotationProofValidity(body)
               val data = encodeSubmitKeyRotationRequestCmd(body)
               val gasInfo = body.gasInfo
@@ -671,7 +670,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
                   val tmpTx: EthereumTransaction = new EthereumTransaction(
                     params.chainId,
-                    EthereumTransactionUtils.getToAddressFromString(to),
+                    JOptional.of(new AddressProposition(CertificateKeyRotationMsgProcessor.CertificateKeyRotationContractAddress)),
                     nonce,
                     gasLimit,
                     maxPriorityFeePerGas,
@@ -694,7 +693,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
     val vrfPubKey = new VrfPublicKey(BytesUtils.fromHexString(forgerStakeInfo.vrfPubKey))
-    val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), new AddressProposition(BytesUtils.fromHexString(forgerStakeInfo.ownerAddress)))
+    val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), Address.fromHexNoPrefix(forgerStakeInfo.ownerAddress))
 
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd), addForgerStakeInput.encode())
   }

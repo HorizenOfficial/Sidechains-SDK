@@ -4,10 +4,11 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.FakeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import com.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, _}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
-import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
@@ -33,7 +34,7 @@ trait ForgerStakesProvider {
 
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with ForgerStakesProvider {
 
-  override val contractAddress: Address = FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
+  override val contractAddress: Address = FORGER_STAKE_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCode")
 
   val networkParams: NetworkParams = params
@@ -84,7 +85,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     addNewNodeToList(view, stakeId)
 
     val forgerStakeData = ForgerStakeData(
-      ForgerPublicKeys(blockSignProposition, vrfPublicKey), ownerPublicKey, stakedAmount)
+      ForgerPublicKeys(blockSignProposition, vrfPublicKey), new AddressProposition(ownerPublicKey), stakedAmount)
 
     // store the forger stake data
     view.updateAccountStorageBytes(contractAddress, stakeId,
@@ -258,7 +259,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     // remove the forger stake data
     removeForgerStake(view, stakeId)
 
-    val removeStakeEvt = WithdrawForgerStake(stakeData.ownerPublicKey, stakeId)
+    val removeStakeEvt = WithdrawForgerStake(stakeData.ownerPublicKey.address(), stakeId)
     val evmLog = getEvmLog(removeStakeEvt)
     view.addLog(evmLog)
 
@@ -266,7 +267,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     view.subBalance(contractAddress, stakeData.stakedAmount)
 
     // increase the balance of owner (not the sender) by withdrawn amount.
-    view.addBalance(stakeData.ownerPublicKey, stakeData.stakedAmount)
+    view.addBalance(stakeData.ownerPublicKey.address(), stakeData.stakedAmount)
 
     // Maybe result is not useful in case of success execution (used probably for RPC commands only)
     stakeId

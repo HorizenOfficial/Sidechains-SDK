@@ -367,9 +367,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @JsonIgnore
-    public String getToAddressString() {
+    public Address getToAddress() {
         if (this.to == null) return null;
-        return this.to.address().toString();
+        return this.to.address();
     }
 
     @Override
@@ -396,9 +396,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @JsonIgnore
-    public String getFromAddressString() {
+    public Address getFromAddress() {
         if (this.getFrom() == null) return null;
-        return this.getFrom().address().toString();
+        return this.getFrom().address();
     }
 
     @Override
@@ -430,10 +430,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                         "maxFeePerGas=%s, maxPriorityFeePerGas=%s, chainId=%s, version=%d, Signature=%s}",
                 id(),
-                getFromAddressString(),
+                getFromAddress(),
                 Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
                 Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
-                getToAddressString(),
+                getToAddress(),
                 Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
                 getDataString(),
                 Numeric.toHexStringWithPrefix(getMaxFeePerGas() != null ? getMaxFeePerGas() : BigInteger.ZERO),
@@ -447,11 +447,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                         "chainId=%s, version=%d, Signature=%s}",
                 id(),
-                getFromAddressString(),
+                getFromAddress(),
                 Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
                 Numeric.toHexStringWithPrefix(getGasPrice() != null ? getGasPrice() : BigInteger.ZERO),
                 Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
-                getToAddressString(),
+                getToAddress(),
                 Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
                 getDataString(),
                 getChainId() != null ? getChainId() : "",

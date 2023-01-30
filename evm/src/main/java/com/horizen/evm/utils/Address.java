@@ -32,11 +32,6 @@ public class Address implements Type<String> {
         this.bytes = bytes;
     }
 
-    @Override
-    public String toString() {
-        return "0x" + Converter.toHexString(bytes);
-    }
-
     public static Address fromBytes(byte[] bytes) {
         if (bytes == null) {
             return null;
@@ -49,6 +44,19 @@ public class Address implements Type<String> {
             throw new IllegalArgumentException("address must be prefixed with 0x");
         }
         return new Address(Converter.fromHexString(hex.substring(2)));
+    }
+
+    public static Address fromHexNoPrefix(String hex) {
+        return new Address(Converter.fromHexString(hex));
+    }
+
+    @Override
+    public String toString() {
+        return "0x" + Converter.toHexString(bytes);
+    }
+
+    public String toStringNoPrefix() {
+        return Converter.toHexString(bytes);
     }
 
     public byte[] toBytes() {

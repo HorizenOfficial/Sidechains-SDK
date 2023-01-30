@@ -3,6 +3,7 @@ package com.horizen.account.state
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proof.SignatureSecp256k1
+import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.evm.utils.Address
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
@@ -38,7 +39,7 @@ case class AccountForgingStakeInfo(
 
     listOfParams.add(new Bytes32(stakeId))
     listOfParams.add(new Uint256(forgerStakeData.stakedAmount))
-    listOfParams.add(forgerStakeData.ownerPublicKey)
+    listOfParams.add(forgerStakeData.ownerPublicKey.address())
 
     listOfParams.addAll(forgerPublicKeysParams)
 
@@ -251,7 +252,7 @@ object OpenStakeForgerListCmdInputDecoder extends ABIDecoder[OpenStakeForgerList
 @JsonView(Array(classOf[Views.Default]))
 case class ForgerStakeData(
                             forgerPublicKeys: ForgerPublicKeys,
-                            ownerPublicKey: Address,
+                            ownerPublicKey: AddressProposition,
                             stakedAmount: BigInteger)
   extends BytesSerializable {
 
@@ -268,14 +269,14 @@ case class ForgerStakeData(
 object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
   override def serialize(s: ForgerStakeData, w: Writer): Unit = {
     ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
-    w.putBytes(s.ownerPublicKey.toBytes)
+    AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
     w.putInt(s.stakedAmount.toByteArray.length)
     w.putBytes(s.stakedAmount.toByteArray)
   }
 
   override def parse(r: Reader): ForgerStakeData = {
     val forgerPublicKeys = ForgerPublicKeysSerializer.parse(r)
-    val ownerPublicKey = Address.fromBytes(r.getBytes(Address.LENGTH))
+    val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
     val stakeAmountLength = r.getInt()
     val stakeAmount = new BigInteger(r.getBytes(stakeAmountLength))
 
