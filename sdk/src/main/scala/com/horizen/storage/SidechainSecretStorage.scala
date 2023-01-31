@@ -1,16 +1,14 @@
 package com.horizen.storage
 
 import com.google.common.primitives.{Bytes, Ints}
-
-import java.util.{ArrayList => JArrayList}
 import com.horizen.SidechainTypes
-import com.horizen.certificatesubmitter.keys.KeyRotationProofSerializer
+import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.utils.Utils.nextVersion
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, SchnorrKeyGenerator, SchnorrSecret, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
-import com.sun.tools.javac.resources.version
 import scorex.util.ScorexLogging
 
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
@@ -43,11 +41,27 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     val storageData = storage.getAll.asScala
     storageData.view
       .map(keyToSecretBytes => keyToSecretBytes.getValue.data)
-      .map(secretBytes => sidechainSecretsCompanion.parseBytes(secretBytes))
+      .map(secretBytes => {
+        sidechainSecretsCompanion.parseBytes(secretBytes) match {
+          case key2551: PrivateKey25519 =>
+            incrementNonce(PrivateKey25519Creator.getInstance().salt())
+            key2551
+          case secp256k: PrivateKeySecp256k1 =>
+            incrementNonce(PrivateKeySecp256k1Creator.getInstance().salt())
+            secp256k
+          case secret: SchnorrSecret =>
+            incrementNonce(SchnorrKeyGenerator.getInstance().salt())
+            secret
+          case key: VrfSecretKey =>
+            incrementNonce(VrfKeyGenerator.getInstance().salt())
+            key
+          case other => other
+        }
+      })
       .foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
   }
 
-  def get (proposition: SidechainTypes#SCP): Option[SidechainTypes#SCS] = secrets.get(calculateKey(proposition))
+  def get(proposition: SidechainTypes#SCP): Option[SidechainTypes#SCS] = secrets.get(calculateKey(proposition))
 
   def get (propositions: List[SidechainTypes#SCP]): List[SidechainTypes#SCS] = propositions.flatMap(p => secrets.get(calculateKey(p)))
 
@@ -144,7 +158,14 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
             log.error("Error while nonce information parsing.", exception)
             Option.empty
         }
-      case _ => Some(0)
+      case _ => Some(0) // if the first secret of the domain type, the nonce is zero
+    }
+  }
+
+  private def incrementNonce(salt: Array[Byte]): Try[SidechainSecretStorage] = {
+    getNonce(salt) match {
+      case Some(nonce) =>
+        storeNonce(nonce + 1, salt)
     }
   }
 
