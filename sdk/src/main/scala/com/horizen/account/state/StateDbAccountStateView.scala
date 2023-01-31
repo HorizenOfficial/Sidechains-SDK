@@ -263,7 +263,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
     stateDb.setStorage(address, key, value)
 
   final override def removeAccountStorage(address: Address, key: Array[Byte]): Unit =
-    updateAccountStorage(address, key, null)
+    updateAccountStorage(address, key, Array.fill(Hash.LENGTH)(0))
 
   // random data used to salt chunk keys in the storage trie when accessed via get/updateAccountStorageBytes
   private val chunkKeySalt =

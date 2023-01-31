@@ -54,7 +54,8 @@ class EoaMessageProcessorIntegrationTest
 
     usingView(EoaMessageProcessor) { view =>
       view.addBalance(sender, initialBalance)
-      val returnData = assertGas(GasUtil.TxGas)(view.applyMessage(msg, _, defaultBlockContext))
+      // EOA transactions only consume intrinsic gas, the processor itself therefore must not use any gas
+      val returnData = assertGas(0, msg, view, EoaMessageProcessor, defaultBlockContext)
       assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
       assertEquals("Different from account value found", initialBalance.subtract(value), view.getBalance(sender))
       assertEquals("Different to account value found", value, view.getBalance(to))

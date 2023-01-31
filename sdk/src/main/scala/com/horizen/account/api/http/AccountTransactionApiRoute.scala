@@ -27,16 +27,13 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThre
 import com.horizen.evm.utils.Address
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Signature25519
-import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.proof.SchnorrSignatureSerializer
-import com.horizen.proposition.SchnorrPropositionSerializer
+import com.horizen.proof.{SchnorrSignatureSerializer, Signature25519}
+import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, SchnorrPropositionSerializer, VrfPublicKey}
+import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-import com.horizen.secret.PrivateKey25519
 
-import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -298,7 +295,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
             var maxPriorityFeePerGas = BigInteger.valueOf(120)
             var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-            var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+            var gasLimit = BigInteger.valueOf(500000)
 
             if (body.gasInfo.isDefined) {
               maxFeePerGas = body.gasInfo.get.maxFeePerGas
@@ -384,7 +381,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
           var maxPriorityFeePerGas = BigInteger.valueOf(120)
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-          var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+          var gasLimit = BigInteger.valueOf(500000)
 
           if (body.gasInfo.isDefined) {
             maxFeePerGas = body.gasInfo.get.maxFeePerGas
@@ -432,7 +429,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
           var maxPriorityFeePerGas = BigInteger.valueOf(120)
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-          var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+          var gasLimit = BigInteger.valueOf(500000)
 
           if (body.gasInfo.isDefined) {
             maxFeePerGas = body.gasInfo.get.maxFeePerGas
@@ -547,7 +544,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
           var maxPriorityFeePerGas = BigInteger.valueOf(120)
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-          var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+          var gasLimit = BigInteger.valueOf(500000)
 
           if (gasInfo.isDefined) {
             maxFeePerGas = gasInfo.get.maxFeePerGas
@@ -602,7 +599,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
           var maxPriorityFeePerGas = GasUtil.TxGasContractCreation
           var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-          var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+          var gasLimit = BigInteger.valueOf(500000)
 
           if (body.gasInfo.isDefined) {
             maxFeePerGas = body.gasInfo.get.maxFeePerGas
@@ -614,7 +611,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val secret = getFittingSecret(sidechainNodeView, None, txCost)
           secret match {
             case Some(secret) =>
-              val to = null
+              val to: String = null
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val data = body.contractCode
               val tmpTx: EthereumTransaction = new EthereumTransaction(

@@ -184,7 +184,6 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testOpenStakeForgerList(): Unit = {
 
-
     val randomGenerator = new Random(1L)
     val byteSeed = new Array[Byte](32)
     randomGenerator.nextBytes(byteSeed)
@@ -240,15 +239,8 @@ class ForgerStakeMsgProcessorTest
       var msg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
-      var returnData = assertGas(45937) {
-        forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
-      }
-
-      assertNotNull(returnData)
-      assertEquals(returnData.length, 3)
-      assertEquals(returnData(0), 1)
-      assertEquals(returnData(1), 0)
-      assertEquals(returnData(2), 0)
+      var returnData = assertGas(45937, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+      assertArrayEquals(Array[Byte](1, 0, 0), returnData)
 
       // Checking log
       val listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
@@ -274,10 +266,8 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because index is out of bound
-      assertGas(0) { gas =>
-        assertThrows[ExecutionRevertedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
+      assertThrows[ExecutionRevertedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
       // negative test: use a wrong index (negative value)
@@ -304,10 +294,8 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because signature is wrong
-      assertGas(0) { gas =>
-        assertThrows[ExecutionRevertedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
+      assertThrows[ExecutionRevertedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
       // now sign correctly
@@ -319,15 +307,8 @@ class ForgerStakeMsgProcessorTest
       msg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
-      returnData = assertGas(2237) {
-        forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
-      }
-
-      assertNotNull(returnData)
-      assertEquals(returnData.length, 3)
-      assertEquals(returnData(0), 1)
-      assertEquals(returnData(1), 1)
-      assertEquals(returnData(2), 0)
+      returnData = assertGas(6237, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+      assertArrayEquals(Array[Byte](1, 1, 0), returnData)
 
       // assert we have open the forger list
       isOpen = forgerStakeMessageProcessor.isForgerListOpen(view)
@@ -348,10 +329,8 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because the list now is open
-      assertGas(300) { gas =>
-        assertThrows[ExecutionRevertedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
+      assertThrows[ExecutionRevertedException] {
+        assertGas(4300, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
       // assert we have open the forger list
@@ -396,10 +375,8 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
       // should fail because forger list is not restricted
-      assertGas(0) { gas =>
-        assertThrows[ExecutionRevertedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
+      assertThrows[ExecutionRevertedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
       // assert we have open the forger list
@@ -421,7 +398,7 @@ class ForgerStakeMsgProcessorTest
       forgerStakeMessageProcessor.init(view)
 
       // create sender account with some fund in it
-      val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
+      val initialAmount = BigInteger.valueOf(100).multiply(validWeiAmount)
       createSenderAccount(view, initialAmount)
 
       Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
@@ -440,9 +417,7 @@ class ForgerStakeMsgProcessorTest
       val msg = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
 
       // positive case, verify we can add the stake to view
-      val returnData = assertGas(188612) {
-        forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
-      }
+      val returnData = assertGas(186112, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       assertNotNull(returnData)
       println("This is the returned value: " + BytesUtils.toHexString(returnData))
 
@@ -477,9 +452,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
           ownerAddressProposition, validWeiAmount))
 
-      val returnData2 = assertGas(180512) {
-        forgerStakeMessageProcessor.process(msg2, view, _, defaultBlockContext)
-      }
+      val returnData2 = assertGas(195012, msg2, view, forgerStakeMessageProcessor, defaultBlockContext)
       assertNotNull(returnData2)
       println("This is the returned value: " + BytesUtils.toHexString(returnData2))
 
@@ -509,9 +482,7 @@ class ForgerStakeMsgProcessorTest
       view.setupTxContext(txHash4, 10)
 
       // try processing the removal of stake, should succeed
-      val returnData3 = assertGas(4281) {
-        forgerStakeMessageProcessor.process(msg3, view, _, defaultBlockContext)
-      }
+      val returnData3 = assertGas(30781, msg3, view, forgerStakeMessageProcessor, defaultBlockContext)
       assertNotNull(returnData3)
       println("This is the returned value: " + BytesUtils.toHexString(returnData3))
 
@@ -526,10 +497,8 @@ class ForgerStakeMsgProcessorTest
       val expectedRemoveStakeEvent = WithdrawForgerStake(ownerAddressProposition.address(), stakeId)
       checkRemoveForgerStakeEvent(expectedRemoveStakeEvent, listOfLogs(0))
 
-      val msg4 = getDefaultMessage(BytesUtils.fromHexString(GetListOfForgersCmd), Array.emptyByteArray, randomNonce, BigInteger.ZERO)
-      val returnData4 = assertGas(900) {
-        forgerStakeMessageProcessor.process(msg4, view, _, defaultBlockContext)
-      }
+      val msg4 = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
+      val returnData4 = assertGas(18900, msg4, view, forgerStakeMessageProcessor, defaultBlockContext)
       assertNotNull(returnData4)
       val listOfExpectedForgerStakes = new util.ArrayList[AccountForgingStakeInfo]
       listOfExpectedForgerStakes.add(expectedLastStake)
@@ -573,10 +542,8 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because forger is not in the allowed list
-      assertGas(7300) { gas =>
-        assertThrows[ExecutionFailedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
+      assertThrows[ExecutionFailedException] {
+        assertGas(4800, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
       view.commit(bytesToVersion(getVersion.data()))
@@ -591,11 +558,9 @@ class ForgerStakeMsgProcessorTest
       val msg = getDefaultMessage(BytesUtils.fromHexString("03"), data, randomNonce)
 
       // should fail because op code is invalid
-      assertGas(0)(gas =>
-        assertThrows[ExecutionFailedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
-      )
+      assertThrows[ExecutionFailedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+      }
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
@@ -634,10 +599,8 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, invalidWeiAmount)
 
       // should fail because staked amount is not a zat amount
-      assertGas(0) { gas =>
-        assertThrows[ExecutionFailedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
+      assertThrows[ExecutionFailedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
       view.commit(bytesToVersion(getVersion.data()))
@@ -678,10 +641,8 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
        // should fail because recipient is a smart contract
-       assertGas(5200) { gas =>
-        assertThrows[ExecutionRevertedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
+      assertThrows[ExecutionRevertedException] {
+        assertGas(200, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
       view.commit(bytesToVersion(getVersion.data()))
     }
@@ -712,10 +673,8 @@ class ForgerStakeMsgProcessorTest
         BytesUtils.fromHexString(GetListOfForgersCmd),
         data, randomNonce)
 
-      assertGas(0) { gas =>
-        assertThrows[ExecutionFailedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
-        }
+      assertThrows[ExecutionFailedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
       view.commit(bytesToVersion(getVersion.data()))

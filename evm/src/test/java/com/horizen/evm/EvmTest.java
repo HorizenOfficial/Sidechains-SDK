@@ -79,7 +79,7 @@ public class EvmTest extends LibEvmTestBase {
                     statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, new TraceOptions());
                 assertEquals("", result.evmError);
                 assertEquals(hex(anotherValue), hex(result.returnData));
-                assertNotNull(result.traceLogs);
+                assertNotNull(result.tracerResult);
 
                 modifiedStateRoot = statedb.commit();
             }

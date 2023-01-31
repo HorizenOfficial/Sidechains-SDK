@@ -40,8 +40,9 @@ class EvmMessageProcessorIntegrationTest extends EvmMessageProcessorTestBase {
   def testProcess(): Unit = {
 
     val initialBalance = new BigInteger("2000000000000")
+    val evmMessageProcessor = new EvmMessageProcessor()
 
-    usingView(new EvmMessageProcessor) { stateView =>
+    usingView(evmMessageProcessor) { stateView =>
       stateView.addBalance(origin, initialBalance)
 
       // smart contract constructor has one argument (256-bit uint)
@@ -49,7 +50,7 @@ class EvmMessageProcessorIntegrationTest extends EvmMessageProcessorTestBase {
       initialValue(initialValue.length - 1) = 42
       // add constructor arguments to the end of the deployment code
       val msg = getMessage(null, data = deployCode ++ initialValue)
-      val result = assertGas(138826)(stateView.applyMessage(msg, _, defaultBlockContext))
+      val result = assertGas(76990, msg, stateView, evmMessageProcessor, defaultBlockContext)
       assertNotNull("result should not be null", result)
     }
   }

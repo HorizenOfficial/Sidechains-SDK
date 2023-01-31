@@ -90,7 +90,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
         assertEquals("Different amount found", msg.getValue, args.getArgument(1))
       })
 
-    val returnData = assertGas(BigInteger.ZERO)(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext))
+    val returnData = assertGas(0, msg, mockStateView, EoaMessageProcessor, defaultBlockContext)
     assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
 
     // Test 2: Failure during subBalance

@@ -13,6 +13,8 @@ import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 
 import java.math.BigInteger
 import java.util.Optional
+import scala.language.implicitConversions
+import scala.util.Try
 
 trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
@@ -44,7 +46,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
     val gasPrice = BigInteger.ZERO
     val gasFeeCap = BigInteger.valueOf(1000001)
     val gasTipCap = BigInteger.ZERO
-    val gasLimit = BigInteger.valueOf(1000000)
+    val gasLimit = BigInteger.valueOf(500000)
     new Message(
       from,
       Optional.ofNullable(to),
@@ -69,20 +71,19 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
   /**
    * Creates a large temporary gas pool and verifies the amount of total gas consumed.
    */
-  def assertGas[A](expectedGas: BigInteger, enforce: Boolean = true)(fun: GasPool => A): A = {
-    withGas { gas =>
-      try {
-        fun(gas)
-      } finally {
-        if (enforce) {
-          assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
-        } else {
-          println("consumed gas: " + gas.getUsedGas)
-          if (expectedGas != gas.getUsedGas)
-            println(" mismatch here, expected is: " + expectedGas)
-        }
-      }
-    }
+  def assertGas(
+      expectedGas: BigInteger,
+      msg: Message,
+      view: AccountStateView,
+      processor: MessageProcessor,
+      ctx: BlockContext,
+  ): Array[Byte] = {
+    view.setupAccessList(msg)
+    val gas = new GasPool(1000000)
+    val result = Try.apply(processor.process(msg, view, gas, ctx))
+    assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+    // return result or rethrow any exception
+    result.get
   }
 
   def getEventSignature(eventABISignature: String): Array[Byte] =
