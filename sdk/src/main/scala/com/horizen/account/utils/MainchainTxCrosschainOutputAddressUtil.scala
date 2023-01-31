@@ -15,6 +15,6 @@ object MainchainTxCrosschainOutputAddressUtil {
    */
   def getAccountAddress(inputAddress: Array[Byte]): Address = {
     require(inputAddress.length == 32, s"byte array length ${inputAddress.length} != 32")
-    Address.fromBytes(BytesUtils.reverseBytes(inputAddress.take(Address.LENGTH)))
+    new Address(BytesUtils.reverseBytes(inputAddress.take(Address.LENGTH)))
   }
 }

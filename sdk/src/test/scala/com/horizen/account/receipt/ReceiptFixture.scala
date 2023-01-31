@@ -32,7 +32,7 @@ trait ReceiptFixture extends AccountFixture {
       logs += createTestEvmLog(Some(address))
 
     val contractAddress = if (contractAddressPresence) {
-      Option(Address.fromHex("0x1122334455667788990011223344556677889900"))
+      Option(new Address("0x1122334455667788990011223344556677889900"))
     } else {
       None
     }

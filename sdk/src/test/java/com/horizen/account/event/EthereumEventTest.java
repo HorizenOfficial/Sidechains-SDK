@@ -29,7 +29,7 @@ public class EthereumEventTest {
     // helper because we have a namespace collision here between org.web3j.abi.datatypes.Address and our
     // com.horizen.evm.utils.Address - which is why we need to use the fully qualified name
     private com.horizen.evm.utils.Address evmAddressFromHex(String hex) {
-        return com.horizen.evm.utils.Address.fromHex(hex);
+        return new com.horizen.evm.utils.Address(hex);
     }
 
     @Test

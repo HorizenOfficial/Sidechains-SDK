@@ -21,5 +21,5 @@ trait AccountFixture {
 
   def randomHash: Array[Byte] = randomBytes(32)
 
-  def randomAddress: Address = Address.fromBytes(randomBytes(Address.LENGTH))
+  def randomAddress: Address = new Address(randomBytes(Address.LENGTH))
 }

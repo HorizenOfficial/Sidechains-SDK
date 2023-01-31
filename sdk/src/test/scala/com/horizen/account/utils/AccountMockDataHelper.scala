@@ -258,20 +258,20 @@ case class AccountMockDataHelper(genesis: Boolean)
     if (state.getView != null) {
       Mockito.when(state.getView.getBalance(any())).thenReturn(BigInteger.valueOf(99999999999999999L))
       Mockito
-        .when(state.getView.getBalance(Address.fromHex("0x1234567891011121314151617181920212223242")))
+        .when(state.getView.getBalance(new Address("0x1234567891011121314151617181920212223242")))
         .thenReturn(BigInteger.valueOf(123L))
       Mockito.when(state.getView.getCode(any())).thenReturn(Numeric.hexStringToByteArray("0x"))
       Mockito
-        .when(state.getView.getCode(Address.fromHex("0x1234567891011121314151617181920212223242")))
+        .when(state.getView.getCode(new Address("0x1234567891011121314151617181920212223242")))
         .thenReturn(Numeric.hexStringToByteArray("0x1234"))
       Mockito.when(state.getView.getNonce(any())).thenReturn(BigInteger.ZERO)
       Mockito
-        .when(state.getView.getNonce(Address.fromHex("0x1234567891011121314151617181920212223242")))
+        .when(state.getView.getNonce(new Address("0x1234567891011121314151617181920212223242")))
         .thenReturn(BigInteger.ONE)
       Mockito.when(state.getView.getRefund).thenReturn(BigInteger.ONE)
 
       val proofRes: ProofAccountResult = mock[ProofAccountResult]
-      proofRes.address = Address.fromHex("0x1234567891011121314151617181920212223242")
+      proofRes.address = new Address("0x1234567891011121314151617181920212223242")
       proofRes.accountProof = Array("123")
       proofRes.nonce = BigInteger.ONE
       proofRes.balance = BigInteger.valueOf(123L)
@@ -287,7 +287,7 @@ case class AccountMockDataHelper(genesis: Boolean)
         Mockito
           .when(
             stateDB.getStorage(
-              Address.fromHex("0x1234567890123456789012345678901234567890"),
+              new Address("0x1234567890123456789012345678901234567890"),
               Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
             )
           )
@@ -297,7 +297,7 @@ case class AccountMockDataHelper(genesis: Boolean)
         Mockito
           .when(
             stateDB.getStorage(
-              Address.fromHex("0x1234567891011121314151617181920212223242"),
+              new Address("0x1234567891011121314151617181920212223242"),
               Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
             )
           )
@@ -308,7 +308,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     }
     Mockito.when(state.getBalance(any())).thenReturn(BigInteger.valueOf(999999999999999999L))
     Mockito
-      .when(state.getBalance(Address.fromHex("0x1234567891011121314151617181920212223242")))
+      .when(state.getBalance(new Address("0x1234567891011121314151617181920212223242")))
       .thenReturn(BigInteger.ZERO)
     Mockito.when(state.getStateDbViewFromRoot(any())).thenReturn(stateView)
 

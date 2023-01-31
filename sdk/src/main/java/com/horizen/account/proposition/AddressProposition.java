@@ -62,7 +62,7 @@ public final class AddressProposition implements SingleSecretProofOfKnowledgePro
     }
 
     public Address address() {
-        return Address.fromBytes(address);
+        return new Address(address);
     }
 
     public String checksumAddress() {

@@ -26,7 +26,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
 
   def rlpDecode(values: RlpList): EvmLog = {
     val addressBytes = values.getValues.get(0).asInstanceOf[RlpString].getBytes
-    val address = Address.fromBytes(addressBytes)
+    val address = new Address(addressBytes)
     val topicsRlp = values.getValues.get(1).asInstanceOf[RlpList]
     val hashList = new util.ArrayList[Hash]
     val topicsListSize = topicsRlp.getValues.size
@@ -75,7 +75,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
   }
 
   override def parse(reader: Reader): EvmLog = {
-    val address: Address = Address.fromBytes(reader.getBytes(Address.LENGTH))
+    val address: Address = new Address(reader.getBytes(Address.LENGTH))
 
     val topicsArraySize: Int = reader.getInt
     val topics: util.ArrayList[Hash] = new util.ArrayList[Hash]

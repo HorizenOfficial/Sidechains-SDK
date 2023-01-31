@@ -690,7 +690,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
     val vrfPubKey = new VrfPublicKey(BytesUtils.fromHexString(forgerStakeInfo.vrfPubKey))
-    val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), Address.fromHexNoPrefix(forgerStakeInfo.ownerAddress))
+    val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), new Address("0x" + forgerStakeInfo.ownerAddress))
 
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd), addForgerStakeInput.encode())
   }

@@ -16,6 +16,8 @@ public class EvmLogTest extends LibEvmTestBase {
     public void nullEvmLogHashCodeTest() {
         var addressBytes = new byte[Address.LENGTH];
         new Random().nextBytes(addressBytes);
+        var address = new Address(addressBytes);
+
         var topics = new Hash[4];
         topics[0] = Hash.fromBytes(
             Converter.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"));
@@ -28,9 +30,8 @@ public class EvmLogTest extends LibEvmTestBase {
 
         var data = Converter.fromHexString("aabbccddeeff22");
 
-        EvmLog randomLog = new EvmLog(Address.fromBytes(addressBytes), topics, data);
-
-        EvmLog randomLog2 = new EvmLog(Address.fromBytes(addressBytes), topics, data);
+        EvmLog randomLog = new EvmLog(address, topics, data);
+        EvmLog randomLog2 = new EvmLog(address, topics, data);
         assertEquals(randomLog, randomLog2);
         assertEquals(randomLog.hashCode(), randomLog2.hashCode());
     }

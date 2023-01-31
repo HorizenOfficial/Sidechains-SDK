@@ -62,7 +62,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
       "Message for WithdrawalMsgProcessor cannot be processed",
       WithdrawalMsgProcessor.canProcess(msg, mockStateView)
     )
-    val wrongAddress = Address.fromHex("0x35fdd51e73221f467b40946c97791a3e19799bea")
+    val wrongAddress = new Address("0x35fdd51e73221f467b40946c97791a3e19799bea")
     val msgNotProcessable = getMessage(wrongAddress, BigInteger.ZERO, Array.emptyByteArray)
     assertFalse(
       "Message not for WithdrawalMsgProcessor can be processed",

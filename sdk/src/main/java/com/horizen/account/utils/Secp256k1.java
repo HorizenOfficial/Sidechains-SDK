@@ -95,6 +95,6 @@ public final class Secp256k1 {
     }
 
     public static Address generateContractAddress(Address from, BigInteger nonce) {
-        return Address.fromBytes(ContractUtils.generateContractAddress(from.toBytes(), nonce));
+        return new Address(ContractUtils.generateContractAddress(from.toBytes(), nonce));
     }
 }

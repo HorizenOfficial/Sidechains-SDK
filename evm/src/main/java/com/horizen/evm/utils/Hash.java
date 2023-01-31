@@ -1,6 +1,5 @@
 package com.horizen.evm.utils;
 
-import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -11,24 +10,19 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 @JsonSerialize(using = Hash.Serializer.class)
 @JsonDeserialize(using = Hash.Deserializer.class)
-public class Hash {
+public class Hash extends FixedSizeByteArray {
     public static final int LENGTH = 32;
-    private final byte[] bytes;
 
     /**
-     * Zero address: 0x000...000
+     * Zero hash: 0x000...000
      */
     public static final Hash ZERO = new Hash(new byte[LENGTH]);
 
     private Hash(byte[] bytes) {
-        if (bytes.length != LENGTH) {
-            throw new IllegalArgumentException("hash must have a length of " + LENGTH);
-        }
-        this.bytes = bytes;
+        super(LENGTH, bytes);
     }
 
     public static Hash fromBytes(byte[] bytes) {
@@ -36,29 +30,6 @@ public class Hash {
             return null;
         }
         return new Hash(bytes);
-    }
-
-    public byte[] toBytes() {
-        return Arrays.copyOf(bytes, LENGTH);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Hash h = (Hash) o;
-        return Arrays.equals(this.bytes, h.bytes);
-    }
-
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(bytes);
-    }
-
-    @JsonValue
-    @Override
-    public String toString() {
-        return "0x" + Converter.toHexString(bytes);
     }
 
     public static class Serializer extends JsonSerializer<Hash> {

@@ -10,7 +10,7 @@ public class LibEvmTestBase {
     static final byte[] hashEmpty = bytes("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
     protected static Address address(String hex) {
-        return Address.fromHex(hex);
+        return new Address(hex);
     }
 
     protected static byte[] bytes(String hex) {

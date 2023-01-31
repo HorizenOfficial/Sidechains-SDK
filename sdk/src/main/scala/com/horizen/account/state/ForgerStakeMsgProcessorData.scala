@@ -157,7 +157,7 @@ object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
     val forgerPublicKey = new PublicKey25519Proposition(listOfParams.get(0).asInstanceOf[Bytes32].getValue)
     val vrfKey = decodeVrfKey(listOfParams.get(1).asInstanceOf[Bytes32], listOfParams.get(2).asInstanceOf[Bytes1])
     val forgerPublicKeys = ForgerPublicKeys(forgerPublicKey, vrfKey)
-    val ownerPublicKey = Address.fromHex(listOfParams.get(3).asInstanceOf[AbiAddress].toString)
+    val ownerPublicKey = new Address(listOfParams.get(3).asInstanceOf[AbiAddress].toString)
 
     AddNewStakeCmdInput(forgerPublicKeys, ownerPublicKey)
   }

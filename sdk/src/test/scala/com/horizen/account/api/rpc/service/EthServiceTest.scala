@@ -94,7 +94,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         EthereumTransactionType.DynamicFeeTxType.ordinal(),
         transactionIndex = 0,
         blockNumber = 2,
-        address = Address.fromHex("0xd2a538a476aad6ecd245099df9297df6a129c2c5"),
+        address = new Address("0xd2a538a476aad6ecd245099df9297df6a129c2c5"),
         txHash = Some(BytesUtils.fromHexString("6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
         blockHash = "0456"
       )

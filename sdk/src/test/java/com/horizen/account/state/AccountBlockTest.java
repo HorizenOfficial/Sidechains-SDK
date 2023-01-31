@@ -45,7 +45,7 @@ public class AccountBlockTest implements ReceiptFixture {
             var numLogs = 3;
             var contractAddressPresence = false;
 
-            return createTestEthereumReceipt(txType, numLogs, contractAddressPresence, Option.apply(BytesUtils.fromHexString(d[0])), Address.fromHex(d[1]), "blockhash", 22, 33).consensusDataReceipt();
+            return createTestEthereumReceipt(txType, numLogs, contractAddressPresence, Option.apply(BytesUtils.fromHexString(d[0])), new Address(d[1]), "blockhash", 22, 33).consensusDataReceipt();
         }).collect(Collectors.toList());
 
         var precalculatedRoot = BytesUtils.fromHexString("895fd6302535b35fc2f4c903c4ea919e367587b72c98ee8a976af069d1794ce9");
