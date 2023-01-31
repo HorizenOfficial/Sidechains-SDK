@@ -1,5 +1,6 @@
 package com.horizen.account.forger
 
+import akka.util.Timeout
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -8,7 +9,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, Bloom}
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
@@ -18,11 +19,11 @@ import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
-import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
+import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction.{TransactionSerializer}
 import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core.NodeViewModifier
@@ -393,5 +394,20 @@ class AccountForgeMessageBuilder(
       })
 
     forgingStakeMerklePathInfoSeq
+  }
+
+  def getPendingBlock(nodeView: View,
+                      timestamp: Long,
+                      branchPointInfo: BranchPointInfo,
+                      forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
+                      blockSignPrivateKey: PrivateKey25519,
+                      vrfProof: VrfProof,
+                      timeout: Timeout,
+                      forcedTx: Iterable[SidechainTypes#SCAT]): Option[AccountBlock] = {
+    forgeBlock(nodeView, timestamp, branchPointInfo, forgingStakeMerklePathInfo, blockSignPrivateKey, vrfProof,
+      timeout, forcedTx) match {
+      case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
+      case _: ForgeFailure => Option.empty
+    }
   }
 }

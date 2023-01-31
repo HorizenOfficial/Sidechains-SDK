@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.account.api.rpc.handler.RpcException
-import com.horizen.account.api.rpc.service.utils.{PendingBlock, PendingStateView}
+import com.horizen.account.api.rpc.service.utils.PendingBlock
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
@@ -31,7 +31,7 @@ import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
-import sparkz.core.{NodeViewHolder, bytesToId, idToVersion}
+import sparkz.core.{NodeViewHolder, VersionTag, bytesToId, idToVersion}
 
 import java.math.BigInteger
 import java.util
@@ -161,16 +161,23 @@ class EthService(
       }
 
     val history = nodeView.history
-    val (blockNumber, blockHash, view): (Long, Hash, AccountStateView) =
+    val (blockNumber, blockHash, view, pendingState): (Long, Hash, AccountStateView, AccountState) =
       if (blockId == null) {
-        (history.getCurrentHeight + 1, null, PendingStateView(nodeView, block).getPendingStateView)
+        val pendingState = getPendingState(nodeView, block)
+        (history.getCurrentHeight + 1, null, pendingState.getView, pendingState)
       } else {
-        (history.getBlockHeightById(blockId).get().toLong, Hash.fromBytes(blockId.toBytes), nodeView.state.getView)
+        (
+          history.getBlockHeightById(blockId).get().toLong,
+          Hash.fromBytes(blockId.toBytes),
+          nodeView.state.getView,
+          null
+        )
       }
 
     using(view) { stateView =>
       if (hydratedTx) {
         val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
+        rollbackPendingState(pendingState, idToVersion(block.header.parentId))
         EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
       } else {
         EthereumBlockView.notHydrated(blockNumber, blockHash, block)
@@ -390,8 +397,16 @@ class EthService(
 
   private def getBlockById(nodeView: NV, blockId: ModifierId): (AccountBlock, SidechainBlockInfo) = {
     val (block, blockInfo) = if (blockId == null) {
-      val pendingBlock = new PendingBlock(nodeView)
-      (pendingBlock.getPendingBlock, pendingBlock.getBlockInfo)
+      val pendingBlockInstance = new PendingBlock(nodeView)
+      val pendingBlock = pendingBlockInstance.getPendingBlock
+      val parentId = getBlockIdByTag(nodeView, "latest")
+      (
+        pendingBlock.getOrElse(throw new RpcException(RpcError.fromCode(
+          RpcCode.UnknownBlock,
+          "Invalid block tag parameter."
+        ))),
+        pendingBlockInstance.getBlockInfo(pendingBlock.get, parentId, nodeView.history.blockInfoById(parentId))
+      )
     } else {
       (
         nodeView.history
@@ -419,12 +434,7 @@ class EthService(
       networkParams.chainId
     )
     if (tag == "pending") {
-      val pendingState = nodeView.state.applyModifier(block).getOrElse(throw new RpcException(RpcError.fromCode(
-        RpcCode.InternalError,
-        "Failed to get pending block."
-      )))
-      val pendingStateDbView = pendingState.getStateDbViewFromRoot(block.header.stateRoot)
-      pendingState.rollbackTo(idToVersion(block.parentId))
+      val pendingStateDbView = getPendingStateDbView(nodeView, block)
       using(pendingStateDbView)(fun(_, blockContext))
     } else {
       using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
@@ -503,12 +513,27 @@ class EthService(
     blockTransactionByIndex(nodeView => getBlockIdByTag(nodeView, tag), index)
   }
 
+  private def getPendingState(nodeView: NV, block: AccountBlock): AccountState = {
+    nodeView.state.applyModifier(block).getOrElse(throw new RpcException(RpcError.fromCode(
+      RpcCode.InternalError,
+      "Failed to get pending block."
+    )))
+  }
+  private def getPendingStateDbView(nodeView: NV, block: AccountBlock): StateDbAccountStateView = {
+    val pendingState = getPendingState(nodeView, block)
+    val stateDbView = pendingState.getStateDbViewFromRoot(block.header.stateRoot)
+    rollbackPendingState(pendingState, idToVersion(block.header.parentId))
+    stateDbView
+  }
+
+  private def rollbackPendingState(pendingState: AccountState, version: VersionTag) = {
+    if (pendingState != null) pendingState.rollbackTo(version)
+  }
+
   private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: Quantity): EthereumTransactionView = {
     val txIndex = index.toNumber.intValueExact()
     applyOnAccountView { nodeView =>
       val blockId = getBlockId(nodeView)
-      val history = nodeView.history
-
       val block: AccountBlock =
         try {
           getBlockById(nodeView, blockId)._1
@@ -516,10 +541,11 @@ class EthService(
           case _: Throwable => return null
         }
 
+      val pendingState = getPendingState(nodeView, block)
       val view: AccountStateView =
-        if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
+        if (blockId == null) pendingState.getView else nodeView.state.getView
 
-      block.transactions
+      val ethTxView = block.transactions
         .drop(txIndex)
         .headOption
         .map(_.asInstanceOf[EthereumTransaction])
@@ -527,6 +553,8 @@ class EthService(
           using(view)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
             .map(new EthereumTransactionView(tx, _, block.header.baseFee))
         ).orNull
+      rollbackPendingState(pendingState, idToVersion(block.header.parentId))
+      ethTxView
     }
   }
 
