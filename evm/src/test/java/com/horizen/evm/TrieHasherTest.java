@@ -2,16 +2,10 @@ package com.horizen.evm;
 
 import org.junit.Test;
 
-import java.util.Arrays;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public class TrieHasherTest extends LibEvmTestBase {
-    private void assertArrayNotEquals(String message, byte[] unexpected, byte[] actual) {
-        assertFalse(message, Arrays.equals(unexpected, actual));
-    }
-
     @Test
     public void trieHasher() {
         // verify that:
@@ -31,16 +25,16 @@ public class TrieHasherTest extends LibEvmTestBase {
         var hashF = TrieHasher.Root(new byte[200][1]);
         var hashG = TrieHasher.Root(new byte[1000][67]);
 
-        assertArrayEquals("should return well-known empty root hash", hashEmpty, hashEmptyTest);
-        assertArrayEquals("should return well-known empty root hash", hashEmptyTest, hashEmptyTest2);
-        assertArrayNotEquals("should not give empty root hash", hashEmptyTest, hashA);
-        assertArrayEquals("should return same root hash for same input", hashA, hashA2);
-        assertArrayNotEquals("should return different root hash for different input", hashA, hashB);
-        assertArrayNotEquals("should return different root hash for different input", hashB, hashC);
-        assertArrayNotEquals("should return different root hash for different input", hashC, hashD);
-        assertArrayNotEquals("should return different root hash for different input", hashD, hashE);
-        assertArrayNotEquals("should return different root hash for different input", hashE, hashF);
-        assertArrayNotEquals("should return different root hash for different input", hashF, hashG);
+        assertEquals("should return well-known empty root hash", StateDB.EMPTY_ROOT_HASH, hashEmptyTest);
+        assertEquals("should return well-known empty root hash", hashEmptyTest, hashEmptyTest2);
+        assertNotEquals("should not give empty root hash", hashEmptyTest, hashA);
+        assertEquals("should return same root hash for same input", hashA, hashA2);
+        assertNotEquals("should return different root hash for different input", hashA, hashB);
+        assertNotEquals("should return different root hash for different input", hashB, hashC);
+        assertNotEquals("should return different root hash for different input", hashC, hashD);
+        assertNotEquals("should return different root hash for different input", hashD, hashE);
+        assertNotEquals("should return different root hash for different input", hashE, hashF);
+        assertNotEquals("should return different root hash for different input", hashF, hashG);
 
         // TODO: generate some receipts, RLP encode them and verify the root hash
     }

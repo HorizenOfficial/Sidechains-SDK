@@ -17,7 +17,7 @@ public class Address extends FixedSizeByteArray {
     public static final int LENGTH = 20;
 
     /**
-     * Zero address: 0x000...000
+     * Zero address: 0x0000000000000000000000000000000000000000
      */
     public static final Address ZERO = new Address(new byte[LENGTH]);
 

@@ -17,12 +17,16 @@ public class Hash extends FixedSizeByteArray {
     public static final int LENGTH = 32;
 
     /**
-     * Zero hash: 0x000...000
+     * Zero hash: 0x0000000000000000000000000000000000000000000000000000000000000000
      */
     public static final Hash ZERO = new Hash(new byte[LENGTH]);
 
-    private Hash(byte[] bytes) {
+    public Hash(byte[] bytes) {
         super(LENGTH, bytes);
+    }
+
+    public Hash(String hex) {
+        super(LENGTH, hex);
     }
 
     public static Hash fromBytes(byte[] bytes) {

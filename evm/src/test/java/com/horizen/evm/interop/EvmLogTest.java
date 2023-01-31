@@ -6,27 +6,20 @@ import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
 import org.junit.Test;
 
-import java.util.Random;
-
 import static org.junit.Assert.assertEquals;
 
 public class EvmLogTest extends LibEvmTestBase {
 
     @Test
     public void nullEvmLogHashCodeTest() {
-        var addressBytes = new byte[Address.LENGTH];
-        new Random().nextBytes(addressBytes);
-        var address = new Address(addressBytes);
+        var address = new Address("0x670f5b2c2a839622103b176334f07c1e0bcf6cc5");
 
-        var topics = new Hash[4];
-        topics[0] = Hash.fromBytes(
-            Converter.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"));
-        topics[1] = Hash.fromBytes(
-            Converter.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"));
-        topics[2] = Hash.fromBytes(
-            Converter.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"));
-        topics[3] = Hash.fromBytes(
-            Converter.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"));
+        var topics = new Hash[] {
+            new Hash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+            new Hash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+            new Hash("0x2222222222222222222222222222222222222222222222222222222222222222"),
+            new Hash("0x3333333333333333333333333333333333333333333333333333333333333333"),
+        };
 
         var data = Converter.fromHexString("aabbccddeeff22");
 

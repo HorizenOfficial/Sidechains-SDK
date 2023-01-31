@@ -2,24 +2,22 @@ package com.horizen.evm;
 
 import com.horizen.evm.interop.*;
 import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
 
 import java.math.BigInteger;
-import java.util.Arrays;
 
 public class StateDB extends ResourceHandle {
     /**
      * Code hash of an empty byte array
      */
-    public static final byte[] EMPTY_CODE_HASH =
-        Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+    public static final Hash EMPTY_CODE_HASH = new Hash(
+        "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
     /**
      * TrieHasher.Root() of an empty byte array
      */
-    public static final byte[] EMPTY_ROOT_HASH =
-        Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+    public static final Hash EMPTY_ROOT_HASH = new Hash(
+        "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
     /**
      * Opens a view on the state at the given state root hash.
@@ -27,8 +25,8 @@ public class StateDB extends ResourceHandle {
      * @param db   database instance
      * @param root root hash
      */
-    public StateDB(Database db, byte[] root) {
-        super(LibEvm.invoke("StateOpen", new OpenStateParams(db.handle, Hash.fromBytes(root)), int.class));
+    public StateDB(Database db, Hash root) {
+        super(LibEvm.invoke("StateOpen", new OpenStateParams(db.handle, root), int.class));
     }
 
     /**
@@ -53,8 +51,8 @@ public class StateDB extends ResourceHandle {
      *
      * @return state root hash
      */
-    public byte[] getIntermediateRoot() {
-        return LibEvm.invoke("StateIntermediateRoot", new HandleParams(handle), Hash.class).toBytes();
+    public Hash getIntermediateRoot() {
+        return LibEvm.invoke("StateIntermediateRoot", new HandleParams(handle), Hash.class);
     }
 
     /**
@@ -62,8 +60,8 @@ public class StateDB extends ResourceHandle {
      *
      * @return updated state root hash
      */
-    public byte[] commit() {
-        return LibEvm.invoke("StateCommit", new HandleParams(handle), Hash.class).toBytes();
+    public Hash commit() {
+        return LibEvm.invoke("StateCommit", new HandleParams(handle), Hash.class);
     }
 
     /**
@@ -87,7 +85,7 @@ public class StateDB extends ResourceHandle {
      * @return true if account is EOA, otherwise false
      */
     public boolean isEoaAccount(Address address) {
-        return isEmpty(address) || Arrays.equals(getCodeHash(address), EMPTY_CODE_HASH);
+        return isEmpty(address) || EMPTY_CODE_HASH.equals(getCodeHash(address));
     }
 
     /**
@@ -166,8 +164,8 @@ public class StateDB extends ResourceHandle {
      * @param address account address
      * @return code hash
      */
-    public byte[] getCodeHash(Address address) {
-        return LibEvm.invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class).toBytes();
+    public Hash getCodeHash(Address address) {
+        return LibEvm.invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class);
     }
 
     /**
@@ -223,8 +221,8 @@ public class StateDB extends ResourceHandle {
      * @param key     storage key
      * @return storage value, always 32 bytes
      */
-    public byte[] getStorage(Address address, byte[] key) {
-        return LibEvm.invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
+    public Hash getStorage(Address address, Hash key) {
+        return LibEvm.invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class);
     }
 
     /**
@@ -234,8 +232,8 @@ public class StateDB extends ResourceHandle {
      * @param key     storage key
      * @return comitted storage value, always 32 bytes
      */
-    public byte[] getCommittedStorage(Address address, byte[] key) {
-        return LibEvm.invoke("StateGetCommittedStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
+    public Hash getCommittedStorage(Address address, Hash key) {
+        return LibEvm.invoke("StateGetCommittedStorage", new StorageParams(handle, address, key), Hash.class);
     }
 
     /**
@@ -247,7 +245,7 @@ public class StateDB extends ResourceHandle {
      * @param key     storage key
      * @param value   value to store
      */
-    public void setStorage(Address address, byte[] key, byte[] value) {
+    public void setStorage(Address address, Hash key, Hash value) {
         LibEvm.invoke("StateSetStorage", new SetStorageParams(handle, address, key, value));
     }
 
@@ -258,7 +256,7 @@ public class StateDB extends ResourceHandle {
      * @param keys    storage keys
      * @return proofs
      */
-    public ProofAccountResult getProof(Address address, byte[][] keys) {
+    public ProofAccountResult getProof(Address address, Hash[] keys) {
         return LibEvm.invoke("StateGetProof", new ProofParams(handle, address, keys), ProofAccountResult.class);
     }
 
@@ -286,7 +284,7 @@ public class StateDB extends ResourceHandle {
      * @param txHash transaction hash
      * @return log entries related to given transaction hash
      */
-    public EvmLog[] getLogs(byte[] txHash) {
+    public EvmLog[] getLogs(Hash txHash) {
         return LibEvm.invoke("StateGetLogs", new GetLogsParams(handle, txHash), EvmLog[].class);
     }
 
@@ -305,7 +303,7 @@ public class StateDB extends ResourceHandle {
      * @param txHash  the hash of the transaction to be set in context
      * @param txIndex the index of the transaction in the block
      */
-    public void setTxContext(byte[] txHash, int txIndex) {
+    public void setTxContext(Hash txHash, int txIndex) {
         LibEvm.invoke("StateSetTxContext", new SetTxContextParams(handle, txHash, txIndex));
     }
 
@@ -336,7 +334,7 @@ public class StateDB extends ResourceHandle {
      * @param slot    storage slot to access
      * @return true if the slot was already on the access list, false otherwise
      */
-    public boolean accessSlot(Address address, byte[] slot) {
+    public boolean accessSlot(Address address, Hash slot) {
         return LibEvm.invoke("AccessSlot", new SlotParams(handle, address, slot), Boolean.class);
     }
 

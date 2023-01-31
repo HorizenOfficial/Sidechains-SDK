@@ -6,8 +6,8 @@ import com.horizen.evm.utils.Hash;
 public class SlotParams extends AccountParams {
     public Hash slot;
 
-    public SlotParams(int handle, Address address, byte[] slot) {
+    public SlotParams(int handle, Address address, Hash slot) {
         super(handle, address);
-        this.slot = Hash.fromBytes(slot);
+        this.slot = slot;
     }
 }

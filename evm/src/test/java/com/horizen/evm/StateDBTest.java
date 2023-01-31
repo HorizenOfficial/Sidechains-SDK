@@ -3,7 +3,6 @@ package com.horizen.evm;
 import com.horizen.evm.interop.HandleParams;
 import com.horizen.evm.interop.OpenStateParams;
 import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -15,27 +14,10 @@ import scorex.crypto.hash.Keccak256;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
 public class StateDBTest extends LibEvmTestBase {
-    public static byte[] pad(byte[] buffer, byte paddingByte, int paddingLength) {
-        var paddingBuffer = createPaddingBuffer(paddingByte, paddingLength);
-        var paddingBufferIndex = paddingBuffer.length - 1;
-
-        for (int i = buffer.length - 1; i >= 0; i--) {
-            paddingBuffer[paddingBufferIndex--] = buffer[i];
-        }
-
-        return paddingBuffer;
-    }
-
-    public static byte[] createPaddingBuffer(byte paddingByte, int paddingLength) {
-        byte[] padding = new byte[paddingLength];
-        Arrays.fill(padding, paddingByte);
-        return padding;
-    }
 
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();
@@ -52,18 +34,20 @@ public class StateDBTest extends LibEvmTestBase {
         final var v3 = BigInteger.valueOf(3);
         final var v5 = BigInteger.valueOf(5);
 
-        byte[] rootWithBalance1234;
-        byte[] rootWithBalance802;
+        Hash rootWithBalance1234;
+        Hash rootWithBalance802;
 
         try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
-            try (var statedb = new StateDB(db, hashNull)) {
+            try (var statedb = new StateDB(db, Hash.ZERO)) {
                 var intermediateRoot = statedb.getIntermediateRoot();
-                assertArrayEquals("empty state should give the hash of an empty string as the root hash", hashEmpty,
+                assertEquals(
+                    "empty state should give the hash of an empty string as the root hash",
+                    StateDB.EMPTY_ROOT_HASH,
                     intermediateRoot
                 );
 
                 var committedRoot = statedb.commit();
-                assertArrayEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
+                assertEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
                 assertEquals(BigInteger.ZERO, statedb.getBalance(origin));
 
                 statedb.addBalance(origin, v1234);
@@ -99,7 +83,7 @@ public class StateDBTest extends LibEvmTestBase {
         // also verify that the database was closed
         assertThrows(
             Exception.class,
-            () -> LibEvm.invoke("StateOpen", new OpenStateParams(1, Hash.fromBytes(hashNull)), int.class)
+            () -> LibEvm.invoke("StateOpen", new OpenStateParams(1, Hash.ZERO), int.class)
         );
 
         try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
@@ -119,19 +103,19 @@ public class StateDBTest extends LibEvmTestBase {
     public void accountStorage() throws Exception {
         final var databaseFolder = tempFolder.newFolder("account-db");
         final var origin = address("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff");
-        final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
-        final byte[][] values = {
-            bytes("0000000000000000000000000000000000000000000000000000000000000000"),
-            bytes("0000000000000000000000001234000000000000000000000000000000000000"),
-            bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-            bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
+        final var key = new Hash("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
+        final Hash[] values = {
+            new Hash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+            new Hash("0x0000000000000000000000001234000000000000000000000000000000000000"),
+            new Hash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            new Hash("0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
         };
 
-        byte[] initialRoot;
-        var roots = new ArrayList<byte[]>();
+        Hash initialRoot;
+        var roots = new ArrayList<Hash>();
 
         try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
-            try (var statedb = new StateDB(db, hashEmpty)) {
+            try (var statedb = new StateDB(db, StateDB.EMPTY_ROOT_HASH)) {
                 assertTrue("account must not exist in an empty state", statedb.isEmpty(origin));
                 // make sure the account is not "empty"
                 statedb.setNonce(origin, BigInteger.ONE);
@@ -140,11 +124,11 @@ public class StateDBTest extends LibEvmTestBase {
                 for (var value : values) {
                     statedb.setStorage(origin, key, value);
                     var retrievedValue = statedb.getStorage(origin, key);
-                    assertArrayEquals(value, retrievedValue);
+                    assertEquals(value, retrievedValue);
                     // store the root hash of each state
                     roots.add(statedb.commit());
                     var committedValue = statedb.getStorage(origin, key);
-                    assertArrayEquals(value, committedValue);
+                    assertEquals(value, committedValue);
                 }
             }
         }
@@ -154,10 +138,10 @@ public class StateDBTest extends LibEvmTestBase {
             for (int i = 0; i < values.length; i++) {
                 try (var statedb = new StateDB(db, roots.get(i))) {
                     var writtenValue = statedb.getStorage(origin, key);
-                    assertArrayEquals(values[i], writtenValue);
+                    assertEquals(values[i], writtenValue);
                     // verify that removing the key results in the initial state root
                     statedb.setStorage(origin, key, null);
-                    assertArrayEquals(initialRoot, statedb.getIntermediateRoot());
+                    assertEquals(initialRoot, statedb.getIntermediateRoot());
                 }
             }
         }
@@ -166,55 +150,45 @@ public class StateDBTest extends LibEvmTestBase {
     @Test
     public void accountStorageEdgeCases() throws Exception {
         final var origin = address("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff");
-        final var key = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
+        final var key = new Hash("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
         // test some negative cases:
-        // - trying to store a value that is not 32 bytes should throw
+        // - trying to store a value that is not 32 bytes should throw - after refactoring to "Hash" this is prevented
         // - writing 32 bytes of zeros and null should behave identical (remove the key-value pair)
-        final byte[] validValue = bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
-        final byte[][] invalidValues = {
-            bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddee"),
-            bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00"),
-            bytes(
-                "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
-        };
+        final Hash validValue = new Hash("0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
 
         try (var db = new MemoryDatabase()) {
-            try (var statedb = new StateDB(db, hashEmpty)) {
+            try (var statedb = new StateDB(db, StateDB.EMPTY_ROOT_HASH)) {
                 assertTrue("account must not exist in an empty state", statedb.isEmpty(origin));
                 // writing to an "empty" account should fail:
                 // this is a safety precaution, because empty accounts will be pruned, even if the storage is not empty
                 assertThrows(InvokeException.class, () -> statedb.setStorage(origin, key, validValue));
                 // make sure the account is not "empty"
                 statedb.setNonce(origin, BigInteger.ONE);
-                assertArrayEquals(
+                assertEquals(
                     "reading a non-existent key should return all zeroes",
-                    hashNull,
+                    Hash.ZERO,
                     statedb.getStorage(origin, key)
                 );
                 // make sure this does not throw anymore and the value can be read correctly
                 statedb.setStorage(origin, key, validValue);
-                assertArrayEquals("value was not written correctly", validValue, statedb.getStorage(origin, key));
-                // test invalid values (length not 32)
-                for (var value : invalidValues) {
-                    assertThrows(IllegalArgumentException.class, () -> statedb.setStorage(origin, key, value));
-                }
+                assertEquals("value was not written correctly", validValue, statedb.getStorage(origin, key));
                 // make sure the value did not change after invalid write attempts
-                assertArrayEquals("unexpected change of written value", validValue, statedb.getStorage(origin, key));
+                assertEquals("unexpected change of written value", validValue, statedb.getStorage(origin, key));
                 // test removal of the key by using null
                 statedb.setStorage(origin, key, null);
-                assertArrayEquals("value should be all zeroes", hashNull, statedb.getStorage(origin, key));
+                assertEquals("value should be all zeroes", Hash.ZERO, statedb.getStorage(origin, key));
                 // write the value again
                 statedb.setStorage(origin, key, validValue);
                 // test removal of the key by using all zeros
-                statedb.setStorage(origin, key, hashNull);
-                assertArrayEquals("value should be all zeroes", hashNull, statedb.getStorage(origin, key));
+                statedb.setStorage(origin, key, Hash.ZERO);
+                assertEquals("value should be all zeroes", Hash.ZERO, statedb.getStorage(origin, key));
             }
         }
     }
 
     private void testAccessListAccounts(StateDB statedb, Address sender, Address destination, Address other) {
-        final var key1 = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff000000000000000000000001");
-        final var key2 = bytes("bafe3b6f2a19658df3cb5efca158c93272ff5cff000000000000000000000002");
+        final var key1 = new Hash("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff000000000000000000000001");
+        final var key2 = new Hash("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff000000000000000000000002");
 
         statedb.accessSetup(sender, destination);
         assertTrue("sender must be on access list", statedb.accessAccount(sender));
@@ -263,7 +237,7 @@ public class StateDBTest extends LibEvmTestBase {
         };
 
         try (var db = new MemoryDatabase()) {
-            try (var statedb = new StateDB(db, hashEmpty)) {
+            try (var statedb = new StateDB(db, StateDB.EMPTY_ROOT_HASH)) {
                 // test multiple permutations of the accounts in a row to make sure the access list is correctly reset
                 testAccessListAccounts(statedb, accounts[0], accounts[1], accounts[2]);
                 testAccessListAccounts(statedb, accounts[1], accounts[2], accounts[0]);
@@ -276,11 +250,11 @@ public class StateDBTest extends LibEvmTestBase {
 
     @Test
     public void TestAccountTypes() throws Exception {
-        final var code = Converter.fromHexString("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
+        final var code = bytes("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
         final var addr1 = address("0x1234561234561234561234561234561234561230");
 
         try (var db = new MemoryDatabase()) {
-            try (var statedb = new StateDB(db, hashNull)) {
+            try (var statedb = new StateDB(db, Hash.ZERO)) {
                 // Test 1: non-existing account is an EOA account
                 assertTrue("EOA account expected", statedb.isEoaAccount(addr1));
                 assertFalse("EOA account expected", statedb.isSmartContractAccount(addr1));
@@ -303,23 +277,19 @@ public class StateDBTest extends LibEvmTestBase {
     @Ignore
     public void proof() throws Exception {
         final var address = address("cca577ee56d30a444c73f8fc8d5ce34ed1c7da8b");
-        final int paddingLength = 32;
-        final byte paddingByte = 0;
 
         try (var db = new MemoryDatabase()) {
-            try (var statedb = new StateDB(db, hashNull)) {
+            try (var statedb = new StateDB(db, Hash.ZERO)) {
                 statedb.setStorage(
                     address,
-                    (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000000")),
-                    pad(
-                        RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))),
-                        paddingByte, paddingLength
-                    )
+                    new Hash((byte[]) Keccak256.hash(Hash.ZERO.toBytes())),
+                    padToHash(RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))))
                 );
                 statedb.setStorage(
                     address,
-                    (byte[]) Keccak256.hash(bytes("0000000000000000000000000000000000000000000000000000000000000001")),
-                    pad(RlpEncoder.encode(RlpString.create(bytes("02"))), paddingByte, paddingLength)
+                    new Hash((byte[]) Keccak256.hash(
+                        bytes("0000000000000000000000000000000000000000000000000000000000000001"))),
+                    padToHash(RlpEncoder.encode(RlpString.create(bytes("02"))))
                 );
 
                 statedb.commit();
@@ -328,7 +298,7 @@ public class StateDBTest extends LibEvmTestBase {
                 // storageProof's length is always 0
                 var proofAccountResult = statedb.getProof(
                     address,
-                    new byte[][] {bytes("0000000000000000000000000000000000000000000000000000000000000001")}
+                    new Hash[] {Hash.ZERO}
                 );
 
                 // after successful proof retrieval, we should verify the root hash

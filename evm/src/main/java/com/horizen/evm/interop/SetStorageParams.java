@@ -6,9 +6,9 @@ import com.horizen.evm.utils.Hash;
 public class SetStorageParams extends StorageParams {
     public Hash value;
 
-    public SetStorageParams(int handle, Address address, byte[] key, byte[] value) {
+    public SetStorageParams(int handle, Address address, Hash key, Hash value) {
         super(handle, address, key);
-        this.value = Hash.fromBytes(value);
+        this.value = value;
     }
 }
 

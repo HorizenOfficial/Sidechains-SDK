@@ -2,13 +2,12 @@ package com.horizen.evm;
 
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Converter;
+import com.horizen.evm.utils.Hash;
+import scala.Array;
 
 import java.util.Arrays;
 
 public class LibEvmTestBase {
-    static final byte[] hashNull = bytes("0000000000000000000000000000000000000000000000000000000000000000");
-    static final byte[] hashEmpty = bytes("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
-
     protected static Address address(String hex) {
         return new Address(hex);
     }
@@ -29,5 +28,11 @@ public class LibEvmTestBase {
 
     protected static byte[] concat(String a, String b) {
         return concat(bytes(a), bytes(b));
+    }
+
+    protected static Hash padToHash(byte[] bytes) {
+        var padded = new byte[Hash.LENGTH];
+        Array.copy(bytes, 0, padded, padded.length - bytes.length, bytes.length);
+        return new Hash(padded);
     }
 }
