@@ -453,7 +453,7 @@ class EthService(
   private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
     val blockId = parseBlockTag(nodeView, tag) match {
       case height if height == nodeView.history.getCurrentHeight + 1 => null
-      case _ => ModifierId(nodeView.history.blockIdByHeight(parseBlockTag(nodeView, tag)).get)
+      case height => ModifierId(nodeView.history.blockIdByHeight(height).get)
     }
     blockId
   }
