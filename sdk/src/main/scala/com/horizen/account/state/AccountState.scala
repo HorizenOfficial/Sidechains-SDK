@@ -6,7 +6,7 @@ import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.Account.generateContractAddress
+import com.horizen.account.utils.Secp256k1.generateContractAddress
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
 import com.horizen.account.validation.InvalidTransactionChainIdException
 import com.horizen.block.WithdrawalEpochCertificate

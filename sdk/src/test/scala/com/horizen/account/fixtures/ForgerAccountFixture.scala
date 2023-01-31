@@ -1,11 +1,7 @@
 package com.horizen.account.fixtures
 
-import com.google.common.primitives.Longs
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.utils.{Account, AccountPayment, Secp256k1}
-
-import java.util.Random
+import com.horizen.account.utils.AccountPayment
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.fixtures.SecretFixture
 import com.horizen.proposition.VrfPublicKey
@@ -15,7 +11,7 @@ import com.horizen.utils.Ed25519
 
 import java.math.BigInteger
 import java.util
-
+import java.util.Random
 
 case class ForgerAccountGenerationMetadata(propositionSecret: PrivateKey25519, blockSignSecret: PrivateKey25519, vrfSecret: VrfSecretKey,
                                        forgingStakeInfo: ForgingStakeInfo)
@@ -39,7 +35,7 @@ object ForgerAccountFixture extends SecretFixture {
     val blockSignProposition = signerPrivKey.publicImage()
 
     // TODO get a deterministic value with createEcKeyPair
-    val ownerAddressProposition = new AddressProposition(util.Arrays.copyOf(byteSeed, Account.ADDRESS_SIZE))
+    val ownerAddressProposition = new AddressProposition(util.Arrays.copyOf(byteSeed, AddressProposition.LENGTH))
 
     /*
     val ownerKeyPair = Secp256k1.createKeyPair(Longs.toByteArray(seed));
