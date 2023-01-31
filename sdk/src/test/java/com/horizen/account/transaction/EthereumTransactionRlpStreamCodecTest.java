@@ -7,6 +7,10 @@ import com.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.web3j.rlp.RlpDecoder;
+import org.web3j.rlp.RlpEncoder;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
 import scorex.util.ByteArrayBuilder;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.VLQByteBufferReader;
@@ -184,4 +188,41 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         long stopTime2 = System.nanoTime();
         System.out.println("RlpStreamEncoding: " + (stopTime2 - startTime2));
     }
+
+    private RlpList getEip1559TxInternalRlpList(EthereumTransaction ethTx) {
+        assertTrue(ethTx.isEIP1559());
+        byte[] encodedBytes = ethTx.encode(true);
+        byte[] encodedTx = java.util.Arrays.copyOfRange(encodedBytes, 1, encodedBytes.length);
+        return (RlpList)RlpDecoder.decode(encodedTx).getValues().get(0);
+    }
+
+    @Test
+    public void rlpEthTxEIP1559IllFormatted() {
+        EthereumTransaction ethTx = getEoa2EoaEip1559Transaction();
+        RlpList ethTxList = getEip1559TxInternalRlpList(ethTx);
+
+        // add an invalid item to the eth rlp list
+        ethTxList.getValues().add(RlpString.create("Hello"));
+
+        byte[] tamperedBytes1 = RlpEncoder.encode(ethTxList);
+        byte[] tamperedBytes = ByteBuffer.allocate(tamperedBytes1.length + 1)
+                .put(ethTx.version())
+                .put(tamperedBytes1)
+                .array();
+
+        assertThrows(
+                "Exception expected, because data are a decoded invalid RLP list",
+                IllegalArgumentException.class,
+                () -> EthereumTransactionDecoder.decode(tamperedBytes)
+        );
+
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(tamperedBytes));
+        assertThrows(
+                "Exception expected, because data are a decoded invalid RLP list",
+                IllegalArgumentException.class,
+                () -> EthereumTransactionDecoder.decode(reader)
+        );
+
+    }
+
 }

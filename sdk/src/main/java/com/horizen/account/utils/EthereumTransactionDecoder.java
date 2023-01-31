@@ -83,6 +83,12 @@ public class EthereumTransactionDecoder {
 
     private static EthereumTransaction RlpList2EIP1559Transaction(RlpList rlpList) {
         RlpList values = (RlpList)rlpList.getValues().get(0);
+        if (values.getValues().size() != 9 && values.getValues().size() != 12) {
+           throw new IllegalArgumentException(
+              "Error while decoding the EIP1559 tx bytes, unexpected number of values in rlp list: " +
+               values.getValues().size()
+           );
+        }
         long chainId = ((RlpString)values.getValues().get(0)).asPositiveBigInteger().longValueExact();
         BigInteger nonce = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
         BigInteger maxPriorityFeePerGas = ((RlpString)values.getValues().get(2)).asPositiveBigInteger();
@@ -95,7 +101,9 @@ public class EthereumTransactionDecoder {
         var optTo = EthereumTransactionUtils.getToAddressFromString(to);
         var dataBytes = EthereumTransactionUtils.getDataFromString(data);
 
-        if (((RlpList)values.getValues().get(8)).getValues().size() > 0) throw new IllegalArgumentException("Access list is not supported");
+        if (((RlpList)values.getValues().get(8)).getValues().size() > 0)
+            throw new IllegalArgumentException("Access list is not supported");
+
         if (values.getValues().size() == 9) {
             return new EthereumTransaction(
                     chainId,
