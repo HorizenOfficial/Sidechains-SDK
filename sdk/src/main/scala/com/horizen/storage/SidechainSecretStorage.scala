@@ -2,9 +2,7 @@ package com.horizen.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
-import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, SchnorrKeyGenerator, SchnorrSecret, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import scorex.util.ScorexLogging
 
@@ -35,16 +33,16 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   def calculateKey(proposition: SidechainTypes#SCP): ByteArrayWrapper = Utils.calculateKey(proposition.bytes)
 
+  /**
+   * Used to speed up key retrieval.
+   * Loads secrets during the initialization phase.
+   */
   private def loadSecrets(): Unit = {
     secrets.clear()
     val storageData = storage.getAll.asScala
     val secretBytesList = storageData.view
       .map(keyToSecretBytes => keyToSecretBytes.getValue.data)
       .map(secretBytes => sidechainSecretsCompanion.parseBytes(secretBytes))
-    incrementNonce(PrivateKey25519Creator.getInstance().salt(), secretBytesList.count(_.isInstanceOf[PrivateKey25519]))
-    incrementNonce(PrivateKeySecp256k1Creator.getInstance().salt(), secretBytesList.count(_.isInstanceOf[PrivateKeySecp256k1]))
-    incrementNonce(SchnorrKeyGenerator.getInstance().salt(), secretBytesList.count(_.isInstanceOf[SchnorrSecret]))
-    incrementNonce(VrfKeyGenerator.getInstance().salt(), secretBytesList.count(_.isInstanceOf[VrfSecretKey]))
     secretBytesList.foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
   }
 
@@ -135,7 +133,9 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   }
 
   def getNonce(keyTypeSalt: Array[Byte]): Option[Int] = {
-    storage.get(getNonceKey(keyTypeSalt)).asScala match {
+    val key = getNonceKey(keyTypeSalt)
+    val storageData = storage.get(key)// need to mock (for some specific key need to mock value, and assert return value
+    storageData.asScala match {
       case Some(baw) =>
         Try {
           Ints.fromByteArray(baw.data)
@@ -149,20 +149,14 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     }
   }
 
-  private def incrementNonce(salt: Array[Byte], numOfKeys: Int): Try[SidechainSecretStorage] = {
-    getNonce(salt) match {
-      case Some(nonce) =>
-        storeNonce(nonce + numOfKeys, salt)
-    }
-  }
 
-  def storeNonce(nonce: Int, keyTypeSalt: Array[Byte]): Try[SidechainSecretStorage] = Try{
+  def storeNonce(nonce: Int, keyTypeSalt: Array[Byte]): Try[SidechainSecretStorage] = Try {
     require(nonce > 0, "Nonce must be not negative")
     require(keyTypeSalt != null, "Key type salt must be NOT NULL")
     val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val removeList = new JArrayList[ByteArrayWrapper]()
     updateList.add(new JPair(getNonceKey(keyTypeSalt), new ByteArrayWrapper(nonce)))
-    storage.update(new ByteArrayWrapper(1), updateList, removeList)
+    storage.update(new ByteArrayWrapper(Utils.nextVersion), updateList, removeList) // need to mock. Need to pass mocked inner storage. Inside mock I check in thenAnswer()
     this
   }
 }
