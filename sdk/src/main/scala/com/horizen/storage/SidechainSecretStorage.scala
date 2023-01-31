@@ -152,7 +152,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   private def incrementNonce(salt: Array[Byte], numOfKeys: Int): Try[SidechainSecretStorage] = {
     getNonce(salt) match {
       case Some(nonce) =>
-        storeNonce(nonce + 1, salt)
+        storeNonce(nonce + numOfKeys, salt)
     }
   }
 
