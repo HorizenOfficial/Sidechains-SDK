@@ -5,7 +5,7 @@ import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake, Ope
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.FakeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import com.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, addNewNodeToList, findLinkedListNode, getListItem, linkedListNodeRefIsNull, modifyNode}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
@@ -30,7 +30,7 @@ trait ForgerStakesProvider {
   private[horizen] def getAllowedForgerListIndexes(view: BaseAccountStateView): Seq[Int]
 }
 
-case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with ForgerStakesProvider {
+case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with ForgerStakesProvider {
 
   override val contractAddress: Array[Byte] = FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
   override val contractCode: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCode")

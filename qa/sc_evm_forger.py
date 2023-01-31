@@ -204,7 +204,7 @@ class SCEvmForger(AccountChainSetup):
         assert_true('error' in forg_spend_res_2, "The command should fail")
         assert_equal(forg_spend_res_2['error']['description'], "Forger Stake Owner not found")
 
-        # Try to delegate stake to a fake smart contract. It should fail.
+        # Try to delegate stake to a native smart contract. It should fail.
         sc2_blockSignPubKey = sc_node_2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc2_vrfPubKey = sc_node_2.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
 
@@ -214,7 +214,7 @@ class SCEvmForger(AccountChainSetup):
                                                     sc2_blockSignPubKey,
                                                     sc2_vrfPubKey, convertZenToZennies(forgerStake1_amount))
         if "result" not in makeForgerStakeJsonRes:
-            fail("make forger stake with fake smart contract as owner should create a tx: " + json.dumps(
+            fail("make forger stake with native smart contract as owner should create a tx: " + json.dumps(
                 makeForgerStakeJsonRes))
         else:
             logging.info("Transaction created as expected")
@@ -225,7 +225,7 @@ class SCEvmForger(AccountChainSetup):
         tx_id = makeForgerStakeJsonRes['result']['transactionId']
         receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_id))
         status = int(receipt['result']['status'], 16)
-        assert_equal(0, status, "Make forger stake with fake smart contract as owner should create a failed tx")
+        assert_equal(0, status, "Make forger stake with native smart contract as owner should create a failed tx")
         # Check the logs
         assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")
 
@@ -258,7 +258,7 @@ class SCEvmForger(AccountChainSetup):
                                                     sc2_vrfPubKey, convertZenToZennies(forgerStake1_amount))
 
         if "result" not in makeForgerStakeJsonRes:
-            fail("make forger stake with fake smart contract as owner should create a tx: " + json.dumps(
+            fail("make forger stake with native smart contract as owner should create a tx: " + json.dumps(
                 makeForgerStakeJsonRes))
         else:
             logging.info("Transaction created as expected")
@@ -269,7 +269,7 @@ class SCEvmForger(AccountChainSetup):
         tx_id = makeForgerStakeJsonRes['result']['transactionId']
         receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_id))
         status = int(receipt['result']['status'], 16)
-        assert_equal(0, status, "Make forger stake with fake smart contract as owner should create a failed tx")
+        assert_equal(0, status, "Make forger stake with native smart contract as owner should create a failed tx")
 
         # Check the logs
         assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")

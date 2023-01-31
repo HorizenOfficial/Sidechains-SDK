@@ -272,7 +272,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  // creates an eth transaction which makes a call to the forger stake fake smart contract
+  // creates an eth transaction which makes a call to the forger stake native smart contract
   // expressing the vote for opening the restrict forgers list.
   // Analogous to the UTXO model createOpenStakeTransaction
   def openForgerList: Route = (post & path("openForgerList")) {
