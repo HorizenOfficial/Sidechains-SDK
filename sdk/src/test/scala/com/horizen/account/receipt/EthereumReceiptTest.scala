@@ -178,13 +178,13 @@ class EthereumReceiptTest
     for (testCase <- testCases.entrySet.asScala) {
       val receipts = generateReceipts(testCase.getKey)
       val rlpReceipts = receipts.map(r => EthereumConsensusDataReceipt.rlpEncode(r)).toList
-      val actualHash = Numeric.toHexString(TrieHasher.Root(rlpReceipts.toArray))
+      val actualHash = TrieHasher.Root(rlpReceipts.toArray)
       /*
         println("i: " + testCase.getKey() +
                 ", value: " + testCase.getValue().toString() +
                 ", actual: "+ actualHash.toString())
        */
-      assertEquals("should match transaction root hash", testCase.getValue, actualHash)
+      assertEquals("should match transaction root hash", testCase.getValue, actualHash.toString)
     }
   }
 }

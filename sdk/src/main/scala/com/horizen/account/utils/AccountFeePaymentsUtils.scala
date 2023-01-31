@@ -5,7 +5,7 @@ import com.horizen.evm.{StateDB, TrieHasher}
 import java.math.BigInteger
 
 object AccountFeePaymentsUtils {
-  val DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH: Array[Byte] = StateDB.EMPTY_ROOT_HASH
+  val DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH: Array[Byte] = StateDB.EMPTY_ROOT_HASH.toBytes
 
   def calculateFeePaymentsHash(feePayments: Seq[AccountPayment]): Array[Byte] = {
     if(feePayments.isEmpty) {
@@ -13,7 +13,7 @@ object AccountFeePaymentsUtils {
       DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH
     } else {
       // turn seq elements into leaves and compute merkel root hash
-      TrieHasher.Root(feePayments.map(payment => payment.bytes).toArray)
+      TrieHasher.Root(feePayments.map(payment => payment.bytes).toArray).toBytes
     }
   }
 

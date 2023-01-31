@@ -22,7 +22,7 @@ import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
 import com.horizen.evm.StateDB
 import com.horizen.evm.interop.ProofAccountResult
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.SidechainBlockFixture.generateMainchainBlockReference
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
 import com.horizen.params.MainNetParams
@@ -39,6 +39,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
+
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
 import java.util.{Optional, HashMap => JHashMap}
@@ -283,26 +284,26 @@ case class AccountMockDataHelper(genesis: Boolean)
       if (stateDB != null) {
         Mockito
           .when(stateDB.getStorage(any(), any()))
-          .thenReturn(Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"))
+          .thenReturn(Hash.ZERO)
         Mockito
           .when(
             stateDB.getStorage(
               new Address("0x1234567890123456789012345678901234567890"),
-              Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
+              Hash.ZERO
             )
           )
           .thenReturn(
-            Numeric.hexStringToByteArray("0x1411111111111111111111111111111111111111111111111111111111111111")
+            new Hash("0x1411111111111111111111111111111111111111111111111111111111111111")
           )
         Mockito
           .when(
             stateDB.getStorage(
               new Address("0x1234567891011121314151617181920212223242"),
-              Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
+              Hash.ZERO
             )
           )
           .thenReturn(
-            Numeric.hexStringToByteArray("0x1511111111111111111111111111111111111111111111111111111111111111")
+            new Hash("0x1511111111111111111111111111111111111111111111111111111111111111")
           )
       }
     }

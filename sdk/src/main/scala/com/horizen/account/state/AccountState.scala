@@ -15,7 +15,7 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -315,7 +315,7 @@ class AccountState(
   // View
   override def getView: AccountStateView = {
     // get state root
-    val stateRoot = stateMetadataStorage.getAccountStateRoot
+    val stateRoot = new Hash(stateMetadataStorage.getAccountStateRoot)
     val statedb = new StateDB(stateDbStorage, stateRoot)
 
     new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
@@ -323,7 +323,7 @@ class AccountState(
 
   // get a view over state db which is built with the given state root
   def getStateDbViewFromRoot(stateRoot: Array[Byte]): StateDbAccountStateView =
-    new StateDbAccountStateView(new StateDB(stateDbStorage, stateRoot), messageProcessors)
+    new StateDbAccountStateView(new StateDB(stateDbStorage, new Hash(stateRoot)), messageProcessors)
 
   // Base getters
   override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =

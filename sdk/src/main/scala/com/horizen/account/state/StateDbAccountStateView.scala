@@ -257,13 +257,13 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
   }
 
   override def getAccountStorage(address: Address, key: Array[Byte]): Array[Byte] =
-    stateDb.getStorage(address, key)
+    stateDb.getStorage(address, new Hash(key)).toBytes
 
   override def updateAccountStorage(address: Address, key: Array[Byte], value: Array[Byte]): Unit =
-    stateDb.setStorage(address, key, value)
+    stateDb.setStorage(address, new Hash(key), new Hash(value))
 
   final override def removeAccountStorage(address: Address, key: Array[Byte]): Unit =
-    updateAccountStorage(address, key, Array.fill(Hash.LENGTH)(0))
+    updateAccountStorage(address, key, Hash.ZERO.toBytes)
 
   // random data used to salt chunk keys in the storage trie when accessed via get/updateAccountStorageBytes
   private val chunkKeySalt =
@@ -309,18 +309,18 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
     updateAccountStorageBytes(address, key, Array.empty)
 
   def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult =
-    stateDb.getProof(address, keys)
+    stateDb.getProof(address, keys.map(new Hash(_)))
 
   // account specific getters
   override def getNonce(address: Address): BigInteger = stateDb.getNonce(address)
 
   override def getBalance(address: Address): BigInteger = stateDb.getBalance(address)
 
-  override def getCodeHash(address: Address): Array[Byte] = stateDb.getCodeHash(address)
+  override def getCodeHash(address: Address): Array[Byte] = stateDb.getCodeHash(address).toBytes
 
   override def getCode(address: Address): Array[Byte] = stateDb.getCode(address)
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(new Hash(txHash))
 
   override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
 
@@ -329,10 +329,10 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
 
   override def getStateDbHandle: ResourceHandle = stateDb
 
-  override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
+  override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot.toBytes
 
   // set context for the created events/logs assignment
-  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = stateDb.setTxContext(txHash, idx)
+  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = stateDb.setTxContext(new Hash(txHash), idx)
 
   // reset and prepare account access list
   def setupAccessList(msg: Message): Unit = stateDb.accessSetup(msg.getFrom, msg.getTo.orElse(Address.ZERO))

@@ -67,7 +67,7 @@ class AccountStateView(
   override def commit(version: VersionTag): Unit = {
     // Update StateDB without version, then set the rootHash and commit metadataStorageView
     val rootHash = stateDb.commit()
-    metadataStorageView.updateAccountStateRoot(rootHash)
+    metadataStorageView.updateAccountStateRoot(rootHash.toBytes)
     metadataStorageView.commit(version)
   }
 

@@ -46,7 +46,7 @@ class AccountBlock(override val header: AccountBlockHeader,
   @throws(classOf[InconsistentSidechainBlockDataException])
   override def verifyTransactionsDataConsistency(): Unit = {
     // verify Ethereum friendly transaction root hash
-    val txRootHash = TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
+    val txRootHash = TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray).toBytes
     if (!java.util.Arrays.equals(txRootHash, header.sidechainTransactionsMerkleRootHash)) {
       val reason = s"Invalid transaction root hash: actual ${BytesUtils.toHexString(header.sidechainTransactionsMerkleRootHash)}, expected ${BytesUtils.toHexString(txRootHash)}"
       log.error(reason)
@@ -201,12 +201,12 @@ object AccountBlock {
 
   def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTypes#SCAT]): Array[Byte] = {
     // calculate Ethereum friendly transaction root hash
-    TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
+    TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray).toBytes
   }
 
   def calculateReceiptRoot(receiptList: Seq[EthereumConsensusDataReceipt]) : Array[Byte] = {
     // 1. for each receipt item in list rlp encode and append to a new leaf list
     // 2. compute hash
-    TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
+    TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray).toBytes
   }
 }

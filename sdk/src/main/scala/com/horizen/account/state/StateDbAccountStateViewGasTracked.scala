@@ -2,10 +2,9 @@ package com.horizen.account.state
 
 import com.horizen.evm.StateDB
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 
 import java.math.BigInteger
-import java.util
 
 /**
  * Extension to help with tracking gas consumption.
@@ -33,7 +32,7 @@ class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq
    */
   @throws(classOf[OutOfGasException])
   private def storageAccess(address: Address, slot: Array[Byte]): Unit = {
-    val warm = stateDb.accessSlot(address, slot)
+    val warm = stateDb.accessSlot(address, new Hash(slot))
     gas.subGas(if (warm) GasUtil.WarmStorageReadCostEIP2929 else GasUtil.ColdSloadCostEIP2929)
   }
 
@@ -43,7 +42,7 @@ class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq
    *   original implementation in GETH: github.com/ethereum/go-ethereum@v1.10.26/core/vm/operations_acl.go:27
    */
   @throws(classOf[OutOfGasException])
-  private def storageWriteAccess(address: Address, key: Array[Byte], value: Array[Byte]): Unit = {
+  private def storageWriteAccess(address: Address, key: Hash, value: Hash): Unit = {
     // If we fail the minimum gas availability invariant, fail (0)
     if (gas.getGas.compareTo(GasUtil.SstoreSentryGasEIP2200) <= 0)
       throw new OutOfGasException("account storage write gas sentry fail")
@@ -53,17 +52,17 @@ class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq
     }
     val writeGasCost = {
       val current = stateDb.getStorage(address, key)
-      if (util.Arrays.equals(value, current)) {
+      if (value.equals(current)) {
         // noop (1)
         GasUtil.WarmStorageReadCostEIP2929
       } else {
         val original = stateDb.getCommittedStorage(address, key)
-        if (util.Arrays.equals(original, current)) {
-          if (original.forall(_ == 0)) {
+        if (original.equals(current)) {
+          if (original.equals(Hash.ZERO)) {
             // create slot (2.1.1)
             GasUtil.SstoreSetGasEIP2200
           } else {
-            if (value.forall(_ == 0)) {
+            if (value.equals(Hash.ZERO)) {
               // delete slot (2.1.2b)
               stateDb.addRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
             }
@@ -71,17 +70,17 @@ class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq
             GasUtil.SstoreResetGasEIP2200.subtract(GasUtil.ColdSloadCostEIP2929)
           }
         } else {
-          if (!original.forall(_ == 0)) {
-            if (current.forall(_ == 0)) {
+          if (!original.equals(Hash.ZERO)) {
+            if (current.equals(Hash.ZERO)) {
               // recreate slot (2.2.1.1)
               stateDb.subRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
-            } else if (value.forall(_ == 0)) {
+            } else if (value.equals(Hash.ZERO)) {
               // delete slot (2.2.1.2)
               stateDb.addRefund(GasUtil.SstoreClearsScheduleRefundEIP3529)
             }
           }
-          if (util.Arrays.equals(original, value)) {
-            if (original.forall(_ == 0)) {
+          if (original.equals(value)) {
+            if (original.equals(Hash.ZERO)) {
               // reset to original inexistent slot (2.2.2.1)
               stateDb.addRefund(GasUtil.SstoreSetGasEIP2200.subtract(GasUtil.WarmStorageReadCostEIP2929))
             } else {
@@ -174,7 +173,7 @@ class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq
 
   @throws(classOf[OutOfGasException])
   override def updateAccountStorage(address: Address, key: Array[Byte], value: Array[Byte]): Unit = {
-    storageWriteAccess(address, key, value)
+    storageWriteAccess(address, new Hash(key), new Hash(value))
     super.updateAccountStorage(address, key, value)
   }
 

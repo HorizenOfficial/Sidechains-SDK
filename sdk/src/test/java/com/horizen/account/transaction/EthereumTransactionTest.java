@@ -185,7 +185,7 @@ public class EthereumTransactionTest {
         for (var testCase : testCases.entrySet()) {
             final var txs = generateTransactions(testCase.getKey());
             final var rlpTxs = Arrays.stream(txs).map(tx -> tx.encode(true)).toArray(byte[][]::new);
-            final var actualHash = Numeric.toHexString(TrieHasher.Root(rlpTxs));
+            final var actualHash = TrieHasher.Root(rlpTxs).toString();
             assertEquals("should match transaction root hash", testCase.getValue(), actualHash);
         }
     }
