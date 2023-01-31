@@ -1,18 +1,16 @@
 package com.horizen.cryptolibprovider.implementations;
 
-import com.horizen.cryptolibprovider.utils.FieldElementUtils;
 import com.horizen.cryptolibprovider.utils.SchnorrFunctions;
+import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.schnorrnative.SchnorrKeyPair;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSecretKey;
 import com.horizen.schnorrnative.SchnorrSignature;
-import com.horizen.librustsidechains.Constants;
 
-import java.util.Arrays;
 import java.util.EnumMap;
 
-import static com.horizen.cryptolibprovider.utils.FieldElementUtils.messageToFieldElement;
+import static com.horizen.cryptolibprovider.utils.FieldElementUtils.messageToFieldElementStrict;
 import static com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType.PUBLIC;
 import static com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType.SECRET;
 
@@ -40,7 +38,7 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
         SchnorrPublicKey publicKey = SchnorrPublicKey.deserialize(publicKeyBytes);
 
         SchnorrKeyPair keyPair = new SchnorrKeyPair(secretKey, publicKey);
-        FieldElement fieldElement = messageToFieldElement(messageBytes);
+        FieldElement fieldElement = messageToFieldElementStrict(messageBytes);
         SchnorrSignature signature = keyPair.signMessage(fieldElement);
         byte[] signatureBytes = signature.serializeSignature();
 
@@ -55,7 +53,7 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
     @Override
     public boolean verify(byte[] messageBytes, byte[] publicKeyBytes, byte[] signatureBytes) {
         SchnorrPublicKey publicKey = SchnorrPublicKey.deserialize(publicKeyBytes);
-        FieldElement fieldElement = messageToFieldElement(messageBytes);
+        FieldElement fieldElement = messageToFieldElementStrict(messageBytes);
         SchnorrSignature signature = SchnorrSignature.deserialize(signatureBytes);
 
         boolean signatureIsValid = publicKey.verifySignature(signature, fieldElement);

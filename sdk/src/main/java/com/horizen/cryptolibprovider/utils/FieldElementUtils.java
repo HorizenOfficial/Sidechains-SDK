@@ -11,7 +11,7 @@ public class FieldElementUtils {
         return Constants.FIELD_ELEMENT_LENGTH();
     }
 
-    public static FieldElement messageToFieldElement(byte[] message) {
+    public static FieldElement messageToFieldElementStrict(byte[] message) {
         if (message.length != fieldElementLength()) {
             throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
                     message.length + " but it shall be equal to " + fieldElementLength());
@@ -19,13 +19,12 @@ public class FieldElementUtils {
         return FieldElement.deserialize(message);
     }
 
-    public static FieldElement hashToFieldElement(String hexByte) {
-        byte[] hashBytes = BytesUtils.fromHexString(hexByte);
-        if (hashBytes.length > fieldElementLength()) {
-            throw new IllegalArgumentException("Hash length is exceed Poseidon hash len. Hash len " +
-                    hashBytes.length + " but it shall be " + fieldElementLength());
+    public static FieldElement messageToFieldElement(byte[] message) {
+        if (message.length > fieldElementLength()) {
+            throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
+                    message.length + " but it shall be less than " + fieldElementLength());
         }
-        return FieldElement.deserialize(Arrays.copyOf(hashBytes, fieldElementLength()));
+        return FieldElement.deserialize(Arrays.copyOf(message, fieldElementLength()));
     }
 
     public static byte[] randomFieldElementBytes() {
