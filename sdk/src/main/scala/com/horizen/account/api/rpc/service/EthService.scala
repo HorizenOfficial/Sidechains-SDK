@@ -163,7 +163,7 @@ class EthService(
     val history = nodeView.history
     val (blockNumber, blockHash, view, pendingState): (Long, Hash, AccountStateView, AccountState) =
       if (blockId == null) {
-        val pendingState = getPendingState(nodeView, block)
+        val pendingState = getPendingState(nodeView, block, blockId)
         (history.getCurrentHeight + 1, null, pendingState.getView, pendingState)
       } else {
         (
@@ -513,14 +513,15 @@ class EthService(
     blockTransactionByIndex(nodeView => getBlockIdByTag(nodeView, tag), index)
   }
 
-  private def getPendingState(nodeView: NV, block: AccountBlock): AccountState = {
+  private def getPendingState(nodeView: NV, block: AccountBlock, blockId: ModifierId): AccountState = {
+    if (blockId != null) return null
     nodeView.state.applyModifier(block).getOrElse(throw new RpcException(RpcError.fromCode(
       RpcCode.InternalError,
       "Failed to get pending block."
     )))
   }
   private def getPendingStateDbView(nodeView: NV, block: AccountBlock): StateDbAccountStateView = {
-    val pendingState = getPendingState(nodeView, block)
+    val pendingState = getPendingState(nodeView, block, null)
     val stateDbView = pendingState.getStateDbViewFromRoot(block.header.stateRoot)
     rollbackPendingState(pendingState, idToVersion(block.header.parentId))
     stateDbView
@@ -541,7 +542,7 @@ class EthService(
           case _: Throwable => return null
         }
 
-      val pendingState = getPendingState(nodeView, block)
+      val pendingState = getPendingState(nodeView, block, blockId)
       val view: AccountStateView =
         if (blockId == null) pendingState.getView else nodeView.state.getView
 
