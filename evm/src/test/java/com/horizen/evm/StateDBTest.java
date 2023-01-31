@@ -26,7 +26,7 @@ public class StateDBTest extends LibEvmTestBase {
     public void accountManipulation() throws Exception {
         final var databaseFolder = tempFolder.newFolder("evm-db");
 
-        final var origin = address("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b");
+        final var origin = new Address("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b");
 
         final var v1234 = BigInteger.valueOf(1234);
         final var v432 = BigInteger.valueOf(432);
@@ -102,7 +102,7 @@ public class StateDBTest extends LibEvmTestBase {
     @Test
     public void accountStorage() throws Exception {
         final var databaseFolder = tempFolder.newFolder("account-db");
-        final var origin = address("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff");
+        final var origin = new Address("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = new Hash("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
         final Hash[] values = {
             new Hash("0x0000000000000000000000000000000000000000000000000000000000000000"),
@@ -149,7 +149,7 @@ public class StateDBTest extends LibEvmTestBase {
 
     @Test
     public void accountStorageEdgeCases() throws Exception {
-        final var origin = address("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff");
+        final var origin = new Address("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final var key = new Hash("0xbafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
         // test some negative cases:
         // - trying to store a value that is not 32 bytes should throw - after refactoring to "Hash" this is prevented
@@ -231,9 +231,9 @@ public class StateDBTest extends LibEvmTestBase {
     @Test
     public void accessList() throws Exception {
         final var accounts = new Address[] {
-            address("0x0011001100110011001100110011001100110011"),
-            address("0x0022002200220022002200220022002200220022"),
-            address("0x0033003300330033003300330033003300330033"),
+            new Address("0x0011001100110011001100110011001100110011"),
+            new Address("0x0022002200220022002200220022002200220022"),
+            new Address("0x0033003300330033003300330033003300330033"),
         };
 
         try (var db = new MemoryDatabase()) {
@@ -251,7 +251,7 @@ public class StateDBTest extends LibEvmTestBase {
     @Test
     public void TestAccountTypes() throws Exception {
         final var code = bytes("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
-        final var addr1 = address("0x1234561234561234561234561234561234561230");
+        final var addr1 = new Address("0x1234561234561234561234561234561234561230");
 
         try (var db = new MemoryDatabase()) {
             try (var statedb = new StateDB(db, Hash.ZERO)) {
@@ -276,7 +276,7 @@ public class StateDBTest extends LibEvmTestBase {
     @Test
     @Ignore
     public void proof() throws Exception {
-        final var address = address("cca577ee56d30a444c73f8fc8d5ce34ed1c7da8b");
+        final var address = new Address("cca577ee56d30a444c73f8fc8d5ce34ed1c7da8b");
 
         try (var db = new MemoryDatabase()) {
             try (var statedb = new StateDB(db, Hash.ZERO)) {
