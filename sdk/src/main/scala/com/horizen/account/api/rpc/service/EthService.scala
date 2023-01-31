@@ -191,16 +191,14 @@ class EthService(
   private def blockTransactionCount(getBlockId: NV => ModifierId): Quantity = {
     applyOnAccountView { nodeView =>
       val blockId = getBlockId(nodeView)
-      val history = nodeView.history
-      val optBlock: Option[AccountBlock] = if (blockId == null) {
-        Option.apply(getBlockById(nodeView, blockId)._1)
+      if (blockId == null) {
+        new Quantity(getPoolTxs(nodeView, true).size())
       } else {
-        history.getStorageBlockById(blockId)
+        nodeView.history.getStorageBlockById(blockId)
+          .map(_.transactions.size)
+          .map(new Quantity(_))
+          .orNull
       }
-      optBlock
-        .map(_.transactions.size)
-        .map(new Quantity(_))
-        .orNull
     }
   }
 
