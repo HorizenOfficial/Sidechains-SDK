@@ -30,7 +30,7 @@ public class EvmLog {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         var log = (EvmLog) o;
-        return Arrays.equals(address.toBytes(), log.address.toBytes()) &&
+        return address.equals(log.address) &&
             Arrays.equals(topics, log.topics) &&
             Arrays.equals(data, log.data);
     }
@@ -38,12 +38,10 @@ public class EvmLog {
     @Override
     public int hashCode() {
         var result = 1;
-        var addressBytes = address.toBytes();
-        result = result + Arrays.hashCode(addressBytes);
+        result = result + address.hashCode();
         if (topics.length != 0) {
             for (var hash : topics) {
-                var topic = (hash == null) ? null : hash.toBytes();
-                result = 31 * result + Arrays.hashCode(topic);
+                result = 31 * result + ((hash == null) ? 0 : hash.hashCode());
             }
         } else {
             result = 31 * result + Arrays.hashCode(topics);
