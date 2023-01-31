@@ -42,7 +42,7 @@ class EvmMessageProcessorIntegrationTest extends EvmMessageProcessorTestBase {
     val initialBalance = new BigInteger("2000000000000")
 
     usingView(new EvmMessageProcessor) { stateView =>
-      stateView.addBalance(originAddress, initialBalance)
+      stateView.addBalance(origin, initialBalance)
 
       // smart contract constructor has one argument (256-bit uint)
       val initialValue = Array.fill(32) { 0.toByte }

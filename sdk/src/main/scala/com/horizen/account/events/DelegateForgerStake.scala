@@ -3,13 +3,14 @@ package com.horizen.account.events
 import com.horizen.account.event.annotation.{Indexed, Parameter}
 import com.horizen.evm.utils.Address
 import org.web3j.abi.datatypes.generated.{Bytes32, Uint256}
+import org.web3j.abi.datatypes.{Address => AbiAddress}
 
 import java.math.BigInteger
 import scala.annotation.meta.getter
 
 case class DelegateForgerStake(
-    @(Parameter @getter)(1) @(Indexed @getter) from: Address,
-    @(Parameter @getter)(2) @(Indexed @getter) owner: Address,
+    @(Parameter @getter)(1) @(Indexed @getter) from: AbiAddress,
+    @(Parameter @getter)(2) @(Indexed @getter) owner: AbiAddress,
     @(Parameter @getter)(3) stakeId: Bytes32,
     @(Parameter @getter)(4) value: Uint256
 )
@@ -21,8 +22,8 @@ object DelegateForgerStake {
       stakeId: Array[Byte],
       value: BigInteger
   ): DelegateForgerStake = DelegateForgerStake(
-    from,
-    owner,
+    new AbiAddress(from.toString),
+    new AbiAddress(owner.toString),
     new Bytes32(stakeId),
     new Uint256(value)
   )

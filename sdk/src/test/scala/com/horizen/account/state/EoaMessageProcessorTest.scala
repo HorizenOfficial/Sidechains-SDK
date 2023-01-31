@@ -26,7 +26,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
 
   @Test
   def canProcess(): Unit = {
-    val address = getAddressProposition(12345L).address()
+    val address = randomAddress
     val value = BigInteger.ONE
     val msg = getMessage(address, value, Array.emptyByteArray)
 
@@ -36,7 +36,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     Mockito
       .when(mockStateView.isEoaAccount(ArgumentMatchers.any[Address]))
       .thenAnswer(args => {
-        assertArrayEquals("Different address found", msg.getToAddressBytes, args.getArgument(0))
+        assertEquals("Different address found", msg.getTo.get(), args.getArgument(0))
         true
       })
     assertTrue(
@@ -55,7 +55,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     Mockito
       .when(mockStateView.isEoaAccount(ArgumentMatchers.any[Address]))
       .thenAnswer(args => {
-        assertArrayEquals("Different address found", msg.getToAddressBytes, args.getArgument(0))
+        assertEquals("Different address found", msg.getTo.get(), args.getArgument(0))
         false
       })
     assertFalse(
@@ -79,14 +79,14 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     Mockito
       .when(mockStateView.subBalance(ArgumentMatchers.any[Address], ArgumentMatchers.any[BigInteger]))
       .thenAnswer(args => {
-        assertArrayEquals("Different address found", msg.getFromAddressBytes, args.getArgument(0))
+        assertEquals("Different address found", msg.getFrom, args.getArgument(0))
         assertEquals("Different amount found", msg.getValue, args.getArgument(1))
       })
 
     Mockito
       .when(mockStateView.addBalance(ArgumentMatchers.any[Address], ArgumentMatchers.any[BigInteger]))
       .thenAnswer(args => {
-        assertArrayEquals("Different address found", msg.getToAddressBytes, args.getArgument(0))
+        assertEquals("Different address found", msg.getTo.get(), args.getArgument(0))
         assertEquals("Different amount found", msg.getValue, args.getArgument(1))
       })
 

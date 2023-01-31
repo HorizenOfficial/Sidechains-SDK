@@ -7,8 +7,6 @@ import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
-
 import static org.junit.Assert.*;
 
 public class AddressPropositionTest {
@@ -27,7 +25,7 @@ public class AddressPropositionTest {
     @Test
     public void addressPropositionTest() {
         // Test 1: Returns hash code correctly
-        assertEquals("Hashcode is different", Arrays.hashCode(addressProposition.address().toBytes()), addressProposition.hashCode());
+        assertEquals("Hashcode is different", addressProposition.address().hashCode(), addressProposition.hashCode());
 
         // Test 2: Returns true as the object is the same
         assertEquals(addressProposition, addressProposition);

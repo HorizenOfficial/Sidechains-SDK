@@ -72,7 +72,7 @@ trait EthereumTransactionFixture {
   def getEoa2EoaLegacyTransaction: EthereumTransaction = {
     new EthereumTransaction(
       EthereumTransactionUtils.getToAddressFromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
-            BigInteger.valueOf(70L), // nonce
+      BigInteger.valueOf(70L), // nonce
       BigInteger.valueOf(3).pow(9), // gasPrice
       GasUtil.TxGas,  // gasLimit
       BigInteger.TEN.pow(19), // value
