@@ -153,29 +153,29 @@ class EthService(
       blockId: ModifierId,
       hydratedTx: Boolean
   ): EthereumBlockView = {
-    val history = nodeView.history
-    val (blockNumber, blockHash, optBlock): (Long, Hash, Option[AccountBlock]) = if (blockId == null) {
-      (history.getCurrentHeight + 1, null, Option.apply(getBlockById(nodeView, blockId)._1))
-    } else {
-      (
-        history.getBlockHeightById(blockId).get().toLong,
-        Hash.fromBytes(blockId.toBytes),
-        history.getStorageBlockById(blockId)
-      )
-    }
-
-    optBlock.map(block => {
-      val view: AccountStateView =
-        if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
-      using(view) { stateView =>
-        if (hydratedTx) {
-          val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
-          EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
-        } else {
-          EthereumBlockView.notHydrated(blockNumber, blockHash, block)
-        }
+    val block: AccountBlock =
+      try {
+        getBlockById(nodeView, blockId)._1
+      } catch {
+        case _: Throwable => return null
       }
-    }).orNull
+
+    val history = nodeView.history
+    val (blockNumber, blockHash, view): (Long, Hash, AccountStateView) =
+      if (blockId == null) {
+        (history.getCurrentHeight + 1, null, PendingStateView(nodeView, block).getPendingStateView)
+      } else {
+        (history.getBlockHeightById(blockId).get().toLong, Hash.fromBytes(blockId.toBytes), nodeView.state.getView)
+      }
+
+    using(view) { stateView =>
+      if (hydratedTx) {
+        val receipts = block.transactions.map(_.id.toBytes).flatMap(stateView.getTransactionReceipt)
+        EthereumBlockView.hydrated(blockNumber, blockHash, block, receipts.asJava)
+      } else {
+        EthereumBlockView.notHydrated(blockNumber, blockHash, block)
+      }
+    }
   }
 
   @RpcMethod("eth_getBlockTransactionCountByHash")
@@ -508,23 +508,25 @@ class EthService(
     applyOnAccountView { nodeView =>
       val blockId = getBlockId(nodeView)
       val history = nodeView.history
-      val optBlock: Option[AccountBlock] = if (blockId == null) {
-        Option.apply(getBlockById(nodeView, blockId)._1)
-      } else {
-        history.getStorageBlockById(blockId)
-      }
-      optBlock.flatMap(block => {
-        val view: AccountStateView =
-          if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
-        block.transactions
-          .drop(txIndex)
-          .headOption
-          .map(_.asInstanceOf[EthereumTransaction])
-          .flatMap(tx =>
-            using(view)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
-              .map(new EthereumTransactionView(tx, _, block.header.baseFee))
-          )
-      }).orNull
+
+      val block: AccountBlock =
+        try {
+          getBlockById(nodeView, blockId)._1
+        } catch {
+          case _: Throwable => return null
+        }
+
+      val view: AccountStateView =
+        if (blockId == null) PendingStateView(nodeView, block).getPendingStateView else nodeView.state.getView
+
+      block.transactions
+        .drop(txIndex)
+        .headOption
+        .map(_.asInstanceOf[EthereumTransaction])
+        .flatMap(tx =>
+          using(view)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
+            .map(new EthereumTransactionView(tx, _, block.header.baseFee))
+        ).orNull
     }
   }
 
