@@ -11,7 +11,7 @@ import com.horizen.box.{Box, ZenBox}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
+import com.horizen.fixtures.{BoxFixture, CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
@@ -295,7 +295,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   val schnorrSecret3 = SchnorrKeyGenerator.getInstance().generateSecret("seed3".getBytes)
   val schnorrSecret4 = SchnorrKeyGenerator.getInstance().generateSecret("seed4".getBytes)
 
-  val schnorrProof = schnorrSecret.sign("Message".getBytes)
+  val schnorrProof = schnorrSecret.sign(FieldElementFixture.generateFieldElement())
   val keyRotationProof = KeyRotationProof(KeyRotationProofTypes(0), 0, schnorrSecret.publicImage(), schnorrProof, schnorrProof)
   val signerKeys = Seq(schnorrSecret.publicImage(), schnorrSecret2.publicImage())
   val masterKeys = Seq(schnorrSecret3.publicImage(), schnorrSecret4.publicImage())
