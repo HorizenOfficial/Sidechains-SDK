@@ -37,28 +37,15 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   private def loadSecrets(): Unit = {
     secrets.clear()
-
     val storageData = storage.getAll.asScala
-    storageData.view
+    val secretBytesList = storageData.view
       .map(keyToSecretBytes => keyToSecretBytes.getValue.data)
-      .map(secretBytes => {
-        sidechainSecretsCompanion.parseBytes(secretBytes) match {
-          case key2551: PrivateKey25519 =>
-            incrementNonce(PrivateKey25519Creator.getInstance().salt())
-            key2551
-          case secp256k: PrivateKeySecp256k1 =>
-            incrementNonce(PrivateKeySecp256k1Creator.getInstance().salt())
-            secp256k
-          case secret: SchnorrSecret =>
-            incrementNonce(SchnorrKeyGenerator.getInstance().salt())
-            secret
-          case key: VrfSecretKey =>
-            incrementNonce(VrfKeyGenerator.getInstance().salt())
-            key
-          case other => other
-        }
-      })
-      .foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
+      .map(secretBytes => sidechainSecretsCompanion.parseBytes(secretBytes))
+    incrementNonce(PrivateKey25519Creator.getInstance().salt(), secretBytesList.count(_.isInstanceOf[PrivateKey25519]))
+    incrementNonce(PrivateKeySecp256k1Creator.getInstance().salt(), secretBytesList.count(_.isInstanceOf[PrivateKeySecp256k1]))
+    incrementNonce(SchnorrKeyGenerator.getInstance().salt(), secretBytesList.count(_.isInstanceOf[SchnorrSecret]))
+    incrementNonce(VrfKeyGenerator.getInstance().salt(), secretBytesList.count(_.isInstanceOf[VrfSecretKey]))
+    secretBytesList.foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
   }
 
   def get(proposition: SidechainTypes#SCP): Option[SidechainTypes#SCS] = secrets.get(calculateKey(proposition))
@@ -162,7 +149,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     }
   }
 
-  private def incrementNonce(salt: Array[Byte]): Try[SidechainSecretStorage] = {
+  private def incrementNonce(salt: Array[Byte], numOfKeys: Int): Try[SidechainSecretStorage] = {
     getNonce(salt) match {
       case Some(nonce) =>
         storeNonce(nonce + 1, salt)
