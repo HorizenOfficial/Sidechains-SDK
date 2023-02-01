@@ -398,6 +398,10 @@ class EthService(
     }
   }
 
+  /** Returns tuple of AccountBlock and SidechainBlockInfo for given blockId
+   * blockId = null is a valid case, returning pending block and its block info
+   * Throws RpcException for not found blockId or errors while creating pending block
+   */
   private def getBlockById(nodeView: NV, blockId: ModifierId): (AccountBlock, SidechainBlockInfo) = {
     val (block, blockInfo) = if (blockId == null) {
       val pendingBlockInstance = new PendingBlock(nodeView)
