@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Converter;
+import com.horizen.evm.utils.FixedSizeByteArray;
 import com.horizen.evm.utils.Hash;
 
 import java.util.Arrays;
@@ -53,7 +54,7 @@ public class EvmLog {
     private String getTopicsString() {
         var strs = Arrays
             .stream(topics)
-            .map(topic -> Converter.toHexString(topic.toBytes()))
+            .map(FixedSizeByteArray::toString)
             .toArray(String[]::new);
         return String.format("[%s]", String.join(",", strs));
     }
@@ -62,7 +63,7 @@ public class EvmLog {
     public String toString() {
         return String.format(
             "EvmLog (log consensus data) {address=%s, topics=%s, data=%s}",
-            Converter.toHexString(address.toBytes()),
+            address,
             getTopicsString(),
             Converter.toHexString(data)
         );
