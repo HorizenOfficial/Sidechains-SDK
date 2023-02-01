@@ -16,7 +16,7 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef: Ac
   private val transactionMap : TrieMap[String, Promise[ModifierId]] = TrieMap()
 
   override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[T]])
+    context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[_]])
     context.system.eventStream.subscribe(self, classOf[FailedTransaction])
   }
 
@@ -31,7 +31,7 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef: Ac
       val future = promise.future
       transactionMap(transaction.id) = promise
       sender() ! future
-      sidechainNodeViewHolderRef ! LocallyGeneratedTransaction[Transaction](transaction)
+      sidechainNodeViewHolderRef ! LocallyGeneratedTransaction(transaction)
   }
 
   protected def sidechainNodeViewHolderEvents: Receive = {

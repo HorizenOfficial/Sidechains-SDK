@@ -12,11 +12,14 @@ import scala.util.{Failure, Success, Try}
 class CeasingSidechain(mainchainChannel: MainchainNodeChannel, params: NetworkParams)
   extends CertificateSubmissionStrategy with SparkzLogging {
 
-  override def getStatus[H <: AbstractHistory[_, _, _, _, _, _], S <: AbstractState[_, _, _, _]](sidechainNodeView: CurrentView[H, S, _, _], id: ModifierId): SubmissionWindowStatus = {
+  override def getStatus[
+    H <: AbstractHistory[_, _, _, _, _, _],
+    S <: AbstractState[_, _, _, _]
+  ](history: H, state: S, id: ModifierId): SubmissionWindowStatus = {
     // Take withdrawal epoch info for block from the History.
     // Note: We can't rely on `State.getWithdrawalEpochInfo`, because it shows the tip info,
     // but the older block may being applied at the moment.
-    val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(id).withdrawalEpochInfo
+    val withdrawalEpochInfo: WithdrawalEpochInfo = history.blockInfoById(id).withdrawalEpochInfo
     val referencedWithdrawalEpochNumber: Int = withdrawalEpochInfo.epoch - 1
 
     SubmissionWindowStatus(referencedWithdrawalEpochNumber, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))

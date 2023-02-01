@@ -118,8 +118,7 @@ class AccountForgeMessageBuilder(
             // update cumulative gas used so far
             cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-            val baseFeePerGas = blockContext.baseFee
-            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
+            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, blockContext.baseFee)
             cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
             cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
             priceAndNonceIter.next()
@@ -323,7 +322,7 @@ class AccountForgeMessageBuilder(
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 
-    nodeView.pool.takeExecutableTxs()
+    nodeView.pool.takeExecutableTxs(forcedTx)
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[AccountBlockHeader]]): Int = {

@@ -16,11 +16,13 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http._
+import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.forge.AbstractForger
 import com.horizen.params.MainNetParams
+import com.horizen.secret.SecretSerializer
 import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
@@ -33,7 +35,8 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.util.ModifierId
 import sparkz.core.bytesToId
 import sparkz.core.settings.RESTApiSettings
-
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -108,6 +111,9 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
       TestActor.KeepRunning
     }
   })
+
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]] = new JHashMap()
+  val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
   val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
   val mockedSidechainTransactionActor = TestProbe()
@@ -191,8 +197,8 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   Mockito.when(params.chainId).thenReturn(1997L)
 
   val sidechainTransactionApiRoute: Route = AccountTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,sidechainTransactionsCompanion, params, CircuitTypes.NaiveThresholdSignatureCircuit).route
-  val sidechainWalletApiRoute: Route = AccountWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainBlockApiRoute: Route = AccountBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef).route
+  val sidechainWalletApiRoute: Route = AccountWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
+  val sidechainBlockApiRoute: Route = AccountBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params).route
 
   val basePath: String
 

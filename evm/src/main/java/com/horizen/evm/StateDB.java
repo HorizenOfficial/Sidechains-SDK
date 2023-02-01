@@ -12,17 +12,18 @@ public class StateDB extends ResourceHandle {
      * Code hash of an empty byte array
      */
     public static final byte[] EMPTY_CODE_HASH =
-            Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+        Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
     /**
      * TrieHasher.Root() of an empty byte array
      */
     public static final byte[] EMPTY_ROOT_HASH =
-            Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+        Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
     /**
      * Opens a view on the state at the given state root hash.
-     * @param db database instance
+     *
+     * @param db   database instance
      * @param root root hash
      */
     public StateDB(Database db, byte[] root) {
@@ -188,31 +189,52 @@ public class StateDB extends ResourceHandle {
     }
 
     /**
+     * Add gas refund.
+     *
+     * @param gas amount to add to refund counter
+     */
+    public void addRefund(BigInteger gas) {
+        LibEvm.refundAdd(handle, gas);
+    }
+
+    /**
+     * Remove gas refund.
+     *
+     * @param gas amount to remove from refund counter
+     */
+    public void subRefund(BigInteger gas) {
+        LibEvm.refundSub(handle, gas);
+    }
+
+    /**
      * Get refunded gas.
      *
      * @return refunded gas
      */
     public BigInteger getRefund() {
-        return LibEvm.stateGetRefund(handle);
+        return LibEvm.refundGet(handle);
     }
 
     /**
      * Read storage trie of given account.
      *
-     * @param address  account address
-     * @param key      storage key
-     * @param strategy storage strategy to apply
-     * @return storage value, representation depends on strategy
+     * @param address account address
+     * @param key     storage key
+     * @return storage value, always 32 bytes
      */
-    public byte[] getStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
-        switch (strategy) {
-            case RAW:
-                return LibEvm.stateGetStorage(handle, address, key);
-            case CHUNKED:
-                return LibEvm.stateGetStorageBytes(handle, address, key);
-            default:
-                throw new RuntimeException("invalid storage strategy");
-        }
+    public byte[] getStorage(byte[] address, byte[] key) {
+        return LibEvm.stateGetStorage(handle, address, key);
+    }
+
+    /**
+     * Read comitted storage trie of given account.
+     *
+     * @param address account address
+     * @param key     storage key
+     * @return comitted storage value, always 32 bytes
+     */
+    public byte[] getCommittedStorage(byte[] address, byte[] key) {
+        return LibEvm.stateGetCommittedStorage(handle, address, key);
     }
 
     /**
@@ -220,42 +242,12 @@ public class StateDB extends ResourceHandle {
      * Note: Do not mix RAW and CHUNKED strategies for the same key,
      * this can potentially lead to dangling nodes in the storage Trie and de facto infinite-loops.
      *
-     * @param address  account address
-     * @param key      storage key
-     * @param value    value to store
-     * @param strategy storage strategy to apply
+     * @param address account address
+     * @param key     storage key
+     * @param value   value to store
      */
-    public void setStorage(byte[] address, byte[] key, byte[] value, StateStorageStrategy strategy) {
-        switch (strategy) {
-            case RAW:
-                LibEvm.stateSetStorage(handle, address, key, value);
-                return;
-            case CHUNKED:
-                LibEvm.stateSetStorageBytes(handle, address, key, value);
-                return;
-            default:
-                throw new RuntimeException("invalid storage strategy");
-        }
-    }
-
-    /**
-     * Remove from storage trie of given account.
-     *
-     * @param address  account address
-     * @param key      storage key
-     * @param strategy access strategy to apply
-     */
-    public void removeStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
-        switch (strategy) {
-            case RAW:
-                LibEvm.stateRemoveStorage(handle, address, key);
-                return;
-            case CHUNKED:
-                LibEvm.stateRemoveStorageBytes(handle, address, key);
-                return;
-            default:
-                throw new RuntimeException("invalid storage strategy");
-        }
+    public void setStorage(byte[] address, byte[] key, byte[] value) {
+        LibEvm.stateSetStorage(handle, address, key, value);
     }
 
     /**
@@ -314,6 +306,37 @@ public class StateDB extends ResourceHandle {
      */
     public void setTxContext(byte[] txHash, int txIndex) {
         LibEvm.stateSetTxContext(handle, txHash, txIndex);
+    }
+
+    /**
+     * Reset and prepare account access list.
+     *
+     * @param sender      sender account
+     * @param destination destination account
+     */
+    public void accessSetup(byte[] sender, byte[] destination) {
+        LibEvm.accessSetup(handle, sender, destination);
+    }
+
+    /**
+     * Add the given account to the access list.
+     *
+     * @param address account to access
+     * @return true if the account was already on the access list, false otherwise
+     */
+    public boolean accessAccount(byte[] address) {
+        return LibEvm.accessAccount(handle, address);
+    }
+
+    /**
+     * Add given account storage slot to the access list.
+     *
+     * @param address account to access
+     * @param slot    storage slot to access
+     * @return true if the slot was already on the access list, false otherwise
+     */
+    public boolean accessSlot(byte[] address, byte[] slot) {
+        return LibEvm.accessSlot(handle, address, slot);
     }
 
     @Override

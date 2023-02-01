@@ -6,7 +6,7 @@ import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.NodeAccountHistory
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
-import com.horizen.params.{NetworkParams, NetworkParamsUtils}
+import com.horizen.params.NetworkParams
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import sparkz.util.{SparkzEncoding, SparkzLogging}
 
@@ -32,10 +32,7 @@ extends com.horizen.AbstractHistory[
   AccountBlock,
   AccountFeePaymentsInfo,
   AccountHistoryStorage,
-  AccountHistory](
-    storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-  with NetworkParamsUtils
-  with ConsensusDataProvider
+  AccountHistory](storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   with SparkzEncoding
   with NodeAccountHistory
   with SparkzLogging
