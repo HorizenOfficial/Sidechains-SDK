@@ -7,7 +7,7 @@ import org.web3j.abi.datatypes.Address
 import scorex.crypto.hash.Keccak256
 import scorex.util.ScorexLogging
 
-abstract class FakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
+abstract class NativeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
 
   val contractAddress: Array[Byte]
   val contractCode: Array[Byte]
@@ -35,6 +35,6 @@ abstract class FakeSmartContractMsgProcessor extends MessageProcessor with Score
   }
 }
 
-object FakeSmartContractMsgProcessor {
+object NativeSmartContractMsgProcessor {
   val NULL_HEX_STRING_32: Array[Byte] = Array.fill(32)(0)
 }

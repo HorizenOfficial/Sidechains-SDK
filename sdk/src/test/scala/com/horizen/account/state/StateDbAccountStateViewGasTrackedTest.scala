@@ -116,7 +116,15 @@ class StateDbAccountStateViewGasTrackedTest
       (2300, Seq(_.getAccountStorage(origin, slot1), _.getAccountStorage(origin, slot1), _.getNonce(origin))),
       // account storage modification
       (24800, Seq(_.increaseNonce(origin), _.updateAccountStorage(origin, slot1, randomHash))),
-      (24800, Seq(_.increaseNonce(origin), _.removeAccountStorage(origin, slot1)))
+      (4900, Seq(_.increaseNonce(origin), _.removeAccountStorage(origin, slot1))),
+      (
+        24900,
+        Seq(
+          _.increaseNonce(origin),
+          _.updateAccountStorage(origin, slot1, randomHash),
+          _.removeAccountStorage(origin, slot1)
+        )
+      ),
     )
 
     forAll(testCases) { (expectedGas, sequence) =>
