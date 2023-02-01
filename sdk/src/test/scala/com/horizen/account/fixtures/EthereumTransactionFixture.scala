@@ -192,6 +192,9 @@ trait EthereumTransactionFixture {
   }
 
   def getPartiallySignedEip155LegacyTransaction: EthereumTransaction = {
+    // partially signed means this is not a real signature nor a null signature object
+    // but has v=chainId and empty arrays for r,s
+    // Such signature is produced for EIP155 unsigned transactions in the encoding phase
     new EthereumTransaction(
       88L,
       EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),

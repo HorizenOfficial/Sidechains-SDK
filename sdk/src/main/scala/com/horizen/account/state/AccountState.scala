@@ -174,10 +174,9 @@ class AccountState(
 
             receiptList += fullReceipt
 
-            val baseFeePerGas = blockContext.baseFee
-            val (txBaseFeePerGas, txMaxPriorityFeePerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
+            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, blockContext.baseFee)
             cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
-            cumForgerTips = cumForgerTips.add(txMaxPriorityFeePerGas.multiply(txGasUsed))
+            cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
 
           case Failure(err: GasLimitReached) =>
             log.error("Could not apply tx, block gas limit exceeded")

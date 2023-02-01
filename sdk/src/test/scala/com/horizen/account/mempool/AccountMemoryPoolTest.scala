@@ -34,7 +34,7 @@ class AccountMemoryPoolTest
 
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock, () => baseStateViewMock)
 
-    assertTrue("Wrong tx list size ", accountMemoryPool.takeExecutableTxs.isEmpty)
+    assertTrue("Wrong tx list size ", accountMemoryPool.takeExecutableTxs().isEmpty)
 
     //Adding some txs in the mempool
 
@@ -45,13 +45,13 @@ class AccountMemoryPoolTest
     val account1ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account1Key), gasFee = BigInteger.valueOf(3), priorityGasFee = BigInteger.valueOf(3))
     assertTrue(accountMemoryPool.put(account1ExecTransaction0).isSuccess)
 
-    var listOfExecTxs = accountMemoryPool.takeExecutableTxs
+    var listOfExecTxs = accountMemoryPool.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs.head.id)
 
     val account1NonExecTransaction0 = createEIP1559Transaction(value, BigInteger.valueOf(1000), Option(account1Key))
     assertTrue(accountMemoryPool.put(account1NonExecTransaction0).isSuccess)
-    listOfExecTxs = accountMemoryPool.takeExecutableTxs
+    listOfExecTxs = accountMemoryPool.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs.head.id)
 
@@ -62,7 +62,7 @@ class AccountMemoryPoolTest
     val account1ExecTransaction2 = createEIP1559Transaction(value, account1ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account1Key), gasFee = BigInteger.valueOf(1000), priorityGasFee = BigInteger.valueOf(110))
     assertTrue(accountMemoryPool.put(account1ExecTransaction2).isSuccess)
 
-    listOfExecTxs = accountMemoryPool.takeExecutableTxs
+    listOfExecTxs = accountMemoryPool.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 3, listOfExecTxs.size)
     var iter = listOfExecTxs.iterator
     assertEquals("Wrong tx ", account1ExecTransaction0.id(), iter.next().id)
@@ -93,7 +93,7 @@ class AccountMemoryPoolTest
     assertTrue(accountMemoryPool.put(account3ExecTransaction2).isSuccess)
     assertTrue(accountMemoryPool.put(account3ExecTransaction1).isSuccess)
 
-    listOfExecTxs = accountMemoryPool.takeExecutableTxs
+    listOfExecTxs = accountMemoryPool.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 9, listOfExecTxs.size)
     iter = listOfExecTxs.iterator
     assertEquals("Wrong tx ", account3ExecTransaction0.id(), iter.next().id)

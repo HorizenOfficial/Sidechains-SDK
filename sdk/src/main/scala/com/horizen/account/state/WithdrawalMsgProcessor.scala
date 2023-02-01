@@ -22,7 +22,7 @@ trait WithdrawalRequestProvider {
   private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: BaseAccountStateView): Seq[WithdrawalRequest]
 }
 
-object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with WithdrawalRequestProvider {
+object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with WithdrawalRequestProvider {
 
   override val contractAddress: Array[Byte] = WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
   override val contractCode: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCode")
@@ -33,7 +33,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = new AccountStateViewGasTracked(view, gas)
+    val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case GetListOfWithdrawalReqsCmdSig =>
         execGetListOfWithdrawalReqRecords(msg, gasView)

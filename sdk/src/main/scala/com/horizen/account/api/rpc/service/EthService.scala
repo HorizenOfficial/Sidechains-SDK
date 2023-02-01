@@ -3,6 +3,7 @@ package com.horizen.account.api.rpc.service
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
+import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.SidechainTypes
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
@@ -27,15 +28,18 @@ import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
+import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.{NodeViewHolder, bytesToId}
+
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -45,6 +49,7 @@ class EthService(
     scNodeViewHolderRef: ActorRef,
     nvtimeout: FiniteDuration,
     networkParams: NetworkParams,
+    settings: EthServiceSettings,
     sidechainTransactionActorRef: ActorRef
 ) extends RpcService
       with ClosableResourceHandler
@@ -173,7 +178,7 @@ class EthService(
 
   private def doCall(nodeView: NV, params: TransactionArgs, tag: String): Array[Byte] = {
     getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
-      val msg = params.toMessage(blockContext.baseFee)
+      val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
       tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
     }
   }
@@ -296,11 +301,8 @@ class EthService(
           }
         }
       }
-      // Recap the highest gas allowance with specified gascap.
-      // global RPC gas cap (in geth this is a config variable)
-      val rpcGasCap = GasUtil.RpcGlobalGasCap
-      if (highBound.compareTo(rpcGasCap) > 0) {
-        highBound = rpcGasCap
+      if (highBound.compareTo(settings.globalRpcGasCap) > 0) {
+        highBound = settings.globalRpcGasCap
       }
       // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
       // other exceptions are not caught as the call would not succeed with any amount of gas
@@ -534,16 +536,18 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
-  def traceBlockByNumber(number: String, config: TraceOptions): DebugTraceBlockView = {
+  def traceBlockByNumber(number: String, config: TraceOptions): List[JsonNode] = {
     val hash: Hash = {
       applyOnAccountView { nodeView =>
-        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))}}
+        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))
+      }
+    }
     traceBlockByHash(hash, config)
   }
 
   @RpcMethod("debug_traceBlockByHash")
   @RpcOptionalParameters(1)
-  def traceBlockByHash(hash: Hash, config: TraceOptions): DebugTraceBlockView = {
+  def traceBlockByHash(hash: Hash, config: TraceOptions): List[JsonNode] = {
     applyOnAccountView { nodeView =>
       // get block to trace
       val (block, blockInfo) = getBlockById(nodeView, bytesToId(hash.toBytes))
@@ -562,19 +566,24 @@ class EthService(
 
         // apply all transaction, collecting traces on the way
         val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
-          blockContext.setEvmResult(EvmResult.emptyEvmResult())
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
           blockContext.getEvmResult
         })
 
-        new DebugTraceBlockView(evmResults.toArray)
+        // return the list of tracer results from the evm
+        val tracerResultList = new ListBuffer[JsonNode]
+        for(evmResult <- evmResults) {
+          if(evmResult!=null && evmResult.tracerResult!=null)
+            tracerResultList += evmResult.tracerResult
+        }
+        tracerResultList.toList
       }
     }
   }
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, config: TraceOptions): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: Hash, config: TraceOptions): Any = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -605,10 +614,12 @@ class EthService(
         blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
         // apply requested transaction with tracing enabled
-        blockContext.setEvmResult(EvmResult.emptyEvmResult())
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
-        new DebugTraceTransactionView(blockContext.getEvmResult)
+        // return the tracer result from the evm
+        if(blockContext.getEvmResult != null) {
+          blockContext.getEvmResult.tracerResult
+        } else Unit
       }
     }
   }

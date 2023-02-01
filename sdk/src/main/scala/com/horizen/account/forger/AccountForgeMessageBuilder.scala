@@ -23,8 +23,19 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import com.horizen.utils.{
+  ByteArrayWrapper,
+  ClosableResourceHandler,
+  DynamicTypedSerializer,
+  ForgingStakeMerklePathInfo,
+  ListSerializer,
+  MerklePath,
+  MerkleTree,
+  TimeToEpochUtils,
+  WithdrawalEpochInfo,
+  WithdrawalEpochUtils
+}
+import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 
@@ -114,8 +125,7 @@ class AccountForgeMessageBuilder(
           // update cumulative gas used so far
           cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-            val baseFeePerGas = blockContext.baseFee
-            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
+          val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, blockContext.baseFee)
           cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
           cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
           priceAndNonceIter.next()
@@ -314,7 +324,7 @@ class AccountForgeMessageBuilder(
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 
-    nodeView.pool.takeExecutableTxs()
+    nodeView.pool.takeExecutableTxs(forcedTx)
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[AccountBlockHeader]]): Int = {

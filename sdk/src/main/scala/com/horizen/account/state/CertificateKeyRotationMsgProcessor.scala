@@ -27,14 +27,14 @@ trait CertificateKeysProvider {
   private[horizen] def getCertifiersKeys(epochNum: Int, view: BaseAccountStateView): CertifiersKeys
 }
 
-case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with CertificateKeysProvider {
+case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with CertificateKeysProvider {
 
   override val contractAddress: Array[Byte] = CertificateKeyRotationContractAddress
   override val contractCode: Array[Byte] = CertificateKeyRotationContractCode
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = new AccountStateViewGasTracked(view, gas)
+    val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case SubmitKeyRotationReqCmdSig =>
         execSubmitKeyRotation(msg, gasView, blockContext.withdrawalEpochNumber)

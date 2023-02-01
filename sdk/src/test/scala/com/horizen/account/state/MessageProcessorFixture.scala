@@ -1,9 +1,8 @@
 package com.horizen.account.state
 
-import com.horizen.account.utils.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.account.utils.Account
+import com.horizen.account.utils.{Account, FeeUtils}
 import com.horizen.evm.utils.Hash
 import com.horizen.evm.{MemoryDatabase, StateDB}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
@@ -15,7 +14,7 @@ import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 import java.math.BigInteger
 import java.util.Optional
 import scala.language.implicitConversions
-import scala.util.Random
+import scala.util.{Random, Try}
 
 trait MessageProcessorFixture extends ClosableResourceHandler {
   // simplifies using BigIntegers within the tests
@@ -63,7 +62,7 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
     val gasPrice = BigInteger.ZERO
     val gasFeeCap = BigInteger.valueOf(1000001)
     val gasTipCap = BigInteger.ZERO
-    val gasLimit = BigInteger.valueOf(1000000)
+    val gasLimit = BigInteger.valueOf(500000)
     new Message(
       if (from == null)
         Optional.of(new AddressProposition(origin))
@@ -94,20 +93,19 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   /**
    * Creates a large temporary gas pool and verifies the amount of total gas consumed.
    */
-  def assertGas[A](expectedGas: BigInteger, enforce: Boolean = true)(fun: GasPool => A): A = {
-    withGas { gas =>
-      try {
-        fun(gas)
-      } finally {
-        if (enforce) {
-          assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
-        } else {
-          println("consumed gas: " + gas.getUsedGas)
-          if (expectedGas != gas.getUsedGas)
-            println(" mismatch here, expected is: " + expectedGas)
-        }
-      }
-    }
+  def assertGas(
+      expectedGas: BigInteger,
+      msg: Message,
+      view: AccountStateView,
+      processor: MessageProcessor,
+      ctx: BlockContext,
+  ): Array[Byte] = {
+    view.setupAccessList(msg)
+    val gas = new GasPool(1000000)
+    val result = Try.apply(processor.process(msg, view, gas, ctx))
+    assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+    // return result or rethrow any exception
+    result.get
   }
 
   def getEventSignature(eventABISignature: String): Array[Byte] =

@@ -10,7 +10,7 @@ public class TraceOptions {
     private final boolean enableReturnData;
     private final String tracer;
     private final String timeout;
-    private final TracerConfig tracerConfig;
+    private final Object tracerConfig;
 
     public TraceOptions() {
         enableMemory = false;
@@ -46,7 +46,7 @@ public class TraceOptions {
         return timeout;
     }
 
-    public TracerConfig getTracerConfig() {
+    public Object getTracerConfig() {
         return tracerConfig;
     }
 }
