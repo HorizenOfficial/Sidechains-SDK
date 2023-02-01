@@ -43,11 +43,11 @@ class ForgerStakeMsgProcessorTest
 
   val mockNetworkParams: NetworkParams = mock[NetworkParams]
   val forgerStakeMessageProcessor: ForgerStakeMsgProcessor = ForgerStakeMsgProcessor(mockNetworkParams)
-  /** short hand: forger state fake contract address */
+  /** short hand: forger state native contract address */
   val contractAddress: Address = forgerStakeMessageProcessor.contractAddress
 
   // create private/public key pair
-  val privateKey: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("fakemsgprocessortest".getBytes())
+  val privateKey: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("nativemsgprocessortest".getBytes())
   val ownerAddressProposition: AddressProposition = privateKey.publicImage()
 
   val AddNewForgerStakeEventSig: Array[Byte] = getEventSignature("DelegateForgerStake(address,address,bytes32,uint256)")

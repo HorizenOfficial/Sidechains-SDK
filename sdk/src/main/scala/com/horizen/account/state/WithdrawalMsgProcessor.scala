@@ -23,7 +23,7 @@ trait WithdrawalRequestProvider {
   private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: BaseAccountStateView): Seq[WithdrawalRequest]
 }
 
-object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with WithdrawalRequestProvider {
+object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with WithdrawalRequestProvider {
 
   override val contractAddress: Address = WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCode")

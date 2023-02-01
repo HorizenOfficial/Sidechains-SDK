@@ -28,7 +28,7 @@ trait CertificateKeysProvider {
   private[horizen] def getCertifiersKeys(epochNum: Int, view: BaseAccountStateView): CertifiersKeys
 }
 
-case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with CertificateKeysProvider {
+case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with CertificateKeysProvider {
 
   override val contractAddress: Address = CertificateKeyRotationContractAddress
   override val contractCode: Array[Byte] = CertificateKeyRotationContractCode

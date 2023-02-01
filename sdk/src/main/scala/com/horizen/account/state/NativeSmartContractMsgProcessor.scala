@@ -8,7 +8,7 @@ import scorex.util.ScorexLogging
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
-abstract class FakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
+abstract class NativeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
 
   val contractAddress: Address
   val contractCode: Array[Byte]
@@ -36,6 +36,6 @@ abstract class FakeSmartContractMsgProcessor extends MessageProcessor with Score
   }
 }
 
-object FakeSmartContractMsgProcessor {
+object NativeSmartContractMsgProcessor {
   val NULL_HEX_STRING_32: Array[Byte] = Array.fill(32)(0)
 }
