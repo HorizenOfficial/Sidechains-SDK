@@ -5,6 +5,8 @@ The Example Apps are Java applications that run a basic Sidechain Node, able to 
 
 Example App node(s) can also be run without a connection to mainchain.
 
+The EvmApp is a sidechain node using the "account" model, while the SimpleApp uses the "UTXO" model.
+
 **Install Dependencies**
 
 Solidity Compiler
