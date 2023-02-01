@@ -2,12 +2,10 @@ package com.horizen.evm;
 
 import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
-import scala.Array;
 
 import java.util.Arrays;
 
 public class LibEvmTestBase {
-
     protected static byte[] bytes(String hex) {
         return Converter.fromHexString(hex);
     }
@@ -20,7 +18,7 @@ public class LibEvmTestBase {
 
     protected static Hash padToHash(byte[] bytes) {
         var padded = new byte[Hash.LENGTH];
-        Array.copy(bytes, 0, padded, padded.length - bytes.length, bytes.length);
+        System.arraycopy(bytes, 0, padded, padded.length-bytes.length, bytes.length);
         return new Hash(padded);
     }
 }

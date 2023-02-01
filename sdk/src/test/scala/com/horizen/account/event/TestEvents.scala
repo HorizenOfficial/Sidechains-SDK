@@ -21,7 +21,10 @@ class ScalaClassTestEvent1(
     @(Parameter @getter)(2) val value: Uint256
 ) {}
 
-class ScalaClassTestEvent2(var address: AbiAddress, var value: Uint256) {}
+class ScalaClassTestEvent2(
+    var address: AbiAddress,
+    var value: Uint256
+) {}
 
 class ScalaClassTestEvent3(
     @(Parameter @getter)(1) @(Indexed @getter) val address: Double,
