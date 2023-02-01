@@ -14,14 +14,14 @@ import java.util.stream.Collectors;
 public class ForwardTransfersView {
     private final List<ForwardTransferData> forwardTransfers;
 
-    public ForwardTransfersView(List<ForwardTransfer> transactions, boolean noPrefix) {
+    public ForwardTransfersView(List<ForwardTransfer> transactions, boolean isHttpResponse) {
         forwardTransfers = transactions.stream().map(tx -> {
             var ftOutput = tx.getFtOutput();
             var address = MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOutput.propositionBytes());
             var weiValue = ZenWeiConverter.convertZenniesToWei(ftOutput.amount());
             return new ForwardTransferData(
-                noPrefix ? address.toStringNoPrefix() : address.toString(),
-                noPrefix ? Numeric.toHexStringNoPrefix(weiValue) : Numeric.toHexStringWithPrefix(weiValue)
+                isHttpResponse ? address.toStringNoPrefix() : address.toString(),
+                isHttpResponse ? String.valueOf(weiValue) : Numeric.toHexStringWithPrefix(weiValue)
             );
         }).collect(Collectors.toList());
     }
