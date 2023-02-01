@@ -22,16 +22,30 @@ import com.horizen.consensus._
 import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, Secret}
-import com.horizen.transaction.{TransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.transaction.TransactionSerializer
+import com.horizen.utils.{
+  ByteArrayWrapper,
+  ClosableResourceHandler,
+  DynamicTypedSerializer,
+  ForgingStakeMerklePathInfo,
+  ListSerializer,
+  MerklePath,
+  MerkleTree,
+  TimeToEpochUtils,
+  WithdrawalEpochInfo,
+  WithdrawalEpochUtils
+}
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 
 import java.math.BigInteger
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.SECONDS
 import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(
@@ -78,7 +92,6 @@ class AccountForgeMessageBuilder(
       blockContext: BlockContext
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
-
     for (mcBlockRefData <- mainchainBlockReferencesData) {
       // Since forger still doesn't know the candidate block id we may pass random one.
       val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
@@ -88,7 +101,6 @@ class AccountForgeMessageBuilder(
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val listOfTxsInBlock = new ListBuffer[SidechainTypes#SCAT]()
-
 
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
@@ -108,7 +120,13 @@ class AccountForgeMessageBuilder(
 
       try {
         val tx = priceAndNonceIter.peek
-        stateView.applyTransaction(tx, listOfTxsInBlock.size, blockGasPool, blockContext, finalizeChanges = false) match {
+        stateView.applyTransaction(
+          tx,
+          listOfTxsInBlock.size,
+          blockGasPool,
+          blockContext,
+          finalizeChanges = false
+        ) match {
           case Success(consensusDataReceipt) =>
             val ethTx = tx.asInstanceOf[EthereumTransaction]
 
@@ -184,7 +202,7 @@ class AccountForgeMessageBuilder(
     val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 3. Set gasLimit
-    val gasLimit : BigInteger = FeeUtils.GAS_LIMIT
+    val gasLimit: BigInteger = FeeUtils.GAS_LIMIT
 
     // 4. create a context for the new block
     // this will throw if parent block was not found
@@ -205,40 +223,49 @@ class AccountForgeMessageBuilder(
     // 5. create a disposable view and try to apply all transactions in the list and apply fee payments if needed, collecting all data needed for
     //    going on with the forging of the block
     val (stateRoot, receiptList, appliedTxList, feePayments)
-    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountPayment]) = {
-        using(nodeView.state.getView) {
-          dummyView =>
-            // the outputs of the next call will be:
-            // - the list of receipt of the transactions successfully applied ---> for getting the receiptsRoot
-            // - the list of transactions successfully applied to the state ---> to be included in the forged block
-            // - the fee payments related to this block
-            val resultTuple : (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) =
-              computeBlockInfo(dummyView, sidechainTransactions, mainchainBlockReferencesData, blockContext, forgerAddress)
+        : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountPayment]) = {
+      using(nodeView.state.getView) {
+        dummyView =>
+          // the outputs of the next call will be:
+          // - the list of receipt of the transactions successfully applied ---> for getting the receiptsRoot
+          // - the list of transactions successfully applied to the state ---> to be included in the forged block
+          // - the fee payments related to this block
+          val resultTuple: (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) =
+            computeBlockInfo(
+              dummyView,
+              sidechainTransactions,
+              mainchainBlockReferencesData,
+              blockContext,
+              forgerAddress
+            )
 
-            val receiptList = resultTuple._1
-            val appliedTxList = resultTuple._2
-            val currentBlockPayments = resultTuple._3
+          val receiptList = resultTuple._1
+          val appliedTxList = resultTuple._2
+          val currentBlockPayments = resultTuple._3
 
-            val feePayments = if(isWithdrawalEpochLastBlock) {
-              // Current block is expected to be the continuation of the current tip, so there are no ommers.
-              require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
-              require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
+          val feePayments = if (isWithdrawalEpochLastBlock) {
+            // Current block is expected to be the continuation of the current tip, so there are no ommers.
+            require(
+              nodeView.history.bestBlockId == branchPointInfo.branchPointId,
+              "Last block of the withdrawal epoch expect to be a continuation of the tip."
+            )
+            require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
 
-              val withdrawalEpochNumber: Int = dummyView.getWithdrawalEpochInfo.epoch
+            val withdrawalEpochNumber: Int = dummyView.getWithdrawalEpochInfo.epoch
 
-              // get all previous payments for current ending epoch and append the one of the current block
-              val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
+            // get all previous payments for current ending epoch and append the one of the current block
+            val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
 
-              // add rewards to forgers balance
-              feePayments.foreach(payment => dummyView.addBalance(payment.addressBytes, payment.value))
+            // add rewards to forgers balance
+            feePayments.foreach(payment => dummyView.addBalance(payment.addressBytes, payment.value))
 
-              feePayments
-            } else {
-              Seq()
-            }
+            feePayments
+          } else {
+            Seq()
+          }
 
-            (dummyView.getIntermediateRoot, receiptList, appliedTxList, feePayments)
-        }
+          (dummyView.getIntermediateRoot, receiptList, appliedTxList, feePayments)
+      }
     }
 
     // 6. Compute the receipt root
@@ -396,16 +423,32 @@ class AccountForgeMessageBuilder(
     forgingStakeMerklePathInfoSeq
   }
 
-  def getPendingBlock(nodeView: View,
-                      timestamp: Long,
-                      branchPointInfo: BranchPointInfo,
-                      forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
-                      blockSignPrivateKey: PrivateKey25519,
-                      vrfProof: VrfProof,
-                      timeout: Timeout,
-                      forcedTx: Iterable[SidechainTypes#SCAT]): Option[AccountBlock] = {
-    forgeBlock(nodeView, timestamp, branchPointInfo, forgingStakeMerklePathInfo, blockSignPrivateKey, vrfProof,
-      timeout, forcedTx) match {
+  def getPendingBlock(nodeView: View, forcedTx: Iterable[SidechainTypes#SCAT]): Option[AccountBlock] = {
+    val branchPointInfo = BranchPointInfo(nodeView.history.bestBlockId, Seq(), Seq())
+    val blockSignPrivateKey = new PrivateKey25519(
+      new Array[Byte](PrivateKey25519.PRIVATE_KEY_LENGTH),
+      new Array[Byte](PrivateKey25519.PUBLIC_KEY_LENGTH)
+    )
+    val forgingStakeInfo: ForgingStakeInfo = new ForgingStakeInfo(
+      new PublicKey25519Proposition(new Array[Byte](PublicKey25519Proposition.KEY_LENGTH)),
+      new VrfPublicKey(new Array[Byte](VrfPublicKey.KEY_LENGTH)),
+      0
+    )
+    val forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo =
+      ForgingStakeMerklePathInfo(forgingStakeInfo, new MerklePath(new JArrayList()))
+    val vrfProof = new VrfProof(new Array[Byte](VrfProof.PROOF_LENGTH))
+    implicit val timeout: Timeout = new Timeout(5, SECONDS)
+
+    forgeBlock(
+      nodeView,
+      System.currentTimeMillis / 1000,
+      branchPointInfo,
+      forgingStakeMerklePathInfo,
+      blockSignPrivateKey,
+      vrfProof,
+      timeout,
+      forcedTx
+    ) match {
       case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
       case _: ForgeFailure => Option.empty
     }
