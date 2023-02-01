@@ -2,6 +2,8 @@ package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.evm.interop.ProofAccountResult;
+import com.horizen.evm.utils.Address;
+import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 
@@ -9,12 +11,12 @@ import java.util.Arrays;
 
 @JsonView(Views.Default.class)
 public class EthereumAccountProofView {
-    public final String address;
+    public final Address address;
     public final String[] accountProof;
     public final String balance;
-    public final String codeHash;
+    public final Hash codeHash;
     public final String nonce;
-    public final String storageHash;
+    public final Hash storageHash;
     public final EthereumStorageProof[] storageProof;
 
     @JsonView(Views.Default.class)
@@ -31,12 +33,12 @@ public class EthereumAccountProofView {
     }
 
     public EthereumAccountProofView(ProofAccountResult result) {
-        this.address = result.address.toString();
+        this.address = result.address;
         this.accountProof = result.accountProof;
         this.balance = Numeric.encodeQuantity(result.balance);
-        this.codeHash = result.codeHash == null ? null : result.codeHash.toString();
+        this.codeHash = result.codeHash;
         this.nonce = Numeric.encodeQuantity(result.nonce);
-        this.storageHash = result.storageHash == null ? null : result.storageHash.toString();
+        this.storageHash = result.storageHash;
         this.storageProof = result.storageProof == null ? null : Arrays
             .stream(result.storageProof)
             .map(EthereumStorageProof::new)

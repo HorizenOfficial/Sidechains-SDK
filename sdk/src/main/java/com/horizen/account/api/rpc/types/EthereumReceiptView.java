@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.evm.utils.Address;
+import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 import scala.collection.JavaConverters;
@@ -15,9 +16,9 @@ import java.util.List;
 @JsonView(Views.Default.class)
 public class EthereumReceiptView {
     public final String type;
-    public final String transactionHash;
+    public final Hash transactionHash;
     public final String transactionIndex;
-    public final String blockHash;
+    public final Hash blockHash;
     public final String blockNumber;
     public final Address from;
     public final Address to;
@@ -31,9 +32,9 @@ public class EthereumReceiptView {
 
     public EthereumReceiptView(EthereumReceipt receipt, EthereumTransaction tx, BigInteger baseFee, int firstLogIndex) {
         type = Numeric.toHexString(new byte[] { tx.version() });
-        transactionHash = Numeric.toHexString(receipt.transactionHash());
+        transactionHash = new Hash(receipt.transactionHash());
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
-        blockHash = Numeric.toHexString(receipt.blockHash());
+        blockHash = new Hash(receipt.blockHash());
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
         from = tx.getFromAddress();
         to = tx.getToAddress();

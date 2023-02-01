@@ -17,12 +17,12 @@ import java.util.stream.IntStream;
 @JsonView(Views.Default.class)
 public class EthereumBlockView {
     public final String number;
-    public final String hash;
-    public final String parentHash;
+    public final Hash hash;
+    public final Hash parentHash;
     public final String logsBloom;
-    public final String transactionsRoot;
-    public final String stateRoot;
-    public final String receiptsRoot;
+    public final Hash transactionsRoot;
+    public final Hash stateRoot;
+    public final Hash receiptsRoot;
     public final Address miner;
     public final String size;
     public final String gasLimit;
@@ -53,12 +53,12 @@ public class EthereumBlockView {
         var header = block.header();
         author = header.forgerAddress().address();
         number = Numeric.encodeQuantity(BigInteger.valueOf(blockNumber));
-        hash = Numeric.toHexString(blockHash.toBytes());
-        parentHash = Numeric.prependHexPrefix((String) block.parentId());
+        hash = blockHash;
+        parentHash = new Hash(Numeric.prependHexPrefix((String) header.parentId()));
         logsBloom = Numeric.toHexString(header.logsBloom().getBytes());
-        transactionsRoot = Numeric.toHexString(header.sidechainTransactionsMerkleRootHash());
-        stateRoot = Numeric.toHexString(header.stateRoot());
-        receiptsRoot = Numeric.toHexString(header.receiptsRoot());
+        transactionsRoot = new Hash(header.sidechainTransactionsMerkleRootHash());
+        stateRoot = new Hash(header.stateRoot());
+        receiptsRoot = new Hash(header.receiptsRoot());
         miner = header.forgerAddress().address();
         size = Numeric.encodeQuantity(BigInteger.valueOf(header.bytes().length));
         gasLimit = Numeric.encodeQuantity(header.gasLimit());
