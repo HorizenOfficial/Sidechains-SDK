@@ -423,7 +423,7 @@ class AccountForgeMessageBuilder(
     forgingStakeMerklePathInfoSeq
   }
 
-  def getPendingBlock(nodeView: View, forcedTx: Iterable[SidechainTypes#SCAT]): Option[AccountBlock] = {
+  def getPendingBlock(nodeView: View): Option[AccountBlock] = {
     val branchPointInfo = BranchPointInfo(nodeView.history.bestBlockId, Seq(), Seq())
     val blockSignPrivateKey = new PrivateKey25519(
       new Array[Byte](PrivateKey25519.PRIVATE_KEY_LENGTH),
@@ -447,7 +447,7 @@ class AccountForgeMessageBuilder(
       blockSignPrivateKey,
       vrfProof,
       timeout,
-      forcedTx
+      Seq()
     ) match {
       case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
       case _: ForgeFailure => Option.empty

@@ -4,13 +4,13 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.SidechainTypes
+import com.horizen.{EthServiceSettings, SidechainTypes}
 import com.horizen.account.api.rpc.handler.RpcException
-import com.horizen.account.api.rpc.service.utils.PendingBlock
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.chain.AccountFeePaymentsInfo
+import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
@@ -24,15 +24,16 @@ import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.{EvmResult, TraceOptions}
+import com.horizen.evm.interop.TraceOptions
 import com.horizen.evm.utils.{Address, Hash}
+import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
-import com.horizen.{EthServiceSettings, SidechainTypes}
+import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils, WithdrawalEpochUtils}
 import org.web3j.utils.Numeric
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.{NodeViewHolder, VersionTag, bytesToId, idToVersion}
 
 import java.math.BigInteger
@@ -202,7 +203,7 @@ class EthService(
     applyOnAccountView { nodeView =>
       val blockId = getBlockId(nodeView)
       if (blockId == null) {
-        new Quantity(getPoolTxs(nodeView, true).size())
+        new Quantity(getPoolTxs(nodeView, true).values().flatMap(_.values()).size)
       } else {
         nodeView.history.getStorageBlockById(blockId)
           .map(_.transactions.size)
@@ -398,21 +399,20 @@ class EthService(
     }
   }
 
-  /** Returns tuple of AccountBlock and SidechainBlockInfo for given blockId
-   * blockId = null is a valid case, returning pending block and its block info
-   * Throws RpcException for not found blockId or errors while creating pending block
+  /**
+   * Returns tuple of AccountBlock and SidechainBlockInfo for given blockId blockId = null is a valid case, returning
+   * pending block and its block info Throws RpcException for not found blockId or errors while creating pending block
    */
   private def getBlockById(nodeView: NV, blockId: ModifierId): (AccountBlock, SidechainBlockInfo) = {
     val (block, blockInfo) = if (blockId == null) {
-      val pendingBlockInstance = new PendingBlock(nodeView)
-      val pendingBlock = pendingBlockInstance.getPendingBlock
+      val pendingBlock = getPendingBlock(nodeView)
       val parentId = getBlockIdByTag(nodeView, "latest")
       (
         pendingBlock.getOrElse(throw new RpcException(RpcError.fromCode(
           RpcCode.UnknownBlock,
           "Invalid block tag parameter."
         ))),
-        pendingBlockInstance.getBlockInfo(pendingBlock.get, parentId, nodeView.history.blockInfoById(parentId))
+        getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId))
       )
     } else {
       (
@@ -518,6 +518,32 @@ class EthService(
   @RpcMethod("eth_getTransactionByBlockNumberAndIndex")
   def getTransactionByBlockNumberAndIndex(tag: String, index: Quantity): EthereumTransactionView = {
     blockTransactionByIndex(nodeView => getBlockIdByTag(nodeView, tag), index)
+  }
+
+  def getPendingBlock(nodeView: NV): Option[AccountBlock] = {
+    new AccountForgeMessageBuilder(new MainchainSynchronizer(null), null, networkParams, false)
+      .getPendingBlock(
+        nodeView
+      )
+  }
+
+  def getPendingBlockInfo(parentId: ModifierId, parentInfo: SidechainBlockInfo): SidechainBlockInfo = {
+    new SidechainBlockInfo(
+      parentInfo.height + 1,
+      parentInfo.score + 1,
+      parentId,
+      System.currentTimeMillis / 1000,
+      ModifierSemanticValidity.Unknown,
+      null,
+      null,
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(
+        0,
+        parentInfo.withdrawalEpochInfo,
+        networkParams
+      ),
+      None,
+      parentInfo.lastBlockInPreviousConsensusEpoch
+    )
   }
 
   private def getPendingState(nodeView: NV, block: AccountBlock, blockId: ModifierId): AccountState = {
@@ -669,8 +695,8 @@ class EthService(
 
         // return the list of tracer results from the evm
         val tracerResultList = new ListBuffer[JsonNode]
-        for(evmResult <- evmResults) {
-          if(evmResult!=null && evmResult.tracerResult!=null)
+        for (evmResult <- evmResults) {
+          if (evmResult != null && evmResult.tracerResult != null)
             tracerResultList += evmResult.tracerResult
         }
         tracerResultList.toList
@@ -714,7 +740,7 @@ class EthService(
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         // return the tracer result from the evm
-        if(blockContext.getEvmResult != null) {
+        if (blockContext.getEvmResult != null) {
           blockContext.getEvmResult.tracerResult
         } else Unit
       }
