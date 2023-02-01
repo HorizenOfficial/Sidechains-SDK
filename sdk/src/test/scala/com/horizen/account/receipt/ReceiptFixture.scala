@@ -8,23 +8,30 @@ import scorex.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 trait ReceiptFixture extends AccountFixture {
 
-    def createTestEvmLog(address: Option[Address]): EvmLog = {
-      val topics = new Array[Hash](4)
-      topics(0) = Hash.fromBytes(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
-      topics(1) = Hash.fromBytes(BytesUtils.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"))
-      topics(2) = Hash.fromBytes(BytesUtils.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"))
-      topics(3) = Hash.fromBytes(BytesUtils.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"))
+  def createTestEvmLog(address: Option[Address]): EvmLog = {
+    val topics = Array[Hash](
+      new Hash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      new Hash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+      new Hash("0x2222222222222222222222222222222222222222222222222222222222222222"),
+      new Hash("0x3333333333333333333333333333333333333333333333333333333333333333"),
+    )
+    val data = BytesUtils.fromHexString("aabbccddeeff")
+    new EvmLog(address.getOrElse(randomAddress), topics, data)
+  }
 
-      val data = BytesUtils.fromHexString("aabbccddeeff")
-      new EvmLog(address.getOrElse(randomAddress), topics, data)
-    }
-
-  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]] = None, address: Address = Address.ZERO,
-                                blockHash: String = "blockhash", blockNumber: Int = 22, transactionIndex: Int = 33): EthereumReceipt = {
+  def createTestEthereumReceipt(
+      txType: Integer,
+      num_logs: Integer = 2,
+      contractAddressPresence: Boolean = true,
+      txHash: Option[Array[Byte]] = None,
+      address: Address = Address.ZERO,
+      blockHash: String = "blockhash",
+      blockNumber: Int = 22,
+      transactionIndex: Int = 33
+  ): EthereumReceipt = {
     val txHashTemp: Array[Byte] = txHash.getOrElse(randomHash)
 
     val logs = new ListBuffer[EvmLog]
@@ -49,9 +56,11 @@ trait ReceiptFixture extends AccountFixture {
     receipt
   }
 
-  def createTestEthereumConsensusDataReceipt(txType: Integer, num_logs: Integer, address: Address = null): EthereumConsensusDataReceipt = {
-    val txHash = new Array[Byte](32)
-    Random.nextBytes(txHash)
+  def createTestEthereumConsensusDataReceipt(
+      txType: Integer,
+      num_logs: Integer,
+      address: Address = null
+  ): EthereumConsensusDataReceipt = {
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
       logs += createTestEvmLog(Some(address))

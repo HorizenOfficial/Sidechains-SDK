@@ -33,7 +33,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
     if (topicsListSize > 0) { // loop on list and decode all topics
       for (i <- 0 until topicsListSize) {
         val topicBytes = topicsRlp.getValues.get(i).asInstanceOf[RlpString].getBytes
-        hashList.add(Hash.fromBytes(topicBytes))
+        hashList.add(new Hash(topicBytes))
       }
     }
     val topics = hashList.toArray(new Array[Hash](0))
@@ -80,7 +80,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
     val topicsArraySize: Int = reader.getInt
     val topics: util.ArrayList[Hash] = new util.ArrayList[Hash]
     for (_ <- 0 until topicsArraySize) {
-      topics.add(Hash.fromBytes(reader.getBytes(Hash.LENGTH)))
+      topics.add(new Hash(reader.getBytes(Hash.LENGTH)))
     }
 
     val dataLength: Int = reader.getInt

@@ -80,7 +80,7 @@ public class EthereumEvent {
         var outputParameters = eventFunction.getOutputParameters();
 
         if (!anonymous) {
-            topics.add(Hash.fromBytes(Numeric.hexStringToByteArray(EventEncoder.encode(new Event(eventFunction.getName(), new ArrayList<>(outputParameters))))));
+            topics.add(new Hash(EventEncoder.encode(new Event(eventFunction.getName(), new ArrayList<>(outputParameters)))));
         }
 
         for (var i = 0; i < outputParameters.size(); i++) {
@@ -90,14 +90,14 @@ public class EthereumEvent {
                     throw new IllegalArgumentException("Error: More than four topics defined - defined topics: " + topics.size());
                 // values <= 32 byte will be used as is
                 if (encodedValue.length > 32) encodedValue = (byte[]) Keccak256.hash(encodedValue);
-                topics.add(Hash.fromBytes(encodedValue));
+                topics.add(new Hash(encodedValue));
 
             } else {
                 dataOutputStream.write(encodedValue);
             }
         }
 
-        return new EvmLog(contractAddress, topics.toArray(new Hash[topics.size()]), dataOutputStream.toByteArray());
+        return new EvmLog(contractAddress, topics.toArray(new Hash[0]), dataOutputStream.toByteArray());
     }
 
     /**

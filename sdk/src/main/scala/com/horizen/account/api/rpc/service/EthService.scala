@@ -140,7 +140,7 @@ class EthService(
       hydratedTx: Boolean
   ): EthereumBlockView = {
     val blockNumber = nodeView.history.getBlockHeightById(blockId).get().toLong
-    val blockHash = Hash.fromBytes(blockId.toBytes)
+    val blockHash = new Hash(blockId.toBytes)
     using(nodeView.state.getView) { stateView =>
       nodeView.history
         .getStorageBlockById(blockId)
@@ -539,7 +539,7 @@ class EthService(
   def traceBlockByNumber(number: String, config: TraceOptions): List[JsonNode] = {
     val hash: Hash = {
       applyOnAccountView { nodeView =>
-        Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, number)))
+        new Hash(idToBytes(getBlockIdByTag(nodeView, number)))
       }
     }
     traceBlockByHash(hash, config)
@@ -641,7 +641,7 @@ class EthService(
     val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        Hash.fromBytes(stateView.getAccountStorage(address, storageKey))
+        new Hash(stateView.getAccountStorage(address, storageKey))
       }
     }
   }

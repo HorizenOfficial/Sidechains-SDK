@@ -29,13 +29,6 @@ public class Hash extends FixedSizeByteArray {
         super(LENGTH, hex);
     }
 
-    public static Hash fromBytes(byte[] bytes) {
-        if (bytes == null) {
-            return null;
-        }
-        return new Hash(bytes);
-    }
-
     public static class Serializer extends JsonSerializer<Hash> {
         @Override
         public void serialize(
@@ -50,11 +43,7 @@ public class Hash extends FixedSizeByteArray {
         public Hash deserialize(
             JsonParser jsonParser, DeserializationContext deserializationContext
         ) throws IOException {
-            var text = jsonParser.getText();
-            if (!text.startsWith("0x")) {
-                throw new IOException("hash must be prefixed with 0x");
-            }
-            return Hash.fromBytes(Converter.fromHexString(text.substring(2)));
+            return new Hash(jsonParser.getText());
         }
     }
 }

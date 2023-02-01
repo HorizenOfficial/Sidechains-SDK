@@ -141,7 +141,7 @@ class StateDbAccountStateViewGasTrackedTest
   }
 
   private def randomLog(topics: Int, data: Int): EvmLog = {
-    new EvmLog(randomAddress, Array.fill(topics)(Hash.fromBytes(randomHash)), randomBytes(data))
+    new EvmLog(randomAddress, Array.fill(topics)(new Hash(randomHash)), randomBytes(data))
   }
 
   @Test
