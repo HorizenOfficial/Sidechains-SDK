@@ -3,9 +3,6 @@ package com.horizen.account.utils
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
-import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
-import com.horizen.params.NetworkParams
-import org.mockito.Mockito
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
@@ -15,6 +12,7 @@ import com.horizen.account.state._
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
+import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData}
 import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
@@ -25,7 +23,7 @@ import com.horizen.evm.interop.ProofAccountResult
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.SidechainBlockFixture.generateMainchainBlockReference
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
-import com.horizen.params.MainNetParams
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{Secret, SecretSerializer}
 import com.horizen.storage.{SidechainSecretStorage, Storage}
@@ -33,7 +31,7 @@ import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair, WithdrawalEpochInfo}
 import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
@@ -146,7 +144,6 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     if (genesis) {
       Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
-      Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(new Array[Byte](32)))
       Mockito.when(history.blockIdByHeight(1)).thenReturn(genesisBlockId)
     }
     Mockito.when(history.getCurrentHeight).thenReturn(height)
@@ -218,20 +215,17 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(block.transactions).thenReturn(txs)
     Mockito.when(block.mainchainHeaders).thenReturn(Seq(mcBlockRef.header))
     Mockito.when(block.mainchainBlockReferencesData).thenReturn(Seq(mcBlockRef.data))
-    Mockito
-      .when(block.header.stateRoot)
-      .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))
     Mockito.when(block.header.logsBloom).thenReturn(mock[Bloom])
     Mockito.when(block.header.logsBloom.getBytes).thenReturn(new Array[Byte](256))
     Mockito
       .when(block.header.sidechainTransactionsMerkleRootHash)
-      .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))
+      .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141010203040506070809111222"))
     Mockito
       .when(block.header.stateRoot)
-      .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))
+      .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141010203040506070809111333"))
     Mockito
       .when(block.header.receiptsRoot)
-      .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141"))
+      .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141010203040506070809111444"))
     Mockito.when(block.header.bytes).thenReturn(new Array[Byte](256))
     Mockito.when(block.timestamp).thenReturn(1000000000L)
     block
@@ -252,6 +246,17 @@ case class AccountMockDataHelper(genesis: Boolean)
       override lazy val forgerStakesProvider: ForgerStakesProvider =
         msgProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
+      override def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult = {
+        val proofRes = new ProofAccountResult()
+        proofRes.address = address
+        proofRes.accountProof = Array("123")
+        proofRes.nonce = BigInteger.ONE
+        proofRes.balance = BigInteger.valueOf(123L)
+        proofRes.codeHash = null
+        proofRes.storageHash = null
+        proofRes.storageProof = null
+        proofRes
+      }
     }
     Mockito.when(state.getView).thenReturn(stateView)
     Mockito.when(state.getView.getTransactionReceipt(any())).thenReturn(None)
@@ -271,16 +276,6 @@ case class AccountMockDataHelper(genesis: Boolean)
         .thenReturn(BigInteger.ONE)
       Mockito.when(state.getView.getRefund).thenReturn(BigInteger.ONE)
 
-      val proofRes: ProofAccountResult = mock[ProofAccountResult]
-      proofRes.address = new Address("0x1234567891011121314151617181920212223242")
-      proofRes.accountProof = Array("123")
-      proofRes.nonce = BigInteger.ONE
-      proofRes.balance = BigInteger.valueOf(123L)
-      proofRes.codeHash = null
-      proofRes.storageHash = null
-      proofRes.storageProof = null
-
-      Mockito.when(state.getView.getProof(any(), any())).thenReturn(proofRes)
       if (stateDB != null) {
         Mockito
           .when(stateDB.getStorage(any(), any()))
@@ -319,17 +314,10 @@ case class AccountMockDataHelper(genesis: Boolean)
   private def setupMockMessageProcessor = {
     val mockMsgProcessor = mock[MessageProcessor]
     Mockito
-      .when(mockMsgProcessor.canProcess(ArgumentMatchers.any[Message], ArgumentMatchers.any[BaseAccountStateView]))
+      .when(mockMsgProcessor.canProcess(any[Message], any[BaseAccountStateView]))
       .thenReturn(true)
     Mockito
-      .when(
-        mockMsgProcessor.process(
-          ArgumentMatchers.any[Message],
-          ArgumentMatchers.any[BaseAccountStateView],
-          ArgumentMatchers.any[GasPool],
-          ArgumentMatchers.any[BlockContext]
-        )
-      )
+      .when(mockMsgProcessor.process(any[Message], any[BaseAccountStateView], any[GasPool], any[BlockContext]))
       .thenReturn(Array.empty[Byte])
     mockMsgProcessor
   }
