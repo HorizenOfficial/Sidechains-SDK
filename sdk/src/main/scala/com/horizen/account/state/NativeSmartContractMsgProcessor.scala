@@ -7,7 +7,7 @@ import org.web3j.abi.datatypes.Address
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 
-abstract class FakeSmartContractMsgProcessor extends MessageProcessor with SparkzLogging {
+abstract class NativeSmartContractMsgProcessor extends MessageProcessor with SparkzLogging {
 
   val contractAddress: Array[Byte]
   val contractCode: Array[Byte]
@@ -35,6 +35,6 @@ abstract class FakeSmartContractMsgProcessor extends MessageProcessor with Spark
   }
 }
 
-object FakeSmartContractMsgProcessor {
+object NativeSmartContractMsgProcessor {
   val NULL_HEX_STRING_32: Array[Byte] = Array.fill(32)(0)
 }

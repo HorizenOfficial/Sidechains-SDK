@@ -41,7 +41,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     NodeAccountState,
     NodeWalletBase,
     NodeAccountMemoryPool,
-    AccountNodeView] (settings, sidechainNodeViewHolderRef, sidechainSecretsCompanion) {
+    AccountNodeView](settings, sidechainNodeViewHolderRef, sidechainSecretsCompanion) {
 
   override val route: Route = pathPrefix("wallet") {
     // some of these methods are in the base class
@@ -132,36 +132,37 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-
   /**
    * get all balances of the wallet, return a list of pairs (address, balance).
    */
   def getAllBalances: Route = (post & path("getAllBalances")) {
-    withAuth {
-      entity(as[ReqGetTotalBalance]) { _ =>
-        applyOnNodeView { sidechainNodeView =>
-          try {
-            val wallet = sidechainNodeView.getNodeWallet
-            val addressList = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
-            if (addressList.isEmpty) {
-              ApiResponseUtil.toResponse(RespGetAllBalances(Seq().toList))
-            } else {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqGetTotalBalance]) { _ =>
+          applyOnNodeView { sidechainNodeView =>
+            try {
+              val wallet = sidechainNodeView.getNodeWallet
+              val addressList = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+              if (addressList.isEmpty) {
+                ApiResponseUtil.toResponse(RespGetAllBalances(Seq().toList))
+              } else {
 
-              val addressPropositions = addressList.asScala.map(_.publicImage().asInstanceOf[AddressProposition])
+                val addressPropositions = addressList.asScala.map(_.publicImage().asInstanceOf[AddressProposition])
 
-              val accountBalances : List[AccountBalance] = addressPropositions.foldLeft(List.empty[AccountBalance]) {
-                (listToFill, addressProposition) =>
-                  listToFill :+ AccountBalance(
-                    address = BytesUtils.toHexString(addressProposition.address()),
-                    balance = sidechainNodeView.getNodeState.getBalance(addressProposition.address()))
+                val accountBalances: List[AccountBalance] = addressPropositions.foldLeft(List.empty[AccountBalance]) {
+                  (listToFill, addressProposition) =>
+                    listToFill :+ AccountBalance(
+                      address = BytesUtils.toHexString(addressProposition.address()),
+                      balance = sidechainNodeView.getNodeState.getBalance(addressProposition.address()))
+                }
+
+                ApiResponseUtil.toResponse(RespGetAllBalances(accountBalances))
               }
-
-              ApiResponseUtil.toResponse(RespGetAllBalances(accountBalances))
             }
-          }
-          catch {
-            case e: Exception =>
-              ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+            catch {
+              case e: Exception =>
+                ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+            }
           }
         }
       }

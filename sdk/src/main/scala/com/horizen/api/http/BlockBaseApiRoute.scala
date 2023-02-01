@@ -163,18 +163,6 @@ abstract class BlockBaseApiRoute[
         ApiResponseUtil.toResponse(RespStopForging)
       case Failure(e) =>
         ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", JOptional.of(e)))
-        withBasicAuth {
-          _ => {
-            val future = forgerRef ? StopForging
-            val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
-            result match {
-              case Success(_) =>
-                ApiResponseUtil.toResponse(RespStopForging)
-              case Failure(e) =>
-                ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", JOptional.empty()))
-            }
-          }
-        }
     }
   }
 

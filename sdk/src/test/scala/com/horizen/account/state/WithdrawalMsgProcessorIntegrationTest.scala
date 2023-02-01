@@ -1,8 +1,7 @@
 package com.horizen.account.state
 
-import com.horizen.account.utils.FeeUtils
 import com.horizen.account.events.AddWithdrawalRequest
-import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
@@ -49,7 +48,7 @@ class WithdrawalMsgProcessorIntegrationTest
 
       // GetListOfWithdrawalRequest without withdrawal requests yet
       val msgForListOfWR = listWithdrawalRequestsMessage(withdrawalEpoch)
-      var wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, blockContext))
+      var wrListInBytes = assertGas(2100, msgForListOfWR, view, WithdrawalMsgProcessor, blockContext)
       val expectedListOfWR = new util.ArrayList[WithdrawalRequest]()
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
 
@@ -58,7 +57,9 @@ class WithdrawalMsgProcessorIntegrationTest
       val withdrawalAmount = ZenWeiConverter.convertZenniesToWei(10)
       val msgBalance = addWithdrawalRequestMessage(withdrawalAmount)
       // Withdrawal request with insufficient balance should result in ExecutionFailed
-      assertThrows[ExecutionFailedException](withGas(WithdrawalMsgProcessor.process(msgBalance, view, _, blockContext)))
+      assertThrows[ExecutionFailedException] {
+        assertGas(0, msgBalance, view, WithdrawalMsgProcessor, blockContext)
+      }
 
       // Creating the first Withdrawal request
       val withdrawalAmount1 = ZenWeiConverter.convertZenniesToWei(123)
@@ -71,7 +72,7 @@ class WithdrawalMsgProcessorIntegrationTest
       val txHash1 = Keccak256.hash("first tx")
       view.setupTxContext(txHash1, 10)
 
-      val wrInBytes = withGas(WithdrawalMsgProcessor.process(msg, view, _, blockContext))
+      val wrInBytes = assertGas(68412, msg, view, WithdrawalMsgProcessor, blockContext)
       assertArrayEquals(newExpectedWR.encode(), wrInBytes)
       val newBalance = view.getBalance(msg.getFromAddressBytes)
       assertEquals("Wrong value in account balance", 1177, ZenWeiConverter.convertWeiToZennies(newBalance))
@@ -86,7 +87,7 @@ class WithdrawalMsgProcessorIntegrationTest
       view.setupTxContext(txHash2, 10)
 
       // GetListOfWithdrawalRequest after first withdrawal request creation
-      wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, blockContext))
+      wrListInBytes = assertGas(6300, msgForListOfWR, view, WithdrawalMsgProcessor, blockContext)
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
 
       // Checking that log didn't change
@@ -102,7 +103,7 @@ class WithdrawalMsgProcessorIntegrationTest
       val txHash3 = Keccak256.hash("third tx")
       view.setupTxContext(txHash3, 10)
 
-      val wrInBytes2 = withGas(WithdrawalMsgProcessor.process(msg, view, _, blockContext))
+      val wrInBytes2 = assertGas(48512, msg, view, WithdrawalMsgProcessor, blockContext)
       assertArrayEquals(newExpectedWR.encode(), wrInBytes2)
 
       val newBalanceAfterSecondWR = view.getBalance(msg.getFromAddressBytes)
@@ -116,7 +117,7 @@ class WithdrawalMsgProcessorIntegrationTest
       checkEvent(expectedEvent, listOfLogs(0))
 
       // GetListOfWithdrawalRequest after second withdrawal request creation
-      wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _, blockContext))
+      wrListInBytes = assertGas(10500, msgForListOfWR, view, WithdrawalMsgProcessor, blockContext)
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
     }
   }

@@ -71,7 +71,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
         case sc: SidechainCreation =>
           // While processing sidechain creation output:
           // 1. extract first forger stake info: block sign public key, vrf public key, owner address, stake amount
-          // 2. store the stake info record in the forging fake smart contract storage
+          // 2. store the stake info record in the forging native smart contract storage
           val scOut: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
 
           val stakedAmount = ZenWeiConverter.convertZenniesToWei(scOut.amount)
@@ -168,7 +168,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
    *   - tx execution failed => Receipt with status failed
    *     - if any ExecutionFailedException was thrown, including but not limited to:
    *     - OutOfGasException (not intrinsic gas, see below!)
-   *     - EvmException (EVM reverted) / fake contract exception
+   *     - EvmException (EVM reverted) / native contract exception
    *   - tx could not be applied => throws an exception (this will lead to an invalid block)
    *     - any of the preChecks fail
    *     - not enough gas for intrinsic gas
@@ -271,7 +271,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
     stateDb.setStorage(address, key, value)
 
   final override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
-    updateAccountStorage(address, key, null)
+    updateAccountStorage(address, key, Array.fill(Hash.LENGTH)(0))
 
   // random data used to salt chunk keys in the storage trie when accessed via get/updateAccountStorageBytes
   private val chunkKeySalt =
