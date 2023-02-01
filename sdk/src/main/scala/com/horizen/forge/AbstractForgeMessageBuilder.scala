@@ -164,7 +164,7 @@ abstract class AbstractForgeMessageBuilder[
   protected def getBranchPointInfo(history: HIS): Try[BranchPointInfo] = Try {
     val bestMainchainHeaderInfo = history.getBestMainchainHeaderInfo.get
 
-    val (bestMainchainCommonPointHeight: Int, bestMainchainCommonPointHash: MainchainHeaderHash, newHeaderHashes: Seq[MainchainHeaderHash]) = {
+    val (bestMainchainCommonPointHeight: Int, bestMainchainCommonPointHash: MainchainHeaderHash, newHeaderHashes: Seq[MainchainHeaderHash]) =
       mainchainSynchronizer.getMainchainDivergentSuffix(history, MainchainSynchronizer.MAX_BLOCKS_REQUEST) match {
         case Success((height, hashes)) => (height, hashes.head, hashes.tail) // hashes contains also the hash of best known block
         case Failure(ex) =>
@@ -174,7 +174,6 @@ abstract class AbstractForgeMessageBuilder[
           else
             throw ex
       }
-    }
 
     // Check that there is no orphaned mainchain headers: SC most recent mainchain header is a part of MC active chain
     if(bestMainchainCommonPointHash == bestMainchainHeaderInfo.hash) {
