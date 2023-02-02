@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 
 public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKeySecp256k1> {
     private static final PrivateKeySecp256k1Creator instance;
+    private static final byte[] domain = "PrivateKeySecp25519k1".getBytes(StandardCharsets.UTF_8);
 
     static {
         instance = new PrivateKeySecp256k1Creator();
@@ -35,7 +36,6 @@ public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKe
      */
     @Override
     public byte[] salt() {
-        String domain = "PrivateKeySecp25519k1";
-        return domain.getBytes(StandardCharsets.UTF_8);
+        return domain;
     }
 }

@@ -8,6 +8,7 @@ import java.util.EnumMap;
 
 public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
     private static final SchnorrKeyGenerator instance;
+    private static final byte[] domain = "SchnorrKey".getBytes(StandardCharsets.UTF_8);
 
     static {
         instance = new SchnorrKeyGenerator();
@@ -36,7 +37,6 @@ public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
      */
     @Override
     public byte[] salt() {
-        String domain = "SchnorrKey";
-        return domain.getBytes(StandardCharsets.UTF_8);
+        return domain;
     }
 }

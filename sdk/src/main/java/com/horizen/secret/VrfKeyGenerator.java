@@ -8,6 +8,7 @@ import java.util.EnumMap;
 
 public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
     private static final VrfKeyGenerator instance;
+    private static final byte[] domain = "VrfKey".getBytes(StandardCharsets.UTF_8);
 
     static {
         instance = new VrfKeyGenerator();
@@ -36,7 +37,6 @@ public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
      */
     @Override
     public byte[] salt() {
-        String domain = "VrfKey";
-        return domain.getBytes(StandardCharsets.UTF_8);
+        return domain;
     }
 }
