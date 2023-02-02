@@ -15,6 +15,8 @@ import scorex.util.serialization.Writer;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+
 import static org.junit.Assert.*;
 
 public class RlpStreamCodecTest {
@@ -235,5 +237,494 @@ public class RlpStreamCodecTest {
         assertArrayEquals(res3, new byte[]{(byte)16, (byte)255, (byte)16});
     }
 
+    /*
+     * Adapted from:
+     * https://github.com/web3j/web3j/blob/master/rlp/src/test/java/org/web3j/rlp/RlpDecoderTest.java
+     */
+    @Test
+    public void testRLPDecode() {
 
+        // big positive number should stay positive after encoding-decoding
+        // https://github.com/web3j/web3j/issues/562
+        long value = 3000000000L;
+        assertEquals(
+                RlpString.create(BigInteger.valueOf(value)).asPositiveBigInteger().longValue(),
+                (value));
+
+        // empty array of binary
+        Reader r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {}));
+        assertTrue(RlpStreamDecoder.decode(r).getValues().isEmpty());
+
+        // The string "dog" = [ 0x83, 'd', 'o', 'g' ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0x83, 'd', 'o', 'g'}));
+        assertEquals(
+                RlpStreamDecoder.decode(r).getValues().get(0),
+                (RlpString.create("dog")));
+
+        // The list [ "cat", "dog" ] = [ 0xc8, 0x83, 'c', 'a', 't', 0x83, 'd', 'o', 'g' ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(
+                new byte[] {
+                        (byte) 0xc8,
+                        (byte) 0x83,
+                        'c',
+                        'a',
+                        't',
+                        (byte) 0x83,
+                        'd',
+                        'o',
+                        'g'
+                }
+        ));
+        RlpList rlpList =
+                (RlpList)
+                        RlpStreamDecoder.decode(r)
+                                .getValues()
+                                .get(0);
+
+        assertEquals(rlpList.getValues().get(0), (RlpString.create("cat")));
+
+        assertEquals(rlpList.getValues().get(1), (RlpString.create("dog")));
+
+        // The empty string ('null') = [ 0x80 ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0x80}));
+        assertEquals(
+                RlpStreamDecoder.decode(r).getValues().get(0),
+                (RlpString.create("")));
+
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0x80}));
+        assertEquals(
+                RlpStreamDecoder.decode(r).getValues().get(0),
+                (RlpString.create(new byte[] {})));
+
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0x80}));
+        assertEquals(
+                RlpStreamDecoder.decode(r).getValues().get(0),
+                (RlpString.create(BigInteger.ZERO)));
+
+        // The empty list = [ 0xc0 ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0xc0}));
+        assertEquals(
+                RlpStreamDecoder.decode(r).getValues().get(0).getClass(),
+                (RlpList.class));
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0xc0}));
+        assertTrue(
+                ((RlpList) RlpStreamDecoder.decode(r).getValues().get(0))
+                        .getValues()
+                        .isEmpty());
+
+        // The encoded integer 0 ('\x00') = [ 0x00 ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0x00}));
+        assertEquals(
+                RlpStreamDecoder.decode(r).getValues().get(0),
+                (RlpString.create(BigInteger.valueOf(0).byteValue())));
+
+        // The encoded integer 15 ('\x0f') = [ 0x0f ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0x0f}));
+        assertEquals(
+                RlpStreamDecoder.decode(r).getValues().get(0),
+                (RlpString.create(BigInteger.valueOf(15).byteValue())));
+
+        // The encoded integer 1024 ('\x04\x00') = [ 0x82, 0x04, 0x00 ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0x82, (byte) 0x04, (byte) 0x00}));
+        assertEquals(
+                RlpStreamDecoder.decode(r)
+                        .getValues()
+                        .get(0),
+                (RlpString.create(BigInteger.valueOf(0x0400))));
+
+        // The set theoretical representation of three,
+        // [ [], [[]], [ [], [[]] ] ] = [ 0xc7, 0xc0, 0xc1, 0xc0, 0xc3, 0xc0, 0xc1, 0xc0 ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(
+                new byte[] {
+                        (byte) 0xc7,
+                        (byte) 0xc0,
+                        (byte) 0xc1,
+                        (byte) 0xc0,
+                        (byte) 0xc3,
+                        (byte) 0xc0,
+                        (byte) 0xc1,
+                        (byte) 0xc0
+                }
+        ));
+        rlpList = RlpStreamDecoder.decode(r);
+        assertEquals(rlpList.getClass(), RlpList.class);
+
+        assertEquals(rlpList.getValues().size(), (1));
+
+        assertEquals(rlpList.getValues().get(0).getClass(), (RlpList.class));
+
+        assertEquals(((RlpList) rlpList.getValues().get(0)).getValues().size(), (3));
+
+        assertEquals(
+                ((RlpList) rlpList.getValues().get(0)).getValues().get(0).getClass(),
+                RlpList.class);
+
+        assertEquals(
+                ((RlpList) ((RlpList) rlpList.getValues().get(0)).getValues().get(0))
+                        .getValues()
+                        .size(),
+                (0));
+
+        assertEquals(
+                ((RlpList) ((RlpList) rlpList.getValues().get(0)).getValues().get(1))
+                        .getValues()
+                        .size(),
+                (1));
+
+        assertEquals(
+                ((RlpList) ((RlpList) rlpList.getValues().get(0)).getValues().get(2))
+                        .getValues()
+                        .size(),
+                (2));
+
+        assertEquals(
+                ((RlpList) ((RlpList) rlpList.getValues().get(0)).getValues().get(2))
+                        .getValues()
+                        .get(0)
+                        .getClass(),
+                (RlpList.class));
+
+        assertEquals(
+                ((RlpList)
+                        ((RlpList)
+                                ((RlpList) rlpList.getValues().get(0))
+                                        .getValues()
+                                        .get(2))
+                                .getValues()
+                                .get(0))
+                        .getValues()
+                        .size(),
+                (0));
+
+        assertEquals(
+                ((RlpList)
+                        ((RlpList)
+                                ((RlpList) rlpList.getValues().get(0))
+                                        .getValues()
+                                        .get(2))
+                                .getValues()
+                                .get(1))
+                        .getValues()
+                        .size(),
+                (1));
+
+        // The string "Lorem ipsum dolor sit amet,
+        // consectetur adipisicing elit" =
+        // [ 0xb8, 0x38, 'L', 'o', 'r', 'e', 'm', ' ', ... , 'e', 'l', 'i', 't' ]
+        r = new VLQByteBufferReader(ByteBuffer.wrap(
+                new byte[] {
+                        (byte) 0xb8,
+                        (byte) 0x38,
+                        'L',
+                        'o',
+                        'r',
+                        'e',
+                        'm',
+                        ' ',
+                        'i',
+                        'p',
+                        's',
+                        'u',
+                        'm',
+                        ' ',
+                        'd',
+                        'o',
+                        'l',
+                        'o',
+                        'r',
+                        ' ',
+                        's',
+                        'i',
+                        't',
+                        ' ',
+                        'a',
+                        'm',
+                        'e',
+                        't',
+                        ',',
+                        ' ',
+                        'c',
+                        'o',
+                        'n',
+                        's',
+                        'e',
+                        'c',
+                        't',
+                        'e',
+                        't',
+                        'u',
+                        'r',
+                        ' ',
+                        'a',
+                        'd',
+                        'i',
+                        'p',
+                        'i',
+                        's',
+                        'i',
+                        'c',
+                        'i',
+                        'n',
+                        'g',
+                        ' ',
+                        'e',
+                        'l',
+                        'i',
+                        't'
+                }
+        ));
+        assertEquals(
+                RlpStreamDecoder.decode(r)
+                        .getValues()
+                        .get(0),
+                (RlpString.create("Lorem ipsum dolor sit amet, consectetur adipisicing elit")));
+
+        // https://github.com/paritytech/parity/blob/master/util/rlp/tests/tests.rs#L239
+        r = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {(byte) 0x00}));
+        assertEquals(
+                RlpStreamDecoder.decode(r).getValues().get(0),
+                (RlpString.create(new byte[] {0})));
+
+        r = new VLQByteBufferReader(ByteBuffer.wrap(
+                new byte[] {
+                (byte) 0xc6,
+                (byte) 0x82,
+                (byte) 0x7a,
+                (byte) 0x77,
+                (byte) 0xc1,
+                (byte) 0x04,
+                (byte) 0x01
+        }));
+
+        rlpList = RlpStreamDecoder.decode(r);
+
+        assertEquals(((RlpList) rlpList.getValues().get(0)).getValues().size(), (3));
+
+        assertEquals(
+                ((RlpList) rlpList.getValues().get(0)).getValues().get(0).getClass(),
+                (RlpString.class));
+
+        assertEquals(
+                ((RlpList) rlpList.getValues().get(0)).getValues().get(1).getClass(),
+                (RlpList.class));
+
+        assertEquals(
+                ((RlpList) rlpList.getValues().get(0)).getValues().get(2).getClass(),
+                (RlpString.class));
+
+        assertEquals(
+                ((RlpList) rlpList.getValues().get(0)).getValues().get(0),
+                (RlpString.create("zw")));
+
+        assertEquals(
+                ((RlpList) ((RlpList) rlpList.getValues().get(0)).getValues().get(1))
+                        .getValues()
+                        .get(0),
+                (RlpString.create(4)));
+
+        assertEquals(
+                ((RlpList) rlpList.getValues().get(0)).getValues().get(2), (RlpString.create(1)));
+
+        // payload more than 55 bytes
+        String data =
+                "F86E12F86B80881BC16D674EC8000094CD2A3D9F938E13CD947EC05ABC7FE734D"
+                        + "F8DD8268609184E72A00064801BA0C52C114D4F5A3BA904A9B3036E5E118FE0DBB987"
+                        + "FE3955DA20F2CD8F6C21AB9CA06BA4C2874299A55AD947DBC98A25EE895AABF6B625C"
+                        + "26C435E84BFD70EDF2F69";
+
+        byte[] payload = Numeric.hexStringToByteArray(data);
+        r = new VLQByteBufferReader(ByteBuffer.wrap(payload));
+
+        rlpList = RlpStreamDecoder.decode(r);
+
+        assertEquals(((RlpList) rlpList.getValues().get(0)).getValues().size(), (2));
+
+        assertEquals(
+                ((RlpList) rlpList.getValues().get(0)).getValues().get(0).getClass(),
+                (RlpString.class));
+
+        assertEquals(
+                ((RlpList) rlpList.getValues().get(0)).getValues().get(1).getClass(),
+                (RlpList.class));
+
+        assertEquals(
+                ((RlpList) ((RlpList) rlpList.getValues().get(0)).getValues().get(1))
+                        .getValues()
+                        .size(),
+                (9));
+
+        // Regression test: this would previously throw OutOfMemoryError as it tried to allocate 2GB
+        // for the non-existent data
+        var r2 = new VLQByteBufferReader(ByteBuffer.wrap(new byte[] {
+                (byte) 0xbb, (byte) 0x7f, (byte) 0xff, (byte) 0xff, (byte) 0xff
+        }));
+        assertThrows(
+                RuntimeException.class,
+                (() ->
+                        RlpStreamDecoder.decode(r2)));
+    }
+
+
+    /*
+     * Adapted from:
+     * https://github.com/web3j/web3j/blob/master/rlp/src/test/java/org/web3j/rlp/RlpEncoderTest.java
+     */
+    @Test
+    public void testEncode() {
+        VLQByteBufferWriter w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(RlpString.create("dog"), w);
+        assertArrayEquals(w.toBytes(),
+                (new byte[] {(byte) 0x83, 'd', 'o', 'g'}));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(new RlpList(RlpString.create("cat"), RlpString.create("dog")), w);
+        assertArrayEquals(w.toBytes(),
+                (new byte[] {(byte) 0xc8, (byte) 0x83, 'c', 'a', 't', (byte) 0x83, 'd', 'o', 'g'}));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(RlpString.create(""), w);
+        assertArrayEquals(w.toBytes(), (new byte[] {(byte) 0x80}));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(RlpString.create(new byte[] {}), w);
+        assertArrayEquals(
+                w.toBytes(), (new byte[] {(byte) 0x80}));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(new RlpList(), w);
+        assertArrayEquals(w.toBytes(), (new byte[] {(byte) 0xc0}));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(RlpString.create(BigInteger.valueOf(0x0f)), w);
+        assertArrayEquals(w.toBytes(), (new byte[] {(byte) 0x0f}));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(RlpString.create(BigInteger.valueOf(0x0400)), w);
+        assertArrayEquals(w.toBytes(),
+                (new byte[] {(byte) 0x82, (byte) 0x04, (byte) 0x00}));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(
+                new RlpList(
+                        new RlpList(),
+                        new RlpList(new RlpList()),
+                        new RlpList(new RlpList(), new RlpList(new RlpList()))), w);
+
+        assertArrayEquals(w.toBytes(),
+                (new byte[] {
+                        (byte) 0xc7,
+                        (byte) 0xc0,
+                        (byte) 0xc1,
+                        (byte) 0xc0,
+                        (byte) 0xc3,
+                        (byte) 0xc0,
+                        (byte) 0xc1,
+                        (byte) 0xc0
+                }));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(
+                RlpString.create(
+                        "Lorem ipsum dolor sit amet, consectetur adipisicing elit"), w);
+
+        assertArrayEquals(w.toBytes(),
+                (new byte[] {
+                        (byte) 0xb8,
+                        (byte) 0x38,
+                        'L',
+                        'o',
+                        'r',
+                        'e',
+                        'm',
+                        ' ',
+                        'i',
+                        'p',
+                        's',
+                        'u',
+                        'm',
+                        ' ',
+                        'd',
+                        'o',
+                        'l',
+                        'o',
+                        'r',
+                        ' ',
+                        's',
+                        'i',
+                        't',
+                        ' ',
+                        'a',
+                        'm',
+                        'e',
+                        't',
+                        ',',
+                        ' ',
+                        'c',
+                        'o',
+                        'n',
+                        's',
+                        'e',
+                        'c',
+                        't',
+                        'e',
+                        't',
+                        'u',
+                        'r',
+                        ' ',
+                        'a',
+                        'd',
+                        'i',
+                        'p',
+                        'i',
+                        's',
+                        'i',
+                        'c',
+                        'i',
+                        'n',
+                        'g',
+                        ' ',
+                        'e',
+                        'l',
+                        'i',
+                        't'
+                }));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(RlpString.create(BigInteger.ZERO), w);
+        assertArrayEquals(
+                w.toBytes(), (new byte[] {(byte) 0x80}));
+
+        // https://github.com/paritytech/parity-common/blob/master/rlp/tests/tests.rs#L237
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(RlpString.create(new byte[] {0}), w);
+        assertArrayEquals(w.toBytes(), (new byte[] {(byte) 0x00}));
+
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(
+                new RlpList(
+                        RlpString.create("zw"),
+                        new RlpList(RlpString.create(4)),
+                        RlpString.create(1)), w);
+
+        assertArrayEquals(w.toBytes(),
+                (new byte[] {
+                        (byte) 0xc6,
+                        (byte) 0x82,
+                        (byte) 0x7a,
+                        (byte) 0x77,
+                        (byte) 0xc1,
+                        (byte) 0x04,
+                        (byte) 0x01
+                }));
+
+        // 55 bytes. See https://github.com/web3j/web3j/issues/519
+        byte[] encodeMe = new byte[55];
+        Arrays.fill(encodeMe, (byte) 0);
+        byte[] expectedEncoding = new byte[56];
+        expectedEncoding[0] = (byte) 0xb7;
+        System.arraycopy(encodeMe, 0, expectedEncoding, 1, encodeMe.length);
+        w = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(RlpString.create(encodeMe), w);
+        assertArrayEquals(w.toBytes(), (expectedEncoding));
+    }
 }
