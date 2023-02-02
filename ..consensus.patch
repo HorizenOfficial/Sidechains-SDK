@@ -1,0 +1,195 @@
+diff --git a/examples/evmapp/src/main/java/com/horizen/examples/EvmAppModule.java b/examples/evmapp/src/main/java/com/horizen/examples/EvmAppModule.java
+index 5aa0589a6..b88e7b7c7 100644
+--- a/examples/evmapp/src/main/java/com/horizen/examples/EvmAppModule.java
++++ b/examples/evmapp/src/main/java/com/horizen/examples/EvmAppModule.java
+@@ -58,6 +58,9 @@ public class EvmAppModule extends AccountAppModule {
+         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
+         customMessageProcessors.add(new EvmMessageProcessor());
+ 
++        // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 430.
++        int consensusSecondsInSlot = 12;
++
+         // use a custom object which implements the stopAll() method
+         SidechainAppStopper applicationStopper = new EvmAppStopper();
+ 
+@@ -96,5 +99,9 @@ public class EvmAppModule extends AccountAppModule {
+         bind(new TypeLiteral<List<MessageProcessor>>() {})
+                 .annotatedWith(Names.named("CustomMessageProcessors"))
+                 .toInstance(customMessageProcessors);
++
++        bind(Integer.class)
++                .annotatedWith(Names.named("ConsensusSecondsInSlot"))
++                .toInstance(consensusSecondsInSlot);
+     }
+ }
+diff --git a/examples/simpleapp/src/main/java/com/horizen/examples/SimpleAppModule.java b/examples/simpleapp/src/main/java/com/horizen/examples/SimpleAppModule.java
+index 314156b28..9b5cdc13b 100644
+--- a/examples/simpleapp/src/main/java/com/horizen/examples/SimpleAppModule.java
++++ b/examples/simpleapp/src/main/java/com/horizen/examples/SimpleAppModule.java
+@@ -68,6 +68,8 @@ public class SimpleAppModule extends SidechainAppModule
+ 
+         AppForkConfigurator forkConfigurator = new AppForkConfigurator();
+ 
++        // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 430.
++        int consensusSecondsInSlot = 120;
+ 
+         // Here I can add my custom rest api and/or override existing one
+         List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
+@@ -153,6 +155,8 @@ public class SimpleAppModule extends SidechainAppModule
+         bind(ForkConfigurator.class)
+                 .annotatedWith(Names.named("ForkConfiguration"))
+                 .toInstance(forkConfigurator);
+-
++        bind(Integer.class)
++                .annotatedWith(Names.named("ConsensusSecondsInSlot"))
++                .toInstance(consensusSecondsInSlot);
+     }
+ }
+diff --git a/sdk/src/main/scala/com/horizen/AbstractSidechainApp.scala b/sdk/src/main/scala/com/horizen/AbstractSidechainApp.scala
+index 102543f06..315112aaf 100644
+--- a/sdk/src/main/scala/com/horizen/AbstractSidechainApp.scala
++++ b/sdk/src/main/scala/com/horizen/AbstractSidechainApp.scala
+@@ -57,7 +57,8 @@ abstract class AbstractSidechainApp
+    val rejectedApiPaths : JList[Pair[String, String]],
+    val applicationStopper : SidechainAppStopper,
+    val forkConfigurator : ForkConfigurator,
+-   val chainInfo : ChainInfo
++   val chainInfo : ChainInfo,
++   val consensusSecondsInSlot: Int
+   )
+   extends Application with ScorexLogging
+ {
+@@ -130,9 +131,10 @@ abstract class AbstractSidechainApp
+   lazy val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
+     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
+ 
+-  // It is a fast and dirty workaround to set 12 sec block rate for EvmApp, SimpleApp remains the same 120 seconds
+-  // TODO: make it configurable per network type on application level
+-  lazy val consensusSecondsInSlot: Int = 120
++  if (consensusSecondsInSlot < consensus.minSecondsInSlot || consensusSecondsInSlot > consensus.maxSecondsInSlot) {
++    throw new IllegalArgumentException(s"Consensus seconds in slot is out of range. It should be no less than ${consensus.minSecondsInSlot} and be less or equal to ${consensus.maxSecondsInSlot}. " +
++      s"Current value: ${consensusSecondsInSlot}")
++  }
+ 
+   // Init proper NetworkParams depend on MC network
+   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
+diff --git a/sdk/src/main/scala/com/horizen/SidechainApp.scala b/sdk/src/main/scala/com/horizen/SidechainApp.scala
+index bd8f72e34..6441949b0 100644
+--- a/sdk/src/main/scala/com/horizen/SidechainApp.scala
++++ b/sdk/src/main/scala/com/horizen/SidechainApp.scala
+@@ -57,7 +57,8 @@ class SidechainApp @Inject()
+    @Named("CustomApiGroups") override val customApiGroups: JList[ApplicationApiGroup],
+    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
+    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
+-   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator
++   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
++   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+   )
+   extends AbstractSidechainApp(
+     sidechainSettings,
+@@ -71,7 +72,8 @@ class SidechainApp @Inject()
+     ChainInfo(
+       regtestId = 111,
+       testnetId = 222,
+-      mainnetId = 333)
++      mainnetId = 333),
++    secondsInSlot
+     )
+ {
+ 
+diff --git a/sdk/src/main/scala/com/horizen/SidechainAppModule.scala b/sdk/src/main/scala/com/horizen/SidechainAppModule.scala
+index ddc693184..e665450a8 100644
+--- a/sdk/src/main/scala/com/horizen/SidechainAppModule.scala
++++ b/sdk/src/main/scala/com/horizen/SidechainAppModule.scala
+@@ -60,7 +60,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
+           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
+           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
+           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
+-          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator
++          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
++          @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+   ): SidechainApp = {
+     synchronized {
+       if (app == null) {
+@@ -85,7 +86,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
+           customApiGroups,
+           rejectedApiPaths,
+           applicationStopper,
+-          forkConfigurator
++          forkConfigurator,
++          secondsInSlot
+         )
+       }
+     }
+diff --git a/sdk/src/main/scala/com/horizen/account/AccountAppModule.scala b/sdk/src/main/scala/com/horizen/account/AccountAppModule.scala
+index 94f79c3ae..be5429bf5 100644
+--- a/sdk/src/main/scala/com/horizen/account/AccountAppModule.scala
++++ b/sdk/src/main/scala/com/horizen/account/AccountAppModule.scala
+@@ -50,7 +50,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
+           @Named("ChainInfo") chainInfo : ChainInfo,
+           @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
+           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
+-          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator
++          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
++          @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+          ): AccountSidechainApp = {
+     synchronized {
+       if (app == null) {
+@@ -63,7 +64,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
+           customMessageProcessors,
+           applicationStopper,
+           forkConfigurator,
+-          chainInfo
++          chainInfo,
++          secondsInSlot
+         )
+       }
+     }
+diff --git a/sdk/src/main/scala/com/horizen/account/AccountSidechainApp.scala b/sdk/src/main/scala/com/horizen/account/AccountSidechainApp.scala
+index 6508485ce..42832507d 100644
+--- a/sdk/src/main/scala/com/horizen/account/AccountSidechainApp.scala
++++ b/sdk/src/main/scala/com/horizen/account/AccountSidechainApp.scala
+@@ -49,7 +49,8 @@ class AccountSidechainApp @Inject()
+    @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
+    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
+    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
+-   @Named("ChainInfo") chainInfo: ChainInfo
++   @Named("ChainInfo") chainInfo: ChainInfo,
++   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+   )
+   extends AbstractSidechainApp(
+     sidechainSettings,
+@@ -58,7 +59,8 @@ class AccountSidechainApp @Inject()
+     rejectedApiPaths,
+     applicationStopper,
+     forkConfigurator,
+-    chainInfo
++    chainInfo,
++    secondsInSlot
+   )
+ {
+ 
+@@ -73,9 +75,6 @@ class AccountSidechainApp @Inject()
+       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
+     )
+ 
+-  // It is a fast and dirty workaround to set 12 sec block rate for EvmApp
+-  override lazy val consensusSecondsInSlot: Int = 12
+-
+   require (!isCSWEnabled, "Ceased Sidechain Withdrawal (CSW) should not be enabled in AccountSidechainApp!")
+ 
+   val dataDirAbsolutePath: String = sidechainSettings.sparkzSettings.dataDir.getAbsolutePath
+diff --git a/sdk/src/main/scala/com/horizen/consensus/package.scala b/sdk/src/main/scala/com/horizen/consensus/package.scala
+index 053085a3e..9e93bcc9e 100644
+--- a/sdk/src/main/scala/com/horizen/consensus/package.scala
++++ b/sdk/src/main/scala/com/horizen/consensus/package.scala
+@@ -20,6 +20,9 @@ package object consensus {
+   val forgerStakePercentPrecision: BigDecimal = BigDecimal.valueOf(1000000) // where 1 / forgerStakePercentPrecision -- minimal possible forger stake percentage to be able to forge
+   val stakeConsensusDivideMathContext: MathContext = MathContext.DECIMAL128 //shall be used during dividing, otherwise ArithmeticException is thrown in case of irrational number as division result
+ 
++  val minSecondsInSlot: Int = 10
++  val maxSecondsInSlot:Int = 300
++
+   object ConsensusEpochNumber extends TaggedType[Int]
+   type ConsensusEpochNumber = ConsensusEpochNumber.Type
+   def intToConsensusEpochNumber(consensusEpochNumber: Int): ConsensusEpochNumber = ConsensusEpochNumber @@ consensusEpochNumber

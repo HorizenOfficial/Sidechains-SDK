@@ -57,7 +57,8 @@ abstract class AbstractSidechainApp
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
-   val chainInfo : ChainInfo
+   val chainInfo : ChainInfo,
+   val consensusSecondsInSlot: Int
   )
   extends Application with SparkzLogging
 {
@@ -130,9 +131,10 @@ abstract class AbstractSidechainApp
   lazy val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
 
-  // It is a fast and dirty workaround to set 12 sec block rate for EvmApp, SimpleApp remains the same 120 seconds
-  // TODO: make it configurable per network type on application level
-  lazy val consensusSecondsInSlot: Int = 120
+  if (consensusSecondsInSlot < consensus.minSecondsInSlot || consensusSecondsInSlot > consensus.maxSecondsInSlot) {
+    throw new IllegalArgumentException(s"Consensus seconds in slot is out of range. It should be no less than ${consensus.minSecondsInSlot} and be less or equal to ${consensus.maxSecondsInSlot}. " +
+      s"Current value: ${consensusSecondsInSlot}")
+  }
 
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {

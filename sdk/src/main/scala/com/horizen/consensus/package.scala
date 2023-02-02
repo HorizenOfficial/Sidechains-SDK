@@ -20,6 +20,9 @@ package object consensus {
   val forgerStakePercentPrecision: BigDecimal = BigDecimal.valueOf(1000000) // where 1 / forgerStakePercentPrecision -- minimal possible forger stake percentage to be able to forge
   val stakeConsensusDivideMathContext: MathContext = MathContext.DECIMAL128 //shall be used during dividing, otherwise ArithmeticException is thrown in case of irrational number as division result
 
+  val minSecondsInSlot: Int = 10
+  val maxSecondsInSlot:Int = 300
+
   object ConsensusEpochNumber extends TaggedType[Int]
   type ConsensusEpochNumber = ConsensusEpochNumber.Type
   def intToConsensusEpochNumber(consensusEpochNumber: Int): ConsensusEpochNumber = ConsensusEpochNumber @@ consensusEpochNumber
