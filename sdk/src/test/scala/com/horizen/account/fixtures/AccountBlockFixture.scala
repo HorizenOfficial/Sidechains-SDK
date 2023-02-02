@@ -18,7 +18,7 @@ import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
 import sparkz.core.block.Block
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 import java.math.BigInteger
 import scala.util.{Failure, Random, Try}
 

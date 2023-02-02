@@ -7,7 +7,7 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.{AbstractWallet, SidechainTypes}
 import sparkz.core.VersionTag
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
@@ -18,7 +18,7 @@ class AccountWallet private[horizen](seed: Array[Byte],
     SidechainTypes#SCAT,
     AccountBlock,
     AccountWallet](seed, secretStorage)
-    with ScorexLogging
+    with SparkzLogging
     with NodeWalletBase {
   override type NVCT = this.type
 

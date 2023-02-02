@@ -1,6 +1,6 @@
 package com.horizen.chain
 
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 case class MainchainBlockReferenceDataInfo(headerHash: MainchainHeaderHash,
                                            height: Int,

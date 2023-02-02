@@ -3,3 +3,4 @@ pycryptodome
 rlp
 eth_utils
 eth_bloom
+base58

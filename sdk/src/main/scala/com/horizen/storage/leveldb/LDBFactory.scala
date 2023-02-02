@@ -1,7 +1,7 @@
 package com.horizen.storage.leveldb
 
 import org.iq80.leveldb.DBFactory
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
@@ -9,7 +9,7 @@ import scala.util.Try
  * That source code had been copied/modified from ErgoPlatform Project
  */
 
-object LDBFactory extends ScorexLogging {
+object LDBFactory extends SparkzLogging {
 
   private val nativeFactory = "org.fusesource.leveldbjni.JniDBFactory"
   private val javaFactory   = "org.iq80.leveldb.impl.Iq80DBFactory"

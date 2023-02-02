@@ -2,7 +2,7 @@ package com.horizen.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import java.util.{ArrayList => JArrayList}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 
@@ -11,7 +11,7 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 class SidechainStateForgerBoxStorage(storage: Storage)
-    extends ScorexLogging
+    extends SparkzLogging
       with SidechainStorageInfo
       with SidechainTypes
 {

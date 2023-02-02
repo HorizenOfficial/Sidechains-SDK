@@ -10,7 +10,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   setSeed(1000L)

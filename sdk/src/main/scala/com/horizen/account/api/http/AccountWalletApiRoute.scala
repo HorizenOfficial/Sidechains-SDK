@@ -41,7 +41,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     NodeAccountState,
     NodeWalletBase,
     NodeAccountMemoryPool,
-    AccountNodeView] (settings, sidechainNodeViewHolderRef, sidechainSecretsCompanion) {
+    AccountNodeView](settings, sidechainNodeViewHolderRef, sidechainSecretsCompanion) {
 
   override val route: Route = pathPrefix("wallet") {
     // some of these methods are in the base class
@@ -55,17 +55,19 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
    * Create new secret and return corresponding address (public key)
    */
   def createPrivateKeySecp256k1: Route = (post & path("createPrivateKeySecp256k1")) {
-    withAuth {
-      entity(as[ReqCreateKey]) { _ =>
-        withNodeView { sidechainNodeView =>
-          val wallet = sidechainNodeView.getNodeWallet
-          val secret = PrivateKeySecp256k1Creator.getInstance().generateNextSecret(wallet)
-          val future = sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret)
-          Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-            case Success(_) =>
-              ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
-            case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateKey]) { _ =>
+          withNodeView { sidechainNodeView =>
+            val wallet = sidechainNodeView.getNodeWallet
+            val secret = PrivateKeySecp256k1Creator.getInstance().generateNextSecret(wallet)
+            val future = sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret)
+            Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+              case Success(_) =>
+                ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
+              case Failure(e) =>
+                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+            }
           }
         }
       }
@@ -77,17 +79,19 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
    * Return 0 if account doesn't exist.
    */
   def getBalance: Route = (post & path("getBalance")) {
-    withAuth {
-      entity(as[ReqGetBalance]) { body =>
-        applyOnNodeView { sidechainNodeView =>
-          try {
-            val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.address))
-            val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
-            ApiResponseUtil.toResponse(RespGetBalance(fromBalance))
-          }
-          catch {
-            case e: Exception =>
-              ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqGetBalance]) { body =>
+          applyOnNodeView { sidechainNodeView =>
+            try {
+              val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.address))
+              val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
+              ApiResponseUtil.toResponse(RespGetBalance(fromBalance))
+            }
+            catch {
+              case e: Exception =>
+                ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+            }
           }
         }
       }
@@ -98,64 +102,67 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
    * Check total balance of the wallet.
    */
   def getTotalBalance: Route = (post & path("getTotalBalance")) {
-    withAuth {
-      entity(as[ReqGetTotalBalance]) { _ =>
-        applyOnNodeView { sidechainNodeView =>
-          try {
-            val wallet = sidechainNodeView.getNodeWallet
-            val addressList = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
-            if (addressList.isEmpty) {
-              ApiResponseUtil.toResponse(RespGetBalance(BigInteger.ZERO))
-            } else {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqGetTotalBalance]) { _ =>
+          applyOnNodeView { sidechainNodeView =>
+            try {
+              val wallet = sidechainNodeView.getNodeWallet
+              val addressList = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+              if (addressList.isEmpty) {
+                ApiResponseUtil.toResponse(RespGetBalance(BigInteger.ZERO))
+              } else {
 
-              val listOfAddressPropositions = addressList.asScala.map(s =>
-                s.publicImage().asInstanceOf[AddressProposition])
-              var totalBalance = BigInteger.ZERO
-              listOfAddressPropositions.foreach(address =>
-                totalBalance = totalBalance.add(sidechainNodeView.getNodeState.getBalance(address.address())))
+                val listOfAddressPropositions = addressList.asScala.map(s =>
+                  s.publicImage().asInstanceOf[AddressProposition])
+                var totalBalance = BigInteger.ZERO
+                listOfAddressPropositions.foreach(address =>
+                  totalBalance = totalBalance.add(sidechainNodeView.getNodeState.getBalance(address.address())))
 
-              ApiResponseUtil.toResponse(RespGetBalance(totalBalance))
+                ApiResponseUtil.toResponse(RespGetBalance(totalBalance))
+              }
             }
-          }
-          catch {
-            case e: Exception =>
-              ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+            catch {
+              case e: Exception =>
+                ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+            }
           }
         }
       }
     }
   }
 
-
   /**
    * get all balances of the wallet, return a list of pairs (address, balance).
    */
   def getAllBalances: Route = (post & path("getAllBalances")) {
-    withAuth {
-      entity(as[ReqGetTotalBalance]) { _ =>
-        applyOnNodeView { sidechainNodeView =>
-          try {
-            val wallet = sidechainNodeView.getNodeWallet
-            val addressList = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
-            if (addressList.isEmpty) {
-              ApiResponseUtil.toResponse(RespGetAllBalances(Seq().toList))
-            } else {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqGetTotalBalance]) { _ =>
+          applyOnNodeView { sidechainNodeView =>
+            try {
+              val wallet = sidechainNodeView.getNodeWallet
+              val addressList = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+              if (addressList.isEmpty) {
+                ApiResponseUtil.toResponse(RespGetAllBalances(Seq().toList))
+              } else {
 
-              val addressPropositions = addressList.asScala.map(_.publicImage().asInstanceOf[AddressProposition])
+                val addressPropositions = addressList.asScala.map(_.publicImage().asInstanceOf[AddressProposition])
 
-              val accountBalances : List[AccountBalance] = addressPropositions.foldLeft(List.empty[AccountBalance]) {
-                (listToFill, addressProposition) =>
-                  listToFill :+ AccountBalance(
-                    address = BytesUtils.toHexString(addressProposition.address()),
-                    balance = sidechainNodeView.getNodeState.getBalance(addressProposition.address()))
+                val accountBalances: List[AccountBalance] = addressPropositions.foldLeft(List.empty[AccountBalance]) {
+                  (listToFill, addressProposition) =>
+                    listToFill :+ AccountBalance(
+                      address = BytesUtils.toHexString(addressProposition.address()),
+                      balance = sidechainNodeView.getNodeState.getBalance(addressProposition.address()))
+                }
+
+                ApiResponseUtil.toResponse(RespGetAllBalances(accountBalances))
               }
-
-              ApiResponseUtil.toResponse(RespGetAllBalances(accountBalances))
             }
-          }
-          catch {
-            case e: Exception =>
-              ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+            catch {
+              case e: Exception =>
+                ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+            }
           }
         }
       }

@@ -35,9 +35,9 @@ import com.horizen.utils.{
   WithdrawalEpochInfo,
   WithdrawalEpochUtils
 }
-import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters._

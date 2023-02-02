@@ -1,7 +1,7 @@
 package com.horizen.secret;
 
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public class SchnorrSecretSerializer implements SecretSerializer<SchnorrSecret> {
     private static SchnorrSecretSerializer serializer;

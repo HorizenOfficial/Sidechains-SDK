@@ -19,9 +19,9 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
-import scorex.crypto.hash.Keccak256
 import sparkz.core.bytesToVersion
 
+import sparkz.crypto.hash.Keccak256
 import java.math.BigInteger
 import java.util
 import java.util.{Optional, Random}

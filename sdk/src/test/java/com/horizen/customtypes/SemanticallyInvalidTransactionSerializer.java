@@ -3,8 +3,8 @@ package com.horizen.customtypes;
 import com.horizen.transaction.TransactionSerializer;
 import scala.util.Success;
 import scala.util.Try;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public class SemanticallyInvalidTransactionSerializer implements TransactionSerializer<SemanticallyInvalidTransaction> {
 

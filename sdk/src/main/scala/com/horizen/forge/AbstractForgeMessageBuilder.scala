@@ -17,7 +17,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.block.Block
 import sparkz.core.transaction.MemoryPool
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.transaction.state.MinimalState
 
 import scala.collection.JavaConverters._
@@ -32,7 +32,7 @@ abstract class AbstractForgeMessageBuilder[
     mainchainSynchronizer: MainchainSynchronizer,
     companion: DynamicTypedSerializer[TX, TransactionSerializer[TX]],
     val params: NetworkParams,
-    allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging
+    allowNoWebsocketConnectionInRegtest: Boolean) extends SparkzLogging
 {
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]

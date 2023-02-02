@@ -9,8 +9,8 @@ import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.storage.Storage
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 import sparkz.core.{VersionTag, versionToBytes}
 
 import java.math.BigInteger
@@ -20,7 +20,7 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMetadataStorageReader with ScorexLogging {
+class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMetadataStorageReader with SparkzLogging {
 
   require(storage != null, "Storage must be NOT NULL.")
 

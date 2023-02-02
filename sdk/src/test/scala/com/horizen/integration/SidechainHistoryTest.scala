@@ -23,7 +23,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
 import sparkz.core.settings.SparkzSettings
-import scorex.util.idToBytes
+import sparkz.util.{SparkzEncoding, idToBytes}
 
 import scala.util.{Failure, Success}
 
@@ -33,7 +33,7 @@ class SidechainHistoryTest extends JUnitSuite
   with SidechainBlockInfoFixture
   with StoreFixture
   with CompanionsFixture
-  with sparkz.core.utils.SparkzEncoding {
+  with SparkzEncoding {
 
   var customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   customTransactionSerializers.put(11.toByte, SemanticallyInvalidTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])

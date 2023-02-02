@@ -22,8 +22,8 @@ import com.horizen.evm.{ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
-import scorex.crypto.hash.Keccak256
-import scorex.util.ScorexLogging
+import sparkz.crypto.hash.Keccak256
+import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 import java.util.Optional
@@ -35,7 +35,7 @@ class StateDbAccountStateView(
     messageProcessors: Seq[MessageProcessor]
 ) extends BaseAccountStateView
       with AutoCloseable
-      with ScorexLogging {
+      with SparkzLogging {
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider =
     messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]

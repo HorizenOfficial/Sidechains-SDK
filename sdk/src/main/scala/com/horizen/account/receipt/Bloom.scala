@@ -3,8 +3,8 @@ package com.horizen.account.receipt
 import com.horizen.account.receipt.Bloom.BLOOM_BYTE_LENGTH
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
-import scorex.crypto.hash.Keccak256
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.crypto.hash.Keccak256
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import java.util

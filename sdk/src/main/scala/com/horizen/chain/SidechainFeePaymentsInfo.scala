@@ -2,7 +2,7 @@ package com.horizen.chain
 
 import com.horizen.box.ZenBox
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import com.horizen.transaction.FeePaymentsTransaction
 import com.horizen.transaction.FeePaymentsTransactionSerializer
 import scala.collection.JavaConverters._

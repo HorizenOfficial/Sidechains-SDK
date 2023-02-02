@@ -12,7 +12,7 @@ import com.horizen.serialization.Views;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.WithdrawalEpochUtils;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Collections;
