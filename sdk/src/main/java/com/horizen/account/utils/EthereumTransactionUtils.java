@@ -75,6 +75,18 @@ public final class EthereumTransactionUtils {
         }
     }
 
+    public static Optional<AddressProposition> getToAddressFromBytes(byte[] addressBytes) {
+        if (addressBytes == null) {
+            return Optional.empty();
+        } else {
+            if (addressBytes.length == 0) {
+                return Optional.empty();
+            } else {
+                return Optional.of(new AddressProposition(addressBytes));
+            }
+        }
+    }
+
 
     public static byte[] getDataFromString(String dataString) {
         if (dataString == null) {

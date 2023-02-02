@@ -1,6 +1,7 @@
 package com.horizen.account.utils;
 
 import com.horizen.account.proof.SignatureSecp256k1;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.transaction.EthereumTransaction;
 import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
@@ -10,6 +11,7 @@ import scorex.util.serialization.Reader;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Optional;
 
 import static com.horizen.account.utils.EthereumTransactionUtils.convertToLong;
 import static com.horizen.account.utils.EthereumTransactionUtils.getRealV;
@@ -94,12 +96,13 @@ public class EthereumTransactionDecoder {
         BigInteger maxPriorityFeePerGas = ((RlpString)values.getValues().get(2)).asPositiveBigInteger();
         BigInteger maxFeePerGas = ((RlpString)values.getValues().get(3)).asPositiveBigInteger();
         BigInteger gasLimit = ((RlpString)values.getValues().get(4)).asPositiveBigInteger();
-        String to = ((RlpString)values.getValues().get(5)).asString();
-        BigInteger value = ((RlpString)values.getValues().get(6)).asPositiveBigInteger();
-        String data = ((RlpString)values.getValues().get(7)).asString();
 
-        var optTo = EthereumTransactionUtils.getToAddressFromString(to);
-        var dataBytes = EthereumTransactionUtils.getDataFromString(data);
+        byte[] toBytes = ((RlpString)values.getValues().get(5)).getBytes();
+        Optional<AddressProposition> optTo = EthereumTransactionUtils.getToAddressFromBytes(toBytes);
+
+        BigInteger value = ((RlpString)values.getValues().get(6)).asPositiveBigInteger();
+
+        byte[] dataBytes = ((RlpString)values.getValues().get(7)).getBytes();
 
         if (((RlpList)values.getValues().get(8)).getValues().size() > 0)
             throw new IllegalArgumentException("Access list is not supported");
@@ -138,17 +141,24 @@ public class EthereumTransactionDecoder {
     private static EthereumTransaction RlpList2LegacyTransaction(RlpList rlpList) {
 
         RlpList values = (RlpList)rlpList.getValues().get(0);
+        if (values.getValues().size() != 6 && values.getValues().size() != 9) {
+            throw new IllegalArgumentException(
+                    "Error while rlp decoding payload of legacy tx, unexpected number of values in rlp list: " +
+                            values.getValues().size()
+            );
+        }
         BigInteger nonce = ((RlpString)values.getValues().get(0)).asPositiveBigInteger();
         BigInteger gasPrice = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
         BigInteger gasLimit = ((RlpString)values.getValues().get(2)).asPositiveBigInteger();
-        String to = ((RlpString)values.getValues().get(3)).asString();
+
+        byte[] toBytes = ((RlpString)values.getValues().get(3)).getBytes();
+        Optional<AddressProposition> optTo = EthereumTransactionUtils.getToAddressFromBytes(toBytes);
+
         BigInteger value = ((RlpString)values.getValues().get(4)).asPositiveBigInteger();
-        String data = ((RlpString)values.getValues().get(5)).asString();
 
-        var optTo = EthereumTransactionUtils.getToAddressFromString(to);
-        var dataBytes = EthereumTransactionUtils.getDataFromString(data);
+        byte[] dataBytes = ((RlpString)values.getValues().get(5)).getBytes();
 
-        if (values.getValues().size() != 6 && (values.getValues().size() != 8 || ((RlpString)values.getValues().get(7)).getBytes().length != 10) && (values.getValues().size() != 9 || ((RlpString)values.getValues().get(8)).getBytes().length != 10)) {
+        if (values.getValues().size() != 6 ) {
             byte[] v = ((RlpString)values.getValues().get(6)).getBytes();
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(7)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(8)).getBytes()), 32);

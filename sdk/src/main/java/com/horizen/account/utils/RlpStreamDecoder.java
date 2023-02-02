@@ -69,6 +69,12 @@ public class RlpStreamDecoder {
             if (reader == null || reader.remaining() == 0) {
                 return;
             }
+
+            // levelBytesToRead is derived from input data during recursion, so we must validate it
+            if (levelBytesToRead > reader.remaining()) {
+                throw new RuntimeException("RLP invalid parameters while decoding");
+            }
+
             int startLevelConsumedBytes = reader.consumed();
 
             while (reader.remaining() > 0) {
@@ -185,7 +191,7 @@ public class RlpStreamDecoder {
         byte pow = (byte) (lengthOfLength - 1);
         long length = 0;
         for (int i = 1; i <= lengthOfLength; ++i) {
-            length += reader.getUByte() << (8 * pow);
+            length += ((long)reader.getUByte()) << (8 * pow);
             pow--;
         }
         if (length < 0 || length > Integer.MAX_VALUE) {
