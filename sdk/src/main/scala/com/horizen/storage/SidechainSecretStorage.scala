@@ -136,16 +136,9 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     val key = getNonceKey(keyTypeSalt)
     val storageData = storage.get(key)
     storageData.asScala match {
-      case Some(baw) =>
-        Try {
-          Ints.fromByteArray(baw.data)
-        } match {
-          case Success(epoch) => Some(epoch)
-          case Failure(exception) =>
-            log.error("Error while nonce information parsing.", exception)
-            Option.empty
-        }
-      case _ => Some(0) // if the first secret of the domain type, the nonce is zero
+      case Some(nonceBytes) =>
+        Some(Ints.fromByteArray(nonceBytes.data))
+      case _ => Option.empty
     }
   }
 
