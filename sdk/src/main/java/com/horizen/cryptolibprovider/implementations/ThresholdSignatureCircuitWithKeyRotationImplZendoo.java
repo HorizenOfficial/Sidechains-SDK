@@ -1,5 +1,6 @@
 package com.horizen.cryptolibprovider.implementations;
 
+import com.google.common.primitives.Ints;
 import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
@@ -133,12 +134,23 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 btrFee,
                 customFieldsElements
         );
-        CreateProofResult proofAndQuality = null;
+        Optional<String> proofAndQuality = null;
         try {
-            proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(validatorKeysUpdatesList,
+
+            /*ValidatorKeysUpdatesList keysSignaturesList,
+            WithdrawalCertificate withdrawalCertificate,
+                    Optional<WithdrawalCertificate> prevWithdrawalCertificate,
+                    List<SchnorrSignature> certSignatures,
+            long maxPks,
+            long threshold,
+            FieldElement genesisKeysRootHash*/
+
+            proofAndQuality = NaiveThresholdSignatureWKeyRotation.debugCircuit(validatorKeysUpdatesList,
                     withdrawalCertificate, previousCertificateOption, signatures,
-                    signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.of(supportedSegmentSize),
-                    provingKeyPath, checkProvingKey, zk);
+                    signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash)/*, Optional.of(supportedSegmentSize),
+                    provingKeyPath, checkProvingKey, zk*/);
+            System.out.println(proofAndQuality.get());
+            throw new RuntimeException(proofAndQuality.get());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -164,7 +176,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         signatures.forEach(SchnorrSignature::freeSignature);
         customFieldsElements.forEach(FieldElement::freeFieldElement);
 
-        return new Pair<>(proofAndQuality.getProof(), proofAndQuality.getQuality());
+        return new Pair<>(Ints.toByteArray(1), 2L);
     }
 
     @Override

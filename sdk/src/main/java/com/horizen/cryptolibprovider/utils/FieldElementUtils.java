@@ -2,7 +2,6 @@ package com.horizen.cryptolibprovider.utils;
 
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.librustsidechains.Constants;
-import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
@@ -11,7 +10,7 @@ public class FieldElementUtils {
         return Constants.FIELD_ELEMENT_LENGTH();
     }
 
-    public static FieldElement messageToFieldElementStrict(byte[] message) {
+    public static FieldElement messageToFieldElement(byte[] message) {
         if (message.length != fieldElementLength()) {
             throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
                     message.length + " but it shall be equal to " + fieldElementLength());
@@ -19,12 +18,12 @@ public class FieldElementUtils {
         return FieldElement.deserialize(message);
     }
 
-    public static FieldElement messageToFieldElement(byte[] message) {
-        if (message.length > fieldElementLength()) {
-            throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
-                    message.length + " but it shall be less than " + fieldElementLength());
+    public static FieldElement elementToFieldElement(byte[] element) {
+        if (element.length > fieldElementLength()) {
+            throw new IllegalArgumentException("Element length is exceed allowed element len. Field len " +
+                    element.length + " but it shall be less than " + fieldElementLength());
         }
-        return FieldElement.deserialize(Arrays.copyOf(message, fieldElementLength()));
+        return FieldElement.deserialize(Arrays.copyOf(element, fieldElementLength()));
     }
 
     public static byte[] randomFieldElementBytes() {
