@@ -44,7 +44,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		From:         user,
 		To:           nil,
-		Input:        test.DelegateReceiverContractDeploy(),
+		Input:        test.DelegateReceiver.Deploy(),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
@@ -55,7 +55,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		Address:      *deployReceiverResult.ContractAddress,
 	})
-	if common.Bytes2Hex(test.DelegateReceiverContractRuntimeCode()) != common.Bytes2Hex(getReceiverCode) {
+	if common.Bytes2Hex(test.DelegateReceiver.RuntimeCode()) != common.Bytes2Hex(getReceiverCode) {
 		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getReceiverCode))
 	}
 	_ = instance.StateSetNonce(NonceParams{
@@ -69,7 +69,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		From:         user,
 		To:           nil,
-		Input:        test.DelegateCallerContractDeploy(),
+		Input:        test.DelegateCaller.Deploy(),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
@@ -80,7 +80,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		Address:      *deployCallerResult.ContractAddress,
 	})
-	if common.Bytes2Hex(test.DelegateCallerContractRuntimeCode()) != common.Bytes2Hex(getCallerCode) {
+	if common.Bytes2Hex(test.DelegateCaller.RuntimeCode()) != common.Bytes2Hex(getCallerCode) {
 		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getCallerCode))
 	}
 
@@ -90,7 +90,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		From:         user,
 		To:           deployReceiverResult.ContractAddress,
-		Input:        test.DelegateReceiverContractSetValue(test1Value),
+		Input:        test.DelegateReceiver.Store(test1Value),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
@@ -99,7 +99,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		From:         user,
 		To:           deployReceiverResult.ContractAddress,
-		Input:        test.DelegateReceiverContractGetValue(),
+		Input:        test.DelegateReceiver.Retrieve(),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
@@ -117,7 +117,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		From:         user,
 		To:           deployCallerResult.ContractAddress,
-		Input:        test.DelegateCallerContractSetValue(test2Value, deployReceiverResult.ContractAddress),
+		Input:        test.DelegateCaller.Store(test2Value, deployReceiverResult.ContractAddress),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 		TraceOptions: &TraceOptions{
@@ -132,7 +132,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		From:         user,
 		To:           deployCallerResult.ContractAddress,
-		Input:        test.DelegateCallerContractGetValue(),
+		Input:        test.DelegateCaller.Retrieve(),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})

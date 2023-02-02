@@ -46,7 +46,7 @@ func TestEvmStructLogger(t *testing.T) {
 		},
 		From:  sender,
 		To:    nil,
-		Input: test.StorageContractDeploy(initialValue),
+		Input: test.Storage.Deploy(initialValue),
 		Context: EvmContext{
 			Coinbase: common.Address{},
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
@@ -110,7 +110,7 @@ func TestEvmCallTracer(t *testing.T) {
 		},
 		From:  sender,
 		To:    nil,
-		Input: test.StorageContractDeploy(initialValue),
+		Input: test.Storage.Deploy(initialValue),
 		Context: EvmContext{
 			Coinbase: common.Address{},
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
@@ -161,7 +161,7 @@ func TestEvmCallTracerWithTracerConfig(t *testing.T) {
 		},
 		From:  sender,
 		To:    nil,
-		Input: test.StorageContractDeploy(initialValue),
+		Input: test.Storage.Deploy(initialValue),
 		Context: EvmContext{
 			Coinbase: common.Address{},
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
@@ -213,7 +213,7 @@ func TestEvmFourByteTrace(t *testing.T) {
 		},
 		From:  sender,
 		To:    nil,
-		Input: test.StorageContractDeploy(initialValue),
+		Input: test.Storage.Deploy(initialValue),
 		Context: EvmContext{
 			Coinbase: common.Address{},
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
@@ -251,7 +251,7 @@ func TestEvmOpCodes(t *testing.T) {
 		HandleParams: HandleParams{Handle: stateHandle},
 		From:         user,
 		To:           nil,
-		Input:        test.OpCodesContractDeploy(),
+		Input:        test.OpCodes.Deploy(),
 		AvailableGas: 200000,
 	}
 	err, resultDeploy := instance.EvmApply(evmParamsTemp)
@@ -262,7 +262,7 @@ func TestEvmOpCodes(t *testing.T) {
 		t.Fatalf("vm error: %v", resultDeploy.EvmError)
 	}
 	deployedCode := statedb.GetCode(*resultDeploy.ContractAddress)
-	if common.Bytes2Hex(test.OpCodesContractRuntimeCode()) != common.Bytes2Hex(deployedCode) {
+	if common.Bytes2Hex(test.OpCodes.RuntimeCode()) != common.Bytes2Hex(deployedCode) {
 		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(deployedCode))
 	}
 
@@ -303,7 +303,7 @@ func TestEvmOpCodes(t *testing.T) {
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
 				To:           resultDeploy.ContractAddress,
-				Input:        test.OpCodesContractCall(check.name),
+				Input:        test.OpCodes.Call(check.name),
 				AvailableGas: 200000,
 				GasPrice:     (*hexutil.Big)(gasPrice),
 				Context: EvmContext{
@@ -347,7 +347,7 @@ func TestEvmErrors(t *testing.T) {
 		HandleParams: HandleParams{Handle: stateHandle},
 		From:         user,
 		To:           nil,
-		Input:        test.StorageContractDeploy(common.Big0),
+		Input:        test.Storage.Deploy(common.Big0),
 		AvailableGas: 200000,
 	})
 	if resultDeploy.EvmError != "" {
@@ -380,7 +380,7 @@ func TestEvmErrors(t *testing.T) {
 			params: EvmParams{
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
-				Input:        test.StorageContractDeploy(common.Big0),
+				Input:        test.Storage.Deploy(common.Big0),
 				AvailableGas: 123,
 			},
 		},
@@ -390,7 +390,7 @@ func TestEvmErrors(t *testing.T) {
 			params: EvmParams{
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
-				Input:        test.StorageContractDeploy(common.Big0),
+				Input:        test.Storage.Deploy(common.Big0),
 				AvailableGas: 50000,
 			},
 		},
@@ -403,7 +403,7 @@ func TestEvmErrors(t *testing.T) {
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
 				Value:        (*hexutil.Big)(big.NewInt(100)),
-				Input:        test.StorageContractDeploy(common.Big0),
+				Input:        test.Storage.Deploy(common.Big0),
 				AvailableGas: 200000,
 			},
 		},
@@ -426,7 +426,7 @@ func TestEvmErrors(t *testing.T) {
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
 				To:           resultDeploy.ContractAddress,
-				Input:        test.StorageContractStore(common.Big3),
+				Input:        test.Storage.Store(common.Big3),
 				AvailableGas: 2000,
 			},
 		},
