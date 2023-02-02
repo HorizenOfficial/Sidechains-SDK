@@ -30,7 +30,7 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.{NodeViewHolder, bytesToId}
 
@@ -53,7 +53,7 @@ class EthService(
     sidechainTransactionActorRef: ActorRef
 ) extends RpcService
       with ClosableResourceHandler
-      with ScorexLogging {
+      with SparkzLogging {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   private def applyOnAccountView[R](functionToBeApplied: NV => R): R = {

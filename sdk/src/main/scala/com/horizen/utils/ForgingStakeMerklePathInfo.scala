@@ -2,7 +2,7 @@ package com.horizen.utils
 
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 
 case class ForgingStakeMerklePathInfo(forgingStakeInfo: ForgingStakeInfo, merklePath: MerklePath) extends BytesSerializable {

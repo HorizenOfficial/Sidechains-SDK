@@ -4,10 +4,10 @@ import com.horizen.account.event.EthereumEvent
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import org.web3j.abi.datatypes.Address
-import scorex.crypto.hash.Keccak256
-import scorex.util.ScorexLogging
+import sparkz.crypto.hash.Keccak256
+import sparkz.util.SparkzLogging
 
-abstract class NativeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
+abstract class NativeSmartContractMsgProcessor extends MessageProcessor with SparkzLogging {
 
   val contractAddress: Array[Byte]
   val contractCode: Array[Byte]

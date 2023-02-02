@@ -10,7 +10,7 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.{MerklePath, Utils}
-import scorex.util.bytesToId
+import sparkz.util.bytesToId
 
 import java.math.BigInteger
 import java.util.{ArrayList => JArrayList}

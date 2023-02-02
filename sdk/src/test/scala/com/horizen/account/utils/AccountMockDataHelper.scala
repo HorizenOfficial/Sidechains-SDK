@@ -37,7 +37,7 @@ import org.mockito.ArgumentMatchers
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
 import java.lang.{Byte => JByte}
 import java.math.BigInteger

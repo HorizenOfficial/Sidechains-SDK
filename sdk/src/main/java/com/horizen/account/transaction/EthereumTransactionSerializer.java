@@ -3,8 +3,8 @@ package com.horizen.account.transaction;
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.transaction.TransactionSerializer;
 import org.web3j.utils.Numeric;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public class EthereumTransactionSerializer implements TransactionSerializer<EthereumTransaction> {
 

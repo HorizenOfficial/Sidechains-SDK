@@ -50,21 +50,23 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list. Filter boxes of a given type
     */
   def allBoxes: Route = (post & path("allBoxes")) {
-    withAuth {
-      entity(as[ReqAllBoxes]) { body =>
-        withNodeView { sidechainNodeView =>
-          val optBoxTypeClass = body.boxTypeClass
-          val wallet = sidechainNodeView.getNodeWallet
-          val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(idHex => BytesUtils.fromHexString(idHex))
-          if (optBoxTypeClass.isEmpty) {
-            val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
-            ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
-          } else {
-            getClassByBoxClassName(optBoxTypeClass.get) match {
-              case Failure(exception) => SidechainApiError(exception)
-              case Success(clazz) =>
-                val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
-                ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqAllBoxes]) { body =>
+          withNodeView { sidechainNodeView =>
+            val optBoxTypeClass = body.boxTypeClass
+            val wallet = sidechainNodeView.getNodeWallet
+            val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(idHex => BytesUtils.fromHexString(idHex))
+            if (optBoxTypeClass.isEmpty) {
+              val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
+              ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
+            } else {
+              getClassByBoxClassName(optBoxTypeClass.get) match {
+                case Failure(exception) => SidechainApiError(exception)
+                case Success(clazz) =>
+                  val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
+                  ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
+              }
             }
           }
         }
@@ -76,11 +78,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Returns the balance of all types of coins boxes
     */
   def coinsBalance: Route = (post & path("coinsBalance")) {
-    withAuth {
-      withNodeView { sidechainNodeView =>
-        val wallet = sidechainNodeView.getNodeWallet
-        val sumOfBalances: Long = wallet.allCoinsBoxesBalance()
-        ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
+    withBasicAuth {
+      _ => {
+        withNodeView { sidechainNodeView =>
+          val wallet = sidechainNodeView.getNodeWallet
+          val sumOfBalances: Long = wallet.allCoinsBoxesBalance()
+          ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
+        }
       }
     }
   }
@@ -89,15 +93,17 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Returns the balance for given box type
     */
   def balanceOfType: Route = (post & path("balanceOfType")) {
-    withAuth {
-      entity(as[ReqBalance]) { body =>
-        withNodeView { sidechainNodeView =>
-          val wallet = sidechainNodeView.getNodeWallet
-          getClassByBoxClassName(body.boxType) match {
-            case Failure(exception) => SidechainApiError(exception)
-            case Success(clazz) =>
-              val balance = wallet.boxesBalance(clazz)
-              ApiResponseUtil.toResponse(RespBalance(balance))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqBalance]) { body =>
+          withNodeView { sidechainNodeView =>
+            val wallet = sidechainNodeView.getNodeWallet
+            getClassByBoxClassName(body.boxType) match {
+              case Failure(exception) => SidechainApiError(exception)
+              case Success(clazz) =>
+                val balance = wallet.boxesBalance(clazz)
+                ApiResponseUtil.toResponse(RespBalance(balance))
+            }
           }
         }
       }

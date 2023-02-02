@@ -14,11 +14,11 @@ import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer
 import com.horizen.utils.BytesUtils
 import io.circe.generic.auto._
 import io.circe.syntax._
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit system: ActorSystem, ec: ExecutionContext) extends ScorexLogging {
+class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit system: ActorSystem, ec: ExecutionContext) extends SparkzLogging {
 
   private[client] val http: HttpExt = Http(system)
   private val keySerializer: SchnorrPropositionSerializer = SchnorrPropositionSerializer.getSerializer

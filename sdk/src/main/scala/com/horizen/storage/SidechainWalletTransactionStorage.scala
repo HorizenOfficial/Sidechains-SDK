@@ -7,14 +7,14 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.utils.Utils
 
 import scala.collection.JavaConverters._
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.{Failure, Success, Try}
 
 class SidechainWalletTransactionStorage (storage : Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion)
 extends SidechainTypes
   with SidechainStorageInfo
-  with ScorexLogging
+  with SparkzLogging
 {
   // Version - block Id
   // Key - byte array transaction Id

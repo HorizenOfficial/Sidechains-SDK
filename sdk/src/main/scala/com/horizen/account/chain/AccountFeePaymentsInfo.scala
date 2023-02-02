@@ -6,7 +6,7 @@ import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.ListSerializer
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 

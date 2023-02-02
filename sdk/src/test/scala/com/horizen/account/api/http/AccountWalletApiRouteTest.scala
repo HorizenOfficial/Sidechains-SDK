@@ -35,22 +35,22 @@ class AccountWalletApiRouteTest extends AccountSidechainApiRouteTest with TableD
         val path = basePath + route
 
         if (expectedCode == StatusCodes.BadRequest.intValue) {
-          Post(path).withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
+          Post(path).addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
             rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
           }
-          Post(path).withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
+          Post(path).addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
             rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
           }
         }
 
-        Post(path).withHeaders(apiTokenHeader) ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        Post(path).addCredentials(credentials) ~> Route.seal(sidechainWalletApiRoute) ~> check {
           status.intValue() shouldBe expectedCode
           if (expectedCode != StatusCodes.InternalServerError.intValue) {
             responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
           }
         }
 
-        Post(path).withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
+        Post(path).addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
           rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
         }
       }
@@ -59,14 +59,14 @@ class AccountWalletApiRouteTest extends AccountSidechainApiRouteTest with TableD
     "reply at /getBalance" in {
       val path = basePath + "getBalance"
 
-      Post(path).withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqGetBalance("123"))) ~> sidechainWalletApiRoute ~> check {
+      Post(path).addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqGetBalance("123"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
         assertTrue(result != null)
       }
 
-      Post(path).withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqGetBalance("1234567890123456789012345678901234567890"))) ~> sidechainWalletApiRoute ~> check {
+      Post(path).addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqGetBalance("1234567890123456789012345678901234567890"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
