@@ -10,6 +10,8 @@ import (
 
 //go:generate solc --bin --bin-runtime --hashes --opcodes --storage-layout --optimize -o compiled --overwrite Storage.sol
 //go:generate solc --bin --bin-runtime --hashes --opcodes --storage-layout --optimize -o compiled --overwrite OpCodes.sol
+//go:generate solc --bin --bin-runtime --hashes --opcodes --storage-layout --optimize -o compiled --overwrite DelegateCaller.sol
+//go:generate solc --bin --bin-runtime --hashes --opcodes --storage-layout --optimize -o compiled --overwrite DelegateReceiver.sol
 var (
 	//go:embed compiled/Storage.bin
 	storageDeployCode string
@@ -17,6 +19,19 @@ var (
 	storageRuntimeCode string
 	//go:embed compiled/Storage.signatures
 	storageSignatures string
+
+	//go:embed compiled/DelegateCaller.bin
+	delegateCallerDeployCode string
+	//go:embed compiled/DelegateCaller.bin-runtime
+	delegateCallerRuntimeCode string
+	//go:embed compiled/DelegateCaller.signatures
+	delegateCallerSignatures string
+	//go:embed compiled/DelegateReceiver.bin
+	delegateReceiverDeployCode string
+	//go:embed compiled/DelegateReceiver.bin-runtime
+	delegateReceiverRuntimeCode string
+	//go:embed compiled/DelegateReceiver.signatures
+	delegateReceiverSignatures string
 
 	//go:embed compiled/OpCodes.bin
 	opCodesDeployCode string
@@ -65,4 +80,42 @@ func OpCodesContractRuntimeCode() []byte {
 
 func OpCodesContractCall(name string) []byte {
 	return findSignature(opCodesSignatures, name)
+}
+
+func DelegateCallerContractDeploy() []byte {
+	return common.FromHex(delegateCallerDeployCode)
+}
+
+func DelegateCallerContractRuntimeCode() []byte {
+	return common.FromHex(delegateCallerRuntimeCode)
+}
+
+func DelegateCallerContractSetValue(value *big.Int, address *common.Address) []byte {
+	return append(
+		append(
+			findSignature(delegateCallerSignatures, "store"),
+			common.BigToHash(value).Bytes()...,
+		),
+		address.Hash().Bytes()...,
+	)
+}
+
+func DelegateCallerContractGetValue() []byte {
+	return findSignature(delegateCallerSignatures, "retrieve")
+}
+
+func DelegateReceiverContractDeploy() []byte {
+	return common.FromHex(delegateReceiverDeployCode)
+}
+
+func DelegateReceiverContractRuntimeCode() []byte {
+	return common.FromHex(delegateReceiverRuntimeCode)
+}
+
+func DelegateReceiverContractSetValue(value *big.Int) []byte {
+	return append(findSignature(delegateReceiverSignatures, "store"), common.BigToHash(value).Bytes()...)
+}
+
+func DelegateReceiverContractGetValue() []byte {
+	return findSignature(delegateReceiverSignatures, "retrieve")
 }
