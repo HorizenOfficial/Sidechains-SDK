@@ -3,8 +3,8 @@ package com.horizen.account.receipt
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
 import com.horizen.utils.BytesUtils
-import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util

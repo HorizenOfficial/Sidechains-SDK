@@ -1,7 +1,7 @@
 package com.horizen.proposition;
 
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public final class MCPublicKeyHashPropositionSerializer implements PropositionSerializer<MCPublicKeyHashProposition> {
     private static MCPublicKeyHashPropositionSerializer serializer;

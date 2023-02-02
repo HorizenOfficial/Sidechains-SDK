@@ -2,8 +2,8 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
@@ -12,7 +12,7 @@ import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import java.math.BigInteger
 import scala.util.Random

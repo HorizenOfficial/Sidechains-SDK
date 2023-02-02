@@ -24,7 +24,7 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 
@@ -45,7 +45,7 @@ class AccountForgeMessageBuilder(
       allowNoWebsocketConnectionInRegtest
     )
       with ClosableResourceHandler
-      with ScorexLogging {
+      with SparkzLogging {
   type FPI = AccountFeePaymentsInfo
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet

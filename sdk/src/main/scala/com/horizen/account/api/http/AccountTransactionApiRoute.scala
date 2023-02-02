@@ -100,49 +100,50 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
    *  - otherwise sign it and send the resulting tx to the network and return the transaction id
    */
   def createLegacyTransaction: Route = (post & path("createLegacyTransaction")) {
-    withAuth {
-      entity(as[ReqLegacyTransaction]) { body =>
-        val txCost = body.value.getOrElse(BigInteger.ZERO)
-          .add(body.gasLimit.multiply(body.gasPrice))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqLegacyTransaction]) { body =>
+          val txCost = body.value.getOrElse(BigInteger.ZERO)
+            .add(body.gasLimit.multiply(body.gasPrice))
 
-        applyOnNodeView { sidechainNodeView =>
-          val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
-          secret match {
-            case Some(secret) =>
-              // compute the nonce if not specified in the params
-              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+          applyOnNodeView { sidechainNodeView =>
+            val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+            secret match {
+              case Some(secret) =>
+                // compute the nonce if not specified in the params
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
 
-              val unsignedTx = new EthereumTransaction(
-                EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
-                nonce,
-                body.gasPrice,
-                body.gasLimit,
-                body.value.getOrElse(BigInteger.ZERO),
-                EthereumTransactionUtils.getDataFromString(body.data),
-                if (body.signature_v.isDefined)
-                  new SignatureSecp256k1(
-                    BytesUtils.fromHexString(body.signature_v.get),
-                    BytesUtils.fromHexString(body.signature_r.get),
-                    BytesUtils.fromHexString(body.signature_s.get))
-                else
-                  null
-              )
-              val resp = if (body.outputRawBytes.getOrElse(false)) {
-                ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
-              } else {
-                val signedTx = signTransactionWithSecret(secret, unsignedTx)
-                validateAndSendTransaction(signedTx)
-              }
-              resp
+                val unsignedTx = new EthereumTransaction(
+                  EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
+                  nonce,
+                  body.gasPrice,
+                  body.gasLimit,
+                  body.value.getOrElse(BigInteger.ZERO),
+                  EthereumTransactionUtils.getDataFromString(body.data),
+                  if (body.signature_v.isDefined)
+                    new SignatureSecp256k1(
+                      BytesUtils.fromHexString(body.signature_v.get),
+                      BytesUtils.fromHexString(body.signature_r.get),
+                      BytesUtils.fromHexString(body.signature_s.get))
+                  else
+                    null
+                )
+                val resp = if (body.outputRawBytes.getOrElse(false)) {
+                  ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
+                } else {
+                  val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                  validateAndSendTransaction(signedTx)
+                }
+                resp
 
-            case None =>
-              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+            }
           }
         }
       }
     }
   }
-
 
   /**
    * Create an unsigned EIP155 (Simple replay attack protection) legacy eth transaction, and then:
@@ -151,18 +152,19 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
    *  - otherwise sign it and send the resulting tx to the network and return the transaction id
    */
   def createLegacyEIP155Transaction: Route = (post & path("createLegacyEIP155Transaction")) {
-    withAuth {
-      entity(as[ReqLegacyTransaction]) { body =>
-        val txCost = body.value.getOrElse(BigInteger.ZERO)
-          .add(body.gasLimit.multiply(body.gasPrice))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqLegacyTransaction]) { body =>
+          val txCost = body.value.getOrElse(BigInteger.ZERO)
+            .add(body.gasLimit.multiply(body.gasPrice))
 
-        applyOnNodeView { sidechainNodeView =>
+          applyOnNodeView { sidechainNodeView =>
 
-          val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
-          secret match {
-            case Some(secret) =>
-              // compute the nonce if not specified in the params
-              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+            val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+            secret match {
+              case Some(secret) =>
+                // compute the nonce if not specified in the params
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
 
               val unsignedTx = new EthereumTransaction(
                 params.chainId,
@@ -194,6 +196,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         }
       }
     }
+  }
   }
 
   /**
@@ -203,45 +206,47 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
    *  - otherwise sign it and send the resulting tx to the network and return the transaction id
    */
   def createEIP1559Transaction: Route = (post & path("createEIP1559Transaction")) {
-    withAuth {
-      entity(as[ReqEIP1559Transaction]) { body =>
+    withBasicAuth {
+      _ => {
+        entity(as[ReqEIP1559Transaction]) { body =>
 
-        val txCost = body.value.getOrElse(BigInteger.ZERO)
-          .add(body.gasLimit.multiply(body.maxFeePerGas))
+          val txCost = body.value.getOrElse(BigInteger.ZERO)
+            .add(body.gasLimit.multiply(body.maxFeePerGas))
 
-        // lock the view and try to create CoreTransaction
-        applyOnNodeView { sidechainNodeView =>
-          val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
-          secret match {
-            case Some(secret) =>
-              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+            secret match {
+              case Some(secret) =>
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
 
-              val unsignedTx: EthereumTransaction = new EthereumTransaction(
-                params.chainId,
-                EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
-                nonce,
-                body.gasLimit,
-                body.maxPriorityFeePerGas,
-                body.maxFeePerGas,
-                body.value.getOrElse(BigInteger.ZERO),
-                EthereumTransactionUtils.getDataFromString(body.data),
-                if (body.signature_v.isDefined)
-                  new SignatureSecp256k1(
-                    BytesUtils.fromHexString(body.signature_v.get),
-                    BytesUtils.fromHexString(body.signature_r.get),
-                    BytesUtils.fromHexString(body.signature_s.get))
-                else
-                  null              )
-              val resp = if (body.outputRawBytes.getOrElse(false)) {
-                ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
-              } else {
-                val signedTx = signTransactionWithSecret(secret, unsignedTx)
-                validateAndSendTransaction(signedTx)
-              }
-              resp
+                val unsignedTx: EthereumTransaction = new EthereumTransaction(
+                  params.chainId,
+                  EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
+                  nonce,
+                  body.gasLimit,
+                  body.maxPriorityFeePerGas,
+                  body.maxFeePerGas,
+                  body.value.getOrElse(BigInteger.ZERO),
+                  EthereumTransactionUtils.getDataFromString(body.data),
+                  if (body.signature_v.isDefined)
+                    new SignatureSecp256k1(
+                      BytesUtils.fromHexString(body.signature_v.get),
+                      BytesUtils.fromHexString(body.signature_r.get),
+                      BytesUtils.fromHexString(body.signature_s.get))
+                  else
+                    null)
+                val resp = if (body.outputRawBytes.getOrElse(false)) {
+                  ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
+                } else {
+                  val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                  validateAndSendTransaction(signedTx)
+                }
+                resp
 
-            case None =>
-              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+            }
           }
         }
       }
@@ -253,19 +258,21 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
    * and return the resulting signed raw eth transaction bytes
    */
   def signTransaction: Route = (post & path("signTransaction")) {
-    withAuth {
-      entity(as[ReqSignTransaction]) {
-        body => {
-          applyOnNodeView { sidechainNodeView =>
-            val unsignedTx : EthereumTransaction = companion.parseBytes(BytesUtils.fromHexString(body.transactionBytes)).asInstanceOf[EthereumTransaction]
-            val txCost = unsignedTx.maxCost
-            val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
-            secret match {
-              case Some(secret) =>
-                val signedTx = signTransactionWithSecret(secret, unsignedTx)
-                ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqSignTransaction]) {
+          body => {
+            applyOnNodeView { sidechainNodeView =>
+              val unsignedTx: EthereumTransaction = companion.parseBytes(BytesUtils.fromHexString(body.transactionBytes)).asInstanceOf[EthereumTransaction]
+              val txCost = unsignedTx.maxCost
+              val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+              secret match {
+                case Some(secret) =>
+                  val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                  ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
+                case None =>
+                  ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              }
             }
           }
         }
@@ -277,16 +284,17 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   // expressing the vote for opening the restrict forgers list.
   // Analogous to the UTXO model createOpenStakeTransaction
   def openForgerList: Route = (post & path("openForgerList")) {
-    withAuth {
-      entity(as[ReqOpenStakeForgerList]) { body =>
+    withBasicAuth {
+      _ => {
+        entity(as[ReqOpenStakeForgerList]) { body =>
 
-        // first of all reject the command if we do not have closed forger list
-        if (!params.restrictForgers) {
-          ApiResponseUtil.toResponse(ErrorOpenForgersList(
-            s"The list of forger is not restricted (see configuration)",
-            JOptional.empty()))
+          // first of all reject the command if we do not have closed forger list
+          if (!params.restrictForgers) {
+            ApiResponseUtil.toResponse(ErrorOpenForgersList(
+              s"The list of forger is not restricted (see configuration)",
+              JOptional.empty()))
 
-        } else {
+          } else {
 
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
@@ -346,6 +354,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
                 }
 
+              }
             }
           }
         }
@@ -371,65 +380,67 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   def makeForgerStake: Route = (post & path("makeForgerStake")) {
-    withAuth {
-      entity(as[ReqCreateForgerStake]) { body =>
-        // lock the view and try to create CoreTransaction
-        applyOnNodeView { sidechainNodeView =>
-          val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateForgerStake]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
 
-          // default gas related params
-          val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
-          var maxPriorityFeePerGas = BigInteger.valueOf(120)
-          var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-          var gasLimit = BigInteger.valueOf(500000)
+            // default gas related params
+            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+            var maxPriorityFeePerGas = BigInteger.valueOf(120)
+            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+            var gasLimit = BigInteger.valueOf(500000)
 
-          if (body.gasInfo.isDefined) {
-            maxFeePerGas = body.gasInfo.get.maxFeePerGas
-            maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
-            gasLimit = body.gasInfo.get.gasLimit
-          }
+            if (body.gasInfo.isDefined) {
+              maxFeePerGas = body.gasInfo.get.maxFeePerGas
+              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+              gasLimit = body.gasInfo.get.gasLimit
+            }
 
-          val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
 
-          val secret = getFittingSecret(sidechainNodeView, None, txCost)
+            val secret = getFittingSecret(sidechainNodeView, None, txCost)
 
-          secret match {
-            case Some(secret) =>
+            secret match {
+              case Some(secret) =>
 
-              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-              val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
-              val tmpTx: EthereumTransaction = new EthereumTransaction(
-                params.chainId,
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
+                val tmpTx: EthereumTransaction = new EthereumTransaction(
+                  params.chainId,
                 JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
-                nonce,
-                gasLimit,
-                maxPriorityFeePerGas,
-                maxFeePerGas,
-                valueInWei,
-                dataBytes,
-                null
-              )
-              validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-            case None =>
-              ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+                  nonce,
+                  gasLimit,
+                  maxPriorityFeePerGas,
+                  maxFeePerGas,
+                  valueInWei,
+                  dataBytes,
+                  null
+                )
+                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+            }
           }
-
         }
       }
     }
   }
 
   def spendForgingStake: Route = (post & path("spendForgingStake")) {
-    withAuth {
-      entity(as[ReqSpendForgingStake]) { body =>
-        // lock the view and try to create CoreTransaction
-        applyOnNodeView { sidechainNodeView =>
-          val valueInWei = BigInteger.ZERO
-          // default gas related params
-          val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
-          var maxPriorityFeePerGas = BigInteger.valueOf(120)
-          var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-          var gasLimit = BigInteger.valueOf(500000)
+    withBasicAuth {
+      _ => {
+        entity(as[ReqSpendForgingStake]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val valueInWei = BigInteger.ZERO
+            // default gas related params
+            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+            var maxPriorityFeePerGas = BigInteger.valueOf(120)
+            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+            var gasLimit = BigInteger.valueOf(500000)
 
           if (body.gasInfo.isDefined) {
             maxFeePerGas = body.gasInfo.get.maxFeePerGas
@@ -467,12 +478,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                       null
                     )
 
-                    validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx))
-                  }
-                case None => ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
-              }
-            case None =>
-              ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+                      validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx))
+                    }
+                  case None => ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
+                }
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+            }
           }
         }
       }
@@ -511,8 +523,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   def myForgingStakes: Route = (post & path("myForgingStakes")) {
-    withAuth {
-      withNodeView { sidechainNodeView =>
+    withBasicAuth {
+      _ => {
+        withNodeView { sidechainNodeView =>
           val accountState = sidechainNodeView.getNodeState
           val listOfForgerStakes = accountState.getListOfForgersStakes
 
@@ -520,25 +533,26 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             val wallet = sidechainNodeView.getNodeWallet
             val walletPubKeys = wallet.allSecrets().map(_.publicImage).toSeq
             val ownedStakes = listOfForgerStakes.view.filter(stake => {
-                walletPubKeys.contains(stake.forgerStakeData.ownerPublicKey)
+              walletPubKeys.contains(stake.forgerStakeData.ownerPublicKey)
             })
             ApiResponseUtil.toResponse(RespForgerStakes(ownedStakes.toList))
           } else {
             ApiResponseUtil.toResponse(RespForgerStakes(Seq().toList))
           }
         }
-
+      }
     }
   }
 
   def withdrawCoins: Route = (post & path("withdrawCoins")) {
-    withAuth {
-      entity(as[ReqWithdrawCoins]) { body =>
-        // lock the view and try to create CoreTransaction
-        applyOnNodeView { sidechainNodeView =>
-          val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
-          val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
-          val gasInfo = body.gasInfo
+    withBasicAuth {
+      _ => {
+        entity(as[ReqWithdrawCoins]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
+            val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
+            val gasInfo = body.gasInfo
 
           // default gas related params
           val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
@@ -574,6 +588,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
           }
 
+          }
         }
       }
     }
@@ -590,97 +605,100 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   def createSmartContract: Route = (post & path("createSmartContract")) {
-    withAuth {
-      entity(as[ReqCreateContract]) { body =>
-        // lock the view and try to create CoreTransaction
-        applyOnNodeView { sidechainNodeView =>
-          val valueInWei = BigInteger.ZERO
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateContract]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val valueInWei = BigInteger.ZERO
 
-          val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
-          var maxPriorityFeePerGas = GasUtil.TxGasContractCreation
-          var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-          var gasLimit = BigInteger.valueOf(500000)
+            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+            var maxPriorityFeePerGas = GasUtil.TxGasContractCreation
+            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+            var gasLimit = BigInteger.valueOf(500000)
 
-          if (body.gasInfo.isDefined) {
-            maxFeePerGas = body.gasInfo.get.maxFeePerGas
-            maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
-            gasLimit = body.gasInfo.get.gasLimit
+            if (body.gasInfo.isDefined) {
+              maxFeePerGas = body.gasInfo.get.maxFeePerGas
+              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+              gasLimit = body.gasInfo.get.gasLimit
+            }
+
+            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+            val secret = getFittingSecret(sidechainNodeView, None, txCost)
+            secret match {
+              case Some(secret) =>
+                val to: String = null
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                val data = body.contractCode
+                val tmpTx: EthereumTransaction = new EthereumTransaction(
+                  params.chainId,
+                  EthereumTransactionUtils.getToAddressFromString(to),
+                  nonce,
+                  gasLimit,
+                  maxPriorityFeePerGas,
+                  maxFeePerGas,
+                  valueInWei,
+                  EthereumTransactionUtils.getDataFromString(data),
+                  null
+                )
+                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+            }
           }
-
-          val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
-          val secret = getFittingSecret(sidechainNodeView, None, txCost)
-          secret match {
-            case Some(secret) =>
-              val to: String = null
-              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-              val data = body.contractCode
-              val tmpTx: EthereumTransaction = new EthereumTransaction(
-                params.chainId,
-                EthereumTransactionUtils.getToAddressFromString(to),
-                nonce,
-                gasLimit,
-                maxPriorityFeePerGas,
-                maxFeePerGas,
-                valueInWei,
-                EthereumTransactionUtils.getDataFromString(data),
-                null
-              )
-              validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-            case None =>
-              ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
-          }
-
         }
       }
     }
   }
 
   def createKeyRotationTransaction: Route = (post & path("createKeyRotationTransaction")) {
-    withAuth {
-      entity(as[ReqCreateKeyRotationTransaction]) { body =>
-        circuitType match {
-          case NaiveThresholdSignatureCircuit =>
-            ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
-          case NaiveThresholdSignatureCircuitWithKeyRotation =>
-            applyOnNodeView { sidechainNodeView =>
-              checkKeyRotationProofValidity(body)
-              val data = encodeSubmitKeyRotationRequestCmd(body)
-              val gasInfo = body.gasInfo
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateKeyRotationTransaction]) { body =>
+          circuitType match {
+            case NaiveThresholdSignatureCircuit =>
+              ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
+            case NaiveThresholdSignatureCircuitWithKeyRotation =>
+              applyOnNodeView { sidechainNodeView =>
+                checkKeyRotationProofValidity(body)
+                val data = encodeSubmitKeyRotationRequestCmd(body)
+                val gasInfo = body.gasInfo
 
-              // default gas related params
-              val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
-              var maxPriorityFeePerGas = BigInteger.valueOf(120)
-              var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-              var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+                // default gas related params
+                val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+                var maxPriorityFeePerGas = BigInteger.valueOf(120)
+                var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+                var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
 
-              if (gasInfo.isDefined) {
-                maxFeePerGas = gasInfo.get.maxFeePerGas
-                maxPriorityFeePerGas = gasInfo.get.maxPriorityFeePerGas
-                gasLimit = gasInfo.get.gasLimit
-              }
+                if (gasInfo.isDefined) {
+                  maxFeePerGas = gasInfo.get.maxFeePerGas
+                  maxPriorityFeePerGas = gasInfo.get.maxPriorityFeePerGas
+                  gasLimit = gasInfo.get.gasLimit
+                }
 
-              val txCost = maxFeePerGas.multiply(gasLimit)
-              val secret = getFittingSecret(sidechainNodeView, None, txCost)
-              secret match {
-                case Some(secret) =>
+                val txCost = maxFeePerGas.multiply(gasLimit)
+                val secret = getFittingSecret(sidechainNodeView, None, txCost)
+                secret match {
+                  case Some(secret) =>
 
-                  val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-                  val tmpTx: EthereumTransaction = new EthereumTransaction(
-                    params.chainId,
+                    val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                    val tmpTx: EthereumTransaction = new EthereumTransaction(
+                      params.chainId,
                     JOptional.of(new AddressProposition(CertificateKeyRotationMsgProcessor.CertificateKeyRotationContractAddress)),
-                    nonce,
-                    gasLimit,
-                    maxPriorityFeePerGas,
-                    maxFeePerGas,
-                    BigInteger.ZERO,
-                    EthereumTransactionUtils.getDataFromString(data),
-                    null
-                  )
-                  validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-                case None =>
-                  ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+                      nonce,
+                      gasLimit,
+                      maxPriorityFeePerGas,
+                      maxFeePerGas,
+                      BigInteger.ZERO,
+                      EthereumTransactionUtils.getDataFromString(data),
+                      null
+                    )
+                    validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                  case None =>
+                    ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+                }
               }
-            }
+          }
         }
       }
     }

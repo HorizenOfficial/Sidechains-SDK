@@ -14,6 +14,7 @@ import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, Sid
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import sparkz.core.settings.RESTApiSettings
+import sparkz.util.ModifierId
 import sparkz.core.serialization.SparkzSerializer
 
 import scala.collection.JavaConverters._

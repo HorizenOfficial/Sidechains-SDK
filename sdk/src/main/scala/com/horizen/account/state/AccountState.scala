@@ -19,10 +19,10 @@ import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 
 import java.math.BigInteger
 import java.util
@@ -41,7 +41,7 @@ class AccountState(
       with TransactionValidation[SidechainTypes#SCAT]
       with NodeAccountState
       with ClosableResourceHandler
-      with ScorexLogging {
+      with SparkzLogging {
 
   override type NVCT = AccountState
 
@@ -494,7 +494,7 @@ class AccountState(
   }
 }
 
-object AccountState extends ScorexLogging {
+object AccountState extends SparkzLogging {
   private[horizen] def restoreState(
       stateMetadataStorage: AccountStateMetadataStorage,
       stateDbStorage: Database,

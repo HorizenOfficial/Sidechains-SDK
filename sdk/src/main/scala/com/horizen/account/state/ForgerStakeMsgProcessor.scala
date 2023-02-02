@@ -5,9 +5,9 @@ import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArg
 import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import com.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, _}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
+import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.evm.utils.Address
@@ -15,7 +15,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.BytesUtils
-import scorex.crypto.hash.{Blake2b256, Keccak256}
+import sparkz.crypto.hash.{Blake2b256, Keccak256}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.seqAsJavaListConverter

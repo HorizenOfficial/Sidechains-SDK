@@ -25,7 +25,7 @@ import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 

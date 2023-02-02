@@ -2,16 +2,16 @@ package com.horizen.box;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
-import com.horizen.SparkzEncoding;
 import com.horizen.box.data.AbstractBoxData;
 import com.horizen.proposition.Proposition;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
+import sparkz.util.SparkzEncoder;
 
 import java.util.Arrays;
 import java.util.Objects;
 
 public abstract class AbstractBox<P extends Proposition, BD extends AbstractBoxData<P, B, BD>, B extends AbstractBox<P, BD, B>>
-        extends SparkzEncoding implements Box<P> {
+        implements Box<P> {
     protected final BD boxData;
     protected final long nonce;
 
@@ -78,6 +78,15 @@ public abstract class AbstractBox<P extends Proposition, BD extends AbstractBoxD
     @Override
     public String toString() {
         return String.format("%s(id: %s, proposition: %s, value: %d, nonce: %d)", this.getClass().getSimpleName(), encoder().encode(id()), proposition(), value(), nonce());
+    }
+
+    /**
+     * This method is only needed cause we mix java and scala types.
+     * Java classes cannot use scala traits with implicit values, they treat them like unimplemented.
+     * Otherwise, we can just use sparkz.util.SparkzEncoding like in other places.
+     */
+    public static SparkzEncoder encoder() {
+        return new SparkzEncoder();
     }
 
     @Override

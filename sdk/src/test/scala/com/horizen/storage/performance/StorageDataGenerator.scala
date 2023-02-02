@@ -4,7 +4,7 @@ import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{ByteArrayWrapper, byteArrayToWrapper, Pair => JPair, _}
-import scorex.util.{ModifierId, idToBytes}
+import sparkz.util.{ModifierId, idToBytes}
 
 import scala.util.Random
 

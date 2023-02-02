@@ -1,7 +1,7 @@
 package com.horizen.proposition;
 
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public final class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition> {
     private static PublicKey25519PropositionSerializer serializer;

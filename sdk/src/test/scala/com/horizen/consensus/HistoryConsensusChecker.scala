@@ -12,7 +12,7 @@ import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage}
 import com.horizen.validation.ConsensusValidator
 import sparkz.core.utils.TimeProvider
 import sparkz.core.utils.TimeProvider.Time
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.annotation.tailrec
 import scala.collection.mutable

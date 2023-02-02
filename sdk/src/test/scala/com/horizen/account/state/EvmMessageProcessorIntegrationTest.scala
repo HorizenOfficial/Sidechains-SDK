@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertFalse, assertNotNull, assertTrue}
 import org.junit.Test
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 

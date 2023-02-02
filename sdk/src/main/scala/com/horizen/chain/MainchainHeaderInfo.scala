@@ -2,7 +2,7 @@ package com.horizen.chain
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.serialization.Views
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 @JsonView(Array(classOf[Views.Default]))
 case class MainchainHeaderInfo(hash: MainchainHeaderHash,

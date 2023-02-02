@@ -13,7 +13,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import com.horizen.fork.ForkManager
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 

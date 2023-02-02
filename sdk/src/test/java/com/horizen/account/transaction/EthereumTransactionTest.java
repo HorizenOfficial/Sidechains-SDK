@@ -9,7 +9,7 @@ import com.horizen.evm.utils.Address;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 import org.web3j.utils.Numeric;
-import scorex.crypto.hash.Keccak256;
+import sparkz.crypto.hash.Keccak256;
 
 import java.math.BigInteger;
 import java.util.Arrays;

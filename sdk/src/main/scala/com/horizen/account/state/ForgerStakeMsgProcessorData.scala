@@ -12,8 +12,8 @@ import com.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
-import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util

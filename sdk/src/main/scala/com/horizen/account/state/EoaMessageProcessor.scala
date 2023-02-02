@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
@@ -8,7 +8,7 @@ import scala.compat.java8.OptionConverters.RichOptionalGeneric
  * EoaMessageProcessor is responsible for management of regular coin transfers inside sidechain.
  * In our case to make a transfer from one user account (EOA account) to another user account.
  */
-object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
+object EoaMessageProcessor extends MessageProcessor with SparkzLogging {
   override def init(view: BaseAccountStateView): Unit = {
     // No actions required for transferring coins during genesis state initialization.
   }

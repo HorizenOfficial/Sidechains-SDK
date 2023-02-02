@@ -2,8 +2,8 @@ package com.horizen.box.data;
 
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.MCPublicKeyHashPropositionSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 
 public final class WithdrawalRequestBoxDataSerializer implements BoxDataSerializer<WithdrawalRequestBoxData> {

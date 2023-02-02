@@ -1,6 +1,6 @@
 package com.horizen.utils;
 
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
