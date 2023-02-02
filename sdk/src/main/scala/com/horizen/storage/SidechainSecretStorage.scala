@@ -151,7 +151,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
 
   def storeNonce(nonce: Int, keyTypeSalt: Array[Byte]): Try[SidechainSecretStorage] = Try {
-    require(nonce > 0, "Nonce must be not negative")
+    require(nonce >= 0, "Nonce must be not negative")
     require(keyTypeSalt != null, "Key type salt must be NOT NULL")
     val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val removeList = new JArrayList[ByteArrayWrapper]()

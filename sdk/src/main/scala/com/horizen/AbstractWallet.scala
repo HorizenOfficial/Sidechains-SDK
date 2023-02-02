@@ -114,9 +114,8 @@ abstract class AbstractWallet[
       case Some(nonce) => nonce
       case None => allSecrets.count(_.isInstanceOf[T])
     }
-    val salt: Array[Byte] = secretCreator.salt()
     for (_ <- 0 to secretStorageSize) {
-      val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
+      val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), secretCreator.salt()))
       val secret: T = secretCreator.generateSecret(seed)
       if (!secretStorage.contains(secret)) {
         val trySecret = secretStorage.add(secret)
