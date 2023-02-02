@@ -24,7 +24,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   require(sidechainSecretsCompanion != null, "SidechainSecretsCompanion must be NOT NULL.")
 
   private[horizen] def getNonceKey(keyTypeSalt: Array[Byte]): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, keyTypeSalt))
+    Utils.calculateKey(Bytes.concat("nonce".getBytes, keyTypeSalt))
   }
 
   private val secrets = new mutable.LinkedHashMap[ByteArrayWrapper, SidechainTypes#SCS]()
@@ -134,7 +134,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   def getNonce(keyTypeSalt: Array[Byte]): Option[Int] = {
     val key = getNonceKey(keyTypeSalt)
-    val storageData = storage.get(key)// need to mock (for some specific key need to mock value, and assert return value
+    val storageData = storage.get(key)
     storageData.asScala match {
       case Some(baw) =>
         Try {
@@ -156,7 +156,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val removeList = new JArrayList[ByteArrayWrapper]()
     updateList.add(new JPair(getNonceKey(keyTypeSalt), new ByteArrayWrapper(nonce)))
-    storage.update(new ByteArrayWrapper(Utils.nextVersion), updateList, removeList) // need to mock. Need to pass mocked inner storage. Inside mock I check in thenAnswer()
+    storage.update(new ByteArrayWrapper(Utils.nextVersion), updateList, removeList)
     this
   }
 }
