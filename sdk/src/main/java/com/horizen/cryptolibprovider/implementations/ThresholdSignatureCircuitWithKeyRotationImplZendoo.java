@@ -134,23 +134,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 btrFee,
                 customFieldsElements
         );
-        Optional<String> proofAndQuality = null;
+        CreateProofResult proofAndQuality = null;
         try {
-
-            /*ValidatorKeysUpdatesList keysSignaturesList,
-            WithdrawalCertificate withdrawalCertificate,
-                    Optional<WithdrawalCertificate> prevWithdrawalCertificate,
-                    List<SchnorrSignature> certSignatures,
-            long maxPks,
-            long threshold,
-            FieldElement genesisKeysRootHash*/
-
-            proofAndQuality = NaiveThresholdSignatureWKeyRotation.debugCircuit(validatorKeysUpdatesList,
+            proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(validatorKeysUpdatesList,
                     withdrawalCertificate, previousCertificateOption, signatures,
-                    signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash)/*, Optional.of(supportedSegmentSize),
-                    provingKeyPath, checkProvingKey, zk*/);
-            System.out.println(proofAndQuality.get());
-            throw new RuntimeException(proofAndQuality.get());
+                    signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.of(supportedSegmentSize),
+                    provingKeyPath, checkProvingKey, zk);
         } catch (Exception e) {
             e.printStackTrace();
         }
