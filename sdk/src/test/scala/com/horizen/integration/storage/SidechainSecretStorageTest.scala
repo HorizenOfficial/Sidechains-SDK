@@ -2,14 +2,13 @@ package com.horizen.integration.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
-import com.horizen.box.ForgerBox
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
 import com.horizen.fixtures._
 import com.horizen.secret._
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, Pair, byteArrayToWrapper}
+import com.horizen.utils.{ByteArrayWrapper, Pair}
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -20,7 +19,6 @@ import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
 import java.util.{Optional, HashMap => JHashMap}
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class SidechainSecretStorageTest

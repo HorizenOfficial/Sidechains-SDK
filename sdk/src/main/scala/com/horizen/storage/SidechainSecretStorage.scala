@@ -11,7 +11,7 @@ import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
@@ -40,7 +40,10 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     val storageData = storage.getAll.asScala
     storageData.view
       .map(keyToSecretBytes => keyToSecretBytes.getValue.data)
-      .map(secretBytes => sidechainSecretsCompanion.parseBytes(secretBytes))
+      .flatMap(secretBytes => sidechainSecretsCompanion.parseBytesTry(secretBytes) match {
+        case Success(secret) => Some(secret)
+        case Failure(_) => None
+      })
       .foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
   }
 
