@@ -39,17 +39,17 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
 
 
-      Post(basePath + "createLegacyEIP155Transaction").withHeaders(apiTokenHeader) ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "createLegacyEIP155Transaction").addCredentials(credentials) ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "createLegacyEIP155Transaction").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "createLegacyEIP155Transaction").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "createLegacyEIP155Transaction").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+      Post(basePath + "createLegacyEIP155Transaction").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "createLegacyEIP155Transaction").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "createLegacyEIP155Transaction").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
 
@@ -59,7 +59,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       Post(basePath + "makeForgerStake").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "makeForgerStake").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "makeForgerStake").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
 
@@ -69,7 +69,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       Post(basePath + "spendForgingStake").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "spendForgingStake").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+      Post(basePath + "spendForgingStake").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -80,7 +80,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       Post(basePath + "withdrawCoins").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "withdrawCoins").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+      Post(basePath + "withdrawCoins").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -91,7 +91,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       Post(basePath + "createSmartContract").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "createSmartContract").withHeaders(apiTokenHeader) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+      Post(basePath + "createSmartContract").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -134,7 +134,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
     "reply at /createLegacyEIP155Transaction" in {
       Post(basePath + "createLegacyEIP155Transaction")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqLegacyTransaction(Option.apply("1234567890123456789012345678901234567890"),
           Option.apply("2234567890123456789012345678901234567890"), Some(BigInteger.ONE),
           BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, Option.apply(BigInteger.ONE),
@@ -165,7 +165,9 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     "reply at /withdrawCoins" in {
       val amountInZennies = 32
       val mcAddr = BytesUtils.toHorizenPublicKeyAddress(utilMocks.getMCPublicKeyHashProposition.bytes(),params)
-      Post(basePath + "withdrawCoins").withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqWithdrawCoins(Some(BigInteger.ONE),
+      Post(basePath + "withdrawCoins")
+        .addCredentials(credentials)
+        .withEntity(SerializationUtil.serialize(ReqWithdrawCoins(Some(BigInteger.ONE),
         TransactionWithdrawalRequest(mcAddr, amountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -199,7 +201,9 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     "reply at /makeForgerStake" in {
       val stakeAmountInZennies = 32
 
-      Post(basePath + "makeForgerStake").withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqCreateForgerStake(Some(BigInteger.ONE),
+      Post(basePath + "makeForgerStake")
+        .addCredentials(credentials)
+        .withEntity(SerializationUtil.serialize(ReqCreateForgerStake(Some(BigInteger.ONE),
         TransactionForgerOutput(utilMocks.ownerPublicKeyString, Some(utilMocks.blockSignerPropositionString), utilMocks.vrfPublicKeyString, stakeAmountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -216,7 +220,9 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       val outAsTransactionObj = ReqSpendForgingStake(Some(BigInteger.ONE),
         utilMocks.stakeId, None)
 
-      Post(basePath + "spendForgingStake").withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "spendForgingStake")
+        .addCredentials(credentials)
+        .withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -238,7 +244,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     "reply at /openForgerList" in {
       val outAsTransactionObj = ReqOpenStakeForgerList(Some(BigInteger.ONE), utilMocks.forgerIndex, None)
 
-      Post(basePath + "openForgerList").withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "openForgerList").addCredentials(credentials).withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -255,7 +261,8 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       val contractCodeBytes = new Array[Byte](100)
       Random.nextBytes(contractCodeBytes)
       val contractCode = BytesUtils.toHexString(contractCodeBytes)
-      Post(basePath + "createSmartContract").withHeaders(apiTokenHeader)
+      Post(basePath + "createSmartContract")
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqCreateContract(Some(BigInteger.ONE),
           contractCode, None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -270,7 +277,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     }
 
     "reply at /createEIP1559Transaction" in {
-      Post(basePath + "createEIP1559Transaction").withHeaders(apiTokenHeader)
+      Post(basePath + "createEIP1559Transaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqEIP1559Transaction(Option.apply("1234567890123456789012345678901234567890"),
           Option.apply("2234567890123456789012345678901234567890"), Option.apply(BigInteger.ONE),
           BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, BigInteger.ONE,
@@ -286,7 +293,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     }
 
     "reply at /createLegacyTransaction" in {
-      Post(basePath + "createLegacyTransaction").withHeaders(apiTokenHeader)
+      Post(basePath + "createLegacyTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqLegacyTransaction(Option.apply("1234567890123456789012345678901234567890"),
           Option.apply("2234567890123456789012345678901234567890"), Some(BigInteger.ONE),
           BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, Option.apply(BigInteger.ONE),
@@ -303,7 +310,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
     "reply at /sendTransaction" in {
       //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_signed_hex
-      Post(basePath + "sendTransaction").withHeaders(apiTokenHeader)
+      Post(basePath + "sendTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqSendTransaction(
           "01f86946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e80000801ca02a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5a07ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"
         ))) ~> sidechainTransactionApiRoute ~> check {
@@ -320,7 +327,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     "reply at /signTransaction" in {
       //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_unsigned_hex
       // with insufficient balance on given 'from' address
-      Post(basePath + "signTransaction").withHeaders(apiTokenHeader)
+      Post(basePath + "signTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqSignTransaction(Option.apply("dafea492d9c6733ae3d56b7ed1adb60692c98bc5"),
           "01e646824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e8000080"))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -334,7 +341,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     }
 
     "reply at /createKeyRotationTransaction" in {
-      Post(basePath + "createKeyRotationTransaction").withHeaders(apiTokenHeader)
+      Post(basePath + "createKeyRotationTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqCreateKeyRotationTransaction(1, 0, "123",
           "123", "123", "123",
           Option.apply(BigInteger.ONE), Option.apply(EIP1559GasInfo(

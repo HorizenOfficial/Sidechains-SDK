@@ -50,8 +50,9 @@ import com.horizen.utils.*;
 import scala.Enumeration;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
-import scorex.crypto.hash.Blake2b256;
-import scorex.util.encode.Base16;
+import sparkz.crypto.hash.Blake2b256;
+import sparkz.util.encode.Base16;
+import org.mindrot.jbcrypt.BCrypt;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -601,9 +602,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
         String toEncode = json.get("string").asText();
-
-        String encoded = Base16.encode((byte[]) Blake2b256.apply(toEncode));
-
+        String encoded = BCrypt.hashpw(toEncode, BCrypt.gensalt());
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("encodedString", encoded);
 
@@ -897,7 +896,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 SidechainBlock sidechainBlock = SidechainBlock.create(
                         params.sidechainGenesisBlockParentId(),
-                        SidechainBlock.BLOCK_VERSION(),
+                        block_version,
                         timestamp,
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),

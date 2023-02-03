@@ -7,7 +7,7 @@ import com.horizen.utils.BytesUtils
 import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val size: Int = 255

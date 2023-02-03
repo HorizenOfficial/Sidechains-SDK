@@ -7,8 +7,7 @@ import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import org.web3j.utils.Numeric;
-import scorex.util.serialization.Reader;
-
+import sparkz.util.serialization.Reader;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Optional;

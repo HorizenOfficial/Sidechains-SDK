@@ -15,7 +15,7 @@ import com.horizen.utils.{BytesUtils, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
-import scorex.util.ScorexLogging
+import sparkz.util.{SparkzEncoding, SparkzLogging}
 import java.math.BigInteger
 import scala.util.Try
 
@@ -33,7 +33,7 @@ class AccountBlock(override val header: AccountBlockHeader,
     mainchainBlockReferencesData,
     mainchainHeaders,
     ommers)
-    with ScorexLogging {
+    with SparkzLogging {
   override type M = AccountBlock
 
   override lazy val serializer = new AccountBlockSerializer(companion)

@@ -4,8 +4,8 @@ import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_
 import com.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.util.{Failure, Success}
 

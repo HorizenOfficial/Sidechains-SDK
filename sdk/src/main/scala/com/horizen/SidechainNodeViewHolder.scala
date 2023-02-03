@@ -11,7 +11,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.wallet.ApplicationWallet
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{idToVersion, versionToId}

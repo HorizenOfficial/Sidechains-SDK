@@ -22,8 +22,8 @@ import com.horizen.evm.{ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
-import scorex.crypto.hash.Keccak256
-import scorex.util.ScorexLogging
+import sparkz.crypto.hash.Keccak256
+import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 import java.util.Optional
@@ -33,7 +33,7 @@ import scala.util.Try
 class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessageProcessor])
     extends BaseAccountStateView
       with AutoCloseable
-      with ScorexLogging {
+      with SparkzLogging {
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider =
     messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
@@ -188,7 +188,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
 
     // should never happen if the tx has been accepted in mempool.
     // In some negative test scenario this can happen when forcing an unsigned tx to be forged in a block.
-    // In this case the 'from' attribute in the msg would not be 
+    // In this case the 'from' attribute in the msg would not be
     // set, and it would be difficult to rootcause the reason why gas and nonce checks would fail
     if (!ethTx.isSigned)
       throw new IllegalArgumentException(s"Transaction is not signed: ${ethTx.id}")

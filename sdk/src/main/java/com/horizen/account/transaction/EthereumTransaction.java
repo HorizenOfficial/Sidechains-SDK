@@ -16,8 +16,8 @@ import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
-import scorex.crypto.hash.Keccak256;
-import scorex.util.serialization.Writer;
+import sparkz.crypto.hash.Keccak256;
+import sparkz.util.serialization.Writer;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
@@ -472,8 +472,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         // this will default to gasPrice if the transaction is not EIP-1559
         var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
-                Optional.ofNullable(getFrom()),
-                getTo(),
+                Optional.ofNullable(this.getFrom()),
+                this.getTo(),
                 effectiveGasPrice,
                 gasFeeCap,
                 gasTipCap,

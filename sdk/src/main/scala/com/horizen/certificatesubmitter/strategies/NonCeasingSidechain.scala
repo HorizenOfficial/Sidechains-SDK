@@ -4,7 +4,8 @@ import com.horizen.certificatesubmitter.strategies.NonCeasingSidechain.NON_CEASI
 import com.horizen.params.NetworkParams
 import com.horizen.utils.WithdrawalEpochInfo
 import com.horizen.{AbstractHistory, AbstractState}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
+import sparkz.core.NodeViewHolder.CurrentView
 
 class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionStrategy {
 

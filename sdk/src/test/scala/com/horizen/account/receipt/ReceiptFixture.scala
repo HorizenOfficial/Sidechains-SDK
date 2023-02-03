@@ -3,7 +3,7 @@ package com.horizen.account.receipt
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.BytesUtils
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import scala.collection.mutable.ListBuffer

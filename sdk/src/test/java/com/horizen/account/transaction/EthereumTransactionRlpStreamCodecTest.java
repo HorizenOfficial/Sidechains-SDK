@@ -12,10 +12,10 @@ import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpEncoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
-import scorex.util.ByteArrayBuilder;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.VLQByteBufferReader;
-import scorex.util.serialization.VLQByteBufferWriter;
+import sparkz.util.ByteArrayBuilder;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.VLQByteBufferReader;
+import sparkz.util.serialization.VLQByteBufferWriter;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import static org.junit.Assert.*;
@@ -430,7 +430,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
 
     @Test
     @Ignore
-    public void checkSingle() throws TransactionSemanticValidityException {
+    public void checkSingle() {
         byte[] b = BytesUtils.fromHexString(gethTestVectorsSemanticValdationFailure[0][1]);
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(b);
         //ethTx.semanticValidity();

@@ -8,8 +8,8 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThre
 import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
-import scorex.util.ModifierId
-import scorex.util.bytesToId
+import sparkz.util.ModifierId
+import sparkz.util.bytesToId
 
 case class MainNetParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),

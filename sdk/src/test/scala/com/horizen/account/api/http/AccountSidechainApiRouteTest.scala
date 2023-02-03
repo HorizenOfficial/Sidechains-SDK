@@ -1,6 +1,7 @@
 package com.horizen.account.api.http
 
 import akka.actor.{ActorRef, ActorSystem}
+import akka.http.javadsl.model.headers.HttpCredentials
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
@@ -25,12 +26,13 @@ import com.horizen.secret.SecretSerializer
 import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
+import org.mindrot.jbcrypt.BCrypt
 import org.mockito.Mockito
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.bytesToId
 import sparkz.core.settings.RESTApiSettings
 import java.lang.{Byte => JByte}
@@ -47,8 +49,6 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
   val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
-  val apiTokenHeader = new ApiTokenHeader("api_key", "Horizen")
-  val badApiTokenHeader = new ApiTokenHeader("api_key", "Harizen")
   val genesisBlock: AccountBlock = mock[AccountBlock]
 
   val jsonChecker = new SidechainJSONBOChecker
@@ -63,9 +63,13 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
 
+  val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
+  val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
+  val apiKeyHash = BCrypt.hashpw(credentials.password(), BCrypt.gensalt())
+
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
-  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"))
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some(apiKeyHash))
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")
 

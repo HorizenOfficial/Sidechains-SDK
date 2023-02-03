@@ -13,7 +13,7 @@ import sparkz.core.network.message.{Message, MessageSpec}
 import sparkz.core.network.peer.PenaltyType
 import sparkz.core.network._
 import sparkz.core.settings.NetworkSettings
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}
@@ -31,7 +31,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
                                    certificateSubmitterRef: ActorRef,
                                    params: NetworkParams,
                                    settings: NetworkSettings)
-  (implicit ec: ExecutionContext) extends Actor with Synchronizer with ScorexLogging
+  (implicit ec: ExecutionContext) extends Actor with Synchronizer with SparkzLogging
 {
 
   private implicit val timeout: Timeout = Timeout(settings.syncTimeout.getOrElse(5 seconds))

@@ -2,7 +2,7 @@ package com.horizen.consensus
 
 import com.horizen.utils._
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 case class StakeConsensusEpochInfo(rootHash: Array[Byte], totalStake: Long) extends BytesSerializable {
   require(rootHash.length == merkleTreeHashLen)

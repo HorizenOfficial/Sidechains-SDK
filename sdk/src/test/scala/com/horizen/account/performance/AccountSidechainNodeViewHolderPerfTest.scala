@@ -26,6 +26,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
+import sparkz.util.SparkzEncoding
 
 import java.io.{BufferedWriter, FileWriter}
 import java.math.BigInteger
@@ -39,7 +40,7 @@ class AccountSidechainNodeViewHolderPerfTest
     extends JUnitSuite
       with EthereumTransactionFixture
       with StoreFixture
-      with sparkz.core.utils.SparkzEncoding {
+      with SparkzEncoding {
   var historyMock: AccountHistory = _
   var state: AccountState = _
   var stateViewMock: AccountStateView = _
