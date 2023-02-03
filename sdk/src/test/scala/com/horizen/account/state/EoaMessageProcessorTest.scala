@@ -1,6 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.fixtures.SecretFixture
+import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -67,6 +68,13 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
       EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView))
+
+    // Test 4: Failure: data is empty array
+    Mockito.reset(mockStateView)
+    val contractDeclarationMessage2 = getMessage(null, value, Array.emptyByteArray)
+    assertFalse(
+      "Message for EoaMessageProcessor wrongly can be processed",
+      EoaMessageProcessor.canProcess(contractDeclarationMessage2, mockStateView))
   }
 
   @Test
@@ -96,18 +104,14 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     Mockito.reset(mockStateView)
     Mockito
       .when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
-      .thenAnswer(_ => {
-        throw new Exception("something went error")
-      })
-    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext)))
+      .thenThrow(new ExecutionFailedException("something went error"))
+    assertThrows[ExecutionFailedException](withGas(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext)))
 
     // Test 3: Failure during addBalance
     Mockito.reset(mockStateView)
     Mockito
       .when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
-      .thenAnswer(_ => {
-        throw new Exception("something else went error")
-      })
-    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext)))
+      .thenThrow(new ExecutionFailedException("something went error"))
+    assertThrows[ExecutionFailedException](withGas(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext)))
   }
 }

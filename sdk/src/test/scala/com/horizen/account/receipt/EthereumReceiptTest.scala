@@ -31,7 +31,7 @@ class EthereumReceiptTest
   @Test
   def receiptSimpleSerDeser(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal())
-    assertEquals(receipt.contractAddress.get.length, Address.LENGTH)
+    assertEquals(Address.LENGTH, receipt.contractAddress.get.length)
     val r1: String = receipt.toString
     //println(r1)
 

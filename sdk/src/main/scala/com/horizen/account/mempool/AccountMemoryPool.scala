@@ -7,12 +7,10 @@ import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderPro
 import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.transaction.MempoolReader
 
-import java.math.BigInteger
 import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(

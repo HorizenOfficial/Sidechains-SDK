@@ -31,7 +31,7 @@ import com.horizen.secret.{Secret, SecretSerializer}
 import com.horizen.storage.{SidechainSecretStorage, Storage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers
 import org.scalatestplus.junit.JUnitSuite
@@ -39,6 +39,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
+
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
 import java.util.{Optional, HashMap => JHashMap}
@@ -256,6 +257,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(state.getView.getTransactionReceipt(any())).thenReturn(None)
     Mockito.when(state.getView.getTransactionReceipt(txHash)).thenReturn(Some(receipt))
     if (state.getView != null) {
+      Mockito.when(state.getView.getIntermediateRoot).thenReturn(new Array[Byte](MerkleTree.ROOT_HASH_LENGTH))
       Mockito.when(state.getView.getBalance(any())).thenReturn(BigInteger.valueOf(99999999999999999L))
       Mockito
         .when(state.getView.getBalance(Numeric.hexStringToByteArray("0x1234567891011121314151617181920212223242")))

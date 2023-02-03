@@ -78,4 +78,29 @@ class BloomTest
     assertArrayEquals(bloomFilter, Array.fill[Byte](Bloom.BLOOM_BYTE_LENGTH)(0))
   }
 
+  @Test
+  def bloomFiltersSameBitsDifferentPositions(): Unit = {
+    val hexString = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+    val data1 = BytesUtils.fromHexString(hexString)
+    val data2 = BytesUtils.fromHexString(hexString.reverse)
+
+    val bloomLogs1 = new Bloom()
+    bloomLogs1.add(data1)
+
+    val bloomLogs2 = new Bloom()
+    bloomLogs2.add(data2)
+
+    assertNotEquals(bloomLogs2, bloomLogs1);
+  }
+
+  @Test
+  def bloomFilterAuxiliaryConstructor(): Unit = {
+    val hexString = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    val data = BytesUtils.fromHexString(hexString)
+
+    val bloomLogs = new Bloom(data)
+
+    assertArrayEquals(data, bloomLogs.getBytes)
+  }
 }
