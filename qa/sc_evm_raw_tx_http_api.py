@@ -3,6 +3,8 @@ import logging
 import pprint
 from binascii import a2b_hex, b2a_hex
 from decimal import Decimal
+
+import rlp
 from eth_utils import add_0x_prefix, remove_0x_prefix
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createRawEIP1559Transaction import createRawEIP1559Transaction
@@ -217,13 +219,23 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
                                             value=convertZenToWei(Decimal('0.1')))
         chainId_ok = decodeTransaction(sc_node_2, payload=raw_tx)['chainId']
 
-        # get the last byte of chain id value in the hex representation (bytes 44 and 45 in this tx) and decrement it
+        # get the last byte of chain id value in the hex representation and decrement it (bytes 43 and 44 in this tx)
+        #  - 1997 = [07cd]  --> 1996 = [07cc]
         tx_hex_array = list(bytearray(a2b_hex(raw_tx)))
-        tx_hex_array[45] -= 1
+        tx_hex_array[44] -= 1
         new_eip155_raw_tx = b2x(bytearray(tx_hex_array))
 
+        # decode the modified unsigned tx via http api
         chainId_bad = decodeTransaction(sc_node_2, payload=new_eip155_raw_tx)['chainId']
-        assert_equal(chainId_bad, chainId_ok-1)
+        # check values are consistent
+        assert_equal(chainId_bad, chainId_ok - 1)
+
+        # RLP decode the modified unsigned tx. Strip off the leading byte which is part of the companion obj used by SDK
+        decodedRlpList = rlp.decode(bytearray(tx_hex_array[1:]))
+        # get the chain id in the 7th rlp list member
+        decodedRlpChainId = int('0x' + b2x(decodedRlpList[6]), 16)
+        # check values are consistent
+        assert_equal(chainId_bad, decodedRlpChainId)
 
         bad_chainid_raw_tx = signTransaction(sc_node_1, fromAddress=evm_address_sc1, payload=new_eip155_raw_tx)
 

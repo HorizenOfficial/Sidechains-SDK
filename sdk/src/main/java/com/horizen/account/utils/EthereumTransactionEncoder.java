@@ -7,7 +7,7 @@ import org.bouncycastle.util.BigIntegers;
 import org.web3j.rlp.*;
 import org.web3j.utils.Numeric;
 import scala.Array;
-
+import sparkz.util.serialization.Writer;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -29,8 +29,7 @@ public class EthereumTransactionEncoder {
         }
     }
 
-    private static byte[] encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
-
+    private static RlpList LegacyTransaction2RlpList(EthereumTransaction tx, boolean accountSignature) {
         List<RlpType> result = new ArrayList<>();
 
         result.add(RlpString.create(tx.getNonce()));
@@ -70,12 +69,10 @@ public class EthereumTransactionEncoder {
             }
         }
 
-        RlpList rlpList = new RlpList(result);
-        return RlpEncoder.encode(rlpList);
+        return new RlpList(result);
     }
 
-    private static byte[] encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature) {
-
+    private static RlpList EIP1559Transaction2RlpList(EthereumTransaction tx, boolean accountSignature) {
         List<RlpType> result = new ArrayList<>();
 
         result.add(RlpString.create(tx.getChainId()));
@@ -107,13 +104,41 @@ public class EthereumTransactionEncoder {
             result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(txSignature.getS())));
         }
 
-        RlpList rlpList = new RlpList(result);
+        return new RlpList(result);
+    }
+
+    private static byte[] encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
+        RlpList rlpList = LegacyTransaction2RlpList(tx, accountSignature);
+        return RlpEncoder.encode(rlpList);
+    }
+
+    private static byte[] encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature) {
+        RlpList rlpList = EIP1559Transaction2RlpList(tx, accountSignature);
         byte[] encoded = RlpEncoder.encode(rlpList);
 
         return ByteBuffer.allocate(encoded.length + 1)
                 .put(tx.version())
                 .put(encoded)
                 .array();
+    }
+
+    public static void encodeAsRlpValues(EthereumTransaction tx, boolean accountSignature, Writer writer) {
+        if (tx.isEIP1559()) {
+            encodeEip1559AsRlpValues(tx, accountSignature, writer);
+        } else {
+            encodeLegacyAsRlpValues(tx, accountSignature, writer);
+        }
+    }
+
+    private static void encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature, Writer writer) {
+        RlpList rlpList = LegacyTransaction2RlpList(tx, accountSignature);
+        RlpStreamEncoder.encode(rlpList, writer);
+    }
+
+    private static void encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature, Writer writer) {
+        writer.putUByte(tx.version());
+        RlpList rlpList = EIP1559Transaction2RlpList(tx, accountSignature);
+        RlpStreamEncoder.encode(rlpList, writer);
     }
 
     private static byte[] createEip155v(byte[] realV, long chainId) {

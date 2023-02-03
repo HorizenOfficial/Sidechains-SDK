@@ -312,7 +312,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_signed_hex
       Post(basePath + "sendTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqSendTransaction(
-          "01d601f86946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e80000801ca02a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5a07ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"
+          "01f86946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e80000801ca02a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5a07ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"
         ))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -329,7 +329,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       // with insufficient balance on given 'from' address
       Post(basePath + "signTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqSignTransaction(Option.apply("dafea492d9c6733ae3d56b7ed1adb60692c98bc5"),
-          "014ee646824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e8000080"))) ~> sidechainTransactionApiRoute ~> check {
+          "01e646824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e8000080"))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")

@@ -6,6 +6,7 @@ import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import org.web3j.utils.Numeric;
+import sparkz.util.serialization.Reader;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -49,8 +50,16 @@ public class EthereumTransactionDecoder {
         byte[] transaction = Numeric.hexStringToByteArray(hexTransaction);
         return decode(transaction);
     }
+
     public static EthereumTransaction decode(byte[] transaction) {
         return getTransactionType(transaction) == TransactionType.EIP1559 ? decodeEIP1559Transaction(transaction) : decodeLegacyTransaction(transaction);
+    }
+
+    public static EthereumTransaction decode(Reader reader) {
+        byte[] dataByte = new byte[]{reader.peekByte()};
+
+        return getTransactionType(dataByte) == TransactionType.EIP1559 ?
+                decodeEIP1559Transaction(reader) : decodeLegacyTransaction(reader); // TODO
     }
 
     private static TransactionType getTransactionType(byte[] transaction) {
@@ -58,9 +67,20 @@ public class EthereumTransactionDecoder {
         return firstByte == TransactionType.EIP1559.getRlpType() ? TransactionType.EIP1559 : TransactionType.LEGACY;
     }
 
+    private static EthereumTransaction decodeEIP1559Transaction(Reader reader) {
+        // consume the type byte
+        reader.getByte();
+        RlpList rlpList = RlpStreamDecoder.decode(reader);
+        return RlpList2EIP1559Transaction(rlpList);
+    }
+
     private static EthereumTransaction decodeEIP1559Transaction(byte[] transaction) {
         byte[] encodedTx = Arrays.copyOfRange(transaction, 1, transaction.length);
         RlpList rlpList = RlpDecoder.decode(encodedTx);
+        return RlpList2EIP1559Transaction(rlpList);
+    }
+
+    private static EthereumTransaction RlpList2EIP1559Transaction(RlpList rlpList) {
         RlpList values = (RlpList)rlpList.getValues().get(0);
         long chainId = ((RlpString)values.getValues().get(0)).asPositiveBigInteger().longValueExact();
         BigInteger nonce = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
@@ -96,8 +116,18 @@ public class EthereumTransactionDecoder {
         }
     }
 
+    private static EthereumTransaction decodeLegacyTransaction(Reader reader) {
+        RlpList rlpList = RlpStreamDecoder.decode(reader);
+        return RlpList2LegacyTransaction(rlpList);
+    }
+
     private static EthereumTransaction decodeLegacyTransaction(byte[] transaction) {
         RlpList rlpList = RlpDecoder.decode(transaction);
+        return RlpList2LegacyTransaction(rlpList);
+    }
+
+    private static EthereumTransaction RlpList2LegacyTransaction(RlpList rlpList) {
+
         RlpList values = (RlpList)rlpList.getValues().get(0);
         BigInteger nonce = ((RlpString)values.getValues().get(0)).asPositiveBigInteger();
         BigInteger gasPrice = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
@@ -118,7 +148,7 @@ public class EthereumTransactionDecoder {
             SignatureSecp256k1 realSignature;
             if (Arrays.equals(r, new byte[32]) && Arrays.equals(s, new byte[32])) {
                 // if r and s are both 0 we assume that this signature stands for an unsigned eip155 tx object
-                // therefore v is the plain chainid and the signature is set to null
+                // therefore v is the plain chain ID and the signature is set to null
                 chainId = convertToLong(v);
                 realSignature = null;
             } else {
@@ -139,6 +169,7 @@ public class EthereumTransactionDecoder {
                     optTo, nonce, gasPrice, gasLimit, value, dataBytes, null);
         }
     }
+
 
     private static Long decodeEip155ChainId(byte[] bv) {
         long v = convertToLong(bv);
