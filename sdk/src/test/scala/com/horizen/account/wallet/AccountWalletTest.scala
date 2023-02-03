@@ -20,7 +20,7 @@ import java.util
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 class AccountWalletTest
   extends JUnitSuite
@@ -205,7 +205,8 @@ class AccountWalletTest
     storageList += secret1
     storageList += secret2
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
-    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Try{mockedSecretStorage})
+    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
+    Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
 
     // Prepare block ID and corresponding version
     val blockId = new Array[Byte](32)
@@ -245,9 +246,8 @@ class AccountWalletTest
     Mockito.when(mockedSecretStorage.getNonce(schnorrKeyCreator.salt())).thenReturn(Some(0))
 
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
-    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Try {
-      mockedSecretStorage
-    })
+    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
+    Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
 
     val accountWallet = new AccountWallet(
       "seed".getBytes(),
