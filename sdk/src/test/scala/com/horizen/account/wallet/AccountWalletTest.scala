@@ -248,10 +248,6 @@ class AccountWalletTest
       mockedSecretStorage
     })
 
-    // Prepare block ID and corresponding version
-    val blockId = new Array[Byte](32)
-    Random.nextBytes(blockId)
-
     val accountWallet = new AccountWallet(
       "seed".getBytes(),
       mockedSecretStorage)
