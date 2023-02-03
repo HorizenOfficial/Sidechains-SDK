@@ -93,6 +93,7 @@ testScriptsEvm=(
     'sc_evm_storage_recovery.py'
     'sc_evm_raw_tx_http_api.py'
     'sc_evm_import_export_keys.py'
+    'sc_evm_delegatecall_contract.py'
 );
 
 testScriptsUtxo=(

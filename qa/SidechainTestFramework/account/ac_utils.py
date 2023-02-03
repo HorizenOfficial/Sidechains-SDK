@@ -228,8 +228,7 @@ def contract_function_call(node, smart_contract_type, smart_contract_address, fr
 def deploy_smart_contract(node, smart_contract, from_address, *args, call_method: CallMethod = CallMethod.RPC_LEGACY,
                           next_block=True):
     logging.info("Estimating gas for deployment...")
-    estimated_gas = smart_contract.estimate_gas(node, 'constructor', *args,
-                                                fromAddress=from_address)
+    estimated_gas = smart_contract.estimate_gas(node, 'constructor', *args, fromAddress=from_address)
     logging.info("Estimated gas is {}".format(estimated_gas))
 
     logging.info("Deploying smart contract...")
@@ -242,7 +241,7 @@ def deploy_smart_contract(node, smart_contract, from_address, *args, call_method
 
         tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
         assert_equal(tx_receipt['result']['contractAddress'], address.lower())
-        logging.info("Smart contract deployed successfully to address 0x{}".format(address))
+        logging.info("Smart contract deployed successfully to address {}".format(address))
         return address
     else:
         return address
