@@ -113,7 +113,7 @@ abstract class AbstractWallet[
     val secretStorageSize = allSecrets.count(_.isInstanceOf[T])
     var nonce = secretStorage.getNonce(salt) match {
       case Some(nonce) => nonce
-      case None => allSecrets.count(_.isInstanceOf[T])
+      case None => 0
     }
     for (_ <- 0 to secretStorageSize) {
       val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
