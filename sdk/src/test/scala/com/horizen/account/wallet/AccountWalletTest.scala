@@ -6,13 +6,14 @@ import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.secret._
 import com.horizen.storage._
-import com.horizen.utils.{ByteArrayWrapper, Pair}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import scorex.crypto.hash.Blake2b256
+import sparkz.core.VersionTag
 
 import java.lang.{Byte => JByte}
 import java.util
