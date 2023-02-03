@@ -138,7 +138,43 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
         self.do_test_raw_tx(
             raw_tx=raw_tx, sc_node=sc_node_1, evm_signer_address=evm_address_sc1)
 
+
         # Negative tests
+        # 0.1) create a raw tx, add 1 byte at the end and verify it can not be decoded via api
+        raw_tx = createRawLegacyTransaction(sc_node_1,
+                                            fromAddress=evm_address_sc1,
+                                            toAddress=evm_address_sc2,
+                                            value=convertZenToWei(transferred_amount_in_zen))
+
+        raw_tx_with_extra_byte = raw_tx + "ab"
+        try:
+            decodeTransaction(sc_node_2, payload=raw_tx_with_extra_byte)
+            fail("Trailing bytes in raw object should not work")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("Spurious bytes" in str(err) )
+
+        # 0.2) verify the same with signing by api
+        try:
+            signTransaction(sc_node_1, fromAddress=evm_address_sc1, payload=raw_tx_with_extra_byte)
+            fail("Trailing bytes in raw object should not work")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("Spurious bytes"  in str(err) )
+
+        # 0.3) signe the raw tx, add 1 byte at the end and verify it can not be sent by api
+        signed_raw_tx = signTransaction(sc_node_1, fromAddress=evm_address_sc1, payload=raw_tx)
+        raw_tx_with_extra_byte = signed_raw_tx + "cd"
+        try:
+            sendTransaction(sc_node_1, payload=raw_tx_with_extra_byte)
+            fail("Trailing bytes in raw object should not work")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("Spurious bytes" in str(err))
+
         # 1) use a wrong address for signature
         wrong_signer_address = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
