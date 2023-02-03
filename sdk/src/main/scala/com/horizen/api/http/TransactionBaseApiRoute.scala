@@ -76,14 +76,16 @@ abstract class TransactionBaseApiRoute[
    * Return error in case of invalid transaction or parsing error, otherwise return the id of the transaction.
    */
   def sendTransaction: Route = (post & path("sendTransaction")) {
-    withAuth {
-      entity(as[ReqSendTransaction]) { body =>
-        val transactionBytes = BytesUtils.fromHexString(body.transactionBytes)
-        companion.parseBytesTry(transactionBytes) match {
-          case Success(transaction) =>
-            validateAndSendTransaction(transaction)
-          case Failure(exception) =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
+    withBasicAuth {
+      _ => {
+        entity(as[ReqSendTransaction]) { body =>
+          val transactionBytes = BytesUtils.fromHexString(body.transactionBytes)
+          companion.parseBytesTry(transactionBytes) match {
+            case Success(transaction) =>
+              validateAndSendTransaction(transaction)
+            case Failure(exception) =>
+              ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
+          }
         }
       }
     }

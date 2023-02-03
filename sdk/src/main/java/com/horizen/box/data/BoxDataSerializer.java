@@ -1,8 +1,8 @@
 package com.horizen.box.data;
 
 import sparkz.core.serialization.SparkzSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public interface BoxDataSerializer<D extends BoxData>
         extends SparkzSerializer<D>

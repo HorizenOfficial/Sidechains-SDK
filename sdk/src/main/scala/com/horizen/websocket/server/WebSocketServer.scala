@@ -3,13 +3,13 @@ package com.horizen.websocket.server
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.ExecutionContext
 
 class WebSocketServer(wsPort: Int)
   extends Actor
-  with ScorexLogging {
+  with SparkzLogging {
   val websocket = new WebSocketServerImpl(wsPort, classOf[WebSocketServerEndpoint]);
 
   try {

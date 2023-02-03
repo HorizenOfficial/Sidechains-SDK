@@ -12,7 +12,7 @@ import com.horizen.utils.ZenCoinsUtils
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import java.util
@@ -22,7 +22,7 @@ trait WithdrawalRequestProvider {
   private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: BaseAccountStateView): Seq[WithdrawalRequest]
 }
 
-object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with WithdrawalRequestProvider {
+object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with WithdrawalRequestProvider {
 
   override val contractAddress: Array[Byte] = WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
   override val contractCode: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCode")

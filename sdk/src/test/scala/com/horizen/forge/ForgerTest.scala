@@ -55,12 +55,12 @@ class ForgerTest extends JUnitSuite with Matchers {
   def prepareTestData(params: NetworkParams, timeProvider: NetworkTimeProvider): (ActorRef, TestProbe) = {
     val settings = mock[SidechainSettings]
     val webSocketSettings = mock[WebSocketSettings]
-    val scorexSettings = mock[SparkzSettings]
+    val sparkzSettings = mock[SparkzSettings]
     val restApiSettings = mock[RESTApiSettings]
     when(settings.websocket).thenReturn(webSocketSettings)
     when(webSocketSettings.allowNoConnectionInRegtest).thenReturn(true)
-    when(settings.sparkzSettings).thenReturn(scorexSettings)
-    when(scorexSettings.restApi).thenReturn(restApiSettings)
+    when(settings.sparkzSettings).thenReturn(sparkzSettings)
+    when(sparkzSettings.restApi).thenReturn(restApiSettings)
     when(restApiSettings.timeout).thenReturn(1.seconds)
     val viewHolder = TestProbe()
     val mainchainSynchronizer = mock[MainchainSynchronizer]

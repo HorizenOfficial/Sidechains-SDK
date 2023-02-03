@@ -3,7 +3,7 @@ import logging
 import shutil
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_false, assert_true, initialize_chain_clean, start_nodes, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, connect_sc_nodes
+from SidechainTestFramework.scutil import start_sc_node, generate_next_blocks, bootstrap_sidechain_nodes, connect_sc_nodes, wait_for_sc_node_initialization
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
@@ -66,9 +66,16 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
                                          sc_node_2_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
+    def sc_setup_network(self, split=False):
+        self.sc_setup_nodes()
+        return
+
     def sc_setup_nodes(self):
         # Start 2 SC nodes
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        self.sc_nodes = [start_sc_node(0, self.options.tmpdir, auth_api_key=self.API_KEY_NODE1)]
+        self.sc_nodes.append(start_sc_node(1, self.options.tmpdir, auth_api_key=self.API_KEY_NODE2))
+        wait_for_sc_node_initialization(self.sc_nodes)
+        return
     
     def findAddress(self, propositions, address):
         for proposition in propositions:

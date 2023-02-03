@@ -8,8 +8,8 @@ import com.horizen.proof.SchnorrProof;
 import com.horizen.proof.SchnorrSignatureSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 import sparkz.core.NodeViewModifier$;
 
 import java.util.Optional;

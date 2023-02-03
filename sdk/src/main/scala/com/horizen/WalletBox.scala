@@ -4,13 +4,13 @@ import java.util
 import com.horizen.companion.SidechainBoxesCompanion
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.{ModifierId, SparkzEncoding}
+import sparkz.util.serialization.{Reader, Writer}
 
 
 class WalletBox(val box: SidechainTypes#SCB, val transactionId: ModifierId, val createdAt: Long)
   extends SidechainTypes
-  with sparkz.core.utils.SparkzEncoding
+  with SparkzEncoding
 {
   require(transactionId.length == NodeViewModifier.ModifierIdSize * 2,
     "Expected transactionId length is %d, actual length is %d".format(NodeViewModifier.ModifierIdSize * 2, transactionId.length))

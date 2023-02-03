@@ -10,12 +10,12 @@ import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
-import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
+import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.ModifierId
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
@@ -26,7 +26,7 @@ import scala.util.{Failure, Success, Try}
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
 case class AccountBlockHeader(
                                override val version: Block.Version,
-                               @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) override val parentId: ModifierId,
+                               @JsonSerialize(using = classOf[SparkzModifierIdSerializer]) override val parentId: ModifierId,
                                override val timestamp: Block.Timestamp,
                                override val forgingStakeInfo: ForgingStakeInfo,
                                @JsonSerialize(using = classOf[MerklePathJsonSerializer]) override val forgingStakeMerklePath: MerklePath,

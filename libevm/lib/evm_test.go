@@ -98,10 +98,8 @@ func TestEvmCallTracer(t *testing.T) {
 	)
 	dbHandle := instance.OpenMemoryDB()
 	err, stateDbHandle := instance.StateOpen(StateParams{
-		DatabaseParams: DatabaseParams{
-			DatabaseHandle: dbHandle,
-		},
-		Root: common.Hash{},
+		DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           common.Hash{},
 	})
 	if err != nil {
 		t.Fatal(err)

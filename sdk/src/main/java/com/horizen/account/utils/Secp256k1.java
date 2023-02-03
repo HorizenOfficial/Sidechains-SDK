@@ -3,7 +3,7 @@ package com.horizen.account.utils;
 import com.horizen.utils.Pair;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
-import scorex.crypto.hash.Keccak256;
+import sparkz.crypto.hash.Keccak256;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;

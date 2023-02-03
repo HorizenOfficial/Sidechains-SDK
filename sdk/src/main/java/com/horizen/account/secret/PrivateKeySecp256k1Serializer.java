@@ -2,8 +2,8 @@ package com.horizen.account.secret;
 
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.secret.SecretSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public final class PrivateKeySecp256k1Serializer implements SecretSerializer<PrivateKeySecp256k1> {
     private static final PrivateKeySecp256k1Serializer serializer;
