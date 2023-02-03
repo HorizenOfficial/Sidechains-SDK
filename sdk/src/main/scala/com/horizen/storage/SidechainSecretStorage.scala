@@ -6,11 +6,12 @@ import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import scorex.util.ScorexLogging
 
+import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
@@ -24,7 +25,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   require(sidechainSecretsCompanion != null, "SidechainSecretsCompanion must be NOT NULL.")
 
   private[horizen] def getNonceKey(keyTypeSalt: Array[Byte]): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("nonce".getBytes, keyTypeSalt))
+    Utils.calculateKey(Bytes.concat("nonce".getBytes(StandardCharsets.UTF_8), keyTypeSalt))
   }
 
   private val secrets = new mutable.LinkedHashMap[ByteArrayWrapper, SidechainTypes#SCS]()
