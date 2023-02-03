@@ -41,9 +41,6 @@ Default behavior: the framework starts 1 SC node connected to 1 MC node.
 '''
 class SidechainTestFramework(BitcoinTestFramework):
 
-    def __init__(self):
-        self.number_of_sidechain_nodes = 1
-
     def add_options(self, parser):
         pass
 
