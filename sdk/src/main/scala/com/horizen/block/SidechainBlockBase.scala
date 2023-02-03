@@ -5,7 +5,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.utils.{MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
 import com.horizen.transaction.Transaction
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.ModifierTypeId
 import sparkz.core.block.Block
 import sparkz.core.block.Block.Timestamp

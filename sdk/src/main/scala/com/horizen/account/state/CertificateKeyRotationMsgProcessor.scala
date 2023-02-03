@@ -14,8 +14,8 @@ import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
-import scorex.crypto.hash.{Digest32, Keccak256}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.crypto.hash.{Digest32, Keccak256}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import java.util

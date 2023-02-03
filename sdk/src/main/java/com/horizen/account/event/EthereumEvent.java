@@ -13,7 +13,7 @@ import org.web3j.abi.datatypes.Event;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.utils.Numeric;
-import scorex.crypto.hash.Keccak256;
+import sparkz.crypto.hash.Keccak256;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

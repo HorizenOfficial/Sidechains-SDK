@@ -6,7 +6,7 @@ import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTru
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 

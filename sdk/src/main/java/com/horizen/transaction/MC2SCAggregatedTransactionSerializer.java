@@ -7,8 +7,8 @@ import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import sparkz.core.serialization.SparkzSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 import java.util.HashMap;
 import java.util.List;

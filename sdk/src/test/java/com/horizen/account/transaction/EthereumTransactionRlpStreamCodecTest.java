@@ -7,10 +7,11 @@ import com.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
 import org.junit.Ignore;
 import org.junit.Test;
-import scorex.util.ByteArrayBuilder;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.VLQByteBufferReader;
-import scorex.util.serialization.VLQByteBufferWriter;
+import sparkz.util.ByteArrayBuilder;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.VLQByteBufferReader;
+import sparkz.util.serialization.VLQByteBufferWriter;
+
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import static org.junit.Assert.*;

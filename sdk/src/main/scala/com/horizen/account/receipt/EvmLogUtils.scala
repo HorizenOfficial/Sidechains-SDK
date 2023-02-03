@@ -5,7 +5,7 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import org.web3j.rlp.{RlpDecoder, RlpEncoder, RlpList, RlpString, RlpType}
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.util
 

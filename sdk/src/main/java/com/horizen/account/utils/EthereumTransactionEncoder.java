@@ -7,8 +7,7 @@ import org.bouncycastle.util.BigIntegers;
 import org.web3j.rlp.*;
 import org.web3j.utils.Numeric;
 import scala.Array;
-import scorex.util.serialization.Writer;
-
+import sparkz.util.serialization.Writer;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

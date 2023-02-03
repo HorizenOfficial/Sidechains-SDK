@@ -10,7 +10,7 @@ import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.apache.commons.io.FileUtils
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.io._
 import java.lang.{Byte => JByte}
@@ -22,7 +22,7 @@ class SidechainBackup @Inject()
    @Named("BackupStorage") val backUpStorage: Storage,
    @Named("BackUpper") val backUpper : BoxBackupInterface,
    @Named("Params") val params : NetworkParams
-  ) extends ScorexLogging
+  ) extends SparkzLogging
   {
     protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
     protected val backupStorage = new BackupStorage(backUpStorage, sidechainBoxesCompanion)

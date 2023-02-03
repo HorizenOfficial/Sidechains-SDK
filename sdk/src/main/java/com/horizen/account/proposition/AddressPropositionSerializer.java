@@ -2,8 +2,8 @@ package com.horizen.account.proposition;
 
 import com.horizen.account.utils.Account;
 import com.horizen.proposition.PropositionSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public final class AddressPropositionSerializer
         implements PropositionSerializer<AddressProposition> {

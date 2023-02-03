@@ -5,7 +5,7 @@ import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 class BloomTest
     extends JUnitSuite

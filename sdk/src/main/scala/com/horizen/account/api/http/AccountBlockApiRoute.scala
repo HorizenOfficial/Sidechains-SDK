@@ -12,6 +12,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.node.NodeWalletBase
 import com.horizen.serialization.Views
 import sparkz.core.settings.RESTApiSettings
+import sparkz.util.ModifierId
 import sparkz.core.serialization.SparkzSerializer
 
 import java.util.{Optional => JOptional}

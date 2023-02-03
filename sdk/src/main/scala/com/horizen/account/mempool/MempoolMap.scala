@@ -5,7 +5,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
@@ -15,7 +15,7 @@ import scala.util.Try
 
 class MempoolMap(
                   accountStateReaderProvider: AccountStateReaderProvider,
-                  baseStateReaderProvider: BaseStateReaderProvider) extends ScorexLogging {
+                  baseStateReaderProvider: BaseStateReaderProvider) extends SparkzLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
   type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 

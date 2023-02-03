@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountMemoryPool
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.transaction.MempoolReader
 
 import java.math.BigInteger
@@ -25,7 +25,7 @@ class AccountMemoryPool(
 ]
   with SidechainTypes
   with NodeAccountMemoryPool
-  with ScorexLogging {
+  with SparkzLogging {
   override type NVCT = AccountMemoryPool
 
   // Getters:

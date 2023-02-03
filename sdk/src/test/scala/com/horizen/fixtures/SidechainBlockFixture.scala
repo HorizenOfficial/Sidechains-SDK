@@ -19,7 +19,7 @@ import com.horizen.utils._
 import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 import scala.util.{Failure, Random, Try}
 

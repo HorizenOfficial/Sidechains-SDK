@@ -13,9 +13,9 @@ import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -125,7 +125,7 @@ case class MainchainBlockReference(
   }
 }
 
-object MainchainBlockReference extends ScorexLogging {
+object MainchainBlockReference extends SparkzLogging {
   val MAX_MAINCHAIN_BLOCK_SIZE: Int = 4000000 // 4Mb since SC fork activated
   val SC_CERT_BLOCK_VERSION = 3
 

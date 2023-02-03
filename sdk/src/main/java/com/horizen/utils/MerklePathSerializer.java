@@ -1,8 +1,8 @@
 package com.horizen.utils;
 
 import sparkz.core.serialization.SparkzSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 import java.util.ArrayList;
 
 public class MerklePathSerializer implements SparkzSerializer<MerklePath> {

@@ -29,7 +29,7 @@ import com.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
 import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.app.Application
 import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
@@ -59,7 +59,7 @@ abstract class AbstractSidechainApp
    val forkConfigurator : ForkConfigurator,
    val chainInfo : ChainInfo
   )
-  extends Application with ScorexLogging
+  extends Application with SparkzLogging
 {
   override type TX <: Transaction
   override type PMOD <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]
@@ -361,12 +361,7 @@ abstract class AbstractSidechainApp
     if (currentThreadId != shutdownHookThreadId)
       Runtime.getRuntime.removeShutdownHook(shutdownHookThread)
 
-    // We are doing this because it is the only way for accessing the private 'upnpGateway' parent data member, and we
-    // need to rewrite the implementation of the stopAll() base method, which we do not call from here
-    val upnpGateway = sparkzContext.upnpGateway
-
     log.info("Stopping network services")
-    upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
     networkControllerRef ! ShutdownNetwork
 
     log.info("Stopping actors")

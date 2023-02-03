@@ -22,8 +22,8 @@ import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, Sidec
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.{CertificateKeyRotationTransaction, MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 import sparkz.core._
 import sparkz.core.transaction.state._
 
@@ -47,7 +47,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with ModifierValidation[SidechainBlock]
     with SidechainTypes
     with NodeState
-    with ScorexLogging
+    with SparkzLogging
     with UtxoMerkleTreeView
     with NetworkParamsUtils
 {
@@ -856,7 +856,7 @@ object SidechainState
     // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
     @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
     val ops: Seq[BoxStateChangeOperation[SidechainTypes#SCP, SidechainTypes#SCB]] =
-    toRemove.map(id => Removal[SidechainTypes#SCP, SidechainTypes#SCB](scorex.crypto.authds.ADKey(id))) ++
+    toRemove.map(id => Removal[SidechainTypes#SCP, SidechainTypes#SCB](sparkz.crypto.authds.ADKey(id))) ++
       toAdd.map(b => Insertion[SidechainTypes#SCP, SidechainTypes#SCB](b))
 
     BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB](ops)

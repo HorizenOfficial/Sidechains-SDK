@@ -9,8 +9,9 @@ import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.evm.StateDB
 import com.horizen.state.StateView
 import com.horizen.utils.WithdrawalEpochInfo
-import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.VersionTag
+import sparkz.util.{ModifierId, SparkzLogging}
+
 
 import java.math.BigInteger
 
@@ -26,7 +27,7 @@ class AccountStateView(
 ) extends StateDbAccountStateView(stateDb, messageProcessors)
       with StateView[SidechainTypes#SCAT]
       with AutoCloseable
-      with ScorexLogging {
+      with SparkzLogging {
 
   def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {
     refData.topQualityCertificate.foreach(cert => {

@@ -8,7 +8,7 @@ import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.collection.breakOut
 import scala.util.Try
