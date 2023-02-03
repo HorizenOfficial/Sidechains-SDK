@@ -77,6 +77,8 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public Boolean isPublicKeyValid() {
+        // Considering that public key is not passed to this class, and it's generated from private key,
+        // public key is always valid.
         return true;
     }
 
