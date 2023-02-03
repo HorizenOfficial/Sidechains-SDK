@@ -110,12 +110,12 @@ abstract class AbstractWallet[
     require(secretCreator != null, "AbstractWallet: Secret creator must be NOT NULL.")
     val allSecrets = this.secrets()
     val salt = secretCreator.salt()
-    val secretStorageSize = allSecrets.count(_.isInstanceOf[T])
+    val secretsNumber = allSecrets.count(_.isInstanceOf[T])
     var nonce = secretStorage.getNonce(salt) match {
       case Some(nonce) => nonce
       case None => 0
     }
-    for (_ <- 0 to secretStorageSize) {
+    for (_ <- 0 to secretsNumber) {
       val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
       val secret: T = secretCreator.generateSecret(seed)
       if (!secretStorage.contains(secret)) {

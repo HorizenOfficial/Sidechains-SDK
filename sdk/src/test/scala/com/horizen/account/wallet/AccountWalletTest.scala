@@ -212,10 +212,6 @@ class AccountWalletTest
   def testGenerateSecretsOfDifferentDomainsIndependent(): Unit = {
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
 
-    val accountWallet = new AccountWallet(
-      "seed".getBytes(),
-      mockedSecretStorage)
-
     val storageList = ListBuffer[Secret]()
     val secret1 = getPrivateKey25519("seed1".getBytes())
     val secret2 = getSchnorrKey("seed2".getBytes())
@@ -236,6 +232,9 @@ class AccountWalletTest
     val blockId = new Array[Byte](32)
     Random.nextBytes(blockId)
 
+    val accountWallet = new AccountWallet(
+      "seed".getBytes(),
+      mockedSecretStorage)
     val result3 = accountWallet.generateNextSecret(privateKey25519Creator)
     assertTrue("Generation of first key should be successful", result3.isSuccess)
     val secret3 = result3.get._2
