@@ -537,11 +537,7 @@ class EthService(
       ModifierSemanticValidity.Unknown,
       null,
       null,
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(
-        0,
-        parentInfo.withdrawalEpochInfo,
-        networkParams
-      ),
+      parentInfo.withdrawalEpochInfo,
       None,
       parentInfo.lastBlockInPreviousConsensusEpoch
     )

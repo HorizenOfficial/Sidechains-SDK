@@ -24,6 +24,7 @@ Test:
     - Check all RPC functions that support block tags
       - with earliest, safe, finalized, pending, latest
     - Add some tx and check output for pending
+    - Mine a block and re-check with latest
     - Deploy a smart contract, do some function and static calls and check output for pending
     - Mine a block and re-check with latest
     - Mine more blocks to reach > 100 Sidechain blocks and re-check output for safe / finalized
@@ -87,7 +88,7 @@ class SCEvmRpcBlockTags(AccountChainSetup):
                                             tag='pending')
         assert_true(res[0] == transfer_amount)
 
-    def __send_and_assert_tag_rpc_methods(self, tag, secondAddress=None, **kwargs):
+    def __send_and_assert_tag_rpc_methods(self, tag, **kwargs):
         if tag not in ['earliest', 'safe', 'finalized', 'pending', 'latest']:
             raise Exception("Tag passed is invalid.")
 
@@ -115,9 +116,6 @@ class SCEvmRpcBlockTags(AccountChainSetup):
                 assert_true(resTxCount['error']['code'] == kwargs['TransactionCount'])
                 assert_true(resBlockTxCount['error']['code'] == kwargs['BlockTransactionCount'])
                 assert_true(resBlock['error']['code'] == kwargs['Block'])
-
-        if tag in ['pending', 'latest'] and secondAddress is not None:
-            self.__do_contract_call_tests(self.sc_nodes[0], tag, secondAddress)
 
     def run_test(self):
         sc_node_1 = self.sc_nodes[0]
@@ -155,19 +153,37 @@ class SCEvmRpcBlockTags(AccountChainSetup):
         nonce_addr_1 = 0
         common_tx_list = []
         for i in range(4):
-            common_tx_list.append(
+            common_tx_list.append(add_0x_prefix(
                 createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
                                          nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
-                                         maxFeePerGas=900000000, value=1))
+                                         maxFeePerGas=900000000, value=1)))
             nonce_addr_1 += 1
 
-        # Check pending state and block functions
-        expResp = {'Balance': '0x1b1ae49220f02adffc', 'TransactionCount': '0x4', 'BlockTransactionCount': '0x4',
+        # Check if tx hashes are included in pending block
+        assert_true(common_tx_list == sc_node_1.rpc_eth_getBlockByNumber('pending', False)['result']['transactions'])
+
+        # Calculate the balance for address in mempool
+        tx = sc_node_1.rpc_eth_getBlockByNumber('pending', True)['result']['transactions'][0]
+        gasPrice, value, gasForEoa2Eoa = int(tx['gasPrice'], 16), int(tx['value'], 16), 0x5208
+        balanceUsed = ((gasPrice * gasForEoa2Eoa) + value) * len(common_tx_list)
+        pendingBalance = str(hex((int(ft_amount_in_wei_hex_str, 16) - balanceUsed)))
+
+        expResp = {'Balance': pendingBalance, 'TransactionCount': '0x4', 'BlockTransactionCount': '0x4',
                    'Block': '0x3'}
-        self.__send_and_assert_tag_rpc_methods('pending', add_0x_prefix(evm_address_sc2), **expResp)
+        self.__send_and_assert_tag_rpc_methods('pending', **expResp)
+
+        generate_next_block(sc_node_1, "first node")
+        self.sc_sync_all()
+
+        # Check latest block, should give same outputs as pending block before
+        self.__send_and_assert_tag_rpc_methods('latest', **expResp)
+
+        # Test contract deployment and contract calls with 'pending' tag
+        self.__do_contract_call_tests(self.sc_nodes[0], 'pending', add_0x_prefix(evm_address_sc2))
 
         # Create tracer result for pending block after smart contract deployment was added to mempool
         traceBlock_pending = sc_node_1.rpc_debug_traceBlockByNumber('pending')['result']
+        assert_true(len(traceBlock_pending) > 0)
 
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
@@ -176,12 +192,11 @@ class SCEvmRpcBlockTags(AccountChainSetup):
         traceBlock_latest = sc_node_1.rpc_debug_traceBlockByNumber('latest')['result']
         assert_true(traceBlock_pending == traceBlock_latest)
 
-        expResp = {'Balance': '0x1b1ae13f735e6abcfc', 'TransactionCount': '0x6', 'BlockTransactionCount': '0x2',
-                   'Block': '0x4'}
-        self.__send_and_assert_tag_rpc_methods('latest', add_0x_prefix(evm_address_sc2), **expResp)
+        # Test contract deployment and contract calls with 'latest' tag
+        self.__do_contract_call_tests(self.sc_nodes[0], 'latest', add_0x_prefix(evm_address_sc2))
 
-        # Generate 94 SC blocks to get the first safe / finalized one which will be the genesis block
-        generate_next_blocks(sc_node_1, "first node", 94)
+        # Generate SC blocks to get the genesis block to be first safe / finalized block
+        generate_next_blocks(sc_node_1, "first node", 101 - int(sc_node_1.rpc_eth_blockNumber()['result'], 16))
         expResp = {'Balance': '0x0', 'TransactionCount': '0x0', 'BlockTransactionCount': '0x0',
                    'Block': '0x1'}
         self.__send_and_assert_tag_rpc_methods('safe', **expResp)
