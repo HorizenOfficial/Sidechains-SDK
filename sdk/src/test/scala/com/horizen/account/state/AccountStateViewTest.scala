@@ -13,7 +13,7 @@ import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 import sparkz.core.bytesToVersion
 
 import scala.util.Random

@@ -38,8 +38,8 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
-import scorex.crypto.hash.Keccak256
-import scorex.util.bytesToId
+import sparkz.crypto.hash.Keccak256
+import sparkz.util.bytesToId
 import sparkz.core.transaction.state.Secret
 
 import java.math.BigInteger
