@@ -32,10 +32,10 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils, WithdrawalEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
-import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.{NodeViewHolder, bytesToId}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 import java.util
