@@ -146,7 +146,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     require(keyTypeSalt != null, "Key type salt must be NOT NULL")
     val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val removeList = new JArrayList[ByteArrayWrapper]()
-    updateList.add(new JPair(getNonceKey(keyTypeSalt), new ByteArrayWrapper(nonce)))
+    updateList.add(new JPair(getNonceKey(keyTypeSalt), new ByteArrayWrapper(Ints.toByteArray(nonce))))
     storage.update(new ByteArrayWrapper(Utils.nextVersion), updateList, removeList)
     this
   }
