@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 // NOTE: Deploy this contract first
 contract DelegateReceiver {
-    // NOTE: storage layout must be the same as contract A
+    // NOTE: storage layout must be the same as contract DelegateCaller
     uint public num;
     address public sender;
     uint public value;
@@ -21,7 +21,7 @@ contract DelegateCaller {
     uint public value;
 
     function setVars(address _contract, uint _num) public payable {
-        // A's storage is set, B is not modified.
+        // DelegateCaller's storage is set, DelegateReceiver is not modified.
         (bool success, bytes memory data) = _contract.delegatecall(
             abi.encodeWithSignature("setVars(uint256)", _num)
         );
