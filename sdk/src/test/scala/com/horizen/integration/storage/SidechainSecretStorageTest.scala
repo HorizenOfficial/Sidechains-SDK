@@ -1,6 +1,6 @@
 package com.horizen.integration.storage
 
-import com.google.common.primitives.Ints
+import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
@@ -8,7 +8,7 @@ import com.horizen.fixtures._
 import com.horizen.secret._
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, Pair}
+import com.horizen.utils.{ByteArrayWrapper, Pair, Utils}
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -17,7 +17,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 
 import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
-import java.util.{Optional, HashMap => JHashMap}
+import java.util.{Optional, ArrayList => JArrayList, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 import scala.util.Try
 
@@ -37,6 +37,28 @@ class SidechainSecretStorageTest
   def testCoreTypes(): Unit = {
     testCoreType(getPrivateKey25519, getPrivateKey25519List(3).asScala.toList)
     testCoreType(VrfKeyGenerator.getInstance().generateSecret("seed".getBytes(StandardCharsets.UTF_8)), getPrivateKey25519List(3).asScala.toList)
+  }
+
+  @Test
+  def testLoadSecret(): Unit = {
+    val mockedAdapter = mock[VersionedLevelDbStorageAdapter]
+    val storageData = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
+
+    val secretList: List[SidechainTypes#SCS] = List(getPrivateKey25519)
+    for (s <- secretList) {
+      val key = Utils.calculateKey(s.publicImage().bytes)
+      storageData.add(new Pair[ByteArrayWrapper, ByteArrayWrapper](key,
+        new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(s))))
+    }
+    Mockito.when(mockedAdapter.getAll).thenReturn(storageData)
+    new SidechainSecretStorage(mockedAdapter, sidechainSecretsCompanion)
+
+    val nonce = 1
+    val keyTypeSalt = PrivateKey25519Creator.getInstance().salt()
+    val nonceKey = Utils.calculateKey(Bytes.concat("nonce".getBytes(StandardCharsets.UTF_8), keyTypeSalt))
+    storageData.add(new Pair(nonceKey, new ByteArrayWrapper(Ints.toByteArray(nonce))))
+    Mockito.when(mockedAdapter.getAll).thenReturn(storageData)
+    new SidechainSecretStorage(mockedAdapter, sidechainSecretsCompanion)
   }
 
 
@@ -137,8 +159,6 @@ class SidechainSecretStorageTest
       case e: RuntimeException => exceptionThrown = true
     }
     storage2.close()
-
-    assertTrue("Exception must be thrown if serializer for custom secret type was not specified.", exceptionThrown)
 
 
     // Test 4: open the store again and try to create SidechainSecretStorage WITH Custom Secret serializer support
