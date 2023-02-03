@@ -60,7 +60,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
-          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator
+          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
+          @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -85,7 +86,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           customApiGroups,
           rejectedApiPaths,
           applicationStopper,
-          forkConfigurator
+          forkConfigurator,
+          secondsInSlot
         )
       }
     }
