@@ -8,7 +8,7 @@ import com.horizen.AbstractSidechainNodeViewHolder
 import com.horizen.node.SidechainNodeView
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}

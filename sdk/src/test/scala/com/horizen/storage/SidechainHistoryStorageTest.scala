@@ -19,8 +19,8 @@ import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try

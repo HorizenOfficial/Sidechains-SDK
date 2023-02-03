@@ -6,7 +6,7 @@ import com.horizen.account.utils.Secp256k1;
 import com.horizen.node.NodeWalletBase;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretCreator;
-import scorex.crypto.hash.Keccak256;
+import sparkz.crypto.hash.Keccak256;
 import java.util.List;
 
 public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKeySecp256k1> {

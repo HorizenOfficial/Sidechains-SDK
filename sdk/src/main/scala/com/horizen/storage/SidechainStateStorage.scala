@@ -13,7 +13,7 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -21,7 +21,7 @@ import scala.compat.java8.OptionConverters._
 import scala.util._
 
 class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion, params: NetworkParams)
-  extends ScorexLogging
+  extends SparkzLogging
     with SidechainStorageInfo
     with SidechainTypes
 {

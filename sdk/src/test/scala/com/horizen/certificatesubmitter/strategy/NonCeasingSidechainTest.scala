@@ -16,7 +16,7 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.mockito.Mockito.when
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.BytesUtils
 import sparkz.core.NodeViewHolder.CurrentView

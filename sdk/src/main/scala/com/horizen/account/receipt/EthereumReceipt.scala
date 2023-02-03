@@ -4,7 +4,7 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util

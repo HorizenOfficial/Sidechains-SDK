@@ -1,8 +1,8 @@
 package com.horizen.transaction;
 
 import sparkz.core.serialization.SparkzSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public interface TransactionSerializer<T extends Transaction>
     extends SparkzSerializer<T>

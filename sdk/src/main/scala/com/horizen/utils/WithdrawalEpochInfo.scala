@@ -3,7 +3,7 @@ package com.horizen.utils
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.serialization.Views
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 
 @JsonView(Array(classOf[Views.Default]))

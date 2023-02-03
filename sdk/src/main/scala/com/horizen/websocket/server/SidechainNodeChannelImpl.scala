@@ -1,7 +1,7 @@
 package com.horizen.websocket.server
 
 import java.util
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -22,7 +22,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scala.language.postfixOps
 
 // TODO must be tested for Account model
-class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging {
+class SidechainNodeChannelImpl() extends SidechainNodeChannel with SparkzLogging {
 
   implicit val duration: Timeout = 20 seconds
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global

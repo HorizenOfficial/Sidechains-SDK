@@ -13,7 +13,7 @@ import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.BytesUtils
-import scorex.crypto.hash.{Blake2b256, Keccak256}
+import sparkz.crypto.hash.{Blake2b256, Keccak256}
 import com.horizen.proof.Signature25519
 import java.math.BigInteger
 import scala.collection.JavaConverters.seqAsJavaListConverter

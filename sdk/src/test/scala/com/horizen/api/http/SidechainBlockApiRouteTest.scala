@@ -8,7 +8,7 @@ import com.horizen.consensus.{ConsensusEpochAndSlot, intToConsensusEpochNumber, 
 import com.horizen.forge
 import com.horizen.serialization.SerializationUtil
 import org.junit.Assert._
-import scorex.util.bytesToId
+import sparkz.util.bytesToId
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}
@@ -254,7 +254,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
     "Successfully reply at /stopForging" in {
       sidechainApiMockConfiguration.should_blockActor_StopForging_reply = true
 
-      Post(basePath + "stopForging") ~> sidechainBlockApiRoute ~> check {
+      Post(basePath + "stopForging").addCredentials(credentials) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -263,17 +263,22 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
     "Failed reply at /stopForging" in {
       sidechainApiMockConfiguration.should_blockActor_StopForging_reply = false
 
-      Post(basePath + "stopForging") ~> sidechainBlockApiRoute ~> check {
+      Post(basePath + "stopForging").addCredentials(credentials) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStopForging("", JOptional.empty()).code)
+      }
+
+      Post(basePath + "stopForging").addCredentials(badCredentials)
+        .withEntity("maybe_a_json") ~> Route.seal(sidechainBlockApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
     }
 
     "Successfully reply at /startForging" in {
       sidechainApiMockConfiguration.should_blockActor_StartForging_reply = true
 
-      Post(basePath + "startForging") ~> sidechainBlockApiRoute ~> check {
+      Post(basePath + "startForging").addCredentials(credentials) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -282,10 +287,14 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
     "Failed reply at /startForging" in {
       sidechainApiMockConfiguration.should_blockActor_StartForging_reply = false
 
-      Post(basePath + "startForging") ~> sidechainBlockApiRoute ~> check {
+      Post(basePath + "startForging").addCredentials(credentials) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStartForging("", JOptional.empty()).code)
+      }
+
+      Post(basePath + "startForging").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainBlockApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
     }
 
