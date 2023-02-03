@@ -117,7 +117,7 @@ func TestInvokeDelegatecall(t *testing.T) {
 		HandleParams: HandleParams{Handle: handle},
 		From:         user,
 		To:           deployCallerResult.ContractAddress,
-		Input:        test.DelegateCaller.Store(test2Value, deployReceiverResult.ContractAddress),
+		Input:        test.DelegateCaller.Store(deployReceiverResult.ContractAddress, test2Value),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 		TraceOptions: &TraceOptions{

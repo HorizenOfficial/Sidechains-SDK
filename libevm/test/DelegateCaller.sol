@@ -5,16 +5,13 @@ pragma solidity >=0.7.0 <0.9.0;
 contract DelegateCaller {
     uint public number;
 
-    function store(uint num, address _contract) public {
-        (bool success, ) = _contract.delegatecall(
-            abi.encodeWithSignature("store(uint256)", num)
+    function store(address _contract, uint _num) public {
+        (bool success, bytes memory result) = _contract.delegatecall(
+            abi.encodeWithSignature("store(uint256)", _num)
         );
         if (success == false) {
             assembly {
-                let ptr := mload(0x40)
-                let size := returndatasize()
-                returndatacopy(ptr, 0, size)
-                revert(ptr, size)
+                revert(add(result, 32), mload(result))
             }
         }
     }

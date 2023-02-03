@@ -86,20 +86,6 @@ func (c *OpCodesContract) Call(name string) []byte {
 	return c.findSignature(name)
 }
 
-type DelegateCallerContract struct{ *contract }
-
-func (c *DelegateCallerContract) Store(value *big.Int, address *common.Address) []byte {
-	return Concat(
-		c.findSignature("store"),
-		common.BigToHash(value).Bytes(),
-		address.Hash().Bytes(),
-	)
-}
-
-func (c *DelegateCallerContract) Retrieve() []byte {
-	return c.findSignature("retrieve")
-}
-
 type DelegateReceiverContract struct{ *contract }
 
 func (c *DelegateReceiverContract) Store(value *big.Int) []byte {
@@ -107,5 +93,19 @@ func (c *DelegateReceiverContract) Store(value *big.Int) []byte {
 }
 
 func (c *DelegateReceiverContract) Retrieve() []byte {
+	return c.findSignature("retrieve")
+}
+
+type DelegateCallerContract struct{ *contract }
+
+func (c *DelegateCallerContract) Store(address *common.Address, value *big.Int) []byte {
+	return Concat(
+		c.findSignature("store"),
+		address.Hash().Bytes(),
+		common.BigToHash(value).Bytes(),
+	)
+}
+
+func (c *DelegateCallerContract) Retrieve() []byte {
 	return c.findSignature("retrieve")
 }
