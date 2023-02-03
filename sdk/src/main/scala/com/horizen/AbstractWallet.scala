@@ -13,7 +13,7 @@ import scorex.util.ScorexLogging
 import java.util.{List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
   extends sparkz.core.transaction.wallet.Vault[TX, PMOD, W] {
@@ -119,10 +119,13 @@ abstract class AbstractWallet[
       val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
       val secret: T = secretCreator.generateSecret(seed)
       if (!secretStorage.contains(secret)) {
-        val trySecret = secretStorage.add(secret)
-        if (trySecret.isSuccess) {
-          secretStorage.storeNonce(nonce, salt)
-          return Success(this, secret)
+        secretStorage.add(secret) match {
+          case Success(_) =>
+            secretStorage.storeNonce(nonce, salt) match {
+              case Success(_) => return Success(this, secret)
+              case Failure(exception) => throw new RuntimeException("Can't store nonce while generating next secret " + exception)
+            }
+          case Failure(exception) => throw new RuntimeException("Can't store secret while generating next secret " + exception)
         }
       }
       nonce += 1
