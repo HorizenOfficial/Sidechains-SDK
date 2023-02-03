@@ -57,7 +57,8 @@ class SidechainApp @Inject()
    @Named("CustomApiGroups") override val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
-   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator
+   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
+   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -71,7 +72,8 @@ class SidechainApp @Inject()
     ChainInfo(
       regtestId = 111,
       testnetId = 222,
-      mainnetId = 333)
+      mainnetId = 333),
+    secondsInSlot
     )
 {
 
