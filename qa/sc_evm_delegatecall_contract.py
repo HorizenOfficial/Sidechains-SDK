@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 import logging
 
-from eth_utils import to_checksum_address
-
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.ac_utils import contract_function_static_call, contract_function_call, \
-    generate_block_and_get_tx_receipt, random_byte_string, deploy_smart_contract
-from SidechainTestFramework.scutil import generate_next_block
+from SidechainTestFramework.account.ac_utils import (
+    contract_function_call, contract_function_static_call, deploy_smart_contract, generate_block_and_get_tx_receipt,
+)
 from test_framework.util import assert_equal, assert_true
 
-#TODO: test is passing, but the original gas calculation algorithm doesn't work. Need to be fixed.
 """
-Check an EVM Contract with delegatecall command, which should work properly.
+Check an EVM Contract with delegatecall instruction, which should work properly.
+Also verify the behavior of gas estimation in case errors in nested calls are not reported by the calling function.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -21,16 +19,15 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
     - Start SC node with that genesis info
 
 Test:
-    - Compile the contract
-    - Deploy contract B
-    - Call setVars method of contract B, use “123” as argument
-    - Deploy contract A
-    - Copy Contract B address
-    - Call setVars method of contract A, use contract B address as the first argument, “456” as the second one
-    - Call num method of both contracts
-Expected result:
-    A: num = 123
-    B: num = 456 
+    - Compile and deploy two contracts: DelegateReceiver and DelegateCaller
+    - Write using DelegateReceiver
+    - Verify value
+    - Write using DelegateCaller
+    - Verify value is not actually written (out of gas for the internal call)
+    - Write again using DelegateCaller and a manually increased gas limit
+    - Verify value
+    - Write using a modified version "setVarsAssert" which reports errors of the internal call
+    - Verify value
 """
 
 
@@ -39,56 +36,50 @@ class SCEvmDeployingContract(AccountChainSetup):
     def __init__(self):
         super().__init__(withdrawalEpochLength=100)
 
+    def deploy(self, contract_name):
+        logging.info(f"Creating smart contract utilities for {contract_name}")
+        contract = SmartContract(contract_name)
+        logging.info(contract)
+        contract_address = deploy_smart_contract(self.sc_nodes[0], contract, self.evm_address)
+        return contract, contract_address
+
+    def write_read_cycle(self, contract, address, write_method, write_args, expected_value, overrideGas=None):
+        # write value
+        tx_hash = contract_function_call(
+            self.sc_nodes[0], contract, address, self.evm_address, write_method, *write_args, overrideGas=overrideGas
+        )
+        # make sure the transaction was executed successfully
+        result = generate_block_and_get_tx_receipt(self.sc_nodes[0], tx_hash, True)
+        assert_true(result, "call failed")
+        # read value using a static call
+        read_value = contract_function_static_call(self.sc_nodes[0], contract, address, self.evm_address, "num()")
+        assert_equal(expected_value, read_value[0], "unexpected value")
+
     def run_test(self):
         self.sc_ac_setup()
-        sc_node = self.sc_nodes[0]
 
-        receiver_contract_type = 'DelegateReceiver'
-        logging.info(f"Creating smart contract utilities for {receiver_contract_type}")
-        receiver_contract_type = SmartContract(receiver_contract_type)
-        logging.info(receiver_contract_type)
+        receiver, receiver_address = self.deploy("DelegateReceiver")
+        caller, caller_address = self.deploy("DelegateCaller")
 
-        caller_contract_type = 'DelegateCaller'
-        logging.info(f"Creating smart contract utilities for {caller_contract_type}")
-        caller_contract_type = SmartContract(caller_contract_type)
-        logging.info(caller_contract_type)
+        # Write directly to the receiver contract
+        # we expect this to work and the given value to be written and then read
+        self.write_read_cycle(receiver, receiver_address, "setVars(uint256)", (123,), 123)
 
-        initial_secret = random_byte_string(length=20)
+        # Write using the Caller Contract and delegatecall
+        # This should fail because the implementation of setVars does not report back errors during the delegate-call.
+        # The gas estimation will thus result in a gas limit that is too low to successfully execute the delegate-call,
+        # but the transaction itself will not be marked as failed. We expect the read value to remain zero.
+        self.write_read_cycle(caller, caller_address, "setVars(address,uint256)", (receiver_address, 456), 0)
 
-        # testing deployment
-        evm_hex_address = to_checksum_address(self.evm_address)
-        receiver_contract_address = deploy_smart_contract(sc_node, receiver_contract_type, evm_hex_address,
-                                                        initial_secret)
+        # We can make the function work by manually setting a higher gas limit
+        self.write_read_cycle(
+            caller, caller_address, "setVars(address,uint256)", (receiver_address, 456), 456, overrideGas=80000
+        )
 
-        # Test Contract B store-read cycle
-        method = 'setVars(uint256)'
-        tx_id = contract_function_call(sc_node, receiver_contract_type, receiver_contract_address, self.evm_address,
-                                       method, 123)
-        block_id = generate_next_block(sc_node, "scnode")
-        block_data = sc_node.block_findById(blockId=block_id)["result"]["block"]
-        # get block id and check that tx is included
-        assert_true(any(x for x in block_data['sidechainTransactions'] if "0x" + x['id'] == tx_id),
-                    "Block does not contain transaction with contract call")
-        stored_value = contract_function_static_call(sc_node, receiver_contract_type, receiver_contract_address,
-                                                     self.evm_address, 'num()')
-        assert_equal(123, stored_value[0])
-
-        caller_contract_address = deploy_smart_contract(sc_node, caller_contract_type, evm_hex_address,
-                                                       initial_secret)
-        # Test Contract A store-read cycle with delegatecall
-
-        method = 'setVars(address,uint256)'
-
-        tx_id = contract_function_call(sc_node, caller_contract_type, caller_contract_address, self.evm_address,
-                                       method, receiver_contract_address, 456, value=0, overrideGas=100000)
-        block_id = generate_next_block(sc_node, "scnode")
-        block_data = sc_node.block_findById(blockId=block_id)["result"]["block"]
-        # get block id and check that tx is included
-        assert_true(any(x for x in block_data['sidechainTransactions'] if "0x" + x['id'] == tx_id),
-                    "Block does not contain transaction with contract call")
-        stored_value = contract_function_static_call(sc_node, caller_contract_type, caller_contract_address,
-                                                     self.evm_address, 'num()')
-        assert_equal(456, stored_value[0])
+        # Write using the Caller Contract and delegatecall
+        # This should be successful because the implementation of setVarsAssert will report any errors during the
+        # delegate-call and gas estimation will give a value that actually makes the delegate-call work.
+        self.write_read_cycle(caller, caller_address, "setVarsAssert(address,uint256)", (receiver_address, 789), 789)
 
 
 if __name__ == "__main__":
