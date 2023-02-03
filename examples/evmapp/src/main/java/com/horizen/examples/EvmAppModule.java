@@ -58,7 +58,7 @@ public class EvmAppModule extends AccountAppModule {
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
         customMessageProcessors.add(new EvmMessageProcessor());
 
-        // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 430.
+        // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.
         int consensusSecondsInSlot = 12;
 
         // use a custom object which implements the stopAll() method
