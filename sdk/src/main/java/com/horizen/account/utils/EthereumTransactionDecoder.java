@@ -3,15 +3,17 @@ package com.horizen.account.utils;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.utils.BytesUtils;
 import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import org.web3j.utils.Numeric;
 import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.VLQByteBufferReader;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Optional;
-
 import static com.horizen.account.utils.EthereumTransactionUtils.convertToLong;
 import static com.horizen.account.utils.EthereumTransactionUtils.getRealV;
 import static com.horizen.account.utils.Secp256k1.*;
@@ -50,7 +52,15 @@ public class EthereumTransactionDecoder {
 
     public static EthereumTransaction decode(String hexTransaction) {
         byte[] transaction = Numeric.hexStringToByteArray(hexTransaction);
-        return decode(transaction);
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(transaction));
+        EthereumTransaction tx = EthereumTransactionDecoder.decode(reader);
+        int size = reader.remaining();
+        if (size > 0) {
+            byte[] trailingBytes = reader.getBytes(size);
+            throw new IllegalArgumentException(
+                    "Spurious bytes found in byte stream after obj parsing: [" + BytesUtils.toHexString(trailingBytes) + "]...");
+        }
+        return tx;
     }
 
     public static EthereumTransaction decode(byte[] transaction) {
