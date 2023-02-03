@@ -17,6 +17,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 
 import java.lang.{Byte => JByte}
+import java.nio.charset.StandardCharsets
 import java.util.{Optional, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -37,7 +38,7 @@ class SidechainSecretStorageTest
   @Test
   def testCoreTypes(): Unit = {
     testCoreType(getPrivateKey25519, getPrivateKey25519List(3).asScala.toList)
-    testCoreType(VrfKeyGenerator.getInstance().generateSecret("seed".getBytes()), getPrivateKey25519List(3).asScala.toList)
+    testCoreType(VrfKeyGenerator.getInstance().generateSecret("seed".getBytes(StandardCharsets.UTF_8)), getPrivateKey25519List(3).asScala.toList)
   }
 
 
