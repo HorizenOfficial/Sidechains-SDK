@@ -34,20 +34,17 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   def calculateKey(proposition: SidechainTypes#SCP): ByteArrayWrapper = Utils.calculateKey(proposition.bytes)
 
-  /**
-   * Used to speed up key retrieval.
-   * Loads secrets during the initialization phase.
-   */
   private def loadSecrets(): Unit = {
     secrets.clear()
+
     val storageData = storage.getAll.asScala
-    val secretBytesList = storageData.view
+    storageData.view
       .map(keyToSecretBytes => keyToSecretBytes.getValue.data)
       .map(secretBytes => sidechainSecretsCompanion.parseBytes(secretBytes))
-    secretBytesList.foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
+      .foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
   }
 
-  def get(proposition: SidechainTypes#SCP): Option[SidechainTypes#SCS] = secrets.get(calculateKey(proposition))
+  def get (proposition: SidechainTypes#SCP): Option[SidechainTypes#SCS] = secrets.get(calculateKey(proposition))
 
   def get (propositions: List[SidechainTypes#SCP]): List[SidechainTypes#SCS] = propositions.flatMap(p => secrets.get(calculateKey(p)))
 
