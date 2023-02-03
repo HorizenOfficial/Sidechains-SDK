@@ -114,7 +114,7 @@ class WithdrawalMsgProcessorIntegrationTest
       // Checking log
       listOfLogs = view.getLogs(txHash3.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      expectedEvent = AddWithdrawalRequest(msg.getFrom.get(), mcAddr, withdrawalAmount2, defaultBlockContext.withdrawalEpochNumber)
+      expectedEvent = AddWithdrawalRequest(msg.getFrom.get(), mcAddr, withdrawalAmount2, withdrawalEpoch)
       checkEvent(expectedEvent, listOfLogs(0))
 
       // GetListOfWithdrawalRequest after second withdrawal request creation
