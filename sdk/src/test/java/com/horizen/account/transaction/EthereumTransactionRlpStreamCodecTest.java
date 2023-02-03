@@ -3,6 +3,7 @@ package com.horizen.account.transaction;
 import com.google.common.primitives.Bytes;
 import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.utils.EthereumTransactionDecoder;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
 import org.junit.Ignore;
@@ -233,6 +234,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
     }
 
     // See: https://github.com/ethereum/tests/tree/develop/src/TransactionTestsFiller/ttWrongRLP
+
     // Badly RLP encoded transactions
     String[][] gethTestVectorsWrongRlp = {
             {"aCrashingRLP", "96dc24d6874a9b01e4a7b7e5b74db504db3731f764293769caef100f551efadf7d378a015faca6ae62ae30a9bf5e3c6aa94f58597edc381d0ec167fa0c84635e12a2d13ab965866ebf7c7aae458afedef1c17e08eb641135f592774e18401e0104f8e7f8e0d98e3230332e3133322e39342e31333784787beded84556c094cf8528c39342e3133372e342e31333982765fb840621168019b7491921722649cd1aa9608f23f8857d782e7495fb6765b821002c4aac6ba5da28a5c91b432e5fcc078931f802ffb5a3ababa42adee7a0c927ff49ef8528c3136322e3234332e34362e39829dd4b840e437a4836b77ad9d9ffe73ee782ef2614e6d8370fcf62191a6e488276e23717147073a7ce0b444d485fff5a0c34c4577251a7a990cf80d8542e21b95aa8c5e6cdd8e3230332e3133322e39342e31333788ffffffffa5aadb3a84556c095384556c0919"},
@@ -259,6 +261,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
             {"TRANSCT__RandomByteAtRLP_6", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8cef804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT__RandomByteAtRLP_7", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285efebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT__RandomByteAtRLP_8", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44efb9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            {"TRANSCT__RandomByteAtRLP_9", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887ef321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT_rvalue_GivenAsList", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ce098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT_rvalue_TooLarge", "f86303018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca2ef3d98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT_svalue_GivenAsList", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4ae08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
@@ -276,6 +279,45 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
             {"TRANSCT__ZeroByteAtRLP_6", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c00804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT__ZeroByteAtRLP_7", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf28500ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT__ZeroByteAtRLP_8", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c4400b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            {"TRANSCT__ZeroByteAtRLP_9", "f861030182a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa0888700321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            {"TRANSCT__RandomByteAtTheEnd", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3ef"},
+    };
+    // RLP encoded transactions which are decoded by us but yield eth tx objects not semantically valid
+    String[][] gethTestVectorsSemanticValdationFailure = {
+            // byte 33: the r value is an array of 30 byte instead of 32. Our decoder pads it with zeros and the encoder would trim it accordingly, but the signature is not readable
+            {"TRANSCT_rvalue_TooShort", "f85f030182a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441c9e921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // gas uint64 overflows
+            {"TRANSCT_gasLimit_TooLarge", "f8810301a2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff07d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+    };
+    // RLP encoded transactions which are correctly decoded by us and yield semantically valid eth tx obj
+    // Note: some of these testvectors has been modified for having a gas limit value above the intrinsic gas limit 21000, otherwise the semantic validity would fail
+    String[][] gethTestVectorsNotFailing = {
+            // byte 33: rvalue is 34 byte long with two leading zeros [ a2 00 00 ...] (should be [ a0 .. ]
+            {"TRANSCT_rvalue_Prefixed0000", "f863030182a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca2000098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // same as above for s value
+            {"TRANSCT_svalue_Prefixed0000", "f863030182a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa200008887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // byte 4: gas limit is encoded as an array of size 5 with leading zeroes: [85 00 00 00 09 48] (Should be [82 09 48])
+            {"RLPgasLimitWithFirstZeros", "f862800185000000a94894095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
+            // byte 3: same as above for gas price
+            {"RLPgasPriceWithFirstZeros", "f862808300000182a35294095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
+            // byte 2: same as above for nonce
+            {"RLPNonceWithFirstZeros", "f86384000000030182a35294095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
+            // byte 28: same as above for value 10 [82 00 0a] (Should be [0a]
+            {"RLPValueWithFirstZeros", "f861800182a35294095e7baea6a6c7c4c2dfeb977efac326af552d8782000a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
+            // Similar to RLPgasLimitWithFirstZeros
+            {"TRANSCT_gasLimit_Prefixed0000", "f8630301840000a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // byte 31: a length expressed as two bytes with a leading 00: [b9 00 40] (should be [b8 40])
+            {"RLPArrayLengthWithFirstZeros", "f8a20301830186a094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0ab90040ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // byte 2: a 0 is expressed not as an empty string but encoded explicitly [81 00] (should be [80])
+            {"RLPIncorrectByteEncoding00", "f86081000182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // byte 2: a byte is expressed not as a string of value 0..0x7f but encoded explicitly as a string of length 1 contaning the value,[81 01] (should be [01])
+            {"RLPIncorrectByteEncoding01", "f86081010182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // the same as above, [81 7f] (should be [7f])
+            {"RLPIncorrectByteEncoding127", "f860817f0182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // byte 0: the length of a list fits 1 byte but is encoded in two bytes with a leading 0 [f9 00 5f] (should be [f8 5f])
+            {"RLPListLengthWithFirstZeros", "f9005f030182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // TODO: not clear why this should fail, unrealistic large nonce or gasPrice??
+            {"tr201506052141PYTHON", "f8718439a6c38b88446cf2b7cba3be25847c4af09494a41e36344e8524318a21a527743b169f3a437b8684153aa6b4808189a0f5e5d736775026020ad30508a301eea73d2b096171e6ba17ac3d170f6863b55c9f5fe34e0580ce02b39acae5844a9da787ac7d1a4d97d6bfc53546ba2bc47880"},
     };
 
 
@@ -315,23 +357,6 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
     }
 
 
-    // RLP encoded transactions which are decoded but yield eth tx objects not semantically valid
-    String[][] gethTestVectorsSemanticValdationFailure = {
-            {"RLPgasLimitWithFirstZeros", "f862800185000000094894095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
-            {"RLPgasPriceWithFirstZeros", "f862808300000182035294095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
-            {"RLPNonceWithFirstZeros", "f86384000000030182035294095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
-            {"RLPValueWithFirstZeros", "f861800182035294095e7baea6a6c7c4c2dfeb977efac326af552d8782000a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
-            {"TRANSCT_gasLimit_Prefixed0000", "f863030184000007d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"TRANSCT__RandomByteAtRLP_9", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887ef321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"TRANSCT__RandomByteAtTheEnd", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3ef"},
-            {"TRANSCT_rvalue_Prefixed0000", "f86303018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca2000098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"TRANSCT_rvalue_TooShort", "f85f03018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441c9e921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"TRANSCT_svalue_Prefixed0000", "f86303018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa200008887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"TRANSCT__ZeroByteAtRLP_9", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa0888700321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"TRANSCT_gasLimit_TooLarge", "f8810301a2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff07d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-    };
-
-
 
     @Test
     public void testGethDecodeRlpSemanticValidationStream() {
@@ -346,8 +371,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
                 fail("Should not succeed");
 
             } catch (Exception e) {
-                //if (e.getMessage().contains("Transaction"))
-                //System.out.println(gethTestVectorsSemanticValdationFailure[i][0] + "--->" + e.getMessage());
+                System.out.println(strings[0] + "--->" + e.getMessage());
             }
         }
     }
@@ -364,25 +388,11 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
                 fail("Should not succeed");
 
             } catch (Exception e) {
-                //if (e.getMessage().contains("Transaction"))
-                //System.out.println(gethTestVectorsSemanticValdationFailure[i][0] + "--->" + e.getMessage());
+                System.out.println(strings[0] + "--->" + e.getMessage());
             }
         }
     }
 
-    // RLP encoded transactions which are correctly decoded and yield semantically valid eth tx obj
-    String[][] gethTestVectorsNotFailing = {
-            // a length expressed as two bytes with a leading 00: [00 40]
-            {"RLPArrayLengthWithFirstZeros", "f8a20301830186a094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0ab90040ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            // nonce = 0 is expressed not as an empty string but encoded explicitly
-            {"RLPIncorrectByteEncoding00", "f86081000182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-
-            // TODO check these
-            {"RLPIncorrectByteEncoding01", "f86081010182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"RLPIncorrectByteEncoding127", "f860817f0182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"RLPListLengthWithFirstZeros", "f9005f030182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            {"tr201506052141PYTHON", "f8718439a6c38b88446cf2b7cba3be25847c4af09494a41e36344e8524318a21a527743b169f3a437b8684153aa6b4808189a0f5e5d736775026020ad30508a301eea73d2b096171e6ba17ac3d170f6863b55c9f5fe34e0580ce02b39acae5844a9da787ac7d1a4d97d6bfc53546ba2bc47880"},
-    };
 
     @Test
     public void testGethDecodeRlpNotFailingStream() {
@@ -420,19 +430,33 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
 
     @Test
     @Ignore
-    public void checkSingle() {
-        byte[] b = BytesUtils.fromHexString(gethTestVectorsSemanticValdationFailure[1][1]);
+    public void checkSingle() throws TransactionSemanticValidityException {
+        byte[] b = BytesUtils.fromHexString(gethTestVectorsSemanticValdationFailure[0][1]);
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(b);
-        System.out.println(ethTx.toString());
+        //ethTx.semanticValidity();
+
+        byte[] b2 = ethTx.encode(true);
+        EthereumTransaction ethTx2 = EthereumTransactionDecoder.decode(b2);
+
+        assertEquals(ethTx, ethTx2);
+        assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(b2));
+        System.out.println(ethTx);
     }
 
     @Test
     @Ignore
-    public void checkSingleStream() {
-        byte[] b = BytesUtils.fromHexString("04f88601808477359400a0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82520894095e7baea6a6c7c4c2dfeb977efac326af552d878080c080a05cbd172231fc0735e0fb994dd5b1a4939170a260b36f0427a8a80866b063b948a07c230f7f578dd61785c93361b9871c0706ebfa6d06e3f4491dc9558c5202ed36");
+    public void checkSingleStream() throws TransactionSemanticValidityException {
+        byte[] b = BytesUtils.fromHexString(gethTestVectorsNotFailing[5][1]);
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
-        System.out.println(ethTx.toString());
+        ethTx.semanticValidity();
+
+        byte[] b2 = ethTx.encode(true);
+        EthereumTransaction ethTx2 = EthereumTransactionDecoder.decode(b2);
+
+        assertEquals(ethTx, ethTx2);
+        //assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(b2));
+        System.out.println(ethTx);
     }
 
 

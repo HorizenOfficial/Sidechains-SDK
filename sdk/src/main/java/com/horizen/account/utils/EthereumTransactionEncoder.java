@@ -59,6 +59,7 @@ public class EthereumTransactionEncoder {
                 v = createEip155v(v, tx.getChainId());
             }
 
+            // we chose to trim any leading zero thus potentially reducing the 32 byte length array. The decoder handles it accordingly and pads the same field with 0
             result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(v)));
             result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(r)));
             result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(s)));

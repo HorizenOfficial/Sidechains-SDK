@@ -160,6 +160,7 @@ public class EthereumTransactionDecoder {
 
         if (values.getValues().size() != 6 ) {
             byte[] v = ((RlpString)values.getValues().get(6)).getBytes();
+            // we chose to pad byte arrays shorter than 32 bytes. The method throws an exception if it is longer
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(7)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(8)).getBytes()), 32);
 
