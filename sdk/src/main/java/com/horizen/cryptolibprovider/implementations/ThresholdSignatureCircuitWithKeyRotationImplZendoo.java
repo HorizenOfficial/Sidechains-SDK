@@ -165,7 +165,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         signatures.forEach(SchnorrSignature::freeSignature);
         customFieldsElements.forEach(FieldElement::freeFieldElement);
 
-        return new Pair<>(Ints.toByteArray(1), 2L);
+        return new Pair<>(proofAndQuality.getProof(), proofAndQuality.getQuality());
     }
 
     @Override
