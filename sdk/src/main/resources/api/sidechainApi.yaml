@@ -1890,13 +1890,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /submitter/getSchnorrPublicKeyHash:
+  /submitter/getKeyRotationMessageToSignForSigningKey:
     post:
       tags:
         - submitter
       summary: returns hash of public key
-      description: Accepts public key and returns hash of the public key
-      operationId: getSchnorrPublicKeyHash
+      description: Accepts public key and returns hash of the public signing key
+      operationId: getKeyRotationMessageToSignForSigningKey
       requestBody:
         content:
           application/json:
@@ -1904,10 +1904,15 @@ paths:
               type: object
               required:
                 - schnorrPublicKey
+                - withdrawalEpoch
               properties:
                 schnorrPublicKey:
                   type: string
                   description: public key of certificate signer
+                withdrawalEpoch:
+                  type: integer
+                  format: int32
+                  description: Number of withdrawal epoch
       responses:
         '200':
           description: successful operation
@@ -1919,7 +1924,53 @@ paths:
                   result:
                     type: object
                     properties:
-                      schnorrPublicKeyHash:
+                      keyRotationMessageToSign:
+                        type: string
+                        description: Hash of public key of certificate signer
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/getKeyRotationMessageToSignForMasterKey:
+    post:
+      tags:
+        - submitter
+      summary: returns hash of public key
+      description: Accepts public key and returns hash of the public master key
+      operationId: getKeyRotationMessageToSignForMasterKey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - schnorrPublicKey
+                - withdrawalEpoch
+              properties:
+                schnorrPublicKey:
+                  type: string
+                  description: public key of certificate signer
+                withdrawalEpoch:
+                  type: integer
+                  format: int32
+                  description: Number of withdrawal epoch
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      keyRotationMessageToSign:
                         type: string
                         description: Hash of public key of certificate signer
                   error:

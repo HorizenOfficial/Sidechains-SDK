@@ -15,7 +15,8 @@ from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstra
 
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 from test_framework.mc_test.mc_test import generate_random_field_element_hex
-from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal, assert_false, get_field_element_with_padding
+from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal, \
+    assert_false, get_field_element_with_padding
 
 WAIT_CONST = 1
 
@@ -181,7 +182,7 @@ Parameters:
  - block_timestamp_rewind: rewind genesis block timestamp by some value
  - virtual_withdrawal_epoch_length - actual withdrawal epoch length from SC perspective in case of non-ceasing sidechain
     Note: must be undefined or 0 in case of ceasing sidechain; >0 in case of non-ceasing sidechain.
-
+ 
 Output: a JSON object to be included in the settings file of the sidechain node nth.
 {
     "scId": "id of the sidechain node",
@@ -282,7 +283,6 @@ def generate_cert_signer_secrets(seed, number_of_schnorr_keys):
     return schnorr_keys
 
 
-
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
 
 """
@@ -311,7 +311,6 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
         signer_secrets.append(signer_key.secret)
         public_signing_keys.append(signer_key.publicKey)
 
-
     json_parameters = {
         "signersPublicKeys": public_signing_keys,
         "threshold": threshold,
@@ -321,7 +320,7 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
     }
 
     if circuit_type == KEY_ROTATION_CIRCUIT:
-        master_keys = generate_cert_signer_secrets("master"+seed, number_of_signer_keys)
+        master_keys = generate_cert_signer_secrets("master" + seed, number_of_signer_keys)
         for i in range((len(master_keys))):
             master_key = master_keys[i]
             master_secrets.append(master_key.secret)
@@ -329,7 +328,8 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
 
         json_parameters["mastersPublicKeys"] = public_master_keys
 
-    output = launch_bootstrap_tool("generateCertProofInfo", json_parameters) if circuit_type == NO_KEY_ROTATION_CIRCUIT else \
+    output = launch_bootstrap_tool("generateCertProofInfo",
+                                   json_parameters) if circuit_type == NO_KEY_ROTATION_CIRCUIT else \
         launch_bootstrap_tool("generateCertWithKeyRotationProofInfo", json_parameters)
 
     threshold = output["threshold"]
@@ -479,7 +479,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_signing_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
-        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_master_keys), # This should be NON empty only in case of Key Rotation Circuit
+        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_master_keys),
+        # This should be NON empty only in case of Key Rotation Circuit
         "MAX_PKS": len(bootstrap_info.certificate_proof_info.public_signing_keys),
         "CERT_PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
         "CERT_VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
@@ -608,7 +609,6 @@ EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.6.
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
                   auth_api_key=None):
-
     """
     Start a SC node and returns API connection to it
     """
@@ -714,7 +714,8 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
     while True:
         if time.time() - start >= wait_for:
             raise (TimeoutException("Trying to connect to node{0}".format(node_num)))
-        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("remoteAddress") == "/" + ip_port):
+        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if
+               i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
 
@@ -950,7 +951,8 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys, sc_creation_info.csw_enabled, sc_creation_info.circuit_type)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys, sc_creation_info.csw_enabled,
+                                            sc_creation_info.circuit_type)
     if sc_creation_info.csw_enabled:
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
     else:
@@ -988,7 +990,8 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False, circuit_type = NO_KEY_ROTATION_CIRCUIT):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False,
+                          circuit_type=NO_KEY_ROTATION_CIRCUIT):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
     if (circuit_type == NO_KEY_ROTATION_CIRCUIT):
         if isCSWEnabled:
@@ -1002,7 +1005,7 @@ def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=F
         pk = "cert_marlin_snark_pk_with_key_rotation"
         vk = "cert_marlin_snark_vk_with_key_rotation"
     else:
-        assert "type is not supported "+str(circuit_type)
+        assert "type is not supported " + str(circuit_type)
 
     return ProofKeysPaths(
         os.path.join(dirname, pk + str(cert_threshold_sig_max_keys)).replace("\\", "/"),
@@ -1290,3 +1293,11 @@ def get_resources_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'resources'))
 
 
+
+
+def get_withdrawal_epoch(sc_node):
+    j = {
+        "blockId": sc_node.block_best()["result"]["block"]["id"]
+    }
+    request = json.dumps(j)
+    return sc_node.block_findBlockInfoById(request)["result"]["blockInfo"]["withdrawalEpochInfo"]["epoch"]

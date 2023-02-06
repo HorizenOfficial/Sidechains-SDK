@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import time
 
 
@@ -110,9 +109,9 @@ class SCMultiplePendingCertsNonCeasing(SidechainTestFramework):
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10  # Note: must be even number
-    total_withdrawal_epochs_number = 5
+    total_withdrawal_epochs_number = 5  # sc_withdrawal_epoch_length must exceed this value at least by 2
     sc_creation_amount = 100  # Zen
-    ft_amount = 100  # Zen
+    ft_amount = 100 + pow(2, total_withdrawal_epochs_number)  # Zen
 
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays

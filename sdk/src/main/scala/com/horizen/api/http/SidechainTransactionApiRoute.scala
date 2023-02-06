@@ -486,9 +486,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                   }
 
                 //Collect input box
-                wallet.allBoxes().asScala.find(box => box.isInstanceOf[ZenBox] && box.value() >= fee && !boxIdsToExclude.contains(box.id())) match {
+                wallet.boxesOfType(classOf[ZenBox], boxIdsToExclude).asScala.find(box => box.value() >= fee) match {
                   case Some(inputBox) =>
-                    val keyRotationTransaction = CertificateKeyRotationTransaction.create(
+                    Try { CertificateKeyRotationTransaction.create(
                       new JPair[ZenBox, PrivateKey25519](inputBox.asInstanceOf[ZenBox], wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get()),
                       inputBox.proposition().asInstanceOf[PublicKey25519Proposition],
                       fee,
@@ -499,14 +499,17 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                       SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.masterKeySignature)),
                       SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature)),
                     )
-                    if (body.automaticSend.getOrElse(true)) {
+                    } match {
+                      case Success(keyRotationTransaction) =>if (body.automaticSend.getOrElse(true)) {
                       validateAndSendTransaction(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
                     } else {
                       if (body.format.getOrElse(false)) {
                         ApiResponseUtil.toResponse(TransactionDTO(keyRotationTransaction.asInstanceOf[SCBT]))
                       } else {
                         ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(keyRotationTransaction.asInstanceOf[SCBT]))))
-                      }
+                      }}
+                      case Failure(ex) =>
+                        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(ex)))
                     }
                   case None =>
                     ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput("Not found input box to pay the fee", JOptional.empty()))
