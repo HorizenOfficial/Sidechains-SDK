@@ -245,23 +245,44 @@ class AccountWalletTest
 
     val privateKey25519Creator = PrivateKey25519Creator.getInstance()
     val schnorrKeyCreator = SchnorrKeyGenerator.getInstance()
+    var schnorrNonce = 1
+    var key25519Nonce = 2
 
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+
+    Mockito.when(mockedSecretStorage.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer(answer =>
+      if(answer.getArgument(0) == schnorrKeyCreator.salt()) {
+        schnorrNonce += 1
+        Some(schnorrNonce)
+      } else if(answer.getArgument(0) == privateKey25519Creator.salt()) {
+        key25519Nonce += 1
+        Some(key25519Nonce)
+      }
+    )
 
     val accountWallet = new AccountWallet(
       "seed".getBytes(),
       mockedSecretStorage)
 
-    Mockito.when(mockedSecretStorage.getNonce(schnorrKeyCreator.salt())).thenReturn(Some(2))
-    accountWallet.generateNextSecret(schnorrKeyCreator)
 
-    Mockito.when(mockedSecretStorage.getNonce(privateKey25519Creator.salt())).thenReturn(Some(3))
-    accountWallet.generateNextSecret(privateKey25519Creator)
+    val schnorrKey_3 = accountWallet.generateNextSecret(schnorrKeyCreator).get._2
+    storageList += schnorrKey_3
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
 
-    Mockito.when(mockedSecretStorage.getNonce(schnorrKeyCreator.salt())).thenReturn(Some(3))
-    accountWallet.generateNextSecret(schnorrKeyCreator)
+    val key25519_4 = accountWallet.generateNextSecret(privateKey25519Creator).get._2
+    storageList += key25519_4
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
 
-    Mockito.when(mockedSecretStorage.getNonce(privateKey25519Creator.salt())).thenReturn(Some(4))
-    accountWallet.generateNextSecret(privateKey25519Creator)
+    val schnorrKey_4 = accountWallet.generateNextSecret(schnorrKeyCreator).get._2
+    storageList += schnorrKey_4
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+
+    val key25519_5 = accountWallet.generateNextSecret(privateKey25519Creator).get._2
+    storageList += key25519_5
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+
+    Assert.assertEquals("Total number of secrets must be 9", 9, storageList.size)
+    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 3, schnorrNonce)
+    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 4, key25519Nonce)
   }
 }
