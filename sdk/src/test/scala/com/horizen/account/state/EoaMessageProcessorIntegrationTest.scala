@@ -14,8 +14,7 @@ class EoaMessageProcessorIntegrationTest
   extends JUnitSuite
     with MockitoSugar
     with SecretFixture
-    with MessageProcessorFixture
-    with ClosableResourceHandler {
+    with MessageProcessorFixture {
 
   @Test
   def canProcess(): Unit = {

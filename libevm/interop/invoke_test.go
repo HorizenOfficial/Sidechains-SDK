@@ -64,7 +64,7 @@ func TestInvoke(t *testing.T) {
 		HandleParams: lib.HandleParams{Handle: handle},
 		From:         user,
 		To:           nil,
-		Input:        test.StorageContractDeploy(initialValue),
+		Input:        test.Storage.Deploy(initialValue),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	}).(*lib.EvmResult)
@@ -75,7 +75,7 @@ func TestInvoke(t *testing.T) {
 		HandleParams: lib.HandleParams{Handle: handle},
 		Address:      *result.ContractAddress,
 	}).([]byte)
-	if common.Bytes2Hex(test.StorageContractRuntimeCode()) != common.Bytes2Hex(getCodeResult) {
+	if common.Bytes2Hex(test.Storage.RuntimeCode()) != common.Bytes2Hex(getCodeResult) {
 		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getCodeResult))
 	}
 	// call function to store value
@@ -83,7 +83,7 @@ func TestInvoke(t *testing.T) {
 		HandleParams: lib.HandleParams{Handle: handle},
 		From:         user,
 		To:           result.ContractAddress,
-		Input:        test.StorageContractStore(anotherValue),
+		Input:        test.Storage.Store(anotherValue),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
@@ -92,7 +92,7 @@ func TestInvoke(t *testing.T) {
 		HandleParams: lib.HandleParams{Handle: handle},
 		From:         user,
 		To:           result.ContractAddress,
-		Input:        test.StorageContractRetrieve(),
+		Input:        test.Storage.Retrieve(),
 		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	}).(*lib.EvmResult)
