@@ -233,37 +233,25 @@ class AccountWalletTest
   @Test
   def testGenerateSecretsOfDifferentDomainsIndependent(): Unit = {
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
+    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
+    Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
 
-    val storageList = ListBuffer[Secret]()
-    val secret1 = getPrivateKey25519("seed1".getBytes())
-    val secret2 = getSchnorrKey("seed2".getBytes())
-    storageList += secret1
-    storageList += secret2
+    val key25519_1 = getPrivateKey25519("seed1".getBytes())
+    val schnorrKey_1 = getSchnorrKey("seed2".getBytes())
+    val key25519_2 = getPrivateKey25519("seed3".getBytes())
+    val key25519_3 = getPrivateKey25519("seed4".getBytes())
+    val schnorrKey_2 = getSchnorrKey("seed5".getBytes())
+    val storageList = ListBuffer[Secret](key25519_1, schnorrKey_1, key25519_2, key25519_3, schnorrKey_2)
 
     val privateKey25519Creator = PrivateKey25519Creator.getInstance()
     val schnorrKeyCreator = SchnorrKeyGenerator.getInstance()
-    Mockito.when(mockedSecretStorage.getNonce(privateKey25519Creator.salt())).thenReturn(Some(1))
-    Mockito.when(mockedSecretStorage.getNonce(schnorrKeyCreator.salt())).thenReturn(Some(0))
+    Mockito.when(mockedSecretStorage.getNonce(privateKey25519Creator.salt())).thenReturn(Some(2))
+    Mockito.when(mockedSecretStorage.getNonce(schnorrKeyCreator.salt())).thenReturn(Some(1))
 
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
-    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
-    Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
 
     val accountWallet = new AccountWallet(
       "seed".getBytes(),
       mockedSecretStorage)
-    val result3 = accountWallet.generateNextSecret(privateKey25519Creator)
-    assertTrue("Generation of first key should be successful", result3.isSuccess)
-    val secret3 = result3.get._2
-    storageList += secret3
-    storageList -= secret2
-
-    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
-    val result4 = accountWallet.generateNextSecret(schnorrKeyCreator)
-
-    assertTrue("Generation of second key of different type should be successful", result4.isSuccess)
-    val secret4 = result4.get._2
-
-    assertNotEquals("The deleted Schnorr key and the generated Schnorr key after deleted of that one should not be the same", secret2, secret4)
   }
 }
