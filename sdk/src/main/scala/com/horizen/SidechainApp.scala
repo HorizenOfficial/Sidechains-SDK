@@ -34,6 +34,7 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
+import com.horizen.sc2sc.Sc2ScProverRef
 
 import com.horizen.sc2sc.Sc2ScConfigurator
 
@@ -209,20 +210,25 @@ class SidechainApp @Inject()
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
   }
 
+  var sc2scProverRef: Option[ActorRef] = if (sc2scConfigurator.canSendMessages) Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)) else None
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
 
-  override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute[TX,
-      SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
-    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params)
-  )
-
+  override lazy val coreApiRoutes: Seq[ApiRoute] = {
+    var ret =  Seq(
+      MainchainBlockApiRoute[TX,
+        SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
+      SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
+      SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
+      SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
+      SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
+      SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
+      SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
+      SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params))
+    if (sc2scConfigurator.canSendMessages){
+      ret = ret :+ Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef.get)
+    }
+    ret
+  }
   val nodeViewProvider: NodeViewProvider[
     TX,
     SidechainBlockHeader,
