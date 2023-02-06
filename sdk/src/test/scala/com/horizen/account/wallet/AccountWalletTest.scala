@@ -245,13 +245,23 @@ class AccountWalletTest
 
     val privateKey25519Creator = PrivateKey25519Creator.getInstance()
     val schnorrKeyCreator = SchnorrKeyGenerator.getInstance()
-    Mockito.when(mockedSecretStorage.getNonce(privateKey25519Creator.salt())).thenReturn(Some(2))
-    Mockito.when(mockedSecretStorage.getNonce(schnorrKeyCreator.salt())).thenReturn(Some(1))
 
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
 
     val accountWallet = new AccountWallet(
       "seed".getBytes(),
       mockedSecretStorage)
+
+    Mockito.when(mockedSecretStorage.getNonce(schnorrKeyCreator.salt())).thenReturn(Some(2))
+    accountWallet.generateNextSecret(schnorrKeyCreator)
+
+    Mockito.when(mockedSecretStorage.getNonce(privateKey25519Creator.salt())).thenReturn(Some(3))
+    accountWallet.generateNextSecret(privateKey25519Creator)
+
+    Mockito.when(mockedSecretStorage.getNonce(schnorrKeyCreator.salt())).thenReturn(Some(3))
+    accountWallet.generateNextSecret(schnorrKeyCreator)
+
+    Mockito.when(mockedSecretStorage.getNonce(privateKey25519Creator.salt())).thenReturn(Some(4))
+    accountWallet.generateNextSecret(privateKey25519Creator)
   }
 }
