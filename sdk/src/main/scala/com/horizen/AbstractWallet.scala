@@ -105,8 +105,7 @@ abstract class AbstractWallet[
 
   def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): W
 
-  @Override
-  def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)] = Try {
+  override def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)] = Try {
     require(secretCreator != null, "AbstractWallet: Secret creator must be NOT NULL.")
     val allSecrets = this.secrets()
     val salt = secretCreator.salt()
