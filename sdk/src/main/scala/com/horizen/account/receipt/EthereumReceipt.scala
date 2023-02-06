@@ -85,7 +85,7 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
     // optional field
     val addr = receipt.contractAddress.map(_.toBytes).getOrElse(Array.empty)
     writer.putInt(addr.length)
-    writer.putBytes(addr)
+    if (addr.nonEmpty) writer.putBytes(addr)
   }
 
   override def parse(reader: Reader): EthereumReceipt = {
@@ -113,9 +113,8 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
 
     // optional field
     val contractAddressLength = reader.getInt
-    val contractAddressBytes = reader.getBytes(contractAddressLength)
     val contractAddress =
-      if (contractAddressLength == 0) None else Some(new Address(contractAddressBytes))
+      if (contractAddressLength == 0) None else Some(new Address(reader.getBytes(contractAddressLength)))
 
     EthereumReceipt(receipt, txHash, txIndex, blockHash, blockNumber, gasUsed, contractAddress)
   }

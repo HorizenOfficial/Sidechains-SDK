@@ -75,9 +75,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
     val secret = allAccounts.find(
       a => (fromAddress.isEmpty ||
-        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
-          .address.toBytes) == fromAddress.get) &&
-        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0 // TODO account for gas
+        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address.toBytes) == fromAddress.get) &&
+        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
+          .compareTo(txValueInWei) >= 0 // TODO account for gas
     )
 
     if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])

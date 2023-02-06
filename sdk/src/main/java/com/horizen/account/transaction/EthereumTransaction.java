@@ -387,7 +387,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                         )
                 );
             } catch (Exception e) {
-                // TODO: is this a valid case? what are supposed to do with a TX that has a signature we cannot process?
                 // whatever exception may result in processing the signature, we can not tell the from address
                 LogManager.getLogger().info("Could not find from address, Signature not valid:", e);
                 this.from = null;
