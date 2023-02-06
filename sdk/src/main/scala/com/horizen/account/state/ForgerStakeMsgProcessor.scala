@@ -41,7 +41,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
-      msg.getFromAddressBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
+      msg.getFrom.toBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
   }
 
   override def init(view: BaseAccountStateView): Unit = {

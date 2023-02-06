@@ -51,16 +51,8 @@ public class Message {
         return from;
     }
 
-    public byte[] getFromAddressBytes() {
-        return from.toBytes();
-    }
-
     public Optional<Address> getTo() {
         return to;
-    }
-
-    public byte[] getToAddressBytes() {
-        return to.isEmpty() ? null : to.get().toBytes();
     }
 
     public BigInteger getGasPrice() {
