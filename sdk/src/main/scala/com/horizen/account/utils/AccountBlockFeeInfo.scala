@@ -27,10 +27,18 @@ object AccountBlockFeeInfoSerializer extends SparkzSerializer[AccountBlockFeeInf
   }
 
   override def parse(r: Reader): AccountBlockFeeInfo = {
+    var bigIntBitLength: Integer = 0
     val baseFeeLength = r.getInt()
     val baseFee = new BigInteger(r.getBytes(baseFeeLength))
+    bigIntBitLength = baseFee.bitLength()
+    if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+      throw new IllegalArgumentException(s"Base Fee bit size $bigIntBitLength exceeds the limit ${Account.BIG_INT_MAX_BIT_SIZE}")
+
     val forgerTipsLength = r.getInt()
     val forgerTips = new BigInteger(r.getBytes(forgerTipsLength))
+    bigIntBitLength = baseFee.bitLength()
+    if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+      throw new IllegalArgumentException(s"Base Fee bit size $bigIntBitLength exceeds the limit ${Account.BIG_INT_MAX_BIT_SIZE}")
     val forgerRewardKey: AddressProposition = AddressPropositionSerializer.getSerializer.parse(r)
 
     AccountBlockFeeInfo(baseFee, forgerTips, forgerRewardKey)

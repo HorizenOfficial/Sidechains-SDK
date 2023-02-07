@@ -26,6 +26,9 @@ object AccountPaymentSerializer extends SparkzSerializer[AccountPayment] {
     val address = AddressPropositionSerializer.getSerializer.parse(r)
     val valueLength = r.getInt
     val value = new BigInteger(r.getBytes(valueLength))
+    val bigIntBitLength = value.bitLength()
+    if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+      throw new IllegalArgumentException(s"Base Fee bit size $bigIntBitLength exceeds the limit ${Account.BIG_INT_MAX_BIT_SIZE}")
 
     AccountPayment(address, value)
   }

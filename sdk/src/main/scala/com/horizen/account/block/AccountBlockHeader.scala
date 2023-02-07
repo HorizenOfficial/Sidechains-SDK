@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.receipt.{Bloom, BloomSerializer}
-import com.horizen.account.utils.FeeUtils
+import com.horizen.account.utils.{Account, FeeUtils}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
@@ -19,6 +19,7 @@ import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
+
 import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
 
@@ -210,14 +211,25 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
+    var bigIntBitLength: Integer = 0
+
     val baseFeeSize = r.getInt()
     val baseFee = new BigInteger(r.getBytes(baseFeeSize))
+    bigIntBitLength = baseFee.bitLength()
+    if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+      throw new IllegalArgumentException(s"Base Fee bit size $bigIntBitLength exceeds the limit ${Account.BIG_INT_MAX_BIT_SIZE}")
 
     val gasUsedSize = r.getInt()
     val gasUsed = new BigInteger(r.getBytes(gasUsedSize))
+    bigIntBitLength = baseFee.bitLength()
+    if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+      throw new IllegalArgumentException(s"Base Fee bit size $bigIntBitLength exceeds the limit ${Account.BIG_INT_MAX_BIT_SIZE}")
 
     val gasLimitSize = r.getInt()
     val gasLimit = new BigInteger(r.getBytes(gasLimitSize))
+    bigIntBitLength = gasLimit.bitLength()
+    if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+      throw new IllegalArgumentException(s"Base Fee bit size $bigIntBitLength exceeds the limit ${Account.BIG_INT_MAX_BIT_SIZE}")
 
     val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 

@@ -83,12 +83,35 @@ public class EthereumTransactionDecoder {
     private static EthereumTransaction RlpList2EIP1559Transaction(RlpList rlpList) {
         RlpList values = (RlpList)rlpList.getValues().get(0);
         long chainId = ((RlpString)values.getValues().get(0)).asPositiveBigInteger().longValueExact();
+
+        Integer bigIntBitLength;
         BigInteger nonce = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
+        bigIntBitLength = nonce.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         BigInteger maxPriorityFeePerGas = ((RlpString)values.getValues().get(2)).asPositiveBigInteger();
+        bigIntBitLength = maxPriorityFeePerGas.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         BigInteger maxFeePerGas = ((RlpString)values.getValues().get(3)).asPositiveBigInteger();
+        bigIntBitLength = maxFeePerGas.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         BigInteger gasLimit = ((RlpString)values.getValues().get(4)).asPositiveBigInteger();
+        bigIntBitLength = gasLimit.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         String to = ((RlpString)values.getValues().get(5)).asString();
+
         BigInteger value = ((RlpString)values.getValues().get(6)).asPositiveBigInteger();
+        bigIntBitLength = value.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         String data = ((RlpString)values.getValues().get(7)).asString();
 
         var optTo = EthereumTransactionUtils.getToAddressFromString(to);
@@ -127,13 +150,31 @@ public class EthereumTransactionDecoder {
     }
 
     private static EthereumTransaction RlpList2LegacyTransaction(RlpList rlpList) {
-
+        Integer bigIntBitLength;
         RlpList values = (RlpList)rlpList.getValues().get(0);
+
         BigInteger nonce = ((RlpString)values.getValues().get(0)).asPositiveBigInteger();
+        bigIntBitLength = nonce.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         BigInteger gasPrice = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
+        bigIntBitLength = gasPrice.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         BigInteger gasLimit = ((RlpString)values.getValues().get(2)).asPositiveBigInteger();
+        bigIntBitLength = gasLimit.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         String to = ((RlpString)values.getValues().get(3)).asString();
+
         BigInteger value = ((RlpString)values.getValues().get(4)).asPositiveBigInteger();
+        bigIntBitLength = value.bitLength();
+        if (bigIntBitLength > Account.BIG_INT_MAX_BIT_SIZE)
+            throw new IllegalArgumentException(String.format("Base Fee bit size %d exceeds the limit %d", bigIntBitLength, Account.BIG_INT_MAX_BIT_SIZE));
+
         String data = ((RlpString)values.getValues().get(5)).asString();
 
         var optTo = EthereumTransactionUtils.getToAddressFromString(to);
