@@ -73,6 +73,8 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
         VRFProof vrfProof = VRFProof.deserialize(proofBytes);
         FieldElement messageAsFieldElement = FieldElementUtils.elementToFieldElement(element);
 
+        // VRF public key, proof and field element could null in case they can not be deserialized.
+        // It may happen when vrf public key is not valid or when fieldElement or proof is invalid.
         if(publicKey == null || vrfProof == null || messageAsFieldElement == null) {
             if(publicKey != null)
                 publicKey.freePublicKey();
