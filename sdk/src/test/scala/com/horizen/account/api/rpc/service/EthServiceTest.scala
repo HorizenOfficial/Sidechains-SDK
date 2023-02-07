@@ -265,7 +265,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block tag", "Transaction index", "Expected output"),
       ("latest", "0", txViewOutput),
-      ("pending", "0", txViewOutput),
       (null, "0", txViewOutput),
       ("0x2", "0", txViewOutput),
       ("2", "0", txViewOutput),
@@ -393,7 +392,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block tag", "Full transaction objects", "Expected output"),
       ("latest", true, blockViewOutput),
-      ("pending", false, blockViewOutputTxHashes),
+      ("latest", false, blockViewOutputTxHashes),
       ("0x2", true, blockViewOutput)
     )
 
@@ -453,7 +452,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block tag / index", "Expected output"),
       ("latest", "0x1"),
-      ("pending", "0x1"),
       ("0x2", "0x1"),
       ("0x1", "0x0")
     )

@@ -63,7 +63,7 @@ public class EthereumTransactionView {
             r = Numeric.toHexString(signature.getR());
             s = Numeric.toHexString(signature.getS());
         }
-        blockHash = new Hash(receipt.blockHash());
+        blockHash = receipt.blockHash() != null ? new Hash(receipt.blockHash()) : null;
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
         from = tx.getFromAddress();
         hash = new Hash(receipt.transactionHash());

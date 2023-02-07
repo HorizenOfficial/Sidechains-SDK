@@ -1,5 +1,6 @@
 package com.horizen.account.forger
 
+import akka.util.Timeout
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -18,9 +19,10 @@ import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
-import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
+import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -29,8 +31,10 @@ import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 
 import java.math.BigInteger
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.SECONDS
 import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(
@@ -393,5 +397,36 @@ class AccountForgeMessageBuilder(
       })
 
     forgingStakeMerklePathInfoSeq
+  }
+
+  def getPendingBlock(nodeView: View): Option[AccountBlock] = {
+    val branchPointInfo = BranchPointInfo(nodeView.history.bestBlockId, Seq(), Seq())
+    val blockSignPrivateKey = new PrivateKey25519(
+      new Array[Byte](PrivateKey25519.PRIVATE_KEY_LENGTH),
+      new Array[Byte](PrivateKey25519.PUBLIC_KEY_LENGTH)
+    )
+    val forgingStakeInfo: ForgingStakeInfo = new ForgingStakeInfo(
+      new PublicKey25519Proposition(new Array[Byte](PublicKey25519Proposition.KEY_LENGTH)),
+      new VrfPublicKey(new Array[Byte](VrfPublicKey.KEY_LENGTH)),
+      0
+    )
+    val forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo =
+      ForgingStakeMerklePathInfo(forgingStakeInfo, new MerklePath(new JArrayList()))
+    val vrfProof = new VrfProof(new Array[Byte](VrfProof.PROOF_LENGTH))
+    implicit val timeout: Timeout = new Timeout(5, SECONDS)
+
+    forgeBlock(
+      nodeView,
+      System.currentTimeMillis / 1000,
+      branchPointInfo,
+      forgingStakeMerklePathInfo,
+      blockSignPrivateKey,
+      vrfProof,
+      timeout,
+      Seq()
+    ) match {
+      case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
+      case _: ForgeFailure => Option.empty
+    }
   }
 }
