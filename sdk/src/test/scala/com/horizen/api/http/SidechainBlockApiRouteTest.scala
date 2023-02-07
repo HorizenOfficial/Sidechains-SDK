@@ -10,6 +10,7 @@ import com.horizen.serialization.SerializationUtil
 import org.junit.Assert._
 import scorex.util.bytesToId
 
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}
 import java.util.{Optional => JOptional}
@@ -290,7 +291,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
     }
 
     "Successfully reply at /generate (2,1)" in {
-      val successBlockId = bytesToId("firstBlock".getBytes())
+      val successBlockId = bytesToId("firstBlock".getBytes(StandardCharsets.UTF_8))
       sidechainApiMockConfiguration.blockActor_ForgingEpochAndSlot_reply.put(
         ConsensusEpochAndSlot(intToConsensusEpochNumber(2), intToConsensusSlotNumber(1)), Success(successBlockId))
 

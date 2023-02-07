@@ -1,7 +1,6 @@
 package com.horizen.transaction
 
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.box.{Box, ZenBox}
@@ -15,6 +14,8 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.utils.SparkzEncoder
 
+import java.nio.charset.StandardCharsets
+
 class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
 {
 
@@ -26,17 +27,17 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
 
     val creator = PrivateKey25519Creator.getInstance
-    val pk1 = creator.generateSecret("test_seed1".getBytes)
-    val pk2 = creator.generateSecret("test_seed2".getBytes)
-    val pk3 = creator.generateSecret("test_seed3".getBytes)
+    val pk1 = creator.generateSecret("test_seed1".getBytes(StandardCharsets.UTF_8))
+    val pk2 = creator.generateSecret("test_seed2".getBytes(StandardCharsets.UTF_8))
+    val pk3 = creator.generateSecret("test_seed3".getBytes(StandardCharsets.UTF_8))
 
     from.add(new JPair[ZenBox, PrivateKey25519](getZenBox(pk1.publicImage(), 1, 60), pk1))
     from.add(new JPair[ZenBox, PrivateKey25519](getZenBox(pk2.publicImage(), 1, 50), pk2))
     from.add(new JPair[ZenBox, PrivateKey25519](getZenBox(pk3.publicImage(), 1, 20), pk3))
 
-    val pk4 = creator.generateSecret("test_seed4".getBytes)
-    val pk5 = creator.generateSecret("test_seed5".getBytes)
-    val pk6 = creator.generateSecret("test_seed6".getBytes)
+    val pk4 = creator.generateSecret("test_seed4".getBytes(StandardCharsets.UTF_8))
+    val pk5 = creator.generateSecret("test_seed5".getBytes(StandardCharsets.UTF_8))
+    val pk6 = creator.generateSecret("test_seed6".getBytes(StandardCharsets.UTF_8))
 
     to.add(new ZenBoxData(pk4.publicImage, 10L))
     to.add(new ZenBoxData(pk5.publicImage, 20L))

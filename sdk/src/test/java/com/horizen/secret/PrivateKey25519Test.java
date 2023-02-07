@@ -5,12 +5,13 @@ import com.horizen.proof.Signature25519;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import static org.junit.Assert.*;
 
 public class PrivateKey25519Test {
-    byte[] testMessage = "Test string message to sign/verify.".getBytes();
+    byte[] testMessage = "Test string message to sign/verify.".getBytes(StandardCharsets.UTF_8);
 
     PrivateKey25519 key;
     PublicKey25519Proposition prp;

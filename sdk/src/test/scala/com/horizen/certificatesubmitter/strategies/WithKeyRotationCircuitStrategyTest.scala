@@ -29,6 +29,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
 import java.lang
+import java.nio.charset.StandardCharsets
 import java.util.Optional
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
@@ -44,9 +45,9 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
   def init(): Unit = {
     val keyGenerator = SchnorrKeyGenerator.getInstance()
     val schnorrSecrets: Seq[SchnorrSecret] = Seq(
-      keyGenerator.generateSecret("seed1".getBytes()),
-      keyGenerator.generateSecret("seed2".getBytes()),
-      keyGenerator.generateSecret("seed3".getBytes())
+      keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8)),
+      keyGenerator.generateSecret("seed2".getBytes(StandardCharsets.UTF_8)),
+      keyGenerator.generateSecret("seed3".getBytes(StandardCharsets.UTF_8))
     )
     val signersThreshold = 2
     params = RegTestParams(

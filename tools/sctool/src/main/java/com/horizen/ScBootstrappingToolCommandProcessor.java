@@ -202,7 +202,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             printGenerateKeyUsageMsg("seed is not specified or has invalid format.");
             return;
         }
-        PrivateKey25519 key = PrivateKey25519Creator.getInstance().generateSecret(json.get("seed").asText().getBytes());
+        PrivateKey25519 key = PrivateKey25519Creator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
@@ -228,7 +228,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
-        VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(json.get("seed").asText().getBytes());
+        VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("vrfSecret", BytesUtils.toHexString(secretsCompanion.toBytes(vrfSecretKey)));
@@ -251,7 +251,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
-        PrivateKeySecp256k1 secret = PrivateKeySecp256k1Creator.getInstance().generateSecret(json.get("seed").asText().getBytes());
+        PrivateKeySecp256k1 secret = PrivateKeySecp256k1Creator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("accountSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secret)));
@@ -273,7 +273,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        byte[] seed = json.get("seed").asText().getBytes();
+        byte[] seed = json.get("seed").asText().getBytes(StandardCharsets.UTF_8);
         SchnorrSecret secretKey = SchnorrKeyGenerator.getInstance().generateSecret(seed);
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -809,7 +809,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             if (sidechainCreation == null)
                 throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo mc block.");
 
-            byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
+            byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes(StandardCharsets.UTF_8);
             VrfProof vrfProof  = vrfSecretKey.prove(vrfMessage).getKey();
             MerklePath mp = new MerklePath(new ArrayList<>());
             // In Regtest it possible to set genesis block timestamp to not to have block in future exception during STF tests.
@@ -1058,7 +1058,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                     "\t}\n" +
                     "}\n";
 
-            Files.write(Paths.get(pathToResultConf), conf.getBytes());
+            Files.write(Paths.get(pathToResultConf), conf.getBytes(StandardCharsets.UTF_8));
 
         } catch (Exception e) {
             printer.print("Error: unable to open config file.");
