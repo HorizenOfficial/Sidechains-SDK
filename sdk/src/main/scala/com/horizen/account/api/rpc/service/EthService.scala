@@ -25,7 +25,7 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.evm.interop.TraceOptions
-import com.horizen.evm.utils.{Address, Hash}
+import com.horizen.evm.utils.{Address, Converter, Hash}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -474,6 +474,13 @@ class EthService(
     blockId
   }
 
+  private def getBlockHashByTag(nodeView: NV, tag: String): Hash = {
+    if (tag.length == 66 && tag.substring(0, 2) == "0x")
+      Hash.fromBytes(Converter.fromHexString(tag.substring(2)))
+    else
+      Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, tag)))
+  }
+
   @RpcMethod("net_version")
   def version: String = String.valueOf(networkParams.chainId)
 
@@ -785,6 +792,52 @@ class EthService(
 
         // apply requested transaction with tracing enabled
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
+
+        // return the tracer result from the evm
+        if(blockContext.getEvmResult != null) {
+          blockContext.getEvmResult.tracerResult
+        } else Unit
+      }
+    }
+  }
+
+  @RpcMethod("debug_traceCall")
+  @RpcOptionalParameters(1)
+  def traceCall(tx: TransactionArgs, tag: String, config: TraceOptions): Any = {
+
+    applyOnAccountView { nodeView =>
+      // retrieve block hash from input
+      val hash = getBlockHashByTag(nodeView, tag)
+
+      // get block to trace
+      val (block, blockInfo) = getBlockById(nodeView, bytesToId(hash.toBytes))
+
+      // get state at previous block
+      getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
+        // use default trace params if none are given
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+
+        // apply mainchain references
+        for (mcBlockRefData <- block.mainchainBlockReferencesData) {
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
+        }
+
+        val gasPool = new GasPool(block.header.gasLimit)
+
+        // apply block transactions without tracing
+        for ((tx, i) <- block.transactions.zipWithIndex) {
+          tagStateView.applyTransaction(tx, i, gasPool, blockContext)
+        }
+
+        // declare the ethereum transaction from the input parameters
+        val ethTx = tx.toTransaction(networkParams)
+        val ethTxScat = ethTx.asInstanceOf[SidechainTypes#SCAT]
+
+        // use default trace params if none are given
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+
+        // apply requested transaction with tracing enabled
+        tagStateView.applyTransaction(ethTxScat, block.transactions.length, gasPool, blockContext, signatureRequired = false)
 
         // return the tracer result from the evm
         if (blockContext.getEvmResult != null) {

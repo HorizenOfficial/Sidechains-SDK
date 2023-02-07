@@ -179,7 +179,8 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
       txIndex: Int,
       blockGasPool: GasPool,
       blockContext: BlockContext,
-      finalizeChanges: Boolean = true
+      finalizeChanges: Boolean = true,
+      signatureRequired: Boolean = true
   ): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
@@ -190,7 +191,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
     // In some negative test scenario this can happen when forcing an unsigned tx to be forged in a block.
     // In this case the 'from' attribute in the msg would not be
     // set, and it would be difficult to rootcause the reason why gas and nonce checks would fail
-    if (!ethTx.isSigned)
+    if (signatureRequired && !ethTx.isSigned)
       throw new IllegalArgumentException(s"Transaction is not signed: ${ethTx.id}")
 
     val txHash = BytesUtils.fromHexString(ethTx.id)
