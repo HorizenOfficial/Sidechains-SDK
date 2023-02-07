@@ -329,7 +329,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       // with insufficient balance on given 'from' address
       Post(basePath + "signTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqSignTransaction(Option.apply("dafea492d9c6733ae3d56b7ed1adb60692c98bc5"),
-          "01e646824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e8000080"))) ~> sidechainTransactionApiRoute ~> check {
+          "01e946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e8000080808080"))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")

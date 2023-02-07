@@ -8,10 +8,12 @@ import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 import org.web3j.utils.Numeric;
 import sparkz.crypto.hash.Keccak256;
+import sparkz.util.ByteArrayBuilder;
+import sparkz.util.serialization.VLQByteBufferWriter;
+
 import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
@@ -152,7 +154,7 @@ public class EthereumTransactionTest {
 //            if (i % 3 == 0) {
 
             // make sure we also have a signature to encode, even if it is empty to make the results comparable to GETH
-            txs[i] = new EthereumTransaction(to, nonce, gasPrice, gas, value, data, new SignatureSecp256k1(new byte[1], new byte[32], new byte[32]));
+            txs[i] = new EthereumTransaction(to, nonce, gasPrice, gas, value, data, null);
 //            } else {
 //                txs[i] = RawTransaction.createTransaction(0, nonce, gas, to, value, data, gasPrice, gasPrice);
 //            }
@@ -182,7 +184,23 @@ public class EthereumTransactionTest {
                 );
         for (var testCase : testCases.entrySet()) {
             final var txs = generateTransactions(testCase.getKey());
+
+            List<byte[]> rlpTxsList = new ArrayList<>();
+            Arrays.asList(txs).forEach(
+                    ethTx -> {
+                        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+                        ethTx.encode(true, writer);
+                        rlpTxsList.add(writer.toBytes());
+                    }
+            );
+            var rlpTxs2 = rlpTxsList.toArray(byte[][]::new);
+
             final var rlpTxs = Arrays.stream(txs).map(tx -> tx.encode(true)).toArray(byte[][]::new);
+            int i = 0;
+            while (i < rlpTxs.length) {
+                assertArrayEquals(rlpTxs, rlpTxs2);
+                i++;
+            }
             final var actualHash = Numeric.toHexString(TrieHasher.Root(rlpTxs));
             assertEquals("should match transaction root hash", testCase.getValue(), actualHash);
         }

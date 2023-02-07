@@ -94,7 +94,7 @@ public class EthereumTransactionDecoder {
 
     private static EthereumTransaction RlpList2EIP1559Transaction(RlpList rlpList) {
         RlpList values = (RlpList)rlpList.getValues().get(0);
-        if (values.getValues().size() != 9 && values.getValues().size() != 12) {
+        if (values.getValues().size() != 12) {
            throw new IllegalArgumentException(
               "Error while decoding the EIP1559 tx bytes, unexpected number of values in rlp list: " +
                values.getValues().size()
@@ -116,25 +116,32 @@ public class EthereumTransactionDecoder {
         if (((RlpList)values.getValues().get(8)).getValues().size() > 0)
             throw new IllegalArgumentException("Access list is not supported");
 
-        if (values.getValues().size() == 9) {
-            return new EthereumTransaction(
-                    chainId,
-                    optTo,
-                    nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value,
-                    dataBytes,
-                    null);
+        byte[] v = getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
+        byte[] r = ((RlpString)values.getValues().get(10)).getBytes();
+        byte[] s = ((RlpString)values.getValues().get(11)).getBytes();
+
+        SignatureSecp256k1 realSignature;
+        if (Arrays.equals(r, new byte[0]) && Arrays.equals(s, new byte[0])) {
+            // if r and s are both 0 we assume that this signature stands for an unsigned tx object
+            // therefore v is the plain chain ID and the signature is set to null
+            realSignature = null;
         } else {
-            byte[] v = getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
-            byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(10)).getBytes()), 32);
-            byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(11)).getBytes()), 32);
-            SignatureSecp256k1 signature = new SignatureSecp256k1(v, r, s);
-            return new EthereumTransaction(
-                    chainId,
-                    optTo,
-                    nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value,
-                    dataBytes,
-                    signature);
+            // we check the size here even if an assertion would be thrown when instantiating the signature obj below
+            if (r.length != 32)
+                throw new IllegalArgumentException("r byte array length: " + r.length + " != 32");
+            if (s.length != 32)
+                throw new IllegalArgumentException("s byte array length: " + s.length + " != 32");
+
+            realSignature = new SignatureSecp256k1(v, r, s);
         }
+
+        return new EthereumTransaction(
+                chainId,
+                optTo,
+                nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas, value,
+                dataBytes,
+                realSignature);
+
     }
 
     private static EthereumTransaction decodeLegacyTransaction(Reader reader) {
@@ -150,7 +157,7 @@ public class EthereumTransactionDecoder {
     private static EthereumTransaction RlpList2LegacyTransaction(RlpList rlpList) {
 
         RlpList values = (RlpList)rlpList.getValues().get(0);
-        if (values.getValues().size() != 6 && values.getValues().size() != 9) {
+        if (values.getValues().size() != 9) {
             throw new IllegalArgumentException(
                     "Error while rlp decoding payload of legacy tx, unexpected number of values in rlp list: " +
                             values.getValues().size()
@@ -167,35 +174,35 @@ public class EthereumTransactionDecoder {
 
         byte[] dataBytes = ((RlpString)values.getValues().get(5)).getBytes();
 
-        if (values.getValues().size() != 6 ) {
-            byte[] v = ((RlpString)values.getValues().get(6)).getBytes();
-            // we chose to pad byte arrays shorter than 32 bytes. The method throws an exception if it is longer
-            byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(7)).getBytes()), 32);
-            byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(8)).getBytes()), 32);
+        byte[] v = ((RlpString)values.getValues().get(6)).getBytes();
+        byte[] r = ((RlpString)values.getValues().get(7)).getBytes();
+        byte[] s = ((RlpString)values.getValues().get(8)).getBytes();
 
-            Long chainId;
-            SignatureSecp256k1 realSignature;
-            if (Arrays.equals(r, new byte[32]) && Arrays.equals(s, new byte[32])) {
-                // if r and s are both 0 we assume that this signature stands for an unsigned eip155 tx object
-                // therefore v is the plain chain ID and the signature is set to null
-                chainId = convertToLong(v);
-                realSignature = null;
-            } else {
-                chainId = decodeEip155ChainId(v);
-                realSignature = new SignatureSecp256k1(getRealV(v), r, s);
-            }
+        Long chainId;
+        SignatureSecp256k1 realSignature;
+        if (Arrays.equals(r, new byte[0]) && Arrays.equals(s, new byte[0])) {
+            // if r and s are both 0 we assume that this signature stands for an unsigned tx object
+            // therefore v is the plain chain ID and the signature is set to null
+            chainId = convertToLong(v);
+            realSignature = null;
+        } else {
+            // we check the size here even if an assertion would be thrown when instantiating the signature obj below
+            if (r.length != 32)
+                throw new IllegalArgumentException("r byte array length: " + r.length + " != 32");
+            if (s.length != 32)
+                throw new IllegalArgumentException("s byte array length: " + s.length + " != 32");
 
-            if (chainId != null) {
-                // chain id is encoded into V part, this is an EIP 155
-                return new EthereumTransaction(
-                        chainId, optTo, nonce, gasPrice, gasLimit, value, dataBytes, realSignature);
-            } else {
-                return new EthereumTransaction(
-                        optTo, nonce, gasPrice, gasLimit, value, dataBytes, realSignature);
-            }
+            chainId = decodeEip155ChainId(v);
+            realSignature = new SignatureSecp256k1(getRealV(v), r, s);
+        }
+
+        if (chainId != null && chainId != 0) {
+            // chain id is encoded into V part, this is an EIP 155
+            return new EthereumTransaction(
+                    chainId, optTo, nonce, gasPrice, gasLimit, value, dataBytes, realSignature);
         } else {
             return new EthereumTransaction(
-                    optTo, nonce, gasPrice, gasLimit, value, dataBytes, null);
+                    optTo, nonce, gasPrice, gasLimit, value, dataBytes, realSignature);
         }
     }
 

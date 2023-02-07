@@ -1,5 +1,6 @@
 package com.horizen.account.utils;
 
+import com.google.common.primitives.Ints;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.proposition.AddressProposition;
@@ -46,27 +47,35 @@ public class EthereumTransactionEncoder {
         result.add(RlpString.create(tx.getData()));
 
         if (accountSignature) {
-            if (!tx.isSigned())
-                throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
-            SignatureSecp256k1 txSignature = tx.getSignature();
+            byte[] v = new byte[0];
+            byte[] r = new byte[0];
+            byte[] s = new byte[0];
 
-            byte[] v = txSignature.getV();
-            byte[] r = txSignature.getR();
-            byte[] s = txSignature.getS();
+            if (tx.isSigned()) {
 
-            if (tx.isEIP155()) {
-                v = createEip155v(v, tx.getChainId());
+                SignatureSecp256k1 txSignature = tx.getSignature();
+
+                v = txSignature.getV();
+                r = txSignature.getR();
+                s = txSignature.getS();
+
+                if (tx.isEIP155()) {
+                    v = createEip155v(v, tx.getChainId());
+                }
+            } else {
+                if (tx.isEIP155()) {
+                    v = EthereumTransactionUtils.convertToBytes(tx.getChainId());
+                }
             }
 
-            // we chose to trim any leading zero thus potentially reducing the 32 byte length array. The decoder handles it accordingly and pads the same field with 0
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(v)));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(r)));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(s)));
+            result.add(RlpString.create(v));
+            result.add(RlpString.create(r));
+            result.add(RlpString.create(s));
         } else {
             if (tx.isEIP155()) {
                 result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(EthereumTransactionUtils.convertToBytes(tx.getChainId()))));
-                result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(new byte[] {})));
-                result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(new byte[] {})));
+                result.add(RlpString.create(new byte[] {}));
+                result.add(RlpString.create(new byte[] {}));
             }
         }
 
@@ -96,13 +105,21 @@ public class EthereumTransactionEncoder {
         result.add(new RlpList());
 
         if (accountSignature) {
-            if (!tx.isSigned())
-                throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
+            byte[] r = new byte[0];
+            byte[] s = new byte[0];
 
-            SignatureSecp256k1 txSignature = tx.getSignature();
-            result.add(RlpString.create(getRecId(txSignature.getV(), tx.getChainId())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(txSignature.getR())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(txSignature.getS())));
+            if (tx.isSigned()) {
+
+                SignatureSecp256k1 txSignature = tx.getSignature();
+                r = txSignature.getR();
+                s = txSignature.getS();
+                result.add(RlpString.create(getRecId(txSignature.getV(), tx.getChainId())));
+
+            } else {
+                result.add(RlpString.create(tx.getChainId()));
+            }
+            result.add(RlpString.create(r));
+            result.add(RlpString.create(s));
         }
 
         return new RlpList(result);
