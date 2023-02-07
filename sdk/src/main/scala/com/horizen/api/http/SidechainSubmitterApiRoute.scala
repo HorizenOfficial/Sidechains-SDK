@@ -16,6 +16,7 @@ import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
@@ -38,7 +39,7 @@ case class SidechainSubmitterApiRoute[
   NS <: AbstractState[TX, H, PM, NS] with NodeStateBase,
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
-  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef, circuitType: CircuitTypes)
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](override val settings: RESTApiSettings, params: NetworkParams, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef, circuitType: CircuitTypes)
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV]
   with ApiDirectives

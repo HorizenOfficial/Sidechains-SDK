@@ -14,7 +14,6 @@ from httpCalls.block.best import http_block_best
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_signing_key
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
-from httpCalls.submitter.getSchnorrPublicKeyHash import http_get_schnorr_public_key_hash
 from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction
 from httpCalls.transaction.sendTransaction import sendTransaction
@@ -157,15 +156,16 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
         new_public_key = new_signing_key.publicKey
         epoch = get_withdrawal_epoch(sc_node)
-        new_signing_key_message = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, epoch)["keyRotationMessageToSign"]
+        new_signing_key_message = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, epoch)[
+            "keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message,
                                                                 public_key=public_master_keys[0])["signature"]
         signing_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message,
-                                                                key=private_signing_keys[0])["signature"]
+                                                                 key=private_signing_keys[0])["signature"]
         new_key_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message,
-                                                                key=new_signing_key.secret)["signature"]
+                                                                 key=new_signing_key.secret)["signature"]
 
         # Change the signing key 0
         http_create_key_rotation_transaction(sc_node,
@@ -176,7 +176,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
                                              master_key_signature=master_signature,
                                              new_key_signature=new_key_signature,
                                              format=True,
-                                             automatic_send=True)["result"]["transactionId"]
+                                             automatic_send=True)
 
         self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
@@ -193,15 +193,17 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         # Change again the same signature key
         new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
         new_public_key_2 = new_signing_key_2.publicKey
-        new_signing_key_message_2 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, epoch)["keyRotationMessageToSign"]
+        new_signing_key_message_2 = \
+        http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, epoch)[
+            "keyRotationMessageToSign"]
 
         # Sign the new signing key with the old keys
         master_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_2,
-                                                                public_key=public_master_keys[0])["signature"]
+                                                                  public_key=public_master_keys[0])["signature"]
         signing_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_2,
-                                                                key=private_signing_keys[0])["signature"]
+                                                                   key=private_signing_keys[0])["signature"]
         new_key_signature_2 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_2,
-                                                                key=new_signing_key_2.secret)["signature"]
+                                                                   key=new_signing_key_2.secret)["signature"]
 
         # Change again the signing key 0
         http_create_key_rotation_transaction(sc_node,
@@ -212,7 +214,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
                                              master_key_signature=master_signature_2,
                                              new_key_signature=new_key_signature_2,
                                              format=True,
-                                             automatic_send=True)["result"]["transactionId"]
+                                             automatic_send=True)
 
         self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
@@ -239,22 +241,22 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
 
         # Sign the new signing key with the old keys
         master_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_3,
-                                                                public_key=public_master_keys[0])["signature"]
+                                                                  public_key=public_master_keys[0])["signature"]
         signing_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_3,
-                                                                key=private_signing_keys[0])["signature"]
+                                                                   key=private_signing_keys[0])["signature"]
         new_key_signature_3 = self.secure_enclave_create_signature(message_to_sign=new_signing_key_message_3,
-                                                                key=new_signing_key_3.secret)["signature"]
+                                                                   key=new_signing_key_3.secret)["signature"]
 
         # Change the signer key 0
         across_epoch_txhex_t3 = http_create_key_rotation_transaction(sc_node,
-                                            key_type=0,
-                                            key_index=0,
-                                            new_key=new_public_key_3,
-                                            signing_key_signature=signing_signature_3,
-                                            master_key_signature=master_signature_3,
-                                            new_key_signature=new_key_signature_3,
-                                            format=False,
-                                            automatic_send=False)["result"]["transactionBytes"]
+                                                                     key_type=0,
+                                                                     key_index=0,
+                                                                     new_key=new_public_key_3,
+                                                                     signing_key_signature=signing_signature_3,
+                                                                     master_key_signature=master_signature_3,
+                                                                     new_key_signature=new_key_signature_3,
+                                                                     format=False,
+                                                                     automatic_send=False)["result"]["transactionBytes"]
 
         across_epoch_txid_t3 = sendTransaction(sc_node, across_epoch_txhex_t3)["result"]["transactionId"]
 
@@ -360,7 +362,6 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         # Verify that we have the updated key
         certificate_signers_keys = http_get_certifiers_keys(sc_node, 0)["certifiersKeys"]
         assert_equal(certificate_signers_keys["signingKeys"][0]["publicKey"], new_public_key_2)
-
 
 
 if __name__ == "__main__":

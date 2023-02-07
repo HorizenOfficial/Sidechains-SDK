@@ -32,7 +32,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-import com.horizen.secret.PrivateKey25519
+
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -739,18 +739,11 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction): Unit = {
     val index = body.keyIndex
     val keyType = body.keyType
-    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey))
-    val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature))
     if (index < 0 || index >= params.signersPublicKeys.length)
       throw new IllegalArgumentException(s"Key rotation proof - key index out for range: $index")
 
     if (keyType < 0 || keyType >= KeyRotationProofTypes.maxId)
       throw new IllegalArgumentException("Key type enumeration value should be valid!")
-
-    val messageToSign: Array[Byte] = newKey.getHash
-
-    if (!newKeySignature.isValid(newKey, messageToSign))
-      throw new IllegalArgumentException(s"Key rotation proof - self signature is invalid: $index")
   }
 
 }
