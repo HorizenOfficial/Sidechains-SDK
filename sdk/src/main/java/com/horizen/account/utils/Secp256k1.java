@@ -46,8 +46,7 @@ public final class Secp256k1 {
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
         try {
-            SecureRandom rnd = SecureRandom.getInstance("SHA1PRNG");
-            rnd.setSeed(seed);
+            SecureRandom rnd = ChaChaPrngSecureRandom.getInstance(seed);
             ECKeyPair keyPair = Keys.createEcKeyPair(rnd);
 
             byte[] privateKey = Numeric.toBytesPadded(keyPair.getPrivateKey(), PRIVATE_KEY_SIZE);

@@ -1,17 +1,17 @@
 package com.horizen.account.utils;
 
 
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 
 import java.security.*;
 
 class ChaChaPrngSecureRandomProvider extends Provider {
     public ChaChaPrngSecureRandomProvider() {
-        super("ChaChaPRNG",
+        super(ChaChaPrngSecureRandom.NAME,
                 "1.0",
                 "A Cryptographically-Secure PRNG based on ChaCha20");
-        put("SecureRandom.ChaChaPRNG", ChaChaPrngSecureRandom.class.getName());
-        put("SecureRandom.ChaChaPRNG ImplementedIn", "Software");
+        put("SecureRandom." + ChaChaPrngSecureRandom.NAME, ChaChaPrngSecureRandom.class.getName());
+        put("SecureRandom." + ChaChaPrngSecureRandom.NAME + " ImplementedIn", "Software");
     }
 }
 
@@ -23,8 +23,10 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
     private long mStream = 0;
     private static final int DEFAULT_WORD_INDEX = 16;
 
+    protected static final String NAME = "ChaChaPRNG";
+
     public static SecureRandom getInstance(byte[] seed) throws SecurityException {
-        Provider[] providers = Security.getProviders("SecureRandom.ChaChaPRNG");
+        Provider[] providers = Security.getProviders("SecureRandom." + NAME);
         if ((providers == null)
             || (providers.length < 1)
             || (!providers[0].getClass().equals(ChaChaPrngSecureRandomProvider.class))){
@@ -33,12 +35,12 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
 
         SecureRandom rng;
         try {
-            rng = SecureRandom.getInstance("ChaChaPRNG");
+            rng = SecureRandom.getInstance(NAME);
         } catch (NoSuchAlgorithmException e) {
-            throw new SecurityException("ChaChaPRNG not available", e);
+            throw new SecurityException(NAME + " not available", e);
         }
         if (!ChaChaPrngSecureRandomProvider.class.equals(rng.getProvider().getClass())) {
-            throw new SecurityException("SecureRandom.getInstance(\"ChaChaPRNG\") backed by wrong provider: " + rng.getProvider().getClass());
+            throw new SecurityException("SecureRandom.getInstance(\"" + NAME + "\") backed by wrong provider: " + rng.getProvider().getClass());
         }
         rng.setSeed(seed);
         return rng;
