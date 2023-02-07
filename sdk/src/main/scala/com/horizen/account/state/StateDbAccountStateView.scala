@@ -179,20 +179,18 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
       txIndex: Int,
       blockGasPool: GasPool,
       blockContext: BlockContext,
-      finalizeChanges: Boolean = true,
-      signatureRequired: Boolean = true
+      finalizeChanges: Boolean = true
   ): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
 
-    // The signature check is skipped for some specific cases (condition checked with signatureRequired flag)
-    // but it should never happen if the tx has been accepted in mempool.
+    // It should never happen if the tx has been accepted in mempool.
     // In some negative test scenario this can happen when forcing an unsigned tx to be forged in a block.
     // In this case the 'from' attribute in the msg would not be
     // set, and it would be difficult to rootcause the reason why gas and nonce checks would fail
-    if (signatureRequired && !ethTx.isSigned)
+    if (!ethTx.isSigned)
       throw new IllegalArgumentException(s"Transaction is not signed: ${ethTx.id}")
 
     val txHash = BytesUtils.fromHexString(ethTx.id)

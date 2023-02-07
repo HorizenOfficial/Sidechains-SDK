@@ -29,13 +29,13 @@ import com.horizen.evm.utils.{Address, Converter, Hash}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.{NodeViewHolder, bytesToId}
-import sparkz.util.{ModifierId, SparkzLogging}
+import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
 
 import java.math.BigInteger
 import java.util
@@ -474,11 +474,12 @@ class EthService(
     blockId
   }
 
-  private def getBlockHashByTag(nodeView: NV, tag: String): Hash = {
+  private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
     if (tag.length == 66 && tag.substring(0, 2) == "0x")
-      Hash.fromBytes(Converter.fromHexString(tag.substring(2)))
-    else
-      Hash.fromBytes(idToBytes(getBlockIdByTag(nodeView, tag)))
+      bytesToId(Converter.fromHexString(tag.substring(2)))
+    else {
+      getBlockIdByTag(nodeView, tag)
+    }
   }
 
   @RpcMethod("net_version")
@@ -803,17 +804,16 @@ class EthService(
 
   @RpcMethod("debug_traceCall")
   @RpcOptionalParameters(1)
-  def traceCall(tx: TransactionArgs, tag: String, config: TraceOptions): Any = {
+  def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): Any = {
 
     applyOnAccountView { nodeView =>
-      // retrieve block hash from input
-      val hash = getBlockHashByTag(nodeView, tag)
-
       // get block to trace
-      val (block, blockInfo) = getBlockById(nodeView, bytesToId(hash.toBytes))
+      val (block, blockInfo) = getBlockById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
 
-      // get state at previous block
-      getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
+      // get state at selected block
+
+      getStateViewAtTag(nodeView, if(tag=="pending") "pending" else (blockInfo.height).toString) { (tagStateView, blockContext) =>
+
         // use default trace params if none are given
         blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
@@ -829,15 +829,9 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
 
-        // declare the ethereum transaction from the input parameters
-        val ethTx = tx.toTransaction(networkParams)
-        val ethTxScat = ethTx.asInstanceOf[SidechainTypes#SCAT]
-
-        // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
-
-        // apply requested transaction with tracing enabled
-        tagStateView.applyTransaction(ethTxScat, block.transactions.length, gasPool, blockContext, signatureRequired = false)
+        // apply requested message with tracing enabled
+        val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
+        tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
 
         // return the tracer result from the evm
         if (blockContext.getEvmResult != null) {
