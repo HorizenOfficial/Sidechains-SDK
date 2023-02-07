@@ -208,10 +208,6 @@ class AccountWalletTest
     Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
     Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
 
-    // Prepare block ID and corresponding version
-    val blockId = new Array[Byte](32)
-    Random.nextBytes(blockId)
-
     Mockito.when(mockedSecretStorage.getNonce(ArgumentMatchers.any())).thenReturn(Some(2))
     val privateKey25519Creator = PrivateKey25519Creator.getInstance()
 
