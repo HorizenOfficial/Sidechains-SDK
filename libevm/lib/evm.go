@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"math"
 	"math/big"
@@ -122,9 +123,11 @@ func (t *TraceOptions) getTracer() tracers.Tracer {
 		return nil
 	}
 	if t.Tracer != "" {
-		var returnTracer tracers.Tracer
-		returnTracer, _ = tracers.New(t.Tracer, nil, t.TracerConfig)
-		return returnTracer
+		tracer, err := tracers.New(t.Tracer, nil, t.TracerConfig)
+		if err != nil {
+			log.Warn("failed to create tracer: %v", err)
+		}
+		return tracer
 	} else {
 		traceConfig := logger.Config{
 			EnableMemory:     t.EnableMemory,
