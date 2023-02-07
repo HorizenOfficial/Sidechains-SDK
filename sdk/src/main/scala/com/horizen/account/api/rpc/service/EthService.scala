@@ -17,9 +17,9 @@ import com.horizen.account.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.Account.generateContractAddress
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
+import com.horizen.account.utils.Secp256k1.generateContractAddress
 import com.horizen.account.utils.{EthereumTransactionDecoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
@@ -29,7 +29,7 @@ import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
@@ -172,7 +172,7 @@ class EthService(
       } else {
         (
           history.getBlockHeightById(blockId).get().toLong,
-          Hash.fromBytes(blockId.toBytes),
+          new Hash(blockId.toBytes),
           nodeView.state.getView
         )
       }
@@ -270,7 +270,7 @@ class EthService(
       .map(_.asInstanceOf[PrivateKeySecp256k1])
       .find(secret =>
         // if from address is given the secrets public key needs to match, otherwise check all of the secrets
-        fromAddress.forall(from => util.Arrays.equals(from.toBytes, secret.publicImage().address())) &&
+        fromAddress.forall(_.equals(secret.publicImage.address)) &&
           // TODO account for gas
           state.getBalance(secret.publicImage.address).compareTo(txCostInWei) >= 0
       )
@@ -382,7 +382,7 @@ class EthService(
   def getBalance(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        new Quantity(tagStateView.getBalance(address.toBytes))
+        new Quantity(tagStateView.getBalance(address))
       }
     }
   }
@@ -392,7 +392,7 @@ class EthService(
   def getTransactionCount(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        new Quantity(tagStateView.getNonce(address.toBytes))
+        new Quantity(tagStateView.getNonce(address))
       }
     }
   }
@@ -670,7 +670,7 @@ class EthService(
   def getCode(address: Address, tag: String): String = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        val code = Option.apply(tagStateView.getCode(address.toBytes)).getOrElse(Array.emptyByteArray)
+        val code = Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
         Numeric.toHexString(code)
       }
     }
@@ -811,7 +811,7 @@ class EthService(
     val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        Hash.fromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
+        new Hash(stateView.getAccountStorage(address, storageKey))
       }
     }
   }
@@ -822,7 +822,7 @@ class EthService(
     val storageKeys = keys.map(key => Numeric.toBytesPadded(key.toNumber, 32))
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        new EthereumAccountProofView(stateView.getProof(address.toBytes, storageKeys))
+        new EthereumAccountProofView(stateView.getProof(address, storageKeys))
       }
     }
   }

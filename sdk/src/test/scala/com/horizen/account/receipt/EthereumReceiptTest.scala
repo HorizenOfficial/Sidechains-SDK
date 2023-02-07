@@ -4,13 +4,13 @@ package com.horizen.account.receipt
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.evm.TrieHasher
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.utils.Numeric
+
 import java.math.BigInteger
 import java.util
 import java.util.Map.entry
@@ -31,7 +31,6 @@ class EthereumReceiptTest
   @Test
   def receiptSimpleSerDeser(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal())
-    assertEquals(Address.LENGTH, receipt.contractAddress.get.length)
     val r1: String = receipt.toString
     //println(r1)
 
@@ -179,13 +178,13 @@ class EthereumReceiptTest
     for (testCase <- testCases.entrySet.asScala) {
       val receipts = generateReceipts(testCase.getKey)
       val rlpReceipts = receipts.map(r => EthereumConsensusDataReceipt.rlpEncode(r)).toList
-      val actualHash = Numeric.toHexString(TrieHasher.Root(rlpReceipts.toArray))
+      val actualHash = TrieHasher.Root(rlpReceipts.toArray)
       /*
         println("i: " + testCase.getKey() +
                 ", value: " + testCase.getValue().toString() +
                 ", actual: "+ actualHash.toString())
        */
-      assertEquals("should match transaction root hash", testCase.getValue, actualHash)
+      assertEquals("should match transaction root hash", testCase.getValue, actualHash.toString)
     }
   }
 }

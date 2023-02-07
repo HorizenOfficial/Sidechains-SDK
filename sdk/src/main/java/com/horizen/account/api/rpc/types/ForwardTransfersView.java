@@ -1,37 +1,29 @@
 package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.ZenWeiConverter;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.ForwardTransfer;
 import org.web3j.utils.Numeric;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @JsonView(Views.Default.class)
 public class ForwardTransfersView {
-    private final List<ForwardTransferData> forwardTransfers = new ArrayList<>();
+    private final List<ForwardTransferData> forwardTransfers;
 
-    public ForwardTransfersView(List<ForwardTransfer> transactions, boolean noPrefix) {
-        for (ForwardTransfer transaction : transactions) {
-            var ftOutput = transaction.getFtOutput();
-            var to = "";
-            var value = "";
-            var address = new AddressProposition(
-                    MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOutput.propositionBytes()));
+    public ForwardTransfersView(List<ForwardTransfer> transactions, boolean isHttpResponse) {
+        forwardTransfers = transactions.stream().map(tx -> {
+            var ftOutput = tx.getFtOutput();
+            var address = MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOutput.propositionBytes());
             var weiValue = ZenWeiConverter.convertZenniesToWei(ftOutput.amount());
-            if (noPrefix) {
-                to = Numeric.toHexStringNoPrefix(address.address());
-                value = String.valueOf(weiValue);
-            } else {
-                to = Numeric.toHexString(address.address());
-                value = Numeric.toHexStringWithPrefix(weiValue);
-            }
-            forwardTransfers.add(new ForwardTransferData(to, value));
-        }
+            return new ForwardTransferData(
+                isHttpResponse ? address.toStringNoPrefix() : address.toString(),
+                isHttpResponse ? String.valueOf(weiValue) : Numeric.toHexStringWithPrefix(weiValue)
+            );
+        }).collect(Collectors.toList());
     }
 
     public List<ForwardTransferData> getForwardTransfers() {

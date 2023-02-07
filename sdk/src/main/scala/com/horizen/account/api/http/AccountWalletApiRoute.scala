@@ -5,29 +5,29 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.api.http.AccountWalletErrorResponse.ErrorCouldNotGetBalance
-import com.horizen.account.api.http.AccountWalletRestScheme.{AccountBalance, ReqGetBalance, ReqGetTotalBalance, RespGetAllBalances, RespGetBalance}
-import com.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
+import com.horizen.account.api.http.AccountWalletRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
+import com.horizen.api.http.WalletBaseRestScheme.{ReqCreateKey, RespCreatePrivateKey}
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, WalletBaseApiRoute}
+import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.node.NodeWalletBase
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
+import com.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import sparkz.core.settings.RESTApiSettings
+
+import java.math.BigInteger
 import java.util.{Optional => JOptional}
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.WalletBaseRestScheme.{ReqCreateKey, RespCreatePrivateKey}
-import com.horizen.companion.SidechainSecretsCompanion
-import java.math.BigInteger
-import scala.collection.JavaConverters.asScalaBufferConverter
-
 
 case class AccountWalletApiRoute(override val settings: RESTApiSettings,
                                  sidechainNodeViewHolderRef: ActorRef,
@@ -152,7 +152,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
                 val accountBalances: List[AccountBalance] = addressPropositions.foldLeft(List.empty[AccountBalance]) {
                   (listToFill, addressProposition) =>
                     listToFill :+ AccountBalance(
-                      address = BytesUtils.toHexString(addressProposition.address()),
+                    address = addressProposition.address().toStringNoPrefix,
                       balance = sidechainNodeView.getNodeState.getBalance(addressProposition.address()))
                 }
 

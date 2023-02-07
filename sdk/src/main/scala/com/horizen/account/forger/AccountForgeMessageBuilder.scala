@@ -233,7 +233,7 @@ class AccountForgeMessageBuilder(
               val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
 
               // add rewards to forgers balance
-              feePayments.foreach(payment => dummyView.addBalance(payment.addressBytes, payment.value))
+              feePayments.foreach(payment => dummyView.addBalance(payment.address.address(), payment.value))
 
               feePayments
             } else {
@@ -301,7 +301,7 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),
+      AddressProposition.ZERO,
       BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
       BigInteger.valueOf(Long.MaxValue),
       BigInteger.valueOf(Long.MaxValue),

@@ -1,8 +1,10 @@
 package com.horizen.account.state
 
+import com.horizen.account.AccountFixture
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.StateDB
+import com.horizen.evm.utils.Address
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.MCPublicKeyHashProposition
@@ -13,17 +15,16 @@ import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import sparkz.crypto.hash.Keccak256
 import sparkz.core.bytesToVersion
+import sparkz.crypto.hash.Keccak256
 
-import scala.util.Random
-
-class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProcessorFixture with StoreFixture {
+class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProcessorFixture with StoreFixture
+      with AccountFixture {
 
   var stateView: AccountStateView = _
   val mockNetworkParams: NetworkParams = mock[NetworkParams]
   val forgerStakeMessageProcessor: ForgerStakeMsgProcessor = ForgerStakeMsgProcessor(mockNetworkParams)
-  val contractAddress: Array[Byte] = forgerStakeMessageProcessor.contractAddress
+  val contractAddress: Address = forgerStakeMessageProcessor.contractAddress
 
   @Before
   def setUp(): Unit = {
@@ -63,7 +64,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     // With 3999 withdrawal requests
     val maxNumOfWithdrawalReqs = MaxWithdrawalReqsNumPerEpoch
 
-    val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
+    val destAddress = new MCPublicKeyHashProposition(randomBytes(20))
     val listOfWR = (1 to maxNumOfWithdrawalReqs).map(index => {
       WithdrawalRequest(destAddress, ZenWeiConverter.convertZenniesToWei(index))
     })

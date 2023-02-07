@@ -4,8 +4,9 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.events.AddWithdrawalRequest
-import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.evm.utils.Address
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.ZenCoinsUtils
@@ -24,7 +25,7 @@ trait WithdrawalRequestProvider {
 
 object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with WithdrawalRequestProvider {
 
-  override val contractAddress: Array[Byte] = WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
+  override val contractAddress: Address = WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCode")
 
   val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getBackwardTransfers(uint32)")
@@ -108,9 +109,9 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
     val requestInBytes = request.bytes
     view.updateAccountStorageBytes(contractAddress, getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes)
 
-    view.subBalance(msg.getFromAddressBytes, withdrawalAmount)
+    view.subBalance(msg.getFrom, withdrawalAmount)
 
-    val withdrawalEvent = AddWithdrawalRequest(msg.getFrom.get(), request.proposition, withdrawalAmount, currentEpochNum)
+    val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
     val evmLog = getEvmLog(withdrawalEvent)
     view.addLog(evmLog)
 
