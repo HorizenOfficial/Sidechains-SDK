@@ -4,30 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jna.Callback;
 import com.sun.jna.Pointer;
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 
-final class LibEvmLogCallback implements Callback {
-    private LibEvmLogCallback() {
-        // this is a singleton, prevent more instances
-    }
-
-    static void Register() {
-        // register log callback
-        LibEvm.SetLogCallback(LibEvmLogCallback.instance);
-        // propagate log4j log level to glog
-        LibEvm.SetLogLevel(log4jToGlogLevel(logger.getLevel()));
-    }
-
-    // this singleton instance of the callback will be passed to libevm to be used for logging,
-    // the static reference here will also prevent the callback instance from being garbage collected,
-    // because without it the only reference might be from native code (libevm) and the JVM does not know about that
-    private static final LibEvmLogCallback instance = new LibEvmLogCallback();
-
+class GlogCallback implements Callback {
     private static final ObjectMapper mapper = new ObjectMapper();
-    private static final Logger logger = LogManager.getLogger(LibEvm.class);
+
+    private final Logger logger;
+
+    GlogCallback(Logger logger) {
+        this.logger = logger;
+    }
 
     public void callback(Pointer message) {
         try {
@@ -51,7 +39,7 @@ final class LibEvmLogCallback implements Callback {
         }
     }
 
-    private static Level glogToLog4jLevel(String glogLevel) {
+    public static Level glogToLog4jLevel(String glogLevel) {
         switch (glogLevel) {
             case "trce":
                 return Level.TRACE;
@@ -69,7 +57,7 @@ final class LibEvmLogCallback implements Callback {
         }
     }
 
-    private static String log4jToGlogLevel(Level level) {
+    public static String log4jToGlogLevel(Level level) {
         switch (level.toString()) {
             default:
             case "ALL":
