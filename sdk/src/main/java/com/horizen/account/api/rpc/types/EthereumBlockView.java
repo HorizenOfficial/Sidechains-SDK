@@ -52,7 +52,7 @@ public class EthereumBlockView {
         var header = block.header();
         author = Numeric.toHexString(header.forgerAddress().address());
         number = Numeric.encodeQuantity(BigInteger.valueOf(blockNumber));
-        hash = Numeric.toHexString(blockHash.toBytes());
+        hash = (blockHash != null) ? Numeric.toHexString(blockHash.toBytes()) : null;
         parentHash = Numeric.prependHexPrefix((String) block.parentId());
         logsBloom = Numeric.toHexString(header.logsBloom().getBytes());
         transactionsRoot = Numeric.toHexString(header.sidechainTransactionsMerkleRootHash());

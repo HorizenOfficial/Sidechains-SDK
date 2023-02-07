@@ -26,7 +26,7 @@ case class EthereumReceipt(
   override def toString: String = {
 
     val txHashStr: String = BytesUtils.toHexString(transactionHash)
-    val blockHashStr: String = BytesUtils.toHexString(blockHash)
+    val blockHashStr: String = if (blockHash != null) BytesUtils.toHexString(blockHash) else null
     val contractAddressStr = contractAddress match {
       case Some(addr) => BytesUtils.toHexString(addr)
       case None => BytesUtils.toHexString(Array.empty)
