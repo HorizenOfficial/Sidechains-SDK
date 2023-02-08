@@ -1,0 +1,11 @@
+websocket-client
+cython
+cytoolz
+eth-utils
+eth_abi
+base58
+eth-hash[pycryptodome]
+eth-hash[pysha3]
+eth_bloom
+rlp
+flask
