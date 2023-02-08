@@ -100,8 +100,8 @@ public class EthereumTransactionDecoder {
                values.getValues().size()
            );
         }
-        long chainId = ((RlpString)values.getValues().get(0)).asPositiveBigInteger().longValueExact();
 
+        long chainId = getCheckedValue((RlpString)values.getValues().get(0), "chainId").longValueExact();
         BigInteger nonce = getCheckedValue((RlpString)values.getValues().get(1), "gasNonce");
         BigInteger maxPriorityFeePerGas = getCheckedValue((RlpString)values.getValues().get(2), "maxPriorityFeePerGas");
         BigInteger maxFeePerGas = getCheckedValue((RlpString)values.getValues().get(3), "maxFeePerGas");

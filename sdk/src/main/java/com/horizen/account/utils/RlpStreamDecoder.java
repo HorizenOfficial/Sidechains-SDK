@@ -149,7 +149,7 @@ public class RlpStreamDecoder {
 
                     if (strLen < 56) {
                         throw new RuntimeException(
-                                "RLP bad encoding: strlen is too small for this encoding:" + strLen);
+                                "RLP bad encoding: strlen is too small for this encoding: " + strLen);
                     }
 
                     // Input validation
@@ -190,7 +190,7 @@ public class RlpStreamDecoder {
                     int listLen = calcLength(lenOfListLen, reader);
                     if (listLen < 56) {
                         throw new RuntimeException(
-                                "RLP bad encoding: strlen is too small for this encoding:" + listLen);
+                                "RLP bad encoding: strlen is too small for this encoding: " + listLen);
                     }
 
                     RlpList newLevelList = new RlpList(new ArrayList<>());

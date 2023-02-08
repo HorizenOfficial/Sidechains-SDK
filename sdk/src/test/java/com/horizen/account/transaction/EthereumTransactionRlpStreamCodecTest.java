@@ -3,6 +3,7 @@ package com.horizen.account.transaction;
 import com.google.common.primitives.Bytes;
 import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.utils.EthereumTransactionDecoder;
+import com.horizen.account.utils.RlpStreamDecoder;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
@@ -414,7 +415,21 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         }
     }
 
+    @Test
+    public void checkUnsignedTx() {
+        // https://github.com/ethereumbook/ethereumbook/blob/develop/code/web3js/raw_tx/raw_tx_demo.js
+        byte[] b = BytesUtils.fromHexString("e6808609184e72a0008303000094b0920c523d582040f2bcb1bd7fb1c7c1ecebdb3480801c8080");
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
+        EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
+        assertTrue(!ethTx.isSigned());
 
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        ethTx.encode(true, writer);
+        byte[] result = writer.toBytes();
+        assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(result));
+    }
+
+    // useful when developing tests
     @Test
     @Ignore
     public void checkSingle() {
@@ -446,24 +461,6 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(b2));
         System.out.println(ethTx);
     }
-
-    @Test
-    @Ignore
-    public void checkUnsignedTx() throws TransactionSemanticValidityException {
-        byte[] b = BytesUtils.fromHexString("f86a8085028fa6ae008303d09094e9e7cea3dedca5984780bafc599bd69add087d5680b844a9059cbb0000000000000000000000006072257e80d54c5b739893358752d81e16c38e75000000000000000000000000000000000000000000000000002386f26fc10000618080");
-        //byte[] b = BytesUtils.fromHexString("e6808609184e72a0008303000094b0920c523d582040f2bcb1bd7fb1c7c1ecebdb348080");
-        //byte[] b = BytesUtils.fromHexString("e6808609184e72a0008303000094b0920c523d582040f2bcb1bd7fb1c7c1ecebdb3480801c8080");
-        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
-        EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
-
-        byte[] b2 = ethTx.encode(false);
-        EthereumTransaction ethTx2 = EthereumTransactionDecoder.decode(b2);
-
-        assertEquals(ethTx, ethTx2);
-        assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(b2));
-        System.out.println(ethTx);
-    }
-
 
     @Test
     @Ignore
