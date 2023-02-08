@@ -22,9 +22,9 @@ Test:
         - Transfer tokens and trace transaction
         - EOA2EOA transfer and trace transaction
         - Trace block with transaction using the debug_traceTransaction and debug_traceBlockByNumber/debug_traceBlockByHash methods
-        - Call traceCall method method on current block
+        - Call traceCall method on current block
         - Generate a new block without transaction and call tracer methods
-        - Call traceCall method method on pending block
+        - Call traceCall method on pending block
 """
 
 
