@@ -35,7 +35,7 @@ import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.{NodeViewHolder, bytesToId}
-import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 import java.util
@@ -811,7 +811,6 @@ class EthService(
       val (block, blockInfo) = getBlockById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
 
       // get state at selected block
-
       getStateViewAtTag(nodeView, if(tag=="pending") "pending" else (blockInfo.height).toString) { (tagStateView, blockContext) =>
 
         // use default trace params if none are given
