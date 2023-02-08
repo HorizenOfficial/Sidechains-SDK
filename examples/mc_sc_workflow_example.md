@@ -37,11 +37,9 @@ Run Bootstrapping tool using the command:
 All other commands are performed as commands for Bootstrapping tool in the next format: `"command name"  "parameters for command in JSON format"`.
 For any help, you could use the command `help`, for the exit just print `exit`
 
-**Step 3: Generate keypairs for the first Forger box in Sidechain**
+**Step 3: Generate keypairs for the first Forger in the Sidechain**
 
-**Model: UTXO**
-
-As a next step we need Vrf keypair and ed25519 keypair, those keys will be used as inputs for the first Forger box in the newly created Sidechain, i.e. output for Mainchain to Sidechain transaction
+As a next step we need a Vrf keypair and an ed25519 keypair, those keys will be used as inputs for the first Forger in the newly created Sidechain, i.e. output for Mainchain to Sidechain transaction
 
 For generating ed25519 key use the command:  
 `generatekey {"seed":"my seed"}` 
