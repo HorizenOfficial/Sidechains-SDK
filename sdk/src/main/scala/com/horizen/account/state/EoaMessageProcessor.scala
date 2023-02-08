@@ -2,6 +2,8 @@ package com.horizen.account.state
 
 import sparkz.util.SparkzLogging
 
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
+
 /*
  * EoaMessageProcessor is responsible for management of regular coin transfers inside sidechain.
  * In our case to make a transfer from one user account (EOA account) to another user account.
@@ -16,7 +18,7 @@ object EoaMessageProcessor extends MessageProcessor with SparkzLogging {
     // There is no need to check "from" account because it can't be a smart contract one,
     // because there is no known private key to create a valid signature.
     // Note: in case of smart contract declaration "to" is null.
-    msg.getTo.isPresent && view.isEoaAccount(msg.getTo.get().address())
+    msg.getTo.asScala.exists(view.isEoaAccount)
   }
 
   @throws(classOf[ExecutionFailedException])
@@ -26,8 +28,8 @@ object EoaMessageProcessor extends MessageProcessor with SparkzLogging {
       gas: GasPool,
       blockContext: BlockContext
   ): Array[Byte] = {
-    view.subBalance(msg.getFromAddressBytes, msg.getValue)
-    view.addBalance(msg.getToAddressBytes, msg.getValue)
+    view.subBalance(msg.getFrom, msg.getValue)
+    view.addBalance(msg.getTo.get(), msg.getValue)
     Array.emptyByteArray
   }
 }

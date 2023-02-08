@@ -3,7 +3,6 @@ package com.horizen.account.transaction;
 import com.google.common.primitives.Bytes;
 import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.utils.EthereumTransactionDecoder;
-import com.horizen.account.utils.RlpStreamDecoder;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
@@ -421,7 +420,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         byte[] b = BytesUtils.fromHexString("e6808609184e72a0008303000094b0920c523d582040f2bcb1bd7fb1c7c1ecebdb3480801c8080");
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
-        assertTrue(!ethTx.isSigned());
+        assertFalse(ethTx.isSigned());
 
         VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
         ethTx.encode(true, writer);

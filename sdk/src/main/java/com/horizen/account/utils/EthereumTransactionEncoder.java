@@ -40,7 +40,7 @@ public class EthereumTransactionEncoder {
 
         // an empty to address (contract creation) should not be encoded as a numeric 0 value
         // addresses that start with zeros should be encoded with the zeros included, not as numeric values
-        result.add(RlpString.create(tx.getTo().map(AddressProposition::address).orElse(Array.emptyByteArray())));
+        result.add(RlpString.create(tx.getTo().map(AddressProposition::pubKeyBytes).orElse(Array.emptyByteArray())));
         result.add(RlpString.create(tx.getValue()));
 
         // value field will already be hex encoded, so we need to convert into binary first
@@ -95,7 +95,7 @@ public class EthereumTransactionEncoder {
 
         // an empty to address (contract creation) should not be encoded as a numeric 0 value
         // addresses that start with zeros should be encoded with the zeros included, not as numeric values
-        result.add(RlpString.create(tx.getTo().map(AddressProposition::address).orElse(Array.emptyByteArray())));
+        result.add(RlpString.create(tx.getTo().map(AddressProposition::pubKeyBytes).orElse(Array.emptyByteArray())));
         result.add(RlpString.create(tx.getValue()));
 
         // value field will already be hex encoded, so we need to convert into binary first

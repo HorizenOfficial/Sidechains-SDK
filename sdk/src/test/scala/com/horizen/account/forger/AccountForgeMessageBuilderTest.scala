@@ -16,6 +16,7 @@ import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEnco
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.ForgingStakeInfo
+import com.horizen.evm.utils.Address
 import com.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import com.horizen.params.TestNetParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -38,27 +39,30 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
+import sparkz.core.transaction.state.Secret
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.bytesToId
-import sparkz.core.transaction.state.Secret
 
 import java.math.BigInteger
 import java.time.Instant
 import java.util
-import java.util.{Arrays, Optional}
+import java.util.Optional
 import scala.io.Source
 
 class AccountForgeMessageBuilderTest
     extends MockitoSugar
       with MessageProcessorFixture
       with EthereumTransactionFixture
-      with SidechainTypes with ReceiptFixture with CompanionsFixture with SecretFixture
+      with SidechainTypes
+      with ReceiptFixture
+      with CompanionsFixture
+      with SecretFixture
       with SidechainRelatedMainchainOutputFixture {
 
   @Test
   def testConsistentStateAfterMissingMsgProcessorError(): Unit = {
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       10000000000L,
@@ -111,7 +115,7 @@ class AccountForgeMessageBuilderTest
     val invalidTx = new BuggyTransaction(tmpTx, tmpTx.getSignature)
 
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       10000000000L,
@@ -174,7 +178,7 @@ class AccountForgeMessageBuilderTest
     )
 
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       gasLimit.longValueExact(), // Just enough for 1 tx
@@ -273,7 +277,7 @@ class AccountForgeMessageBuilderTest
 
     Mockito.when(secretsMock.size()).thenReturn(0)
     Mockito.when(nodeView.vault).thenReturn(vlMock)
-    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => Arrays.asList(fittingSecret))
+    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => util.Arrays.asList(fittingSecret))
 
     Mockito.when(nodeView.history).thenReturn(mock[AccountHistory])
     val epochSizeInSlots = 15
@@ -299,7 +303,7 @@ class AccountForgeMessageBuilderTest
         EthereumTransactionType.DynamicFeeTxType.ordinal(),
         transactionIndex = 0,
         blockNumber = 2,
-        address = BytesUtils.fromHexString("d2a538a476aad6ecd245099df9297df6a129c2c5"),
+        address = new Address("0xd2a538a476aad6ecd245099df9297df6a129c2c5"),
         txHash = Some(BytesUtils.fromHexString("6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
         blockHash = "0456"
       )
@@ -340,7 +344,7 @@ class AccountForgeMessageBuilderTest
     val accountStateViewMock = mock[AccountStateReader]
     val baseStateViewMock = mock[BaseStateReader]
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
-    Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(initialStateNonce)
+    Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address])).thenReturn(initialStateNonce)
 
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock, () => baseStateViewMock)
 

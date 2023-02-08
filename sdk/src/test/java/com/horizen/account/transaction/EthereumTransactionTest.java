@@ -1,19 +1,19 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
+import com.horizen.evm.utils.Address;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 import org.web3j.utils.Numeric;
 import sparkz.crypto.hash.Keccak256;
 import sparkz.util.ByteArrayBuilder;
 import sparkz.util.serialization.VLQByteBufferWriter;
-
 import java.math.BigInteger;
 import java.util.*;
-
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
@@ -126,14 +126,12 @@ public class EthereumTransactionTest {
 
         EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(metamaskHexStr));
         long chainId2 = decodedTx.getChainId();
-        byte[] fromAddress = decodedTx.getFrom().address();
-        byte[] toAddress = new byte[]{};
-        if (decodedTx.getTo().isPresent())
-            toAddress = decodedTx.getTo().get().address();
+        var fromAddress = decodedTx.getFrom().address();
+        var toAddress = decodedTx.getTo().map(AddressProposition::address).orElse(Address.ZERO);
 
         assertTrue(decodedTx.getSignature().isValid(decodedTx.getFrom(), decodedTx.messageToSign()));
-        assertEquals("892278d9f50a1da5b2e98e5056f165b1b2486d97", BytesUtils.toHexString(fromAddress));
-        assertEquals("d830603264bd3118cf95f1fc623749337342f9e9", BytesUtils.toHexString(toAddress));
+        assertEquals("0x892278d9f50a1da5b2e98e5056f165b1b2486d97", fromAddress.toString());
+        assertEquals("0xd830603264bd3118cf95f1fc623749337342f9e9", toAddress.toString());
         assertEquals(1997, chainId2);
         assertEquals("3000000000000000000", decodedTx.getValue().toString());
 
@@ -201,7 +199,9 @@ public class EthereumTransactionTest {
                 assertArrayEquals(rlpTxs, rlpTxs2);
                 i++;
             }
-            final var actualHash = Numeric.toHexString(TrieHasher.Root(rlpTxs));
+
+            final var actualHash = TrieHasher.Root(rlpTxs).toString();
+
             assertEquals("should match transaction root hash", testCase.getValue(), actualHash);
         }
     }

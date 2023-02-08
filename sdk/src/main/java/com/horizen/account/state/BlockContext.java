@@ -3,11 +3,12 @@ package com.horizen.account.state;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.evm.interop.EvmResult;
 import com.horizen.evm.interop.TraceOptions;
+import com.horizen.evm.utils.Address;
 
 import java.math.BigInteger;
 
 public class BlockContext {
-    public final byte[] forgerAddress;
+    public final Address forgerAddress;
     public final long timestamp;
     public final BigInteger baseFee;
     public final BigInteger blockGasLimit;
@@ -19,7 +20,7 @@ public class BlockContext {
     private EvmResult evmResult;
 
     public BlockContext(
-        byte[] forgerAddress,
+        Address forgerAddress,
         long timestamp,
         BigInteger baseFee,
         BigInteger blockGasLimit,
