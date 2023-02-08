@@ -13,6 +13,8 @@ final class LibEvm {
 
     private static native void SetLogLevel(String level);
 
+    private static native void SetBlockHashCallback(BlockHashCallback callback);
+
     private static native JsonPointer Invoke(String method, JsonPointer args);
 
     private static final Logger log = LogManager.getLogger();
@@ -21,6 +23,8 @@ final class LibEvm {
     // the static reference here will also prevent the callback instance from being garbage collected,
     // because without it the only reference might be from native code (libevm) and the JVM does not know about that
     private static final GlogCallback logCallbackInstance = new GlogCallback(log);
+
+    private static final BlockHashCallback blockHashCallbackInstance = new BlockHashCallback();
 
     static String getOSLibExtension() {
         var os = System.getProperty("os.name").toLowerCase();
@@ -42,6 +46,8 @@ final class LibEvm {
         SetLogCallback(logCallbackInstance);
         // propagate log4j log level to glog
         SetLogLevel(GlogCallback.log4jToGlogLevel(log.getLevel()));
+        // setup block hash getter
+        SetBlockHashCallback(blockHashCallbackInstance);
     }
 
     private LibEvm() {

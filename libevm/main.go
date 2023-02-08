@@ -8,9 +8,12 @@ package main
 import "C"
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 	"libevm/interop"
 	"libevm/lib"
+	"math/big"
 	"unsafe"
 )
 
@@ -33,8 +36,20 @@ func logToCallback(r *log.Record) error {
 	)
 	msg := C.CString(string(logFormatter.Format(r)))
 	defer C.free(unsafe.Pointer(msg))
-	C.invokeLog(msg)
+	C.invokeLogCallback(msg)
 	return nil
+}
+
+func blockHashCallback(handle int, blockNumber uint64) common.Hash {
+	hex := (*hexutil.Big)(new(big.Int).SetUint64(blockNumber)).String()
+	str := C.CString(hex)
+	defer C.free(unsafe.Pointer(str))
+	var result *C.char
+	result = C.invokeBlockHashCallback(C.int(handle), str)
+	if result == nil {
+		return common.Hash{}
+	}
+	return common.HexToHash(C.GoString(result))
 }
 
 // static initializer
@@ -43,7 +58,7 @@ func init() {
 	logger.Verbosity(log.LvlTrace)
 	log.Root().SetHandler(logger)
 	// initialize instance of our service
-	instance = lib.New()
+	instance = lib.NewWithCallback(blockHashCallback)
 }
 
 // main function is required by cgo, but doesn't do anything nor is it ever called

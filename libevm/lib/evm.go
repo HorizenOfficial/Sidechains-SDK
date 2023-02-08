@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/log"
@@ -33,13 +32,14 @@ type EvmParams struct {
 }
 
 type EvmContext struct {
-	ChainID     hexutil.Uint64 `json:"chainID"`
-	Coinbase    common.Address `json:"coinbase"`
-	GasLimit    hexutil.Uint64 `json:"gasLimit"`
-	BlockNumber *hexutil.Big   `json:"blockNumber"`
-	Time        *hexutil.Big   `json:"time"`
-	BaseFee     *hexutil.Big   `json:"baseFee"`
-	Random      *common.Hash   `json:"random"`
+	ChainID                 hexutil.Uint64 `json:"chainID"`
+	Coinbase                common.Address `json:"coinbase"`
+	GasLimit                hexutil.Uint64 `json:"gasLimit"`
+	BlockNumber             *hexutil.Big   `json:"blockNumber"`
+	Time                    *hexutil.Big   `json:"time"`
+	BaseFee                 *hexutil.Big   `json:"baseFee"`
+	Random                  *common.Hash   `json:"random"`
+	BlockHashCallbackHandle int            `json:"blockHashCallbackHandle"`
 }
 
 type TraceOptions struct {
@@ -84,11 +84,11 @@ func (c *EvmContext) setDefaults() {
 	}
 }
 
-func (c *EvmContext) getBlockContext() vm.BlockContext {
+func (c *EvmContext) getBlockContext(service *Service) vm.BlockContext {
 	return vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
-		GetHash:     mockBlockHashFn,
+		GetHash:     service.createBlockHashGetter(c.BlockHashCallbackHandle),
 		Coinbase:    c.Coinbase,
 		GasLimit:    uint64(c.GasLimit),
 		BlockNumber: c.BlockNumber.ToInt(),
@@ -139,11 +139,6 @@ func (t *TraceOptions) getTracer() tracers.Tracer {
 	}
 }
 
-func mockBlockHashFn(n uint64) common.Hash {
-	// TODO: fetch real block hashes
-	return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
-}
-
 type EvmResult struct {
 	UsedGas         uint64          `json:"usedGas"`
 	EvmError        string          `json:"evmError"`
@@ -167,7 +162,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 			Origin:   params.From,
 			GasPrice: params.GasPrice.ToInt(),
 		}
-		blockContext = params.Context.getBlockContext()
+		blockContext = params.Context.getBlockContext(s)
 		chainConfig  = params.Context.getChainConfig()
 		tracer       = params.TraceOptions.getTracer()
 		evmConfig    = vm.Config{

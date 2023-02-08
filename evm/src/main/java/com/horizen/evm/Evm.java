@@ -1,6 +1,5 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.EvmContext;
 import com.horizen.evm.interop.EvmParams;
 import com.horizen.evm.interop.EvmResult;
 import com.horizen.evm.interop.TraceOptions;
