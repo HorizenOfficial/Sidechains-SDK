@@ -208,7 +208,8 @@ class AccountForgeMessageBuilder(
     // 5. create a disposable view and try to apply all transactions in the list and apply fee payments if needed, collecting all data needed for
     //    going on with the forging of the block
     val (stateRoot, receiptList, appliedTxList, feePayments)
-    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountPayment]) = {
+    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountPayment]) =
+    if (nodeView.history.bestBlockId == branchPointInfo.branchPointId) {
         using(nodeView.state.getView) {
           dummyView =>
             // the outputs of the next call will be:
@@ -242,6 +243,18 @@ class AccountForgeMessageBuilder(
 
             (dummyView.getIntermediateRoot, receiptList, appliedTxList, feePayments)
         }
+    }
+    else {
+      // This happens when there is a fork in Mainchain. The SC blocks referencing the old MC chain will be reverted
+      // and the new SC blocks will be created on top the SC block referencing the MC branching point.
+      // The first new SC block must not contain FT or transactions.
+      require(ommers.nonEmpty, "Expected ommers when branching point is not the blockchain tip")
+      require(sidechainTransactions.isEmpty, "No txs expected in a block with ommers")
+      require(mainchainBlockReferencesData.isEmpty, "No Mainchain reference data expected in a block with ommers")
+      (nodeView.history.getBlockById(parentId).get().header.stateRoot,
+        Seq.empty[EthereumConsensusDataReceipt],
+        Seq.empty[SidechainTypes#SCAT],
+        Seq.empty[AccountPayment])
     }
 
     // 6. Compute the receipt root
