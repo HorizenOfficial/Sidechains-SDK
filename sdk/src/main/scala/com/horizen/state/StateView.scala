@@ -6,7 +6,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
 import com.horizen.utils.WithdrawalEpochInfo
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.VersionTag
 
 import java.math.BigInteger

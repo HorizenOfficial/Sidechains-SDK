@@ -8,13 +8,13 @@ import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
 import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
-case class FieldElementCertificateField(rawData: Array[Byte]) extends ScorexLogging {
+case class FieldElementCertificateField(rawData: Array[Byte]) extends SparkzLogging {
   def fieldElementBytes(version: SidechainCreationVersion): Array[Byte] = {
     logger.trace("Fe before: " + BytesUtils.toHexString(rawData))
     val bytes = version match {

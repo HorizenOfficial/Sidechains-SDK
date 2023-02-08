@@ -1,5 +1,7 @@
 package com.horizen.evm;
 
+import com.horizen.evm.interop.DatabaseParams;
+
 public abstract class Database extends ResourceHandle {
     public Database(int handle) {
         super(handle);
@@ -7,6 +9,6 @@ public abstract class Database extends ResourceHandle {
 
     @Override
     public void close() throws Exception {
-        LibEvm.closeDatabase(handle);
+        LibEvm.invoke("CloseDatabase", new DatabaseParams(handle));
     }
 }

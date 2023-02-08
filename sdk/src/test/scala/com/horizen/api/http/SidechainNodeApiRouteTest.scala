@@ -17,7 +17,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
   "The Api should to" should {
 
     "reject and reply with http error" in {
-      Get(basePath) ~> sidechainNodeApiRoute ~> check {
+      Get(basePath).addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
         rejection shouldBe MethodRejection(HttpMethods.POST)
       }
       Get(basePath) ~> Route.seal(sidechainNodeApiRoute) ~> check {
@@ -28,7 +28,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "connect").withEntity("maybe_a_json") ~> sidechainNodeApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
-      Post(basePath + "connect").withEntity("maybe_a_json") ~> Route.seal(sidechainNodeApiRoute) ~> check {
+      Post(basePath + "connect").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainNodeApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -36,7 +36,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
 
     "reply at /allPeers" in {
       // 3 peers
-      Post(basePath + "allPeers") ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "allPeers").addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -77,15 +77,19 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
       // api error
       sidechainApiMockConfiguration.setShould_peerManager_GetAllPeers_reply(false)
-      Post(basePath + "allPeers") ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "allPeers").addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+      Post(basePath + "allPeers").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainNodeApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
     }
 
     "reply at /connectedPeers" in {
       // 2 peers
-      Post(basePath + "connectedPeers") ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "connectedPeers").addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -133,16 +137,20 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
       // api error
       sidechainApiMockConfiguration.setShould_networkController_GetConnectedPeers_reply(false)
-      Post(basePath + "connectedPeers") ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "connectedPeers").addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+      Post(basePath + "connectedPeers").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainNodeApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
     }
 
     "reply at /connect" in {
       // valid host
       Post(basePath + "connect")
-        .withEntity(SerializationUtil.serialize(ReqConnect("92.92.92.92", 8080))) ~> sidechainNodeApiRoute ~> check {
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqConnect("92.92.92.92", 8080))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -155,9 +163,13 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
       // not valid host
       Post(basePath + "connect")
-        .withEntity(SerializationUtil.serialize(ReqConnect("my_host", 8080))) ~> sidechainNodeApiRoute ~> check {
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqConnect("my_host", 8080))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+      Post(basePath + "connect").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainNodeApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
     }
 

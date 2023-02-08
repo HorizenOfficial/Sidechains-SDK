@@ -4,14 +4,14 @@ import com.horizen.block.SidechainBlock
 
 import javax.websocket._
 import org.glassfish.tyrus.server.Server
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
 import com.horizen.websocket.client.WebSocketConnector
 
 @ClientEndpoint
-class WebSocketServerImpl(bindPort: Int, configuration: Class[_]) extends WebSocketConnector with ScorexLogging {
+class WebSocketServerImpl(bindPort: Int, configuration: Class[_]) extends WebSocketConnector with SparkzLogging {
 
   var server: Server = null
 

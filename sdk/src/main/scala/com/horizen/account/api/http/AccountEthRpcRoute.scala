@@ -22,7 +22,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.api.http.ApiDirectives
 import sparkz.core.settings.RESTApiSettings
 
@@ -54,7 +54,7 @@ case class AccountEthRpcRoute(
     ]
       with SidechainTypes
       with ClosableResourceHandler
-      with ScorexLogging
+      with SparkzLogging
       with ApiDirectives {
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
@@ -66,6 +66,7 @@ case class AccountEthRpcRoute(
       sidechainNodeViewHolderRef,
       settings.timeout,
       params,
+      sidechainSettings.ethService,
       sidechainTransactionActorRef
     )
   )
@@ -74,47 +75,49 @@ case class AccountEthRpcRoute(
    * Returns the success / error response of called rpc method or error if method does not exist
    */
   def ethRpc: Route = post {
-    withAuth {
-      entity(as[JsonNode]) { body =>
+    withBasicAuth {
+      _ => {
+        entity(as[JsonNode]) { body =>
 
-        val json = {
-          // if the input json is an array a batch rpc request will be handled
-          // the single rpc request will retrieve from the input json and they will be processed by rpcHandler
-          // the position of the elements in the output will reflect their position in the input request
-          if(body.isArray()) {
-            if(!body.isEmpty) {
-              val responseList = mutable.MutableList[ApiResponse]()
-              val iterator: util.Iterator[JsonNode] = body.asInstanceOf[ArrayNode].elements()
-              while (iterator.hasNext) {
+          val json = {
+            // if the input json is an array a batch rpc request will be handled
+            // the single rpc request will retrieve from the input json and they will be processed by rpcHandler
+            // the position of the elements in the output will reflect their position in the input request
+            if(body.isArray()) {
+              if(!body.isEmpty) {
+                val responseList = mutable.MutableList[ApiResponse]()
+                val iterator: util.Iterator[JsonNode] = body.asInstanceOf[ArrayNode].elements()
+                while (iterator.hasNext) {
+                  try {
+                    val rpcRequest = new RpcRequest(iterator.next())
+                    responseList += rpcHandler.apply(rpcRequest)
+                  } catch {
+                    case _: RpcException => responseList += new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest, null))
+                  }
+                }
+                SerializationUtil.serialize(responseList.toList)
+              }
+              // if the input json is an empty array the output will be a single invalidRequest rpc response
+              else {
+                SerializationUtil.serialize(new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest, null)))
+              }
+            }
+            // if the input json is not an array a single rpc request will be handled
+            else {
+              val response = {
                 try {
-                  val rpcRequest = new RpcRequest(iterator.next())
-                  responseList += rpcHandler.apply(rpcRequest)
+                  rpcHandler.apply(new RpcRequest(body))
                 } catch {
-                  case _: RpcException => responseList += new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest, null))
+                  case _: RpcException => new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest, null))
                 }
               }
-              SerializationUtil.serialize(responseList.toList)
-            }
-            // if the input json is an empty array the output will be a single invalidRequest rpc response
-            else {
-              SerializationUtil.serialize(new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest, null)))
+              SerializationUtil.serialize(response)
             }
           }
-          // if the input json is not an array a single rpc request will be handled
-          else {
-            val response = {
-              try {
-                rpcHandler.apply(new RpcRequest(body))
-              } catch {
-                case _: RpcException => new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest, null))
-              }
-            }
-            SerializationUtil.serialize(response)
-          }
-        }
 
         log.trace(s"RPC message response << $json")
         SidechainApiResponse(json);
+        }
       }
     }
   }

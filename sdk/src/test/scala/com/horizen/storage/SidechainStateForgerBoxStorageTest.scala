@@ -10,7 +10,7 @@ import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 import java.util.{ArrayList => JArrayList, Optional => JOptional}
 import scala.collection.mutable.ListBuffer

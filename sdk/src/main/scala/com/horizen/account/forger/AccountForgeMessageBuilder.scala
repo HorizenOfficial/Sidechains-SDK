@@ -1,5 +1,6 @@
 package com.horizen.account.forger
 
+import akka.util.Timeout
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -8,7 +9,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, Bloom}
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
@@ -18,19 +19,22 @@ import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
-import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
+import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 
 import java.math.BigInteger
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.SECONDS
 import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(
@@ -45,7 +49,7 @@ class AccountForgeMessageBuilder(
       allowNoWebsocketConnectionInRegtest
     )
       with ClosableResourceHandler
-      with ScorexLogging {
+      with SparkzLogging {
   type FPI = AccountFeePaymentsInfo
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
@@ -118,8 +122,7 @@ class AccountForgeMessageBuilder(
             // update cumulative gas used so far
             cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-            val baseFeePerGas = blockContext.baseFee
-            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
+            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, blockContext.baseFee)
             cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
             cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
             priceAndNonceIter.next()
@@ -230,7 +233,7 @@ class AccountForgeMessageBuilder(
               val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
 
               // add rewards to forgers balance
-              feePayments.foreach(payment => dummyView.addBalance(payment.addressBytes, payment.value))
+              feePayments.foreach(payment => dummyView.addBalance(payment.address.address(), payment.value))
 
               feePayments
             } else {
@@ -298,7 +301,7 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),
+      AddressProposition.ZERO,
       BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
       BigInteger.valueOf(Long.MaxValue),
       BigInteger.valueOf(Long.MaxValue),
@@ -323,7 +326,7 @@ class AccountForgeMessageBuilder(
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 
-    nodeView.pool.takeExecutableTxs()
+    nodeView.pool.takeExecutableTxs(forcedTx)
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[AccountBlockHeader]]): Int = {
@@ -394,5 +397,36 @@ class AccountForgeMessageBuilder(
       })
 
     forgingStakeMerklePathInfoSeq
+  }
+
+  def getPendingBlock(nodeView: View): Option[AccountBlock] = {
+    val branchPointInfo = BranchPointInfo(nodeView.history.bestBlockId, Seq(), Seq())
+    val blockSignPrivateKey = new PrivateKey25519(
+      new Array[Byte](PrivateKey25519.PRIVATE_KEY_LENGTH),
+      new Array[Byte](PrivateKey25519.PUBLIC_KEY_LENGTH)
+    )
+    val forgingStakeInfo: ForgingStakeInfo = new ForgingStakeInfo(
+      new PublicKey25519Proposition(new Array[Byte](PublicKey25519Proposition.KEY_LENGTH)),
+      new VrfPublicKey(new Array[Byte](VrfPublicKey.KEY_LENGTH)),
+      0
+    )
+    val forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo =
+      ForgingStakeMerklePathInfo(forgingStakeInfo, new MerklePath(new JArrayList()))
+    val vrfProof = new VrfProof(new Array[Byte](VrfProof.PROOF_LENGTH))
+    implicit val timeout: Timeout = new Timeout(5, SECONDS)
+
+    forgeBlock(
+      nodeView,
+      System.currentTimeMillis / 1000,
+      branchPointInfo,
+      forgingStakeMerklePathInfo,
+      blockSignPrivateKey,
+      vrfProof,
+      timeout,
+      Seq()
+    ) match {
+      case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
+      case _: ForgeFailure => Option.empty
+    }
   }
 }

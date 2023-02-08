@@ -13,7 +13,7 @@ import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import sparkz.core.VersionTag
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 import java.lang.{Byte => JByte}
 import java.util
@@ -89,26 +89,6 @@ class AccountWalletTest
 
 
   }
-
-
-  @Test
-  def testRollback(): Unit = {
-    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
-
-    val accountWallet = new AccountWallet(
-      "seed".getBytes(),
-      mockedSecretStorage)
-
-    // Prepare block ID and corresponding version
-    val blockId = new Array[Byte](32)
-    Random.nextBytes(blockId)
-    val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(blockId)
-
-    assertTrue("SidechainWallet rollback expected to be successful", accountWallet.rollback(versionTag).isSuccess)
-
-    Mockito.verifyNoInteractions(mockedSecretStorage)
-  }
-
 
   @Test
   def testSecrets(): Unit = {

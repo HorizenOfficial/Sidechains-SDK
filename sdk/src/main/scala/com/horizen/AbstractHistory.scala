@@ -15,7 +15,7 @@ import sparkz.core.NodeViewModifier
 import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
 import sparkz.core.validation.RecoverableModifierError
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
@@ -42,7 +42,7 @@ abstract class AbstractHistory[
       with NetworkParamsUtils
       with ConsensusDataProvider
       with NodeHistoryBase[TX, H, PM, FPI]
-      with ScorexLogging
+      with SparkzLogging
 {
   self: HT =>
 
@@ -347,7 +347,7 @@ abstract class AbstractHistory[
     Seq() // we didn't find common block (even genesis one is different) -> we have totally different chains.
   }
 
-  /** From Scorex History:
+  /** From Sparkz History:
    * Whether another's node syncinfo shows that another node is ahead or behind ours
    *
    * @param other other's node sync info

@@ -1,11 +1,11 @@
 package com.horizen.websocket.client
 
 import com.horizen.WebSocketSettings
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration.FiniteDuration
 
-class DefaultWebSocketReconnectionHandler(conf: WebSocketSettings) extends WebSocketReconnectionHandler with ScorexLogging {
+class DefaultWebSocketReconnectionHandler(conf: WebSocketSettings) extends WebSocketReconnectionHandler with SparkzLogging {
 
   var onConnectFailureCounter = 0
 

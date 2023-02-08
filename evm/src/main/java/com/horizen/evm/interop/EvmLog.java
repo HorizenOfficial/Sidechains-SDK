@@ -7,6 +7,7 @@ import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 public class EvmLog {
     public final Address address;
@@ -14,15 +15,14 @@ public class EvmLog {
     public final byte[] data;
 
     @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
-    public EvmLog(@JsonProperty("address") Address address, @JsonProperty("topics") Hash[] topics, @JsonProperty("data") byte[] data) {
+    public EvmLog(
+        @JsonProperty("address") Address address,
+        @JsonProperty("topics") Hash[] topics,
+        @JsonProperty("data") byte[] data
+    ) {
         this.address = address;
         this.topics = topics;
-
-        if (data != null) {
-            this.data = data;
-        } else {
-            this.data = new byte[0];
-        }
+        this.data = Objects.requireNonNullElseGet(data, () -> new byte[0]);
     }
 
     @Override
@@ -30,20 +30,18 @@ public class EvmLog {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         var log = (EvmLog) o;
-        return Arrays.equals(address.toBytes(), log.address.toBytes()) &&
-                Arrays.equals(topics, log.topics) &&
-                Arrays.equals(data, log.data);
+        return address.equals(log.address) &&
+            Arrays.equals(topics, log.topics) &&
+            Arrays.equals(data, log.data);
     }
 
     @Override
     public int hashCode() {
         var result = 1;
-        var addressBytes = address.toBytes();
-        result = result + Arrays.hashCode(addressBytes);
+        result = result + address.hashCode();
         if (topics.length != 0) {
             for (var hash : topics) {
-                var topic = (hash == null) ? null : hash.toBytes();
-                result = 31 * result + Arrays.hashCode(topic);
+                result = 31 * result + ((hash == null) ? 0 : hash.hashCode());
             }
         } else {
             result = 31 * result + Arrays.hashCode(topics);
@@ -52,21 +50,13 @@ public class EvmLog {
         return result;
     }
 
-    private String getTopicsString() {
-        var strs = Arrays
-                .stream(topics)
-                .map(topic -> Converter.toHexString(topic.toBytes()))
-                .toArray(String[]::new);
-        return String.format("[%s]", String.join(",", strs));
-    }
-
     @Override
     public String toString() {
         return String.format(
-                "EvmLog (log consensus data) {address=%s, topics=%s, data=%s}",
-                Converter.toHexString(address.toBytes()),
-                getTopicsString(),
-                Converter.toHexString(data)
+            "EvmLog (log consensus data) {address=%s, topics=%s, data=%s}",
+            address,
+            Arrays.toString(topics),
+            Converter.toHexString(data)
         );
     }
 }

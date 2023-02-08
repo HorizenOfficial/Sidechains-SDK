@@ -450,7 +450,13 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': (str(rest_api_timeout) + "s"),
         'BIND_PORT': str(bindPort),
-        'MAX_CONNECTIONS': sc_node_config.max_connections,
+        'MAX_INCOMING_CONNECTIONS': sc_node_config.max_incoming_connections,
+        'MAX_OUTGOING_CONNECTIONS': sc_node_config.max_outgoing_connections,
+        'GET_PEERS_INTERVAL': sc_node_config.get_peers_interval,
+        'DECLARED_ADDRESS': f'declaredAddress = "{sc_node_config.declared_address}"' if hasattr(sc_node_config, 'declared_address') else "",
+        'KNOWN_PEERS': json.dumps(sc_node_config.known_peers),
+        'STORAGE_BACKUP_INTERVAL': json.dumps(sc_node_config.storage_backup_interval),
+        'STORAGE_BACKUP_DELAY': json.dumps(sc_node_config.storage_backup_delay),
         'OFFLINE_GENERATION': "false",
         'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'MAX_TX_FEE': sc_node_config.max_fee,
@@ -523,19 +529,21 @@ def initialize_default_sc_datadir(dirname, n, api_key):
     resourcesDir = get_resources_dir()
     with open(resourcesDir + '/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
-    api_key_hash = ""
-    if api_key != "":
-        api_key_hash = calculateApiKeyHash(api_key)
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
-        'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': "5s",
         'BIND_PORT': str(bindPort),
-        'MAX_CONNECTIONS': 100,
+        'MAX_INCOMING_CONNECTIONS': 100,
+        'MAX_OUTGOING_CONNECTIONS': 100,
+        'KNOWN_PEERS': [],
+        'STORAGE_BACKUP_INTERVAL': "15m",
+        'STORAGE_BACKUP_DELAY': "5m",
+        'GET_PEERS_INTERVAL': "2m",
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
         "CERTIFICATE_SIGNING": "false",
@@ -631,8 +639,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
     else:
         sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
-
-    url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
+    url = "http://%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url, auth_api_key=auth_api_key)
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir  # store the name of the datadir

@@ -4,7 +4,7 @@ import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utils.{MerklePath, Utils}
 
 import scala.util.Random
-import scorex.util.bytesToId
+import sparkz.util.bytesToId
 import java.util.{ArrayList => JArrayList}
 
 import com.horizen.proof.{Signature25519, VrfProof}

@@ -2,16 +2,15 @@ import json
 
 
 # execute a transaction/sendRawTransaction call
-def sendRawTransaction(sidechainNode, *, fromAddress=None, payload, api_key=None):
+def sendTransaction(sidechainNode, *, payload, api_key=None):
     j = {
-        "from": fromAddress,
-        "payload": payload
+        "transactionBytes": payload
     }
     request = json.dumps(j)
     if api_key is not None:
-        response = sidechainNode.transaction_sendRawTransaction(request, api_key)
+        response = sidechainNode.transaction_sendTransaction(request, api_key)
     else:
-        response = sidechainNode.transaction_sendRawTransaction(request)
+        response = sidechainNode.transaction_sendTransaction(request)
 
     if "result" in response:
         if "transactionId" in response["result"]:
