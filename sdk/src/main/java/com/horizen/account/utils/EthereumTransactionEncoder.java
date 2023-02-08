@@ -1,6 +1,5 @@
 package com.horizen.account.utils;
 
-import com.google.common.primitives.Ints;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.proposition.AddressProposition;
@@ -20,14 +19,6 @@ public class EthereumTransactionEncoder {
 
     private EthereumTransactionEncoder() {
         // prevent instantiation
-    }
-
-    public static byte[] encodeAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
-        if (tx.isEIP1559()) {
-            return encodeEip1559AsRlpValues(tx, accountSignature);
-        } else {
-            return encodeLegacyAsRlpValues(tx, accountSignature);
-        }
     }
 
     private static RlpList LegacyTransaction2RlpList(EthereumTransaction tx, boolean accountSignature) {
@@ -123,21 +114,6 @@ public class EthereumTransactionEncoder {
         }
 
         return new RlpList(result);
-    }
-
-    private static byte[] encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
-        RlpList rlpList = LegacyTransaction2RlpList(tx, accountSignature);
-        return RlpEncoder.encode(rlpList);
-    }
-
-    private static byte[] encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature) {
-        RlpList rlpList = EIP1559Transaction2RlpList(tx, accountSignature);
-        byte[] encoded = RlpEncoder.encode(rlpList);
-
-        return ByteBuffer.allocate(encoded.length + 1)
-                .put(tx.version())
-                .put(encoded)
-                .array();
     }
 
     public static void encodeAsRlpValues(EthereumTransaction tx, boolean accountSignature, Writer writer) {

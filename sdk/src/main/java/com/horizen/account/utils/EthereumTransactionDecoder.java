@@ -4,7 +4,6 @@ import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.utils.BytesUtils;
-import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import org.web3j.utils.Numeric;
@@ -63,10 +62,6 @@ public class EthereumTransactionDecoder {
         return tx;
     }
 
-    public static EthereumTransaction decode(byte[] transaction) {
-        return getTransactionType(transaction) == TransactionType.EIP1559 ? decodeEIP1559Transaction(transaction) : decodeLegacyTransaction(transaction);
-    }
-
     public static EthereumTransaction decode(Reader reader) {
         byte[] dataByte = new byte[]{reader.peekByte()};
 
@@ -83,12 +78,6 @@ public class EthereumTransactionDecoder {
         // consume the type byte
         reader.getByte();
         RlpList rlpList = RlpStreamDecoder.decode(reader);
-        return RlpList2EIP1559Transaction(rlpList);
-    }
-
-    private static EthereumTransaction decodeEIP1559Transaction(byte[] transaction) {
-        byte[] encodedTx = Arrays.copyOfRange(transaction, 1, transaction.length);
-        RlpList rlpList = RlpDecoder.decode(encodedTx);
         return RlpList2EIP1559Transaction(rlpList);
     }
 
@@ -147,11 +136,6 @@ public class EthereumTransactionDecoder {
 
     private static EthereumTransaction decodeLegacyTransaction(Reader reader) {
         RlpList rlpList = RlpStreamDecoder.decode(reader);
-        return RlpList2LegacyTransaction(rlpList);
-    }
-
-    private static EthereumTransaction decodeLegacyTransaction(byte[] transaction) {
-        RlpList rlpList = RlpDecoder.decode(transaction);
         return RlpList2LegacyTransaction(rlpList);
     }
 

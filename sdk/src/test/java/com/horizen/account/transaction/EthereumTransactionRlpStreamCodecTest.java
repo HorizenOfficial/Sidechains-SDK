@@ -3,13 +3,13 @@ package com.horizen.account.transaction;
 import com.google.common.primitives.Bytes;
 import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.utils.EthereumTransactionDecoder;
+import com.horizen.account.utils.RlpStreamDecoder;
+import com.horizen.account.utils.RlpStreamEncoder;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.web3j.rlp.RlpDecoder;
-import org.web3j.rlp.RlpEncoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import sparkz.util.ByteArrayBuilder;
@@ -66,13 +66,6 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         EthereumTransaction ethTx2 = getEoa2EoaLegacyTransaction();
         EthereumTransaction ethTx3 = getEoa2EoaEip155LegacyTransaction();
 
-        // encode txs in w3j way and concatenate them
-        byte[] encodedBytes1 = ethTx1.encode(true);
-        byte[] encodedBytes2 = ethTx2.encode(true);
-        byte[] encodedBytes3 = ethTx3.encode(true);
-
-        byte[] joinedEncodedBytes = Bytes.concat(encodedBytes1, encodedBytes2, encodedBytes3);
-
         // encode same txs with stream writer
         VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
         ethTx1.encode(true, writer);
@@ -80,11 +73,8 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         ethTx3.encode(true, writer);
         byte[] joinedStreamEncodedBytes = writer.result().toBytes();
 
-        // check resulting bytes are the same with both encoding strategies
-        assertArrayEquals(joinedEncodedBytes, joinedStreamEncodedBytes);
-
         // decode using stream reader
-        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(joinedEncodedBytes));
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(joinedStreamEncodedBytes));
         var ethTxDecoded1 = EthereumTransactionDecoder.decode(reader);
         var ethTxDecoded2 = EthereumTransactionDecoder.decode(reader);
         var ethTxDecoded3 = EthereumTransactionDecoder.decode(reader);
@@ -100,25 +90,15 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
 
 
     private void checkEthTxEncoding(EthereumTransaction ethTx) {
-        // use w3j way
-        byte[] encodedBytes1 = ethTx.encode(true);
 
-        // use a stream
         VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
         ethTx.encode(true, writer);
-        byte[] encodedBytes2 = writer.result().toBytes();
+        byte[] encodedBytes = writer.result().toBytes();
 
-        // check we have the same results
-        assertArrayEquals(encodedBytes1, encodedBytes2);
-
-        // do both decoding ways and check the results are as expected
-        Reader reader1 = new VLQByteBufferReader(ByteBuffer.wrap(encodedBytes1));
-        var ethTxDecoded1 = EthereumTransactionDecoder.decode(reader1);
-
-        var ethTxDecoded2 = EthereumTransactionDecoder.decode(encodedBytes2);
-
-        assertEquals(ethTxDecoded1, ethTxDecoded2);
-        assertEquals(ethTx, ethTxDecoded1);
+        // read what has been written
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(encodedBytes));
+        var ethTxDecoded = EthereumTransactionDecoder.decode(reader);
+        assertEquals(ethTx, ethTxDecoded);
     }
 
     @Test
@@ -169,17 +149,20 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         );
     }
 
+
     private RlpList getEip1559TxInternalRlpList(EthereumTransaction ethTx) {
         assertTrue(ethTx.isEIP1559());
         byte[] encodedBytes = ethTx.encode(true);
         byte[] encodedTx = java.util.Arrays.copyOfRange(encodedBytes, 1, encodedBytes.length);
-        return (RlpList)RlpDecoder.decode(encodedTx).getValues().get(0);
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(encodedTx));
+        return (RlpList) RlpStreamDecoder.decode(reader).getValues().get(0);
     }
 
     private RlpList getLegacyTxInternalRlpList(EthereumTransaction ethTx) {
         assertTrue(ethTx.isEIP155());
-        byte[] encodedBytes = ethTx.encode(true);
-        return (RlpList)RlpDecoder.decode(encodedBytes).getValues().get(0);
+        byte[] encodedTx = ethTx.encode(true);
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(encodedTx));
+        return (RlpList) RlpStreamDecoder.decode(reader).getValues().get(0);
     }
 
     @Test
@@ -190,17 +173,13 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         // add an invalid item to the eth rlp list
         ethTxList.getValues().add(RlpString.create("Hello"));
 
-        byte[] tamperedBytes1 = RlpEncoder.encode(ethTxList);
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(ethTxList, writer);
+        byte[] tamperedBytes1 = writer.toBytes();
         byte[] tamperedBytes = ByteBuffer.allocate(tamperedBytes1.length + 1)
                 .put(ethTx.version())
                 .put(tamperedBytes1)
                 .array();
-
-        assertThrows(
-                "Exception expected, because data are a decoded invalid RLP list",
-                IllegalArgumentException.class,
-                () -> EthereumTransactionDecoder.decode(tamperedBytes)
-        );
 
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(tamperedBytes));
         assertThrows(
@@ -219,13 +198,9 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         // add an invalid item to the eth rlp list
         ethTxList.getValues().add(RlpString.create("Hello"));
 
-        byte[] tamperedBytes = RlpEncoder.encode(ethTxList);
-
-        assertThrows(
-                "Exception expected, because data are a decoded invalid RLP list",
-                IllegalArgumentException.class,
-                () -> EthereumTransactionDecoder.decode(tamperedBytes)
-        );
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        RlpStreamEncoder.encode(ethTxList, writer);
+        byte[] tamperedBytes = writer.toBytes();
 
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(tamperedBytes));
         assertThrows(
@@ -346,22 +321,6 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         }
     }
 
-    @Test
-    public void testGethDecodeRlp() {
-
-        for (String[] strings : gethTestVectorsWrongRlp) {
-            byte[] b = BytesUtils.fromHexString(strings[1]);
-            try {
-                EthereumTransaction ethTx = EthereumTransactionDecoder.decode(b);
-                System.out.println(strings[0] + "--->" + ethTx.toString());
-                fail("Should not succeed");
-
-            } catch (Exception e) {
-                //System.out.println(gethTestVectorsWrongRlp[i][0] + "--->" + e.getMessage());
-            }
-        }
-    }
-
 
     @Test
     public void testGethDecodeRlpSemanticValidationStream() {
@@ -377,39 +336,6 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
 
             } catch (Exception e) {
                 System.out.println(strings[0] + "--->" + e.getMessage());
-            }
-        }
-    }
-
-    @Test
-    public void testGethDecodeRlpSemanticValidation() {
-
-        for (String[] strings : gethTestVectorsSemanticValdationFailure) {
-            byte[] b = BytesUtils.fromHexString(strings[1]);
-            try {
-                EthereumTransaction ethTx = EthereumTransactionDecoder.decode(b);
-                ethTx.semanticValidity();
-                System.out.println(strings[0] + "--->" + ethTx);
-                fail("Should not succeed");
-
-            } catch (Exception e) {
-                System.out.println(strings[0] + "--->" + e.getMessage());
-            }
-        }
-    }
-
-    @Test
-    public void testGethDecodeRlpNotFailingWithW3j() {
-
-        for (String[] strings : gethTestVectorsNotFailingWithW3j) {
-            byte[] b = BytesUtils.fromHexString(strings[1]);
-            try {
-                EthereumTransaction ethTx = EthereumTransactionDecoder.decode(b);
-                ethTx.semanticValidity();
-                //System.out.println(gethTestVectorsNotFailing[i][0] + "--->" + ethTx.toString());
-            } catch (Exception e) {
-                System.out.println(strings[0] + "--->" + e.getMessage());
-                fail("Should not fail");
             }
         }
     }
@@ -431,33 +357,12 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
     // useful when developing tests
     @Test
     @Ignore
-    public void checkSingle() {
-        byte[] b = BytesUtils.fromHexString(gethTestVectorsNotFailingWithW3j[0][1]);
-        EthereumTransaction ethTx = EthereumTransactionDecoder.decode(b);
-        //ethTx.semanticValidity();
-
-        byte[] b2 = ethTx.encode(true);
-        EthereumTransaction ethTx2 = EthereumTransactionDecoder.decode(b2);
-
-        assertEquals(ethTx, ethTx2);
-        assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(b2));
-        System.out.println(ethTx);
-    }
-
-    @Test
-    @Ignore
     public void checkSingleStream() throws TransactionSemanticValidityException {
         byte[] b = BytesUtils.fromHexString("f86e09850a02ffee00825208943535353535353535353535353535353535353535880de0b6b3a7640000808200bda028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83");
         //byte[] b = BytesUtils.fromHexString(gethTestVectorsNotFailingWithW3j[2][1]);
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
         ethTx.semanticValidity();
-
-        byte[] b2 = ethTx.encode(true);
-        EthereumTransaction ethTx2 = EthereumTransactionDecoder.decode(b2);
-
-        assertEquals(ethTx, ethTx2);
-        assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(b2));
         System.out.println(ethTx);
     }
 

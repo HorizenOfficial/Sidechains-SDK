@@ -3,7 +3,6 @@ package com.horizen.account.transaction;
 import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.state.GasUintOverflowException;
 import com.horizen.account.state.GasUtil;
 import com.horizen.account.state.Message;
 import com.horizen.account.utils.BigIntegerUtil;
@@ -18,8 +17,9 @@ import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
 import sparkz.crypto.hash.Keccak256;
+import sparkz.util.ByteArrayBuilder;
+import sparkz.util.serialization.VLQByteBufferWriter;
 import sparkz.util.serialization.Writer;
-
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.Optional;
@@ -487,7 +487,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public byte[] encode(boolean accountSignature) {
-        return EthereumTransactionEncoder.encodeAsRlpValues(this, accountSignature);
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        encode(accountSignature, writer);
+        return writer.toBytes();
     }
 
     public void encode(boolean accountSignature, Writer writer) {
