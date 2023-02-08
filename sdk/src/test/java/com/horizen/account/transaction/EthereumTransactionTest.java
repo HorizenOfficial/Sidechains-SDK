@@ -164,7 +164,7 @@ public class EthereumTransactionTest {
 
     @Test
     public void ethereumTransactionsRootHashTest() {
-        // source of these hashes: TestHashRoot() at libevm/lib/service_hash_test.go:103
+        // source of these hashes: TestHashRoot() at libevm/lib/hash_test.go:102
         final var testCases =
                 Map.ofEntries(
                         entry(0, "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"),
@@ -187,11 +187,11 @@ public class EthereumTransactionTest {
 
             List<byte[]> rlpTxsList = new ArrayList<>();
             Arrays.asList(txs).forEach(
-                    ethTx -> {
-                        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
-                        ethTx.encode(true, writer);
-                        rlpTxsList.add(writer.toBytes());
-                    }
+                ethTx -> {
+                    VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+                    ethTx.encode(true, writer);
+                    rlpTxsList.add(writer.toBytes());
+                }
             );
             var rlpTxs2 = rlpTxsList.toArray(byte[][]::new);
 

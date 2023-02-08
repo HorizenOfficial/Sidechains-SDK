@@ -3,12 +3,9 @@ package com.horizen.account.utils;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
-
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Optional;
-
 import static com.horizen.account.utils.Secp256k1.LOWER_REAL_V;
 
 public final class EthereumTransactionUtils {
@@ -17,12 +14,10 @@ public final class EthereumTransactionUtils {
         // prevent instantiation
     }
 
-    // Util function
-    // w3j private method in TransactionEncoder, it returns a byte array with Long.BYTES length
+    // return minimal byte array representation of a long
     public static byte[] convertToBytes(long x) {
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(x);
-        return buffer.array();
+        BigInteger v = BigInteger.valueOf(x);
+        return v.toByteArray();
     }
 
     // w3j way for converting bytes, it works also with generic byte contents (not only Long.BYTES byte arrays)

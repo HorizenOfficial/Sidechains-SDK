@@ -18,6 +18,8 @@ import sparkz.util.serialization.VLQByteBufferReader;
 import sparkz.util.serialization.VLQByteBufferWriter;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.stream.Stream;
+
 import static org.junit.Assert.*;
 
 public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactionFixture {
@@ -268,6 +270,18 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
             {"TRANSCT_rvalue_TooLarge", "f86303018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca2ef3d98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             // same as above for s value
             {"TRANSCT_svalue_Prefixed0000", "f863030182a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa200008887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // byte 3: same as above for gas price
+            {"RLPgasPriceWithFirstZeros", "f862808300000182a35294095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
+            // byte 2: same as above for nonce
+            {"RLPNonceWithFirstZeros", "f86384000000030182a35294095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
+            // byte 28: same as above for value 10 [82 00 0a] (Should be [0a]
+            {"RLPValueWithFirstZeros", "f861800182a35294095e7baea6a6c7c4c2dfeb977efac326af552d8782000a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
+            // byte 4: gas limit is encoded as an array of size 5 with leading zeroes: [85 00 00 00 09 48] (Should be [82 09 48])
+            {"RLPgasLimitWithFirstZeros", "f862800185000000a94894095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
+            // Similar to RLPgasLimitWithFirstZeros
+            {"TRANSCT_gasLimit_Prefixed0000", "f8630301840000a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // byte 33: the r value is an array of 30 byte instead of 32.
+            {"TRANSCT_rvalue_TooShort", "f85f030182a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441c9e921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT_svalue_GivenAsList", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4ae08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT_svalue_TooLarge", "f86303018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa2ef3d8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT_to_GivenAsList", "f86103018207d0d4b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
@@ -290,41 +304,33 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
     };
     // RLP encoded transactions which are decoded by us but yield eth tx objects not semantically valid
     String[][] gethTestVectorsSemanticValdationFailure = {
-            // byte 33: the r value is an array of 30 byte instead of 32. Our decoder pads it with zeros and the encoder would trim it accordingly, but the signature is not readable
-            {"TRANSCT_rvalue_TooShort", "f85f030182a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441c9e921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             // gas uint64 overflows
             {"TRANSCT_gasLimit_TooLarge", "f8810301a2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff07d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
     };
-    // RLP encoded transactions which are correctly decoded by us and yield semantically valid eth tx obj
+    // RLP encoded transactions which are correctly decoded by w3j (while they shouldn't) and yield semantically valid eth tx obj
     // Note: some of these testvectors has been modified for having a gas limit value above the intrinsic gas limit 21000, otherwise the semantic validity would fail
-    String[][] gethTestVectorsNotFailing = {
-            // byte 4: gas limit is encoded as an array of size 5 with leading zeroes: [85 00 00 00 09 48] (Should be [82 09 48])
-            {"RLPgasLimitWithFirstZeros", "f862800185000000a94894095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
-            // byte 3: same as above for gas price
-            {"RLPgasPriceWithFirstZeros", "f862808300000182a35294095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
-            // byte 2: same as above for nonce
-            {"RLPNonceWithFirstZeros", "f86384000000030182a35294095e7baea6a6c7c4c2dfeb977efac326af552d870a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
-            // byte 28: same as above for value 10 [82 00 0a] (Should be [0a]
-            {"RLPValueWithFirstZeros", "f861800182a35294095e7baea6a6c7c4c2dfeb977efac326af552d8782000a801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804"},
-            // Similar to RLPgasLimitWithFirstZeros
-            {"TRANSCT_gasLimit_Prefixed0000", "f8630301840000a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+    String[][] gethTestVectorsNotFailingWithW3j = {
             // byte 31: a length expressed as two bytes with a leading 00: [b9 00 40] (should be [b8 40])
             {"RLPArrayLengthWithFirstZeros", "f8a20301830186a094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0ab90040ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
+            // byte 0: the length of a list fits 1 byte but is encoded in two bytes with a leading 0 [f9 00 5f] (should be [f8 5f])
+            {"RLPListLengthWithFirstZeros", "f9005f030182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             // byte 2: a 0 is expressed not as an empty string but encoded explicitly [81 00] (should be [80])
             {"RLPIncorrectByteEncoding00", "f86081000182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             // byte 2: a byte is expressed not as a string of value 0..0x7f but encoded explicitly as a string of length 1 contaning the value,[81 01] (should be [01])
             {"RLPIncorrectByteEncoding01", "f86081010182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             // the same as above, [81 7f] (should be [7f])
             {"RLPIncorrectByteEncoding127", "f860817f0182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
-            // byte 0: the length of a list fits 1 byte but is encoded in two bytes with a leading 0 [f9 00 5f] (should be [f8 5f])
-            {"RLPListLengthWithFirstZeros", "f9005f030182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a801ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
     };
 
 
     @Test
     public void testGethDecodeRlpStream() {
 
-        for (String[] strings : gethTestVectorsWrongRlp) {
+        // check stream decoding correctly refuses to decode what w3j is not strictly handling
+        String[][] supersetOfTestVectorsWrongRlp = Stream.of(gethTestVectorsWrongRlp, gethTestVectorsNotFailingWithW3j).flatMap(Stream::of)
+                .toArray(String[][]::new);
+
+        for (String[] strings : supersetOfTestVectorsWrongRlp) {
             byte[] b = BytesUtils.fromHexString(strings[1]);
             Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
             try {
@@ -355,7 +361,6 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
             }
         }
     }
-
 
 
     @Test
@@ -393,28 +398,10 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         }
     }
 
-
     @Test
-    public void testGethDecodeRlpNotFailingStream() {
+    public void testGethDecodeRlpNotFailingWithW3j() {
 
-        for (String[] strings : gethTestVectorsNotFailing) {
-            byte[] b = BytesUtils.fromHexString(strings[1]);
-            Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
-            try {
-                EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
-                ethTx.semanticValidity();
-                //System.out.println(gethTestVectorsNotFailing[i][0] + "--->" + ethTx.toString());
-            } catch (Exception e) {
-                System.out.println(strings[0] + "--->" + e.getMessage());
-                fail("Should not fail");
-            }
-        }
-    }
-
-    @Test
-    public void testGethDecodeRlpNotFailing() {
-
-        for (String[] strings : gethTestVectorsNotFailing) {
+        for (String[] strings : gethTestVectorsNotFailingWithW3j) {
             byte[] b = BytesUtils.fromHexString(strings[1]);
             try {
                 EthereumTransaction ethTx = EthereumTransactionDecoder.decode(b);
@@ -431,7 +418,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
     @Test
     @Ignore
     public void checkSingle() {
-        byte[] b = BytesUtils.fromHexString(gethTestVectorsSemanticValdationFailure[0][1]);
+        byte[] b = BytesUtils.fromHexString(gethTestVectorsNotFailingWithW3j[0][1]);
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(b);
         //ethTx.semanticValidity();
 
@@ -446,7 +433,8 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
     @Test
     @Ignore
     public void checkSingleStream() throws TransactionSemanticValidityException {
-        byte[] b = BytesUtils.fromHexString(gethTestVectorsWrongRlp[gethTestVectorsWrongRlp.length-1][1]);
+        byte[] b = BytesUtils.fromHexString("f86e09850a02ffee00825208943535353535353535353535353535353535353535880de0b6b3a7640000808200bda028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83");
+        //byte[] b = BytesUtils.fromHexString(gethTestVectorsNotFailingWithW3j[2][1]);
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
         ethTx.semanticValidity();

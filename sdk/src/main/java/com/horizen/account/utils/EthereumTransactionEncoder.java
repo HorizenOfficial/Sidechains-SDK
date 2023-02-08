@@ -73,7 +73,7 @@ public class EthereumTransactionEncoder {
             result.add(RlpString.create(s));
         } else {
             if (tx.isEIP155()) {
-                result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(EthereumTransactionUtils.convertToBytes(tx.getChainId()))));
+                result.add(RlpString.create(EthereumTransactionUtils.convertToBytes(tx.getChainId())));
                 result.add(RlpString.create(new byte[] {}));
                 result.add(RlpString.create(new byte[] {}));
             }

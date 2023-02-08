@@ -108,7 +108,7 @@ public class RlpStreamDecoder {
                     // null
                     rlpList.getValues().add(RlpString.create(new byte[0]));
 
-                } else if (prefix > OFFSET_SHORT_STRING && prefix <= OFFSET_LONG_STRING) {
+                } else if (prefix <= OFFSET_LONG_STRING) {
 
                     // 2. the data is a string if the range of the
                     // first byte is [0x80, 0xb7], and the string
@@ -125,9 +125,18 @@ public class RlpStreamDecoder {
                     }
 
                     byte[] rlpData = reader.getBytes(strLen);
+
+                    // if we have just one byte we must ensure the encoding is minimal
+                    if (strLen == 1) {
+                        if ((rlpData[0] & 0xff) < OFFSET_SHORT_STRING) {
+                            throw new RuntimeException(
+                                    "RLP bad encoding: 1 byte value not minimally encoded");
+                        }
+                    }
+
                     rlpList.getValues().add(RlpString.create(rlpData));
 
-                } else if (prefix > OFFSET_LONG_STRING && prefix < OFFSET_SHORT_LIST) {
+                } else if (prefix < OFFSET_SHORT_LIST) {
 
                     // 3. the data is a string if the range of the
                     // first byte is [0xb8, 0xbf], and the length of the
@@ -137,6 +146,11 @@ public class RlpStreamDecoder {
 
                     byte lenOfStrLen = (byte) (prefix - OFFSET_LONG_STRING);
                     int strLen = calcLength(lenOfStrLen, reader);
+
+                    if (strLen < 56) {
+                        throw new RuntimeException(
+                                "RLP bad encoding: strlen is too small for this encoding:" + strLen);
+                    }
 
                     // Input validation
                     if (reader.remaining() < strLen) {
@@ -150,7 +164,7 @@ public class RlpStreamDecoder {
 
                     rlpList.getValues().add(RlpString.create(rlpData));
 
-                } else if (prefix >= OFFSET_SHORT_LIST && prefix <= OFFSET_LONG_LIST) {
+                } else if (prefix <= OFFSET_LONG_LIST) {
 
                     // 4. the data is a list if the range of the
                     // first byte is [0xc0, 0xf7], and the concatenation of
@@ -163,7 +177,7 @@ public class RlpStreamDecoder {
                     traverse(reader, listLen, newLevelList);
                     rlpList.getValues().add(newLevelList);
 
-                } else if (prefix > OFFSET_LONG_LIST) {
+                } else {
 
                     // 5. the data is a list if the range of the
                     // first byte is [0xf8, 0xff], and the total payload of the
@@ -174,6 +188,10 @@ public class RlpStreamDecoder {
 
                     byte lenOfListLen = (byte) (prefix - OFFSET_LONG_LIST);
                     int listLen = calcLength(lenOfListLen, reader);
+                    if (listLen < 56) {
+                        throw new RuntimeException(
+                                "RLP bad encoding: strlen is too small for this encoding:" + listLen);
+                    }
 
                     RlpList newLevelList = new RlpList(new ArrayList<>());
                     traverse(reader, listLen, newLevelList);
@@ -182,12 +200,20 @@ public class RlpStreamDecoder {
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException("RLP wrong encoding", e);
+            throw new RuntimeException("RLP wrong encoding at stream pos " + reader.position(), e);
         }
     }
 
     private static int calcLength(int lengthOfLength, Reader reader) {
         byte pow = (byte) (lengthOfLength - 1);
+
+        if (pow > 0) {
+            // we must ensure the encoding is minimal
+            byte initialByteValue = reader.peekByte();
+            if (initialByteValue == 0)
+                throw new RuntimeException("RLP length encoding is not minimal");
+        }
+
         long length = 0;
         for (int i = 1; i <= lengthOfLength; ++i) {
             length += ((long)reader.getUByte()) << (8 * pow);

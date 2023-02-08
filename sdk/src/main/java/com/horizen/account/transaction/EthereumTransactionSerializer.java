@@ -22,8 +22,6 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
         return serializer;
     }
 
-    // Maybe we need to do the serialization in a different way to be eth compatible,
-    // because of here used message length integer needed for decoding
     @Override
     public void serialize(EthereumTransaction tx, Writer writer) {
         tx.encode(true, writer);
