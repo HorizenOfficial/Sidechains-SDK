@@ -6,27 +6,29 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/params"
 	"math"
 	"math/big"
 	"time"
+
+	// Force-load the tracer engines to trigger registration
+	_ "github.com/ethereum/go-ethereum/eth/tracers/native"
 )
 
 type EvmParams struct {
 	HandleParams
-	From         common.Address   `json:"from"`
-	To           *common.Address  `json:"to"`
-	Value        *hexutil.Big     `json:"value"`
-	Input        []byte           `json:"input"`
-	AvailableGas hexutil.Uint64   `json:"availableGas"`
-	GasPrice     *hexutil.Big     `json:"gasPrice"`
-	AccessList   types.AccessList `json:"accessList"`
-	Context      EvmContext       `json:"context"`
-	TraceOptions *TraceOptions    `json:"traceOptions"`
+	From         common.Address  `json:"from"`
+	To           *common.Address `json:"to"`
+	Value        *hexutil.Big    `json:"value"`
+	Input        []byte          `json:"input"`
+	AvailableGas hexutil.Uint64  `json:"availableGas"`
+	GasPrice     *hexutil.Big    `json:"gasPrice"`
+	Context      EvmContext      `json:"context"`
+	TraceOptions *TraceOptions   `json:"traceOptions"`
 }
 
 type EvmContext struct {
@@ -40,10 +42,12 @@ type EvmContext struct {
 }
 
 type TraceOptions struct {
-	EnableMemory     bool `json:"enableMemory"`
-	DisableStack     bool `json:"disableStack"`
-	DisableStorage   bool `json:"disableStorage"`
-	EnableReturnData bool `json:"enableReturnData"`
+	EnableMemory     bool            `json:"enableMemory"`
+	DisableStack     bool            `json:"disableStack"`
+	DisableStorage   bool            `json:"disableStorage"`
+	EnableReturnData bool            `json:"enableReturnData"`
+	Tracer           string          `json:"tracer"`
+	TracerConfig     json.RawMessage `json:"tracerConfig"`
 }
 
 // setDefaults for parameters that were omitted
@@ -113,17 +117,23 @@ func (c *EvmContext) getChainConfig() *params.ChainConfig {
 	}
 }
 
-func (t *TraceOptions) getTracer() *logger.StructLogger {
+func (t *TraceOptions) getTracer() tracers.Tracer {
 	if t == nil {
 		return nil
 	}
-	traceConfig := logger.Config{
-		EnableMemory:     t.EnableMemory,
-		DisableStack:     t.DisableStack,
-		DisableStorage:   t.DisableStorage,
-		EnableReturnData: t.EnableReturnData,
+	if t.Tracer != "" {
+		var returnTracer tracers.Tracer
+		returnTracer, _ = tracers.New(t.Tracer, nil, t.TracerConfig)
+		return returnTracer
+	} else {
+		traceConfig := logger.Config{
+			EnableMemory:     t.EnableMemory,
+			DisableStack:     t.DisableStack,
+			DisableStorage:   t.DisableStorage,
+			EnableReturnData: t.EnableReturnData,
+		}
+		return logger.NewStructLogger(&traceConfig)
 	}
-	return logger.NewStructLogger(&traceConfig)
 }
 
 func mockBlockHashFn(n uint64) common.Hash {
@@ -132,12 +142,12 @@ func mockBlockHashFn(n uint64) common.Hash {
 }
 
 type EvmResult struct {
-	UsedGas         uint64                `json:"usedGas"`
-	EvmError        string                `json:"evmError"`
-	ReturnData      []byte                `json:"returnData"`
-	ContractAddress *common.Address       `json:"contractAddress"`
-	TraceLogs       []logger.StructLogRes `json:"traceLogs,omitempty"`
-	Reverted        bool                  `json:"reverted"`
+	UsedGas         uint64          `json:"usedGas"`
+	EvmError        string          `json:"evmError"`
+	ReturnData      []byte          `json:"returnData"`
+	ContractAddress *common.Address `json:"contractAddress"`
+	Reverted        bool            `json:"reverted"`
+	TracerResult    json.RawMessage `json:"tracerResult,omitempty"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -171,10 +181,6 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		contractCreation = params.To == nil
 	)
 
-	// Set up the initial access list.
-	if rules := evm.ChainConfig().Rules(evm.Context.BlockNumber, evm.Context.Random != nil); rules.IsBerlin {
-		statedb.PrepareAccessList(params.From, params.To, vm.ActivePrecompiles(rules), params.AccessList)
-	}
 	var (
 		returnData      []byte
 		vmerr           error
@@ -235,12 +241,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		if traceErr != nil {
 			return fmt.Errorf("trace error: %v", traceErr), nil
 		}
-		// unfortunately, there is no way to get the tracer results without json marshaling, so we unmarshal again here
-		var traceResult *logger.ExecutionResult
-		if traceErr = json.Unmarshal(traceResultJson, &traceResult); traceErr != nil {
-			return fmt.Errorf("failed to unmarshal trace result %v", traceErr), nil
-		}
-		result.TraceLogs = traceResult.StructLogs
+		result.TracerResult = traceResultJson
 	}
 
 	return nil, &result

@@ -49,7 +49,8 @@ class AccountSidechainApp @Inject()
    @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
-   @Named("ChainInfo") chainInfo: ChainInfo
+   @Named("ChainInfo") chainInfo: ChainInfo,
+   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -58,7 +59,8 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
-    chainInfo
+    chainInfo,
+    secondsInSlot
   )
 {
 
@@ -72,9 +74,6 @@ class AccountSidechainApp @Inject()
   override lazy val genesisBlock: AccountBlock = new AccountBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
-
-  // It is a fast and dirty workaround to set 12 sec block rate for EvmApp
-  override lazy val consensusSecondsInSlot: Int = 12
 
   require (!isCSWEnabled, "Ceased Sidechain Withdrawal (CSW) should not be enabled in AccountSidechainApp!")
 
@@ -92,7 +91,7 @@ class AccountSidechainApp @Inject()
   protected val stateMetadataStorage = new AccountStateMetadataStorage(
     registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore)))
 
-  protected val stateDbStorage = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
+  protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
 
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
     registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore)),
@@ -148,10 +147,10 @@ class AccountSidechainApp @Inject()
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
+    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
-    AccountWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala)
   )

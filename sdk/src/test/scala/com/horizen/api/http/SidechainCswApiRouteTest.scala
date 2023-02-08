@@ -49,12 +49,12 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       Post(basePath + "generateCswProof").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
-      Post(basePath + "generateCswProof").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
+      Post(basePath + "generateCswProof").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "generateCswProof").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "generateCswProof").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
       Post(basePath + "cswInfo").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
@@ -100,7 +100,6 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
-        println(mapper.readTree(entityAs[String]))
         if (result == null)
           fail("Serialization failed for object ErrorRetrievingCeasingState")
         assertEquals(3, result.elements().asScala.length)
@@ -195,7 +194,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
 
     "reply at /generateCswProof" in {
       Post(basePath + "generateCswProof")
-        .withHeaders(apiTokenHeader).withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRoute ~> check {
+        .addCredentials(credentials).withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")

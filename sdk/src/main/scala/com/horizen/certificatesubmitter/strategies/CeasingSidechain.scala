@@ -4,12 +4,13 @@ import com.horizen.params.NetworkParams
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
 import com.horizen.{AbstractHistory, AbstractState}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
+import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.util.{Failure, Success, Try}
 
 class CeasingSidechain(mainchainChannel: MainchainNodeChannel, params: NetworkParams)
-  extends CertificateSubmissionStrategy with ScorexLogging {
+  extends CertificateSubmissionStrategy with SparkzLogging {
 
   override def getStatus[
     H <: AbstractHistory[_, _, _, _, _, _],

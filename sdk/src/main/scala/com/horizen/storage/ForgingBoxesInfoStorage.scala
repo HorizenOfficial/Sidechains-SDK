@@ -3,8 +3,8 @@ package com.horizen.storage
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.utils.{ByteArrayWrapper, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, ListSerializer, Pair}
-import scorex.util.{ScorexLogging, bytesToId}
-import scorex.crypto.hash.Blake2b256
+import sparkz.util.{SparkzLogging, bytesToId}
+import sparkz.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -13,7 +13,7 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 
 
-class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with SidechainStorageInfo with ScorexLogging
+class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with SidechainStorageInfo with SparkzLogging
 {
   require(storage != null, "Storage must be NOT NULL.")
 

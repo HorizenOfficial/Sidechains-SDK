@@ -9,11 +9,11 @@ package com.horizen.account.state;
 // Currently there are 3 main MessageProcessor types:
 //  - Eoa2Eoa: handling regular coin transfers between EOA accounts
 //  - Evm: handling transactions requiring EVM invocations (such as smart contract deployment/invocation/...)
-//  - FakeSmartContract: Handling SC custom logic not requiring EVM invocations (Forger Stake handling, Withdrawal request ...)
+//  - NativeSmartContract: Handling SC custom logic not requiring EVM invocations (Forger Stake handling, Withdrawal request ...)
 // It is possible to extend the MessageProcessors list in the application level by adding custom instances
 public interface MessageProcessor {
     // Initialization is going to happen only once at genesis State creation.
-    // Common pattern: declare a new fake smart contract account in the View
+    // Common pattern: declare a new native smart contract account in the View
     void init(BaseAccountStateView view) throws MessageProcessorInitializationException;
 
     // Checks if the processor is applicable to the Message

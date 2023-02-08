@@ -73,13 +73,21 @@ case class SidechainSubmitterApiRoute[
   }
 
   def enableCertificateSubmitter: Route = (post & path("enableCertificateSubmitter")) {
-    certSubmitterRef ! EnableSubmitter
-    ApiResponseUtil.toResponse(RespSubmitterOk)
+    withBasicAuth {
+      _ => {
+        certSubmitterRef ! EnableSubmitter
+        ApiResponseUtil.toResponse(RespSubmitterOk)
+      }
+    }
   }
 
   def disableCertificateSubmitter: Route = (post & path("disableCertificateSubmitter")) {
-    certSubmitterRef ! DisableSubmitter
-    ApiResponseUtil.toResponse(RespSubmitterOk)
+    withBasicAuth {
+      _ => {
+        certSubmitterRef ! DisableSubmitter
+        ApiResponseUtil.toResponse(RespSubmitterOk)
+      }
+    }
   }
 
   def isCertificateSignerEnabled: Route = (post & path("isCertificateSignerEnabled")) {
@@ -95,13 +103,21 @@ case class SidechainSubmitterApiRoute[
   }
 
   def enableCertificateSigner: Route = (post & path("enableCertificateSigner")) {
-    certSubmitterRef ! EnableCertificateSigner
-    ApiResponseUtil.toResponse(RespSubmitterOk)
+    withBasicAuth {
+      _ => {
+        certSubmitterRef ! EnableCertificateSigner
+        ApiResponseUtil.toResponse(RespSubmitterOk)
+      }
+    }
   }
 
   def disableCertificateSigner: Route = (post & path("disableCertificateSigner")) {
-    certSubmitterRef ! DisableCertificateSigner
-    ApiResponseUtil.toResponse(RespSubmitterOk)
+    withBasicAuth {
+      _ => {
+        certSubmitterRef ! DisableCertificateSigner
+        ApiResponseUtil.toResponse(RespSubmitterOk)
+      }
+    }
   }
 
   def getSchnorrPublicKeyHash: Route = (post & path("getSchnorrPublicKeyHash")) {

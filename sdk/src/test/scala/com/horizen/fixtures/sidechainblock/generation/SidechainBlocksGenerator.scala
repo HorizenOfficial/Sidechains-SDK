@@ -20,7 +20,7 @@ import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
 
 import java.math.BigInteger

@@ -4,15 +4,16 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.events.AddWithdrawalRequest
-import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.evm.utils.Address
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.ZenCoinsUtils
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import java.util
@@ -22,9 +23,9 @@ trait WithdrawalRequestProvider {
   private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: BaseAccountStateView): Seq[WithdrawalRequest]
 }
 
-object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with WithdrawalRequestProvider {
+object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with WithdrawalRequestProvider {
 
-  override val contractAddress: Array[Byte] = WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS_BYTES
+  override val contractAddress: Address = WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCode")
 
   val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getBackwardTransfers(uint32)")
@@ -33,7 +34,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = new AccountStateViewGasTracked(view, gas)
+    val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case GetListOfWithdrawalReqsCmdSig =>
         execGetListOfWithdrawalReqRecords(msg, gasView)
@@ -108,9 +109,9 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
     val requestInBytes = request.bytes
     view.updateAccountStorageBytes(contractAddress, getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes)
 
-    view.subBalance(msg.getFromAddressBytes, withdrawalAmount)
+    view.subBalance(msg.getFrom, withdrawalAmount)
 
-    val withdrawalEvent = AddWithdrawalRequest(msg.getFrom.get(), request.proposition, withdrawalAmount, currentEpochNum)
+    val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
     val evmLog = getEvmLog(withdrawalEvent)
     view.addLog(evmLog)
 

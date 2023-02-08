@@ -5,7 +5,7 @@
 - Use `truffle migrate --network zen` to execute deployment scripts in the project
 - Use `truffle console --network zen` to open an interactive Javascript console
 
-Within the console the fake contracts can be used like this:
+Within the console the native contracts can be used like this:
 
 ```
 var w = await WithdrawalRequests.at("0x0000000000000000000011111111111111111111");

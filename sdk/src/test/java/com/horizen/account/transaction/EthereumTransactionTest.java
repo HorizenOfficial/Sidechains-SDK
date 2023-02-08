@@ -1,19 +1,19 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
+import com.horizen.evm.utils.Address;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 import org.web3j.utils.Numeric;
-import scorex.crypto.hash.Keccak256;
-
+import sparkz.crypto.hash.Keccak256;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
-
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
@@ -122,18 +122,16 @@ public class EthereumTransactionTest {
         // - to address: 0xd830603264bd3118cf95f1fc623749337342f9e9
         // - value: 3000000000000000000
         // - chain id: 1997
-        String metamaskHexStr = "de01f86d02843b9aca0082520894d830603264bd3118cf95f1fc623749337342f9e98829a2241af62c000080820fbea0f638802002d7c0a3115716f7d24d646452d598050ffc2d6892ba0ed88aeb76bea01dd5a7fb9ea0ec2a414dbb93b09b3e716a3cd05c1e333d40622c63d0c34e3d35";
+        String metamaskHexStr = "f86d02843b9aca0082520894d830603264bd3118cf95f1fc623749337342f9e98829a2241af62c000080820fbea0f638802002d7c0a3115716f7d24d646452d598050ffc2d6892ba0ed88aeb76bea01dd5a7fb9ea0ec2a414dbb93b09b3e716a3cd05c1e333d40622c63d0c34e3d35";
 
         EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(metamaskHexStr));
         long chainId2 = decodedTx.getChainId();
-        byte[] fromAddress = decodedTx.getFrom().address();
-        byte[] toAddress = new byte[]{};
-        if (decodedTx.getTo().isPresent())
-            toAddress = decodedTx.getTo().get().address();
+        var fromAddress = decodedTx.getFrom().address();
+        var toAddress = decodedTx.getTo().map(AddressProposition::address).orElse(Address.ZERO);
 
         assertTrue(decodedTx.getSignature().isValid(decodedTx.getFrom(), decodedTx.messageToSign()));
-        assertEquals("892278d9f50a1da5b2e98e5056f165b1b2486d97", BytesUtils.toHexString(fromAddress));
-        assertEquals("d830603264bd3118cf95f1fc623749337342f9e9", BytesUtils.toHexString(toAddress));
+        assertEquals("0x892278d9f50a1da5b2e98e5056f165b1b2486d97", fromAddress.toString());
+        assertEquals("0xd830603264bd3118cf95f1fc623749337342f9e9", toAddress.toString());
         assertEquals(1997, chainId2);
         assertEquals("3000000000000000000", decodedTx.getValue().toString());
 
@@ -185,7 +183,7 @@ public class EthereumTransactionTest {
         for (var testCase : testCases.entrySet()) {
             final var txs = generateTransactions(testCase.getKey());
             final var rlpTxs = Arrays.stream(txs).map(tx -> tx.encode(true)).toArray(byte[][]::new);
-            final var actualHash = Numeric.toHexString(TrieHasher.Root(rlpTxs));
+            final var actualHash = TrieHasher.Root(rlpTxs).toString();
             assertEquals("should match transaction root hash", testCase.getValue(), actualHash);
         }
     }

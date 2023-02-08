@@ -35,7 +35,6 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
-import scala.collection.JavaConverters._
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
@@ -58,7 +57,8 @@ class SidechainApp @Inject()
    @Named("CustomApiGroups") override val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
-   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator
+   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
+   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -72,7 +72,8 @@ class SidechainApp @Inject()
     ChainInfo(
       regtestId = 111,
       testnetId = 222,
-      mainnetId = 333)
+      mainnetId = 333),
+    secondsInSlot
     )
 {
 
@@ -209,7 +210,7 @@ class SidechainApp @Inject()
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX,
       SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),

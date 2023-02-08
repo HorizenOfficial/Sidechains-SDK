@@ -2,7 +2,7 @@ package com.horizen.utils
 
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 case class BlockFeeInfo(fee: Long,
                         forgerRewardKey: PublicKey25519Proposition

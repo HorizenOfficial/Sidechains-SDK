@@ -7,7 +7,7 @@ import com.horizen.account.utils.AccountMockDataHelper
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.bytesToId
+import sparkz.util.bytesToId
 import org.web3j.utils.Numeric
 import java.math.BigInteger
 import scala.util.Random

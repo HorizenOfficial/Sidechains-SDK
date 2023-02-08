@@ -7,7 +7,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.storage.StorageIterator;
 import com.horizen.utils.Utils;
 import scala.util.Try;
-import scorex.util.serialization.VLQByteBufferReader;
+import sparkz.util.serialization.VLQByteBufferReader;
 
 import java.nio.ByteBuffer;
 import java.util.*;

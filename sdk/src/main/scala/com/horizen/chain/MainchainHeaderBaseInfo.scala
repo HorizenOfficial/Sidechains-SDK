@@ -7,7 +7,7 @@ import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.transaction.Transaction
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable.ArrayBuffer
 

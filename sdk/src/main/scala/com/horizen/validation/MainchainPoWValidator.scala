@@ -7,7 +7,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
-import scorex.util.idToBytes
+import sparkz.util.idToBytes
 
 import scala.util.{Failure, Success, Try}
 

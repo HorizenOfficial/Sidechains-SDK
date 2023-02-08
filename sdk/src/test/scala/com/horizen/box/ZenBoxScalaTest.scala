@@ -8,7 +8,7 @@ import com.horizen.utils.{BytesUtils, Ed25519}
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.core.utils.SparkzEncoder
+import sparkz.util.SparkzEncoder
 
 class ZenBoxScalaTest
   extends JUnitSuite with BoxFixture

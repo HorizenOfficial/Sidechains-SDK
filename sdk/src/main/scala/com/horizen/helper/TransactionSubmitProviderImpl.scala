@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.transaction.Transaction
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt

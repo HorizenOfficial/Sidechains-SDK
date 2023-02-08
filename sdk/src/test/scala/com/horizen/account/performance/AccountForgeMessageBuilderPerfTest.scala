@@ -12,6 +12,7 @@ import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
@@ -50,18 +51,18 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
 
   val state: AccountState = mock[AccountState]
   Mockito
-    .when(state.getBalance(ArgumentMatchers.any[Array[Byte]]))
+    .when(state.getBalance(ArgumentMatchers.any[Address]))
     .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
   Mockito.when(state.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
-  Mockito.when(state.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(BigInteger.ZERO)
+  Mockito.when(state.getNonce(ArgumentMatchers.any[Address])).thenReturn(BigInteger.ZERO)
   val mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, AccountMempoolSettings())
 
   val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool] =
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
   Mockito.when(nodeView.pool).thenReturn(mempool)
 
-  val blockContext = new BlockContext(Array.empty[Byte], 1000, BigInteger.ZERO, FeeUtils.GAS_LIMIT, 11, 2, 3, 1L)
+  val blockContext = new BlockContext(Address.ZERO, 1000, BigInteger.ZERO, FeeUtils.GAS_LIMIT, 11, 2, 3, 1L)
 
 
   /*

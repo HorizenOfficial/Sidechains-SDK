@@ -11,7 +11,7 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, WithdrawalEpochUtils}
-import scorex.util.idToBytes
+import sparkz.util.idToBytes
 
 import scala.util.Try
 

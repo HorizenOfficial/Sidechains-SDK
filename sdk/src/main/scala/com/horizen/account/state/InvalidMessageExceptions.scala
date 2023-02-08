@@ -1,7 +1,8 @@
 package com.horizen.account.state
 
-import com.horizen.account.state.InvalidMessageException.{toAddress, toHex}
+import com.horizen.account.state.InvalidMessageException.toHex
 import com.horizen.account.utils.Secp256k1
+import com.horizen.evm.utils.Address
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.BytesUtils
 
@@ -20,29 +21,37 @@ import java.math.BigInteger
 class InvalidMessageException(message: String) extends TransactionSemanticValidityException(message)
 
 private object InvalidMessageException {
-  def toAddress(address: Array[Byte]): String = Secp256k1.checksumAddress(address)
+  def toAddress(address: Array[Byte]): String = {
+    if (address != null)
+        Secp256k1.checksumAddress(address)
+    else "NULL"
+  }
 
-  def toHex(data: Array[Byte]): String = BytesUtils.toHexString(data)
+  def toHex(data: Array[Byte]): String = {
+    if (data != null)
+      BytesUtils.toHexString(data)
+    else "NULL"
+  }
 }
 
 /** ErrNonceTooLow is returned if the nonce of a transaction is lower than the one present in the local chain. */
-case class NonceTooLowException(address: Array[Byte], txNonce: BigInteger, stateNonce: BigInteger)
-  extends InvalidMessageException(s"nonce too low: address ${toAddress(address)}, tx $txNonce, state $stateNonce")
+case class NonceTooLowException(address: Address, txNonce: BigInteger, stateNonce: BigInteger)
+  extends InvalidMessageException(s"nonce too low: address $address, tx $txNonce, state $stateNonce")
 
 /** ErrNonceTooHigh is returned if the nonce of a transaction is higher than the next one expected based on the local chain. */
-case class NonceTooHighException(address: Array[Byte], txNonce: BigInteger, stateNonce: BigInteger)
-  extends InvalidMessageException(s"nonce too high: address ${toAddress(address)}, tx $txNonce, state $stateNonce")
+case class NonceTooHighException(address: Address, txNonce: BigInteger, stateNonce: BigInteger)
+  extends InvalidMessageException(s"nonce too high: address $address, tx $txNonce, state $stateNonce")
 
 /** ErrNonceMax is returned if the nonce of a transaction sender account has maximum allowed value and would become invalid if incremented. */
-case class NonceMaxException(address: Array[Byte], stateNonce: BigInteger)
-  extends InvalidMessageException(s"nonce has max value: address ${toAddress(address)}, state $stateNonce")
+case class NonceMaxException(address: Address, stateNonce: BigInteger)
+  extends InvalidMessageException(s"nonce has max value: address $address, state $stateNonce")
 
 /** ErrGasLimitReached is returned by the gas pool if the amount of gas required by a transaction is higher than what's left in the block. */
 case class GasLimitReached() extends InvalidMessageException("gas limit reached")
 
 /** ErrInsufficientFunds is returned if the total cost of executing a transaction is higher than the balance of the user's account. */
-case class InsufficientFundsException(address: Array[Byte], have: BigInteger, want: BigInteger)
-  extends InvalidMessageException(s"insufficient funds for gas * price + value: address ${toAddress(address)}, have $have, want $want")
+case class InsufficientFundsException(address: Address, have: BigInteger, want: BigInteger)
+  extends InvalidMessageException(s"insufficient funds for gas * price + value: address $address, have $have, want $want")
 
 /** ErrGasUintOverflow is returned when calculating gas usage. */
 case class GasUintOverflowException() extends InvalidMessageException("gas uint64 overflow")
@@ -52,13 +61,13 @@ case class IntrinsicGasException(have: BigInteger, want: BigInteger)
   extends InvalidMessageException(s"intrinsic gas too low: have $have, want $want")
 
 /** ErrFeeCapTooLow is returned if the transaction fee cap is less than the	base fee of the block. */
-case class FeeCapTooLowException(address: Array[Byte], maxFeePerGas: BigInteger, baseFee: BigInteger)
-  extends InvalidMessageException(s"max fee per gas less than block base fee: address ${toAddress(address)}, maxFeePerGas $maxFeePerGas, baseFee $baseFee")
+case class FeeCapTooLowException(address: Address, maxFeePerGas: BigInteger, baseFee: BigInteger)
+  extends InvalidMessageException(s"max fee per gas less than block base fee: address $address, maxFeePerGas $maxFeePerGas, baseFee $baseFee")
 
 /** ErrSenderNoEOA is returned if the sender of a transaction is a contract. */
-case class SenderNotEoaException(address: Array[Byte], codeHash: Array[Byte])
-  extends InvalidMessageException(s"sender not an eoa: address ${toAddress(address)}, codeHash ${toHex(codeHash)}")
+case class SenderNotEoaException(address: Address, codeHash: Array[Byte])
+  extends InvalidMessageException(s"sender not an eoa: address $address, codeHash ${toHex(codeHash)}")
 
 /** ErrOversizedData is returned if the transaction size exceeds maximum size (128 KB). */
-case class TxOversizedException(address: Array[Byte], txSize: Long)
-  extends InvalidMessageException(s"transaction size exceeds maximum size: address ${toAddress(address)}, size $txSize")
+case class TxOversizedException(address: Address, txSize: Long)
+  extends InvalidMessageException(s"transaction size exceeds maximum size: address $address, size $txSize")

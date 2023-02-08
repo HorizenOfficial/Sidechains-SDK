@@ -10,7 +10,7 @@ import com.horizen.proposition.SchnorrProposition
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
 
 import java.math.BigInteger
