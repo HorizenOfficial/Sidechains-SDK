@@ -101,15 +101,16 @@ public class EthereumTransactionDecoder {
            );
         }
         long chainId = ((RlpString)values.getValues().get(0)).asPositiveBigInteger().longValueExact();
-        BigInteger nonce = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
-        BigInteger maxPriorityFeePerGas = ((RlpString)values.getValues().get(2)).asPositiveBigInteger();
-        BigInteger maxFeePerGas = ((RlpString)values.getValues().get(3)).asPositiveBigInteger();
-        BigInteger gasLimit = ((RlpString)values.getValues().get(4)).asPositiveBigInteger();
+
+        BigInteger nonce = getCheckedValue((RlpString)values.getValues().get(1), "gasNonce");
+        BigInteger maxPriorityFeePerGas = getCheckedValue((RlpString)values.getValues().get(2), "maxPriorityFeePerGas");
+        BigInteger maxFeePerGas = getCheckedValue((RlpString)values.getValues().get(3), "maxFeePerGas");
+        BigInteger gasLimit = getCheckedValue((RlpString)values.getValues().get(4), "gasLimit");
 
         byte[] toBytes = ((RlpString)values.getValues().get(5)).getBytes();
         Optional<AddressProposition> optTo = EthereumTransactionUtils.getToAddressFromBytes(toBytes);
 
-        BigInteger value = ((RlpString)values.getValues().get(6)).asPositiveBigInteger();
+        BigInteger value = getCheckedValue((RlpString)values.getValues().get(6), "value");
 
         byte[] dataBytes = ((RlpString)values.getValues().get(7)).getBytes();
 
@@ -154,6 +155,19 @@ public class EthereumTransactionDecoder {
         return RlpList2LegacyTransaction(rlpList);
     }
 
+    private static BigInteger getCheckedValue(RlpString rawValueString, String fieldName) {
+        byte[] rawValueBytes = rawValueString.getBytes();
+        // encoded values should not have prepending zero bytes in the rlp representation
+        if (rawValueBytes.length > 1) {
+            if (rawValueBytes[0] == 0x00)
+            throw new IllegalArgumentException(
+                "Error while rlp decoding payload of legacy tx, " + fieldName + " value has leading zero in rlp encoding: " +
+                    BytesUtils.toHexString(rawValueBytes)
+            );
+        }
+        return rawValueString.asPositiveBigInteger();
+    }
+
     private static EthereumTransaction RlpList2LegacyTransaction(RlpList rlpList) {
 
         RlpList values = (RlpList)rlpList.getValues().get(0);
@@ -163,14 +177,14 @@ public class EthereumTransactionDecoder {
                             values.getValues().size()
             );
         }
-        BigInteger nonce = ((RlpString)values.getValues().get(0)).asPositiveBigInteger();
-        BigInteger gasPrice = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
-        BigInteger gasLimit = ((RlpString)values.getValues().get(2)).asPositiveBigInteger();
+        BigInteger nonce = getCheckedValue((RlpString)values.getValues().get(0), "gasNonce");
+        BigInteger gasPrice = getCheckedValue((RlpString)values.getValues().get(1), "gasPrice");
+        BigInteger gasLimit = getCheckedValue((RlpString)values.getValues().get(2), "gasLimit");
 
         byte[] toBytes = ((RlpString)values.getValues().get(3)).getBytes();
         Optional<AddressProposition> optTo = EthereumTransactionUtils.getToAddressFromBytes(toBytes);
 
-        BigInteger value = ((RlpString)values.getValues().get(4)).asPositiveBigInteger();
+        BigInteger value = getCheckedValue((RlpString)values.getValues().get(4), "value");
 
         byte[] dataBytes = ((RlpString)values.getValues().get(5)).getBytes();
 
