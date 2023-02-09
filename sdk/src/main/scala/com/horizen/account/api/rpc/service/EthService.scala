@@ -423,6 +423,22 @@ class EthService(
     (block, blockInfo)
   }
 
+  /**
+   * Returns a SidechainBlockInfo for a given blockId
+   * blockId = null is a valid case, returning pending block info
+   * Throws RpcException for not found blockId or errors while creating pending block
+   */
+  private def getBlockInfoById(nodeView: NV, blockId: ModifierId): SidechainBlockInfo = {
+    val blockInfo = if (blockId == null) {
+      val parentId = getBlockIdByTag(nodeView, "latest")
+      getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId)
+      )
+    } else {
+        nodeView.history.blockInfoById(blockId)
+    }
+    blockInfo
+  }
+
   private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
     val blockId = getBlockIdByTag(nodeView, tag)
     val (block, blockInfo) = getBlockById(nodeView, blockId)
@@ -807,8 +823,8 @@ class EthService(
   def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): Any = {
 
     applyOnAccountView { nodeView =>
-      // get block to trace
-      val (block, blockInfo) = getBlockById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
+      // get block info
+      val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
 
       // get state at selected block
       getStateViewAtTag(nodeView, if(tag=="pending") "pending" else (blockInfo.height).toString) { (tagStateView, blockContext) =>
