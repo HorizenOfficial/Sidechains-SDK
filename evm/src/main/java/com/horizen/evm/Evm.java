@@ -22,20 +22,8 @@ public final class Evm {
         TraceOptions traceOptions,
         BlockHashCallback blockHashGetter
     ) {
-        Integer blockHashCallbackHandle = null;
-        try {
-            if (blockHashGetter != null) {
-                blockHashCallbackHandle = LibEvm.registerCallback(blockHashGetter);
-            }
-            var params = new EvmParams(
-                stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions,
-                blockHashCallbackHandle
-            );
-            return LibEvm.invoke("EvmApply", params, EvmResult.class);
-        } finally {
-            if (blockHashCallbackHandle != null) {
-                LibEvm.unregisterCallback(blockHashCallbackHandle);
-            }
-        }
+        var params = new EvmParams(
+            stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions, blockHashGetter);
+        return LibEvm.invoke("EvmApply", params, EvmResult.class);
     }
 }

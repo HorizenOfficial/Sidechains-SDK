@@ -6,7 +6,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 
-class GlogCallback implements LibEvm.LibEvmCallback {
+class GlogCallback extends LibEvmCallback {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final Logger logger;
