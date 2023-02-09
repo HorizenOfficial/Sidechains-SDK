@@ -170,49 +170,40 @@ class SCEvmDebugMethods(AccountChainSetup):
         }
 
         # struct/opcode default tracer with verbosity boolean parameters
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 40,
-                              "params": [trace_call_transaction, block_number,
-                                         {
-                                             "enableMemory": False,
-                                             "disableStack": True,
-                                             "disableStorage": True,
-                                             "enableReturnData": False
-                                         }]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_number, {
+            "enableMemory": False,
+            "disableStack": True,
+            "disableStorage": True,
+            "enableReturnData": False
+        })['result']
         assert_true("error" not in res, "debug_traceCall failed for successful smart contract transaction")
         trace_logs_length = len(res['structLogs'])
         assert_true(trace_logs_length > 130, "unexpected number of trace logs, less than 130")
 
         # call tracer - native tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 48, "params": [trace_call_transaction, block_number, {"tracer": "callTracer"}]})
-        res = sc_node.ethv1(request)['result']
-        assert_true(res['type'] == "CREATE", "callTracer type not CALL")
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_number, {"tracer": "callTracer"})['result']
+        assert_true(res['type'] == "CREATE", "callTracer type not CREATE")
 
         # call tracer with tracer config parameters
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 56,
-                              "params": [trace_call_transaction, block_number, {"tracer": "callTracer",
-                                                        "tracerConfig": {
-                                                            "onlyTopCall": True,
-                                                            "withLog": True
-                                                        }}]})
-        res = sc_node.ethv1(request)['result']
-        assert_true(res['type'] == "CREATE", "callTracer type not CALL")
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_number, {"tracer": "callTracer",
+                                                                                 "tracerConfig": {
+                                                                                     "onlyTopCall": True,
+                                                                                     "withLog": True
+                                                                                 }})['result']
+        assert_true(res['type'] == "CREATE", "callTracer type not CREATE")
 
         # 4byte tracer - native tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 64, "params": [trace_call_transaction, block_number, {"tracer": "4byteTracer"}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_number, {"tracer": "4byteTracer"})['result']
         assert_true(res is not None, "4byteTracer response empty")
 
         # traceCall method call using block hash - call tracer
         block_hash = sc_node.rpc_eth_getBlockByNumber(block_number,False)['result']['hash']
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 48, "params": [trace_call_transaction, block_hash, {"tracer": "callTracer"}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_hash, {"tracer": "callTracer"})['result']
         assert_true(res['type'] == "CREATE", "callTracer type not CALL")
 
         # traceCall method call using block tag latest (current block) - call tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 48, "params": [trace_call_transaction, "latest", {"tracer": "callTracer"}]})
-        res = sc_node.ethv1(request)['result']
-        assert_true(res['type'] == "CREATE", "callTracer type not CALL")
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, "latest", {"tracer": "callTracer"})['result']
+        assert_true(res['type'] == "CREATE", "callTracer type not CREATE")
 
         # -------------------------------------------------------------------------------------
         # generate a new block without transactions and call the debug methods to check if everything works
@@ -230,21 +221,17 @@ class SCEvmDebugMethods(AccountChainSetup):
         # ------------------------------------------------------------------------
         # debug_traceCall on pending block
         # struct/opcode default tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 40,
-                              "params": [trace_call_transaction, "pending"]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, "pending")['result']
         assert_true("error" not in res, "debug_traceCall failed for successful smart contract transaction")
         trace_logs_length = len(res['structLogs'])
         assert_true(trace_logs_length > 130, "unexpected number of trace logs, less than 130")
 
         # call tracer - native tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 48, "params": [trace_call_transaction, "pending", {"tracer": "callTracer"}]})
-        res = sc_node.ethv1(request)['result']
-        assert_true(res['type'] == "CREATE", "callTracer type not CALL")
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, "pending", {"tracer": "callTracer"})['result']
+        assert_true(res['type'] == "CREATE", "callTracer type not CREATE")
 
         # 4byte tracer - native tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceCall", "id": 64, "params": [trace_call_transaction, "pending", {"tracer": "4byteTracer"}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_transaction, "pending", {"tracer": "4byteTracer"})['result']
         assert_true(res is not None, "4byteTracer response empty")
 
 if __name__ == "__main__":

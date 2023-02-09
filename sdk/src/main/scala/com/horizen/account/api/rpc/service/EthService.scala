@@ -25,7 +25,7 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.evm.interop.TraceOptions
-import com.horizen.evm.utils.{Address, Converter, Hash}
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -476,7 +476,7 @@ class EthService(
 
   private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
     if (tag.length == 66 && tag.substring(0, 2) == "0x")
-      bytesToId(Converter.fromHexString(tag.substring(2)))
+      bytesToId(BytesUtils.fromHexString(tag.substring(2)))
     else {
       getBlockIdByTag(nodeView, tag)
     }
@@ -815,18 +815,6 @@ class EthService(
 
         // use default trace params if none are given
         blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
-
-        // apply mainchain references
-        for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
-        }
-
-        val gasPool = new GasPool(block.header.gasLimit)
-
-        // apply block transactions without tracing
-        for ((tx, i) <- block.transactions.zipWithIndex) {
-          tagStateView.applyTransaction(tx, i, gasPool, blockContext)
-        }
 
         // apply requested message with tracing enabled
         val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
