@@ -1,7 +1,11 @@
 package com.horizen.account.state;
 
+import com.horizen.evm.BlockHashCallback;
 import com.horizen.evm.Evm;
 import com.horizen.evm.EvmContext;
+import com.horizen.evm.utils.Hash;
+import com.horizen.utils.BytesUtils;
+import scala.compat.java8.OptionConverters;
 
 import java.math.BigInteger;
 
@@ -28,7 +32,7 @@ public class EvmMessageProcessor implements MessageProcessor {
 
     @Override
     public byte[] process(Message msg, BaseAccountStateView view, GasPool gas, BlockContext blockContext)
-            throws ExecutionFailedException {
+        throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
 
@@ -40,18 +44,27 @@ public class EvmMessageProcessor implements MessageProcessor {
         context.baseFee = blockContext.baseFee;
         // TODO: add 32 bytes of random from VRF to support the "PREVRANDAO" (ex "DIFFICULTY") EVM-opcode
 //        context.random = null;
+
+        // setup callback for the evm to access the block hash provider
+        var blockHashGetter = new BlockHashCallback((BigInteger blockNumber) -> OptionConverters
+            .toJava(blockContext.blockHashProvider.blockIdByHeight(blockNumber.intValueExact()))
+            .map(hex -> new Hash(BytesUtils.fromHexString(hex)))
+            .orElse(null)
+        );
+
         // execute EVM
         var result = Evm.Apply(
-                view.getStateDbHandle(),
-                msg.getFrom(),
-                msg.getTo().orElse(null),
-                msg.getValue(),
-                msg.getData(),
-                // use gas from the pool not the message, because intrinsic gas was already spent at this point
-                gas.getGas(),
-                msg.getGasPrice(),
-                context,
-                blockContext.getTraceParams()
+            view.getStateDbHandle(),
+            msg.getFrom(),
+            msg.getTo().orElse(null),
+            msg.getValue(),
+            msg.getData(),
+            // use gas from the pool not the message, because intrinsic gas was already spent at this point
+            gas.getGas(),
+            msg.getGasPrice(),
+            context,
+            blockContext.getTraceParams(),
+            blockHashGetter
         );
         blockContext.setEvmResult(result);
         var returnData = result.returnData == null ? new byte[0] : result.returnData;

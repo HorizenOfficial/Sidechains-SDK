@@ -12,10 +12,9 @@ public class EvmParams extends HandleParams {
     public byte[] input;
     public BigInteger availableGas; // uint64
     public BigInteger gasPrice;
-
     public EvmContext context;
-
     public TraceOptions traceOptions;
+    public Integer blockHashCallbackHandle;
 
     public EvmParams(
         int handle,
@@ -26,7 +25,8 @@ public class EvmParams extends HandleParams {
         BigInteger availableGas,
         BigInteger gasPrice,
         EvmContext context,
-        TraceOptions traceOptions
+        TraceOptions traceOptions,
+        Integer blockHashCallbackHandle
     ) {
         super(handle);
         this.from = from;
@@ -37,5 +37,6 @@ public class EvmParams extends HandleParams {
         this.gasPrice = gasPrice;
         this.context = context;
         this.traceOptions = traceOptions;
+        this.blockHashCallbackHandle = blockHashCallbackHandle;
     }
 }

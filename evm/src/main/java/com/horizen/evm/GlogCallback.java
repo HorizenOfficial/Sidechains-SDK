@@ -1,14 +1,12 @@
 package com.horizen.evm;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.jna.Callback;
-import com.sun.jna.Pointer;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 
-class GlogCallback implements Callback {
+class GlogCallback implements LibEvm.LibEvmCallback {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final Logger logger;
@@ -17,10 +15,10 @@ class GlogCallback implements Callback {
         this.logger = logger;
     }
 
-    public void callback(Pointer message) {
+    @Override
+    public String callback(String args) {
         try {
-            var json = message.getString(0);
-            var data = mapper.readValue(json, HashMap.class);
+            var data = mapper.readValue(args, HashMap.class);
             // parse and remove known properties from the map
             var level = glogToLog4jLevel((String) data.remove("lvl"));
             var file = data.remove("file");
@@ -37,6 +35,7 @@ class GlogCallback implements Callback {
             // the raw json string itself
             logger.warn("received invalid log message data from libevm", e);
         }
+        return null;
     }
 
     public static Level glogToLog4jLevel(String glogLevel) {

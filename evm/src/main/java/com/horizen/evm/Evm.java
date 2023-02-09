@@ -8,7 +8,7 @@ import com.horizen.evm.utils.Address;
 import java.math.BigInteger;
 
 public final class Evm {
-    private Evm() {}
+    private Evm() { }
 
     public static EvmResult Apply(
         ResourceHandle stateDBHandle,
@@ -19,10 +19,23 @@ public final class Evm {
         BigInteger gasLimit,
         BigInteger gasPrice,
         EvmContext context,
-        TraceOptions traceOptions
+        TraceOptions traceOptions,
+        BlockHashCallback blockHashGetter
     ) {
-        var params = new EvmParams(
-            stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions);
-        return LibEvm.invoke("EvmApply", params, EvmResult.class);
+        Integer blockHashCallbackHandle = null;
+        try {
+            if (blockHashGetter != null) {
+                blockHashCallbackHandle = LibEvm.registerCallback(blockHashGetter);
+            }
+            var params = new EvmParams(
+                stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions,
+                blockHashCallbackHandle
+            );
+            return LibEvm.invoke("EvmApply", params, EvmResult.class);
+        } finally {
+            if (blockHashCallbackHandle != null) {
+                LibEvm.unregisterCallback(blockHashCallbackHandle);
+            }
+        }
     }
 }

@@ -23,6 +23,18 @@ var instance *lib.Service
 // initialize logger
 var logger = log.NewGlogHandler(log.FuncHandler(logToCallback))
 var logFormatter = log.JSONFormatEx(false, false)
+var logCallbackHandle int
+
+func callback(handle int, msg string) string {
+	str := C.CString(msg)
+	defer C.free(unsafe.Pointer(str))
+	var result *C.char
+	result = C.invokeCallback(C.int(handle), str)
+	if result == nil {
+		return ""
+	}
+	return C.GoString(result)
+}
 
 func logToCallback(r *log.Record) error {
 	// see comments on stack.Call.Format for available format specifiers
@@ -36,20 +48,13 @@ func logToCallback(r *log.Record) error {
 	)
 	msg := C.CString(string(logFormatter.Format(r)))
 	defer C.free(unsafe.Pointer(msg))
-	C.invokeLogCallback(msg)
+	callback(logCallbackHandle, msg)
 	return nil
 }
 
 func blockHashCallback(handle int, blockNumber uint64) common.Hash {
 	hex := (*hexutil.Big)(new(big.Int).SetUint64(blockNumber)).String()
-	str := C.CString(hex)
-	defer C.free(unsafe.Pointer(str))
-	var result *C.char
-	result = C.invokeBlockHashCallback(C.int(handle), str)
-	if result == nil {
-		return common.Hash{}
-	}
-	return common.HexToHash(C.GoString(result))
+	return common.HexToHash(callback(handle, hex))
 }
 
 // static initializer
@@ -73,6 +78,7 @@ func SetLogLevel(level *C.char) {
 		return
 	}
 	logger.Verbosity(parsedLevel)
+	logCallbackHandle = 1
 }
 
 //export Invoke

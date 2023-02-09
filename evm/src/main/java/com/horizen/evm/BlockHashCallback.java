@@ -1,27 +1,39 @@
 package com.horizen.evm;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.horizen.evm.utils.Hash;
-import com.sun.jna.Callback;
-import com.sun.jna.Pointer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-class BlockHashCallback implements Callback {
-    private static final ObjectMapper mapper = new ObjectMapper();
+import java.math.BigInteger;
+import java.util.function.Function;
 
-    private final Logger logger = LogManager.getLogger();
+public class BlockHashCallback implements LibEvm.LibEvmCallback {
+    private static final Logger logger = LogManager.getLogger();
 
-    public static int Acquire() {
-        return 1;
+    // TODO: refactor to abstract method?
+    private final Function<BigInteger, Hash> getter;
+
+    public BlockHashCallback(Function<BigInteger, Hash> getter) {
+        this.getter = getter;
     }
 
-    public String callback(int handle, Pointer blockNumber) {
+    @Override
+    public String callback(String args) {
         logger.info("received block hash callback");
         try {
             // TODO: read block number from message, retrieve corresponding block hash and return as string
-//            var json = message.getString(0);
-//            var data = mapper.readValue(json, HashMap.class);
+            if (!args.startsWith("0x")) {
+                logger.warn("received invalid block number: {}", args);
+            } else {
+                var blockNumber = new BigInteger(args.substring(2), 16);
+                if (getter != null) {
+                    return getter.apply(blockNumber).toString();
+                }
+                var bytes = blockNumber.toByteArray();
+                var padded = new byte[Hash.LENGTH];
+                System.arraycopy(bytes, 0, padded, padded.length - bytes.length, bytes.length);
+                return new Hash(padded).toString();
+            }
         } catch (Exception e) {
             // note: make sure we do not throw any exception here because this callback is called by native code
             // for diagnostics we log the exception here, if it is caused by malformed json it will also include
