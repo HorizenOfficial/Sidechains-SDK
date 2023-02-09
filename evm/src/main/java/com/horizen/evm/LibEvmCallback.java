@@ -27,6 +27,7 @@ abstract class LibEvmCallback implements AutoCloseable {
         for (int i = 0; i < callbacks.length; i++) {
             if (callbacks[i] == null) {
                 callbacks[i] = callback;
+                logger.trace("registered callback with handle {}: {}", i, callback);
                 return i;
             }
         }
@@ -35,10 +36,11 @@ abstract class LibEvmCallback implements AutoCloseable {
 
     private static void unregister(int handle, LibEvmCallback callback) {
         if (callbacks[handle] != callback) {
-            // TODO: log a warning or assert? something is wrong in this case, probably already unregistered
+            logger.warn("already unregistered callback with handle {}: {}", handle, callback);
             return;
         }
         callbacks[handle] = null;
+        logger.trace("unregistered callback with handle {}: {}", handle, callback);
     }
 
     private static String invoke(int handle, String args) {
@@ -46,12 +48,12 @@ abstract class LibEvmCallback implements AutoCloseable {
             logger.warn("received callback with invalid handle: {}", handle);
             return null;
         }
+        logger.trace("received callback with handle {}", handle);
         return callbacks[handle].callback(args);
     }
 
     static class MasterCallback implements Callback {
         public String callback(int handle, Pointer msg) {
-            logger.debug("received callback with handle {}", handle);
             try {
                 return invoke(handle, msg.getString(0));
             } catch (Exception e) {
