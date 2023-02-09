@@ -84,7 +84,6 @@ class SCKeyRotationTest(AccountChainSetup):
 
     def run_test(self):
         time.sleep(0.1)
-        nonce = 0
 
         # We need regular coins (the genesis account balance is locked into forging stake), so we perform a
         # Forward transfer to sidechain for an amount equals to the genesis_account_balance
@@ -184,7 +183,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                             signing_key_signature=master_signature,
                                                             master_key_signature=master_signature,
                                                             new_key_signature=new_key_signature)
-        nonce += 1
         generate_next_blocks(sc_node, "first node", 1)
         receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         status = int(receipt['result']['status'], 16)
@@ -198,7 +196,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                             signing_key_signature=signing_signature,
                                                             master_key_signature=signing_signature,
                                                             new_key_signature=new_key_signature)
-        nonce += 1
         generate_next_blocks(sc_node, "first node", 1)
         receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         status = int(receipt['result']['status'], 16)
@@ -212,7 +209,6 @@ class SCKeyRotationTest(AccountChainSetup):
         #                                                     signing_key_signature=signing_signature,
         #                                                     master_key_signature=master_signature,
         #                                                     new_key_signature=master_signature)
-        # nonce += 1
         # generate_next_blocks(sc_node, "first node", 1)
         # receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         # status = int(receipt['result']['status'], 16)
@@ -226,7 +222,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                             signing_key_signature=signing_signature,
                                                             master_key_signature=master_signature,
                                                             new_key_signature=new_key_signature)
-        nonce += 1
         generate_next_blocks(sc_node, "first node", 1)
         receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         status = int(receipt['result']['status'], 16)
@@ -270,7 +265,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                  signing_key_signature=signing_signature,
                                                  master_key_signature=master_signature,
                                                  new_key_signature=new_key_signature)
-        nonce += 1
 
         self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
@@ -304,7 +298,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                             signing_key_signature=signing_signature,
                                                             master_key_signature=master_signature,
                                                             new_key_signature=new_key_signature_2)
-        nonce += 1
         generate_next_blocks(sc_node, "first node", 1)
         receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         status = int(receipt['result']['status'], 16)
@@ -318,7 +311,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                  signing_key_signature=signing_signature_2,
                                                  master_key_signature=master_signature_2,
                                                  new_key_signature=new_key_signature_2)
-        nonce += 1
 
         self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
@@ -352,7 +344,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                  signing_key_signature=signing_signature_3,
                                                  master_key_signature=master_signature_3,
                                                  new_key_signature=new_key_signature_3)
-        nonce += 1
         self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()
@@ -426,7 +417,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                  signing_key_signature=signing_signature_4,
                                                  master_key_signature=master_signature_4,
                                                  new_key_signature=new_key_signature_4)
-        nonce += 1
 
         self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
@@ -445,7 +435,6 @@ class SCKeyRotationTest(AccountChainSetup):
 
         # ******************** WITHDRAWAL EPOCH 2 START ********************
         logging.info("******************** WITHDRAWAL EPOCH 2 START ********************")
-
         # Generate first mc block of the next epoch
         mc_node.generate(1)
         epoch_mc_blocks_left = self.withdrawalEpochLength - 1
@@ -536,8 +525,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                      signing_key_signature=new_sign_signing_signature,
                                                      master_key_signature=new_sign_master_signature,
                                                      new_key_signature=new_sign_key_signature)
-            nonce += 1
-
             generate_next_blocks(sc_node, "first node", 1)
 
             # Create the key rotation transacion to change the master key
@@ -548,8 +535,6 @@ class SCKeyRotationTest(AccountChainSetup):
                                                      signing_key_signature=new_master_signing_signature,
                                                      master_key_signature=new_master_master_signature,
                                                      new_key_signature=new_master_key_signature)
-            nonce += 1
-
             generate_next_blocks(sc_node, "first node", 1)
 
         generate_next_blocks(sc_node, "first node", 1)
