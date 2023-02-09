@@ -25,11 +25,11 @@ var logger = log.NewGlogHandler(log.FuncHandler(logToCallback))
 var logFormatter = log.JSONFormatEx(false, false)
 var logCallbackHandle int
 
-func callback(handle int, msg string) string {
-	str := C.CString(msg)
-	defer C.free(unsafe.Pointer(str))
+func callback(handle int, args string) string {
+	argsStr := C.CString(args)
+	defer C.free(unsafe.Pointer(argsStr))
 	var result *C.char
-	result = C.invokeCallback(C.int(handle), str)
+	result = C.invokeCallback(C.int(handle), argsStr)
 	if result == nil {
 		return ""
 	}
@@ -46,8 +46,7 @@ func logToCallback(r *log.Record) error {
 		// function name (without additional path qualifiers because the filename will already be qualified)
 		"fn", fmt.Sprintf("%n", r.Call),
 	)
-	msg := C.CString(string(logFormatter.Format(r)))
-	defer C.free(unsafe.Pointer(msg))
+	msg := string(logFormatter.Format(r))
 	callback(logCallbackHandle, msg)
 	return nil
 }
@@ -70,15 +69,15 @@ func init() {
 func main() {
 }
 
-//export SetLogLevel
-func SetLogLevel(level *C.char) {
+//export SetupLogging
+func SetupLogging(handle int, level *C.char) {
 	parsedLevel, err := log.LvlFromString(C.GoString(level))
 	if err != nil {
 		log.Error("unable to parse log level", "error", err)
 		return
 	}
 	logger.Verbosity(parsedLevel)
-	logCallbackHandle = 1
+	logCallbackHandle = handle
 }
 
 //export Invoke

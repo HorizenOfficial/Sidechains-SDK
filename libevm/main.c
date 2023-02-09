@@ -4,7 +4,7 @@ void Free(void *ptr) {
     free(ptr);
 }
 
-typedef char* (*callbackFunc)(int handle, char *msg);
+typedef char* (*callbackFunc)(int handle, char *args);
 
 // global callback function pointer
 static callbackFunc callback = NULL;
@@ -15,7 +15,7 @@ void SetCallback(callbackFunc func) {
 }
 
 // used by GO to invoke the callback, as GO cannot invoke C function pointers
-char* invokeCallback(int handle, char *msg) {
+char* invokeCallback(int handle, char *args) {
     if (callback == NULL) return NULL;
-    return callback(handle, msg);
+    return callback(handle, args);
 }

@@ -21,15 +21,15 @@ import (
 
 type EvmParams struct {
 	HandleParams
-	From                    common.Address  `json:"from"`
-	To                      *common.Address `json:"to"`
-	Value                   *hexutil.Big    `json:"value"`
-	Input                   []byte          `json:"input"`
-	AvailableGas            hexutil.Uint64  `json:"availableGas"`
-	GasPrice                *hexutil.Big    `json:"gasPrice"`
-	Context                 EvmContext      `json:"context"`
-	TraceOptions            *TraceOptions   `json:"traceOptions"`
-	BlockHashCallbackHandle int             `json:"blockHashCallbackHandle"`
+	From              common.Address  `json:"from"`
+	To                *common.Address `json:"to"`
+	Value             *hexutil.Big    `json:"value"`
+	Input             []byte          `json:"input"`
+	AvailableGas      hexutil.Uint64  `json:"availableGas"`
+	GasPrice          *hexutil.Big    `json:"gasPrice"`
+	Context           EvmContext      `json:"context"`
+	TraceOptions      *TraceOptions   `json:"traceOptions"`
+	BlockHashCallback int             `json:"blockHashCallback"`
 }
 
 type EvmContext struct {
@@ -162,7 +162,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 			Origin:   params.From,
 			GasPrice: params.GasPrice.ToInt(),
 		}
-		blockContext = params.Context.getBlockContext(s.createBlockHashGetter(params.BlockHashCallbackHandle))
+		blockContext = params.Context.getBlockContext(s.createBlockHashGetter(params.BlockHashCallback))
 		chainConfig  = params.Context.getChainConfig()
 		tracer       = params.TraceOptions.getTracer()
 		evmConfig    = vm.Config{
