@@ -30,8 +30,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
   val rejectedBlock: AccountBlock = mock[AccountBlock]
   val appliedBlock: AccountBlock = mock[AccountBlock]
 
-  val listOfRejectedBlocks = Seq(rejectedBlock)
-  val listOfAppliedBlocks = Seq(appliedBlock)
+  val listOfRejectedBlocks: Seq[AccountBlock] = Seq(rejectedBlock)
+  val listOfAppliedBlocks: Seq[AccountBlock] = Seq(appliedBlock)
 
   val accountKeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes()))
 
@@ -54,14 +54,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
 
     val expectedNumOfTxs = 7
-    val listOfTxs = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfTxs).toSeq
+    val listOfTxs: Seq[SidechainTypes#SCAT] = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfTxs)
 
     // Try with only txs from reverted blocks
     var listOfTxsToReAdd = listOfTxs
     var listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
 
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs, mempoolMap.size)
 
@@ -78,8 +78,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     listOfTxsToReAdd = Seq.empty[SidechainTypes#SCAT]
     listOfTxsToRemove = listOfTxs
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 0, mempoolMap.size)
@@ -89,8 +89,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     listOfTxsToReAdd = listOfTxs.take(3)
     listOfTxsToRemove = listOfTxs
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 0, mempoolMap.size)
@@ -99,8 +99,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     listOfTxsToReAdd = listOfTxs
     listOfTxsToRemove = listOfTxs.take(4)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
@@ -119,8 +119,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       accountKeyOpt)
     listOfTxsToReAdd = listOfTxsToReAdd :+ invalidTx.asInstanceOf[SidechainTypes#SCAT]
     listOfTxsToReAdd = listOfTxsToReAdd :+ validTx.asInstanceOf[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     assertTrue(invalidTx.maxCost().compareTo(listOfTxsToReAdd.head.maxCost()) > 0)
     Mockito
       .when(accountStateViewMock.getBalance(invalidTx.getFrom.address()))
@@ -138,7 +138,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     val expectedNumOfTxs = 5
     val expectedNumOfExecutableTxs = 3
-    val listOfTxs = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfTxs, expectedNumOfExecutableTxs).toSeq
+    val listOfTxs: Seq[SidechainTypes#SCAT] = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfTxs, expectedNumOfExecutableTxs)
 
     //initialize mem pool
     listOfTxs.foreach(tx => mempoolMap.add(tx))
@@ -149,8 +149,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Try with only txs from applied blocks
     var listOfTxsToReAdd = Seq.empty[SidechainTypes#SCAT]
     var listOfTxsToRemove = listOfTxs.take(expectedNumOfExecutableTxs - 1)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
@@ -165,8 +165,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Try with only txs from reverted blocks
     listOfTxsToReAdd = listOfTxsToRemove
     listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
@@ -183,8 +183,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Try with txs from applied and reverted blocks
     listOfTxsToReAdd = listOfTxs.take(1)
     listOfTxsToRemove = listOfTxs.take(2)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
@@ -199,8 +199,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Reset mempool to initial situation
     listOfTxsToReAdd = listOfTxsToRemove
     listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.ZERO)
@@ -211,9 +211,9 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     //Apply enough txs so that the non executable txs become executable
     listOfTxsToReAdd = Seq.empty[SidechainTypes#SCAT]
-    listOfTxsToRemove = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfExecutableTxs + 1).toSeq //creates expectedNumOfExecutableTxs + 1 consecutive txs
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    listOfTxsToRemove = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfExecutableTxs + 1) //creates expectedNumOfExecutableTxs + 1 consecutive txs
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(expectedNumOfExecutableTxs + 1))
@@ -247,7 +247,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     val expectedNumOfTxs = 6
     val expectedNumOfExecutableTxs = 4
 
-    val listOfTxs = scala.collection.mutable.ListBuffer[SidechainTypes#SCAT](tx0, tx1, tx2, tx3, tx5, tx6).toSeq
+    val listOfTxs = scala.collection.mutable.ListBuffer[SidechainTypes#SCAT](tx0, tx1, tx2, tx3, tx5, tx6)
 
     //initialize mem pool
     listOfTxs.foreach(tx => assertTrue(s"Error while adding tx $tx", mempoolMap.add(tx).isSuccess))
@@ -258,8 +258,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Try with only txs from applied blocks
     var listOfTxsToReAdd = Seq.empty[SidechainTypes#SCAT]
     var listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx0, tx1)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     //Update the nonce in the state db
     val address = listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()
     Mockito
@@ -281,8 +281,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Try to revert tx0 and tx1 but tx1 is not inserted because the balance is too low now
     listOfTxsToReAdd = listOfTxsToRemove
     listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     Mockito
@@ -302,8 +302,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     listOfTxsToReAdd = Seq.empty[SidechainTypes#SCAT]
     listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx0, newTx1, newTx2)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
@@ -347,8 +347,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Prepare blocks
     var listOfTxsToReAdd =  Seq[SidechainTypes#SCAT](tx0, tx1)
     var listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
      Mockito
@@ -378,8 +378,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Prepare blocks
     listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx0, tx1, tx2, tx3, tx4)
     listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx0Norm, tx1)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(address))
@@ -446,8 +446,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Prepare blocks
     var listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx12, tx13)
     var listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     var stateNonce = listOfTxsToReAdd.head.getNonce
@@ -472,8 +472,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx9, tx10, tx11, tx12, tx13)
     listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     stateNonce = listOfTxsToReAdd.head.getNonce
@@ -498,8 +498,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Prepare blocks
     listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx6, tx7, tx8, tx9, tx10, tx11, tx12, tx13)
     listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     stateNonce = listOfTxsToReAdd.head.getNonce
@@ -524,8 +524,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Prepare blocks
     listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx11, tx12, tx13)
     listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx11)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     stateNonce = tx12.getNonce
@@ -548,8 +548,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Prepare blocks
     listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx8, tx9, tx10, tx11, tx12, tx13)
     listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx8)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     stateNonce = tx9.getNonce
@@ -573,8 +573,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Prepare blocks
     listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx5, tx6, tx7, tx8, tx9, tx10, tx11, tx12, tx13)
     listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx5)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     stateNonce = tx6.getNonce
@@ -635,8 +635,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
      //Prepare blocks
     val listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx11, tx12, tx13)
     val listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     val stateNonce = listOfTxsToReAdd.head.getNonce
@@ -656,15 +656,18 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
 
   @Test
-  def testWithTxsInvalidForMempoolSize(): Unit = {
+  def testUpdateWithMempoolFull(): Unit = {
 
+    val addressA = accountKeyOpt.get.publicImage().address()
     val txA0 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(0), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
     val txA1 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(1), keyOpt = accountKeyOpt)
-    val txA2 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(2), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
+    val txA2 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(2), keyOpt = accountKeyOpt)
     val txA3 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(3), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
     val txA4 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(4), keyOpt = accountKeyOpt)
+    val txA5 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(5), keyOpt = accountKeyOpt), MempoolMap.TxSlotSize + 1)
 
     val accountKeyBOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
+    val addressB = accountKeyBOpt.get.publicImage().address()
 
     val txB0 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(0), keyOpt = accountKeyBOpt)
     val txB1 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(1), keyOpt = accountKeyBOpt)
@@ -673,74 +676,62 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     val txB4 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(4), keyOpt = accountKeyBOpt)
     val txB5 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(5), keyOpt = accountKeyBOpt)
 
-    // Test 1: Txs from reverted blocks exceed mempool size. Verify that txs with biggest nonce are evicted
+    // Test 1: Txs from reverted blocks exceed mempool size. Verify that oldest txs are evicted
 
     //Initialize mempool
     val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings(maxMemPoolSlots = 8))
     //Update the nonce in the state db
     Mockito
-      .when(accountStateViewMock.getNonce(txA0.getFrom.address()))
+      .when(accountStateViewMock.getNonce(addressA))
       .thenReturn(BigInteger.valueOf(3))
     Mockito
-      .when(accountStateViewMock.getNonce(txB0.getFrom.address()))
+      .when(accountStateViewMock.getNonce(addressB))
       .thenReturn(BigInteger.valueOf(5))
 
     //Add txs to the mem pool
     assertTrue(mempoolMap.add(txA3).isSuccess) //exec
     assertTrue(mempoolMap.add(txA4).isSuccess) //exec
     assertTrue(mempoolMap.add(txB5).isSuccess) //exec
-    assertEquals("Wrong account size in slots", 6, mempoolMap.getMempoolSizeInSlots())
+    assertEquals("Wrong account size in slots", 6, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
 
 
     //Prepare blocks. The rejected txs occupy 4 slots, there are already 6 slots occupied => total size 10 > maxMemPoolSlots (8)
-    var listOfTxsToReAdd = Seq[SidechainTypes#SCAT](txA1, txB1, txB2, txB3)
+    // txA3, that occupies 4 slots and it is the oldest, should be evicted.
+    var listOfTxsToReAdd = Seq[SidechainTypes#SCAT](txB1, txB2, txB3, txB4)
     val listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
     //Update the nonce in the state db
     Mockito
-      .when(accountStateViewMock.getNonce(txA1.getFrom.address()))
-      .thenReturn(BigInteger.ONE)
-    Mockito
-      .when(accountStateViewMock.getNonce(txB0.getFrom.address()))
-      .thenReturn(BigInteger.ONE)
+      .when(accountStateViewMock.getNonce(addressB))
+      .thenReturn(BigInteger.valueOf(1))
 
-    //After the update txA1, txA3, txB1,txB2 and will txB3 be in the mempool
+    //After the update txA4, txB1, txB2, txB3, txB4 and txB5 will be in the mempool
 
     mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
-    assertEquals("Wrong account size in slots", mempoolMap.MaxMemPoolSlots, mempoolMap.getMempoolSizeInSlots())
-    assertEquals("Wrong number of txs in the mempool", 5, mempoolMap.size)
-    assertTrue(mempoolMap.contains(ModifierId @@ txA1.id))
-    assertTrue(mempoolMap.contains(ModifierId @@ txA3.id))
+    assertEquals("Wrong account size in slots", 6, mempoolMap.getMempoolSizeInSlots)
+    assertEquals("Wrong number of txs in the mempool", 6, mempoolMap.size)
     assertTrue(mempoolMap.contains(ModifierId @@ txB1.id))
     assertTrue(mempoolMap.contains(ModifierId @@ txB2.id))
+    assertTrue(mempoolMap.contains(ModifierId @@ txA4.id))
     assertTrue(mempoolMap.contains(ModifierId @@ txB3.id))
+    assertTrue(mempoolMap.contains(ModifierId @@ txB4.id))
+    assertTrue(mempoolMap.contains(ModifierId @@ txB5.id))
 
-
-    //Prepare blocks. The rejected txs occupy 5 slots, there are already MaxMemPoolSlots slots occupied => 5 slots must be emptied
-    listOfTxsToReAdd = Seq[SidechainTypes#SCAT](txA0, txB0)
-    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
-
-    Mockito
-      .when(accountStateViewMock.getNonce(txA0.getFrom.address()))
-      .thenReturn(BigInteger.ZERO)
-    Mockito
-      .when(accountStateViewMock.getNonce(txB0.getFrom.address()))
-      .thenReturn(BigInteger.ZERO)
-
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
-
-    assertEquals("Wrong account size in slots", mempoolMap.MaxMemPoolSlots, mempoolMap.getMempoolSizeInSlots())
-    assertEquals("Wrong number of txs in the mempool", 5, mempoolMap.size)
-    assertTrue(mempoolMap.contains(ModifierId @@ txA0.id))
-    assertTrue(mempoolMap.contains(ModifierId @@ txA1.id))
-    assertTrue(mempoolMap.contains(ModifierId @@ txB0.id))
-    assertTrue(mempoolMap.contains(ModifierId @@ txB1.id))
-    assertTrue(mempoolMap.contains(ModifierId @@ txB2.id))
-
+    //Verify that the rejected txs are "younger" than the txs that were already in the mempool.
+    //Fill again the mempool and check that the eviction order is the same as the expected age order.
+    //First will be evicted the txs that were in the mempool, then the txs reinjected, in reverse order respect the nonce order
+    assertTrue(mempoolMap.add(txA5).isSuccess) //Add 2 slots
+    val orderedTxs: Array[ModifierId] = Array(ModifierId @@ txA4.id, ModifierId @@ txB5.id, ModifierId @@ txB4.id, ModifierId @@ txB3.id, ModifierId @@ txB2.id, ModifierId @@ txB1.id)
+    val accountKeyCOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest3".getBytes()))
+    (0 to 5).foreach { idx =>
+      assertTrue(mempoolMap.contains(ModifierId @@ orderedTxs(idx)))
+      mempoolMap.add(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(idx), keyOpt = accountKeyCOpt))
+      assertFalse(s"Transaction $idx is still in mempool", mempoolMap.contains(ModifierId @@ orderedTxs(idx)))
+    }
   }
 
 
