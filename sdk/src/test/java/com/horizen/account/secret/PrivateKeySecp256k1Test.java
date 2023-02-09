@@ -25,7 +25,7 @@ public class PrivateKeySecp256k1Test {
     @Test
     public void privateKeySecp256k1Test() {
         // Test 1: Returns correct address proposition from private key
-        assertEquals("e16c1623c1aa7d919cd2241d8b36d9e79c1be2a2", BytesUtils.toHexString(privateKeySecp256k1.publicImage().address()));
+        assertEquals("0xe16c1623c1aa7d919cd2241d8b36d9e79c1be2a2", privateKeySecp256k1.publicImage().address().toString());
 
         // Test 2: Must return true as it owns here created address proposition
         assertTrue(privateKeySecp256k1.owns(addressProposition));

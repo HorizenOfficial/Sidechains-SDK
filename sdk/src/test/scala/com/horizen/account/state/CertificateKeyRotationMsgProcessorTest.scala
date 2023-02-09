@@ -1,12 +1,12 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig
 import com.horizen.account.utils.FeeUtils
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.evm.utils.Address
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
@@ -31,12 +31,11 @@ class CertificateKeyRotationMsgProcessorTest
     with ClosableResourceHandler
     with StoreFixture {
 
-  val bigIntegerZero: BigInteger = BigInteger.ZERO
   val sidechainId: Array[Byte] = Array[Byte](0, 1, 0)
   val mockNetworkParams: NetworkParams = mock[NetworkParams]
   when(mockNetworkParams.sidechainId).thenReturn(sidechainId)
   val certificateKeyRotationMsgProcessor: CertificateKeyRotationMsgProcessor = CertificateKeyRotationMsgProcessor(mockNetworkParams)
-  val contractAddress: Array[Byte] = certificateKeyRotationMsgProcessor.contractAddress
+  val contractAddress: Address = certificateKeyRotationMsgProcessor.contractAddress
 
   val SubmitKeyRotation: Array[Byte] = getEventSignature("submitKeyRotation(uint32,uint32,bytes32,bytes1,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)")
   val NumberOfParams: Int = 6
@@ -54,15 +53,15 @@ class CertificateKeyRotationMsgProcessorTest
     (1 to n).map(_ => keyGenerator.generateSecret(Random.nextDouble().toByte.toByteArray))
   }
 
-  def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = bigIntegerZero): Message = {
+  def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = 0): Message = {
     val data = Bytes.concat(opCode, arguments)
     new Message(
-      Optional.of(new AddressProposition(origin)),
-      Optional.of(new AddressProposition(contractAddress)), // to
-      bigIntegerZero, // gasPrice
-      bigIntegerZero, // gasFeeCap
-      bigIntegerZero, // gasTipCap
-      bigIntegerZero, // gasLimit
+      origin,
+      Optional.of(contractAddress), // to
+      0, // gasPrice
+      0, // gasFeeCap
+      0, // gasTipCap
+      0, // gasLimit
       value,
       nonce,
       data,
@@ -104,7 +103,7 @@ class CertificateKeyRotationMsgProcessorTest
       if (epoch == 0)
         defaultBlockContext
       else
-        new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1)
+        new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1)
 
     val messageToSign = keyRotationProof.keyType match {
       case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation

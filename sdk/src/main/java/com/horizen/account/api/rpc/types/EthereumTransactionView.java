@@ -3,6 +3,8 @@ package com.horizen.account.api.rpc.types;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.evm.utils.Address;
+import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
@@ -13,14 +15,14 @@ import java.util.Objects;
 
 @JsonView(Views.Default.class)
 public class EthereumTransactionView {
-    public final String blockHash;
+    public final Hash blockHash;
     public final String blockNumber;
-    public final String from;
-    public final String hash;
+    public final Address from;
+    public final Hash hash;
     public final String transactionIndex;
     public final String type;
     public final String nonce;
-    public final String to;
+    public final Address to;
     public final String gas;
     public final String value;
     public final String input;
@@ -37,7 +39,7 @@ public class EthereumTransactionView {
         assert Objects.equals(BytesUtils.toHexString(receipt.transactionHash()), tx.id());
         type = Numeric.encodeQuantity(BigInteger.valueOf(tx.version()));
         nonce = Numeric.encodeQuantity(tx.getNonce());
-        to = tx.getToAddressString();
+        to = tx.getToAddress();
         gas = Numeric.encodeQuantity(tx.getGasLimit());
         value = Numeric.encodeQuantity(tx.getValue());
         input = Numeric.toHexString(tx.getData());
@@ -61,10 +63,10 @@ public class EthereumTransactionView {
             r = Numeric.toHexString(signature.getR());
             s = Numeric.toHexString(signature.getS());
         }
-        blockHash = Numeric.toHexString(receipt.blockHash());
+        blockHash = receipt.blockHash() != null ? new Hash(receipt.blockHash()) : null;
         blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
-        from = tx.getFromAddressString();
-        hash = Numeric.toHexString(receipt.transactionHash());
+        from = tx.getFromAddress();
+        hash = new Hash(receipt.transactionHash());
         transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         accessList = null;
     }

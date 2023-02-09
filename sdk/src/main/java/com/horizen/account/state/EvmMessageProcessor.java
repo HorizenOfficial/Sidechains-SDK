@@ -2,7 +2,6 @@ package com.horizen.account.state;
 
 import com.horizen.evm.Evm;
 import com.horizen.evm.interop.EvmContext;
-import com.horizen.evm.utils.Address;
 
 import java.math.BigInteger;
 
@@ -21,10 +20,10 @@ public class EvmMessageProcessor implements MessageProcessor {
      */
     @Override
     public boolean canProcess(Message msg, BaseAccountStateView view) {
+        var to = msg.getTo();
         // contract deployment to a new account
-        if (msg.getTo().isEmpty()) return true;
-        var to = msg.getTo().get().address();
-        return view.isSmartContractAccount(to);
+        if (to.isEmpty()) return true;
+        return view.isSmartContractAccount(to.get());
     }
 
     @Override
@@ -34,7 +33,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         var context = new EvmContext();
 
         context.chainID = BigInteger.valueOf(blockContext.chainID);
-        context.coinbase = Address.fromBytes(blockContext.forgerAddress);
+        context.coinbase = blockContext.forgerAddress;
         context.gasLimit = blockContext.blockGasLimit;
         context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
         context.time = BigInteger.valueOf(blockContext.timestamp);
@@ -44,8 +43,8 @@ public class EvmMessageProcessor implements MessageProcessor {
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),
-                msg.getFromAddressBytes(),
-                msg.getToAddressBytes(),
+                msg.getFrom(),
+                msg.getTo().orElse(null),
                 msg.getValue(),
                 msg.getData(),
                 // use gas from the pool not the message, because intrinsic gas was already spent at this point

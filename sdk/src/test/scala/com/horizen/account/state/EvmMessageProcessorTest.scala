@@ -1,13 +1,12 @@
 package com.horizen.account.state
 
+import com.horizen.evm.utils.Address
 import org.junit.Assert.{assertFalse, assertNotNull, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 
-import java.util
-
-class EvmMessageProcessorTest extends MessageProcessorFixture with EvmMessageProcessorTestBase with MockitoSugar {
+class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSugar {
   @Test
   def testInit(): Unit = {
     val mockStateView = MockitoSugar.mock[AccountStateView]
@@ -22,11 +21,11 @@ class EvmMessageProcessorTest extends MessageProcessorFixture with EvmMessagePro
     val processor = new EvmMessageProcessor()
 
     Mockito
-      .when(mockStateView.isSmartContractAccount(ArgumentMatchers.any[Array[Byte]]()))
+      .when(mockStateView.isSmartContractAccount(ArgumentMatchers.any[Address]()))
       .thenAnswer(args => {
-        val addressBytes: Array[Byte] = args.getArgument(0)
-        assertNotNull("should not check the null address", addressBytes)
-        util.Arrays.equals(addressBytes, contractAddress.address())
+        val address: Address = args.getArgument(0)
+        assertNotNull("should not check the null address", address)
+        contractAddress.equals(address)
       })
 
     assertTrue("should process smart contract deployment", processor.canProcess(getMessage(null), mockStateView))
@@ -41,6 +40,6 @@ class EvmMessageProcessorTest extends MessageProcessorFixture with EvmMessagePro
       processor.canProcess(getMessage(eoaAddress), mockStateView))
     assertFalse(
       "should ignore data on EOA to EOA transfer",
-      processor.canProcess(getMessage(eoaAddress, "the same thing we do every night, pinky".getBytes()), mockStateView))
+      processor.canProcess(getMessage(eoaAddress, data = "the same thing we do every night, pinky".getBytes()), mockStateView))
   }
 }

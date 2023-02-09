@@ -32,6 +32,7 @@ import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.cryptolibprovider.utils.CircuitTypes;
 import com.horizen.evm.MemoryDatabase;
 import com.horizen.evm.StateDB;
+import com.horizen.evm.utils.Hash;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
@@ -853,7 +854,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                     return;
                 }
 
-                byte[] receiptsRoot = StateDB.EMPTY_ROOT_HASH; // empty root hash (no receipts)
+                byte[] receiptsRoot = StateDB.EMPTY_ROOT_HASH.toBytes(); // empty root hash (no receipts)
 
                 // taken from the creation cc out
                 AddressProposition forgerAddress = new AddressProposition(
@@ -991,7 +992,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
     private AccountStateView getStateView(scala.collection.Seq<MessageProcessor> mps) {
         var dbm = new MemoryDatabase();
-        StateDB stateDb = new StateDB(dbm, AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT());
+        StateDB stateDb = new StateDB(dbm, new Hash(AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT()));
         return new AccountStateView(null, stateDb, mps);
     }
 

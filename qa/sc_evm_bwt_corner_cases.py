@@ -172,7 +172,7 @@ class SCEvmBWTCornerCases(AccountChainSetup):
         # 1000 txs per block
 
         tx_ids = []
-        num_of_blocks = 10
+        num_of_blocks = 14
         num_of_wr_per_block = int(num_of_wr / num_of_blocks)
         for b in range(1, num_of_blocks + 1):
             start = (num_of_wr_per_block * (b - 1)) + 1
@@ -202,6 +202,7 @@ class SCEvmBWTCornerCases(AccountChainSetup):
         # verifies that there are 3999 withdrawal requests
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)
         assert_equal(num_of_wr, len(list_of_WR))
+
 
         gas_fee = 0
         for tx_id in tx_ids:
