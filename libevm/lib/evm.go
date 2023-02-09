@@ -21,25 +21,25 @@ import (
 
 type EvmParams struct {
 	HandleParams
-	From              common.Address  `json:"from"`
-	To                *common.Address `json:"to"`
-	Value             *hexutil.Big    `json:"value"`
-	Input             []byte          `json:"input"`
-	AvailableGas      hexutil.Uint64  `json:"availableGas"`
-	GasPrice          *hexutil.Big    `json:"gasPrice"`
-	Context           EvmContext      `json:"context"`
-	TraceOptions      *TraceOptions   `json:"traceOptions"`
-	BlockHashCallback int             `json:"blockHashCallback"`
+	From         common.Address  `json:"from"`
+	To           *common.Address `json:"to"`
+	Value        *hexutil.Big    `json:"value"`
+	Input        []byte          `json:"input"`
+	AvailableGas hexutil.Uint64  `json:"availableGas"`
+	GasPrice     *hexutil.Big    `json:"gasPrice"`
+	Context      EvmContext      `json:"context"`
+	TraceOptions *TraceOptions   `json:"traceOptions"`
 }
 
 type EvmContext struct {
-	ChainID     hexutil.Uint64 `json:"chainID"`
-	Coinbase    common.Address `json:"coinbase"`
-	GasLimit    hexutil.Uint64 `json:"gasLimit"`
-	BlockNumber *hexutil.Big   `json:"blockNumber"`
-	Time        *hexutil.Big   `json:"time"`
-	BaseFee     *hexutil.Big   `json:"baseFee"`
-	Random      *common.Hash   `json:"random"`
+	ChainID           hexutil.Uint64 `json:"chainID"`
+	Coinbase          common.Address `json:"coinbase"`
+	GasLimit          hexutil.Uint64 `json:"gasLimit"`
+	BlockNumber       *hexutil.Big   `json:"blockNumber"`
+	Time              *hexutil.Big   `json:"time"`
+	BaseFee           *hexutil.Big   `json:"baseFee"`
+	Random            *common.Hash   `json:"random"`
+	BlockHashCallback *int           `json:"blockHashCallback"`
 }
 
 type TraceOptions struct {
@@ -84,11 +84,11 @@ func (c *EvmContext) setDefaults() {
 	}
 }
 
-func (c *EvmContext) getBlockContext(blockHashGetter vm.GetHashFunc) vm.BlockContext {
+func (c *EvmContext) getBlockContext(s *Service) vm.BlockContext {
 	return vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
-		GetHash:     blockHashGetter,
+		GetHash:     s.createBlockHashGetter(c.BlockHashCallback),
 		Coinbase:    c.Coinbase,
 		GasLimit:    uint64(c.GasLimit),
 		BlockNumber: c.BlockNumber.ToInt(),
@@ -162,7 +162,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 			Origin:   params.From,
 			GasPrice: params.GasPrice.ToInt(),
 		}
-		blockContext = params.Context.getBlockContext(s.createBlockHashGetter(params.BlockHashCallback))
+		blockContext = params.Context.getBlockContext(s)
 		chainConfig  = params.Context.getChainConfig()
 		tracer       = params.TraceOptions.getTracer()
 		evmConfig    = vm.Config{

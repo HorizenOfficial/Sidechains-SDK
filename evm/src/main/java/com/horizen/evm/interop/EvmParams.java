@@ -1,6 +1,5 @@
 package com.horizen.evm.interop;
 
-import com.horizen.evm.BlockHashCallback;
 import com.horizen.evm.EvmContext;
 import com.horizen.evm.utils.Address;
 
@@ -15,7 +14,6 @@ public class EvmParams extends HandleParams {
     public BigInteger gasPrice;
     public EvmContext context;
     public TraceOptions traceOptions;
-    public BlockHashCallback blockHashCallback;
 
     public EvmParams(
         int handle,
@@ -26,8 +24,7 @@ public class EvmParams extends HandleParams {
         BigInteger availableGas,
         BigInteger gasPrice,
         EvmContext context,
-        TraceOptions traceOptions,
-        BlockHashCallback blockHashCallback
+        TraceOptions traceOptions
     ) {
         super(handle);
         this.from = from;
@@ -38,6 +35,5 @@ public class EvmParams extends HandleParams {
         this.gasPrice = gasPrice;
         this.context = context;
         this.traceOptions = traceOptions;
-        this.blockHashCallback = blockHashCallback;
     }
 }

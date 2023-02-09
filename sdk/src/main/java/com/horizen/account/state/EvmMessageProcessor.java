@@ -35,7 +35,6 @@ public class EvmMessageProcessor implements MessageProcessor {
         throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
-
         context.chainID = BigInteger.valueOf(blockContext.chainID);
         context.coinbase = blockContext.forgerAddress;
         context.gasLimit = blockContext.blockGasLimit;
@@ -47,6 +46,8 @@ public class EvmMessageProcessor implements MessageProcessor {
 
         // setup callback for the evm to access the block hash provider
         try (var blockHashGetter = new BlockHashGetter(blockContext.blockHashProvider)) {
+            context.blockHashCallback = blockHashGetter;
+
             // execute EVM
             var result = Evm.Apply(
                 view.getStateDbHandle(),
@@ -58,8 +59,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                 gas.getGas(),
                 msg.getGasPrice(),
                 context,
-                blockContext.getTraceParams(),
-                blockHashGetter
+                blockContext.getTraceParams()
             );
             blockContext.setEvmResult(result);
             var returnData = result.returnData == null ? new byte[0] : result.returnData;

@@ -43,7 +43,7 @@ public class EvmTest extends LibEvmTestBase {
                 statedb.addBalance(addr1, v10m);
                 // Due to nonce increase before any transaction on sdk side
                 statedb.setNonce(addr1, BigInteger.ONE);
-                result = Evm.Apply(statedb, addr1, addr2, v5m, null, gasLimit, gasPrice, null, null, null);
+                result = Evm.Apply(statedb, addr1, addr2, v5m, null, gasLimit, gasPrice, null, null);
                 assertEquals("", result.evmError);
                 assertEquals(v5m, statedb.getBalance(addr2));
                 // gas fees should not have been deducted
@@ -57,7 +57,7 @@ public class EvmTest extends LibEvmTestBase {
                 // Due to nonce increase before any transaction on sdk side
                 statedb.setNonce(addr2, BigInteger.ONE);
                 final var createResult = Evm.Apply(
-                    statedb, addr2, null, null, calldata, gasLimit, gasPrice, null, null, null);
+                    statedb, addr2, null, null, calldata, gasLimit, gasPrice, null, null);
                 assertEquals("", createResult.evmError);
                 contractAddress = createResult.contractAddress;
                 assertEquals(codeHash, statedb.getCodeHash(contractAddress));
@@ -71,12 +71,12 @@ public class EvmTest extends LibEvmTestBase {
 
                 // call "store" function on the contract to set a value
                 calldata = concat(funcStore, anotherValue.toBytes());
-                result = Evm.Apply(statedb, addr2, contractAddress, null, calldata, gasLimit, gasPrice, null, null, null);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, calldata, gasLimit, gasPrice, null, null);
                 assertEquals("", result.evmError);
 
                 // call "retrieve" on the contract to fetch the value we just set
                 result = Evm.Apply(
-                    statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, new TraceOptions(), null);
+                    statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, new TraceOptions());
                 assertEquals("", result.evmError);
                 assertEquals(anotherValue, new Hash(result.returnData));
                 assertNotNull(result.tracerResult);
@@ -86,7 +86,7 @@ public class EvmTest extends LibEvmTestBase {
 
             // reopen the state and retrieve a value
             try (var statedb = new StateDB(db, modifiedStateRoot)) {
-                result = Evm.Apply(statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, null, null);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, null);
                 assertEquals("", result.evmError);
                 assertEquals(anotherValue, new Hash(result.returnData));
             }
@@ -107,7 +107,7 @@ public class EvmTest extends LibEvmTestBase {
         try (var db = new MemoryDatabase()) {
             try (var statedb = new StateDB(db, Hash.ZERO)) {
                 statedb.setNonce(addr1, BigInteger.ZERO);
-                result = Evm.Apply(statedb, addr1, addr2, v5m, null, gasLimit, gasPrice, null, null, null);
+                result = Evm.Apply(statedb, addr1, addr2, v5m, null, gasLimit, gasPrice, null, null);
                 assertNotNull(result.evmError);
             }
         }
@@ -129,7 +129,7 @@ public class EvmTest extends LibEvmTestBase {
             try (var statedb = new StateDB(db, Hash.ZERO)) {
                 statedb.setBalance(addr1, v5m);
                 statedb.setNonce(addr1, BigInteger.ZERO);
-                result = Evm.Apply(statedb, addr1, null, null, input, gasLimit, gasPrice, null, null, null);
+                result = Evm.Apply(statedb, addr1, null, null, input, gasLimit, gasPrice, null, null);
                 assertNotNull(result.evmError);
             }
         }
@@ -149,7 +149,7 @@ public class EvmTest extends LibEvmTestBase {
             try (var statedb = new StateDB(db, Hash.ZERO)) {
                 statedb.setBalance(addr1, v5m);
                 statedb.setNonce(addr1, BigInteger.ZERO);
-                var result = Evm.Apply(statedb, addr1, null, null, input, gasLimit, gasPrice, null, null, null);
+                var result = Evm.Apply(statedb, addr1, null, null, input, gasLimit, gasPrice, null, null);
                 assertNotNull(result.evmError);
             }
         }

@@ -31,15 +31,15 @@ func NewWithCallback(callback BlockHashCallback) *Service {
 	}
 }
 
-func (s *Service) createBlockHashGetter(handle int) vm.GetHashFunc {
+func (s *Service) createBlockHashGetter(handle *int) vm.GetHashFunc {
 	// default to the mocked block hash getter whenever there is no callback set to retrieve actual block hashes,
 	// e.g. during tests
-	if s.blockHashGetter == nil {
+	if handle == nil || s.blockHashGetter == nil {
 		return mockBlockHashFn
 	}
 	// return a function to retrieve the block hash for a given block number, passing on the handle
 	return func(blockNumber uint64) common.Hash {
-		return s.blockHashGetter(handle, blockNumber)
+		return s.blockHashGetter(*handle, blockNumber)
 	}
 }
 

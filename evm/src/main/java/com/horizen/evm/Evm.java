@@ -19,11 +19,10 @@ public final class Evm {
         BigInteger gasLimit,
         BigInteger gasPrice,
         EvmContext context,
-        TraceOptions traceOptions,
-        BlockHashCallback blockHashGetter
+        TraceOptions traceOptions
     ) {
         var params = new EvmParams(
-            stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions, blockHashGetter);
+            stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceOptions);
         return LibEvm.invoke("EvmApply", params, EvmResult.class);
     }
 }
