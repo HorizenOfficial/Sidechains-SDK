@@ -25,6 +25,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.state.BaseStateReader
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
+import com.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any
@@ -235,6 +236,7 @@ class AccountForgeMessageBuilderTest
     val ownerPrivateKey = mock[PrivateKey25519]
     val forgingStakeInfo = mock[ForgingStakeInfo]
     val vrfProof = mock[VrfProof]
+    val vrfOutput = mock[VrfOutput]
     val forgingStakeInfoMerklePath = mock[MerklePath]
     val companion = mock[DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]]]
     val inputBlockSize = 0
@@ -257,6 +259,7 @@ class AccountForgeMessageBuilderTest
         ownerPrivateKey,
         forgingStakeInfo,
         vrfProof,
+        vrfOutput,
         forgingStakeInfoMerklePath,
         companion,
         inputBlockSize,
@@ -370,7 +373,9 @@ class AccountForgeMessageBuilderTest
       new Array[Byte](PublicKey25519Proposition.KEY_LENGTH)
     )
 
-    val vrfProof = VrfGenerator.generateProof(123)
+    val proofAndOutput = VrfGenerator.generateProofAndOutput(123)
+    val vrfProof = proofAndOutput.getKey
+    val vrfOutput = proofAndOutput.getValue
     val forgingStakeInfo =
       new ForgingStakeInfo(ownerPrivateKey.publicImage(), new VrfPublicKey(new Array[Byte](VrfPublicKey.KEY_LENGTH)), 1)
     val forgingStakeInfoMerklePath = new MerklePath(new util.ArrayList[Pair[java.lang.Byte, Array[Byte]]])
@@ -393,6 +398,7 @@ class AccountForgeMessageBuilderTest
       ownerPrivateKey,
       forgingStakeInfo,
       vrfProof,
+      vrfOutput,
       forgingStakeInfoMerklePath,
       companion,
       inputBlockSize,

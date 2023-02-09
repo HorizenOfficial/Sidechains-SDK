@@ -26,6 +26,7 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.vrf.VrfOutput
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
@@ -171,6 +172,7 @@ class AccountForgeMessageBuilder(
       ownerPrivateKey: PrivateKey25519,
       forgingStakeInfo: ForgingStakeInfo,
       vrfProof: VrfProof,
+      vrfOutput: VrfOutput,
       forgingStakeInfoMerklePath: MerklePath,
       companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
       inputBlockSize: Int,
@@ -280,6 +282,7 @@ class AccountForgeMessageBuilder(
       ownerPrivateKey,
       forgingStakeInfo,
       vrfProof,
+      vrfOutput,
       forgingStakeInfoMerklePath,
       feePaymentsHash,
       stateRoot,
@@ -311,6 +314,7 @@ class AccountForgeMessageBuilder(
       forgingStakeMerklePathInfo.forgingStakeInfo,
       forgingStakeMerklePathInfo.merklePath,
       vrfProof,
+      new VrfOutput(new Array[Byte](VrfOutput.OUTPUT_LENGTH)),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
@@ -426,7 +430,9 @@ class AccountForgeMessageBuilder(
     )
     val forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo =
       ForgingStakeMerklePathInfo(forgingStakeInfo, new MerklePath(new JArrayList()))
-    val vrfProof = new VrfProof(new Array[Byte](VrfProof.PROOF_LENGTH))
+    val vrfProof: VrfProof = new VrfProof(new Array[Byte](VrfProof.PROOF_LENGTH))
+    val vrfOutput: VrfOutput = new VrfOutput(new Array[Byte](VrfOutput.OUTPUT_LENGTH))
+
     implicit val timeout: Timeout = new Timeout(5, SECONDS)
 
     forgeBlock(
@@ -436,6 +442,7 @@ class AccountForgeMessageBuilder(
       forgingStakeMerklePathInfo,
       blockSignPrivateKey,
       vrfProof,
+      vrfOutput,
       timeout,
       Seq()
     ) match {
