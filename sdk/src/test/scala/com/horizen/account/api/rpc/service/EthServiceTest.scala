@@ -35,6 +35,8 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
 import sparkz.core.bytesToId
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
+import sparkz.util.ByteArrayBuilder
+import sparkz.util.serialization.VLQByteBufferWriter
 
 import java.math.BigInteger
 import java.util.Optional
@@ -116,7 +118,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       new Array[Byte](0),
       goodSignature
     )
-    val encodedMessage = EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned)
+    val writer = new VLQByteBufferWriter(new ByteArrayBuilder)
+    EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned, writer)
+    val encodedMessage = writer.toBytes
     val txHash = BytesUtils.toHexString(Keccak256.hash(encodedMessage))
 
     txs.append(txEip1559.asInstanceOf[SidechainTypes#SCAT])
