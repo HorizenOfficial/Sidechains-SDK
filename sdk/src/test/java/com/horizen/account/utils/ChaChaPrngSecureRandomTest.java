@@ -8,7 +8,7 @@ import static org.junit.Assert.*;
 
 public class ChaChaPrngSecureRandomTest {
     @Test
-    public void outputExpected() {
+    public void outputExpected() throws Exception {
         byte[] seed = {
                3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
         };
@@ -20,8 +20,14 @@ public class ChaChaPrngSecureRandomTest {
         byte[] output = new byte[32];
         SecureRandom rng = ChaChaPrngSecureRandom.getInstance(seed);
         rng.nextBytes(output);
+        if (output[0] != expected1[0]) {
+            throw new Exception(printArray(output));
+        }
         assertArrayEquals(expected1, output);
         rng.nextBytes(output);
+        if (output[0] != expected1[0]) {
+            throw new Exception(printArray(output));
+        }
         assertArrayEquals(expected2, output);
     }
 
