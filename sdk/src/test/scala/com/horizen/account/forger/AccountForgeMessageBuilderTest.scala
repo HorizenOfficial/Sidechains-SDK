@@ -69,7 +69,8 @@ class AccountForgeMessageBuilderTest
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider
     )
 
     usingView { stateView =>
@@ -122,7 +123,8 @@ class AccountForgeMessageBuilderTest
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -185,7 +187,8 @@ class AccountForgeMessageBuilderTest
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor

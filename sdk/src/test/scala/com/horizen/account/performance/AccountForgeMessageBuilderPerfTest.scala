@@ -62,8 +62,17 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
   Mockito.when(nodeView.pool).thenReturn(mempool)
 
-  val blockContext = new BlockContext(Address.ZERO, 1000, BigInteger.ZERO, FeeUtils.GAS_LIMIT, 11, 2, 3, 1L)
-
+  val blockContext = new BlockContext(
+    Address.ZERO,
+    1000,
+    BigInteger.ZERO,
+    FeeUtils.GAS_LIMIT,
+    11,
+    2,
+    3,
+    1L,
+    MockedHistoryBlockHashProvider
+  )
 
   /*
   This method is used for testing what is the impact on forging of getting txs from the mem pool.
@@ -102,7 +111,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         mempool.put(tx.asInstanceOf[SidechainTypes#SCAT])
       }
 
-      //Sanity check
+      // Sanity check
       assertEquals(numOfTxs, mempool.size)
       val forger = new AccountForgeMessageBuilder(null, null, null, false)
 
@@ -113,7 +122,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         nodeView,
         1500,
         Seq.empty[MainchainBlockReferenceData],
-        WithdrawalEpochInfo(0,0),
+        WithdrawalEpochInfo(0, 0),
         100,
         Seq.empty[SidechainTypes#SCAT]
       )

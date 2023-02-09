@@ -19,7 +19,8 @@ import scala.util.Try
 trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
   val origin: Address = randomAddress
-  val defaultBlockContext = new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1)
+  val defaultBlockContext =
+    new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1, MockedHistoryBlockHashProvider)
 
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>

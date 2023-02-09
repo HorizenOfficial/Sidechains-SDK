@@ -96,7 +96,7 @@ class CertificateKeyRotationMsgProcessorTest
       if (epoch == 0)
         defaultBlockContext
       else
-        new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1)
+        new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1, MockedHistoryBlockHashProvider)
 
     val messageToSign = SchnorrPublicKey.deserialize(newKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
 

@@ -121,11 +121,11 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     log.info("Restoring persistent state from storage...")
 
     val restoredData = for {
-      history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
+      his <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
+      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, history)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
       pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
-    } yield (history, state, wallet, pool)
+    } yield (his, state, wallet, pool)
 
     val result = checkAndRecoverStorages(restoredData)
     result
@@ -133,22 +133,16 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, genesisBlock)
-
+      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, history, genesisBlock)
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
-
-      history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
+      his <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
-
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-
       pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
-    } yield (history, state, wallet, pool)
+    } yield (his, state, wallet, pool)
 
     result.get
   }
-
-
 
   override def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI = {
     val feePayments = state.getFeePaymentsInfo(epochNumber)
