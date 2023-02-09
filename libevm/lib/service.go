@@ -1,19 +1,13 @@
 package lib
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"math/big"
+	"strconv"
 )
 
-type BlockHashCallback func(int, uint64) common.Hash
-
 type Service struct {
-	databases       *Handles[*Database]
-	statedbs        *Handles[*state.StateDB]
-	blockHashGetter BlockHashCallback
+	databases *Handles[*Database]
+	statedbs  *Handles[*state.StateDB]
 }
 
 func New() *Service {
@@ -23,26 +17,27 @@ func New() *Service {
 	}
 }
 
-func NewWithCallback(callback BlockHashCallback) *Service {
-	return &Service{
-		databases:       NewHandles[*Database](),
-		statedbs:        NewHandles[*state.StateDB](),
-		blockHashGetter: callback,
-	}
+type CallbackProxy func(int, string) string
+
+var proxy CallbackProxy = func(int, string) string { return "" }
+
+func SetCallbackProxy(handler CallbackProxy) {
+	proxy = handler
 }
 
-func (s *Service) createBlockHashGetter(handle *int) vm.GetHashFunc {
-	// default to the mocked block hash getter whenever there is no callback set to retrieve actual block hashes,
-	// e.g. during tests
-	if handle == nil || s.blockHashGetter == nil {
-		return mockBlockHashFn
-	}
-	// return a function to retrieve the block hash for a given block number, passing on the handle
-	return func(blockNumber uint64) common.Hash {
-		return s.blockHashGetter(*handle, blockNumber)
-	}
+// Callback is a wrapper around an integer handle
+type Callback int
+
+// Invoke the global proxy with the handle of this callback instance
+func (c *Callback) Invoke(args string) string {
+	return proxy(int(*c), args)
 }
 
-func mockBlockHashFn(blockNumber uint64) common.Hash {
-	return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(blockNumber).String())))
+// UnmarshalJSON reads a callback handle from a JSON number
+func (c *Callback) UnmarshalJSON(input []byte) error {
+	var handle, err = strconv.Atoi(string(input))
+	if err == nil {
+		*c = Callback(handle)
+	}
+	return err
 }
