@@ -194,7 +194,7 @@ public class EthereumTransactionDecoder {
             realSignature = new SignatureSecp256k1(getRealV(v), r, s);
         }
 
-        if (chainId != null && chainId != 0) {
+        if (chainId != 0) {
             // chain id is encoded into V part, this is an EIP 155
             return new EthereumTransaction(
                     chainId, optTo, nonce, gasPrice, gasLimit, value, dataBytes, realSignature);
@@ -208,7 +208,7 @@ public class EthereumTransactionDecoder {
     private static Long decodeEip155ChainId(byte[] bv) {
         long v = convertToLong(bv);
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
-            return null;
+            return 0L;
         }
         return (v - CHAIN_ID_INC) / 2;
     }

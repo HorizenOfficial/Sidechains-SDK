@@ -353,39 +353,4 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         byte[] result = writer.toBytes();
         assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(result));
     }
-
-    // useful when developing tests
-    @Test
-    @Ignore
-    public void checkSingleStream() throws TransactionSemanticValidityException {
-        byte[] b = BytesUtils.fromHexString("f86e09850a02ffee00825208943535353535353535353535353535353535353535880de0b6b3a7640000808200bda028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83");
-        //byte[] b = BytesUtils.fromHexString(gethTestVectorsNotFailingWithW3j[2][1]);
-        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
-        EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
-        ethTx.semanticValidity();
-        System.out.println(ethTx);
-    }
-
-    @Test
-    @Ignore
-    public void checkPerf() {
-        var transactionList = getTransactionList(50000);
-
-        long startTime = System.nanoTime();
-        for (EthereumTransaction tx:transactionList) {
-            tx.encode(true);
-        }
-
-        long stopTime = System.nanoTime();
-        System.out.println("RlpEncoding      : " + (stopTime - startTime));
-
-        long startTime2 = System.nanoTime();
-        for (EthereumTransaction tx:transactionList) {
-            VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
-            tx.encode(true, writer);
-        }
-        long stopTime2 = System.nanoTime();
-        System.out.println("RlpStreamEncoding: " + (stopTime2 - startTime2));
-    }
-
 }
