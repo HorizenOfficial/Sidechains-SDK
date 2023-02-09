@@ -25,7 +25,7 @@ def http_create_key_rotation_transaction(sidechainNode, key_type, key_index, new
 
 def http_create_key_rotation_transaction_evm(sidechainNode, key_type, key_index, new_key,
                                              signing_key_signature, master_key_signature, new_key_signature,
-                                             nonce=None, gas_limit=230000, max_fee_per_gas=900000000,
+                                             nonce=None, gas_limit=300000, max_fee_per_gas=900000000,
                                              max_priority_fee_per_gas=900000000, api_key=None):
     j = {
         "keyType": key_type,

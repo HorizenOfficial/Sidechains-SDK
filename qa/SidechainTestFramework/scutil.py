@@ -1144,6 +1144,8 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
             raise AssertionError("Sidechain has ceased")
         if ("semantically invalid" in forge_result["error"]["description"]):
             raise AssertionError("One transaction in the block is semantically invalid")
+        if ("CertificateKeyRotationTransaction" in forge_result["error"]["description"]):
+            raise AssertionError("CertificateKeyRotationTransaction error: {}".format(forge_result["error"]["description"]))
 
         count_slot -= 1
         if (count_slot <= 0):
