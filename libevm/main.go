@@ -30,6 +30,7 @@ func callback(handle int, args string) string {
 	defer C.free(unsafe.Pointer(argsStr))
 	var result *C.char
 	result = C.invokeCallback(C.int(handle), argsStr)
+	defer C.free(unsafe.Pointer(result))
 	if result == nil {
 		return ""
 	}
