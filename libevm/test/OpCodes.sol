@@ -41,4 +41,8 @@ contract OpCodes {
         // note: the emitted opcode remains the same, so there is no functional difference - it's just a cosmetic rename
         return block.difficulty;
     }
+
+    function getBlockHash() external view returns (bytes32) {
+        return blockhash(block.number - 1);
+    }
 }

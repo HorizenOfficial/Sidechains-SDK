@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
@@ -275,12 +276,29 @@ func TestEvmOpCodes(t *testing.T) {
 		time        = big.NewInt(1669144595)
 		baseFee     = big.NewInt(123872)
 		random      = common.HexToHash("0x0a5d85d0f0e021c04643e05e38f8f28029275683ee743910670154d78322b6eb")
+		blockHash   = common.HexToHash("0xc01a0d15649a201418433e1760af47a0c3381bc7aec566f1e6258d77ffd2e2c9")
 	)
 
 	// redefine this interface here, because it is not exported from GETH
 	type bytesBacked interface {
 		Bytes() []byte
 	}
+
+	// setup callback proxy for the BLOCKHASH opcode
+	const blockHashCallbackHandle = 5132
+	SetCallbackProxy(func(handle int, args string) string {
+		switch handle {
+		case blockHashCallbackHandle:
+			actual := new(big.Int)
+			actual.SetString(args[2:], 16)
+			if expected := new(big.Int).Sub(blockNumber, common.Big1); actual.Cmp(expected) != 0 {
+				panic(fmt.Sprintf("BLOCKHASH opcode called with unexpected block number: want %v got %v", expected, actual))
+			}
+			return blockHash.String()
+		default:
+			panic(fmt.Sprintf("callback proxy called with unknown handle: %v args: %s", handle, args))
+		}
+	})
 
 	checks := []struct {
 		name     string
@@ -294,6 +312,7 @@ func TestEvmOpCodes(t *testing.T) {
 		{"TIME", time},
 		{"BASEFEE", baseFee},
 		{"RANDOM", random},
+		{"BLOCKHASH", blockHash},
 	}
 
 	for _, check := range checks {
@@ -307,13 +326,14 @@ func TestEvmOpCodes(t *testing.T) {
 				AvailableGas: 200000,
 				GasPrice:     (*hexutil.Big)(gasPrice),
 				Context: EvmContext{
-					ChainID:     hexutil.Uint64(chainID),
-					Coinbase:    coinbase,
-					GasLimit:    hexutil.Uint64(gasLimit),
-					BlockNumber: (*hexutil.Big)(blockNumber),
-					Time:        (*hexutil.Big)(time),
-					BaseFee:     (*hexutil.Big)(baseFee),
-					Random:      &random,
+					ChainID:           hexutil.Uint64(chainID),
+					Coinbase:          coinbase,
+					GasLimit:          hexutil.Uint64(gasLimit),
+					BlockNumber:       (*hexutil.Big)(blockNumber),
+					Time:              (*hexutil.Big)(time),
+					BaseFee:           (*hexutil.Big)(baseFee),
+					Random:            &random,
+					BlockHashCallback: &BlockHashCallback{Callback(blockHashCallbackHandle)},
 				},
 			})
 			if err != nil {
