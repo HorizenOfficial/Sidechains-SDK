@@ -83,12 +83,14 @@ class AccountForgeMessageBuilderTest
         Seq[SidechainTypes#SCAT](transaction.asInstanceOf[SidechainTypes#SCAT])
       )
 
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertTrue(appliedTxs.isEmpty)
 
@@ -139,12 +141,14 @@ class AccountForgeMessageBuilderTest
           invalidTx.asInstanceOf[SidechainTypes#SCAT]
         )
       )
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertTrue(appliedTxs.isEmpty)
 
@@ -209,12 +213,14 @@ class AccountForgeMessageBuilderTest
           validTx.asInstanceOf[SidechainTypes#SCAT]
         )
       )
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertEquals(1, appliedTxs.size)
       assertEquals(validTx.id(), appliedTxs.head.id)

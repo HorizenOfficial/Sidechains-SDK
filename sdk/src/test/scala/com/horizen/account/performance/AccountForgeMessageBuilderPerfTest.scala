@@ -128,7 +128,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         Seq.empty[SidechainTypes#SCAT]
       )
 
-      val (_, appliedTxs, _) = forger.computeBlockInfo(stateView, listOfExecTxs, Seq.empty, blockContext, null)
+      val (_, appliedTxs, _) = forger.computeBlockInfo(stateView, listOfExecTxs, Seq.empty, blockContext, null, 100L)
       val totalTime = System.currentTimeMillis() - startTime
 
       val maxNumOfTxsInBlock = blockContext.blockGasLimit.divide(GasUtil.TxGas).intValue()

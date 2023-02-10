@@ -1,7 +1,7 @@
 package com.horizen.account.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.account.block.AccountBlock.calculateReceiptRoot
+import com.horizen.account.block.AccountBlock.{MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE, calculateReceiptRoot}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
@@ -11,12 +11,13 @@ import com.horizen.evm.TrieHasher
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
-import com.horizen.utils.{BytesUtils, MerklePath}
+import com.horizen.utils.{BytesUtils, ListSerializer, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
 import sparkz.util.SparkzLogging
+import scala.collection.JavaConverters._
 
 import java.math.BigInteger
 import scala.util.Try
@@ -89,8 +90,18 @@ class AccountBlock(override val header: AccountBlockHeader,
   //Number of transactions doesn't have a limit in an AccountBlock because txs are limited using block gas limit
   override def transactionsListExceedsSizeLimit: Boolean = false
 
-  //AccountBlock size doesn't have a limit in an AccountBlock because block gas limit control the number of txs included
-  override def blockExceedsSizeLimit(blockSize: Int): Boolean = false
+  //AccountBlock size: block gas limit controls the number of txs included, but we have also overheads (MC block ref, ommers, header)
+  override def blockExceedsSizeLimit(blockSize: Long): Boolean = blockSize > AccountBlock.MAX_ACCOUNT_BLOCK_SIZE
+
+  // This controls the overhead size, which is computed as the difference between the total block size and the size
+  // of all included txes
+  override def blockExceedsOverheadSizeLimit(blockOverheadSize: Long): Boolean = {
+    blockOverheadSize > MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE
+  }
+
+  override def blockTxSize(): Long = {
+    new ListSerializer[SidechainTypes#SCAT](companion).toBytes(sidechainTransactions.asJava).length
+  }
 
 }
 
@@ -98,6 +109,11 @@ class AccountBlock(override val header: AccountBlockHeader,
 object AccountBlock {
 
   val ACCOUNT_BLOCK_VERSION: Block.Version = 2: Byte
+  // this is the maximum size of the block portion which contains MC ref data, ommers and block header
+  val MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE: Int = 5000000
+
+  // this is the overall block size, included the txes
+  val MAX_ACCOUNT_BLOCK_SIZE: Int = 7000000
 
   def create(parentId: Block.BlockId,
              blockVersion: Block.Version,

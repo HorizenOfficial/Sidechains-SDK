@@ -229,6 +229,11 @@ abstract class AbstractForgeMessageBuilder[
     }
   }
 
+  // the max size of the block excluding txs
+  def getMaxBlockOverheadSize() : Int
+  // the max size of the block including txs
+  def getMaxBlockSize() : Int
+
   protected def forgeBlock(nodeView: View,
                            timestamp: Long,
                            branchPointInfo: BranchPointInfo,
@@ -286,7 +291,7 @@ abstract class AbstractForgeMessageBuilder[
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if (blockSize + refDataSize > SidechainBlock.MAX_BLOCK_SIZE)
+          if (blockSize + refDataSize > getMaxBlockOverheadSize())
             false // stop data collection
           else {
             mainchainReferenceData.append(ref.data)
