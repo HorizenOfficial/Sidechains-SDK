@@ -602,7 +602,7 @@ def get_examples_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
 
 SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
-EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.6.0.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* com.horizen.examples.EvmApp"
+EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* com.horizen.examples.EvmApp"
 
 
 

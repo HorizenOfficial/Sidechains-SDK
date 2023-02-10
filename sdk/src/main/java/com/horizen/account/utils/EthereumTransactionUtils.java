@@ -3,12 +3,9 @@ package com.horizen.account.utils;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
-
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Optional;
-
 import static com.horizen.account.utils.Secp256k1.LOWER_REAL_V;
 
 public final class EthereumTransactionUtils {
@@ -17,12 +14,10 @@ public final class EthereumTransactionUtils {
         // prevent instantiation
     }
 
-    // Util function
-    // w3j private method in TransactionEncoder, it returns a byte array with Long.BYTES length
+    // return minimal byte array representation of a long
     public static byte[] convertToBytes(long x) {
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(x);
-        return buffer.array();
+        BigInteger v = BigInteger.valueOf(x);
+        return v.toByteArray();
     }
 
     // w3j way for converting bytes, it works also with generic byte contents (not only Long.BYTES byte arrays)
@@ -75,6 +70,18 @@ public final class EthereumTransactionUtils {
         }
     }
 
+    public static Optional<AddressProposition> getToAddressFromBytes(byte[] addressBytes) {
+        if (addressBytes == null) {
+            return Optional.empty();
+        } else {
+            if (addressBytes.length == 0) {
+                return Optional.empty();
+            } else {
+                return Optional.of(new AddressProposition(addressBytes));
+            }
+        }
+    }
+
 
     public static byte[] getDataFromString(String dataString) {
         if (dataString == null) {
@@ -94,19 +101,5 @@ public final class EthereumTransactionUtils {
                 }
             }
         }
-    }
-
-    public static byte[] trimLeadingBytes(byte[] bytes, byte b) {
-        int offset = 0;
-        for (; offset < bytes.length; offset++) {
-            if (bytes[offset] != b) {
-                break;
-            }
-        }
-        return Arrays.copyOfRange(bytes, offset, bytes.length);
-    }
-
-    public static byte[] trimLeadingZeroes(byte[] bytes) {
-        return trimLeadingBytes(bytes, (byte) 0);
     }
 }

@@ -172,6 +172,23 @@ public class RlpStreamCodecTest {
         checkRlpString(decodedSentence, sentence);
     }
 
+
+    @Test
+    public void rlpCodecSentenceWrong() {
+        // similar sentence as above without the last char
+        // not minimal encoding, when the string length is < 56 should be b74C not b8374c ...
+        byte[] encodedBytes2 = BytesUtils.fromHexString(
+                "b8374C6F72656D20697073756D20646F6C6F722073697420616D65742C20636F6E73656374657475722061646970697363696E6720656C6974");
+
+        Reader r = new VLQByteBufferReader(ByteBuffer.wrap(encodedBytes2));
+        assertThrows(
+                "Exception expected, because data are a decoded invalid RLP list",
+                RuntimeException.class,
+                () -> RlpStreamDecoder.decode(r)
+        );
+
+    }
+
     @Test
     public void rlpCodecConcatenatedSentences() {
         ArrayList<String> sentences = new ArrayList<>();

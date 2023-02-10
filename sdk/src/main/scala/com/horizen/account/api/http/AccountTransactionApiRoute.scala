@@ -20,7 +20,7 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
+import com.horizen.api.http.TransactionBaseErrorResponse.{ErrorBadCircuit, ErrorByteTransactionParsing}
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
@@ -35,7 +35,6 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -265,15 +264,23 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqSignTransaction]) {
           body => {
             applyOnNodeView { sidechainNodeView =>
-              val unsignedTx: EthereumTransaction = companion.parseBytes(BytesUtils.fromHexString(body.transactionBytes)).asInstanceOf[EthereumTransaction]
-              val txCost = unsignedTx.maxCost
-              val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
-              secret match {
-                case Some(secret) =>
-                  val signedTx = signTransactionWithSecret(secret, unsignedTx)
-                  ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
-                case None =>
-                  ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              val unsignedTxObj = Try {
+                companion.parseBytes(BytesUtils.fromHexString(body.transactionBytes)).asInstanceOf[EthereumTransaction]
+              }
+              unsignedTxObj match {
+                case Success(unsignedTx) =>
+                  val txCost = unsignedTx.maxCost
+                  val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+                  secret match {
+                    case Some(secret) =>
+                      val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                      ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
+                    case None =>
+                      ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+                  }
+                case Failure(exception) =>
+                  ApiResponseUtil.toResponse(ErrorByteTransactionParsing("ErrorByteTransactionParsing", JOptional.of(exception)))
+
               }
             }
           }
