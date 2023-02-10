@@ -291,6 +291,8 @@ func TestEvmOpCodes(t *testing.T) {
 		case blockHashCallbackHandle:
 			actual := new(big.Int)
 			actual.SetString(args[2:], 16)
+			// the getBlockHash() function of OpCodes.sol will always call blockhash of blockNumber - 1
+			// verify that the argument arrived here as expected
 			if expected := new(big.Int).Sub(blockNumber, common.Big1); actual.Cmp(expected) != 0 {
 				panic(fmt.Sprintf("BLOCKHASH opcode called with unexpected block number: want %v got %v", expected, actual))
 			}

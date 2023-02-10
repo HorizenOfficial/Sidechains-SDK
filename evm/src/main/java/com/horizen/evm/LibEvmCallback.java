@@ -16,7 +16,7 @@ abstract class LibEvmCallback implements AutoCloseable {
     // this singleton instance of the callback will be passed to libevm,
     // the static reference here will also prevent the callback instance from being garbage collected,
     // because without it the only reference might be from native code (libevm) and the JVM does not know about that
-    static CallbackProxy proxy = new CallbackProxy();
+    final static CallbackProxy proxy = new CallbackProxy();
 
     private static final Logger logger = LogManager.getLogger();
 
