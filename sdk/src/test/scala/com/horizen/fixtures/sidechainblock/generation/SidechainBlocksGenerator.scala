@@ -24,6 +24,7 @@ import scorex.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.Random
@@ -257,7 +258,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
     val stakeAmount: Long = initialForgingStake.stakeAmount + forgingStakeCorruptionRules.stakeAmountShift
 
     val blockSignProposition: PublicKey25519Proposition = if (forgingStakeCorruptionRules.blockSignPropositionChanged) {
-      val propositionKeyPair: utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(rnd.nextLong().toString.getBytes)
+      val propositionKeyPair: utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))
       val newBlockSignProposition: PublicKey25519Proposition = new PublicKey25519Proposition(propositionKeyPair.getValue)
       newBlockSignProposition
     }
@@ -270,7 +271,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
 
       do {
         val corruptedVrfPublicKeyBytes =
-          CryptoLibProvider.vrfFunctions.generatePublicAndSecretKeys(rnd.nextLong().toString.getBytes).get(VrfFunctions.KeyType.PUBLIC)
+          CryptoLibProvider.vrfFunctions.generatePublicAndSecretKeys(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8)).get(VrfFunctions.KeyType.PUBLIC)
         corrupted = new VrfPublicKey(corruptedVrfPublicKeyBytes)
         println(s"corrupt VRF public key ${BytesUtils.toHexString(initialForgingStake.vrfPublicKey.bytes)} by ${BytesUtils.toHexString(corrupted.bytes)}")
       } while (corrupted.bytes.deep == initialForgingStake.vrfPublicKey.bytes.deep)
@@ -412,9 +413,9 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   }
 
   private def buildGenesisSidechainForgingData(initialValue: Long, seed: Long): SidechainForgingData = {
-    val key = PrivateKey25519Creator.getInstance().generateSecret(seed.toString.getBytes)
+    val key = PrivateKey25519Creator.getInstance().generateSecret(seed.toString.getBytes(StandardCharsets.UTF_8))
     val value = initialValue
-    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes)
+    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes(StandardCharsets.UTF_8))
     val vrfPublicKey = vrfSecretKey.publicImage()
 
     val forgerBoxData = new ForgerBoxData(key.publicImage(), value, key.publicImage(), vrfPublicKey)

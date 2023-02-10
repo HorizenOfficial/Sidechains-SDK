@@ -14,13 +14,14 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class VrfGeneratedDataProvider {
     private static String pathPrefix = "src/test/resources/";
     private static final ClassLoader classLoader = VrfGeneratedDataProvider.class.getClassLoader();
 
     public static VrfSecretKey updateVrfSecretKey(String prefix, Integer seed) {
-        VrfSecretKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes());
+        VrfSecretKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes(StandardCharsets.UTF_8));
         writeToFile(prefix, seed, VrfSecretKey.class, obj.bytes());
         return obj;
     }
@@ -31,7 +32,7 @@ public class VrfGeneratedDataProvider {
     }
 
     public static VrfPublicKey updateVrfPublicKey(String prefix, Integer seed) {
-        VrfPublicKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes()).publicImage();
+        VrfPublicKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes(StandardCharsets.UTF_8)).publicImage();
         writeToFile(prefix, seed, obj.getClass(), obj.bytes());
         return obj;
     }

@@ -6,6 +6,7 @@ import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{ByteArrayWrapper, byteArrayToWrapper, Pair => JPair, _}
 import scorex.util.{ModifierId, idToBytes}
 
+import java.nio.charset.StandardCharsets
 import scala.util.Random
 
 trait StorageDataGenerator {
@@ -58,12 +59,12 @@ case class TransactionStorageDataGenerator(inputTransactionsSizeRange: Range,
     require(!inputTransactionsSizeRange.isEmpty)
     val inputTransactionsSize = util.Random.nextInt(inputTransactionsSizeRange.size) + inputTransactionsSizeRange.start
     val inputTransactionsList: Seq[PrivateKey25519] = (1 to inputTransactionsSize)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(util.Random.nextString(32).getBytes))
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(util.Random.nextString(32).getBytes(StandardCharsets.UTF_8)))
 
     require(!outputTransactionsSizeRange.isEmpty)
     val outputTransactionsSize = util.Random.nextInt(outputTransactionsSizeRange.size) + outputTransactionsSizeRange.start
     val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to outputTransactionsSize)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(util.Random.nextString(32).getBytes).publicImage())
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(util.Random.nextString(32).getBytes(StandardCharsets.UTF_8)).publicImage())
 
     getRegularTransaction(inputTransactionsList, outputTransactionsList)
   }

@@ -15,6 +15,7 @@ import sparkz.core.consensus.ModifierSemanticValidity
 import org.junit.{Before, Test}
 import scorex.util._
 
+import java.nio.charset.StandardCharsets
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -48,14 +49,14 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
 
   val consensusDataStorage = new ConsensusDataStorage(new InMemoryStorageAdapter())
   epochIds.zipWithIndex.foreach{case (epochId, index) =>
-    consensusDataStorage.addStakeConsensusEpochInfo(epochId, StakeConsensusEpochInfo(epochId.getBytes.take(merkleTreeHashLen), (index + 1) * 1000))}
+    consensusDataStorage.addStakeConsensusEpochInfo(epochId, StakeConsensusEpochInfo(epochId.getBytes(StandardCharsets.UTF_8).take(merkleTreeHashLen), (index + 1) * 1000))}
 
   //vrfData -- contains data per epoch for filling SidechainBlockInfo, in case if VrfData contains None it means that slot shall be skipped
   private def generateBlockIdsAndInfos(genesisVrfProof: VrfProof,
                                        genesisVrfOutput: VrfOutput,
                                        vrfData: List[List[Option[(VrfProof, VrfOutput)]]]): Seq[Seq[(ModifierId, SidechainBlockInfo)]] = {
 
-    val parentOfGenesisBlock = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes))
+    val parentOfGenesisBlock = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes(StandardCharsets.UTF_8)))
 
     val genesisBlockInfo = new SidechainBlockInfo(0, 0, parentOfGenesisBlock, params.sidechainGenesisBlockTimestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, None, params.sidechainGenesisBlockId)
 
@@ -92,7 +93,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   }
 
   private def generateSidechainBlockInfo(parentId: ModifierId, timestamp: Long, vrfProof: VrfProof, vrfOutput: VrfOutput, lastBlockInPreviousConsensusEpoch: ModifierId): (ModifierId, SidechainBlockInfo) = {
-    val newBlockId = bytesToId(Utils.doubleSHA256Hash(parentId.getBytes))
+    val newBlockId = bytesToId(Utils.doubleSHA256Hash(parentId.getBytes(StandardCharsets.UTF_8)))
     val blockInfo =
       new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, Option(vrfOutput), lastBlockInPreviousConsensusEpoch)
 
@@ -158,14 +159,14 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     )
     require(slotsPresentationForFirstDataProvider.forall(_.size == slotsInEpoch))
 
-    val genesisBlockId = bytesToId(Utils.doubleSHA256Hash("genesis".getBytes()))
+    val genesisBlockId = bytesToId(Utils.doubleSHA256Hash("genesis".getBytes(StandardCharsets.UTF_8)))
     val genesisBlockTimestamp = 1000000
     val networkParams = new TestNetParams(
       sidechainGenesisBlockId = genesisBlockId,
       sidechainGenesisBlockTimestamp = genesisBlockTimestamp,
       consensusSlotsInEpoch = slotsInEpoch,
       consensusSecondsInSlot = 100
-    ) {override val sidechainGenesisBlockParentId: ModifierId = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes))}
+    ) {override val sidechainGenesisBlockParentId: ModifierId = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes(StandardCharsets.UTF_8)))}
 
     val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams)
     val blockIdAndInfosPerEpochForFirstDataProvider = firstDataProvider.blockIdAndInfosPerEpoch
@@ -192,7 +193,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     //and stake is as expected
     assertEquals(1000, consensusInfoForEndSecondEpoch.stakeConsensusEpochInfo.totalStake)
     //nd stake root hash as expected
-    assertTrue(epochIdsForFirstDataProvider.head.getBytes.take(merkleTreeHashLen).sameElements(consensusInfoForGenesisEpoch.stakeConsensusEpochInfo.rootHash))
+    assertTrue(epochIdsForFirstDataProvider.head.getBytes(StandardCharsets.UTF_8).take(merkleTreeHashLen).sameElements(consensusInfoForGenesisEpoch.stakeConsensusEpochInfo.rootHash))
     //but nonce is the same as well // Is it acceptable? //
     assertEquals(consensusInfoForEndSecondEpoch.nonceConsensusEpochInfo, consensusInfoForGenesisEpoch.nonceConsensusEpochInfo)
 

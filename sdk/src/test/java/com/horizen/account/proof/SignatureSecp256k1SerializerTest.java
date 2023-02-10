@@ -23,7 +23,7 @@ public class SignatureSecp256k1SerializerTest {
         var message = payload.getBytes(StandardCharsets.UTF_8);
 
         // Create a key and generate the signature
-        PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("seed".getBytes());
+        PrivateKeySecp256k1 privateKey = PrivateKeySecp256k1Creator.getInstance().generateSecret("seed".getBytes(StandardCharsets.UTF_8));
         signatureSecp256k1 = privateKey.sign(message);
     }
 
@@ -39,7 +39,7 @@ public class SignatureSecp256k1SerializerTest {
         assertEquals("Deserialized proof expected to be equal", signatureSecp256k1.toString(), t.get().toString());
 
         // Test 2: try to parse broken bytes
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
     }
 }

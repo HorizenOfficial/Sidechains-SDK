@@ -39,6 +39,7 @@ import sparkz.core.consensus.ModifierSemanticValidity
 
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util.{Optional, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
@@ -340,7 +341,7 @@ case class AccountMockDataHelper(genesis: Boolean)
   }
 
   def getMockedWallet(secret: PrivateKeySecp256k1): AccountWallet = {
-    val wallet = new AccountWallet("seed".getBytes(), getMockedSecretStorage(secret))
+    val wallet = new AccountWallet("seed".getBytes(StandardCharsets.UTF_8), getMockedSecretStorage(secret))
 
     wallet
   }

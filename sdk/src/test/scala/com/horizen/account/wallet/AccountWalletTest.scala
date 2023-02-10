@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes._
 import com.horizen.fixtures._
-import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
+import com.horizen.secret._
 import com.horizen.storage._
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair}
 import org.junit.Assert._
@@ -12,15 +12,16 @@ import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import sparkz.core.VersionTag
 import scorex.crypto.hash.Blake2b256
+import sparkz.core.VersionTag
 
 import java.lang.{Byte => JByte}
+import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 class AccountWalletTest
   extends JUnitSuite
@@ -84,10 +85,6 @@ class AccountWalletTest
         }
         storedSecretList.appendAll(answer.getArgument(1).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
       })
-
-
-
-
   }
 
 
@@ -96,7 +93,7 @@ class AccountWalletTest
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
 
     val accountWallet = new AccountWallet(
-      "seed".getBytes(),
+      "seed".getBytes(StandardCharsets.UTF_8),
       mockedSecretStorage)
 
     // Prepare block ID and corresponding version
@@ -114,10 +111,10 @@ class AccountWalletTest
   def testSecrets(): Unit = {
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val accountWallet = new AccountWallet(
-      "seed".getBytes(),
+      "seed".getBytes(StandardCharsets.UTF_8),
       mockedSecretStorage1)
-    val secret1 = getPrivateKey25519("testSeed1".getBytes())
-    val secret2 = getPrivateKey25519("testSeed2".getBytes())
+    val secret1 = getPrivateKey25519("testSeed1".getBytes(StandardCharsets.UTF_8))
+    val secret2 = getPrivateKey25519("testSeed2".getBytes(StandardCharsets.UTF_8))
 
 
     // Test 1: test secret(proposition) and secretByPublicKey(proposition)
@@ -195,4 +192,94 @@ class AccountWalletTest
     assertEquals("SidechainWallet different exception expected during removing new Secret.", expectedException, failureResult.failed.get)
   }
 
+  @Test
+  def testGenerateNextSecret(): Unit = {
+    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
+
+    val accountWallet = new AccountWallet(
+      "seed".getBytes(),
+      mockedSecretStorage)
+
+    val storageList = ListBuffer[Secret]()
+    val secret1 = getPrivateKey25519("seed1".getBytes())
+    val secret2 = getPrivateKey25519("seed2".getBytes())
+    storageList += secret1
+    storageList += secret2
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
+    Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
+
+    Mockito.when(mockedSecretStorage.getNonce(ArgumentMatchers.any())).thenReturn(Some(2))
+    val privateKey25519Creator = PrivateKey25519Creator.getInstance()
+
+    val result3 = accountWallet.generateNextSecret(privateKey25519Creator)
+    assertTrue("Generation of first key should be successful", result3.isSuccess)
+    val secret3 = result3.get._2
+    storageList += secret3
+    storageList -= secret1
+
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+    val result4 = accountWallet.generateNextSecret(privateKey25519Creator)
+
+    assertTrue("Generation of second key should be successful", result4.isSuccess)
+    val secret4 = result4.get._2
+
+    assertEquals("keys should not be the same", secret3, secret4)
+  }
+
+  @Test
+  def testGenerateSecretsOfDifferentDomainsIndependent(): Unit = {
+    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
+    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
+    Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
+
+    val key25519_1 = getPrivateKey25519("seed1".getBytes())
+    val schnorrKey_1 = getSchnorrKey("seed2".getBytes())
+    val key25519_2 = getPrivateKey25519("seed3".getBytes())
+    val key25519_3 = getPrivateKey25519("seed4".getBytes())
+    val schnorrKey_2 = getSchnorrKey("seed5".getBytes())
+    val storageList = ListBuffer[Secret](key25519_1, schnorrKey_1, key25519_2, key25519_3, schnorrKey_2)
+
+    val privateKey25519Creator = PrivateKey25519Creator.getInstance()
+    val schnorrKeyCreator = SchnorrKeyGenerator.getInstance()
+    var schnorrNonce = 1
+    var key25519Nonce = 2
+
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+
+    Mockito.when(mockedSecretStorage.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer(answer =>
+      if(answer.getArgument(0) == schnorrKeyCreator.salt()) {
+        schnorrNonce += 1
+        Some(schnorrNonce)
+      } else if(answer.getArgument(0) == privateKey25519Creator.salt()) {
+        key25519Nonce += 1
+        Some(key25519Nonce)
+      }
+    )
+
+    val accountWallet = new AccountWallet(
+      "seed".getBytes(),
+      mockedSecretStorage)
+
+
+    val schnorrKey_3 = accountWallet.generateNextSecret(schnorrKeyCreator).get._2
+    storageList += schnorrKey_3
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+
+    val key25519_4 = accountWallet.generateNextSecret(privateKey25519Creator).get._2
+    storageList += key25519_4
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+
+    val schnorrKey_4 = accountWallet.generateNextSecret(schnorrKeyCreator).get._2
+    storageList += schnorrKey_4
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+
+    val key25519_5 = accountWallet.generateNextSecret(privateKey25519Creator).get._2
+    storageList += key25519_5
+    Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
+
+    Assert.assertEquals("Total number of secrets must be 9", 9, storageList.size)
+    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 3, schnorrNonce)
+    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 4, key25519Nonce)
+  }
 }

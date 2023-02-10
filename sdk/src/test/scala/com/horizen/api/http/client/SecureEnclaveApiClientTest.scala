@@ -19,6 +19,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -131,7 +132,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
         ))
 
       val result = Await.result(
-        apiClient.signWithEnclave("test".getBytes, (publicKey, index)), 1.second
+        apiClient.signWithEnclave("test".getBytes(StandardCharsets.UTF_8), (publicKey, index)), 1.second
       )
 
       result shouldBe empty

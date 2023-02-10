@@ -8,6 +8,7 @@ import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
+import java.nio.charset.StandardCharsets
 import scala.util.Random
 import scala.util.Try
 
@@ -16,7 +17,7 @@ class MainchainTxForwardTransferCrosschainOutputTest extends JUnitSuite with Mai
   @Test
   def creation(): Unit = {
     val amount: Long = 100L
-    val proposition: PublicKey25519Proposition = PrivateKey25519Creator.getInstance().generateSecret("test1".getBytes()).publicImage()
+    val proposition: PublicKey25519Proposition = PrivateKey25519Creator.getInstance().generateSecret("test1".getBytes(StandardCharsets.UTF_8)).publicImage()
     val sidechainId: Array[Byte] = new Array[Byte](32)
     Random.nextBytes(sidechainId)
     val mcReturnAddress: Array[Byte] = new Array[Byte](20)
