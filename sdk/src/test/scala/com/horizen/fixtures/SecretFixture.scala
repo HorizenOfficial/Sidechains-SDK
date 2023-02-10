@@ -13,6 +13,7 @@ import java.math.BigInteger
 import com.horizen.secret._
 import java.nio.charset.StandardCharsets
 import java.util
+import java.util.{ArrayList => JArrayList, List => JList}
 import scala.util.Random
 
 trait SecretFixture {
