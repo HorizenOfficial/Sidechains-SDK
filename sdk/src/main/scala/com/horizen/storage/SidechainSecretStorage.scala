@@ -1,16 +1,17 @@
 package com.horizen.storage
 
-import java.util.{ArrayList => JArrayList}
+import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.utils.Utils.nextVersion
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import scorex.util.ScorexLogging
 
+import java.nio.charset.StandardCharsets
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
@@ -22,6 +23,10 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainSecretsCompanion != null, "SidechainSecretsCompanion must be NOT NULL.")
+
+  private[horizen] def getNonceKey(keyTypeSalt: Array[Byte]): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("nonce".getBytes(StandardCharsets.UTF_8), keyTypeSalt))
+  }
 
   private val secrets = new mutable.LinkedHashMap[ByteArrayWrapper, SidechainTypes#SCS]()
 
@@ -35,7 +40,10 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     val storageData = storage.getAll.asScala
     storageData.view
       .map(keyToSecretBytes => keyToSecretBytes.getValue.data)
-      .map(secretBytes => sidechainSecretsCompanion.parseBytes(secretBytes))
+      .flatMap(secretBytes => sidechainSecretsCompanion.parseBytesTry(secretBytes) match {
+        case Success(secret) => Some(secret)
+        case Failure(_) => None
+      })
       .foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
   }
 
@@ -113,9 +121,36 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     this
   }
 
+  def contains(secret: SidechainTypes#SCS): Boolean = {
+    require(secret != null, "Can not check if contains in storage: Secret must be NOT NULL.")
+    val key = calculateKey(secret.publicImage())
+    secrets.contains(key)
+  }
+
   def isEmpty: Boolean = storage.isEmpty
 
   override def lastVersionId : Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
+  }
+
+  def getNonce(keyTypeSalt: Array[Byte]): Option[Int] = {
+    val key = getNonceKey(keyTypeSalt)
+    val storageData = storage.get(key)
+    storageData.asScala match {
+      case Some(nonceBytes) =>
+        Some(Ints.fromByteArray(nonceBytes.data))
+      case _ => Option.empty
+    }
+  }
+
+
+  def storeNonce(nonce: Int, keyTypeSalt: Array[Byte]): Try[SidechainSecretStorage] = Try {
+    require(nonce >= 0, "Nonce must be not negative")
+    require(keyTypeSalt != null, "Key type salt must be NOT NULL")
+    val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
+    val removeList = new JArrayList[ByteArrayWrapper]()
+    updateList.add(new JPair(getNonceKey(keyTypeSalt), new ByteArrayWrapper(Ints.toByteArray(nonce))))
+    storage.update(new ByteArrayWrapper(Utils.nextVersion), updateList, removeList)
+    this
   }
 }

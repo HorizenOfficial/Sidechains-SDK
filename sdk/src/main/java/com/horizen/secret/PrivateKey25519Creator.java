@@ -1,17 +1,14 @@
 package com.horizen.secret;
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
-import com.horizen.node.NodeWalletBase;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
-import scorex.crypto.hash.Blake2b256;
 
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 public final class PrivateKey25519Creator implements SecretCreator<PrivateKey25519>
 {
     private static final PrivateKey25519Creator instance;
+    private static final byte[] domain = "PrivateKey25519".getBytes(StandardCharsets.UTF_8);
 
     static {
         instance = new PrivateKey25519Creator();
@@ -31,12 +28,14 @@ public final class PrivateKey25519Creator implements SecretCreator<PrivateKey255
         return new PrivateKey25519(keyPair.getKey(), keyPair.getValue());
     }
 
+    /**
+     * Method to get salt.
+     * In this case salt serves as a domain separation
+     *
+     * @return salt as byte array in UTF-8 encoding
+     */
     @Override
-    public PrivateKey25519 generateNextSecret(NodeWalletBase wallet) {
-        List<Secret> prevSecrets = wallet.secretsOfType(PrivateKey25519.class);
-        byte[] nonce = Ints.toByteArray(prevSecrets.size());
-        byte[] seed = Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));
-
-        return generateSecret(seed);
+    public byte[] salt() {
+        return domain;
     }
 }

@@ -2,6 +2,7 @@ package com.horizen.api.http
 
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.forge.ForgingInfo
+import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
 import scorex.util.ModifierId
 
 import scala.collection.mutable
@@ -9,6 +10,7 @@ import scala.util.{Failure, Try}
 
 class SidechainApiMockConfiguration {
 
+  private var setShould_nodeViewHolder_GenerateSecret_reply: Boolean = true
   private var should_nodeViewHolder_LocallyGeneratedSecret_reply: Boolean = true
   private var should_history_getBlockById_return_value: Boolean = true
   private var should_history_getBlockIdByHeight_return_value: Boolean = true
@@ -39,7 +41,14 @@ class SidechainApiMockConfiguration {
   private var should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply = true
   private var should_nodeViewHolder_GetStorageVersions_reply: Boolean = true
 
+  def getShould_nodeViewHolder_GenerateSecret_reply(): Boolean = setShould_nodeViewHolder_GenerateSecret_reply
+
   def getShould_nodeViewHolder_LocallyGeneratedSecret_reply(): Boolean = should_nodeViewHolder_LocallyGeneratedSecret_reply
+
+  def setShould_nodeViewHolder_GenerateSecret_reply(value: Boolean): VrfSecretKey = {
+    setShould_nodeViewHolder_GenerateSecret_reply = value
+    VrfKeyGenerator.getInstance().generateSecret("some_seed".getBytes)
+  }
 
   def setShould_nodeViewHolder_LocallyGeneratedSecret_reply(value: Boolean): Unit = should_nodeViewHolder_LocallyGeneratedSecret_reply = value
 
