@@ -17,7 +17,8 @@ public class EthereumTransactionUtilsTest {
         byte[] bv = BytesUtils.fromHexString("01");
         long lv3 = EthereumTransactionUtils.convertToLong(bv);
         assertEquals(lv3, 1);
+        // minimal encoding
         byte[] bv2 = EthereumTransactionUtils.convertToBytes(lv3);
-        assertEquals("0000000000000001", BytesUtils.toHexString(bv2));
+        assertEquals("01", BytesUtils.toHexString(bv2));
     }
 }

@@ -24,14 +24,7 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.state.BaseStateReader
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{
-  BytesUtils,
-  DynamicTypedSerializer,
-  MerklePath,
-  Pair,
-  TestSidechainsVersionsManager,
-  WithdrawalEpochInfo
-}
+import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any
@@ -41,7 +34,8 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
 import sparkz.core.transaction.state.Secret
 import sparkz.crypto.hash.Keccak256
-import sparkz.util.bytesToId
+import sparkz.util.serialization.VLQByteBufferWriter
+import sparkz.util.{ByteArrayBuilder, bytesToId}
 
 import java.math.BigInteger
 import java.time.Instant
@@ -327,7 +321,9 @@ class AccountForgeMessageBuilderTest
       new Array[Byte](0),
       goodSignature
     )
-    val encodedMessage = EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned)
+    val writer = new VLQByteBufferWriter(new ByteArrayBuilder)
+    EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned, writer)
+    val encodedMessage = writer.toBytes
     val txHash = BytesUtils.toHexString(Keccak256.hash(encodedMessage))
     val mockedState: AccountState =
       AccountMockDataHelper(false).getMockedState(receipt, Numeric.hexStringToByteArray(txHash))

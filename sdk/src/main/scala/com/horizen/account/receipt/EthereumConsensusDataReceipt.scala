@@ -3,9 +3,12 @@ package com.horizen.account.receipt
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
+import com.horizen.account.utils.{RlpStreamDecoder, RlpStreamEncoder}
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import org.web3j.rlp._
+import sparkz.util.ByteArrayBuilder
+import sparkz.util.serialization.{VLQByteBufferReader, VLQByteBufferWriter}
 
 import java.math.BigInteger
 import java.nio.ByteBuffer
@@ -116,8 +119,14 @@ object EthereumConsensusDataReceipt {
     val FAILED, SUCCESSFUL = Value
   }
 
-  def decodeLegacy(rlpData: Array[Byte]): EthereumConsensusDataReceipt = {
-    val rlpList = RlpDecoder.decode(rlpData)
+  private def decodeLegacy(rlpData: Array[Byte]): EthereumConsensusDataReceipt = {
+
+    val reader = new VLQByteBufferReader(ByteBuffer.wrap(rlpData))
+    val rlpList = RlpStreamDecoder.decode(reader)
+    if (reader.remaining > 0){
+      throw new IllegalArgumentException("Spurious bytes after decoding stream")
+    }
+
     val values = rlpList.getValues.get(0).asInstanceOf[RlpList]
     val postTxState = values.getValues.get(0).asInstanceOf[RlpString].getBytes
     val status = if (postTxState.isEmpty) {
@@ -151,7 +160,7 @@ object EthereumConsensusDataReceipt {
     )
   }
 
-  def decodeTyped(
+  private def decodeTyped(
       rt: Int,
       rlpData: Array[Byte]
   ): EthereumConsensusDataReceipt = {
@@ -165,6 +174,7 @@ object EthereumConsensusDataReceipt {
     )
   }
 
+  // not used by code base, just called by UTs
   def rlpDecode(rlpData: Array[Byte]): EthereumConsensusDataReceipt = {
     if (rlpData == null || rlpData.length == 0) {
       return null
@@ -179,7 +189,11 @@ object EthereumConsensusDataReceipt {
   def rlpEncode(r: EthereumConsensusDataReceipt): Array[Byte] = {
     val values = asRlpValues(r)
     val rlpList = new RlpList(values)
-    val encoded = RlpEncoder.encode(rlpList)
+
+    val writer = new VLQByteBufferWriter(new ByteArrayBuilder)
+    RlpStreamEncoder.encode(rlpList, writer)
+    val encoded = writer.toBytes
+
     if (!(r.getTxType == EthereumTransactionType.LegacyTxType)) {
       // add byte for versioned type support
       ByteBuffer

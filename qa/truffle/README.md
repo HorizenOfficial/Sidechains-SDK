@@ -1,6 +1,6 @@
 # Truffle
 
-- Update `.env` file
+- Create `.env` file from `.env.example`
 - Use `truffle compile` to compile Solidity contracts in the project
 - Use `truffle migrate --network zen` to execute deployment scripts in the project
 - Use `truffle console --network zen` to open an interactive Javascript console
