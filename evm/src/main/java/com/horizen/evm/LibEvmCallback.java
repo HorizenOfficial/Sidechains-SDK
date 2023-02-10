@@ -6,6 +6,9 @@ import com.sun.jna.Pointer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Base class to be used when passing callbacks to libevm. Can and should be used when passing parameter objects via the
  * LibEvm.invoke() JSON interface. When a parameter derived from this type is passed to libevm it will be serialized as
@@ -20,36 +23,35 @@ abstract class LibEvmCallback implements AutoCloseable {
 
     private static final Logger logger = LogManager.getLogger();
 
-    private static final int MAX_CALLBACKS = 10;
-    private static final LibEvmCallback[] callbacks = new LibEvmCallback[MAX_CALLBACKS];
+    private static final Map<Integer, LibEvmCallback> callbacks = new HashMap<>();
 
     private static synchronized int register(LibEvmCallback callback) {
-        for (int i = 0; i < callbacks.length; i++) {
-            if (callbacks[i] == null) {
-                callbacks[i] = callback;
-                logger.trace("registered callback with handle {}: {}", i, callback);
-                return i;
+        // note: with N items in the map this will iterate for N+1 times, hence it should always find an unused handle
+        for (int handle = 0; handle <= callbacks.size(); handle++) {
+            if (!callbacks.containsKey(handle)) {
+                callbacks.put(handle, callback);
+                logger.trace("registered callback with handle {}: {}", handle, callback);
+                return handle;
             }
         }
         throw new IllegalStateException("too many callback handles");
     }
 
     private static void unregister(int handle, LibEvmCallback callback) {
-        if (callbacks[handle] != callback) {
+        if (!callbacks.remove(handle, callback)) {
             logger.warn("already unregistered callback with handle {}: {}", handle, callback);
             return;
         }
-        callbacks[handle] = null;
         logger.trace("unregistered callback with handle {}: {}", handle, callback);
     }
 
     private static String invoke(int handle, String args) {
-        if (callbacks[handle] == null) {
+        if (!callbacks.containsKey(handle)) {
             logger.warn("received callback with invalid handle: {}", handle);
             return null;
         }
         logger.trace("received callback with handle {}", handle);
-        return callbacks[handle].invoke(args);
+        return callbacks.get(handle).invoke(args);
     }
 
     static class CallbackProxy implements Callback {

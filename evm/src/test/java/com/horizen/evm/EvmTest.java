@@ -146,6 +146,13 @@ public class EvmTest extends LibEvmTestBase {
             assertEquals("unexpected error message", "", resultB.evmError);
             assertEquals("unexpected block hash", blockHash, new Hash(resultB.returnData));
         }
+
+        // sanity check for unregistering callbacks
+        try (var blockHashGetterC = new BlockHashGetter()) {
+            // handle 0 will always be used by the log callback
+            // we released all other callbacks and created a new one here, so we expect the handle to be 1
+            assertEquals("callback handles were not released", 1, blockHashGetterC.handle);
+        }
     }
 
     @Test
