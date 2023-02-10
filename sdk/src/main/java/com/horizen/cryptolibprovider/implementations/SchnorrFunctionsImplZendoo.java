@@ -1,12 +1,12 @@
 package com.horizen.cryptolibprovider.implementations;
 
 import com.horizen.cryptolibprovider.utils.SchnorrFunctions;
+import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.schnorrnative.SchnorrKeyPair;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSecretKey;
 import com.horizen.schnorrnative.SchnorrSignature;
-import com.horizen.librustsidechains.Constants;
 import java.util.EnumMap;
 
 import static com.horizen.cryptolibprovider.utils.FieldElementUtils.messageToFieldElement;

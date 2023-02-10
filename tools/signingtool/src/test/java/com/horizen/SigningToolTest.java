@@ -67,7 +67,7 @@ public class SigningToolTest {
     @Test
     public void testSignatureSignVerify() throws JsonProcessingException {
         //Sign
-        String testMessage = "Test signmessage";
+        String testMessage = "Test sign message of 32 symbols!";
         SchnorrSecret secretKey = generateSecret();
         SchnorrProposition publicKey = secretKey.publicImage();
 
@@ -94,7 +94,7 @@ public class SigningToolTest {
 
         //Negative
         argsJson = new ObjectMapper().createObjectNode();
-        argsJson.put("message", BytesUtils.toHexString("Wrong message".getBytes(StandardCharsets.UTF_8)));
+        argsJson.put("message", BytesUtils.toHexString("Some wrong message of 32 length!".getBytes(StandardCharsets.UTF_8)));
         argsJson.put("signature", signature);
         argsJson.put("publicKey", BytesUtils.toHexString(PROPOSITION_SERIALIZER.toBytes(publicKey)));
         argsJson.put("type", SCHNORR);

@@ -76,8 +76,8 @@ package object consensus {
 
   private def generateHashAndCleanUp(elements: Array[Byte]*): Array[Byte] = {
     val digest = PoseidonHash.getInstanceConstantLength(elements.length)
-    elements.foreach { message =>
-      val fieldElement = FieldElementUtils.messageToFieldElement(message)
+    elements.foreach { element =>
+      val fieldElement = FieldElementUtils.elementToFieldElement(element)
       digest.update(fieldElement)
       fieldElement.freeFieldElement()
     }

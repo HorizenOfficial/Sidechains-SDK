@@ -5,7 +5,7 @@ import akka.http.scaladsl.HttpExt
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
+import com.horizen.fixtures.{CompanionsFixture, FieldElementFixture, SidechainBlockFixture}
 import com.horizen.proof.SchnorrSignatureSerializer
 import com.horizen.proposition.SchnorrPropositionSerializer
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
@@ -141,7 +141,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
     "return signature info with memorized index" in {
       val (apiClient, serverMock) = prepareApiClient()
-      val message = "test".getBytes(StandardCharsets.UTF_8)
+      val message = FieldElementFixture.generateFieldElement()
       val privateKey = generateKey()
       val publicKey = privateKey.publicImage()
       val index = 1
@@ -166,7 +166,7 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
     "process several requests with errors between them signWithEnclave" in {
       val (apiClient, serverMock) = prepareApiClient()
-      val message = "test".getBytes(StandardCharsets.UTF_8)
+      val message = FieldElementFixture.generateFieldElement()
       val privateKey = generateKey()
       val publicKey = privateKey.publicImage()
       val response = mapper
