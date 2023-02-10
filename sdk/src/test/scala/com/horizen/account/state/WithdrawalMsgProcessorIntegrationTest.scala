@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
 import org.junit._
@@ -57,7 +57,8 @@ class WithdrawalMsgProcessorIntegrationTest
         0,
         withdrawalEpoch,
         1,
-        MockedHistoryBlockHashProvider
+        MockedHistoryBlockHashProvider,
+        Hash.ZERO
       )
 
       // GetListOfWithdrawalRequest without withdrawal requests yet

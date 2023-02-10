@@ -16,7 +16,7 @@ import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEnco
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import com.horizen.params.TestNetParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -65,7 +65,8 @@ class AccountForgeMessageBuilderTest
       2,
       3,
       1,
-      MockedHistoryBlockHashProvider
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     usingView { stateView =>
@@ -119,7 +120,8 @@ class AccountForgeMessageBuilderTest
       2,
       3,
       1,
-      MockedHistoryBlockHashProvider
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -183,7 +185,8 @@ class AccountForgeMessageBuilderTest
       2,
       3,
       1,
-      MockedHistoryBlockHashProvider
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor

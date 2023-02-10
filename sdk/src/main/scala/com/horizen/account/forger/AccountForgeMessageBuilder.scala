@@ -19,6 +19,7 @@ import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
+import com.horizen.evm.utils.Hash
 import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -205,7 +206,8 @@ class AccountForgeMessageBuilder(
         .getWithdrawalEpochInfo(mainchainBlockReferencesData.size, parentInfo.withdrawalEpochInfo, params)
         .epoch,
       params.chainId,
-      nodeView.history
+      nodeView.history,
+      new Hash(vrfOutput.bytes())
     )
 
     // 5. create a disposable view and try to apply all transactions in the list and apply fee payments if needed, collecting all data needed for
@@ -418,7 +420,8 @@ class AccountForgeMessageBuilder(
   }
 
   def getPendingBlock(nodeView: View): Option[AccountBlock] = {
-    val branchPointInfo = BranchPointInfo(nodeView.history.bestBlockId, Seq(), Seq())
+    val bestBlockId: ModifierId = nodeView.history.bestBlockId
+    val branchPointInfo = BranchPointInfo(bestBlockId, Seq(), Seq())
     val blockSignPrivateKey = new PrivateKey25519(
       new Array[Byte](PrivateKey25519.PRIVATE_KEY_LENGTH),
       new Array[Byte](PrivateKey25519.PUBLIC_KEY_LENGTH)
@@ -431,7 +434,12 @@ class AccountForgeMessageBuilder(
     val forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo =
       ForgingStakeMerklePathInfo(forgingStakeInfo, new MerklePath(new JArrayList()))
     val vrfProof: VrfProof = new VrfProof(new Array[Byte](VrfProof.PROOF_LENGTH))
-    val vrfOutput: VrfOutput = new VrfOutput(new Array[Byte](VrfOutput.OUTPUT_LENGTH))
+
+    // keep pending block VRFOutput same as for current tip one
+    // it is used as a source of BlockContext.random
+    val bestBlockInfo = nodeView.history.blockInfoById(bestBlockId)
+    val vrfOutput: VrfOutput = bestBlockInfo.vrfOutputOpt.getOrElse(
+      new VrfOutput(new Array[Byte](VrfOutput.OUTPUT_LENGTH)))
 
     implicit val timeout: Timeout = new Timeout(5, SECONDS)
 

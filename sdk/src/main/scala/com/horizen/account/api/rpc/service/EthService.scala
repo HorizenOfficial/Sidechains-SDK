@@ -567,7 +567,7 @@ class EthService(
       null,
       null,
       parentInfo.withdrawalEpochInfo,
-      None,
+      parentInfo.vrfOutputOpt, // same as for parent block, used as a source of BlockContext.random field
       parentInfo.lastBlockInPreviousConsensusEpoch
     )
   }

@@ -41,8 +41,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
         context.time = BigInteger.valueOf(blockContext.timestamp);
         context.baseFee = blockContext.baseFee;
-        // TODO: add 32 bytes of random from VRF to support the "PREVRANDAO" (ex "DIFFICULTY") EVM-opcode
-//        context.random = null;
+        context.random = blockContext.random;
 
         // setup callback for the evm to access the block hash provider
         try (var blockHashGetter = new BlockHashGetter(blockContext.blockHashProvider)) {

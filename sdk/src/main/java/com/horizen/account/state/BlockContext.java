@@ -4,6 +4,7 @@ import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.evm.interop.EvmResult;
 import com.horizen.evm.interop.TraceOptions;
 import com.horizen.evm.utils.Address;
+import com.horizen.evm.utils.Hash;
 
 import java.math.BigInteger;
 
@@ -17,7 +18,9 @@ public class BlockContext {
     public final int withdrawalEpochNumber;
     public final long chainID;
     public final HistoryBlockHashProvider blockHashProvider;
+    public final Hash random;
     private TraceOptions traceOptions;
+
     private EvmResult evmResult;
 
     public BlockContext(
@@ -29,7 +32,8 @@ public class BlockContext {
         int consensusEpochNumber,
         int withdrawalEpochNumber,
         long chainID,
-        HistoryBlockHashProvider blockHashProvider
+        HistoryBlockHashProvider blockHashProvider,
+        Hash random
     ) {
         this.forgerAddress = forgerAddress;
         this.timestamp = timestamp;
@@ -40,6 +44,7 @@ public class BlockContext {
         this.withdrawalEpochNumber = withdrawalEpochNumber;
         this.chainID = chainID;
         this.blockHashProvider = blockHashProvider;
+        this.random = random;
     }
 
     public BlockContext(
@@ -59,7 +64,8 @@ public class BlockContext {
             consensusEpochNumber,
             withdrawalEpochNumber,
             chainID,
-            blockHashProvider
+            blockHashProvider,
+            new Hash(blockHeader.vrfOutput().bytes())
         );
     }
 
