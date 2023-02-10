@@ -302,6 +302,12 @@
           <include>SidechainBlockHeaderTestVrfSecretKey178</include>
           <include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
           <include>ForgerBoxSerializationTestVrfPublicKey901</include>
+          <include>AccountBlockHeaderTestVrfOutput178</include>
+          <include>AccountBlockHeaderTestVrfProof178</include>
+          <include>AccountBlockHeaderTestVrfSecretKey178</include>
+          <include>AccountBlockTestVrfOutput908</include>
+          <include>AccountBlockTestVrfProof908</include>
+          <include>AccountBlockTestVrfSecretKey908</include>
           <include>OmmerTestVrfProof143</include>
           <include>OmmerTestVrfSecretKey143</include>
           <include>zenbox_hex</include>

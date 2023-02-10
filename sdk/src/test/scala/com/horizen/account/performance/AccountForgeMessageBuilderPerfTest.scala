@@ -12,7 +12,7 @@ import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
@@ -71,7 +71,8 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
     2,
     3,
     1L,
-    MockedHistoryBlockHashProvider
+    MockedHistoryBlockHashProvider,
+    Hash.ZERO
   )
 
   /*

@@ -48,6 +48,7 @@ import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
+import com.horizen.vrf.VrfOutput;
 import scala.Enumeration;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
@@ -831,7 +832,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo mc block.");
 
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
-            VrfProof vrfProof  = vrfSecretKey.prove(vrfMessage).getKey();
+            VrfProof vrfProof = vrfSecretKey.prove(vrfMessage).getKey();
+            VrfOutput vrfOutput = vrfProof.proofToVrfOutput(vrfSecretKey.publicImage(), vrfMessage).get();
             MerklePath mp = new MerklePath(new ArrayList<>());
             // In Regtest it possible to set genesis block timestamp to not to have block in future exception during STF tests.
             long currentTimeSeconds = System.currentTimeMillis() / 1000;
@@ -886,6 +888,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                         key,
                         forgingStakeInfo,
                         vrfProof,
+                        vrfOutput,
                         mp,
                         feePaymentsHash,
                         stateRoot,

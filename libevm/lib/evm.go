@@ -51,7 +51,7 @@ type EvmContext struct {
 	BlockNumber       *hexutil.Big       `json:"blockNumber"`
 	Time              *hexutil.Big       `json:"time"`
 	BaseFee           *hexutil.Big       `json:"baseFee"`
-	Random            *common.Hash       `json:"random"`
+	Random            common.Hash        `json:"random"`
 	BlockHashCallback *BlockHashCallback `json:"blockHashCallback"`
 }
 
@@ -92,9 +92,6 @@ func (c *EvmContext) setDefaults() {
 	if c.BaseFee == nil {
 		c.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
 	}
-	if c.Random == nil {
-		c.Random = new(common.Hash)
-	}
 }
 
 func (c *EvmContext) getBlockContext() vm.BlockContext {
@@ -108,7 +105,7 @@ func (c *EvmContext) getBlockContext() vm.BlockContext {
 		Time:        c.Time.ToInt(),
 		Difficulty:  common.Big0,
 		BaseFee:     c.BaseFee.ToInt(),
-		Random:      c.Random,
+		Random:      &c.Random,
 	}
 }
 
