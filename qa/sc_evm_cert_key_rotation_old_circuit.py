@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import time
 
+from SidechainTestFramework.account.httpCalls.transaction.createKeyRotationTransaction import \
+    http_create_key_rotation_transaction_evm
 from SidechainTestFramework.sc_boostrap_info import NO_KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.scutil import generate_next_blocks
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
-from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction_evm
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from test_framework.util import assert_equal
 

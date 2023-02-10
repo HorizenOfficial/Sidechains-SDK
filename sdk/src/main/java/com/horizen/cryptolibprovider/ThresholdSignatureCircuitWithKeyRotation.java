@@ -4,6 +4,7 @@ import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.WithdrawalCertificate;
+import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.ValidatorKeysUpdatesList;
 import com.horizen.utils.Pair;
 
@@ -59,4 +60,8 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
     ValidatorKeysUpdatesList getSchnorrKeysSignaturesList(SchnorrKeysSignatures schnorrKeysSignatures);
 
     byte[] getSchnorrKeysHash(SchnorrKeysSignatures schnorrKeysSignatures);
+
+    byte[] getMsgToSignForSigningKeyUpdate(byte[] newSigningKeyBytes, int epochNumber, byte[] sidechainId);
+
+    byte[] getMsgToSignForMasterKeyUpdate(byte[] newMasterKeyBytes, int epochNumber, byte[] sidechainId);
 }
