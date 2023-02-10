@@ -173,7 +173,6 @@ testScriptsUtxo=(
     'sc_big_block.py'
 );
 
-
 # decide whether to have only evm tests or only utxo tests or the whole set
 if [ ! -z "$EVM_ONLY" ] && [ ! -z "$UTXO_ONLY" ]; then
     echo -e "\nCan not have both options '-evm_only' and '-utxo_only'" | tee /dev/fd/3
@@ -224,10 +223,79 @@ if [ ! -z "$SPLIT" ]; then
   fi
 fi
 
+testCount=${#testScripts[@]}
 successCount=0
+successCountFile="/tmp/successCounter.txt"
 notFoundCount=0
+notFoundCountFile="/tmp/notFoundCounter.txt"
 failureCount=0
+failureCountFile="/tmp/failureCounter.txt"
 declare -a failures
+failuresFile="/tmp/failuresList.txt"
+flock_file="/tmp/flock_file.lock"
+testsFile="/tmp/tests.txt"
+
+function updateCountFile
+{
+  (
+    flock -x 200
+    # Check if the counter file exists
+    if [ ! -f "$1" ]; then
+      # If the counter file does not exist, initialize it with a starting value
+      echo "0" > "$1"
+    fi
+
+    # Read the current value of the counter
+    count=$(cat "$1")
+
+    # Increment the counter
+    count=$((count + 1))
+
+    # Write the new value of the counter
+    echo "$count" > "$1"
+  ) 200>"$flock_file"
+}
+
+function updateFailList
+{
+  if [ "$PARALLEL" ]; then
+    (
+      flock -x 200
+
+      # Write the passed argument to the file
+      echo "$1" >> $failuresFile
+    ) 200>$flock_file
+  else
+    failures[${#failures[@]}]="$1"
+  fi
+}
+
+function updateNotFoundCount
+{
+  if [ "$PARALLEL" ]; then
+    updateCountFile "$notFoundCountFile"
+  else
+    notFoundCount=$((notFoundCount + 1))
+  fi
+}
+
+function updateFailureCount
+{
+  if [ "$PARALLEL" ]; then
+    updateCountFile "$failureCountFile"
+  else
+    failureCount=$((failureCount + 1))
+  fi
+}
+
+function updateSuccessCount
+{
+  if [ "$PARALLEL" ]; then
+    updateCountFile "$successCountFile"
+  else
+    successCount=$(expr $successCount + 1)
+  fi
+}
 
 function checkFileExists
 {
@@ -238,12 +306,26 @@ function checkFileExists
 
     if [ ! -f "${TestScriptFileAndPath}" ]; then
       echo -e "\nWARNING: file not found [ ${TestScriptFileAndPath} ]" | tee /dev/fd/3
-      failures[${#failures[@]}]="(#-NotFound-$1-#)"
-      notFoundCount=$((notFoundCount + 1))
+      updateFailList "(#-NotFound-$1-#)"
+      updateNotFoundCount
+
       return 1;
     else
       return 0
     fi
+}
+
+function checkScriptArgsValid
+{
+  local scriptArg = $1
+  local testToRun = $2
+
+  if [ -z "$scriptArg" ] || [ "${scriptArg:0:1}" = "-" ] || [ "$scriptArg" = "$testToRun" ] || [ "$scriptArg.py" = "$testToRun" ]; then
+    return 0;
+  else
+    echo "Unable to run $testToRun, invalid arg passed to shell script" | tee /dev/fd/3
+    return 1
+  fi
 }
 
 function runTestScript
@@ -264,13 +346,13 @@ function runTestScript
     if eval "$@"; then
       testEnd=$(date +%s)
       testRuntime=$((testEnd-testStart))
-      successCount=$(expr $successCount + 1)
+      updateSuccessCount
       echo "--- Success: ${testName} --- ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
     else
       testEnd=$(date +%s)
       testRuntime=$((testEnd-testStart))
-      failures[${#failures[@]}]="$testName"
-      failureCount=$((failureCount + 1))
+      updateFailList="$testName"
+      updateFailureCount
       echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
     fi
 
@@ -282,98 +364,126 @@ function runTests
   # Assign any parameter given to the shell script, then remove from this functions args
   scriptArg=$1; shift
 
-  if [ "$PARALLEL" ]; then
-    # Assign parallelGroup if running parallel tests, then remove from this functions args
-    declare parallelGroup=$1
-    shift
-  fi;
-
   # Assign remaining args (which should be the test scripts array)
   testsToRun=("$@")
   runningInfoMessage="Of ${#testsToRun[@]} Tests"
 
-  if [ "$PARALLEL" ]; then
-    runningInfoMessage="$runningInfoMessage :: Parallel Group $parallelGroup ::"
-  fi;
-
   for (( i = 0; i < ${#testsToRun[@]}; i++ )); do
     if checkFileExists "${testsToRun[$i]}"; then
-          if [ -z "$scriptArg" ] || [ "${scriptArg:0:1}" = "-" ] || [ "$scriptArg" = "${testsToRun[$i]}" ] || [ "$scriptArg.py" = "${testsToRun[$i]}" ]; then
+          if checkScriptArgsValid "$scriptArg ${testsToRun[$i]}"; then
             echo "Running $((i +1)) $runningInfoMessage" | tee /dev/fd/3
             testFileWithArgs="${BASH_SOURCE%/*}/${testsToRun[$i]}"
 
-            if [ "$PARALLEL" ]; then
-              testFileWithArgs="$testFileWithArgs --parallel=$parallelGroup"
-            fi
             runTestScript \
                   "${testsToRun[$i]}" \
                   "$testFileWithArgs"
-          else
-            echo "Unable to run ${testsToRun[$i]}, invalid arg passed to shell script" | tee /dev/fd/3
           fi
     fi
   done
-
-  end=$(date +%s)
-  runtime=$((end-start))
-  total=$((successCount + failureCount))
-  testRunTimeMessage="===  TOTAL TEST RUN TIME: ${runtime}(s)  ==="
-  testsRunMessage="\n\nTests Run: $total"
-  summaryMessage="Passed: $successCount; Failed: $failureCount; Not Found: $notFoundCount"
-  fileNotFoundMessage="\nCould not exec any test: File name [$1]"
-  failingTestsMessage="\nFailing tests: ${failures[*]}"
-
-  if [ "$PARALLEL" ]; then
-    testRunTimeMessage="$testRunTimeMessage (Parallel Group: $parallelGroup)"
-    testsRunMessage="$testsRunMessage (Parallel Group: $parallelGroup)"
-    summaryMessage="$summaryMessage (Parallel Group: $parallelGroup)"
-    fileNotFoundMessage="$fileNotFoundMessage (Parallel Group: $parallelGroup)"
-    failingTestsMessage="$failingTestsMessage (Parallel Group: $parallelGroup)"
-  fi
-
-  echo -e "$testsRunMessage" | tee /dev/fd/3
-  echo "$summaryMessage" | tee /dev/fd/3
-  echo "$testRunTimeMessage" | tee /dev/fd/3
-
-  if [ $total -eq 0 ]; then
-    echo -e "$fileNotFoundMessage" | tee /dev/fd/3
-    checkFileExists $1
-    exit 1
-  fi
-
-  if [ ${#failures[@]} -gt 0 ]; then
-      echo -e "$failingTestsMessage" | tee /dev/fd/3
-      exit 1
-    else
-      exit 0
-  fi
 }
 
-if [ ! -z "$PARALLEL" ]; then
-  TESTS_TO_RUN_IN_PARALLEL=$((("${#testScripts[@]}" + (PARALLEL - 1)) / "$PARALLEL"))
-  TEST_GROUP=1
+function runParallelTests
+{
+  # Assign any parameter given to the shell script, then remove from this functions args
+  scriptArg=$1; shift
 
-  for((i = 0; i < ${#testScripts[@]}; i+=TESTS_TO_RUN_IN_PARALLEL))
-  do
-    part=( "${testScripts[@]:i:TESTS_TO_RUN_IN_PARALLEL}" )
-    eval declare -a testScripts_$TEST_GROUP=\( \"\${part[@]}\" \)
-    TEST_GROUP=$((TEST_GROUP + 1))
+  # Assign parallelGroup if running parallel tests, then remove from this functions args
+  parallelGroup=$1; shift
+
+  while true; do
+    # Acquire the lock for the array and retrieve the first test and a count of remaining tests
+    result=$(flock -w 1 $testsFile -c "head -n 1 $testsFile; sed -i '1d' $testsFile; echo \$(wc -l $testsFile | awk '{print \$1}')")
+
+    test=$(echo $result | awk '{print $1}')
+    num_lines=$(echo $result | awk '{print $2}')
+
+    if [ -z "$test" ] || [ "$test" = " " ] || [ "$test" = "0" ] ; then
+      break
+    fi
+
+    testNumber=$((${#testScripts[@]}-$num_lines))
+
+    echo "Running test \"$test\" ($testNumber of $testCount) in parallel group: $parallelGroup" | tee /dev/fd/3
+
+    runningInfoMessage="Of $testCount Tests :: Parallel Group $parallelGroup ::"
+
+    if checkFileExists "$test"; then
+          if checkScriptArgsValid "$scriptArg $test"; then
+            echo "Running $testNumber $runningInfoMessage" | tee /dev/fd/3
+            testFileWithArgs="${BASH_SOURCE%/*}/$test --parallel=$parallelGroup"
+
+            runTestScript \
+                  "$test" \
+                  "$testFileWithArgs"
+          fi
+    fi
   done
+}
 
-  echo "!=== Running ${#testScripts[@]} total tests between $PARALLEL Parallel Groups ===!" | tee /dev/fd/3
-  for (( i=1; i<=$PARALLEL; i++ ))
-  do
-    testGroup="testScripts_${i}[@]"
-    runTests  \
+startTime=$(date +%s)
+
+if [ ! -z "$PARALLEL" ]; then
+  rm -f /tmp/tests.txt
+  printf "%s\n" "${testScripts[@]}" > /tmp/tests.txt
+  for (( i=1; i<=$PARALLEL; i++ )); do
+    runParallelTests  \
         "$1"  \
-        "$i"  \
-        "${!testGroup}" &
+        "$i"  &
   done
   # Wait for all processes to finish
   wait < <(jobs -p)
+
 else
   # Pass main script arg to function first (could be null or -PARALLEL etc) followed by array.
   runTests  \
       "$1"  \
       "${testScripts[@]}"
+fi
+
+if [ "$PARALLEL" ]; then
+  if [ -f "$successCountFile" ]; then
+    successCount=$(cat "$successCountFile")
+  fi
+  if [ -f "$failureCountFile" ]; then
+    failureCount=$(cat "$failureCountFile")
+  fi
+  if [ -f "$notFoundCountFile" ]; then
+    notFoundCount=$(cat "$notFoundCountFile")
+  fi
+  if [ -f "$failuresFile" ]; then
+    # Read the contents of the failures file into an array
+    IFS=$'\n' read -r -a contents < $failuresFile
+
+    # Add the contents array to the existing failures array
+    failures=("${failures[@]}" "${contents[@]}")
+  fi
+fi
+
+# Clean up files
+trap "rm -f $flock_file $testsFile $successCountFile $notFoundCountFile $failureCountFile $failuresFile" INT TERM EXIT
+
+endTime=$(date +%s)
+runtime=$((endTime-startTime))
+total=$((successCount + failureCount))
+testRunTimeMessage="\n===  TOTAL TEST RUN TIME: ${runtime}(s)  ==="
+testsRunMessage="\nTests Run: $total"
+summaryMessage="\nPassed: $successCount; Failed: $failureCount; Not Found: $notFoundCount"
+fileNotFoundMessage="\nCould not exec any test: File name [$1]"
+failingTestsMessage="\nFailing tests: ${failures[*]}"
+
+echo -e "$testsRunMessage" | tee /dev/fd/3
+echo -e "$summaryMessage" | tee /dev/fd/3
+echo -e "$testRunTimeMessage" | tee /dev/fd/3
+
+if [ $total -eq 0 ]; then
+  echo -e "\n!! WARNING: No test files were found. !!" | tee /dev/fd/3
+  echo -e "$failingTestsMessage" | tee /dev/fd/3
+  exit 1
+fi
+
+if [ ${#failures[@]} -gt 0 ]; then
+    echo -e "$failingTestsMessage" | tee /dev/fd/3
+    exit 1
+  else
+    exit 0
 fi
