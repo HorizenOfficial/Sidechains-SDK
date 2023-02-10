@@ -1,4 +1,3 @@
-
 package com.horizen.consensus
 
 import com.fasterxml.jackson.annotation.JsonView
