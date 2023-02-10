@@ -22,8 +22,7 @@ Test:
     - Compile and deploy test contract: BlockHash
     - Mine a few blocks
     - Verify block hashes returned by contract function
-    - Test behavior when eth_call with different block contexts,
-        i.e. "pending", "latest" or a block number passed to eth_call
+    - Test behavior with different block contexts, i.e. "pending", "latest" or a block number passed to eth_call
 """
 
 
@@ -57,6 +56,7 @@ class SCEvmContextBlockHash(AccountChainSetup):
         # mine some blocks and get the block hashes
         # the keys are offsets relative to the current block height, i.e. "latest"
         block_hashes = {
+            4: generate_next_block(self.sc_nodes[0], "first node"),
             3: generate_next_block(self.sc_nodes[0], "first node"),
             2: generate_next_block(self.sc_nodes[0], "first node"),
             1: generate_next_block(self.sc_nodes[0], "first node"),
