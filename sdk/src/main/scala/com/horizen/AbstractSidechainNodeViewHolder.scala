@@ -4,6 +4,7 @@ import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.params.NetworkParams
+import com.horizen.secret.{Secret, SecretCreator}
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
@@ -93,6 +94,7 @@ abstract class AbstractSidechainNodeViewHolder[
       applyBiFunctionOnNodeView orElse
       getCurrentSidechainNodeViewInfo orElse
       processLocallyGeneratedSecret orElse
+      processGenerateSecret orElse
       processRemoteModifiers orElse
       applyModifier orElse
       processGetStorageVersions orElse
@@ -179,6 +181,17 @@ abstract class AbstractSidechainNodeViewHolder[
         case Success(newVault) =>
           updateNodeView(updatedVault = Some(newVault))
           sender() ! Success(Unit)
+        case Failure(ex) =>
+          sender() ! Failure(ex)
+      }
+  }
+
+  protected def processGenerateSecret: Receive = {
+    case AbstractSidechainNodeViewHolder.ReceivableMessages.GenerateSecret(secretCreator) =>
+      vault().generateNextSecret(secretCreator) match {
+        case Success((newVault, secret)) =>
+          updateNodeView(updatedVault = Some(newVault))
+          sender() ! Success(secret)
         case Failure(ex) =>
           sender() ! Failure(ex)
       }
@@ -435,6 +448,8 @@ object AbstractSidechainNodeViewHolder {
     case class GetDataFromCurrentSidechainNodeView[NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _], A](f: NV => A)
 
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+    case class GenerateSecret[T <: Secret](secretCreator: SecretCreator[T])
+
 
     case class ApplyFunctionOnNodeView[NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _], A](f: java.util.function.Function[NV, A])
 
