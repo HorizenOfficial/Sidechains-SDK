@@ -117,6 +117,8 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
     }
   }
 
+  def blockTxSize() : Long
+
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
     // version is specific to block subclass
     if(!versionIsValid())
@@ -149,12 +151,10 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
         throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
     }
 
-    var totalTxSize = 0L
     // Check that SidechainTransactions are valid.
     for(tx <- sidechainTransactions) {
       Try {
         tx.semanticValidity()
-        totalTxSize = totalTxSize + tx.size()
       } match {
         case Success(_) =>
         case Failure(e) => throw new InvalidSidechainBlockDataException(
@@ -163,7 +163,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
     }
 
     // Check we do not exceed the block overhead size
-    val blockOverheadSize = blockSize-totalTxSize
+    val blockOverheadSize = blockSize - blockTxSize()
     if(blockExceedsOverheadSizeLimit(blockOverheadSize)) {
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id block overhead size $blockOverheadSize exceeds the limit.")
     }

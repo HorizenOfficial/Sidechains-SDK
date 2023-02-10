@@ -11,11 +11,12 @@ import com.horizen.evm.TrieHasher
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
-import com.horizen.utils.{BytesUtils, MerklePath}
+import com.horizen.utils.{BytesUtils, ListSerializer, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
 import sparkz.util.SparkzLogging
+import scala.collection.JavaConverters._
 
 import java.math.BigInteger
 import scala.util.Try
@@ -96,6 +97,11 @@ class AccountBlock(override val header: AccountBlockHeader,
   override def blockExceedsOverheadSizeLimit(blockOverheadSize: Long): Boolean = {
     blockOverheadSize > MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE
   }
+
+  override def blockTxSize(): Long = {
+    new ListSerializer[SidechainTypes#SCAT](companion).toBytes(sidechainTransactions.asJava).length
+  }
+
 }
 
 

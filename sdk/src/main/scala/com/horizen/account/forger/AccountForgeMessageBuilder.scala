@@ -112,7 +112,7 @@ class AccountForgeMessageBuilder(
       val initialBlockGas = blockGasPool.getGas
       val priceAndNonceIter = iter.asInstanceOf[TransactionsByPriceAndNonceIter]
       val tx = priceAndNonceIter.peek
-      val txSize = tx.size()
+      val txSize = tx.size() + 1 // 1 byte more to account for companion encoding, which will be used when deserializing the block
       if (blockSize + txSize > getMaxBlockSize()) {
         // block size limit exceeded
         // keep trying to fit transactions into the block: this TX did not fit, but another one might

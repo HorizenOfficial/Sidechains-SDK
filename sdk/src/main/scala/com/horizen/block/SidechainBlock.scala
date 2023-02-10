@@ -29,7 +29,7 @@ class SidechainBlock(override val header: SidechainBlockHeader,
                      override val mainchainHeaders: Seq[MainchainHeader],
                      override val ommers: Seq[Ommer[SidechainBlockHeader]],
                      companion: SidechainTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader](header, sidechainTransactions,mainchainBlockReferencesData, mainchainHeaders, ommers)
+  extends SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader](header, sidechainTransactions,mainchainBlockReferencesData, mainchainHeaders, ommers) with SidechainTypes
 {
   def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
@@ -70,6 +70,10 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
   // UTXO does not have a specific limit for block overhead size
   override def blockExceedsOverheadSizeLimit(blockOverheadSize: Long): Boolean = false
+
+  override def blockTxSize(): Long = {
+    new ListSerializer[SidechainTypes#SCBT](companion).toBytes(sidechainTransactions.asJava).length
+  }
 }
 
 
