@@ -102,7 +102,10 @@ class AccountBlock(override val header: AccountBlockHeader,
 object AccountBlock {
 
   val ACCOUNT_BLOCK_VERSION: Block.Version = 2: Byte
+  // this is the maximum size of the block portion which contains MC ref data, ommers and block header
   val MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE: Int = 5000000
+
+  // this is the overall block size, included the txes
   val MAX_ACCOUNT_BLOCK_SIZE: Int = 7000000
 
   def create(parentId: Block.BlockId,
