@@ -423,6 +423,22 @@ class EthService(
     (block, blockInfo)
   }
 
+  /**
+   * Returns a SidechainBlockInfo for a given blockId
+   * blockId = null is a valid case, returning pending block info
+   * Throws RpcException for not found blockId or errors while creating pending block
+   */
+  private def getBlockInfoById(nodeView: NV, blockId: ModifierId): SidechainBlockInfo = {
+    val blockInfo = if (blockId == null) {
+      val parentId = getBlockIdByTag(nodeView, "latest")
+      getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId)
+      )
+    } else {
+        nodeView.history.blockInfoById(blockId)
+    }
+    blockInfo
+  }
+
   private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
     val blockId = getBlockIdByTag(nodeView, tag)
     val (block, blockInfo) = getBlockById(nodeView, blockId)
@@ -472,6 +488,14 @@ class EthService(
       case height => ModifierId(nodeView.history.blockIdByHeight(height).get)
     }
     blockId
+  }
+
+  private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
+    if (tag.length == 66 && tag.substring(0, 2) == "0x")
+      bytesToId(BytesUtils.fromHexString(tag.substring(2)))
+    else {
+      getBlockIdByTag(nodeView, tag)
+    }
   }
 
   @RpcMethod("net_version")
@@ -785,6 +809,32 @@ class EthService(
 
         // apply requested transaction with tracing enabled
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
+
+        // return the tracer result from the evm
+        if(blockContext.getEvmResult != null) {
+          blockContext.getEvmResult.tracerResult
+        } else Unit
+      }
+    }
+  }
+
+  @RpcMethod("debug_traceCall")
+  @RpcOptionalParameters(1)
+  def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): Any = {
+
+    applyOnAccountView { nodeView =>
+      // get block info
+      val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
+
+      // get state at selected block
+      getStateViewAtTag(nodeView, if(tag=="pending") "pending" else (blockInfo.height).toString) { (tagStateView, blockContext) =>
+
+        // use default trace params if none are given
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+
+        // apply requested message with tracing enabled
+        val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
+        tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
 
         // return the tracer result from the evm
         if (blockContext.getEvmResult != null) {
