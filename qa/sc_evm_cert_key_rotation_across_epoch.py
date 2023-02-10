@@ -3,6 +3,8 @@ import time
 
 import requests
 
+from SidechainTestFramework.account.httpCalls.transaction.createKeyRotationTransaction import \
+    http_create_key_rotation_transaction_evm
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_cert_signer_secrets, \
@@ -12,7 +14,6 @@ from httpCalls.block.best import http_block_best
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_signing_key
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
-from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction_evm
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from httpCalls.block.findBlockByID import http_block_findById
 from test_framework.util import assert_equal, assert_true

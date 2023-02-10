@@ -5,6 +5,8 @@ import requests
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
+from SidechainTestFramework.account.httpCalls.transaction.createKeyRotationTransaction import \
+    http_create_key_rotation_transaction_evm
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_cert_signer_secrets, \
@@ -14,7 +16,6 @@ from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_signing_key, \
     http_get_key_rotation_message_to_sign_for_master_key
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
-from httpCalls.transaction.createKeyRotationTransaction import http_create_key_rotation_transaction_evm
 from test_framework.util import assert_equal, assert_true, assert_false
 
 """
@@ -201,19 +202,6 @@ class SCKeyRotationTest(AccountChainSetup):
         status = int(receipt['result']['status'], 16)
         assert_equal(0, status, "Wrong tx status in receipt")
 
-        # # Pass wrong new key proof
-        # response = http_create_key_rotation_transaction_evm(sc_node,
-        #                                                     key_type=0,
-        #                                                     key_index=0,
-        #                                                     new_key=new_public_key,
-        #                                                     signing_key_signature=signing_signature,
-        #                                                     master_key_signature=master_signature,
-        #                                                     new_key_signature=master_signature)
-        # generate_next_blocks(sc_node, "first node", 1)
-        # receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
-        # status = int(receipt['result']['status'], 16)
-        # assert_equal(0, status, "Wrong tx status in receipt")
-
         # Pass wrong key_index
         response = http_create_key_rotation_transaction_evm(sc_node,
                                                             key_type=0,
@@ -228,32 +216,34 @@ class SCKeyRotationTest(AccountChainSetup):
         assert_equal(0, status, "Wrong tx status in receipt")
 
         # Pass key_index out of range
-        error = False
-        try:
-            http_create_key_rotation_transaction_evm(sc_node,
+        response = http_create_key_rotation_transaction_evm(sc_node,
                                                      key_type=0,
                                                      key_index=100,
                                                      new_key=new_public_key,
                                                      signing_key_signature=signing_signature,
                                                      master_key_signature=master_signature,
                                                      new_key_signature=new_key_signature)
-        except:
-            error = True
-        assert_true(error)
+        assert_true("key index out of range" in response['error']['description'])
 
         # Pass wrong key_type
-        error = False
-        try:
-            http_create_key_rotation_transaction_evm(sc_node,
+        response = http_create_key_rotation_transaction_evm(sc_node,
                                                      key_type=3,
                                                      key_index=0,
                                                      new_key=new_public_key,
                                                      signing_key_signature=signing_signature,
                                                      master_key_signature=master_signature,
                                                      new_key_signature=new_key_signature)
-        except:
-            error = True
-        assert_true(error)
+        assert_true("key type enumeration value invalid" in response['error']['description'])
+
+        # Pass wrong new key proof
+        response = http_create_key_rotation_transaction_evm(sc_node,
+                                                            key_type=0,
+                                                            key_index=0,
+                                                            new_key=new_public_key,
+                                                            signing_key_signature=signing_signature,
+                                                            master_key_signature=master_signature,
+                                                            new_key_signature=master_signature)
+        assert_true("self signature is invalid" in response['error']['description'])
 
         # POSITIVE CASE
 
@@ -266,9 +256,10 @@ class SCKeyRotationTest(AccountChainSetup):
                                                             master_key_signature=master_signature,
                                                             new_key_signature=new_key_signature)
         assert_false("error" in response)
-
-        self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
+        receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status, "Wrong tx status in receipt")
         self.sc_sync_all()
 
         # Check that we have the keyRotationProof
@@ -347,9 +338,10 @@ class SCKeyRotationTest(AccountChainSetup):
                                                             master_key_signature=master_signature_3,
                                                             new_key_signature=new_key_signature_3)
         assert_false("error" in response)
-
-        self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
+        receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status, "Wrong tx status in receipt")
         self.sc_sync_all()
 
         # Generate enough MC blocks to reach the end of the withdrawal epoch

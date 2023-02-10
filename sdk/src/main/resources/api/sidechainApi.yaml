@@ -1894,8 +1894,8 @@ paths:
     post:
       tags:
         - submitter
-      summary: returns hash of public key
-      description: Accepts public key and returns hash of the public signing key
+      summary: calculate and return signing key messageToSign to be used to key rotation proof
+      description: Accepts public key and returns message to sign
       operationId: getKeyRotationMessageToSignForSigningKey
       requestBody:
         content:
@@ -1940,8 +1940,8 @@ paths:
     post:
       tags:
         - submitter
-      summary: returns hash of public key
-      description: Accepts public key and returns hash of the public master key
+      summary: calculate and return master key messageToSign to be used to key rotation proof
+      description: Accepts public key and returns message to sign
       operationId: getKeyRotationMessageToSignForMasterKey
       requestBody:
         content:

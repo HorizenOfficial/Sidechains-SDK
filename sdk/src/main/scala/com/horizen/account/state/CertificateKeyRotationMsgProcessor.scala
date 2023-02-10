@@ -132,10 +132,10 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
     }
 
     val latestSigningKey = getLatestSigningKey(view, signingKeyFromConfig, currentEpochNum, index)
-    val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)
     if (!keyRotationProof.signingKeySignature.isValid(latestSigningKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - signing signature is invalid: $index")
 
+    val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)
     if (!keyRotationProof.masterKeySignature.isValid(latestMasterKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - master signature is invalid: $index")
 
