@@ -8,6 +8,8 @@ import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.Assert.*;
 
 public class AddressPropositionTest {
@@ -35,7 +37,7 @@ public class AddressPropositionTest {
         assertNotEquals(addressProposition, null);
 
         // Test 4: Returns false as the object does not contain the same address
-        AddressProposition anotherAddressProposition = PrivateKeySecp256k1Creator.getInstance().generateSecret("addressproptest".getBytes()).publicImage();
+        AddressProposition anotherAddressProposition = PrivateKeySecp256k1Creator.getInstance().generateSecret("addressproptest".getBytes(StandardCharsets.UTF_8)).publicImage();
         assertNotEquals(addressProposition, anotherAddressProposition);
 
         // Test 5: Returns true as the object contains the same address

@@ -5,6 +5,7 @@ import com.horizen.SidechainTypes
 import com.horizen.utils.{ByteArrayWrapper, CswData, CswDataSerializer, ListSerializer, Utils, Pair => JPair}
 import scorex.util.ScorexLogging
 
+import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -16,16 +17,16 @@ class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with
 
   private val cswDataListSerializer = new ListSerializer[CswData](CswDataSerializer)
 
-  private[horizen] val withdrawalEpochKey = Utils.calculateKey("withdrawalEpoch".getBytes)
+  private[horizen] val withdrawalEpochKey = Utils.calculateKey("withdrawalEpoch".getBytes(StandardCharsets.UTF_8))
 
   private val undefinedWithdrawalEpochCounter: Int = -1
 
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
+    Utils.calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch)))
   }
 
   private[horizen] def getCswDataKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
+    Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
   def getWithdrawalEpochCounter(epoch: Int): Int = {

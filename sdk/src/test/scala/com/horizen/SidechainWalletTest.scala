@@ -26,6 +26,7 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 
 import java.lang.{Byte => JByte}
+import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
@@ -197,7 +198,7 @@ class SidechainWalletTest
     val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
 
-    val sidechainWallet = new SidechainWallet("seed".getBytes,
+    val sidechainWallet = new SidechainWallet("seed".getBytes(StandardCharsets.UTF_8),
       mockedWalletBoxStorage,
       mockedSecretStorage,
       mockedWalletTransactionStorage,
@@ -442,10 +443,10 @@ class SidechainWalletTest
     val backupStorageFile = temporaryFolder.newFolder("backupStorage")
     val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
 
-    boxToRestoreList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    boxToRestoreList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes(StandardCharsets.UTF_8)), new ByteArrayWrapper("value1".getBytes(StandardCharsets.UTF_8))))
     backupStorage.update(getVersion, boxToRestoreList.asJava).get
 
-    val sidechainWallet = new SidechainWallet("seed".getBytes,
+    val sidechainWallet = new SidechainWallet("seed".getBytes(StandardCharsets.UTF_8),
       walletBoxStorage,
       mockedSecretStorage,
       mockedWalletTransactionStorage,
@@ -498,7 +499,7 @@ class SidechainWalletTest
     }
     backupStorage.update(getVersion, zenBoxSerializedList.asJava).get
 
-    val sidechainWallet = new SidechainWallet("seed".getBytes,
+    val sidechainWallet = new SidechainWallet("seed".getBytes(StandardCharsets.UTF_8),
       walletBoxStorage,
       mockedSecretStorage,
       mockedWalletTransactionStorage,
@@ -547,7 +548,7 @@ class SidechainWalletTest
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
 
     val sidechainWallet = new SidechainWallet(
-      "seed".getBytes(),
+      "seed".getBytes(StandardCharsets.UTF_8),
       mockedWalletBoxStorage,
       mockedSecretStorage,
       mockedWalletTransactionStorage,
@@ -674,7 +675,7 @@ class SidechainWalletTest
 
     val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
 
-    val sidechainWallet = new SidechainWallet("seed".getBytes, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+    val sidechainWallet = new SidechainWallet("seed".getBytes(StandardCharsets.UTF_8), new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion),
       new SidechainWalletTransactionStorage(mockedTransactionStorage, sidechainTransactionsCompanion),
       new ForgingBoxesInfoStorage(mockedForgingBoxesMerklePathStorage),
@@ -728,7 +729,7 @@ class SidechainWalletTest
       .thenReturn(bytesToId(blockId))
     val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
 
-    val sidechainWallet = new SidechainWallet("seed".getBytes, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+    val sidechainWallet = new SidechainWallet("seed".getBytes(StandardCharsets.UTF_8), new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion),
       new SidechainWalletTransactionStorage(mockedTransactionStorage, sidechainTransactionsCompanion),
       new ForgingBoxesInfoStorage(mockedForgingBoxesMerklePathStorage),
@@ -762,10 +763,10 @@ class SidechainWalletTest
     val mockedCswDataStorage1: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
     val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1,
+    val sidechainWallet = new SidechainWallet("seed".getBytes(StandardCharsets.UTF_8), mockedWalletBoxStorage1, mockedSecretStorage1,
       mockedWalletTransactionStorage1, mockedForgingBoxesMerklePathStorage1, SidechainWalletCswDataProviderCSWEnabled(mockedCswDataStorage1), params, mockedVersion, mockedApplicationWallet)
-    val secret1 = getPrivateKey25519("testSeed1".getBytes())
-    val secret2 = getPrivateKey25519("testSeed2".getBytes())
+    val secret1 = getPrivateKey25519("testSeed1".getBytes(StandardCharsets.UTF_8))
+    val secret2 = getPrivateKey25519("testSeed2".getBytes(StandardCharsets.UTF_8))
 
 
     // Test 1: test secret(proposition) and secretByPublicKey25519Proposition(proposition)
@@ -869,7 +870,7 @@ class SidechainWalletTest
     val mockedCswDataStorage1: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
     val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
 
-    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1,
+    val sidechainWallet = new SidechainWallet("seed".getBytes(StandardCharsets.UTF_8), mockedWalletBoxStorage1, mockedSecretStorage1,
       mockedWalletTransactionStorage1, mockedForgingBoxesMerklePathStorage1, SidechainWalletCswDataProviderCSWEnabled(mockedCswDataStorage1), params, mockedVersion, new CustomApplicationWallet())
     val walletBoxZen1 = getWalletBox(classOf[ZenBox])
     val walletBoxZen2 = getWalletBox(classOf[ZenBox])
@@ -930,7 +931,7 @@ class SidechainWalletTest
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
 
     val sidechainWallet = new SidechainWallet(
-      "seed".getBytes(),
+      "seed".getBytes(StandardCharsets.UTF_8),
       mockedWalletBoxStorage,
       mockedSecretStorage,
       mockedWalletTransactionStorage,
@@ -990,7 +991,7 @@ class SidechainWalletTest
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
 
     val sidechainWallet = new SidechainWallet(
-      "seed".getBytes(),
+      "seed".getBytes(StandardCharsets.UTF_8),
       mockedWalletBoxStorage,
       mockedSecretStorage,
       mockedWalletTransactionStorage,

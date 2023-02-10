@@ -6,6 +6,7 @@ import com.horizen.utils.BytesUtils
 import scorex.crypto.hash.Keccak256
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
@@ -50,7 +51,7 @@ trait ReceiptFixture {
       consensusDataReceipt,
       txHashTemp,
       transactionIndex,
-      Keccak256.hash(blockHash.getBytes).asInstanceOf[Array[Byte]],
+      Keccak256.hash(blockHash.getBytes(StandardCharsets.UTF_8)).asInstanceOf[Array[Byte]],
       blockNumber,
       BigInteger.valueOf(1234567),
       contractAddress

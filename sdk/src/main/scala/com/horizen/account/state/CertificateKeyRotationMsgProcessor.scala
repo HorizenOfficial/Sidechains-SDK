@@ -19,6 +19,7 @@ import scorex.crypto.hash.{Digest32, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
+import java.nio.charset.StandardCharsets
 import java.util
 import scala.collection.mutable
 
@@ -184,7 +185,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 
   private def getKeyRotationProofKey(keyType: KeyRotationProofType, withdrawalEpoch: Int, index: Int): Array[Byte] = {
     calculateKey(Bytes.concat(
-      "keyRotationProof".getBytes,
+      "keyRotationProof".getBytes(StandardCharsets.UTF_8),
       Ints.toByteArray(keyType.id),
       Ints.toByteArray(withdrawalEpoch),
       Ints.toByteArray(index)
@@ -192,15 +193,15 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
   }
 
   private def getSigningKeyKey(epoch: Int, index: Int): Array[Byte] = {
-    calculateKey(Bytes.concat("signingKey".getBytes, Ints.toByteArray(epoch), Ints.toByteArray(index)))
+    calculateKey(Bytes.concat("signingKey".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(epoch), Ints.toByteArray(index)))
   }
 
   private def getMasterKeyKey(epoch: Int, index: Int): Array[Byte] = {
-    calculateKey(Bytes.concat("masterKey".getBytes, Ints.toByteArray(epoch), Ints.toByteArray(index)))
+    calculateKey(Bytes.concat("masterKey".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(epoch), Ints.toByteArray(index)))
   }
 
   private def getKeysRotationHistoryKey(keyType: KeyRotationProofType, index: Int): Array[Byte] = {
-    calculateKey(Bytes.concat("keyHistory".getBytes, Ints.toByteArray(keyType.id), Ints.toByteArray(index)))
+    calculateKey(Bytes.concat("keyHistory".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(keyType.id), Ints.toByteArray(index)))
   }
 }
 

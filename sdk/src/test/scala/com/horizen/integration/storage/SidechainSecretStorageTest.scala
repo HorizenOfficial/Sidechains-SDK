@@ -1,6 +1,8 @@
 package com.horizen.integration.storage
 
 import com.google.common.primitives.{Bytes, Ints}
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
@@ -14,10 +16,9 @@ import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
-
-import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
-import java.util.{Optional, ArrayList => JArrayList, HashMap => JHashMap}
+import java.util.{Optional, ArrayList => JArrayList}
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 import scala.util.Try
 

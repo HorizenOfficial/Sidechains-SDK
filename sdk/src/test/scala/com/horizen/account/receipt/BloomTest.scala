@@ -7,6 +7,8 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import scorex.crypto.hash.Keccak256
 
+import java.nio.charset.StandardCharsets
+
 class BloomTest
     extends JUnitSuite
     with MockitoSugar
@@ -37,20 +39,20 @@ class BloomTest
 
     val bloomLog = new Bloom()
 
-    positive.foreach(s => bloomLog.add(s.getBytes()))
-    positive.foreach(s => assert(bloomLog.test(s.getBytes())))
-    negative.foreach(s => assert(!bloomLog.test(s.getBytes())))
+    positive.foreach(s => bloomLog.add(s.getBytes(StandardCharsets.UTF_8)))
+    positive.foreach(s => assert(bloomLog.test(s.getBytes(StandardCharsets.UTF_8))))
+    negative.foreach(s => assert(!bloomLog.test(s.getBytes(StandardCharsets.UTF_8))))
 
     val bloomLog2 = new Bloom()
     bloomLog2.merge(bloomLog)
 
-    positive.foreach(s => assert(bloomLog2.test(s.getBytes())))
-    negative.foreach(s => assert(!bloomLog2.test(s.getBytes())))
+    positive.foreach(s => assert(bloomLog2.test(s.getBytes(StandardCharsets.UTF_8))))
+    negative.foreach(s => assert(!bloomLog2.test(s.getBytes(StandardCharsets.UTF_8))))
 
     val bloomLog3 = new Bloom()
 
-    positive.foreach(s => assert(!bloomLog3.test(s.getBytes())))
-    negative.foreach(s => assert(!bloomLog3.test(s.getBytes())))
+    positive.foreach(s => assert(!bloomLog3.test(s.getBytes(StandardCharsets.UTF_8))))
+    negative.foreach(s => assert(!bloomLog3.test(s.getBytes(StandardCharsets.UTF_8))))
   }
 
   @Test def bloomFilterGethExtensiveTest(): Unit = {
@@ -58,7 +60,7 @@ class BloomTest
     val bloomLog = new Bloom()
 
     for(i <- 0 until 100) {
-      bloomLog.add(s"xxxxxxxxxx data $i yyyyyyyyyyyyyy".getBytes())
+      bloomLog.add(s"xxxxxxxxxx data $i yyyyyyyyyyyyyy".getBytes(StandardCharsets.UTF_8))
     }
 
     val bloomFilterHash = Keccak256.hash(bloomLog.getBytes)

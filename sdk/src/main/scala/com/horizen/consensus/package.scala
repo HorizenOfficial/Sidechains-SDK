@@ -9,13 +9,14 @@ import scorex.util.ModifierId
 import supertagged.TaggedType
 
 import java.math.{BigDecimal, BigInteger, MathContext}
+import java.nio.charset.StandardCharsets
 
 package object consensus {
   val merkleTreeHashLen: Int = 32
   val sha256HashLen: Int = 32
   val consensusNonceAllowedLengths: Seq[Int] = Seq(8, 32)
 
-  val consensusHardcodedSaltString: Array[Byte] = "TEST".getBytes()
+  val consensusHardcodedSaltString: Array[Byte] = "TEST".getBytes(StandardCharsets.UTF_8)
   val consensusPreForkLength: Int = 4 + 8 + consensusHardcodedSaltString.length
   val forgerStakePercentPrecision: BigDecimal = BigDecimal.valueOf(1000000) // where 1 / forgerStakePercentPrecision -- minimal possible forger stake percentage to be able to forge
   val stakeConsensusDivideMathContext: MathContext = MathContext.DECIMAL128 //shall be used during dividing, otherwise ArithmeticException is thrown in case of irrational number as division result

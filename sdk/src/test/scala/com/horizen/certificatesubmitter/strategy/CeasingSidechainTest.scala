@@ -22,6 +22,7 @@ import com.horizen.utils.BytesUtils
 import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
 import sparkz.core.NodeViewHolder.CurrentView
 
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 
@@ -68,8 +69,8 @@ class CeasingSidechainTest extends JUnitSuite
     val messageToSign = FieldElementFixture.generateFieldElement()
     val knownSigs = ArrayBuffer[CertificateSignatureInfo]()
 
-    val schnorrSecret1 = SchnorrKeyGenerator.getInstance().generateSecret("seed1".getBytes())
-    val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes())
+    val schnorrSecret1 = SchnorrKeyGenerator.getInstance().generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
+    val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes(StandardCharsets.UTF_8))
 
     // Too few keys
     when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String])).thenAnswer(

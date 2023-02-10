@@ -1,7 +1,6 @@
 package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxGenerationMetadata, SidechainBlockFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.VrfPublicKey
@@ -13,6 +12,7 @@ import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jF
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
 
 class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with SidechainBlockFixture {
@@ -65,7 +65,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
     }
 
     // Test 2: try to deserialize broken bytes.
-    assertTrue("SidechainBlockHeaderSerializer expected to be not parsed due to broken data.", SidechainBlockHeaderSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("SidechainBlockHeaderSerializer expected to be not parsed due to broken data.", SidechainBlockHeaderSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test
@@ -115,7 +115,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
 
 
     // Test 2: signed header with invalid signature must be not semantically valid
-    val invalidSignature = forgerMetadata.blockSignSecret.sign("different_message".getBytes())
+    val invalidSignature = forgerMetadata.blockSignSecret.sign("different_message".getBytes(StandardCharsets.UTF_8))
     val invalidSignedHeader = baseUnsignedHeader.copy(signature = invalidSignature)
     invalidSignedHeader.semanticValidity(params) match {
       case Success(_) =>

@@ -14,6 +14,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -33,7 +34,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
             VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed);
         }
 
-        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes(StandardCharsets.UTF_8));
         // Note: current box bytes are also stored in "src/test/resources/forgerbox_hex"
         box = getForgerBox(
                 new PublicKey25519Proposition(keyPair.getValue()),
@@ -63,7 +64,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
         assertEquals("Boxes expected to be equal", box, box2);
 
 
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
     }
 

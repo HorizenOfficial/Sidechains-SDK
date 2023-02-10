@@ -26,6 +26,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import scorex.util.ModifierId
 import sparkz.core.{bytesToId, bytesToVersion}
 
+import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.Seq
@@ -499,7 +500,7 @@ class SidechainStateTest
     // Test 2: with single block fee info record in the storage
     Mockito.reset(stateStorage)
     val blockFee1: Long = 100
-    val blockFeeInfo1: BlockFeeInfo = BlockFeeInfo(blockFee1, getPrivateKey25519("forger1".getBytes()).publicImage())
+    val blockFeeInfo1: BlockFeeInfo = BlockFeeInfo(blockFee1, getPrivateKey25519("forger1".getBytes(StandardCharsets.UTF_8)).publicImage())
     Mockito.when(stateStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq(blockFeeInfo1))
 
     feePayments = sidechainState.getFeePayments(0)
@@ -510,9 +511,9 @@ class SidechainStateTest
     // Test 3: with multiple block fee info records for different forger keys in the storage
     Mockito.reset(stateStorage)
     val blockFee2: Long = 100
-    val blockFeeInfo2: BlockFeeInfo = BlockFeeInfo(blockFee2, getPrivateKey25519("forger2".getBytes()).publicImage())
+    val blockFeeInfo2: BlockFeeInfo = BlockFeeInfo(blockFee2, getPrivateKey25519("forger2".getBytes(StandardCharsets.UTF_8)).publicImage())
     val blockFee3: Long = 201
-    val blockFeeInfo3: BlockFeeInfo = BlockFeeInfo(blockFee3, getPrivateKey25519("forger3".getBytes()).publicImage())
+    val blockFeeInfo3: BlockFeeInfo = BlockFeeInfo(blockFee3, getPrivateKey25519("forger3".getBytes(StandardCharsets.UTF_8)).publicImage())
     Mockito.when(stateStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3))
 
@@ -545,11 +546,11 @@ class SidechainStateTest
 
 
     // Test 5: with multiple block fee info records created by 2 unique forgers
-    val bfi1 = BlockFeeInfo(0, getPrivateKey25519("forger1".getBytes()).publicImage())
-    val bfi2 = BlockFeeInfo(1000, getPrivateKey25519("forger1".getBytes()).publicImage())
-    val bfi3 = BlockFeeInfo(0, getPrivateKey25519("forger1".getBytes()).publicImage())
-    val bfi4 = BlockFeeInfo(200, getPrivateKey25519("forger2".getBytes()).publicImage())
-    val bfi5 = BlockFeeInfo(0, getPrivateKey25519("forger2".getBytes()).publicImage())
+    val bfi1 = BlockFeeInfo(0, getPrivateKey25519("forger1".getBytes(StandardCharsets.UTF_8)).publicImage())
+    val bfi2 = BlockFeeInfo(1000, getPrivateKey25519("forger1".getBytes(StandardCharsets.UTF_8)).publicImage())
+    val bfi3 = BlockFeeInfo(0, getPrivateKey25519("forger1".getBytes(StandardCharsets.UTF_8)).publicImage())
+    val bfi4 = BlockFeeInfo(200, getPrivateKey25519("forger2".getBytes(StandardCharsets.UTF_8)).publicImage())
+    val bfi5 = BlockFeeInfo(0, getPrivateKey25519("forger2".getBytes(StandardCharsets.UTF_8)).publicImage())
     Mockito.reset(stateStorage)
     Mockito.when(stateStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(bfi1, bfi2, bfi3, bfi4, bfi5))
@@ -1175,15 +1176,15 @@ class SidechainStateTest
     val signingKeys = new JArrayList[SchnorrSecret]()
     val masterKeys = new JArrayList[SchnorrSecret]()
     for (i <- 0 until 3) {
-      signingKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(("signingSeed"+i).getBytes))
-      masterKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(("masterSeed"+i).getBytes()))
+      signingKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(("signingSeed"+i).getBytes(StandardCharsets.UTF_8)))
+      masterKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(("masterSeed"+i).getBytes(StandardCharsets.UTF_8)))
     }
 
     val certifiersKeys = CertifiersKeys(signingKeys.asScala.toVector.map(key => key.publicImage()), masterKeys.asScala.toVector.map(key => key.publicImage()))
     Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
     Mockito.when(mockedStateStorage.getCertifiersKeys(0)).thenReturn(Some(certifiersKeys))
 
-    val newSigningKey = SchnorrKeyGenerator.getInstance().generateSecret("newKey1".getBytes())
+    val newSigningKey = SchnorrKeyGenerator.getInstance().generateSecret("newKey1".getBytes(StandardCharsets.UTF_8))
 
     var keyRotationTransaction = getKeyRotationTransaction((boxList.head.asInstanceOf[ZenBox], secretList.head), KeyRotationProofTypes.SigningKeyRotationProofType, 4, newSigningKey, signingKeys.get(0), masterKeys.get(0))
 

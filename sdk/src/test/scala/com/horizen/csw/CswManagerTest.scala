@@ -30,6 +30,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success, Try}
@@ -605,7 +606,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
     Mockito.when(wallet.secretByPublicKey25519Proposition(ArgumentMatchers.any[PublicKey25519Proposition]())).thenAnswer(_ => {
-      java.util.Optional.of(PrivateKey25519Creator.getInstance().generateSecret("secret".getBytes).asInstanceOf[Secret])
+      java.util.Optional.of(PrivateKey25519Creator.getInstance().generateSecret("secret".getBytes(StandardCharsets.UTF_8)).asInstanceOf[Secret])
     })
 
 

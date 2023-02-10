@@ -1,21 +1,21 @@
 package com.horizen.vrf
 
 import java.util
-
 import com.horizen.cryptolibprovider.VrfFunctions.{KeyType, ProofType}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
 
+import java.nio.charset.StandardCharsets
 import scala.util.Random
 
 
 class VrfFunctionsTest {
-  val keys: util.EnumMap[KeyType, Array[Byte]] = CryptoLibProvider.vrfFunctions.generatePublicAndSecretKeys(1.toString.getBytes())
+  val keys: util.EnumMap[KeyType, Array[Byte]] = CryptoLibProvider.vrfFunctions.generatePublicAndSecretKeys(1.toString.getBytes(StandardCharsets.UTF_8))
   val secretBytes: Array[Byte] = keys.get(KeyType.SECRET)
   val publicBytes: Array[Byte] = keys.get(KeyType.PUBLIC)
-  val message: Array[Byte] = "Very secret message!".getBytes
+  val message: Array[Byte] = "Very secret message!".getBytes(StandardCharsets.UTF_8)
   val vrfProofBytes: Array[Byte] = CryptoLibProvider.vrfFunctions.createProof(secretBytes, publicBytes, message).get(ProofType.VRF_PROOF)
   val vrfProofCheck: Boolean = CryptoLibProvider.vrfFunctions.verifyProof(message, publicBytes, vrfProofBytes)
   val vrfOutputBytes: Array[Byte] = CryptoLibProvider.vrfFunctions.proofToOutput(publicBytes, message, vrfProofBytes).get()
@@ -36,7 +36,7 @@ class VrfFunctionsTest {
 
     for (i <- 1 to 10) {
       val messageLen = rnd.nextInt(128) % FieldElementUtils.fieldElementLength()
-      val newMessage = rnd.nextString(rnd.nextInt(128)).getBytes.take(messageLen)
+      val newMessage = rnd.nextString(rnd.nextInt(128)).getBytes(StandardCharsets.UTF_8).take(messageLen)
       val firstVrfProofBytes = CryptoLibProvider.vrfFunctions.createProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
       val secondVrfProofBytes = CryptoLibProvider.vrfFunctions.createProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
       //@TODO uncomment this ASAP after proof generation became deterministic
@@ -52,7 +52,7 @@ class VrfFunctionsTest {
 
   @Test()
   def tryToCorruptProof(): Unit= {
-    val corruptedMessage: Array[Byte] = "Not very secret message!".getBytes
+    val corruptedMessage: Array[Byte] = "Not very secret message!".getBytes(StandardCharsets.UTF_8)
     val vrfProofCheckCorruptedMessage = CryptoLibProvider.vrfFunctions.verifyProof(corruptedMessage, publicBytes, vrfProofBytes)
     assertFalse(vrfProofCheckCorruptedMessage)
 
