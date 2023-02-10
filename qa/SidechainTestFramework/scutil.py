@@ -42,7 +42,8 @@ TEST_LEVEL_DEBUG = "debug"
 DEFAULT_REST_API_TIMEOUT = 5
 
 # max P2P message size for a Modifier
-DEFAULT_MAX_PACKET_SIZE = 5242980
+DEFAULT_MAX_PACKET_SIZE = 5*1024*1024+100
+DEFAULT_ACCOUNT_MODEL_MAX_PACKET_SIZE = 7*1024*1024+100
 
 SLOTS_IN_EPOCH = 720
 SIMPLE_APP_SLOT_TIME = 120  # seconds
@@ -439,6 +440,11 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         sc_node_config.forger_options.allowed_forgers.append(
             '{ blockSignProposition = "' + bootstrap_info.genesis_account.publicKey + '" NEW_LINE vrfPublicKey = "' + bootstrap_info.genesis_vrf_account.publicKey + '" }')
 
+    if bootstrap_info.genesis_evm_account is not None:
+        max_modifiers_spec_message_size = DEFAULT_ACCOUNT_MODEL_MAX_PACKET_SIZE
+    else:
+        max_modifiers_spec_message_size = DEFAULT_MAX_PACKET_SIZE
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -489,7 +495,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
-        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE,
+        "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),
         "CIRCUIT_TYPE": bootstrap_info.circuit_type,
         "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false")
     }
@@ -553,7 +559,7 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path,
         "RESTRICT_FORGERS": "false",
         "ALLOWED_FORGERS_LIST": [],
-        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE,
+        "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": DEFAULT_MAX_PACKET_SIZE,
         "REMOTE_KEY_MANAGER_ENABLED": "false"
     }
 

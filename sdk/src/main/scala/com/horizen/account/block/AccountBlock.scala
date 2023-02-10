@@ -1,7 +1,7 @@
 package com.horizen.account.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.account.block.AccountBlock.calculateReceiptRoot
+import com.horizen.account.block.AccountBlock.{MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE, calculateReceiptRoot}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
@@ -88,15 +88,22 @@ class AccountBlock(override val header: AccountBlockHeader,
   //Number of transactions doesn't have a limit in an AccountBlock because txs are limited using block gas limit
   override def transactionsListExceedsSizeLimit: Boolean = false
 
-  //AccountBlock size doesn't have a limit in an AccountBlock because block gas limit control the number of txs included
-  override def blockExceedsSizeLimit(blockSize: Int): Boolean = false
+  //AccountBlock size: block gas limit controls the number of txs included, but we have also overheads (MC block ref, ommers, header)
+  override def blockExceedsSizeLimit(blockSize: Long): Boolean = blockSize > AccountBlock.MAX_ACCOUNT_BLOCK_SIZE
 
+  // This controls the overhead size, which is computed as the difference between the total block size and the size
+  // of all included txes
+  override def blockExceedsOverheadSizeLimit(blockOverheadSize: Long): Boolean = {
+    blockOverheadSize > MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE
+  }
 }
 
 
 object AccountBlock {
 
   val ACCOUNT_BLOCK_VERSION: Block.Version = 2: Byte
+  val MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE: Int = 5000000
+  val MAX_ACCOUNT_BLOCK_SIZE: Int = 7000000
 
   def create(parentId: Block.BlockId,
              blockVersion: Block.Version,

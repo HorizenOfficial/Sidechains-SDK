@@ -162,7 +162,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       .filter(tx => {
         val txSize = tx.bytes.length + 4 // placeholder for Tx length
         txsCounter += 1
-        if (txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
+        if (txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > getMaxBlockSize())
           false // stop data collection
         else {
           blockSize += txSize
@@ -180,6 +180,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: SidechainWallet, history: SidechainHistory, state: SidechainState, branchPointInfo: BranchPointInfo, nextBlockTimestamp: Long): Seq[ForgingStakeMerklePathInfo] =
      wallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
 
+  // in UTXO model we have the same limit for both sizes, no special partition reserved for transactions
+  override def getMaxBlockOverheadSize(): Int = SidechainBlock.MAX_BLOCK_SIZE
+  override def getMaxBlockSize(): Int = getMaxBlockOverheadSize()
 }
 
 

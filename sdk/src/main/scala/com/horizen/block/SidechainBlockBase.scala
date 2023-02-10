@@ -42,7 +42,10 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
 
   def transactionsListExceedsSizeLimit: Boolean
 
-  def blockExceedsSizeLimit(blockSize: Int): Boolean
+  def blockExceedsSizeLimit(blockSize: Long): Boolean
+
+  def blockExceedsOverheadSizeLimit(blockOverheadSize: Long): Boolean
+
 
   // Verify that included sidechainTransactions are consistent to header.sidechainTransactionsMerkleRootHash.
   @throws(classOf[InconsistentSidechainBlockDataException])
@@ -135,7 +138,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id sidechain transactions amount exceeds the limit.")
 
     // Check Block size
-    val blockSize: Int = bytes.length
+    val blockSize: Long = bytes.length
     if(blockExceedsSizeLimit(blockSize))
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id size exceeds the limit.")
 
@@ -146,15 +149,23 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
         throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
     }
 
+    var totalTxSize = 0L
     // Check that SidechainTransactions are valid.
     for(tx <- sidechainTransactions) {
       Try {
         tx.semanticValidity()
+        totalTxSize = totalTxSize + tx.size()
       } match {
         case Success(_) =>
         case Failure(e) => throw new InvalidSidechainBlockDataException(
           s"${getClass.getSimpleName} $id Transaction ${tx.id} is semantically invalid: ${e.getMessage}.")
       }
+    }
+
+    // Check we do not exceed the block overhead size
+    val blockOverheadSize = blockSize-totalTxSize
+    if(blockExceedsOverheadSizeLimit(blockOverheadSize)) {
+      throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id block overhead size $blockOverheadSize exceeds the limit.")
     }
 
     // Check that MainchainHeaders are valid.

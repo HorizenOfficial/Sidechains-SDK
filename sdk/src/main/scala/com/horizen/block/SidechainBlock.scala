@@ -66,8 +66,10 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
   override def transactionsListExceedsSizeLimit: Boolean = sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
 
-  override def blockExceedsSizeLimit(blockSize: Int): Boolean = blockSize > SidechainBlock.MAX_BLOCK_SIZE
+  override def blockExceedsSizeLimit(blockSize: Long): Boolean = blockSize > SidechainBlock.MAX_BLOCK_SIZE
 
+  // UTXO does not have a specific limit for block overhead size
+  override def blockExceedsOverheadSizeLimit(blockOverheadSize: Long): Boolean = false
 }
 
 
