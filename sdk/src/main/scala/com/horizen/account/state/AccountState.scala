@@ -13,6 +13,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
+import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
@@ -346,7 +347,7 @@ class AccountState(
   }
 
   override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
-    if (withdrawalEpoch == -1)
+    if (withdrawalEpoch == -1 || params.circuitType == NaiveThresholdSignatureCircuit)
       Some(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
     else {
       using(getView)(_.certifiersKeys(withdrawalEpoch))
