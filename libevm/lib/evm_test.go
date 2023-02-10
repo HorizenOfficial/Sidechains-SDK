@@ -334,7 +334,7 @@ func TestEvmOpCodes(t *testing.T) {
 					BlockNumber:       (*hexutil.Big)(blockNumber),
 					Time:              (*hexutil.Big)(time),
 					BaseFee:           (*hexutil.Big)(baseFee),
-					Random:            &random,
+					Random:            random,
 					BlockHashCallback: &BlockHashCallback{Callback(blockHashCallbackHandle)},
 				},
 			})

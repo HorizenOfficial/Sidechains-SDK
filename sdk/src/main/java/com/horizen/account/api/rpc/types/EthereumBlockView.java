@@ -45,9 +45,8 @@ public class EthereumBlockView {
     public final String sha3Uncles = "0x";
     // we do not have extraData in the block
     public final String extraData = "0x";
-    // currently we do not use the mixHash, but we will set it to a VRF random number in the future to support the
-    // PREVRANDAO EVM-opcode, just like Ethereum does since The Merge
-    public final String mixHash = "0x";
+    // mixHash is set to a VRF output to support the PREVRANDAO EVM-opcode, just like Ethereum does since The Merge
+    public final Hash mixHash;
 
     private EthereumBlockView(Long blockNumber, Hash blockHash, AccountBlock block, List<?> txs) {
         var header = block.header();
@@ -66,6 +65,7 @@ public class EthereumBlockView {
         timestamp = Numeric.encodeQuantity(BigInteger.valueOf(block.timestamp()));
         baseFeePerGas = Numeric.encodeQuantity(header.baseFee());
         transactions = txs;
+        mixHash = new Hash(header.vrfOutput().bytes());
     }
 
     public static EthereumBlockView notHydrated(Long blockNumber, Hash blockHash, AccountBlock block) {

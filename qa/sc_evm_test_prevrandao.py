@@ -2,12 +2,14 @@
 import logging
 from decimal import Decimal
 
+from eth_utils import add_0x_prefix
+
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
-from SidechainTestFramework.account.ac_utils import format_evm, generate_block_and_get_tx_receipt, ensure_nonce
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_utils import format_evm, generate_block_and_get_tx_receipt
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
 from httpCalls.block.findBlockByID import http_block_findById
-from test_framework.util import assert_equal, assert_true
+from test_framework.util import assert_equal
 
 """
 Check an EVM PREVRANDAO Opcode.
@@ -29,6 +31,7 @@ Test:
           * `safe` block
         - Results expected to be the equal and fits blockheader vrfOutput value.
         - Test: `random` is used as a part of Tx -> Forger associates the same VrfOutput as the one in the AccountState.
+        - Check that EthereumBlockView returned by RPC contains `mixHash` fields equals to vrfOutput
 """
 
 
@@ -120,7 +123,7 @@ class SCEvmPrevrandao(AccountChainSetup):
         # Test against the `safe`
         safe_block = http_block_findById(sc_node, safe_block_id)
         safe_block_vrf_output = safe_block["block"]["header"]["vrfOutput"]["bytes"]
-        expected_random = int('0x' + safe_block_vrf_output, 16)
+        expected_random = int(add_0x_prefix(safe_block_vrf_output), 16)
 
         self.__get_random_by_prevrandao(smart_contract, smart_contract_address, self.evm_address,
                                         expected_random, 'safe')
@@ -142,9 +145,16 @@ class SCEvmPrevrandao(AccountChainSetup):
         # Verify persistent random
         last_block = http_block_findById(sc_node, last_block_id)
         last_block_vrf_output = last_block["block"]["header"]["vrfOutput"]["bytes"]
-        expected_random = int('0x' + last_block_vrf_output, 16)
+        expected_random = int(add_0x_prefix(last_block_vrf_output), 16)
 
         self.__get_persistent_random(smart_contract, smart_contract_address, self.evm_address, expected_random, 'latest')
+
+        last_block_eth = sc_node.rpc_eth_getBlockByHash(add_0x_prefix(last_block_id), False)['result']
+        if last_block_eth is None:
+            raise Exception('Unexpected error: block not found {}'.format(last_block_id))
+
+        assert_equal(add_0x_prefix(last_block_vrf_output), last_block_eth['mixHash'],
+                     "EthBlockView mixHash is different to AccountBlockHeader vrfOutput")
 
 
 if __name__ == "__main__":
