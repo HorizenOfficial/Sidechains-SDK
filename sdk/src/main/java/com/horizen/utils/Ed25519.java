@@ -42,6 +42,14 @@ public final class Ed25519 {
         return signature;
     }
 
+    public static boolean validatePublicKey(byte[] publicKey) {
+        try {
+            return org.bouncycastle.math.ec.rfc8032.Ed25519.validatePublicKeyFull(publicKey, 0);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static boolean validatePublicKey(byte[] privateKey, byte[] publicKey) {
         try {
             if (!org.bouncycastle.math.ec.rfc8032.Ed25519.validatePublicKeyFull(publicKey, 0))
