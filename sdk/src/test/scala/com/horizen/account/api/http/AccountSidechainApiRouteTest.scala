@@ -7,7 +7,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GenerateSecret, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -105,6 +105,10 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply())
                 sender ! f(utilMocks.getAccountNodeView(sidechainApiMockConfiguration), funParameter)
           }
+        case GenerateSecret(_) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GenerateSecret_reply())
+            sender ! Success(Unit)
+          else sender ! Failure(new Exception("Secret not added."))
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success(Unit)

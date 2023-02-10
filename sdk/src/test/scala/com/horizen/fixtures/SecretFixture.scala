@@ -2,15 +2,15 @@ package com.horizen.fixtures
 
 import com.google.common.primitives.Longs
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.PrivateKeySecp256k1
+import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.utils.Secp256k1
-import com.horizen.secret._
 import com.horizen.customtypes._
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
 import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
 import java.math.BigInteger
+import com.horizen.secret._
 import java.nio.charset.StandardCharsets
 import java.util
 import scala.util.Random
@@ -18,6 +18,8 @@ import scala.util.Random
 trait SecretFixture {
   val pkc: PrivateKey25519Creator = PrivateKey25519Creator.getInstance()
   val schnorr: SchnorrKeyGenerator = SchnorrKeyGenerator.getInstance()
+  val pkk1: PrivateKeySecp256k1Creator = PrivateKeySecp256k1Creator.getInstance()
+  val vrf: VrfKeyGenerator = VrfKeyGenerator.getInstance()
 
   val pk1: PrivateKey25519 = pkc.generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
   val pk2: PrivateKey25519 = pkc.generateSecret("seed2".getBytes(StandardCharsets.UTF_8))
@@ -34,8 +36,38 @@ trait SecretFixture {
     pkc.generateSecret(seed)
   }
 
+  def getPrivateKeySecp256k1: PrivateKeySecp256k1 = {
+    val seed = new Array[Byte](32)
+    Random.nextBytes(seed)
+    pkk1.generateSecret(seed)
+  }
+
+  def getSchnorrKey: SchnorrSecret = {
+    val seed = new Array[Byte](32)
+    Random.nextBytes(seed)
+    schnorr.generateSecret(seed)
+  }
+
+  def getVrfKey: VrfSecretKey = {
+    val seed = new Array[Byte](32)
+    Random.nextBytes(seed)
+    vrf.generateSecret(seed)
+  }
+
   def getPrivateKey25519(seed: Array[Byte]): PrivateKey25519 = {
     pkc.generateSecret(seed)
+  }
+
+  def getPrivateKeySecp256k1(seed: Array[Byte]): PrivateKeySecp256k1 = {
+    pkk1.generateSecret(seed)
+  }
+
+  def getSchnorrKey(seed: Array[Byte]): SchnorrSecret = {
+    schnorr.generateSecret(seed)
+  }
+
+  def getVrfKey(seed: Array[Byte]): VrfSecretKey = {
+    vrf.generateSecret(seed)
   }
 
   def getPrivateKey25519List(count: Int): JList[PrivateKey25519] = {
@@ -122,12 +154,6 @@ trait SecretFixture {
 
   def getAddressProposition(seed: Long): AddressProposition = {
     getPrivateKeySecp256k1(seed).publicImage()
-  }
-
-  def getSchnorrKey: SchnorrSecret = {
-    val seed = new Array[Byte](32)
-    Random.nextBytes(seed)
-    schnorr.generateSecret(seed)
   }
 
   def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
