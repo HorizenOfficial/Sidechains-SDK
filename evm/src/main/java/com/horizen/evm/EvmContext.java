@@ -1,4 +1,4 @@
-package com.horizen.evm.interop;
+package com.horizen.evm;
 
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
@@ -13,4 +13,5 @@ public class EvmContext {
     public BigInteger time;
     public BigInteger baseFee;
     public Hash random;
+    public BlockHashCallback blockHashCallback;
 }

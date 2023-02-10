@@ -1,6 +1,5 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.EvmContext;
 import com.horizen.evm.interop.EvmParams;
 import com.horizen.evm.interop.EvmResult;
 import com.horizen.evm.interop.TraceOptions;
@@ -9,7 +8,7 @@ import com.horizen.evm.utils.Address;
 import java.math.BigInteger;
 
 public final class Evm {
-    private Evm() {}
+    private Evm() { }
 
     public static EvmResult Apply(
         ResourceHandle stateDBHandle,

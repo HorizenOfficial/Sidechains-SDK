@@ -15,8 +15,9 @@ public class BlockContext {
     public final int blockNumber;
     public final int consensusEpochNumber;
     public final int withdrawalEpochNumber;
-    private TraceOptions traceOptions;
     public final long chainID;
+    public final HistoryBlockHashProvider blockHashProvider;
+    private TraceOptions traceOptions;
     private EvmResult evmResult;
 
     public BlockContext(
@@ -27,7 +28,8 @@ public class BlockContext {
         int blockNumber,
         int consensusEpochNumber,
         int withdrawalEpochNumber,
-        long chainID
+        long chainID,
+        HistoryBlockHashProvider blockHashProvider
     ) {
         this.forgerAddress = forgerAddress;
         this.timestamp = timestamp;
@@ -37,6 +39,7 @@ public class BlockContext {
         this.consensusEpochNumber = consensusEpochNumber;
         this.withdrawalEpochNumber = withdrawalEpochNumber;
         this.chainID = chainID;
+        this.blockHashProvider = blockHashProvider;
     }
 
     public BlockContext(
@@ -44,7 +47,8 @@ public class BlockContext {
         int blockNumber,
         int consensusEpochNumber,
         int withdrawalEpochNumber,
-        long chainID
+        long chainID,
+        HistoryBlockHashProvider blockHashProvider
     ) {
         this(
             blockHeader.forgerAddress().address(),
@@ -54,7 +58,8 @@ public class BlockContext {
             blockNumber,
             consensusEpochNumber,
             withdrawalEpochNumber,
-            chainID
+            chainID,
+            blockHashProvider
         );
     }
 
