@@ -51,8 +51,6 @@ import com.horizen.utils.*;
 import scala.Enumeration;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
-import sparkz.crypto.hash.Blake2b256;
-import sparkz.util.encode.Base16;
 import org.mindrot.jbcrypt.BCrypt;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -803,7 +801,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             }
 
             String mcNetworkName = getNetworkName(network);
-            NetworkParams params = getNetworkParams(network, scId);
+            NetworkParams params = getNetworkParams(network, scId, false);
             // Uncomment if you want to save mc block hex for some reason
             /* try (PrintStream out = new PrintStream(new FileOutputStream("c:/mchex.txt"))) {
                 out.print(BytesUtils.toHexString(Arrays.copyOfRange(infoBytes, offset, infoBytes.length)));
@@ -824,6 +822,10 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                     sidechainCreation =  (SidechainCreation) output;
                 }
             }
+
+            boolean isNewCircuit = sidechainCreation.getScCrOutput().fieldElementCertificateFieldConfigs().length()
+                    == CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION;
+            params = getNetworkParams(network, scId, isNewCircuit);
 
             if (sidechainCreation == null)
                 throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo mc block.");
@@ -1035,14 +1037,18 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         return "";
     }
 
-    private NetworkParams getNetworkParams(byte network, byte[] scId) {
+    private NetworkParams getNetworkParams(byte network, byte[] scId, boolean isNewCircuit) {
+        Enumeration.Value circuitType = isNewCircuit
+                ? CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation()
+                : CircuitTypes.NaiveThresholdSignatureCircuit();
+
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

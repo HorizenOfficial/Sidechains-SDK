@@ -22,7 +22,9 @@ import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.evm.utils.Address
 import com.horizen.node.NodeWalletBase
@@ -660,7 +662,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
             case NaiveThresholdSignatureCircuitWithKeyRotation =>
               applyOnNodeView { sidechainNodeView =>
-                checkKeyRotationProofValidity(body)
+
+                checkKeyRotationProofValidity(body, sidechainNodeView.getNodeState.getWithdrawalEpochInfo.epoch)
                 val data = encodeSubmitKeyRotationRequestCmd(body)
                 val gasInfo = body.gasInfo
 
@@ -732,14 +735,26 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
   }
 
-  private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction): Unit = {
+  private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction, epoch: Int): Unit = {
     val index = body.keyIndex
     val keyType = body.keyType
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey))
+    val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature))
     if (index < 0 || index >= params.signersPublicKeys.length)
       throw new IllegalArgumentException(s"Key rotation proof - key index out for range: $index")
 
     if (keyType < 0 || keyType >= KeyRotationProofTypes.maxId)
       throw new IllegalArgumentException("Key type enumeration value should be valid!")
+
+    val messageToSign = KeyRotationProofTypes(keyType) match {
+      case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForSigningKeyUpdate(newKey.pubKeyBytes(), epoch, params.sidechainId)
+      case MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForMasterKeyUpdate(newKey.pubKeyBytes(), epoch, params.sidechainId)
+    }
+
+    if (!newKeySignature.isValid(newKey, messageToSign))
+      throw new IllegalArgumentException(s"Key rotation proof - self signature is invalid: $index")
   }
 
 }
