@@ -1926,7 +1926,7 @@ paths:
                     properties:
                       keyRotationMessageToSign:
                         type: string
-                        description: Hash of public key of certificate signer
+                        description: Calculated messageToSign to be used to key rotation proof
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1972,7 +1972,7 @@ paths:
                     properties:
                       keyRotationMessageToSign:
                         type: string
-                        description: Hash of public key of certificate signer
+                        description: Calculated messageToSign to be used to key rotation proof
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
