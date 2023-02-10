@@ -30,12 +30,12 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     }
 
     @Override
-    public EnumMap<ProofType, byte[]> createProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] message) {
+    public EnumMap<ProofType, byte[]> createProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] element) {
         VRFSecretKey secretKey = VRFSecretKey.deserialize(secretKeyBytes);
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
 
         VRFKeyPair keyPair = new VRFKeyPair(secretKey, publicKey);
-        FieldElement fieldElement = FieldElementUtils.messageToFieldElement(message);
+        FieldElement fieldElement = FieldElementUtils.elementToFieldElement(element);
         VRFProveResult vrfProofAndVrfOutput = keyPair.prove(fieldElement);
         byte[] vrfProofBytes = vrfProofAndVrfOutput.getVRFProof().serializeProof();
         byte[] vrfOutputBytes = vrfProofAndVrfOutput.getVRFOutput().serializeFieldElement();
@@ -68,10 +68,10 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     }
 
     @Override
-    public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
+    public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] element, byte[] proofBytes) {
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
         VRFProof vrfProof = VRFProof.deserialize(proofBytes);
-        FieldElement messageAsFieldElement = FieldElementUtils.messageToFieldElement(message);
+        FieldElement messageAsFieldElement = FieldElementUtils.elementToFieldElement(element);
 
         if(publicKey == null || vrfProof == null || messageAsFieldElement == null) {
             if(publicKey != null)
