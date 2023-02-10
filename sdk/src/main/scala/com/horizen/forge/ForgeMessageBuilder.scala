@@ -15,6 +15,7 @@ import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import sparkz.util.ModifierId
 import com.horizen.fork.ForkManager
+import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 
 import scala.collection.JavaConverters._
@@ -55,6 +56,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  ownerPrivateKey: PrivateKey25519,
                  forgingStakeInfo: ForgingStakeInfo,
                  vrfProof: VrfProof,
+                 vrfOutput: VrfOutput,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
                  inputBlockSize: Int,

@@ -13,6 +13,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, ListSerializer, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
+import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainTypes, account}
 import sparkz.core.block.Block
 import sparkz.util.SparkzLogging
@@ -124,6 +125,7 @@ object AccountBlock {
              ownerPrivateKey: PrivateKey25519,
              forgingStakeInfo: ForgingStakeInfo,
              vrfProof: VrfProof,
+             vrfOutput: VrfOutput,
              forgingStakeInfoMerklePath: MerklePath,
              feePaymentsHash: Array[Byte],
              stateRoot: Array[Byte],
@@ -162,6 +164,7 @@ object AccountBlock {
           forgingStakeInfo,
           forgingStakeInfoMerklePath,
           vrfProof,
+          vrfOutput,
           sidechainTransactionsMerkleRootHash,
           mainchainMerkleRootHash,
           stateRoot,
@@ -188,6 +191,7 @@ object AccountBlock {
       forgingStakeInfo,
       forgingStakeInfoMerklePath,
       vrfProof,
+      vrfOutput,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
       stateRoot,

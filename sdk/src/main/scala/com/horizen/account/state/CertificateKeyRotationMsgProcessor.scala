@@ -8,6 +8,7 @@ import com.horizen.account.state.CertificateKeyRotationMsgProcessor.{Certificate
 import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -122,13 +123,19 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
     val signingKeyFromConfig = params.signersPublicKeys(index)
     val masterKeyFromConfig = params.mastersPublicKeys(index)
-    val newKeyAsMessage: Array[Byte] = keyRotationProof.newKey.getHash
+
+    val newKeyAsMessage = keyRotationProof.keyType match {
+      case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForSigningKeyUpdate(keyRotationProof.newKey.pubKeyBytes(), currentEpochNum, params.sidechainId)
+      case MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForMasterKeyUpdate(keyRotationProof.newKey.pubKeyBytes(), currentEpochNum, params.sidechainId)
+    }
 
     val latestSigningKey = getLatestSigningKey(view, signingKeyFromConfig, currentEpochNum, index)
-    val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)
     if (!keyRotationProof.signingKeySignature.isValid(latestSigningKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - signing signature is invalid: $index")
 
+    val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)
     if (!keyRotationProof.masterKeySignature.isValid(latestMasterKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - master signature is invalid: $index")
 

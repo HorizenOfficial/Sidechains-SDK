@@ -100,8 +100,18 @@ abstract class AbstractForgeMessageBuilder[
       val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
       val forgingResult = eligibleForgerOpt
-        .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
-          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout, forcedTx)
+        .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, vrfOutput) =>
+          forgeBlock(
+            nodeView,
+            nextBlockTimestamp,
+            branchPointInfo,
+            forgingStakeMerklePathInfo,
+            privateKey25519,
+            vrfProof,
+            vrfOutput,
+            timeout,
+            forcedTx
+          )
         }
         .getOrElse(SkipSlot("No eligible forging stake found."))
       forgingResult
@@ -230,6 +240,7 @@ abstract class AbstractForgeMessageBuilder[
                            forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                            blockSignPrivateKey: PrivateKey25519,
                            vrfProof: VrfProof,
+                           vrfOutput: VrfOutput,
                            timeout: Timeout,
                            forcedTx: Iterable[TX]): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
@@ -322,6 +333,7 @@ abstract class AbstractForgeMessageBuilder[
       blockSignPrivateKey,
       forgingStakeMerklePathInfo.forgingStakeInfo,
       vrfProof,
+      vrfOutput,
       forgingStakeMerklePathInfo.merklePath,
       companion,
       blockSize
@@ -346,6 +358,7 @@ abstract class AbstractForgeMessageBuilder[
                      blockSignPrivateKey: PrivateKey25519,
                      forgingStakeInfo: ForgingStakeInfo,
                      vrfProof: VrfProof,
+                     vrfOutput: VrfOutput,
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
                      inputBlockSize: Int,

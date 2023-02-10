@@ -7,7 +7,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.{AccountState, AccountStateView, MessageProcessor}
+import com.horizen.account.state.{AccountState, AccountStateView, MessageProcessor, MockedHistoryBlockHashProvider}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
@@ -595,7 +595,15 @@ class AccountSidechainNodeViewHolderPerfTest
 
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
 
-    state = new AccountState(params, timeProvider, versionTag, stateMetadataStorage, stateDbStorage, Seq()) {
+    state = new AccountState(
+      params,
+      timeProvider,
+      MockedHistoryBlockHashProvider,
+      versionTag,
+      stateMetadataStorage,
+      stateDbStorage,
+      Seq()
+    ) {
       override def getView: AccountStateView = stateViewMock
     }
 

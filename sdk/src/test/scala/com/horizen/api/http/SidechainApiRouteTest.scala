@@ -392,8 +392,8 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainBackupApiRoute: Route = SidechainBackupApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedBoxIterator, params).route
   val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val walletApiRejected: Route = SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainSubmitterApiRoute: Route = SidechainSubmitterApiRoute(mockedRESTSettings, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuit).route
-  val sidechainSubmitterApiRouteWithKeyRotation: Route = SidechainSubmitterApiRoute(mockedRESTSettings, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation).route
+  val sidechainSubmitterApiRoute: Route = SidechainSubmitterApiRoute(mockedRESTSettings, params, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuit).route
+  val sidechainSubmitterApiRouteWithKeyRotation: Route = SidechainSubmitterApiRoute(mockedRESTSettings, params, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation).route
 
   val basePath: String
 
