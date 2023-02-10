@@ -22,11 +22,11 @@ var logger = log.NewGlogHandler(log.FuncHandler(logToCallback))
 var logFormatter = log.JSONFormatEx(false, false)
 var logCallbackHandle int
 
-func callback(handle int, args string) string {
+func callbackProxy(handle int, args string) string {
 	argsStr := C.CString(args)
 	defer C.free(unsafe.Pointer(argsStr))
 	var result *C.char
-	result = C.invokeCallback(C.int(handle), argsStr)
+	result = C.invokeCallbackProxy(C.int(handle), argsStr)
 	defer C.free(unsafe.Pointer(result))
 	if result == nil {
 		return ""
@@ -45,7 +45,7 @@ func logToCallback(r *log.Record) error {
 		"fn", fmt.Sprintf("%n", r.Call),
 	)
 	msg := string(logFormatter.Format(r))
-	callback(logCallbackHandle, msg)
+	callbackProxy(logCallbackHandle, msg)
 	return nil
 }
 
@@ -56,7 +56,7 @@ func init() {
 	log.Root().SetHandler(logger)
 	// initialize instance of our service
 	instance = lib.New()
-	lib.SetCallbackProxy(callback)
+	lib.SetCallbackProxy(callbackProxy)
 }
 
 // main function is required by cgo, but doesn't do anything nor is it ever called

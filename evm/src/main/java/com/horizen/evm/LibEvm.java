@@ -9,7 +9,7 @@ import org.apache.logging.log4j.Logger;
 final class LibEvm {
     static native void Free(Pointer ptr);
 
-    private static native void SetCallback(LibEvmCallback.MasterCallback callback);
+    private static native void SetCallbackProxy(LibEvmCallback.CallbackProxy callback);
 
     private static native void SetupLogging(int callbackHandle, String level);
 
@@ -18,7 +18,7 @@ final class LibEvm {
     private static final Logger logger = LogManager.getLogger();
     private static final GlogCallback logCallback = new GlogCallback(logger);
 
-    static String getOSLibExtension() {
+    private static String getOSLibExtension() {
         var os = System.getProperty("os.name").toLowerCase();
         if (os.contains("mac os")) {
             return "dylib";
@@ -35,7 +35,7 @@ final class LibEvm {
         // bind native methods in this class to libevm
         Native.register(libName);
         // register callback
-        SetCallback(LibEvmCallback.callackHandler);
+        SetCallbackProxy(LibEvmCallback.proxy);
         // propagate log4j log level to glog
         SetupLogging(logCallback.handle, GlogCallback.log4jToGlogLevel(logger.getLevel()));
     }

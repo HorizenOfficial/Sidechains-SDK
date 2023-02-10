@@ -16,7 +16,7 @@ class GlogCallback extends LibEvmCallback {
     }
 
     @Override
-    public String callback(String args) {
+    public String invoke(String args) {
         try {
             var data = mapper.readValue(args, HashMap.class);
             // parse and remove known properties from the map
@@ -38,7 +38,7 @@ class GlogCallback extends LibEvmCallback {
         return null;
     }
 
-    public static Level glogToLog4jLevel(String glogLevel) {
+    static Level glogToLog4jLevel(String glogLevel) {
         switch (glogLevel) {
             case "trce":
                 return Level.TRACE;
@@ -56,7 +56,7 @@ class GlogCallback extends LibEvmCallback {
         }
     }
 
-    public static String log4jToGlogLevel(Level level) {
+    static String log4jToGlogLevel(Level level) {
         switch (level.toString()) {
             default:
             case "ALL":

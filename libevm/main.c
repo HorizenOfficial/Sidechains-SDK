@@ -4,18 +4,18 @@ void Free(void *ptr) {
     free(ptr);
 }
 
-typedef char* (*callbackFunc)(int handle, char *args);
+typedef char* (*callbackProxy)(int handle, char *args);
 
 // global callback function pointer
-static callbackFunc callback = NULL;
+static callbackProxy proxy = NULL;
 
 // exported symbol to set the callback function pointer
-void SetCallback(callbackFunc func) {
-    callback = func;
+void SetCallbackProxy(callbackProxy func) {
+    proxy = func;
 }
 
 // used by GO to invoke the callback, as GO cannot invoke C function pointers
-char* invokeCallback(int handle, char *args) {
-    if (callback == NULL) return NULL;
-    return callback(handle, args);
+char* invokeCallbackProxy(int handle, char *args) {
+    if (proxy == NULL) return NULL;
+    return proxy(handle, args);
 }

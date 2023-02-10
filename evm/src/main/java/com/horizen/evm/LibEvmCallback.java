@@ -16,7 +16,7 @@ abstract class LibEvmCallback implements AutoCloseable {
     // this singleton instance of the callback will be passed to libevm,
     // the static reference here will also prevent the callback instance from being garbage collected,
     // because without it the only reference might be from native code (libevm) and the JVM does not know about that
-    static MasterCallback callackHandler = new MasterCallback();
+    static CallbackProxy proxy = new CallbackProxy();
 
     private static final Logger logger = LogManager.getLogger();
 
@@ -49,10 +49,10 @@ abstract class LibEvmCallback implements AutoCloseable {
             return null;
         }
         logger.trace("received callback with handle {}", handle);
-        return callbacks[handle].callback(args);
+        return callbacks[handle].invoke(args);
     }
 
-    static class MasterCallback implements Callback {
+    static class CallbackProxy implements Callback {
         public String callback(int handle, Pointer msg) {
             try {
                 return invoke(handle, msg.getString(0));
@@ -80,5 +80,5 @@ abstract class LibEvmCallback implements AutoCloseable {
         unregister(handle, this);
     }
 
-    public abstract String callback(String args);
+    public abstract String invoke(String args);
 }

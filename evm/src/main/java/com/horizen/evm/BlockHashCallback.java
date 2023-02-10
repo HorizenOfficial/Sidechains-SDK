@@ -12,7 +12,7 @@ public abstract class BlockHashCallback extends LibEvmCallback {
     protected abstract Hash getBlockHash(BigInteger blockNumber);
 
     @Override
-    public String callback(String args) {
+    public String invoke(String args) {
         logger.debug("received block hash callback");
         try {
             if (!args.startsWith("0x")) {

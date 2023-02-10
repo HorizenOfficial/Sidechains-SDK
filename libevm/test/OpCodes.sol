@@ -7,7 +7,6 @@ pragma solidity >=0.8.0 <0.9.0;
  * @dev uses specific opcodes for testing
  */
 contract OpCodes {
-
     function getGasPrice() external view returns (uint256) {
         return tx.gasprice;
     }
