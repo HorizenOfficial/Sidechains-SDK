@@ -2,6 +2,7 @@ package com.horizen.transaction;
 
 import com.horizen.box.ZenBox;
 import com.horizen.box.ZenBoxSerializer;
+import com.horizen.utils.Checker;
 import com.horizen.utils.ListSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
@@ -34,9 +35,10 @@ public class FeePaymentsTransactionSerializer implements TransactionSerializer<F
 
     @Override
     public FeePaymentsTransaction parse(Reader reader) {
-        byte version = reader.getByte();
+        byte version = Checker.readByte(reader, "version");
         List<ZenBox> feePayments = outputsSerializer.parse(reader);
 
+        Checker.bufferShouldBeEmpty(reader.remaining());
         return new FeePaymentsTransaction(feePayments, version);
     }
 }

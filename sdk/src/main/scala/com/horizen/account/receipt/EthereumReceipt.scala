@@ -2,7 +2,7 @@ package com.horizen.account.receipt
 
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, Checker}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -99,32 +99,32 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
   }
 
   override def parse(reader: Reader): EthereumReceipt = {
-    val transactionType: Int = reader.getInt
-    val status: Int = reader.getInt
+    val transactionType: Int = Checker.readIntNotLessThanZero(reader, "transaction type")
+    val status: Int = Checker.readIntNotLessThanZero(reader, "status")
 
-    val cumGasUsedLength: Int = reader.getInt
-    val cumGasUsed: BigInteger = new BigInteger(reader.getBytes(cumGasUsedLength))
+    val cumGasUsedLength: Int = Checker.readIntNotLessThanZero(reader, "cum gas used length")
+    val cumGasUsed: BigInteger = new BigInteger(Checker.readBytes(reader, cumGasUsedLength, "cum gas used"))
 
     val logs = ListBuffer[EvmLog]()
-    val numberOfLogs = reader.getInt
+    val numberOfLogs = Checker.readIntNotLessThanZero(reader, "number of logs")
     for (_ <- 0 until numberOfLogs)
       logs += EvmLogUtils.parse(reader)
 
     val receipt: EthereumConsensusDataReceipt =
       new EthereumConsensusDataReceipt(transactionType, status, cumGasUsed, logs)
 
-    val txHash: Array[Byte] = reader.getBytes(32)
-    val txIndex: Int = reader.getInt
-    val blockHash: Array[Byte] = reader.getBytes(32)
-    val blockNumber: Int = reader.getInt
+    val txHash: Array[Byte] = Checker.readBytes(reader, 32, "transaction hash")
+    val txIndex: Int = Checker.readIntNotLessThanZero(reader, "transaction index")
+    val blockHash: Array[Byte] = Checker.readBytes(reader, 32, "block hash")
+    val blockNumber: Int = Checker.readIntNotLessThanZero(reader, "block number")
 
-    val gasUsedLength: Int = reader.getInt
-    val gasUsed: BigInteger = new BigInteger(reader.getBytes(gasUsedLength))
+    val gasUsedLength: Int = Checker.readIntNotLessThanZero(reader, "gas used length")
+    val gasUsed: BigInteger = new BigInteger(Checker.readBytes(reader, gasUsedLength, "gas used"))
 
     // optional field
-    val contractAddressLength = reader.getInt
+    val contractAddressLength = Checker.readIntNotLessThanZero(reader, "contract address length")
     val contractAddress =
-      if (contractAddressLength == 0) None else Some(new Address(reader.getBytes(contractAddressLength)))
+      if (contractAddressLength == 0) None else Some(new Address(Checker.readBytes(reader, contractAddressLength, "contract address")))
 
     EthereumReceipt(receipt, txHash, txIndex, blockHash, blockNumber, gasUsed, contractAddress)
   }

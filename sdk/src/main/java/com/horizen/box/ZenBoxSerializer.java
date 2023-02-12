@@ -2,6 +2,7 @@ package com.horizen.box;
 
 import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.ZenBoxDataSerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -32,7 +33,7 @@ public final class ZenBoxSerializer
 
     @Override
     public ZenBox parse(Reader reader) {
-        Long nonce = reader.getLong();
+        long nonce = Checker.readLongNotLessThanZero(reader, "nonce");
         ZenBoxData boxData = ZenBoxDataSerializer.getSerializer().parse(reader);
 
         return new ZenBox(boxData, nonce);

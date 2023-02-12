@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.serialization.{ModifierSemanticValiditySerializer, Views}
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.utils.{Checker, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
@@ -72,10 +72,10 @@ object SidechainBlockInfoSerializer extends SparkzSerializer[SidechainBlockInfo]
 
   private def readMainchainHeadersHashes(r: Reader): Seq[MainchainHeaderHash] = {
     val references: ArrayBuffer[MainchainHeaderHash] = ArrayBuffer()
-    val length = r.getInt()
+    val length = Checker.readIntNotLessThanZero(r, "mainchain headers hash length")
 
     (0 until length).foreach(_ => {
-      val bytes = r.getBytes(mainchainHeaderHashSize)
+      val bytes = Checker.readBytes(r, mainchainHeaderHashSize, "mainchain header hash")
       references.append(byteArrayToMainchainHeaderHash(bytes))
     })
 
@@ -84,7 +84,7 @@ object SidechainBlockInfoSerializer extends SparkzSerializer[SidechainBlockInfo]
 
   private def readMainchainHeadersBaseInfo(r: Reader): Seq[MainchainHeaderBaseInfo] = {
     val references: ArrayBuffer[MainchainHeaderBaseInfo] = ArrayBuffer()
-    val length = r.getInt()
+    val length = Checker.readIntNotLessThanZero(r, "mainchain header base info length")
 
     (0 until length).foreach(_ => {
       references.append(MainchainHeaderBaseInfoSerializer.parse(r))
@@ -93,17 +93,17 @@ object SidechainBlockInfoSerializer extends SparkzSerializer[SidechainBlockInfo]
     references
   }
 
-  override def parse(r: Reader): SidechainBlockInfo = {
-    val height = r.getInt()
-    val score = r.getLong()
-    val parentId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
-    val timestamp = r.getLong()
-    val semanticValidityCode = r.getByte()
-    val mainchainHeaderBaseInfos = readMainchainHeadersBaseInfo(r)
-    val mainchainReferenceDataHeaderHashes = readMainchainHeadersHashes(r)
-    val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
-    val vrfOutputOpt = r.getOption(VrfOutputSerializer.getSerializer.parse(r))
-    val lastBlockInPreviousConsensusEpoch = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
+  override def parse(reader: Reader): SidechainBlockInfo = {
+    val height = Checker.readIntNotLessThanZero(reader, "height")
+    val score = Checker.readLongNotLessThanZero(reader, "score")
+    val parentId = bytesToId(Checker.readBytes(reader, NodeViewModifier.ModifierIdSize, "parent id"))
+    val timestamp = Checker.readLongNotLessThanZero(reader, "timestamp")
+    val semanticValidityCode = Checker.readByte(reader, "semantic validity code")
+    val mainchainHeaderBaseInfos = readMainchainHeadersBaseInfo(reader)
+    val mainchainReferenceDataHeaderHashes = readMainchainHeadersHashes(reader)
+    val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(reader)
+    val vrfOutputOpt = reader.getOption(VrfOutputSerializer.getSerializer.parse(reader))
+    val lastBlockInPreviousConsensusEpoch = bytesToId(Checker.readBytes(reader, NodeViewModifier.ModifierIdSize, "last block in previous consensus epoch"))
 
     SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode),
       mainchainHeaderBaseInfos, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, vrfOutputOpt, lastBlockInPreviousConsensusEpoch)

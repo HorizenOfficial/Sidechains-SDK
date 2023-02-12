@@ -35,8 +35,8 @@ object StakeConsensusEpochInfoSerializer extends SparkzSerializer[StakeConsensus
   }
 
   override def parse(r: Reader): StakeConsensusEpochInfo = {
-    val rootHash = r.getBytes(merkleTreeHashLen)
-    val totalStake: Long = r.getLong()
+    val rootHash = Checker.readBytes(r, merkleTreeHashLen, "root hash")
+    val totalStake: Long = Checker.readIntNotLessThanZero(r, "total stake")
     StakeConsensusEpochInfo(rootHash, totalStake)
   }
 }

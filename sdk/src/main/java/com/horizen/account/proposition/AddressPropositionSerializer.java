@@ -1,6 +1,7 @@
 package com.horizen.account.proposition;
 
 import com.horizen.proposition.PropositionSerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -27,7 +28,7 @@ public final class AddressPropositionSerializer
 
     @Override
     public AddressProposition parse(Reader reader) {
-        byte[] address = reader.getBytes(AddressProposition.LENGTH);
+        byte[] address = Checker.readBytes(reader, AddressProposition.LENGTH, "Address Proposition");
         return new AddressProposition(address);
     }
 }

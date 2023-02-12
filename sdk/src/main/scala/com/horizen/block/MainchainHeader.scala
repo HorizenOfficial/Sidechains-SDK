@@ -1,11 +1,10 @@
 package com.horizen.block
 
 import java.time.Instant
-
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-import com.horizen.utils.{BytesUtils, Utils}
+import com.horizen.utils.{BytesUtils, Checker, Utils}
 import com.horizen.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
@@ -127,7 +126,7 @@ object MainchainHeaderSerializer extends SparkzSerializer[MainchainHeader] {
   }
 
   override def parse(r: Reader): MainchainHeader = {
-    val length: Int = r.getInt()
-    MainchainHeader.create(r.getBytes(length), 0).get
+    val length: Int = Checker.readIntNotLessThanZero(r, "mainchain header length")
+    MainchainHeader.create(Checker.readBytes(r, length, "mainchain header"), 0).get
   }
 }

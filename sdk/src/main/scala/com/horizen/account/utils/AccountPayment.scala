@@ -3,6 +3,7 @@ package com.horizen.account.utils
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.serialization.Views
+import com.horizen.utils.Checker
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
@@ -23,8 +24,8 @@ object AccountPaymentSerializer extends SparkzSerializer[AccountPayment] {
 
   override def parse(r: Reader): AccountPayment = {
     val address = AddressPropositionSerializer.getSerializer.parse(r)
-    val valueLength = r.getInt
-    val value = new BigInteger(r.getBytes(valueLength))
+    val valueLength = Checker.readIntNotLessThanZero(r, "value length")
+    val value = new BigInteger(Checker.readBytes(r, valueLength, "account payment value"))
 
     AccountPayment(address, value)
   }

@@ -1,5 +1,6 @@
 package com.horizen.proposition;
 
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -25,6 +26,7 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
 
     @Override
     public PublicKey25519Proposition parse(Reader reader) {
-        return new PublicKey25519Proposition(reader.getBytes(PublicKey25519Proposition.KEY_LENGTH));
+        byte[] proposition = Checker.readBytes(reader, PublicKey25519Proposition.KEY_LENGTH, "PublicKey25519Proposition");
+        return new PublicKey25519Proposition(proposition);
     }
 }

@@ -1,6 +1,7 @@
 package com.horizen.node.util;
 
 import com.horizen.params.CommonParams;
+import com.horizen.utils.Checker;
 import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
@@ -32,11 +33,11 @@ public class MainchainBlockReferenceInfoSerializer implements SparkzSerializer<M
 
     @Override
     public MainchainBlockReferenceInfo parse(Reader reader) {
-        byte[] mainchainBlockReferenceHash = reader.getBytes(CommonParams.mainchainBlockHashLength());
-        byte[] parentMainchainBlockReferenceHash = reader.getBytes(CommonParams.mainchainBlockHashLength());
-        int mainchainHeight = reader.getInt();
-        byte[] mainchainHeaderSidechainBlockId = reader.getBytes(CommonParams.sidechainIdLength());
-        byte[] mainchainReferenceDataSidechainBlockId = reader.getBytes(CommonParams.sidechainIdLength());
+        byte[] mainchainBlockReferenceHash = Checker.readBytes(reader, CommonParams.mainchainBlockHashLength(), "mainchainBlockReferenceHash");
+        byte[] parentMainchainBlockReferenceHash = Checker.readBytes(reader, CommonParams.mainchainBlockHashLength(), "parentMainchainBlockReferenceHash");
+        int mainchainHeight = Checker.readIntNotLessThanZero(reader, "mainchain height");
+        byte[] mainchainHeaderSidechainBlockId = Checker.readBytes(reader, CommonParams.sidechainIdLength(), "mainchainHeaderSidechainBlockId");
+        byte[] mainchainReferenceDataSidechainBlockId = Checker.readBytes(reader, CommonParams.sidechainIdLength(), "mainchainReferenceDataSidechainBlockId");
 
         return new MainchainBlockReferenceInfo(mainchainBlockReferenceHash,
                                                parentMainchainBlockReferenceHash,

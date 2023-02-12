@@ -6,6 +6,7 @@ import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.KeyRotationPr
 import com.horizen.proof.{SchnorrProof, SchnorrSignatureSerializer}
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
 import com.horizen.serialization.Views
+import com.horizen.utils.Checker
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import sparkz.util.serialization.{Reader, Writer}
@@ -50,8 +51,8 @@ object KeyRotationProofSerializer extends SparkzSerializer[KeyRotationProof] {
   }
 
   override def parse(reader: Reader): KeyRotationProof = {
-    val keyType = KeyRotationProofTypes.apply(reader.getInt())
-    val index = reader.getInt()
+    val keyType = KeyRotationProofTypes.apply(Checker.readIntNotLessThanZero(reader, "key rotation proof type"))
+    val index = Checker.readIntNotLessThanZero(reader, "key rotation proof index")
     val newKey = SchnorrPropositionSerializer.getSerializer.parse(reader)
     val signingKeySignature = SchnorrSignatureSerializer.getSerializer.parse(reader)
     val masterKeySignature = SchnorrSignatureSerializer.getSerializer.parse(reader)

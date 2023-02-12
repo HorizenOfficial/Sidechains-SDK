@@ -29,5 +29,5 @@ case class NonceConsensusEpochInfo(consensusNonce: ConsensusNonce) extends Bytes
 object NonceConsensusEpochInfoSerializer extends SparkzSerializer[NonceConsensusEpochInfo]{
   override def serialize(obj: NonceConsensusEpochInfo, w: Writer): Unit = w.putBytes(obj.consensusNonce)
 
-  override def parse(r: Reader): NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ r.getBytes(r.remaining))
+  override def parse(r: Reader): NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ Checker.readBytes(r, r.remaining, "consensus nonce"))
 }

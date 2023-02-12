@@ -3,6 +3,7 @@ package com.horizen.account.receipt
 
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
+import com.horizen.utils.Checker
 import org.web3j.rlp.{RlpDecoder, RlpEncoder, RlpList, RlpString, RlpType}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
@@ -75,16 +76,16 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
   }
 
   override def parse(reader: Reader): EvmLog = {
-    val address: Address = new Address(reader.getBytes(Address.LENGTH))
+    val address: Address = new Address(Checker.readBytes(reader, Address.LENGTH, "address"))
 
-    val topicsArraySize: Int = reader.getInt
+    val topicsArraySize: Int = Checker.readIntNotLessThanZero(reader, "topics array size")
     val topics: util.ArrayList[Hash] = new util.ArrayList[Hash]
     for (_ <- 0 until topicsArraySize) {
-      topics.add(new Hash(reader.getBytes(Hash.LENGTH)))
+      topics.add(new Hash(Checker.readBytes(reader, Hash.LENGTH, "topics")))
     }
 
-    val dataLength: Int = reader.getInt
-    val data: Array[Byte] = reader.getBytes(dataLength)
+    val dataLength: Int = Checker.readIntNotLessThanZero(reader, "data length")
+    val data: Array[Byte] = Checker.readBytes(reader, dataLength, "data")
 
     new EvmLog(address, topics.toArray(new Array[Hash](0)), data)
   }

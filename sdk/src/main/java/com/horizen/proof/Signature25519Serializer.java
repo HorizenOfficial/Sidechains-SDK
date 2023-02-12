@@ -1,5 +1,6 @@
 package com.horizen.proof;
 
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -26,7 +27,8 @@ public final class Signature25519Serializer implements ProofSerializer<Signature
 
     @Override
     public Signature25519 parse(Reader reader) {
-        return new Signature25519(reader.getBytes(Signature25519.SIGNATURE_LENGTH));
+        byte[] signature = Checker.readBytes(reader, Signature25519.SIGNATURE_LENGTH, "Signature25519");
+        return new Signature25519(signature);
     }
 
 }

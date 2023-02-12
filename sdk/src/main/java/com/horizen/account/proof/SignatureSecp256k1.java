@@ -41,6 +41,12 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
         }
     }
 
+    /**
+     * V, R and S are terms of Ethereum signature
+     * @param v recovery id
+     * @param r first part of signature (bytes 0 to 31 inclusively)
+     * @param s second part of signature (bytes 32 to 63 inclusively)
+     */
     public SignatureSecp256k1(byte[] v, byte[] r, byte[] s) {
         verifySignatureData(v, r, s);
 
@@ -63,14 +69,23 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
         return SignatureSecp256k1Serializer.getSerializer();
     }
 
+    /**
+     * @return recovery id
+     */
     public byte[] getV() {
         return v;
     }
 
+    /**
+     * @return first part of signature (bytes 0 to 31 inclusively)
+     */
     public byte[] getR() {
         return r;
     }
 
+    /**
+     * @return second part of signature (bytes 32 to 63 inclusively)
+     */
     public byte[] getS() {
         return s;
     }

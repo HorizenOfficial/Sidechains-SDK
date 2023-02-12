@@ -6,6 +6,7 @@ import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.serialization.Views
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
+import com.horizen.utils.Checker
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -89,35 +90,36 @@ object MainchainBlockReferenceDataSerializer extends SparkzSerializer[MainchainB
   }
 
   override def parse(r: Reader): MainchainBlockReferenceData = {
-    val headerHash: Array[Byte] = r.getBytes(HASH_BYTES_LENGTH)
+    val headerHash: Array[Byte] = Checker.readBytes(r, HASH_BYTES_LENGTH, "header hash")
 
     val mc2scTx: Option[MC2SCAggregatedTransaction] = r.getOption(MC2SCAggregatedTransactionSerializer.getSerializer.parse(r))
 
-    val existenceProofSize: Int = r.getInt()
+    val existenceProofSize: Int = Checker.readIntNotLessThanZero(r, "existence proof size")
 
     val existenceProof: Option[Array[Byte]] = {
       if (existenceProofSize > 0)
-        Some(r.getBytes(existenceProofSize))
+        Some(Checker.readBytes(r, existenceProofSize, "existence proof"))
       else
         None
     }
 
-    val absenceProofSize: Int = r.getInt()
+    val absenceProofSize: Int = Checker.readIntNotLessThanZero(r, "absence proof size")
 
     val absenceProof: Option[Array[Byte]] = {
       if (absenceProofSize > 0)
-        Some(r.getBytes(absenceProofSize))
+        Some(Checker.readBytes(r, absenceProofSize, "absense proof"))
       else
         None
     }
 
-    val lowerCertificateLeavesSize: Int = r.getInt()
-    val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize).map(_ => r.getBytes(FieldElementUtils.fieldElementLength()))
+    val lowerCertificateLeavesSize: Int = Checker.readIntNotLessThanZero(r, "lower certificate leaves size")
+    val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize)
+      .map(_ => Checker.readBytes(r, FieldElementUtils.fieldElementLength(), "lower certificate"))
 
-    val topQualityCertificateSize: Int = r.getInt()
+    val topQualityCertificateSize: Int = Checker.readIntNotLessThanZero(r, "top quality certificate size")
     val topQualityCertificate: Option[WithdrawalEpochCertificate] = {
       if (topQualityCertificateSize > 0)
-        Some(WithdrawalEpochCertificateSerializer.parseBytes(r.getBytes(topQualityCertificateSize)))
+        Some(WithdrawalEpochCertificateSerializer.parseBytes(Checker.readBytes(r, topQualityCertificateSize, "withdrawal epoch certificate")))
       else
         None
     }

@@ -6,7 +6,7 @@ import com.google.common.primitives.Bytes
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
-import com.horizen.utils.{BytesUtils, Utils, CompactSize}
+import com.horizen.utils.{BytesUtils, Checker, CompactSize, Utils}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
@@ -210,7 +210,7 @@ object WithdrawalEpochCertificateSerializer
 }
 
   override def parse(r: Reader): WithdrawalEpochCertificate = {
-    val certLength: Int = r.getInt()
-    WithdrawalEpochCertificate.parse(r.getBytes(certLength), 0)
+    val certLength: Int = Checker.readIntNotLessThanZero(r, "certificate length")
+    WithdrawalEpochCertificate.parse(Checker.readBytes(r, certLength, "withdrawal epoch certificate"), 0)
   }
 }

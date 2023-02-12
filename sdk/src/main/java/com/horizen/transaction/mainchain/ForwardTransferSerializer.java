@@ -2,6 +2,7 @@ package com.horizen.transaction.mainchain;
 
 import com.horizen.params.CommonParams;
 import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -33,11 +34,11 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
 
     @Override
     public ForwardTransfer parse(Reader reader) {
-        int ftOutputLength = reader.getInt();;
-        byte[] ftOutputBytes = reader.getBytes(ftOutputLength);
+        int ftOutputLength = Checker.readIntNotLessThanZero(reader, )();
+        byte[] ftOutputBytes = Checker.readBytes(reader, ftOutputLength, "ft output bytes");
         MainchainTxForwardTransferCrosschainOutput output = MainchainTxForwardTransferCrosschainOutput.create(ftOutputBytes, 0).get();
-        byte[] transactionHash = reader.getBytes(CommonParams.mainchainTransactionHashLength());
-        int transactionIndex = reader.getInt();
+        byte[] transactionHash = Checker.readBytes(reader, CommonParams.mainchainTransactionHashLength(), "transaction hash");
+        int transactionIndex = Checker.readIntNotLessThanZero(reader, )();
 
         return new ForwardTransfer(output, transactionHash, transactionIndex);
     }

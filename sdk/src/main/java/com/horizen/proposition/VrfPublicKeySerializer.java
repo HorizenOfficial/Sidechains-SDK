@@ -1,5 +1,7 @@
 package com.horizen.proposition;
 
+import com.horizen.proof.Signature25519;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -25,6 +27,7 @@ public class VrfPublicKeySerializer implements PropositionSerializer<VrfPublicKe
 
     @Override
     public VrfPublicKey parse(Reader reader) {
-        return new VrfPublicKey(reader.getBytes(VrfPublicKey.KEY_LENGTH));
+        byte[] vrfPublicKey = Checker.readBytes(reader, VrfPublicKey.KEY_LENGTH, "VRF public key");
+        return new VrfPublicKey(vrfPublicKey);
     }
 }

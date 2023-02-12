@@ -58,14 +58,11 @@ public class DynamicTypedSerializer<T extends BytesSerializable, S extends Spark
 
     @Override
     public T parse(Reader reader) {
-        if (reader.remaining() < 1)
-            throw new IllegalArgumentException("Unknown custom type id.");
-
-        byte type = reader.getByte();
+        byte type = Checker.readByte(reader, "Unknown custom type id.");
 
         if (type == CUSTOM_SERIALIZER_TYPE) {
             // try parse using custom serializers
-            byte customType = reader.getByte();
+            byte customType = Checker.readByte(reader, "custom type");
 
             S serializer = customSerializers.get(customType);
             if (serializer != null)

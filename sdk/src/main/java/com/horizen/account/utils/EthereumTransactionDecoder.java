@@ -2,6 +2,7 @@ package com.horizen.account.utils;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.utils.Checker;
 import org.web3j.rlp.RlpDecoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
@@ -68,8 +69,7 @@ public class EthereumTransactionDecoder {
     }
 
     private static EthereumTransaction decodeEIP1559Transaction(Reader reader) {
-        // consume the type byte
-        reader.getByte();
+        Checker.readByte(reader, "type");
         RlpList rlpList = RlpStreamDecoder.decode(reader);
         return RlpList2EIP1559Transaction(rlpList);
     }

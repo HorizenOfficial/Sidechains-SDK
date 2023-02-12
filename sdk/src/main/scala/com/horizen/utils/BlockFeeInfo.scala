@@ -20,7 +20,7 @@ object BlockFeeInfoSerializer extends SparkzSerializer[BlockFeeInfo] {
   }
 
   override def parse(r: Reader): BlockFeeInfo = {
-    val fee: Long = r.getLong()
+    val fee: Long = Checker.readIntNotLessThanZero(r, "fee")
     val forgerRewardKey: PublicKey25519Proposition = PublicKey25519PropositionSerializer.getSerializer.parse(r)
 
     BlockFeeInfo(fee, forgerRewardKey)

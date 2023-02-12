@@ -1,5 +1,6 @@
 package com.horizen.storage.leveldb
 
+import com.horizen.utils.Checker
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -46,22 +47,22 @@ object ChangeSetSerializer extends SparkzSerializer[ChangeSet] {
     val insertedQty = r.getUInt().toInt
     val insertedKeys = (0 until insertedQty).foldLeft(Seq.empty[Array[Byte]]) { case (acc, _) =>
       val len = r.getUByte()
-      acc :+ r.getBytes(len)
+      acc :+ Checker.readBytes(r, len, "acc")
     }
     val removedQty = r.getUInt().toInt
     val removed = (0 until removedQty).foldLeft(Seq.empty[(Array[Byte], Array[Byte])]) { case (acc, _) =>
       val kLen = r.getUByte()
-      val k = r.getBytes(kLen)
+      val k = Checker.readBytes(r, kLen, "k")
       val vLen = r.getUInt().toInt
-      val v = r.getBytes(vLen)
+      val v = Checker.readBytes(r, vLen, "v")
       acc :+ (k -> v)
     }
     val alteredQty = r.getUInt().toInt
     val altered = (0 until alteredQty).foldLeft(Seq.empty[(Array[Byte], Array[Byte])]) { case (acc, _) =>
       val kLen = r.getUByte()
-      val k = r.getBytes(kLen)
+      val k = Checker.readBytes(r, kLen, "k")
       val oldVLen = r.getUInt().toInt
-      val oldV = r.getBytes(oldVLen)
+      val oldV = Checker.readBytes(r, oldVLen, "olv v")
       acc :+ (k -> oldV)
     }
     ChangeSet(insertedKeys, removed, altered)

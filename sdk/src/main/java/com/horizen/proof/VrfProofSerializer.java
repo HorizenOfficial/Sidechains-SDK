@@ -1,5 +1,6 @@
 package com.horizen.proof;
 
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -25,6 +26,7 @@ public class VrfProofSerializer implements ProofSerializer<VrfProof> {
 
     @Override
     public VrfProof parse(Reader reader) {
-        return new VrfProof(reader.getBytes(VrfProof.PROOF_LENGTH));
+        byte[] vrfProof = Checker.readBytes(reader, VrfProof.PROOF_LENGTH, "VRF proof");
+        return new VrfProof(vrfProof);
     }
 }

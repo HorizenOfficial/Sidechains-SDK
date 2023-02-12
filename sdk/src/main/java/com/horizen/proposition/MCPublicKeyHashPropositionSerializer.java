@@ -1,5 +1,6 @@
 package com.horizen.proposition;
 
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -25,6 +26,7 @@ public final class MCPublicKeyHashPropositionSerializer implements PropositionSe
 
     @Override
     public MCPublicKeyHashProposition parse(Reader reader) {
-        return new MCPublicKeyHashProposition(reader.getBytes(MCPublicKeyHashProposition.KEY_LENGTH));
+        byte[] proposition = Checker.readBytes(reader, MCPublicKeyHashProposition.KEY_LENGTH, "public key hash");
+        return new MCPublicKeyHashProposition(proposition);
     }
 }

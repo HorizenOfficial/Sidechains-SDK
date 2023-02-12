@@ -2,7 +2,7 @@ package com.horizen.account.receipt
 
 import com.horizen.account.receipt.Bloom.BLOOM_BYTE_LENGTH
 import com.horizen.evm.interop.EvmLog
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, Checker}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
@@ -136,7 +136,7 @@ object BloomSerializer extends SparkzSerializer[Bloom] {
     w.putBytes(obj.getBytes)
   }
 
-  override def parse(r: Reader): Bloom = {
-    new Bloom(r.getBytes(BLOOM_BYTE_LENGTH))
+  override def parse(reader: Reader): Bloom = {
+    new Bloom(Checker.readBytes(reader, BLOOM_BYTE_LENGTH, "bloom"))
   }
 }

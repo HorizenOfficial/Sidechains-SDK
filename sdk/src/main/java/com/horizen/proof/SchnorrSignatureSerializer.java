@@ -1,5 +1,6 @@
 package com.horizen.proof;
 
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -23,6 +24,7 @@ public class SchnorrSignatureSerializer implements ProofSerializer<SchnorrProof>
 
     @Override
     public SchnorrProof parse(Reader reader) {
-        return new SchnorrProof(reader.getBytes(SchnorrProof.SIGNATURE_LENGTH));
+        byte[] schnorrProof = Checker.readBytes(reader, SchnorrProof.SIGNATURE_LENGTH, "schnorr proof");
+        return new SchnorrProof(schnorrProof);
     }
 }

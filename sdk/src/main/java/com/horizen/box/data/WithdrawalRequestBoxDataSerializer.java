@@ -2,6 +2,7 @@ package com.horizen.box.data;
 
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.MCPublicKeyHashPropositionSerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -27,8 +28,7 @@ public final class WithdrawalRequestBoxDataSerializer implements BoxDataSerializ
     @Override
     public WithdrawalRequestBoxData parse(Reader reader) {
         MCPublicKeyHashProposition proposition = MCPublicKeyHashPropositionSerializer.getSerializer().parse(reader);
-        long value = reader.getLong();
-
+        long value = Checker.readLongNotLessThanZero(reader, "withdrawal request box data value");
         return new WithdrawalRequestBoxData(proposition, value);
     }
 }

@@ -1,5 +1,6 @@
 package com.horizen.account.utils;
 
+import com.horizen.utils.Checker;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import sparkz.util.serialization.Reader;
@@ -118,7 +119,7 @@ public class RlpStreamDecoder {
                                 ", wanted: " + strLen);
                     }
 
-                    byte[] rlpData = reader.getBytes(strLen);
+                    byte[] rlpData = Checker.readBytes(reader, strLen, "rlp data");
                     rlpList.getValues().add(RlpString.create(rlpData));
 
                 } else if (prefix > OFFSET_LONG_STRING && prefix < OFFSET_SHORT_LIST) {
@@ -140,7 +141,7 @@ public class RlpStreamDecoder {
                     }
 
                     // now we can parse an item for data[1]..data[length]
-                    byte[] rlpData = reader.getBytes(strLen);
+                    byte[] rlpData = Checker.readBytes(reader, strLen, "rlp data");
 
                     rlpList.getValues().add(RlpString.create(rlpData));
 

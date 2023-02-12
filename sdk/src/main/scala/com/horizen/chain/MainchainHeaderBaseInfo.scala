@@ -4,7 +4,7 @@ import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.serialization.Views
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, Checker}
 import com.horizen.transaction.Transaction
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
@@ -51,9 +51,9 @@ object MainchainHeaderBaseInfoSerializer extends SparkzSerializer[MainchainHeade
   }
 
   override def parse(r: Reader): MainchainHeaderBaseInfo = {
-    val headerHashBytes = r.getBytes(mainchainHeaderHashSize)
+    val headerHashBytes = Checker.readBytes(r, mainchainHeaderHashSize, "header hash")
     val headerHash: MainchainHeaderHash = (byteArrayToMainchainHeaderHash(headerHashBytes))
-    val cumulativeCommTreeHash = r.getBytes(CumulativeHashFunctions.hashLength())
+    val cumulativeCommTreeHash = Checker.readBytes(r, CumulativeHashFunctions.hashLength(), "cumulative tree hash")
     MainchainHeaderBaseInfo(headerHash, cumulativeCommTreeHash)
   }
 }

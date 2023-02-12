@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.{AccountBlockHeader, AccountBlockHeaderSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
+import com.horizen.utils.{BytesUtils, Checker, ListSerializer, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import sparkz.util.idToBytes
 import sparkz.util.serialization.{Reader, Writer}
@@ -171,11 +171,11 @@ object OmmerSerializer extends SparkzSerializer[Ommer[SidechainBlockHeader]] {
 
   override def parse(r: Reader): Ommer[SidechainBlockHeader] = {
     val header: SidechainBlockHeader = SidechainBlockHeaderSerializer.parse(r)
-    val referencesDataHashLength: Int = r.getInt()
+    val referencesDataHashLength: Int = Checker.readIntNotLessThanZero(r, "references data hash length")
     val mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]] = if(referencesDataHashLength == 0)
       None
     else
-      Some(r.getBytes(referencesDataHashLength))
+      Some(Checker.readBytes(r, referencesDataHashLength, "merkle root hash"))
 
     val mainchainHeaders: Seq[MainchainHeader] = mainchainHeaderListSerializer.parse(r).asScala
 
@@ -204,11 +204,11 @@ object AccountOmmerSerializer extends SparkzSerializer[Ommer[AccountBlockHeader]
 
   override def parse(r: Reader): Ommer[AccountBlockHeader] = {
     val header: AccountBlockHeader = AccountBlockHeaderSerializer.parse(r)
-    val referencesDataHashLength: Int = r.getInt()
+    val referencesDataHashLength: Int = Checker.readIntNotLessThanZero(r, "references data hash length")
     val mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]] = if(referencesDataHashLength == 0)
       None
     else
-      Some(r.getBytes(referencesDataHashLength))
+      Some(Checker.readBytes(r, referencesDataHashLength, "merkle root hash"))
 
     val mainchainHeaders: Seq[MainchainHeader] = mainchainHeaderListSerializer.parse(r).asScala
 

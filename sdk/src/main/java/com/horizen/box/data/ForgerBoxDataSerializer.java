@@ -4,6 +4,7 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.proposition.VrfPublicKeySerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -31,10 +32,9 @@ public final class ForgerBoxDataSerializer implements BoxDataSerializer<ForgerBo
     @Override
     public ForgerBoxData parse(Reader reader) {
         PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer().parse(reader);
-        long value = reader.getLong();
+        long value = Checker.readLongNotLessThanZero(reader, "Forger box value");
         PublicKey25519Proposition blockSignProposition = PublicKey25519PropositionSerializer.getSerializer().parse(reader);
         VrfPublicKey vrfPublicKey = VrfPublicKeySerializer.getSerializer().parse(reader);
-
         return new ForgerBoxData(proposition, value, blockSignProposition, vrfPublicKey);
     }
 }

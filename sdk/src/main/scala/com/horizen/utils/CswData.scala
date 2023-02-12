@@ -119,7 +119,7 @@ object CswDataSerializer extends SparkzSerializer[CswData] {
   }
 
   override def parse(r: Reader): CswData = {
-    val cswDataType = r.getInt()
+    val cswDataType = Checker.readIntNotLessThanZero(r, "csw data type")
 
     cswDataType match {
       case 0 => UtxoCswDataSerializer.parse(r)
@@ -142,19 +142,19 @@ object UtxoCswDataSerializer extends SparkzSerializer[UtxoCswData] {
   }
 
   override def parse(r: Reader): UtxoCswData = {
-    val boxId = r.getBytes(32)
+    val boxId = Checker.readBytes(r, 32, "box id")
 
-    val spendingPubKeyLength = r.getInt()
-    val spendingPubKey = r.getBytes(spendingPubKeyLength)
+    val spendingPubKeyLength = Checker.readIntNotLessThanZero(r, "spending public key length")
+    val spendingPubKey = Checker.readBytes(r, spendingPubKeyLength, "spending public key")
 
-    val amount = r.getLong()
-    val nonce = r.getLong()
+    val amount = Checker.readIntNotLessThanZero(r, "amount")
+    val nonce = Checker.readIntNotLessThanZero(r, "nonce")
 
-    val customHashLength = r.getInt()
-    val customHash = r.getBytes(customHashLength)
+    val customHashLength = Checker.readIntNotLessThanZero(r, "custom hash length")
+    val customHash = Checker.readBytes(r, customHashLength, "custom hash")
 
-    val merklePathLength = r.getInt()
-    val merklePath = r.getBytes(merklePathLength)
+    val merklePathLength = Checker.readIntNotLessThanZero(r, "merkle path length")
+    val merklePath = Checker.readBytes(r, merklePathLength, "merkle path")
     UtxoCswData(boxId, spendingPubKey, amount, nonce, customHash, merklePath)
   }
 }
@@ -179,26 +179,26 @@ object ForwardTransferCswDataSerializer extends SparkzSerializer[ForwardTransfer
   }
 
   override def parse(r: Reader): ForwardTransferCswData = {
-    val boxId = r.getBytes(32)
+    val boxId = Checker.readBytes(r, 32, "box id")
 
-    val amount = r.getLong()
+    val amount = Checker.readIntNotLessThanZero(r, "amount")
 
-    val receiverPubKeyReversedLength = r.getInt()
-    val receiverPubKeyReversed = r.getBytes(receiverPubKeyReversedLength)
+    val receiverPubKeyReversedLength = Checker.readIntNotLessThanZero(r, "receiver public key reversed length")
+    val receiverPubKeyReversed = Checker.readBytes(r, receiverPubKeyReversedLength, "receiver public key reserved")
 
-    val paybackAddrDataHash = r.getBytes(20)
-    val txHash = r.getBytes(32)
-    val outIdx = r.getInt()
+    val paybackAddrDataHash = Checker.readBytes(r, 20, "payback address data hash")
+    val txHash = Checker.readBytes(r, 32, "transaction hash")
+    val outIdx = Checker.readIntNotLessThanZero(r, "old idx")
 
-    val scCommitmentMerklePathLength = r.getInt()
-    val scCommitmentMerklePath = r.getBytes(scCommitmentMerklePathLength)
+    val scCommitmentMerklePathLength = Checker.readIntNotLessThanZero(r, "sidechain commitment merkle path length")
+    val scCommitmentMerklePath = Checker.readBytes(r, scCommitmentMerklePathLength, "sidechain commitment merkle path")
 
-    val btrCommitment = r.getBytes(FieldElementUtils.fieldElementLength())
-    val certCommitment = r.getBytes(FieldElementUtils.fieldElementLength())
-    val scCrCommitment = r.getBytes(FieldElementUtils.fieldElementLength())
+    val btrCommitment = Checker.readBytes(r, FieldElementUtils.fieldElementLength(), "btr commitment")
+    val certCommitment = Checker.readBytes(r, FieldElementUtils.fieldElementLength(), "cert commitment")
+    val scCrCommitment = Checker.readBytes(r, FieldElementUtils.fieldElementLength(), "sidechain sc commitment")
 
-    val ftMerklePathLength = r.getInt()
-    val ftMerklePath = r.getBytes(ftMerklePathLength)
+    val ftMerklePathLength = Checker.readIntNotLessThanZero(r, "forward transfer merkle path length")
+    val ftMerklePath = Checker.readBytes(r, ftMerklePathLength, "forward transfer merkle path")
 
     ForwardTransferCswData(boxId, amount, receiverPubKeyReversed, paybackAddrDataHash, txHash, outIdx,
       scCommitmentMerklePath, btrCommitment, certCommitment, scCrCommitment, ftMerklePath)

@@ -8,7 +8,7 @@ import com.horizen.evm.utils.Address
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
-import com.horizen.utils.{BytesUtils, Ed25519}
+import com.horizen.utils.{BytesUtils, Checker, Ed25519}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
@@ -78,7 +78,7 @@ object AccountForgingStakeInfoSerializer extends SparkzSerializer[AccountForging
   }
 
   override def parse(r: Reader): AccountForgingStakeInfo = {
-    val stakeId = r.getBytes(32)
+    val stakeId = Checker.readBytes(r, 32, "stake id")
     val forgerStakeData = ForgerStakeDataSerializer.parse(r)
 
     AccountForgingStakeInfo(stakeId, forgerStakeData)
@@ -277,8 +277,8 @@ object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
   override def parse(r: Reader): ForgerStakeData = {
     val forgerPublicKeys = ForgerPublicKeysSerializer.parse(r)
     val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
-    val stakeAmountLength = r.getInt()
-    val stakeAmount = new BigInteger(r.getBytes(stakeAmountLength))
+    val stakeAmountLength = Checker.readIntNotLessThanZero(r, "stake amount length")
+    val stakeAmount = new BigInteger(Checker.readBytes(r, stakeAmountLength, "stake amount"))
 
     ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
   }

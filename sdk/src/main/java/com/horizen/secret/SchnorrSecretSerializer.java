@@ -1,5 +1,6 @@
 package com.horizen.secret;
 
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -26,8 +27,8 @@ public class SchnorrSecretSerializer implements SecretSerializer<SchnorrSecret> 
 
     @Override
     public SchnorrSecret parse(Reader reader) {
-        byte[] secretKey = reader.getBytes(SchnorrSecret.SECRET_KEY_LENGTH);
-        byte[] publicKey = reader.getBytes(SchnorrSecret.PUBLIC_KEY_LENGTH);
+        byte[] secretKey = Checker.readBytes(reader, SchnorrSecret.SECRET_KEY_LENGTH, "secret key");
+        byte[] publicKey = Checker.readBytes(reader, SchnorrSecret.PUBLIC_KEY_LENGTH, "public key");
 
         return new SchnorrSecret(secretKey, publicKey);
     }

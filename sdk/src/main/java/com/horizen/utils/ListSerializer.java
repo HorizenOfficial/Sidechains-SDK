@@ -33,10 +33,7 @@ public class ListSerializer<T extends BytesSerializable> implements SparkzSerial
 
     @Override
     public List<T> parse(Reader reader) {
-        int objectsCount = reader.getInt();
-
-        if(objectsCount < 0)
-            throw new IllegalArgumentException("Input data contains illegal elements count - " + objectsCount);
+        int objectsCount = Checker.readIntNotLessThanZero(reader, "objects count");
 
         if(maxListLength > 0 && objectsCount > maxListLength)
             throw new IllegalArgumentException("Input data contains to many elements - " + objectsCount);

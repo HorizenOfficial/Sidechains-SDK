@@ -1,5 +1,6 @@
 package com.horizen.secret;
 
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -26,8 +27,8 @@ public class VrfSecretKeySerializer implements SecretSerializer<VrfSecretKey> {
 
     @Override
     public VrfSecretKey parse(Reader reader) {
-        byte[] secretKey = reader.getBytes(VrfSecretKey.SECRET_KEY_LENGTH);
-        byte[] publicKey = reader.getBytes(VrfSecretKey.PUBLIC_KEY_LENGTH);
+        byte[] secretKey = Checker.readBytes(reader, VrfSecretKey.SECRET_KEY_LENGTH, "secret key");
+        byte[] publicKey = Checker.readBytes(reader, VrfSecretKey.PUBLIC_KEY_LENGTH, "public key");
 
         return new VrfSecretKey(secretKey, publicKey);
     }

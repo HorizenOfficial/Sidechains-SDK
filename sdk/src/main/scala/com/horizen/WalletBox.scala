@@ -2,6 +2,7 @@ package com.horizen
 
 import java.util
 import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.utils.Checker
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
 import sparkz.util.{ModifierId, SparkzEncoding}
@@ -45,8 +46,8 @@ class WalletBoxSerializer(sidechainBoxesCompanion : SidechainBoxesCompanion)
   }
 
   override def parse(reader: Reader): WalletBox = {
-    val txId = bytesToId(reader.getBytes(NodeViewModifier.ModifierIdSize))
-    val createdAt = reader.getLong()
+    val txId = bytesToId(Checker.readBytes(reader, NodeViewModifier.ModifierIdSize, "transaction id"))
+    val createdAt = Checker.readIntNotLessThanZero(reader, "created at")
     val box = sidechainBoxesCompanion.parse(reader)
     new WalletBox(box, txId, createdAt)
   }

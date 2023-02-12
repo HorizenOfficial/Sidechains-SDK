@@ -5,7 +5,7 @@ import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.ForgerBox
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
-import com.horizen.utils.{ByteArrayWrapper, Utils}
+import com.horizen.utils.{ByteArrayWrapper, Checker, Utils}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -59,7 +59,7 @@ object ForgingStakeInfoSerializer extends SparkzSerializer[ForgingStakeInfo]{
   override def parse(r: Reader): ForgingStakeInfo = {
     val blockSignPublicKey = PublicKey25519PropositionSerializer.getSerializer.parse(r)
     val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parse(r)
-    val stakeAmount = r.getLong()
+    val stakeAmount = Checker.readIntNotLessThanZero(r, "stake amount")
 
     ForgingStakeInfo(blockSignPublicKey, vrfPublicKey, stakeAmount)
   }

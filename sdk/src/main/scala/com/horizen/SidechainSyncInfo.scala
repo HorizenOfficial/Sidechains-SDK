@@ -1,6 +1,7 @@
 package com.horizen
 
 import com.horizen.block.SidechainBlockBase
+import com.horizen.utils.Checker
 import sparkz.core.NodeViewModifier
 import sparkz.core.consensus.History.ModifierIds
 import sparkz.util.ModifierId
@@ -36,12 +37,12 @@ object SidechainSyncInfoSerializer extends SparkzSerializer[SidechainSyncInfo] {
   }
 
   override def parse(r: Reader): SidechainSyncInfo = {
-    val length = r.getInt()
+    val length = Checker.readIntNotLessThanZero(r, "sidechain sync info")
     if (r.remaining < length * NodeViewModifier.ModifierIdSize)
       throw new IllegalArgumentException("Input data corrupted.")
 
     val modifierIds : Seq[ModifierId] = for(b <- 0 until length)
-      yield bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
+      yield bytesToId(Checker.readBytes(r, NodeViewModifier.ModifierIdSize, "modifier id"))
 
     SidechainSyncInfo(modifierIds)
   }

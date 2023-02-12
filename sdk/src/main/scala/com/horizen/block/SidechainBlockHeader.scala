@@ -7,7 +7,7 @@ import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
-import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerklePathSerializer, MerkleTree}
+import com.horizen.utils.{Checker, FeePaymentsUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import sparkz.util.ModifierId
@@ -104,33 +104,30 @@ object SidechainBlockHeaderSerializer extends SparkzSerializer[SidechainBlockHea
     Signature25519Serializer.getSerializer.serialize(obj.signature, w)
   }
 
-  override def parse(r: Reader): SidechainBlockHeader = {
-    val version: Block.Version = r.getByte()
+  override def parse(reader: Reader): SidechainBlockHeader = {
+    val version: Block.Version = Checker.version(reader, SidechainBlock.BLOCK_VERSION, "SidechainBlock")
 
-    if(version != SidechainBlock.BLOCK_VERSION)
-      throw new InvalidSidechainBlockHeaderException(s"SidechainBlock version $version is invalid.")
+    val parentId: ModifierId = bytesToId(Checker.readBytes(reader, NodeViewModifier.ModifierIdSize, "parent id"))
 
-    val parentId: ModifierId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
+    val timestamp: Block.Timestamp = Checker.readIntNotLessThanZero(reader, "timestamp")
 
-    val timestamp: Block.Timestamp = r.getLong()
+    val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfoSerializer.parse(reader)
 
-    val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfoSerializer.parse(r)
+    val forgingStakeMerkle: MerklePath = MerklePathSerializer.getSerializer.parse(reader)
 
-    val forgingStakeMerkle: MerklePath = MerklePathSerializer.getSerializer.parse(r)
+    val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(reader)
 
-    val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
+    val sidechainTransactionsMerkleRootHash = Checker.readBytes(reader, MerkleTree.ROOT_HASH_LENGTH, "sidechain merkle root hash")
 
-    val sidechainTransactionsMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
+    val mainchainMerkleRootHash = Checker.readBytes(reader, MerkleTree.ROOT_HASH_LENGTH, "mainchain merkle root hash")
 
-    val mainchainMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
+    val ommersMerkleRootHash = Checker.readBytes(reader, MerkleTree.ROOT_HASH_LENGTH, "ommers merkle root hash")
 
-    val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
+    val ommersCumulativeScore: Long = Checker.readIntNotLessThanZero(reader, "ommers cumulative score")
 
-    val ommersCumulativeScore: Long = r.getLong()
+    val feePaymentsHash: Array[Byte] = Checker.readBytes(reader, NodeViewModifier.ModifierIdSize, "fee payments hash")
 
-    val feePaymentsHash: Array[Byte] = r.getBytes(NodeViewModifier.ModifierIdSize)
-
-    val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(r)
+    val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(reader)
 
     SidechainBlockHeader(
       version,

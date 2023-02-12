@@ -2,6 +2,7 @@ package com.horizen.account.proof;
 
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proof.ProofSerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -32,10 +33,10 @@ public final class SignatureSecp256k1Serializer implements ProofSerializer<Signa
 
     @Override
     public SignatureSecp256k1 parse(Reader reader) {
-        var vl = reader.getInt();
-        var v = reader.getBytes(vl);
-        var r = reader.getBytes(Secp256k1.SIGNATURE_RS_SIZE);
-        var s = reader.getBytes(Secp256k1.SIGNATURE_RS_SIZE);
+        var vl = Checker.readIntNotLessThanZero(reader, "Recovery id length");
+        var v = Checker.readBytes(reader, vl, "recovery id");
+        var r = Checker.readBytes(reader, Secp256k1.SIGNATURE_RS_SIZE, "first part of signature");
+        var s = Checker.readBytes(reader, Secp256k1.SIGNATURE_RS_SIZE, "second part of signature");
         return new SignatureSecp256k1(v, r, s);
     }
 }

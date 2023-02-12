@@ -4,6 +4,7 @@ import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.ZenBoxDataSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
+import com.horizen.utils.Checker;
 import sparkz.core.NodeViewModifier$;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
@@ -45,23 +46,22 @@ public class OpenStakeTransactionSerializer implements TransactionSerializer<Ope
 
     @Override
     public OpenStakeTransaction parse(Reader reader) {
-        byte version = reader.getByte();
-        if (version != OPEN_STAKE_TRANSACTION_VERSION) {
-            throw new IllegalArgumentException(String.format("Unsupported transaction version[%d].", version));
-        }
+        byte version = Checker.version(reader, OPEN_STAKE_TRANSACTION_VERSION, "transaction");
 
-        long fee = reader.getLong();
+        long fee = Checker.readLongNotLessThanZero(reader, "transaction fee");
 
-        byte[] inputsId = reader.getBytes(NodeViewModifier$.MODULE$.ModifierIdSize());
+        byte[] inputsId = Checker.readBytes(reader, NodeViewModifier$.MODULE$.ModifierIdSize(), "input ids");
 
-        int outputDataIsPresent = reader.getInt();
+        int outputDataIsPresent = Checker.equalZeroOrOne(Checker.readIntNotLessThanZero(reader, )(), "output data is present");
+
         java.util.Optional<ZenBoxData> output = Optional.empty();
         if (outputDataIsPresent == 1) {
             output = Optional.of(ZenBoxDataSerializer.getSerializer().parse(reader));
         }
 
         Signature25519 proof = Signature25519Serializer.getSerializer().parse(reader);
-        int forgerIndex = reader.getInt();
+        int forgerIndex = Checker.readIntNotLessThanZero(reader, "forger index");
+        Checker.bufferShouldBeEmpty(reader.remaining());
 
         return new OpenStakeTransaction(inputsId, output, proof, forgerIndex, fee, version);
     }

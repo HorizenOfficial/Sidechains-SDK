@@ -2,6 +2,7 @@ package com.horizen.box.data;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -27,8 +28,7 @@ public final class ZenBoxDataSerializer implements BoxDataSerializer<ZenBoxData>
     @Override
     public ZenBoxData parse(Reader reader) {
         PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer().parse(reader);
-        long value = reader.getLong();
-
+        long value = Checker.readLongNotLessThanZero(reader, "Value of proposition");
         return new ZenBoxData(proposition, value);
     }
 }

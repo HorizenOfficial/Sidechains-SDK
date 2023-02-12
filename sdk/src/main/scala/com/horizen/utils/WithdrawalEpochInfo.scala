@@ -23,8 +23,8 @@ object WithdrawalEpochInfoSerializer extends SparkzSerializer[WithdrawalEpochInf
   }
 
   override def parse(r: Reader): WithdrawalEpochInfo = {
-    val epoch = r.getInt()
-    val lastEpochIndex = r.getInt()
+    val epoch = Checker.readIntNotLessThanZero(r, "epoch")
+    val lastEpochIndex = Checker.readIntNotLessThanZero(r, "last epoch element")
     WithdrawalEpochInfo(epoch, lastEpochIndex)
   }
 }

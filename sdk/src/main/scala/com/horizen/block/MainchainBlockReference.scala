@@ -1,7 +1,6 @@
 package com.horizen.block
 
 import java.util
-
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
@@ -11,7 +10,7 @@ import com.horizen.serialization.Views
 import sparkz.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Checker, CompactSize}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
@@ -296,11 +295,11 @@ object MainchainBlockReferenceSerializer extends SparkzSerializer[MainchainBlock
   }
 
   override def parse(r: Reader): MainchainBlockReference = {
-    val headerSize: Int = r.getInt()
-    val header: MainchainHeader = MainchainHeaderSerializer.parseBytes(r.getBytes(headerSize))
+    val headerSize: Int = Checker.readIntNotLessThanZero(r, "header size")
+    val header: MainchainHeader = MainchainHeaderSerializer.parseBytes(Checker.readBytes(r, headerSize, "mainchain header"))
 
-    val dataSize: Int = r.getInt()
-    val data: MainchainBlockReferenceData = MainchainBlockReferenceDataSerializer.parseBytes(r.getBytes(dataSize))
+    val dataSize: Int = Checker.readIntNotLessThanZero(r, "data size")
+    val data: MainchainBlockReferenceData = MainchainBlockReferenceDataSerializer.parseBytes(Checker.readBytes(r, dataSize, "mainchain block reference data"))
 
     MainchainBlockReference(header, data)
   }

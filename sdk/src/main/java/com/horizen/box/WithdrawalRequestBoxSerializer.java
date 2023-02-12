@@ -2,6 +2,7 @@ package com.horizen.box;
 
 import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxDataSerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -32,7 +33,7 @@ public final class WithdrawalRequestBoxSerializer
 
     @Override
     public WithdrawalRequestBox parse(Reader reader) {
-        Long nonce = reader.getLong();
+        long nonce = Checker.readLongNotLessThanZero(reader, "nonce");
         WithdrawalRequestBoxData boxData = WithdrawalRequestBoxDataSerializer.getSerializer().parse(reader);
 
         return new WithdrawalRequestBox(boxData, nonce);

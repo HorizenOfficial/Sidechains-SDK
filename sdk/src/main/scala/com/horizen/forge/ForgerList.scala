@@ -1,5 +1,6 @@
 package com.horizen.forge
 
+import com.horizen.utils.Checker
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -29,10 +30,10 @@ object ForgerListSerializer extends SparkzSerializer[ForgerList] {
   }
 
   override def parse(r: Reader): ForgerList = {
-    val nElement = r.getInt()
+    val nElement = Checker.readIntNotLessThanZero(r, "n element")
     val indexes: Array[Int] = new Array[Int](nElement)
     for (i <- 0 until nElement) {
-      indexes(i) = r.getInt()
+      indexes(i) = Checker.readIntNotLessThanZero(r, String.format("index %s", i))
     }
     ForgerList(indexes)
   }

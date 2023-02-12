@@ -6,6 +6,7 @@ import com.horizen.proof.Proof;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
+import com.horizen.utils.Checker;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import sparkz.core.NodeViewModifier$;
@@ -64,23 +65,20 @@ public final class SidechainCoreTransactionSerializer implements TransactionSeri
 
     @Override
     public SidechainCoreTransaction parse(Reader reader) {
-        byte version = reader.getByte();
+        byte version = Checker.version(reader, SIDECHAIN_CORE_TRANSACTION_VERSION, "sidechain core transaction");
 
-        if (version != SIDECHAIN_CORE_TRANSACTION_VERSION) {
-            throw new IllegalArgumentException(String.format("Unsupported transaction version[%d].", version));
-        }
-
-        long fee = reader.getLong();
-        int inputsNum = reader.getInt();
+        long fee = Checker.readLongNotLessThanZero(reader, "transaction fee");
+        int inputsNum = Checker.readIntNotLessThanZero(reader, "inputs number");
 
         ArrayList<byte[]> inputsIds = new ArrayList<>();
         for(int i = 0; i < inputsNum; i++) {
-            inputsIds.add(reader.getBytes(NodeViewModifier$.MODULE$.ModifierIdSize()));
+            inputsIds.add(Checker.readBytes(reader, NodeViewModifier$.MODULE$.ModifierIdSize(), "input ids"));
         }
 
         List<BoxData<Proposition, Box<Proposition>>> outputsData = boxesDataSerializer.parse(reader);
         List<Proof<Proposition>> proofs = proofsSerializer.parse(reader);
 
+        Checker.bufferShouldBeEmpty(reader.remaining());
         return new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, version);
     }
 }

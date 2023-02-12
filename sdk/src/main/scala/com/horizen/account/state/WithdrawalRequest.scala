@@ -5,6 +5,7 @@ import com.horizen.account.abi.ABIEncodable
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer}
 import com.horizen.serialization.Views
+import com.horizen.utils.Checker
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint256}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
@@ -37,7 +38,7 @@ object WithdrawalRequestSerializer extends SparkzSerializer[WithdrawalRequest] {
   override def parse(reader: Reader): WithdrawalRequest = {
     val proposition = MCPublicKeyHashPropositionSerializer.getSerializer.parse(reader)
     val valueByteArrayLength = reader.getUInt().toInt
-    val value = new BigInteger(reader.getBytes(valueByteArrayLength))
+    val value = new BigInteger(Checker.readBytes(reader, valueByteArrayLength, "withdrawal request value"))
     WithdrawalRequest(proposition, value)
 
   }

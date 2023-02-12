@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, Checker}
 import org.web3j.utils.Numeric
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.crypto.hash.Blake2b256
@@ -176,9 +176,9 @@ object LinkedListNodeSerializer extends SparkzSerializer[LinkedListNode] {
   }
 
   override def parse(r: Reader): LinkedListNode = {
-    val dataKey = r.getBytes(32)
-    val previousNodeKey = r.getBytes(32)
-    val nextNodeKey = r.getBytes(32)
+    val dataKey = Checker.readBytes(r, 32, "data key")
+    val previousNodeKey = Checker.readBytes(r, 32, "previous node key")
+    val nextNodeKey = Checker.readBytes(r, 32, "next node key")
     LinkedListNode(dataKey, previousNodeKey, nextNodeKey)
   }
 }

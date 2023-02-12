@@ -1,5 +1,6 @@
 package com.horizen.vrf;
 
+import com.horizen.utils.Checker;
 import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
@@ -26,6 +27,7 @@ public class VrfOutputSerializer implements SparkzSerializer<VrfOutput> {
 
     @Override
     public VrfOutput parse(Reader reader) {
-        return new VrfOutput(reader.getBytes(VrfOutput.OUTPUT_LENGTH));
+        byte[] vrfOutput = Checker.readBytes(reader, VrfOutput.OUTPUT_LENGTH, "Vrf Output");
+        return new VrfOutput(vrfOutput);
     }
 }

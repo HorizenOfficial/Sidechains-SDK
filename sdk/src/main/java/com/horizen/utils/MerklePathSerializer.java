@@ -30,17 +30,13 @@ public class MerklePathSerializer implements SparkzSerializer<MerklePath> {
 
     @Override
     public MerklePath parse(Reader reader) {
-        int size = reader.getInt();
-
-        if(size < 0)
-            throw new IllegalArgumentException("Input data corrupted.");
-        else if (size == 0)
-            return new MerklePath(new ArrayList<>());
+        int size = Checker.readIntNotLessThanZero(reader, "size");
+        if (size == 0) return new MerklePath(new ArrayList<>());
 
         ArrayList<Pair<Byte, byte[]>> merklePath = new ArrayList<>();
         while(size > 0) {
-            byte key = reader.getByte();
-            byte[] value = reader.getBytes(Utils.SHA256_LENGTH);
+            byte key = Checker.readByte(reader, "key");
+            byte[] value = Checker.readBytes(reader, Utils.SHA256_LENGTH, "value");
             merklePath.add(new Pair<>(key, value));
             size--;
         }

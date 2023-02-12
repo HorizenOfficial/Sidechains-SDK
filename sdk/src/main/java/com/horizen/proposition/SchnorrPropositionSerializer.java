@@ -1,6 +1,8 @@
 package com.horizen.proposition;
 
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.proof.Signature25519;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -26,6 +28,11 @@ public class SchnorrPropositionSerializer implements PropositionSerializer<Schno
 
     @Override
     public SchnorrProposition parse(Reader reader) {
-        return new SchnorrProposition(reader.getBytes(SchnorrProposition.KEY_LENGTH));
+        int bufferSizeLeft = reader.remaining();
+        if (bufferSizeLeft >= SchnorrProposition.KEY_LENGTH) {
+            throw new IllegalArgumentException(String.format("Bytes remaining in buffer %d are not enough " +
+                    "to parse schnorr proposition of length %d", bufferSizeLeft, SchnorrProposition.KEY_LENGTH));
+        }
+        return new SchnorrProposition(Checker.readBytes(reader, SchnorrProposition.KEY_LENGTH, "schnorr proposition"));
     }
 }

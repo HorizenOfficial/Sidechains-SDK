@@ -4,6 +4,7 @@ import com.horizen.transaction.mainchain.BwtRequestSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainCreationSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
+import com.horizen.utils.Checker;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import sparkz.core.serialization.SparkzSerializer;
@@ -48,14 +49,9 @@ public final class MC2SCAggregatedTransactionSerializer implements TransactionSe
 
     @Override
     public MC2SCAggregatedTransaction parse(Reader reader) {
-        byte version = reader.getByte();
-
-        if (version != MC2SC_AGGREGATED_TRANSACTION_VERSION) {
-            throw new IllegalArgumentException(String.format("Unsupported transaction version[%d].", version));
-        }
-
+        byte version = Checker.version(reader, MC2SC_AGGREGATED_TRANSACTION_VERSION, "MC2SC Aggregated Transaction");
         List<SidechainRelatedMainchainOutput> outputs = mc2scTransactionsSerializer.parse(reader);
-
+        Checker.bufferShouldBeEmpty(reader.remaining());
         return new MC2SCAggregatedTransaction(outputs, version);
     }
 }

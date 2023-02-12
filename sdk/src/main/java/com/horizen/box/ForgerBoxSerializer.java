@@ -2,6 +2,7 @@ package com.horizen.box;
 
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.ForgerBoxDataSerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -29,9 +30,8 @@ public final class ForgerBoxSerializer implements BoxSerializer<ForgerBox> {
 
     @Override
     public ForgerBox parse(Reader reader) {
-        Long nonce = reader.getLong();
+        long nonce = Checker.readLongNotLessThanZero(reader, "nonce");
         ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parse(reader);
-
         return new ForgerBox(boxData, nonce);
     }
 }

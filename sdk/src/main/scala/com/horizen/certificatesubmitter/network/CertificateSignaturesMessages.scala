@@ -3,6 +3,7 @@ package com.horizen.certificatesubmitter.network
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.CertificateSignatureInfo
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.proof.SchnorrSignatureSerializer
+import com.horizen.utils.Checker
 import sparkz.core.network.message.{Message, MessageSpecV1}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -34,7 +35,7 @@ class GetCertificateSignaturesSpec(unknownSignaturesLimit: Int) extends MessageS
   override def parse(r: Reader): InvUnknownSignatures = {
     val length = r.getUInt().toInt
     require(length <= unknownSignaturesLimit, s"Too many signature indexes requested. $length exceeds limit $unknownSignaturesLimit")
-    val indexes = (0 until length).map(_ => r.getInt())
+    val indexes = (0 until length).map(_ => Checker.readIntNotLessThanZero(r, "indexes"))
     InvUnknownSignatures(indexes)
   }
 }
@@ -78,12 +79,12 @@ class CertificateSignaturesSpec(signaturesLimit: Int) extends MessageSpecV1[Know
   }
 
   override def parse(r: Reader): KnownSignatures = {
-    val messageToSign = r.getBytes(FieldElementUtils.fieldElementLength())
+    val messageToSign = Checker.readBytes(r, FieldElementUtils.fieldElementLength(), "message to sign")
 
     val length = r.getUInt().toInt
     require(length <= signaturesLimit, s"Too many signatures info entries. $length exceeds limit $signaturesLimit")
     val signaturesInfo = (0 until length).map(_ => {
-      val pubKeyIndex = r.getInt()
+      val pubKeyIndex = Checker.readIntNotLessThanZero(r, "public key bytes")
       val signature = proofSerializer.parse(r)
       CertificateSignatureInfo(pubKeyIndex, signature)
     })

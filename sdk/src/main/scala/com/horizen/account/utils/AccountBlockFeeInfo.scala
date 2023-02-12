@@ -3,6 +3,7 @@ package com.horizen.account.utils
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.serialization.Views
+import com.horizen.utils.Checker
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -27,10 +28,10 @@ object AccountBlockFeeInfoSerializer extends SparkzSerializer[AccountBlockFeeInf
   }
 
   override def parse(r: Reader): AccountBlockFeeInfo = {
-    val baseFeeLength = r.getInt()
-    val baseFee = new BigInteger(r.getBytes(baseFeeLength))
-    val forgerTipsLength = r.getInt()
-    val forgerTips = new BigInteger(r.getBytes(forgerTipsLength))
+    val baseFeeLength = Checker.readIntNotLessThanZero(r, "base fee length")
+    val baseFee = new BigInteger(Checker.readBytes(r, baseFeeLength, "base fee"))
+    val forgerTipsLength = Checker.readIntNotLessThanZero(r, "forger tips length")
+    val forgerTips = new BigInteger(Checker.readBytes(r, forgerTipsLength, "forger tips"))
     val forgerRewardKey: AddressProposition = AddressPropositionSerializer.getSerializer.parse(r)
 
     AccountBlockFeeInfo(baseFee, forgerTips, forgerRewardKey)

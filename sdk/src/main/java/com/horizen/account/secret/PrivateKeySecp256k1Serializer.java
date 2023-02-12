@@ -2,6 +2,7 @@ package com.horizen.account.secret;
 
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.secret.SecretSerializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
@@ -27,7 +28,7 @@ public final class PrivateKeySecp256k1Serializer implements SecretSerializer<Pri
 
     @Override
     public PrivateKeySecp256k1 parse(Reader reader) {
-        byte[] privateKey = reader.getBytes(Secp256k1.PRIVATE_KEY_SIZE);
+        byte[] privateKey = Checker.readBytes(reader, Secp256k1.PRIVATE_KEY_SIZE, "private key");
         return new PrivateKeySecp256k1(privateKey);
     }
 }

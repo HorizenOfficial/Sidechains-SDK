@@ -8,6 +8,7 @@ import com.horizen.proof.SchnorrProof;
 import com.horizen.proof.SchnorrSignatureSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
+import com.horizen.utils.Checker;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 import sparkz.core.NodeViewModifier$;
@@ -52,28 +53,28 @@ public class CertificateKeyRotationTransactionSerializer implements TransactionS
     @Override
     public CertificateKeyRotationTransaction parse(Reader reader) {
 
-        byte version = reader.getByte();
+        byte version = Checker.readByte(reader, "version");
         if (version != CERTIFICATE_KEY_ROTATION_TRANSACTION_VERSION) {
             throw new IllegalArgumentException(String.format("Unsupported transaction version[%d].", version));
         }
 
-        long fee = reader.getLong();
+        long fee = Checker.readLongNotLessThanZero(reader, "transaction fee");
 
-        byte[] inputsId = reader.getBytes(NodeViewModifier$.MODULE$.ModifierIdSize());
+        byte[] inputsId = Checker.readBytes(reader, NodeViewModifier$.MODULE$.ModifierIdSize(), "input ids");
 
         Signature25519 proof = Signature25519Serializer.getSerializer().parse(reader);
 
-        int outputDataIsPresent = reader.getInt();
+        int outputDataIsPresent = Checker.readIntNotLessThanZero(reader, )();
         Optional<ZenBoxData> output = Optional.empty();
         if (outputDataIsPresent == 1) {
             output = Optional.of(ZenBoxDataSerializer.getSerializer().parse(reader));
         }
 
-
         KeyRotationProof keyRotationProof = KeyRotationProofSerializer.parse(reader);
 
         SchnorrProof newKeySignature = SchnorrSignatureSerializer.getSerializer().parse(reader);
 
+        Checker.bufferShouldBeEmpty(reader.remaining());
         return new CertificateKeyRotationTransaction(inputsId, output, proof, fee, version, keyRotationProof, newKeySignature);
     }
 }

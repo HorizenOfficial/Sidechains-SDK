@@ -32,8 +32,8 @@ object UtxoMerkleTreeLeafInfoSerializer extends SparkzSerializer[UtxoMerkleTreeL
   }
 
   override def parse(r: Reader): UtxoMerkleTreeLeafInfo = {
-    val leaf = r.getBytes(FieldElementUtils.fieldElementLength())
-    val position = r.getLong()
+    val leaf = Checker.readBytes(r, FieldElementUtils.fieldElementLength(), "leaf")
+    val position = Checker.readIntNotLessThanZero(r, "position")
     UtxoMerkleTreeLeafInfo(leaf, position)
   }
 }
