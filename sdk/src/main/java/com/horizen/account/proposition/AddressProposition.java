@@ -3,36 +3,43 @@ package com.horizen.account.proposition;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.secret.PrivateKeySecp256k1;
-import com.horizen.account.utils.Account;
 import com.horizen.account.utils.Secp256k1;
-import com.horizen.proposition.*;
+import com.horizen.evm.utils.Address;
+import com.horizen.proposition.PropositionSerializer;
+import com.horizen.proposition.SingleSecretProofOfKnowledgeProposition;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
 @JsonView(Views.Default.class)
-public final class AddressProposition
-        implements SingleSecretProofOfKnowledgeProposition<PrivateKeySecp256k1> {
+public final class AddressProposition implements SingleSecretProofOfKnowledgeProposition<PrivateKeySecp256k1> {
+
+    public static final int LENGTH = 20;
+    public static final AddressProposition ZERO = new AddressProposition(Address.ZERO);
 
     @JsonProperty("address")
     private final byte[] address;
 
     public AddressProposition(byte[] address) {
-        if (address.length != Account.ADDRESS_SIZE) {
+        if (address.length != LENGTH) {
             throw new IllegalArgumentException(String.format(
-                    "Incorrect address length, %d expected, %d found",
-                    Account.ADDRESS_SIZE,
-                    address.length
+                "Incorrect address length, %d expected, %d found",
+                LENGTH,
+                address.length
             ));
         }
 
-        this.address = Arrays.copyOf(address, Account.ADDRESS_SIZE);
+        this.address = Arrays.copyOf(address, LENGTH);
+    }
+
+    public AddressProposition(Address address) {
+        this(address.toBytes());
     }
 
     @Override
     public byte[] pubKeyBytes() {
-        return Arrays.copyOf(address, Account.ADDRESS_SIZE);
+        return Arrays.copyOf(address, LENGTH);
     }
 
     @Override
@@ -54,12 +61,12 @@ public final class AddressProposition
         return Arrays.equals(address, other.address);
     }
 
-    public byte[] address() {
-        return address;
+    public Address address() {
+        return new Address(address);
     }
 
     public String checksumAddress() {
-        return Secp256k1.checksumAddress(address());
+        return Secp256k1.checksumAddress(address);
     }
 
     @Override

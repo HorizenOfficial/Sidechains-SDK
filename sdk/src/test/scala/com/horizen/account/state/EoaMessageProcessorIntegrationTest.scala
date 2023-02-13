@@ -14,8 +14,7 @@ class EoaMessageProcessorIntegrationTest
   extends JUnitSuite
     with MockitoSugar
     with SecretFixture
-    with MessageProcessorFixture
-    with ClosableResourceHandler {
+    with MessageProcessorFixture {
 
   @Test
   def canProcess(): Unit = {
@@ -48,9 +47,9 @@ class EoaMessageProcessorIntegrationTest
   def process(): Unit = {
     val value = BigInteger.valueOf(1337)
     val initialBalance = new BigInteger("2000000000000")
-    val to = getAddressProposition(12345L).address()
+    val to = randomAddress
     val msg = getMessage(to, value, Array.emptyByteArray)
-    val sender = msg.getFromAddressBytes
+    val sender = msg.getFrom
 
     usingView(EoaMessageProcessor) { view =>
       view.addBalance(sender, initialBalance)
@@ -58,7 +57,7 @@ class EoaMessageProcessorIntegrationTest
       val returnData = assertGas(0, msg, view, EoaMessageProcessor, defaultBlockContext)
       assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
       assertEquals("Different from account value found", initialBalance.subtract(value), view.getBalance(sender))
-      assertEquals("Different to account value found", value, view.getBalance(msg.getToAddressBytes))
+      assertEquals("Different to account value found", value, view.getBalance(to))
     }
   }
 }

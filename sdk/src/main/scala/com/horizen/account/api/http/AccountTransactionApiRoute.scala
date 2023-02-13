@@ -17,13 +17,16 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
+import com.horizen.api.http.TransactionBaseErrorResponse.{ErrorBadCircuit, ErrorByteTransactionParsing}
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.evm.utils.Address
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{SchnorrSignatureSerializer, Signature25519}
@@ -32,7 +35,6 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-import com.horizen.secret.PrivateKey25519
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -74,9 +76,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
     val secret = allAccounts.find(
       a => (fromAddress.isEmpty ||
-        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
-          .address) == fromAddress.get) &&
-        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0 // TODO account for gas
+        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address.toBytes) == fromAddress.get) &&
+        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
+          .compareTo(txValueInWei) >= 0 // TODO account for gas
     )
 
     if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
@@ -165,37 +167,37 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 // compute the nonce if not specified in the params
                 val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
 
-                val unsignedTx = new EthereumTransaction(
-                  params.chainId,
-                  EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
-                  nonce,
-                  body.gasPrice,
-                  body.gasLimit,
-                  body.value.getOrElse(BigInteger.ZERO),
-                  EthereumTransactionUtils.getDataFromString(body.data),
-                  if (body.signature_v.isDefined)
-                    new SignatureSecp256k1(
-                      BytesUtils.fromHexString(body.signature_v.get),
-                      BytesUtils.fromHexString(body.signature_r.get),
-                      BytesUtils.fromHexString(body.signature_s.get))
-                  else
-                    null
-                )
-                val resp = if (body.outputRawBytes.getOrElse(false)) {
-                  ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
-                } else {
-                  val signedTx = signTransactionWithSecret(secret, unsignedTx)
-                  validateAndSendTransaction(signedTx)
-                }
-                resp
+              val unsignedTx = new EthereumTransaction(
+                params.chainId,
+                EthereumTransactionUtils.getToAddressFromString(body.to.orNull),
+                nonce,
+                body.gasPrice,
+                body.gasLimit,
+                body.value.getOrElse(BigInteger.ZERO),
+                EthereumTransactionUtils.getDataFromString(body.data),
+                if (body.signature_v.isDefined)
+                  new SignatureSecp256k1(
+                    BytesUtils.fromHexString(body.signature_v.get),
+                    BytesUtils.fromHexString(body.signature_r.get),
+                    BytesUtils.fromHexString(body.signature_s.get))
+                else
+                  null
+              )
+              val resp = if (body.outputRawBytes.getOrElse(false)) {
+                ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(unsignedTx))
+              } else {
+                val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                validateAndSendTransaction(signedTx)
+              }
+              resp
 
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
-            }
+            case None =>
+              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
         }
       }
     }
+  }
   }
 
   /**
@@ -262,15 +264,23 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqSignTransaction]) {
           body => {
             applyOnNodeView { sidechainNodeView =>
-              val unsignedTx: EthereumTransaction = companion.parseBytes(BytesUtils.fromHexString(body.transactionBytes)).asInstanceOf[EthereumTransaction]
-              val txCost = unsignedTx.maxCost
-              val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
-              secret match {
-                case Some(secret) =>
-                  val signedTx = signTransactionWithSecret(secret, unsignedTx)
-                  ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
-                case None =>
-                  ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              val unsignedTxObj = Try {
+                companion.parseBytes(BytesUtils.fromHexString(body.transactionBytes)).asInstanceOf[EthereumTransaction]
+              }
+              unsignedTxObj match {
+                case Success(unsignedTx) =>
+                  val txCost = unsignedTx.maxCost
+                  val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
+                  secret match {
+                    case Some(secret) =>
+                      val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                      ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
+                    case None =>
+                      ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+                  }
+                case Failure(exception) =>
+                  ApiResponseUtil.toResponse(ErrorByteTransactionParsing("ErrorByteTransactionParsing", JOptional.of(exception)))
+
               }
             }
           }
@@ -326,7 +336,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
                 secret match {
                   case Some(txCreatorSecret) =>
-                    val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
                     val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
 
                     val msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
@@ -337,7 +346,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     val dataBytes = encodeOpenStakeCmdRequest(body.forgerIndex, signature)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
                       params.chainId,
-                      EthereumTransactionUtils.getToAddressFromString(to),
+                      JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
                       nonce,
                       gasLimit,
                       maxPriorityFeePerGas,
@@ -406,12 +415,11 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             secret match {
               case Some(secret) =>
 
-                val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
                 val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
                 val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
                 val tmpTx: EthereumTransaction = new EthereumTransaction(
                   params.chainId,
-                  EthereumTransactionUtils.getToAddressFromString(to),
+                JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
                   nonce,
                   gasLimit,
                   maxPriorityFeePerGas,
@@ -453,7 +461,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val secret = getFittingSecret(sidechainNodeView, None, txCost)
           secret match {
             case Some(txCreatorSecret) =>
-              val to = BytesUtils.toHexString(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
               val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
               stakeDataOpt match {
@@ -470,7 +477,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     val dataBytes = encodeSpendStakeCmdRequest(signature, body.stakeId)
                     val tmpTx: EthereumTransaction = new EthereumTransaction(
                       params.chainId,
-                      EthereumTransactionUtils.getToAddressFromString(to),
+                      JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
                       nonce,
                       gasLimit,
                       maxPriorityFeePerGas,
@@ -552,7 +559,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqWithdrawCoins]) { body =>
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
-            val to = BytesUtils.toHexString(WithdrawalMsgProcessor.contractAddress)
             val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
             val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
             val gasInfo = body.gasInfo
@@ -577,7 +583,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
               val tmpTx: EthereumTransaction = new EthereumTransaction(
                 params.chainId,
-                EthereumTransactionUtils.getToAddressFromString(to),
+                JOptional.of(new AddressProposition(WithdrawalMsgProcessor.contractAddress)),
                 nonce,
                 gasLimit,
                 maxPriorityFeePerGas,
@@ -663,43 +669,47 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation transaction!", JOptional.empty()))
             case NaiveThresholdSignatureCircuitWithKeyRotation =>
               applyOnNodeView { sidechainNodeView =>
-                val to = BytesUtils.toHexString(CertificateKeyRotationMsgProcessor.CertificateKeyRotationContractAddress)
-                checkKeyRotationProofValidity(body)
-                val data = encodeSubmitKeyRotationRequestCmd(body)
-                val gasInfo = body.gasInfo
 
-                // default gas related params
-                val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
-                var maxPriorityFeePerGas = BigInteger.valueOf(120)
-                var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-                var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
-
-                if (gasInfo.isDefined) {
-                  maxFeePerGas = gasInfo.get.maxFeePerGas
-                  maxPriorityFeePerGas = gasInfo.get.maxPriorityFeePerGas
-                  gasLimit = gasInfo.get.gasLimit
-                }
-
-                val txCost = maxFeePerGas.multiply(gasLimit)
-                val secret = getFittingSecret(sidechainNodeView, None, txCost)
-                secret match {
-                  case Some(secret) =>
-
-                    val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-                    val tmpTx: EthereumTransaction = new EthereumTransaction(
-                      params.chainId,
-                      EthereumTransactionUtils.getToAddressFromString(to),
-                      nonce,
-                      gasLimit,
-                      maxPriorityFeePerGas,
-                      maxFeePerGas,
-                      BigInteger.ZERO,
-                      EthereumTransactionUtils.getDataFromString(data),
-                      null
-                    )
-                    validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                checkKeyRotationProofValidity(body, sidechainNodeView.getNodeState.getWithdrawalEpochInfo.epoch) match {
+                  case Some(errorResponse) => ApiResponseUtil.toResponse(errorResponse)
                   case None =>
-                    ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+
+                    val data = encodeSubmitKeyRotationRequestCmd(body)
+                    val gasInfo = body.gasInfo
+
+                    // default gas related params
+                    val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+                    var maxPriorityFeePerGas = BigInteger.valueOf(120)
+                    var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+                    var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+
+                    if (gasInfo.isDefined) {
+                      maxFeePerGas = gasInfo.get.maxFeePerGas
+                      maxPriorityFeePerGas = gasInfo.get.maxPriorityFeePerGas
+                      gasLimit = gasInfo.get.gasLimit
+                    }
+
+                    val txCost = maxFeePerGas.multiply(gasLimit)
+                    val secret = getFittingSecret(sidechainNodeView, None, txCost)
+                    secret match {
+                      case Some(secret) =>
+
+                        val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                        val tmpTx: EthereumTransaction = new EthereumTransaction(
+                          params.chainId,
+                          JOptional.of(new AddressProposition(CertificateKeyRotationMsgProcessor.CertificateKeyRotationContractAddress)),
+                          nonce,
+                          gasLimit,
+                          maxPriorityFeePerGas,
+                          maxFeePerGas,
+                          BigInteger.ZERO,
+                          EthereumTransactionUtils.getDataFromString(data),
+                          null
+                        )
+                        validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                      case None =>
+                        ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+                    }
                 }
               }
           }
@@ -712,7 +722,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
     val vrfPubKey = new VrfPublicKey(BytesUtils.fromHexString(forgerStakeInfo.vrfPubKey))
-    val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), new AddressProposition(BytesUtils.fromHexString(forgerStakeInfo.ownerAddress)))
+    val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), new Address("0x" + forgerStakeInfo.ownerAddress))
 
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd), addForgerStakeInput.encode())
   }
@@ -736,21 +746,27 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
   }
 
-  private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction): Unit = {
+  private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction, epoch: Int): Option[ErrorResponse] = {
     val index = body.keyIndex
     val keyType = body.keyType
     val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey))
     val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature))
     if (index < 0 || index >= params.signersPublicKeys.length)
-      throw new IllegalArgumentException(s"Key rotation proof - key index out for range: $index")
+      return Some(ErrorInvalidKeyRotationProof(s"Key rotation proof - key index out of range: $index"))
 
     if (keyType < 0 || keyType >= KeyRotationProofTypes.maxId)
-      throw new IllegalArgumentException("Key type enumeration value should be valid!")
+      return Some(ErrorInvalidKeyRotationProof(s"Key rotation proof - key type enumeration value invalid: $keyType"))
 
-    val messageToSign: Array[Byte] = newKey.getHash
+    val messageToSign = KeyRotationProofTypes(keyType) match {
+      case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForSigningKeyUpdate(newKey.pubKeyBytes(), epoch, params.sidechainId)
+      case MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForMasterKeyUpdate(newKey.pubKeyBytes(), epoch, params.sidechainId)
+    }
 
     if (!newKeySignature.isValid(newKey, messageToSign))
-      throw new IllegalArgumentException(s"Key rotation proof - self signature is invalid: $index")
+      return Some(ErrorInvalidKeyRotationProof(s"Key rotation proof - self signature is invalid: $index"))
+    None
   }
 
 }
@@ -952,6 +968,11 @@ object AccountTransactionErrorResponse {
 
   case class ErrorOpenForgersList(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0208"
+  }
+
+  case class ErrorInvalidKeyRotationProof(description: String) extends ErrorResponse {
+    override val code: String = "0209"
+    override val exception: JOptional[Throwable] = JOptional.empty()
   }
 
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"math"
 	"math/big"
@@ -31,14 +32,27 @@ type EvmParams struct {
 	TraceOptions *TraceOptions   `json:"traceOptions"`
 }
 
+type BlockHashCallback struct{ Callback }
+
+func (c *BlockHashCallback) getBlockHash(blockNumber uint64) common.Hash {
+	blockNumberBig := new(big.Int).SetUint64(blockNumber)
+	if c == nil {
+		// fallback to mocked block hash
+		return common.BytesToHash(crypto.Keccak256([]byte(blockNumberBig.String())))
+	}
+	blockNumberHex := (*hexutil.Big)(blockNumberBig).String()
+	return common.HexToHash(c.Invoke(blockNumberHex))
+}
+
 type EvmContext struct {
-	ChainID     hexutil.Uint64 `json:"chainID"`
-	Coinbase    common.Address `json:"coinbase"`
-	GasLimit    hexutil.Uint64 `json:"gasLimit"`
-	BlockNumber *hexutil.Big   `json:"blockNumber"`
-	Time        *hexutil.Big   `json:"time"`
-	BaseFee     *hexutil.Big   `json:"baseFee"`
-	Random      *common.Hash   `json:"random"`
+	ChainID           hexutil.Uint64     `json:"chainID"`
+	Coinbase          common.Address     `json:"coinbase"`
+	GasLimit          hexutil.Uint64     `json:"gasLimit"`
+	BlockNumber       *hexutil.Big       `json:"blockNumber"`
+	Time              *hexutil.Big       `json:"time"`
+	BaseFee           *hexutil.Big       `json:"baseFee"`
+	Random            common.Hash        `json:"random"`
+	BlockHashCallback *BlockHashCallback `json:"blockHashCallback"`
 }
 
 type TraceOptions struct {
@@ -78,23 +92,20 @@ func (c *EvmContext) setDefaults() {
 	if c.BaseFee == nil {
 		c.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
 	}
-	if c.Random == nil {
-		c.Random = new(common.Hash)
-	}
 }
 
 func (c *EvmContext) getBlockContext() vm.BlockContext {
 	return vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
-		GetHash:     mockBlockHashFn,
+		GetHash:     c.BlockHashCallback.getBlockHash,
 		Coinbase:    c.Coinbase,
 		GasLimit:    uint64(c.GasLimit),
 		BlockNumber: c.BlockNumber.ToInt(),
 		Time:        c.Time.ToInt(),
 		Difficulty:  common.Big0,
 		BaseFee:     c.BaseFee.ToInt(),
-		Random:      c.Random,
+		Random:      &c.Random,
 	}
 }
 
@@ -122,9 +133,11 @@ func (t *TraceOptions) getTracer() tracers.Tracer {
 		return nil
 	}
 	if t.Tracer != "" {
-		var returnTracer tracers.Tracer
-		returnTracer, _ = tracers.New(t.Tracer, nil, t.TracerConfig)
-		return returnTracer
+		tracer, err := tracers.New(t.Tracer, nil, t.TracerConfig)
+		if err != nil {
+			log.Warn("failed to create tracer: %v", err)
+		}
+		return tracer
 	} else {
 		traceConfig := logger.Config{
 			EnableMemory:     t.EnableMemory,
@@ -134,11 +147,6 @@ func (t *TraceOptions) getTracer() tracers.Tracer {
 		}
 		return logger.NewStructLogger(&traceConfig)
 	}
-}
-
-func mockBlockHashFn(n uint64) common.Hash {
-	// TODO: fetch real block hashes
-	return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 }
 
 type EvmResult struct {

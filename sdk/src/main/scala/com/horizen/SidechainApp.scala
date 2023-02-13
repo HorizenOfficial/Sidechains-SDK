@@ -57,7 +57,8 @@ class SidechainApp @Inject()
    @Named("CustomApiGroups") override val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
-   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator
+   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
+   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -71,7 +72,8 @@ class SidechainApp @Inject()
     ChainInfo(
       regtestId = 111,
       testnetId = 222,
-      mainnetId = 333)
+      mainnetId = 333),
+    secondsInSlot
     )
 {
 
@@ -212,7 +214,7 @@ class SidechainApp @Inject()
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
+    SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params)
   )

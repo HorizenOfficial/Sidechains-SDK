@@ -1,20 +1,22 @@
 package com.horizen.account.state
 
-import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake, OpenForgerList}
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
-import com.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, addNewNodeToList, findLinkedListNode, getListItem, linkedListNodeRefIsNull, modifyNode}
+import com.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, _}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
-import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
+import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.BytesUtils
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
-import com.horizen.proof.Signature25519
+
 import java.math.BigInteger
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
@@ -32,14 +34,14 @@ trait ForgerStakesProvider {
 
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with ForgerStakesProvider {
 
-  override val contractAddress: Array[Byte] = FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES
+  override val contractAddress: Address = FORGER_STAKE_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCode")
 
   val networkParams: NetworkParams = params
 
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
-      msg.getFromAddressBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
+      msg.getFrom.toBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
   }
 
   override def init(view: BaseAccountStateView): Unit = {
@@ -76,14 +78,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   def addForgerStake(view: BaseAccountStateView, stakeId: Array[Byte],
                      blockSignProposition: PublicKey25519Proposition,
                      vrfPublicKey: VrfPublicKey,
-                     ownerPublicKey: AddressProposition,
+                     ownerPublicKey: Address,
                      stakedAmount: BigInteger): Unit = {
 
     // add a new node to the linked list pointing to this forger stake data
     addNewNodeToList(view, stakeId)
 
     val forgerStakeData = ForgerStakeData(
-      ForgerPublicKeys(blockSignProposition, vrfPublicKey), ownerPublicKey, stakedAmount)
+      ForgerPublicKeys(blockSignProposition, vrfPublicKey), new AddressProposition(ownerPublicKey), stakedAmount)
 
     // store the forger stake data
     view.updateAccountStorageBytes(contractAddress, stakeId,
@@ -133,20 +135,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       throw new ExecutionRevertedException("Value must not be zero")
     }
 
-    // check that msg.from is not empty
-    if (msg.getFrom.isEmpty) {
-      throw new ExecutionRevertedException("Sender should not be empty")
-    }
-
     // check that msg.value is a legal wei amount convertible to satoshis without any remainder
     if (!isValidZenAmount(msg.getValue)) {
       throw new ExecutionRevertedException(s"Value is not a legal wei amount: ${msg.getValue.toString()}")
     }
 
-    val sender = msg.getFromAddressBytes
     // check that sender account exists (unless we are staking in the sc creation phase)
-    if (!view.accountExists(sender) && !isGenesisScCreation) {
-      throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom.toString}")
+    if (!view.accountExists(msg.getFrom) && !isGenesisScCreation) {
+      throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom}")
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
@@ -154,9 +150,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     val cmdInput = AddNewStakeCmdInputDecoder.decode(inputParams)
     val blockSignPublicKey: PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
-    val ownerAddress: AddressProposition = cmdInput.ownerAddress
+    val ownerAddress = cmdInput.ownerAddress
 
-    if (!view.isEoaAccount(ownerAddress.address())) {
+    if (!view.isEoaAccount(cmdInput.ownerAddress)) {
       throw new ExecutionRevertedException(s"Owner account is not an EOA")
     }
 
@@ -182,7 +178,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
     log.debug(s"Added stake to stateDb: newStakeId=${BytesUtils.toHexString(newStakeId)}, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
 
-    val addNewStakeEvt = DelegateForgerStake(msg.getFrom.get(), ownerAddress, newStakeId, stakedAmount)
+    val addNewStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddress, newStakeId, stakedAmount)
     val evmLog = getEvmLog(addNewStakeEvt)
     view.addLog(evmLog)
 
@@ -192,7 +188,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       view.addBalance(contractAddress, stakedAmount)
     } else {
       // decrease the balance of `from` account by `tx.value`
-      view.subBalance(sender, stakedAmount)
+      view.subBalance(msg.getFrom, stakedAmount)
       // increase the balance of the "forger stake smart contract” account
       view.addBalance(contractAddress, stakedAmount)
     }
@@ -245,11 +241,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
-    // check that msg.from is not empty
-    if (msg.getFrom.isEmpty) {
-      throw new ExecutionRevertedException("Sender should not be empty")
-    }
-
     val inputParams = getArgumentsFromData(msg.getData)
     val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams)
     val stakeId: Array[Byte] = cmdInput.stakeId
@@ -260,7 +251,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       .getOrElse(throw new ExecutionRevertedException("No such stake id in state-db"))
 
     // check signature
-    val msgToSign = getRemoveStakeCmdMessageToSign(stakeId, msg.getFrom.get().address(), msg.getNonce.toByteArray)
+    val msgToSign = getRemoveStakeCmdMessageToSign(stakeId, msg.getFrom, msg.getNonce.toByteArray)
     if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
       throw new ExecutionRevertedException("Invalid signature")
     }
@@ -268,7 +259,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     // remove the forger stake data
     removeForgerStake(view, stakeId)
 
-    val removeStakeEvt = WithdrawForgerStake(stakeData.ownerPublicKey, stakeId)
+    val removeStakeEvt = WithdrawForgerStake(stakeData.ownerPublicKey.address(), stakeId)
     val evmLog = getEvmLog(removeStakeEvt)
     view.addLog(evmLog)
 
@@ -326,7 +317,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     // check signature
     val blockSignerProposition = networkParams.allowedForgersList(forgerIndex)._1
 
-    val msgToSign = getOpenStakeForgerListCmdMessageToSign(forgerIndex, msg.getFrom.get().address(), msg.getNonce.toByteArray)
+    val msgToSign = getOpenStakeForgerListCmdMessageToSign(forgerIndex, msg.getFrom, msg.getNonce.toByteArray)
     if (!signature.isValid(blockSignerProposition, msgToSign)) {
       throw new ExecutionRevertedException(s"Invalid signature, could not validate against blockSignerProposition=$blockSignerProposition")
     }
@@ -348,7 +339,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     restrictForgerList(forgerIndex) = 1
     view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, restrictForgerList)
 
-    val addOpenStakeForgerListEvt = OpenForgerList(forgerIndex, msg.getFrom.get(), blockSignerProposition)
+    val addOpenStakeForgerListEvt = OpenForgerList(forgerIndex, msg.getFrom, blockSignerProposition)
     val evmLog = getEvmLog(addOpenStakeForgerListEvt)
     view.addLog(evmLog)
 
@@ -413,13 +404,13 @@ object ForgerStakeMsgProcessor {
       OpenStakeForgerListCmd.length == 2 * METHOD_ID_LENGTH
   )
 
-  def getRemoveStakeCmdMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
-    Bytes.concat(from, nonce, stakeId)
+  def getRemoveStakeCmdMessageToSign(stakeId: Array[Byte], from: Address, nonce: Array[Byte]): Array[Byte] = {
+    Bytes.concat(from.toBytes, nonce, stakeId)
   }
 
-  def getOpenStakeForgerListCmdMessageToSign(forgerIndex: Int, from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
+  def getOpenStakeForgerListCmdMessageToSign(forgerIndex: Int, from: Address, nonce: Array[Byte]): Array[Byte] = {
     require(!(forgerIndex <0))
-    Bytes.concat(Ints.toByteArray(forgerIndex), from, nonce)
+    Bytes.concat(Ints.toByteArray(forgerIndex), from.toBytes, nonce)
   }
 }
 

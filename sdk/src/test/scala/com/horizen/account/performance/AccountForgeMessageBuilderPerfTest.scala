@@ -12,6 +12,7 @@ import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
@@ -48,19 +49,29 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
 
   val state: AccountState = mock[AccountState]
   Mockito
-    .when(state.getBalance(ArgumentMatchers.any[Array[Byte]]))
+    .when(state.getBalance(ArgumentMatchers.any[Address]))
     .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
   Mockito.when(state.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
-  Mockito.when(state.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(BigInteger.ZERO)
+  Mockito.when(state.getNonce(ArgumentMatchers.any[Address])).thenReturn(BigInteger.ZERO)
   val mempool: AccountMemoryPool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
 
   val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool] =
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
   Mockito.when(nodeView.pool).thenReturn(mempool)
 
-  val blockContext = new BlockContext(Array.empty[Byte], 1000, BigInteger.ZERO, FeeUtils.GAS_LIMIT, 11, 2, 3, 1L)
-
+  val blockContext = new BlockContext(
+    Address.ZERO,
+    1000,
+    BigInteger.ZERO,
+    FeeUtils.GAS_LIMIT,
+    11,
+    2,
+    3,
+    1L,
+    MockedHistoryBlockHashProvider,
+    Hash.ZERO
+  )
 
   /*
   This method is used for testing what is the impact on forging of getting txs from the mem pool.
@@ -99,7 +110,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         mempool.put(tx.asInstanceOf[SidechainTypes#SCAT])
       }
 
-      //Sanity check
+      // Sanity check
       assertEquals(numOfTxs, mempool.size)
       val forger = new AccountForgeMessageBuilder(null, null, null, false)
 
@@ -110,12 +121,12 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         nodeView,
         1500,
         Seq.empty[MainchainBlockReferenceData],
-        WithdrawalEpochInfo(0,0),
+        WithdrawalEpochInfo(0, 0),
         100,
         Seq.empty[SidechainTypes#SCAT]
       )
 
-      val (_, appliedTxs, _) = forger.computeBlockInfo(stateView, listOfExecTxs, Seq.empty, blockContext, null)
+      val (_, appliedTxs, _) = forger.computeBlockInfo(stateView, listOfExecTxs, Seq.empty, blockContext, null, 100L)
       val totalTime = System.currentTimeMillis() - startTime
 
       val maxNumOfTxsInBlock = blockContext.blockGasLimit.divide(GasUtil.TxGas).intValue()

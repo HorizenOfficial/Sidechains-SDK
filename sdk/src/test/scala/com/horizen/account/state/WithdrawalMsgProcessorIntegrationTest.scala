@@ -3,6 +3,7 @@ package com.horizen.account.state
 import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
 import org.junit._
@@ -11,14 +12,15 @@ import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.crypto.hash.Keccak256
+
 import java.math.BigInteger
 import java.util
 
 class WithdrawalMsgProcessorIntegrationTest
     extends JUnitSuite
-    with MockitoSugar
-    with WithdrawalMsgProcessorFixture
-    with ClosableResourceHandler {
+      with MockitoSugar
+      with WithdrawalMsgProcessorFixture
+      with ClosableResourceHandler {
 
   @Before
   def setUp(): Unit = {}
@@ -34,7 +36,9 @@ class WithdrawalMsgProcessorIntegrationTest
       assertArrayEquals(
         "Wrong initial code hash",
         WithdrawalMsgProcessor.contractCodeHash,
-        view.getCodeHash(address))
+        view.getCodeHash(address)
+      )
+      assertTrue(view.isSmartContractAccount(address))
     }
   }
 
@@ -44,7 +48,18 @@ class WithdrawalMsgProcessorIntegrationTest
       WithdrawalMsgProcessor.init(view)
 
       val withdrawalEpoch = 102
-      val blockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, withdrawalEpoch, 1)
+      val blockContext = new BlockContext(
+        Address.ZERO,
+        0,
+        0,
+        FeeUtils.GAS_LIMIT,
+        0,
+        0,
+        withdrawalEpoch,
+        1,
+        MockedHistoryBlockHashProvider,
+        Hash.ZERO
+      )
 
       // GetListOfWithdrawalRequest without withdrawal requests yet
       val msgForListOfWR = listWithdrawalRequestsMessage(withdrawalEpoch)
@@ -53,7 +68,7 @@ class WithdrawalMsgProcessorIntegrationTest
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
 
       // Invalid request for insufficient balance
-      view.subBalance(msgForListOfWR.getFromAddressBytes, view.getBalance(msgForListOfWR.getFromAddressBytes))
+      view.subBalance(msgForListOfWR.getFrom, view.getBalance(msgForListOfWR.getFrom))
       val withdrawalAmount = ZenWeiConverter.convertZenniesToWei(10)
       val msgBalance = addWithdrawalRequestMessage(withdrawalAmount)
       // Withdrawal request with insufficient balance should result in ExecutionFailed
@@ -65,7 +80,7 @@ class WithdrawalMsgProcessorIntegrationTest
       val withdrawalAmount1 = ZenWeiConverter.convertZenniesToWei(123)
       var msg = addWithdrawalRequestMessage(withdrawalAmount1)
       val initialBalance = ZenWeiConverter.convertZenniesToWei(1300)
-      view.addBalance(msg.getFromAddressBytes, initialBalance)
+      view.addBalance(msg.getFrom, initialBalance)
       var newExpectedWR = WithdrawalRequest(mcAddr, msg.getValue)
       expectedListOfWR.add(newExpectedWR)
 
@@ -74,13 +89,13 @@ class WithdrawalMsgProcessorIntegrationTest
 
       val wrInBytes = assertGas(68412, msg, view, WithdrawalMsgProcessor, blockContext)
       assertArrayEquals(newExpectedWR.encode(), wrInBytes)
-      val newBalance = view.getBalance(msg.getFromAddressBytes)
+      val newBalance = view.getBalance(msg.getFrom)
       assertEquals("Wrong value in account balance", 1177, ZenWeiConverter.convertWeiToZennies(newBalance))
 
       // Checking log
       var listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      var expectedEvent = AddWithdrawalRequest(msg.getFrom.get(), mcAddr, withdrawalAmount1, withdrawalEpoch)
+      var expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount1, withdrawalEpoch)
       checkEvent(expectedEvent, listOfLogs(0))
 
       val txHash2 = Keccak256.hash("second tx")
@@ -106,14 +121,14 @@ class WithdrawalMsgProcessorIntegrationTest
       val wrInBytes2 = assertGas(48512, msg, view, WithdrawalMsgProcessor, blockContext)
       assertArrayEquals(newExpectedWR.encode(), wrInBytes2)
 
-      val newBalanceAfterSecondWR = view.getBalance(msg.getFromAddressBytes)
+      val newBalanceAfterSecondWR = view.getBalance(msg.getFrom)
       val expectedBalance = newBalance.subtract(withdrawalAmount2)
       assertEquals("Wrong value in account balance", expectedBalance, newBalanceAfterSecondWR)
 
       // Checking log
       listOfLogs = view.getLogs(txHash3.asInstanceOf[Array[Byte]])
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      expectedEvent = AddWithdrawalRequest(msg.getFrom.get(), mcAddr, withdrawalAmount2, withdrawalEpoch)
+      expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount2, withdrawalEpoch)
       checkEvent(expectedEvent, listOfLogs(0))
 
       // GetListOfWithdrawalRequest after second withdrawal request creation
@@ -123,26 +138,30 @@ class WithdrawalMsgProcessorIntegrationTest
   }
 
   def checkEvent(expectedEvent: AddWithdrawalRequest, actualEvent: EvmLog): Unit = {
-    assertArrayEquals(
+    assertEquals(
       "Wrong address",
       WithdrawalMsgProcessor.contractAddress,
-      actualEvent.address.toBytes)
+      actualEvent.address
+    )
     // The first topic is the hash of the signature of the event
     assertEquals("Wrong number of topics", NumOfIndexedEvtParams + 1, actualEvent.topics.length)
     assertArrayEquals("Wrong event signature", AddNewWithdrawalRequestEventSig, actualEvent.topics(0).toBytes)
     assertEquals(
       "Wrong from address in topic",
       expectedEvent.from,
-      decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
+      decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString))
+    )
     assertEquals(
       "Wrong mcAddr in topic",
       expectedEvent.mcDest,
-      decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.mcDest.getTypeAsString)))
+      decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.mcDest.getTypeAsString))
+    )
 
     val listOfRefs = util.Arrays
       .asList(
         TypeReference.makeTypeReference(expectedEvent.value.getTypeAsString),
-        TypeReference.makeTypeReference(expectedEvent.epochNumber.getTypeAsString))
+        TypeReference.makeTypeReference(expectedEvent.epochNumber.getTypeAsString)
+      )
       .asInstanceOf[util.List[TypeReference[Type[_]]]]
     val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
     assertEquals("Wrong amount in data", expectedEvent.value, listOfDecodedData.get(0))

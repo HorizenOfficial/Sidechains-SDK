@@ -53,7 +53,7 @@ class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDurat
 
     userSession.addMessageHandler(new MessageHandler.Whole[String]() {
       override def onMessage(t: String): Unit = {
-        log.info("Message received from server: " + t)
+        log.trace("Message received from server: " + t)
         messageHandler.onReceivedMessage(t)
       }
     })

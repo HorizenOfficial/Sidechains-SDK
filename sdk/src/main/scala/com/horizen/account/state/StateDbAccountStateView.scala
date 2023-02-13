@@ -7,17 +7,13 @@ import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES, NULL_ADDRESS_BYTES}
+import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import com.horizen.block.{
-  MainchainBlockReferenceData,
-  MainchainTxForwardTransferCrosschainOutput,
-  MainchainTxSidechainCreationCrosschainOutput
-}
+import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
-import com.horizen.evm.utils.Hash
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.evm.{ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
@@ -41,6 +37,7 @@ class StateDbAccountStateView(
     messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider =
     messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
+  // certificateKeysProvider is present only for NaiveThresholdSignatureCircuitWithKeyRotation
   lazy val certificateKeysProvider: CertificateKeysProvider =
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
 
@@ -75,30 +72,23 @@ class StateDbAccountStateView(
           // 1. extract first forger stake info: block sign public key, vrf public key, owner address, stake amount
           // 2. store the stake info record in the forging native smart contract storage
           val scOut: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
-
           val stakedAmount = ZenWeiConverter.convertZenniesToWei(scOut.amount)
+          val ownerAddress = MainchainTxCrosschainOutputAddressUtil.getAccountAddress(scOut.address)
 
-          val ownerAddressProposition = new AddressProposition(
-            MainchainTxCrosschainOutputAddressUtil.getAccountAddress(scOut.address)
-          )
 
           // customData = vrf key | blockSignerKey
           val vrfPublicKey = new VrfPublicKey(scOut.customCreationData.take(VrfPublicKey.KEY_LENGTH))
-          val blockSignerProposition = new PublicKey25519Proposition(scOut.customCreationData.slice(
-            VrfPublicKey.KEY_LENGTH,
-            VrfPublicKey.KEY_LENGTH + PublicKey25519Proposition.KEY_LENGTH
-          ))
-
-          val cmdInput = AddNewStakeCmdInput(
-            ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
-            ownerAddressProposition
+          val blockSignerProposition = new PublicKey25519Proposition(
+            scOut.customCreationData
+              .slice(VrfPublicKey.KEY_LENGTH, VrfPublicKey.KEY_LENGTH + PublicKey25519Proposition.KEY_LENGTH)
           )
 
+          val cmdInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignerProposition, vrfPublicKey), ownerAddress)
           val data = Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), cmdInput.encode())
 
           val message = new Message(
-            Optional.of(ownerAddressProposition),
-            Optional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS_BYTES)),
+            ownerAddress,
+            Optional.of(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
             BigInteger.ZERO, // gasPrice
             BigInteger.ZERO, // gasFeeCap
             BigInteger.ZERO, // gasTipCap
@@ -127,10 +117,11 @@ class StateDbAccountStateView(
             addBalance(recipientProposition.address(), value)
             log.debug(s"added FT amount = $value to address=$recipientProposition")
           } else {
+            val burnAddress = Address.ZERO
             log.warn(
-              s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was burned by sending balance to ${BytesUtils.toHexString(NULL_ADDRESS_BYTES)} address)"
+              s"ignored FT to non-EOA account, amount=$value to address=$recipientProposition (the amount was burned by sending balance to $burnAddress address)"
             )
-            addBalance(NULL_ADDRESS_BYTES, value)
+            addBalance(burnAddress, value)
             // TODO: we should return the amount back to mcReturnAddress instead of just burning it
           }
       }
@@ -193,7 +184,7 @@ class StateDbAccountStateView(
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
 
-    // should never happen if the tx has been accepted in mempool.
+    // It should never happen if the tx has been accepted in mempool.
     // In some negative test scenario this can happen when forcing an unsigned tx to be forged in a block.
     // In this case the 'from' attribute in the msg would not be
     // set, and it would be difficult to rootcause the reason why gas and nonce checks would fail
@@ -233,24 +224,24 @@ class StateDbAccountStateView(
     consensusDataReceipt
   }
 
-  override def isEoaAccount(address: Array[Byte]): Boolean =
+  override def isEoaAccount(address: Address): Boolean =
     stateDb.isEoaAccount(address)
 
-  override def isSmartContractAccount(address: Array[Byte]): Boolean =
+  override def isSmartContractAccount(address: Address): Boolean =
     stateDb.isSmartContractAccount(address)
 
-  override def accountExists(address: Array[Byte]): Boolean =
+  override def accountExists(address: Address): Boolean =
     !stateDb.isEmpty(address)
 
   // account modifiers:
-  override def addAccount(address: Array[Byte], code: Array[Byte]): Unit =
+  override def addAccount(address: Address, code: Array[Byte]): Unit =
     stateDb.setCode(address, code)
 
-  override def increaseNonce(address: Array[Byte]): Unit =
+  override def increaseNonce(address: Address): Unit =
     stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
 
   @throws(classOf[ExecutionFailedException])
-  override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
+  override def addBalance(address: Address, amount: BigInteger): Unit = {
     amount.signum() match {
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
@@ -261,7 +252,7 @@ class StateDbAccountStateView(
   }
 
   @throws(classOf[ExecutionFailedException])
-  override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
+  override def subBalance(address: Address, amount: BigInteger): Unit = {
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     amount.signum() match {
       case x if x == 0 => // amount is zero, do nothing
@@ -274,14 +265,14 @@ class StateDbAccountStateView(
     }
   }
 
-  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] =
-    stateDb.getStorage(address, key)
+  override def getAccountStorage(address: Address, key: Array[Byte]): Array[Byte] =
+    stateDb.getStorage(address, new Hash(key)).toBytes
 
-  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
-    stateDb.setStorage(address, key, value)
+  override def updateAccountStorage(address: Address, key: Array[Byte], value: Array[Byte]): Unit =
+    stateDb.setStorage(address, new Hash(key), new Hash(value))
 
-  final override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
-    updateAccountStorage(address, key, Array.fill(Hash.LENGTH)(0))
+  final override def removeAccountStorage(address: Address, key: Array[Byte]): Unit =
+    updateAccountStorage(address, key, Hash.ZERO.toBytes)
 
   // random data used to salt chunk keys in the storage trie when accessed via get/updateAccountStorageBytes
   private val chunkKeySalt =
@@ -293,7 +284,7 @@ class StateDbAccountStateView(
   private def getChunkKey(key: Array[Byte], chunkIndex: Int): Array[Byte] =
     Keccak256.hash(chunkKeySalt, key, BigIntegerUtil.toUint256Bytes(BigInteger.valueOf(chunkIndex)))
 
-  final override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
+  final override def getAccountStorageBytes(address: Address, key: Array[Byte]): Array[Byte] = {
     val length = new BigInteger(1, getAccountStorage(address, key)).intValueExact()
     val data = new Array[Byte](length)
     for (chunkIndex <- 0 until (length + Hash.LENGTH - 1) / Hash.LENGTH) {
@@ -302,7 +293,7 @@ class StateDbAccountStateView(
     data
   }
 
-  final override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
+  final override def updateAccountStorageBytes(address: Address, key: Array[Byte], value: Array[Byte]): Unit = {
     // get previous length of value stored, if any
     val oldLength = new BigInteger(1, getAccountStorage(address, key)).intValueExact()
     // values are split up into 32-bytes chunks:
@@ -323,22 +314,22 @@ class StateDbAccountStateView(
     }
   }
 
-  final override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit =
+  final override def removeAccountStorageBytes(address: Address, key: Array[Byte]): Unit =
     updateAccountStorageBytes(address, key, Array.empty)
 
-  def getProof(address: Array[Byte], keys: Array[Array[Byte]]): ProofAccountResult =
-    stateDb.getProof(address, keys)
+  def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult =
+    stateDb.getProof(address, keys.map(new Hash(_)))
 
   // account specific getters
-  override def getNonce(address: Array[Byte]): BigInteger = stateDb.getNonce(address)
+  override def getNonce(address: Address): BigInteger = stateDb.getNonce(address)
 
-  override def getBalance(address: Array[Byte]): BigInteger = stateDb.getBalance(address)
+  override def getBalance(address: Address): BigInteger = stateDb.getBalance(address)
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = stateDb.getCodeHash(address)
+  override def getCodeHash(address: Address): Array[Byte] = stateDb.getCodeHash(address).toBytes
 
-  override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
+  override def getCode(address: Address): Array[Byte] = stateDb.getCode(address)
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(new Hash(txHash))
 
   override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
 
@@ -347,13 +338,13 @@ class StateDbAccountStateView(
 
   override def getStateDbHandle: ResourceHandle = stateDb
 
-  override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
+  override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot.toBytes
 
   // set context for the created events/logs assignment
-  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = stateDb.setTxContext(txHash, idx)
+  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = stateDb.setTxContext(new Hash(txHash), idx)
 
   // reset and prepare account access list
-  def setupAccessList(msg: Message): Unit = stateDb.accessSetup(msg.getFromAddressBytes, msg.getToAddressBytes)
+  def setupAccessList(msg: Message): Unit = stateDb.accessSetup(msg.getFrom, msg.getTo.orElse(Address.ZERO))
 
   def getRefund: BigInteger = stateDb.getRefund
 

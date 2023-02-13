@@ -201,32 +201,34 @@ def eoa_transfer(node, sender, receiver, amount, call_method: CallMethod = CallM
     return res
 
 
-def contract_function_static_call(node, smart_contract_type, smart_contract_address, from_address, method, *args):
+def contract_function_static_call(node, smart_contract_type, smart_contract_address, from_address, method, *args,
+                                  tag='latest'):
     logging.info("Calling {}: using static call function".format(method))
     res = smart_contract_type.static_call(node, method, *args, fromAddress=from_address,
-                                          toAddress=smart_contract_address)
+                                          toAddress=smart_contract_address, tag=tag)
     return res
 
 
 def contract_function_call(node, smart_contract_type, smart_contract_address, from_address, method, *args, value=0,
-                           overrideGas=None):
+                           overrideGas=None, tag='latest'):
     logging.info("Estimating gas for contract call...")
     estimated_gas = smart_contract_type.estimate_gas(node, method, *args, value=value,
-                                                     fromAddress=from_address, toAddress=smart_contract_address)
+                                                     fromAddress=from_address, toAddress=smart_contract_address,
+                                                     tag=tag)
     logging.info("Estimated gas is {}".format(estimated_gas))
 
     logging.info("Calling {}: using call function".format(method))
     res = smart_contract_type.call_function(node, method, *args, fromAddress=from_address,
                                             value=value,
                                             gasLimit=estimated_gas if overrideGas is None else overrideGas,
-                                            toAddress=smart_contract_address)
+                                            toAddress=smart_contract_address, tag=tag)
     return res
 
 
-def deploy_smart_contract(node, smart_contract, from_address, *args, call_method: CallMethod = CallMethod.RPC_LEGACY):
+def deploy_smart_contract(node, smart_contract, from_address, *args, call_method: CallMethod = CallMethod.RPC_LEGACY,
+                          next_block=True):
     logging.info("Estimating gas for deployment...")
-    estimated_gas = smart_contract.estimate_gas(node, 'constructor', *args,
-                                                fromAddress=from_address)
+    estimated_gas = smart_contract.estimate_gas(node, 'constructor', *args, fromAddress=from_address)
     logging.info("Estimated gas is {}".format(estimated_gas))
 
     logging.info("Deploying smart contract...")
@@ -234,12 +236,15 @@ def deploy_smart_contract(node, smart_contract, from_address, *args, call_method
                                              fromAddress=from_address,
                                              gasLimit=estimated_gas)
 
-    generate_next_block(node, "first node")
+    if next_block:
+        generate_next_block(node, "first node")
 
-    tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
-    assert_equal(tx_receipt['result']['contractAddress'], address.lower())
-    logging.info("Smart contract deployed successfully to address 0x{}".format(address))
-    return address
+        tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
+        assert_equal(tx_receipt['result']['contractAddress'], address.lower())
+        logging.info("Smart contract deployed successfully to address {}".format(address))
+        return address
+    else:
+        return address
 
 
 def generate_block_and_get_tx_receipt(node, tx_hash, return_status=False):
@@ -271,7 +276,7 @@ def ac_makeForgerStake(sc_node, owner_address, blockSignPubKey, vrf_public_key, 
         "ownerAddress": owner_address,
         "blockSignPublicKey": blockSignPubKey,
         "vrfPubKey": vrf_public_key,
-        "value": amount # in Satoshi
+        "value": amount  # in Satoshi
     },
         "nonce": nonce
     }

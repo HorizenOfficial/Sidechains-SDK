@@ -167,12 +167,12 @@ abstract class AbstractForger[
       }
 
       case Success(ForgeFailed(ex)) => {
-        log.error(s"Forging had been failed. Reason: ${ex.getMessage}")
+        log.error(s"Forging had been failed. Reason: ${ex.getMessage}", ex)
         respondsToOpt.map(respondsTo => respondsTo ! Failure(ex))
       }
 
       case failure @ Failure(ex) => {
-        log.error(s"Forging had been failed. Reason: ${ex.getMessage}")
+        log.error(s"Forging had been failed. Reason: ${ex.getMessage}", ex)
         respondsToOpt.map(respondsTo => respondsTo ! failure)
       }
     }

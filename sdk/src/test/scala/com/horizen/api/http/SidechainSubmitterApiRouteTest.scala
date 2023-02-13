@@ -3,7 +3,7 @@ package com.horizen.api.http
 import akka.http.scaladsl.server.MalformedRequestContentRejection
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
 import com.horizen.api.http.SidechainDebugErrorResponse.ErrorBadCircuit
-import com.horizen.api.http.SidechainDebugRestScheme.ReqKeyRotationProof
+import com.horizen.api.http.SidechainDebugRestScheme.{ReqGetKeyRotationMessageToSign, ReqKeyRotationProof}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -25,14 +25,14 @@ class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
       }
 
       //Bad circuit
-      Post(basePath + "getKeyRotationProof").withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0,0,0)))  ~> sidechainSubmitterApiRoute ~> check {
+      Post(basePath + "getKeyRotationProof").withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0, 0, 0))) ~> sidechainSubmitterApiRoute ~> check {
         status.intValue shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBadCircuit("The current circuit doesn't support key rotation proofs!", JOptional.empty()).code)
       }
 
       //Should answer with a KeyRotationProof
-      Post(basePath + "getKeyRotationProof") .withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0,0,0))) ~> sidechainSubmitterApiRouteWithKeyRotation ~> check {
+      Post(basePath + "getKeyRotationProof").withEntity(SerializationUtil.serialize(ReqKeyRotationProof(0, 0, 0))) ~> sidechainSubmitterApiRouteWithKeyRotation ~> check {
         status.intValue shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -52,7 +52,6 @@ class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
         assertTrue(keyRotationProofJson.has("masterKeySignature"))
         assertEquals(BytesUtils.toHexString(keyRotationProof.masterKeySignature.bytes()), keyRotationProofJson.get("masterKeySignature").get("signature").asText())
       }
-
     }
 
     "reply at /getCertifiersKeys" in {
@@ -82,5 +81,66 @@ class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
 
     }
 
+    "reply at /getKeyRotationMessageToSignForSigningKey" in {
+      //Malformed request
+      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity("maybe_a_json") ~> sidechainSubmitterApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
+      }
+
+      val byteArray: Array[Byte] = getSchnorrKey.getPublicBytes
+      val key = BytesUtils.toHexString(byteArray)
+      //Bad circuit
+      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRoute ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBadCircuit("The current circuit doesn't support key rotation message to sign!", JOptional.empty()).code)
+      }
+
+      //Should answer with a KeyRotationProof
+      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRouteWithKeyRotation ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements.asScala.length)
+
+        val keyRotationMessageToSign = result.get("keyRotationMessageToSign")
+        assertTrue(keyRotationMessageToSign != null)
+        assertEquals("Length of message should be 64", 64, keyRotationMessageToSign.asText().length)
+      }
+    }
+
+    "reply at /getKeyRotationMessageToSignForMasterKey" in {
+      //Malformed request
+      Post(basePath + "getKeyRotationMessageToSignForMasterKey").withEntity("maybe_a_json") ~> sidechainSubmitterApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
+      }
+
+      val byteArray: Array[Byte] = getSchnorrKey.getPublicBytes
+      val key = BytesUtils.toHexString(byteArray)
+      //Bad circuit
+      Post(basePath + "getKeyRotationMessageToSignForMasterKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRoute ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBadCircuit("The current circuit doesn't support key rotation message to sign!", JOptional.empty()).code)
+      }
+
+      //Should answer with a KeyRotationProof
+      Post(basePath + "getKeyRotationMessageToSignForSigningKey").withEntity(SerializationUtil.serialize(ReqGetKeyRotationMessageToSign(key, 0))) ~> sidechainSubmitterApiRouteWithKeyRotation ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements.asScala.length)
+
+        val keyRotationMessageToSign = result.get("keyRotationMessageToSign")
+        assertTrue(keyRotationMessageToSign != null)
+        assertEquals("Length of message should be 64", 64, keyRotationMessageToSign.asText().length)
+      }
+    }
   }
 }

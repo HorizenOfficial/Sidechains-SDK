@@ -1,6 +1,5 @@
 package com.horizen.account.state;
 
-import com.horizen.account.proposition.AddressProposition;
 import com.horizen.evm.utils.Address;
 import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
@@ -10,8 +9,8 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public class Message {
-    private final Optional<AddressProposition> from;
-    private final Optional<AddressProposition> to;
+    private final Address from;
+    private final Optional<Address> to;
 
     private final BigInteger gasPrice;
     private final BigInteger gasFeeCap;
@@ -25,16 +24,16 @@ public class Message {
     private final boolean fakeMsg;
 
     public Message(
-            Optional<AddressProposition> from,
-            Optional<AddressProposition> to,
-            BigInteger gasPrice,
-            BigInteger gasFeeCap,
-            BigInteger gasTipCap,
-            BigInteger gasLimit,
-            BigInteger value,
-            BigInteger nonce,
-            byte[] data,
-            boolean fakeMsg
+        Address from,
+        Optional<Address> to,
+        BigInteger gasPrice,
+        BigInteger gasFeeCap,
+        BigInteger gasTipCap,
+        BigInteger gasLimit,
+        BigInteger value,
+        BigInteger nonce,
+        byte[] data,
+        boolean fakeMsg
     ) {
         this.from = from;
         this.to = to;
@@ -48,19 +47,13 @@ public class Message {
         this.fakeMsg = fakeMsg;
     }
 
-    public Optional<AddressProposition> getFrom() {
+    public Address getFrom() {
         return from;
     }
 
-    public byte[] getFromAddressBytes() {
-        return from.map(AddressProposition::address).orElseGet(() -> new byte[Address.LENGTH]);
-    }
-
-    public Optional<AddressProposition> getTo() {
+    public Optional<Address> getTo() {
         return to;
     }
-
-    public byte[] getToAddressBytes() { return to.isEmpty() ? null : to.get().address(); }
 
     public BigInteger getGasPrice() {
         return gasPrice;
@@ -94,16 +87,17 @@ public class Message {
 
     public String toString() {
         return String.format(
-                "Message{from=%s, to=%s, gasPrice=%s, gasFeeCap=%s, gasTipCap=%s, gasLimit=%s, value=%s, nonce=%s, data=%s, fakeMsg=%s}",
-                getFrom().isEmpty() ? "" : BytesUtils.toHexString(getFrom().get().address()),
-                getTo().isEmpty() ? "" : BytesUtils.toHexString(getTo().get().address()),
-                getGasPrice() != null ?  Numeric.toHexStringWithPrefix(getGasPrice()) : "null",
-                getGasFeeCap() != null ? Numeric.toHexStringWithPrefix(getGasFeeCap()) : "null",
-                getGasTipCap() != null ? Numeric.toHexStringWithPrefix(getGasTipCap()) : "null",
-                getGasLimit() != null ? Numeric.toHexStringWithPrefix(getGasLimit()) : "null",
-                getValue() != null ? Numeric.toHexStringWithPrefix(getValue()) : "null",
-                getNonce() != null ? Numeric.toHexStringWithPrefix(getNonce()) : "null",
-                getData() != null ? BytesUtils.toHexString(getData()) : "null",
-                getIsFakeMsg() ? "YES" : "NO");
+            "Message{from=%s, to=%s, gasPrice=%s, gasFeeCap=%s, gasTipCap=%s, gasLimit=%s, value=%s, nonce=%s, data=%s, fakeMsg=%s}",
+            from.toString(),
+            to.map(Address::toString).orElse(""),
+            gasPrice != null ? Numeric.toHexStringWithPrefix(gasPrice) : "null",
+            gasFeeCap != null ? Numeric.toHexStringWithPrefix(gasFeeCap) : "null",
+            gasTipCap != null ? Numeric.toHexStringWithPrefix(gasTipCap) : "null",
+            gasLimit != null ? Numeric.toHexStringWithPrefix(gasLimit) : "null",
+            value != null ? Numeric.toHexStringWithPrefix(value) : "null",
+            nonce != null ? Numeric.toHexStringWithPrefix(nonce) : "null",
+            data != null ? BytesUtils.toHexString(data) : "null",
+            fakeMsg ? "YES" : "NO"
+        );
     }
 }

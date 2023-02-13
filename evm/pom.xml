@@ -29,12 +29,6 @@
       <version>5.12.1</version>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <version>2.13.4.2</version>
@@ -45,14 +39,15 @@
       <version>31.1-jre</version>
     </dependency>
     <dependency>
-      <groupId>org.web3j</groupId>
-      <artifactId>utils</artifactId>
-      <version>4.9.4</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
       <version>2.19.0</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.horizen</groupId>
