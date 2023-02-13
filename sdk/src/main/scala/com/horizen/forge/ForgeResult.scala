@@ -6,7 +6,7 @@ import com.horizen.transaction.Transaction
 sealed trait ForgeResult
 
 case class ForgeSuccess[PMOD <: SidechainBlockBase[_<: Transaction,_<: SidechainBlockHeaderBase]](block: PMOD) extends ForgeResult {
-  override def toString: String = s"Successfully generated block ${block.id}"
+  override def toString: String = s"Successfully generated block ${block.id} with size ${block.bytes.length}"
 }
 
 sealed trait ForgeFailure extends ForgeResult

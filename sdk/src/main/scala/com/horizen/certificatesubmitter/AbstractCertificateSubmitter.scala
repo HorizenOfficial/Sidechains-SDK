@@ -24,7 +24,7 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.BytesUtils
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -63,7 +63,7 @@ abstract class AbstractCertificateSubmitter[
                         mainchainChannel: MainchainNodeCertificateApi,
                         submissionStrategy: CertificateSubmissionStrategy,
                         keyRotationStrategy: CircuitStrategy[TX, H, PM, HIS, MS, T])
-  (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
+  (implicit ec: ExecutionContext) extends Actor with Timers with SparkzLogging
 {
 
   type View = CurrentView[HIS, MS, VL, MP]

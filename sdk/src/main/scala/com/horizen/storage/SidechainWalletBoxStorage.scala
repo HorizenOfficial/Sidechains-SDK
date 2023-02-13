@@ -10,8 +10,8 @@ import com.horizen.{SidechainTypes, WalletBox, WalletBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ScorexLogging
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.SparkzLogging
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -21,7 +21,7 @@ import scala.util.Try
 class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends SidechainTypes
     with SidechainStorageInfo
-    with ScorexLogging
+    with SparkzLogging
 {
   // Version - block Id
   // Key - byte array box Id

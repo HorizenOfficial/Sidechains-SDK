@@ -5,7 +5,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.utils.{MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
 import com.horizen.transaction.Transaction
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.ModifierTypeId
 import sparkz.core.block.Block
 import sparkz.core.block.Block.Timestamp
@@ -42,7 +42,10 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
 
   def transactionsListExceedsSizeLimit: Boolean
 
-  def blockExceedsSizeLimit(blockSize: Int): Boolean
+  def blockExceedsSizeLimit(blockSize: Long): Boolean
+
+  def blockExceedsOverheadSizeLimit(blockOverheadSize: Long): Boolean
+
 
   // Verify that included sidechainTransactions are consistent to header.sidechainTransactionsMerkleRootHash.
   @throws(classOf[InconsistentSidechainBlockDataException])
@@ -114,6 +117,8 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
     }
   }
 
+  def blockTxSize() : Long
+
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
     // version is specific to block subclass
     if(!versionIsValid())
@@ -135,7 +140,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id sidechain transactions amount exceeds the limit.")
 
     // Check Block size
-    val blockSize: Int = bytes.length
+    val blockSize: Long = bytes.length
     if(blockExceedsSizeLimit(blockSize))
       throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id size exceeds the limit.")
 
@@ -155,6 +160,12 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
         case Failure(e) => throw new InvalidSidechainBlockDataException(
           s"${getClass.getSimpleName} $id Transaction ${tx.id} is semantically invalid: ${e.getMessage}.")
       }
+    }
+
+    // Check we do not exceed the block overhead size
+    val blockOverheadSize = blockSize - blockTxSize()
+    if(blockExceedsOverheadSizeLimit(blockOverheadSize)) {
+      throw new InvalidSidechainBlockDataException(s"${getClass.getSimpleName} $id block overhead size $blockOverheadSize exceeds the limit.")
     }
 
     // Check that MainchainHeaders are valid.

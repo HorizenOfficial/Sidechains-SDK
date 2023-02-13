@@ -5,17 +5,19 @@ import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArg
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable}
 import com.horizen.account.events.SubmitKeyRotation
 import com.horizen.account.state.CertificateKeyRotationMsgProcessor.{CertificateKeyRotationContractAddress, CertificateKeyRotationContractCode, SubmitKeyRotationReqCmdSig}
-import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
+import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
-import scorex.crypto.hash.{Digest32, Keccak256}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.crypto.hash.{Digest32, Keccak256}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import java.util
@@ -27,14 +29,14 @@ trait CertificateKeysProvider {
   private[horizen] def getCertifiersKeys(epochNum: Int, view: BaseAccountStateView): CertifiersKeys
 }
 
-case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with CertificateKeysProvider {
+case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with CertificateKeysProvider {
 
-  override val contractAddress: Array[Byte] = CertificateKeyRotationContractAddress
+  override val contractAddress: Address = CertificateKeyRotationContractAddress
   override val contractCode: Array[Byte] = CertificateKeyRotationContractCode
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = new AccountStateViewGasTracked(view, gas)
+    val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case SubmitKeyRotationReqCmdSig =>
         execSubmitKeyRotation(msg, gasView, blockContext.withdrawalEpochNumber)
@@ -121,13 +123,19 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 
     val signingKeyFromConfig = params.signersPublicKeys(index)
     val masterKeyFromConfig = params.mastersPublicKeys(index)
-    val newKeyAsMessage: Array[Byte] = keyRotationProof.newKey.getHash
+
+    val newKeyAsMessage = keyRotationProof.keyType match {
+      case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForSigningKeyUpdate(keyRotationProof.newKey.pubKeyBytes(), currentEpochNum, params.sidechainId)
+      case MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForMasterKeyUpdate(keyRotationProof.newKey.pubKeyBytes(), currentEpochNum, params.sidechainId)
+    }
 
     val latestSigningKey = getLatestSigningKey(view, signingKeyFromConfig, currentEpochNum, index)
-    val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)
     if (!keyRotationProof.signingKeySignature.isValid(latestSigningKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - signing signature is invalid: $index")
 
+    val latestMasterKey = getLatestMasterKey(view, masterKeyFromConfig, currentEpochNum, index)
     if (!keyRotationProof.masterKeySignature.isValid(latestMasterKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - master signature is invalid: $index")
 
@@ -204,7 +212,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Fak
 }
 
 object CertificateKeyRotationMsgProcessor {
-  val CertificateKeyRotationContractAddress: Array[Byte] = CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS_BYTES
+  val CertificateKeyRotationContractAddress: Address = CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
   val CertificateKeyRotationContractCode: Digest32 = Keccak256.hash("KeyRotationSmartContractCode")
 
   val SubmitKeyRotationReqCmdSig: String = getABIMethodId("submitKeyRotation(uint32,uint32,bytes32,bytes1,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)")

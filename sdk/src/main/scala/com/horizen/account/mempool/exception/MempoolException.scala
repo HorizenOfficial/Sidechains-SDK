@@ -1,5 +1,5 @@
 package com.horizen.account.mempool.exception
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import java.math.BigInteger
 

@@ -3,7 +3,7 @@ package com.horizen.storage
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
 import com.horizen.utils.{ByteArrayWrapper, CswData, CswDataSerializer, ListSerializer, Utils, Pair => JPair}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
-class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with SidechainStorageInfo with SidechainTypes {
+class SidechainWalletCswDataStorage(storage: Storage) extends SparkzLogging with SidechainStorageInfo with SidechainTypes {
   require(storage != null, "Storage must be NOT NULL.")
 
   private val cswDataListSerializer = new ListSerializer[CswData](CswDataSerializer)

@@ -21,11 +21,11 @@ import com.horizen.secret.VrfSecretKey
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation._
-import com.horizen.vrf.VrfGeneratedDataProvider
+import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.{ModifierId, idToBytes}
+import sparkz.util.{ModifierId, idToBytes}
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.math.BigInteger
@@ -55,11 +55,11 @@ class AccountBlockTest
   val parentId: ModifierId = getRandomBlockId(seed)
 
   val generatedDataSeed = 908
-  val vrfGenerationPrefix = "SidechainBlockTest"
+  val vrfGenerationPrefix = "AccountBlockTest"
 
   if (false) {
     VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
-    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, generatedDataSeed)
+    VrfGeneratedDataProvider.updateVrfProofAndOutput(vrfGenerationPrefix, generatedDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
@@ -70,6 +70,7 @@ class AccountBlockTest
 
   val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(seed, vrfKeyPair)
   val vrfProof: VrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, generatedDataSeed)
+  val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(vrfGenerationPrefix, generatedDataSeed)
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test
@@ -885,6 +886,7 @@ class AccountBlockTest
       forgerMetadata.blockSignSecret,
       forgerMetadata.forgingStakeInfo,
       vrfProof,
+      vrfOutput,
       MerkleTreeFixture.generateRandomMerklePath(rnd.nextLong()),
       new Array[Byte](32),
       stateRoot,

@@ -94,7 +94,7 @@ trait SidechainNodeViewHolderFixture
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
-    case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
+    case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
   val sidechainSecretStorage = new SidechainSecretStorage(getStorage(), sidechainSecretsCompanion)

@@ -3,12 +3,12 @@ package com.horizen.account.transaction;
 import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.state.GasUintOverflowException;
 import com.horizen.account.state.GasUtil;
 import com.horizen.account.state.Message;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionEncoder;
 import com.horizen.account.utils.Secp256k1;
+import com.horizen.evm.utils.Address;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
@@ -16,8 +16,10 @@ import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
-import scorex.crypto.hash.Keccak256;
-
+import sparkz.crypto.hash.Keccak256;
+import sparkz.util.ByteArrayBuilder;
+import sparkz.util.serialization.VLQByteBufferWriter;
+import sparkz.util.serialization.Writer;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.Optional;
@@ -235,7 +237,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));
         if (!BigIntegerUtil.isUint64(getGasLimit()))
-            throw new GasUintOverflowException();
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "gas limit uint64 owerflow", id()));
 
         if (isEIP1559()) {
             if (getMaxFeePerGas().signum() < 0)
@@ -366,9 +369,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @JsonIgnore
-    public String getToAddressString() {
+    public Address getToAddress() {
         if (this.to == null) return null;
-        return Numeric.toHexString(this.to.address());
+        return this.to.address();
     }
 
     @Override
@@ -394,9 +397,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @JsonIgnore
-    public String getFromAddressString() {
+    public Address getFromAddress() {
         if (this.getFrom() == null) return null;
-        return Numeric.toHexString(this.getFrom().address());
+        return this.getFrom().address();
     }
 
     @Override
@@ -428,10 +431,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                         "maxFeePerGas=%s, maxPriorityFeePerGas=%s, chainId=%s, version=%d, Signature=%s}",
                 id(),
-                getFromAddressString(),
+                getFromAddress(),
                 Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
                 Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
-                getToAddressString(),
+                getToAddress(),
                 Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
                 getDataString(),
                 Numeric.toHexStringWithPrefix(getMaxFeePerGas() != null ? getMaxFeePerGas() : BigInteger.ZERO),
@@ -445,11 +448,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                         "chainId=%s, version=%d, Signature=%s}",
                 id(),
-                getFromAddressString(),
+                getFromAddress(),
                 Numeric.toHexStringWithPrefix(getNonce() != null ? getNonce() : BigInteger.ONE.negate()),
                 Numeric.toHexStringWithPrefix(getGasPrice() != null ? getGasPrice() : BigInteger.ZERO),
                 Numeric.toHexStringWithPrefix(getGasLimit() != null ? getGasLimit() : BigInteger.ZERO),
-                getToAddressString(),
+                getToAddress(),
                 Numeric.toHexStringWithPrefix(getValue() != null ? getValue() : BigInteger.ZERO),
                 getDataString(),
                 getChainId() != null ? getChainId() : "",
@@ -470,8 +473,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         // this will default to gasPrice if the transaction is not EIP-1559
         var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
-                Optional.ofNullable(this.from),
-                Optional.ofNullable(this.to),
+                getFrom() == null ? Address.ZERO : getFrom().address(),
+                getTo().map(AddressProposition::address),
                 effectiveGasPrice,
                 gasFeeCap,
                 gasTipCap,
@@ -484,6 +487,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public byte[] encode(boolean accountSignature) {
-        return EthereumTransactionEncoder.encodeAsRlpValues(this, accountSignature);
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        encode(accountSignature, writer);
+        return writer.toBytes();
+    }
+
+    public void encode(boolean accountSignature, Writer writer) {
+        EthereumTransactionEncoder.encodeAsRlpValues(this, accountSignature, writer);
     }
 }

@@ -1,9 +1,11 @@
 package com.horizen.account.utils;
 
+import com.horizen.account.proposition.AddressProposition;
+import com.horizen.evm.utils.Address;
 import com.horizen.utils.Pair;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
-import scorex.crypto.hash.Keccak256;
+import sparkz.crypto.hash.Keccak256;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -85,10 +87,14 @@ public final class Secp256k1 {
         // Address is the last Account.ADDRESS_SIZE bytes of public key Keccak256 hash
         byte[] hashedKey = (byte[]) Keccak256.hash(publicKey);
 
-        return Arrays.copyOfRange(hashedKey, hashedKey.length - Account.ADDRESS_SIZE, hashedKey.length);
+        return Arrays.copyOfRange(hashedKey, hashedKey.length - AddressProposition.LENGTH, hashedKey.length);
     }
 
     public static String checksumAddress(byte[] address) {
         return Keys.toChecksumAddress(Numeric.toHexString(address));
+    }
+
+    public static Address generateContractAddress(Address from, BigInteger nonce) {
+        return new Address(ContractUtils.generateContractAddress(from.toBytes(), nonce));
     }
 }

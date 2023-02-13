@@ -16,7 +16,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
 
     "reply at /ethv1 - bad api token header" in {
       Post(basePath)
-        .withHeaders(badApiTokenHeader)
+        .addCredentials(badCredentials)
         .withEntity(SerializationUtil.serialize("maybe_a_json")) ~> ethRpcRoute ~> check {
           rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
         }
@@ -26,7 +26,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val singleRequestJsonNode = mapper.readTree(singleRequestJson)
     "reply at /ethv1 - single request" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(singleRequestJsonNode)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -40,7 +40,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val singleRequestJsonNodeMethodNotFound = mapper.readTree(singleRequestJsonMethodNotFound)
     "reply at /ethv1 - single request - method not found" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(singleRequestJsonNodeMethodNotFound)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -55,7 +55,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val singleRequestJsonNodeIdNotPresent = mapper.readTree(singleRequestJsonIdNotPresent)
     "reply at /ethv1 - single request - id not present" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(singleRequestJsonNodeIdNotPresent)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -70,7 +70,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeOne = mapper.readTree(batchRequestJsonOne)
     "reply at /ethv1 - batch request" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeOne)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -88,7 +88,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeTwo = mapper.readTree(batchRequestJsonTwo)
     "reply at /ethv1 - batch request two" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeTwo)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -110,7 +110,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeMethodNotFound = mapper.readTree(batchRequestJsonMethodNotFound)
     "reply at /ethv1 - batch request - method not found" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeMethodNotFound)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -127,7 +127,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeIdNotPresent = mapper.readTree(batchRequestJsonIdNotPresent)
     "reply at /ethv1 - batch request - id not present" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeIdNotPresent)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -144,7 +144,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeInvalidOne = mapper.readTree(batchRequestJsonInvalidOne)
     "reply at /ethv1 - batch request - invalid batch one" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeInvalidOne)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -163,7 +163,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeInvalidTwo = mapper.readTree(batchRequestJsonInvalidTwo)
     "reply at /ethv1 - batch request - invalid batch two" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeInvalidTwo)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -184,7 +184,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeEmptyArray = mapper.readTree(batchRequestJsonEmptyArray)
     "reply at /ethv1 - batch request - invalid batch - empty array" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeEmptyArray)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -199,7 +199,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val singleRequestJsonNodeInvalidId = mapper.readTree(singleRequestJsonInvalidId)
     "reply at /ethv1 - single request - invalid id" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(singleRequestJsonNodeInvalidId)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -214,7 +214,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeInvalidId = mapper.readTree(batchRequestJsonInvalidId)
     "reply at /ethv1 - batch request - invalid id" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeInvalidId)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -232,7 +232,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeGetUncleCountByBlockHash = mapper.readTree(batchRequestJsonGetUncleCountByBlockHash)
     "reply at /ethv1 - uncle block - eth_getUncleCountByBlockHash" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleCountByBlockHash)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -246,7 +246,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeGetUncleCountByBlockNumber = mapper.readTree(batchRequestJsonGetUncleCountByBlockNumber)
     "reply at /ethv1 - uncle block - eth_getUncleCountByBlockNumber" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleCountByBlockNumber)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -260,7 +260,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeGetUncleByBlockHashAndIndex = mapper.readTree(batchRequestJsonGetUncleByBlockHashAndIndex)
     "reply at /ethv1 - uncle block - eth_getUncleByBlockHashAndIndex" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleByBlockHashAndIndex)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -274,7 +274,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     val batchRequestJsonNodeGetUncleByBlockNumberAndIndex = mapper.readTree(batchRequestJsonGetUncleByBlockNumberAndIndex)
     "reply at /ethv1 - uncle block - eth_getUncleByBlockNumberAndIndex" in {
       Post(basePath)
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(batchRequestJsonNodeGetUncleByBlockNumberAndIndex)) ~> ethRpcRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

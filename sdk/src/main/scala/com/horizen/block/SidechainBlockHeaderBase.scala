@@ -5,13 +5,13 @@ import com.google.common.primitives.Bytes
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.serialization.ScorexModifierIdSerializer
+import com.horizen.serialization.SparkzModifierIdSerializer
 import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import sparkz.core.block.Block
 import sparkz.core.{NodeViewModifier, bytesToId}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.ModifierId
 
 import scala.util.Try
 
@@ -31,7 +31,7 @@ trait SidechainBlockHeaderBase {
   val signature: Signature25519
 
 
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
+  @JsonSerialize(using = classOf[SparkzModifierIdSerializer])
   lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   val messageToSign: Array[Byte]

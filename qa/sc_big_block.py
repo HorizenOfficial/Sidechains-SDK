@@ -26,7 +26,7 @@ Test:
 """
 class BigBlockTest(SidechainTestFramework):
     MAX_TRANSACTION_OUTPUT = 998
-    number_of_sc_ndoes = 2
+    number_of_sidechain_nodes = 2
 
     def setup_nodes(self):
         # Start 1 MC node
@@ -50,7 +50,7 @@ class BigBlockTest(SidechainTestFramework):
 
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sc_ndoes, self.options.tmpdir)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def find_boxes_of_address(self, boxes, address):
         address_boxes = []

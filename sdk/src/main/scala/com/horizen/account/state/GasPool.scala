@@ -1,10 +1,10 @@
 package com.horizen.account.state
 
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 
-class GasPool(initialGas: BigInteger) extends ScorexLogging {
+class GasPool(initialGas: BigInteger) extends SparkzLogging {
 
   private var currentGas = initialGas
 

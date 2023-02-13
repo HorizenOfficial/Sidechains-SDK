@@ -10,7 +10,7 @@ import org.junit.Test
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.bytesToId
+import sparkz.util.bytesToId
 
 
 class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with CompanionsFixture {

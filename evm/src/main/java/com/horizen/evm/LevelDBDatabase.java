@@ -1,5 +1,7 @@
 package com.horizen.evm;
 
+import com.horizen.evm.interop.LevelDBParams;
+
 public class LevelDBDatabase extends Database {
     /**
      * Open a LevelDB instance in the given path.
@@ -7,7 +9,7 @@ public class LevelDBDatabase extends Database {
      * @param path data directory to pass to levelDB
      */
     public LevelDBDatabase(String path) {
-        super(LibEvm.openLevelDB(path));
+        super(LibEvm.invoke("OpenLevelDB", new LevelDBParams(path), int.class));
     }
 
     @Override

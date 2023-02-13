@@ -119,7 +119,7 @@ task(
 
 const config: HardhatUserConfig = {
   solidity: {
-    compilers: [{ version: "0.8.4" }],
+    compilers: [{ version: "0.8.18" }],
   },
 };
 

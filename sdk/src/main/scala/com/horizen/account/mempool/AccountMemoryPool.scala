@@ -4,7 +4,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountMemoryPool
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.{AccountMempoolSettings, SidechainTypes}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.transaction.MempoolReader
 
 import java.util
@@ -24,7 +24,7 @@ class AccountMemoryPool(
 ]
   with SidechainTypes
   with NodeAccountMemoryPool
-  with ScorexLogging {
+  with SparkzLogging {
   override type NVCT = AccountMemoryPool
 
   // Getters:
@@ -47,11 +47,11 @@ class AccountMemoryPool(
   }
 
   override def take(limit: Int): Iterable[SidechainTypes#SCAT] = {
-    unconfirmed.takeExecutableTxs().take(limit)
+    unconfirmed.takeExecutableTxs(Seq()).take(limit)
   }
 
-  def takeExecutableTxs(): MempoolMap#TransactionsByPriceAndNonce = {
-    unconfirmed.takeExecutableTxs()
+  def takeExecutableTxs(forcedTx: Iterable[SidechainTypes#SCAT] = Seq()): MempoolMap#TransactionsByPriceAndNonce = {
+    unconfirmed.takeExecutableTxs(forcedTx)
   }
 
   override def filter(txs: Seq[SidechainTypes#SCAT]): AccountMemoryPool = {

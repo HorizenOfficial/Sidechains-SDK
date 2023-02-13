@@ -6,7 +6,7 @@ import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, Public
 import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.util.{List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
@@ -42,7 +42,7 @@ abstract class AbstractWallet[
     TX,
     PMOD,
     W]
-    with ScorexLogging
+    with SparkzLogging
     with NodeWalletBase
     with SidechainTypes {
 

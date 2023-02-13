@@ -310,7 +310,7 @@ abstract class AbstractSidechainNodeViewHolder[
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.trimChainSuffix method.
-  protected def trimChainSuffix(suffix: IndexedSeq[PMOD], rollbackPoint: scorex.util.ModifierId): IndexedSeq[PMOD] = {
+  protected def trimChainSuffix(suffix: IndexedSeq[PMOD], rollbackPoint: sparkz.util.ModifierId): IndexedSeq[PMOD] = {
     val idx = suffix.indexWhere(_.id == rollbackPoint)
     if (idx == -1) IndexedSeq() else suffix.drop(idx)
   }

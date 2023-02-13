@@ -3,11 +3,11 @@ package com.horizen.account.state
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertFalse, assertNotNull, assertTrue}
 import org.junit.Test
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 
-class EvmMessageProcessorIntegrationTest extends MessageProcessorFixture with EvmMessageProcessorTestBase {
+class EvmMessageProcessorIntegrationTest extends EvmMessageProcessorTestBase {
 
   // compiled EVM byte-code of the Storage contract,
   // source: libevm/contracts/Storage.sol
@@ -18,9 +18,9 @@ class EvmMessageProcessorIntegrationTest extends MessageProcessorFixture with Ev
   def testCanProcess(): Unit = {
     usingView { stateView =>
       // prepare contract account
-      stateView.addAccount(contractAddress.address(), Keccak256.hash("testcode"))
+      stateView.addAccount(contractAddress, Keccak256.hash("testcode"))
       // prepare eoa account that is not empty
-      stateView.addBalance(eoaAddress.address(), BigInteger.TEN)
+      stateView.addBalance(eoaAddress, BigInteger.TEN)
 
       val processor = new EvmMessageProcessor()
       assertTrue("should process smart contract deployment", processor.canProcess(getMessage(null), stateView))
@@ -40,16 +40,17 @@ class EvmMessageProcessorIntegrationTest extends MessageProcessorFixture with Ev
   def testProcess(): Unit = {
 
     val initialBalance = new BigInteger("2000000000000")
+    val evmMessageProcessor = new EvmMessageProcessor()
 
-    usingView(new EvmMessageProcessor) { stateView =>
-      stateView.addBalance(originAddress.address(), initialBalance)
+    usingView(evmMessageProcessor) { stateView =>
+      stateView.addBalance(origin, initialBalance)
 
       // smart contract constructor has one argument (256-bit uint)
       val initialValue = Array.fill(32) { 0.toByte }
       initialValue(initialValue.length - 1) = 42
       // add constructor arguments to the end of the deployment code
-      val msg = getMessage(null, deployCode ++ initialValue)
-      val result = assertGas(138826)(stateView.applyMessage(msg, _, defaultBlockContext))
+      val msg = getMessage(null, data = deployCode ++ initialValue)
+      val result = assertGas(76990, msg, stateView, evmMessageProcessor, defaultBlockContext)
       assertNotNull("result should not be null", result)
     }
   }

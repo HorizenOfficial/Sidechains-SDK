@@ -2,7 +2,7 @@ package com.horizen.fixtures.sidechainblock.generation
 
 import java.util.Random
 
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 case class GenerationRules(forgingBoxesToAdd: Set[SidechainForgingData] = Set(),
                            forgingBoxesToSpent: Set[SidechainForgingData] = Set(),

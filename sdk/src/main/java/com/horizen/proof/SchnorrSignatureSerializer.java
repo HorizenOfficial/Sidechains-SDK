@@ -1,7 +1,7 @@
 package com.horizen.proof;
 
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public class SchnorrSignatureSerializer implements ProofSerializer<SchnorrProof> {
     private static SchnorrSignatureSerializer serializer;

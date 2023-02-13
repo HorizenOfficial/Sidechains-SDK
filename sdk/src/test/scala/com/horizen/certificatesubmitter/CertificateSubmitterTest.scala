@@ -13,8 +13,10 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableM
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
+import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
 import com.horizen.certificatesubmitter.keys.CertifiersKeys
 import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, CertificateSubmissionStrategy, CircuitStrategy, WithoutKeyRotationCircuitStrategy}
+import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, CertificateSubmissionStrategy, WithoutKeyRotationCircuitStrategy}
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.fixtures.FieldElementFixture
@@ -35,12 +37,13 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, when}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.compat.java8.OptionConverters._
@@ -374,7 +377,6 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertArrayEquals("Message to sign is different.", messageToSign, status.messageToSign)
     assertEquals("Known sigs array is different.", knownSigs, status.knownSigs)
   }
-
   @Test
   def newBlockArrived(): Unit = {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)

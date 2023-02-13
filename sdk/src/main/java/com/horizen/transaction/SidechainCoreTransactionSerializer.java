@@ -9,8 +9,8 @@ import com.horizen.proposition.Proposition;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import sparkz.core.NodeViewModifier$;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 import java.util.ArrayList;
 import java.util.HashMap;

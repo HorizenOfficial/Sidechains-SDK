@@ -10,7 +10,8 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.{MerklePath, Utils}
-import scorex.util.bytesToId
+import com.horizen.vrf.VrfOutput
+import sparkz.util.bytesToId
 
 import java.math.BigInteger
 import java.util.{ArrayList => JArrayList}
@@ -21,14 +22,18 @@ trait AccountBlockHeaderFixture {
   def createUnsignedBlockHeader(seed: Long = 123134L,
                                 vrfKeysOpt: Option[(VrfSecretKey, VrfPublicKey)] = None,
                                 vrfProofOpt: Option[VrfProof] = None,
+                                vrfOutputOpt: Option[VrfOutput] = None,
                                 blockVersion:Byte = AccountBlock.ACCOUNT_BLOCK_VERSION): (AccountBlockHeader,  ForgerAccountGenerationMetadata) = {
+    assert(vrfProofOpt.isDefined == vrfOutputOpt.isDefined, "VRF proof and output must be both defined or not")
     val random: Random = new Random(seed)
 
     val parentId = new Array[Byte](32)
     random.nextBytes(parentId)
 
     val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(seed, vrfKeysOpt)
-    val vrfProof = vrfProofOpt.getOrElse(VrfGenerator.generateProof(seed))
+    val proofAndOutput = VrfGenerator.generateProofAndOutput(seed)
+    val vrfProof = vrfProofOpt.getOrElse(proofAndOutput.getKey)
+    val vrfOutput = vrfOutputOpt.getOrElse(proofAndOutput.getValue)
     val merklePath = new MerklePath(new JArrayList())
     val transactionsRootHash = Utils.ZEROS_HASH
     val mainchainRootHash = Utils.ZEROS_HASH
@@ -51,6 +56,7 @@ trait AccountBlockHeaderFixture {
       forgingStakeInfo,
       merklePath,
       vrfProof,
+      vrfOutput,
       transactionsRootHash,
       mainchainRootHash,
       stateRoot,

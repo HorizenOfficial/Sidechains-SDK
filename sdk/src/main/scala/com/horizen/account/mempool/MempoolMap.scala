@@ -7,7 +7,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.{AccountMempoolSettings, SidechainTypes}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
@@ -18,7 +18,7 @@ import scala.util.Try
 class MempoolMap(
                   accountStateReaderProvider: AccountStateReaderProvider,
                   baseStateReaderProvider: BaseStateReaderProvider,
-                  mempoolSettings: AccountMempoolSettings) extends ScorexLogging {
+                  mempoolSettings: AccountMempoolSettings) extends SparkzLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
   type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
@@ -222,11 +222,11 @@ class MempoolMap(
    * Returns executable transactions sorted by gas tip (descending) and nonce. The ordering is performed in a semi-lazy
    * way.
    */
-  def takeExecutableTxs(): TransactionsByPriceAndNonce = {
+  def takeExecutableTxs(forcedTx: Iterable[SidechainTypes#SCAT] = Seq()): TransactionsByPriceAndNonce = {
 
     val baseFee = baseStateReaderProvider.getBaseStateReader().getNextBaseFee
 
-    new TransactionsByPriceAndNonce(baseFee)
+    new TransactionsByPriceAndNonce(baseFee, forcedTx)
   }
 
   def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
@@ -509,7 +509,7 @@ class MempoolMap(
     }
   }
 
-  class TransactionsByPriceAndNonce(baseFee: BigInteger) extends Iterable[SidechainTypes#SCAT] {
+  class TransactionsByPriceAndNonce(baseFee: BigInteger, forcedTx: Iterable[SidechainTypes#SCAT]) extends Iterable[SidechainTypes#SCAT] {
 
     class Iter extends TransactionsByPriceAndNonceIter {
 
@@ -517,32 +517,51 @@ class MempoolMap(
         tx.getMaxFeePerGas.subtract(baseFee).min(tx.getMaxPriorityFeePerGas)
       }
 
+      // used in some scenario (only regtest) where use is made of http api 'generate' setting explicitly some
+      // transactions to be included in a forged block
+      val forcedTxQueue = new mutable.Queue[SidechainTypes#SCAT]()
+
       val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
+
       executableTxs.foreach { case (_, mapOfTxsPerAccount) =>
         val tx = getTransaction(mapOfTxsPerAccount.values.head).get
         orderedQueue.enqueue(tx)
       }
+      forcedTx.foreach(
+        forcedTxQueue.enqueue(_)
+      )
 
-      override def hasNext: Boolean = orderedQueue.nonEmpty
+      override def hasNext: Boolean = forcedTxQueue.nonEmpty || orderedQueue.nonEmpty
 
       override def next(): SidechainTypes#SCAT = {
-        val bestTx = orderedQueue.dequeue()
-        val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
-        if (nextTxIdOpt.nonEmpty) {
-          val tx = getTransaction(nextTxIdOpt.get).get
-          orderedQueue.enqueue(tx)
+        if (forcedTxQueue.nonEmpty) {
+          forcedTxQueue.dequeue()
+        } else {
+          val bestTx = orderedQueue.dequeue()
+          val nextTxIdOpt = executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
+          if (nextTxIdOpt.nonEmpty) {
+            val tx = getTransaction(nextTxIdOpt.get).get
+            orderedQueue.enqueue(tx)
+          }
+          bestTx
         }
-        bestTx
       }
 
       def peek: SidechainTypes#SCAT = {
-        orderedQueue.head
+        if (forcedTxQueue.nonEmpty) {
+          forcedTxQueue.head
+        } else {
+          orderedQueue.head
+        }
       }
 
       def removeAndSkipAccount(): SidechainTypes#SCAT = {
-        orderedQueue.dequeue()
+        if (forcedTxQueue.nonEmpty) {
+          forcedTxQueue.dequeue()
+        } else {
+          orderedQueue.dequeue()
+        }
       }
-
     }
 
     override def iterator: TransactionsByPriceAndNonceIter = {

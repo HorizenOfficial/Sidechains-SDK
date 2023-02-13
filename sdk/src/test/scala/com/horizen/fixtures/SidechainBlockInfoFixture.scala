@@ -5,7 +5,7 @@ import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, Sidechai
 import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
 
 import scala.annotation.tailrec

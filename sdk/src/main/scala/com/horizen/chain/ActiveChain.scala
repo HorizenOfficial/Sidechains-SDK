@@ -1,6 +1,6 @@
 package com.horizen.chain
 
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.collection.mutable.ArrayBuffer
 

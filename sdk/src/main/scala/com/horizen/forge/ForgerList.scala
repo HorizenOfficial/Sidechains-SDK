@@ -1,7 +1,7 @@
 package com.horizen.forge
 
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 case class ForgerList(forgerIndexes: Array[Int]) extends BytesSerializable {
   override type M = ForgerList

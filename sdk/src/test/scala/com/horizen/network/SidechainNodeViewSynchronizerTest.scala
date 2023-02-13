@@ -26,7 +26,7 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import java.io.{BufferedReader, FileReader}
 import java.net.InetSocketAddress
