@@ -1,0 +1,29 @@
+{
+  "test_type": "mempool",
+  "use_multiprocessing": true,
+  "initial_ft_amount": 200,
+  "test_run_time": 60,
+  "max_tps_per_process": 20,
+  "block_rate": 10,
+  "initial_txs": 1800,
+  "extended_transaction": false,
+  "network_topology": "daisy_chain",
+  "latency_settings": {
+    "get_peer_spec": 0,
+    "peer_spec": 0,
+    "transaction": 0,
+    "block": 0,
+    "request_modifier_spec": 0,
+    "modifiers_spec": 0
+  },
+  "nodes": [
+    {
+      "forger": true,
+      "tx_creator": false
+    },
+    {
+      "forger": false,
+      "tx_creator": true
+    }
+  ]
+}
