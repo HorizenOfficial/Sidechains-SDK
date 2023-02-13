@@ -39,11 +39,19 @@ class AccountStateTest
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
     val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
-    state = new AccountState(params, mockedTimeProvider, versionTag, metadataStorage, stateDbStorege, messageProcessors)
+    state = new AccountState(
+      params,
+      mockedTimeProvider,
+      MockedHistoryBlockHashProvider,
+      versionTag,
+      metadataStorage,
+      stateDbStorege,
+      messageProcessors
+    )
   }
 
   private def sumFeeInfos(feeInfo: AccountBlockFeeInfo*): BigInteger = {
-    feeInfo.foldLeft(BigInteger.ZERO)((sum,info) => sum.add(info.baseFee).add(info.forgerTips))
+    feeInfo.foldLeft(BigInteger.ZERO)((sum, info) => sum.add(info.baseFee).add(info.forgerTips))
   }
 
   @Test

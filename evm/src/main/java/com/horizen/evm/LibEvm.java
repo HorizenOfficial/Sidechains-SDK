@@ -3,17 +3,22 @@ package com.horizen.evm;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 final class LibEvm {
     static native void Free(Pointer ptr);
 
-    static native void SetLogCallback(LibEvmLogCallback callback);
+    private static native void SetCallbackProxy(LibEvmCallback.CallbackProxy callback);
 
-    static native void SetLogLevel(String level);
+    private static native void SetupLogging(int callbackHandle, String level);
 
     private static native JsonPointer Invoke(String method, JsonPointer args);
 
-    static String getOSLibExtension() {
+    private static final Logger logger = LogManager.getLogger();
+    private static final GlogCallback logCallback = new GlogCallback(logger);
+
+    private static String getOSLibExtension() {
         var os = System.getProperty("os.name").toLowerCase();
         if (os.contains("mac os")) {
             return "dylib";
@@ -25,9 +30,14 @@ final class LibEvm {
     }
 
     static {
+        var libName = "libevm." + getOSLibExtension();
+        logger.info("loading library: {}", libName);
         // bind native methods in this class to libevm
-        Native.register("libevm." + getOSLibExtension());
-        LibEvmLogCallback.Register();
+        Native.register(libName);
+        // register callback
+        SetCallbackProxy(LibEvmCallback.proxy);
+        // propagate log4j log level to glog
+        SetupLogging(logCallback.handle, GlogCallback.log4jToGlogLevel(logger.getLevel()));
     }
 
     private LibEvm() {

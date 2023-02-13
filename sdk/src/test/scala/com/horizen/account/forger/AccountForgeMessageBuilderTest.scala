@@ -16,7 +16,7 @@ import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEnco
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import com.horizen.params.TestNetParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -25,6 +25,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.state.BaseStateReader
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
+import com.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any
@@ -63,7 +64,9 @@ class AccountForgeMessageBuilderTest
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     usingView { stateView =>
@@ -80,12 +83,14 @@ class AccountForgeMessageBuilderTest
         Seq[SidechainTypes#SCAT](transaction.asInstanceOf[SidechainTypes#SCAT])
       )
 
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertTrue(appliedTxs.isEmpty)
 
@@ -116,7 +121,9 @@ class AccountForgeMessageBuilderTest
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -134,12 +141,14 @@ class AccountForgeMessageBuilderTest
           invalidTx.asInstanceOf[SidechainTypes#SCAT]
         )
       )
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertTrue(appliedTxs.isEmpty)
 
@@ -179,7 +188,9 @@ class AccountForgeMessageBuilderTest
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -202,12 +213,14 @@ class AccountForgeMessageBuilderTest
           validTx.asInstanceOf[SidechainTypes#SCAT]
         )
       )
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertEquals(1, appliedTxs.size)
       assertEquals(validTx.id(), appliedTxs.head.id)
@@ -232,6 +245,7 @@ class AccountForgeMessageBuilderTest
     val ownerPrivateKey = mock[PrivateKey25519]
     val forgingStakeInfo = mock[ForgingStakeInfo]
     val vrfProof = mock[VrfProof]
+    val vrfOutput = mock[VrfOutput]
     val forgingStakeInfoMerklePath = mock[MerklePath]
     val companion = mock[DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]]]
     val inputBlockSize = 0
@@ -254,6 +268,7 @@ class AccountForgeMessageBuilderTest
         ownerPrivateKey,
         forgingStakeInfo,
         vrfProof,
+        vrfOutput,
         forgingStakeInfoMerklePath,
         companion,
         inputBlockSize,
@@ -367,7 +382,9 @@ class AccountForgeMessageBuilderTest
       new Array[Byte](PublicKey25519Proposition.KEY_LENGTH)
     )
 
-    val vrfProof = VrfGenerator.generateProof(123)
+    val proofAndOutput = VrfGenerator.generateProofAndOutput(123)
+    val vrfProof = proofAndOutput.getKey
+    val vrfOutput = proofAndOutput.getValue
     val forgingStakeInfo =
       new ForgingStakeInfo(ownerPrivateKey.publicImage(), new VrfPublicKey(new Array[Byte](VrfPublicKey.KEY_LENGTH)), 1)
     val forgingStakeInfoMerklePath = new MerklePath(new util.ArrayList[Pair[java.lang.Byte, Array[Byte]]])
@@ -390,6 +407,7 @@ class AccountForgeMessageBuilderTest
       ownerPrivateKey,
       forgingStakeInfo,
       vrfProof,
+      vrfOutput,
       forgingStakeInfoMerklePath,
       companion,
       inputBlockSize,

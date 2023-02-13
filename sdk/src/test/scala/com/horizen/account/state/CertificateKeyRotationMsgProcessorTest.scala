@@ -6,7 +6,7 @@ import com.horizen.account.utils.FeeUtils
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
@@ -103,7 +103,7 @@ class CertificateKeyRotationMsgProcessorTest
       if (epoch == 0)
         defaultBlockContext
       else
-        new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1)
+        new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
 
     val messageToSign = keyRotationProof.keyType match {
       case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation

@@ -445,19 +445,24 @@ class EthService(
     (block, blockInfo)
   }
 
-  private def getBlockContext(block: AccountBlock, blockInfo: SidechainBlockInfo): BlockContext = {
+  private def getBlockContext(
+      block: AccountBlock,
+      blockInfo: SidechainBlockInfo,
+      blockHashProvider: HistoryBlockHashProvider
+  ): BlockContext = {
     new BlockContext(
       block.header,
       blockInfo.height,
       TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
       blockInfo.withdrawalEpochInfo.epoch,
-      networkParams.chainId
+      networkParams.chainId,
+      blockHashProvider
     )
   }
 
   private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, BlockContext) ⇒ A): A = {
     val (block, blockInfo) = getBlockByTag(nodeView, tag)
-    val blockContext = getBlockContext(block, blockInfo)
+    val blockContext = getBlockContext(block, blockInfo, nodeView.history)
     if (tag == "pending") {
       using(getPendingStateView(nodeView, block, blockInfo))(fun(_, blockContext))
     } else {
@@ -562,7 +567,7 @@ class EthService(
       null,
       null,
       parentInfo.withdrawalEpochInfo,
-      None,
+      parentInfo.vrfOutputOpt, // same as for parent block, used as a source of BlockContext.random field
       parentInfo.lastBlockInPreviousConsensusEpoch
     )
   }
@@ -586,7 +591,7 @@ class EthService(
 
     // apply transactions
     for ((tx, i) <- block.transactions.zipWithIndex) {
-      pendingStateView.applyTransaction(tx, i, gasPool, getBlockContext(block, blockInfo)) match {
+      pendingStateView.applyTransaction(tx, i, gasPool, getBlockContext(block, blockInfo, nodeView.history)) match {
         case Success(consensusDataReceipt) =>
           val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
 

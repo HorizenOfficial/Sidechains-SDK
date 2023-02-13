@@ -13,6 +13,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
+import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
@@ -33,6 +34,7 @@ import scala.util.{Failure, Success, Try}
 class AccountState(
     val params: NetworkParams,
     timeProvider: NetworkTimeProvider,
+    blockHashProvider: HistoryBlockHashProvider,
     override val version: VersionTag,
     stateMetadataStorage: AccountStateMetadataStorage,
     stateDbStorage: Database,
@@ -140,8 +142,14 @@ class AccountState(
       var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
       val blockGasPool = new GasPool(mod.header.gasLimit)
-      val blockContext =
-        new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch, params.chainId)
+      val blockContext = new BlockContext(
+        mod.header,
+        blockNumber,
+        consensusEpochNumber,
+        modWithdrawalEpochInfo.epoch,
+        params.chainId,
+        blockHashProvider
+      )
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
         stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
@@ -218,6 +226,7 @@ class AccountState(
       new AccountState(
         params,
         timeProvider,
+        blockHashProvider,
         idToVersion(mod.id),
         stateMetadataStorage,
         stateDbStorage,
@@ -303,7 +312,7 @@ class AccountState(
   override def rollbackTo(version: VersionTag): Try[AccountState] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
-    new AccountState(params, timeProvider, version, newMetaState, stateDbStorage, messageProcessors)
+    new AccountState(params, timeProvider, blockHashProvider, version, newMetaState, stateDbStorage, messageProcessors)
   } recoverWith { case exception =>
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
@@ -338,7 +347,7 @@ class AccountState(
   }
 
   override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
-    if (withdrawalEpoch == -1)
+    if (withdrawalEpoch == -1 || params.circuitType == NaiveThresholdSignatureCircuit)
       Some(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
     else {
       using(getView)(_.certifiersKeys(withdrawalEpoch))
@@ -500,7 +509,8 @@ object AccountState extends SparkzLogging {
       stateDbStorage: Database,
       messageProcessors: Seq[MessageProcessor],
       params: NetworkParams,
-      timeProvider: NetworkTimeProvider
+      timeProvider: NetworkTimeProvider,
+      blockHashProvider: HistoryBlockHashProvider
   ): Option[AccountState] = {
 
     if (stateMetadataStorage.isEmpty) {
@@ -510,6 +520,7 @@ object AccountState extends SparkzLogging {
         new AccountState(
           params,
           timeProvider,
+          blockHashProvider,
           bytesToVersion(stateMetadataStorage.lastVersionId.get.data),
           stateMetadataStorage,
           stateDbStorage,
@@ -525,6 +536,7 @@ object AccountState extends SparkzLogging {
       messageProcessors: Seq[MessageProcessor],
       params: NetworkParams,
       timeProvider: NetworkTimeProvider,
+      blockHashProvider: HistoryBlockHashProvider,
       genesisBlock: AccountBlock
   ): Try[AccountState] = Try {
 
@@ -533,6 +545,7 @@ object AccountState extends SparkzLogging {
     new AccountState(
       params,
       timeProvider,
+      blockHashProvider,
       idToVersion(genesisBlock.parentId),
       stateMetadataStorage,
       stateDbStorage,

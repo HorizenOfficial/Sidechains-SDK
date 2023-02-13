@@ -1,5 +1,6 @@
 package com.horizen
 
+import com.horizen.account.state.HistoryBlockHashProvider
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain._
 import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
@@ -16,12 +17,11 @@ import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
+
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
-import java.util.{Optional => JOptional}
-
 
 abstract class AbstractHistory[
   TX <: Transaction,
@@ -41,6 +41,7 @@ abstract class AbstractHistory[
     extends sparkz.core.consensus.History[PM, SidechainSyncInfo, HT]
       with NetworkParamsUtils
       with ConsensusDataProvider
+      with HistoryBlockHashProvider
       with NodeHistoryBase[TX, H, PM, FPI]
       with SparkzLogging
 {
@@ -413,17 +414,17 @@ abstract class AbstractHistory[
 
   override def getBestBlock : PM = bestBlock
 
-  override def getBlockIdByHeight(height: Int): java.util.Optional[String] = {
+  override def getBlockIdByHeight(height: Int): Optional[String] = {
     storage.activeChainBlockId(height) match {
-      case Some(blockId) => java.util.Optional.of[String](blockId)
-      case None => java.util.Optional.empty()
+      case Some(blockId) => Optional.of[String](blockId)
+      case None => Optional.empty()
     }
   }
 
-  override def getBlockHeightById(id: String): java.util.Optional[Integer] = {
+  override def getBlockHeightById(id: String): Optional[Integer] = {
     storage.heightOf(ModifierId(id)) match {
-      case Some(height) => java.util.Optional.of[Integer](height)
-      case None => java.util.Optional.empty()
+      case Some(height) => Optional.of[Integer](height)
+      case None => Optional.empty()
     }
   }
 
@@ -431,7 +432,7 @@ abstract class AbstractHistory[
     height
   }
 
-  override def getFeePaymentsInfo(blockId: String): java.util.Optional[FPI] = {
+  override def getFeePaymentsInfo(blockId: String): Optional[FPI] = {
     feePaymentsInfo(ModifierId @@ blockId).asJava
   }
 
@@ -452,15 +453,15 @@ abstract class AbstractHistory[
  */
   override def getMainchainCreationBlockHeight: Int = params.mainchainCreationBlockHeight
 
-  override def getBestMainchainBlockReferenceInfo: java.util.Optional[MainchainBlockReferenceInfo] = {
+  override def getBestMainchainBlockReferenceInfo: Optional[MainchainBlockReferenceInfo] = {
     storage.getBestMainchainBlockReferenceInfo.asJava
   }
 
-  override def getMainchainBlockReferenceInfoByMainchainBlockHeight(height: Int): java.util.Optional[MainchainBlockReferenceInfo] = {
+  override def getMainchainBlockReferenceInfoByMainchainBlockHeight(height: Int): Optional[MainchainBlockReferenceInfo] = {
     storage.getMainchainBlockReferenceInfoByMainchainBlockHeight(height).asJava
   }
 
-  override def getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash: Array[Byte]): java.util.Optional[MainchainBlockReferenceInfo] = {
+  override def getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash: Array[Byte]): Optional[MainchainBlockReferenceInfo] = {
     storage.getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash).asJava
   }
 
@@ -472,7 +473,7 @@ abstract class AbstractHistory[
     storage.getMainchainHeaderByHash(mainchainHeaderHash).asJava
   }
 
-  override def getMainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): java.util.Optional[MainchainHeaderInfo] = {
+  override def getMainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): Optional[MainchainHeaderInfo] = {
     mainchainHeaderInfoByHash(mainchainHeaderHash).asJava
   }
 
@@ -550,17 +551,17 @@ abstract class AbstractHistory[
     makeNewHistory(storage, consensusDataStorage)
   }
 
-  def findTransactionInsideBlock(transactionId: String, block: PM): JOptional[TX] = {
+  def findTransactionInsideBlock(transactionId: String, block: PM): Optional[TX] = {
     block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
-      case Some(tx) => JOptional.ofNullable(tx)
-      case None => JOptional.empty()
+      case Some(tx) => Optional.ofNullable(tx)
+      case None => Optional.empty()
     }
   }
 
-  def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[TX] = {
+  def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): Optional[TX] = {
     storage.blockById(ModifierId(blockId)) match {
       case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
-      case None => JOptional.empty()
+      case None => Optional.empty()
     }
   }
 }
