@@ -7,7 +7,7 @@ import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519Proposi
 import com.horizen.serialization.Views
 import com.horizen.utils.{ByteArrayWrapper, Utils}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 @JsonView(Array(classOf[Views.Default]))
 case class ForgingStakeInfo(blockSignPublicKey: PublicKey25519Proposition,

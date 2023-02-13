@@ -7,9 +7,8 @@ import com.horizen.node.NodeHistory
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.util.ScorexLogging
+import sparkz.util.{SparkzEncoding, SparkzLogging}
 
-import java.util.{Optional => JOptional}
 import scala.util.Try
 
 
@@ -24,9 +23,9 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
 
   with NetworkParamsUtils
   with ConsensusDataProvider
-  with sparkz.core.utils.SparkzEncoding
+  with SparkzEncoding
   with NodeHistory
-  with ScorexLogging
+  with SparkzLogging
 {
 
   override type NVCT = SidechainHistory

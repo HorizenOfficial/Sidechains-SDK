@@ -4,17 +4,18 @@ void Free(void *ptr) {
     free(ptr);
 }
 
-typedef void (*logFunction)(char *msg);
+typedef char* (*callbackProxy)(int handle, char *args);
 
-// global log callback function pointer
-static logFunction log = NULL;
+// global callback function pointer
+static callbackProxy proxy = NULL;
 
-// exported symbol to set the log function pointer
-void SetLogCallback(logFunction callback) {
-    log = callback;
+// exported symbol to set the callback function pointer
+void SetCallbackProxy(callbackProxy func) {
+    proxy = func;
 }
 
-// used by GO to invoke the log callback, as GO cannot invoke C function pointers
-void invokeLog(char *msg) {
-    if (log != NULL) log(msg);
+// used by GO to invoke the callback, as GO cannot invoke C function pointers
+char* invokeCallbackProxy(int handle, char *args) {
+    if (proxy == NULL) return NULL;
+    return proxy(handle, args);
 }

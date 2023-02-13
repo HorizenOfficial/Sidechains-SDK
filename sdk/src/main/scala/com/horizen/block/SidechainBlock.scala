@@ -11,12 +11,12 @@ import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{BlockFeeInfo, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.validation.InconsistentSidechainBlockDataException
-import com.horizen.{SidechainTypes, SparkzEncoding}
+import com.horizen.SidechainTypes
 import sparkz.core.block.Block
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.idToBytes
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.{ModifierId, SparkzEncoding}
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -29,7 +29,7 @@ class SidechainBlock(override val header: SidechainBlockHeader,
                      override val mainchainHeaders: Seq[MainchainHeader],
                      override val ommers: Seq[Ommer[SidechainBlockHeader]],
                      companion: SidechainTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader](header, sidechainTransactions,mainchainBlockReferencesData, mainchainHeaders, ommers)
+  extends SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader](header, sidechainTransactions,mainchainBlockReferencesData, mainchainHeaders, ommers) with SidechainTypes
 {
   def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
@@ -66,8 +66,14 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
   override def transactionsListExceedsSizeLimit: Boolean = sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
 
-  override def blockExceedsSizeLimit(blockSize: Int): Boolean = blockSize > SidechainBlock.MAX_BLOCK_SIZE
+  override def blockExceedsSizeLimit(blockSize: Long): Boolean = blockSize > SidechainBlock.MAX_BLOCK_SIZE
 
+  // UTXO does not have a specific limit for block overhead size
+  override def blockExceedsOverheadSizeLimit(blockOverheadSize: Long): Boolean = false
+
+  override def blockTxSize(): Long = {
+    new ListSerializer[SidechainTypes#SCBT](companion).toBytes(sidechainTransactions.asJava).length
+  }
 }
 
 

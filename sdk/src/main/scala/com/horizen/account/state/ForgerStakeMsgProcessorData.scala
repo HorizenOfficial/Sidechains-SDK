@@ -4,16 +4,16 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import com.horizen.evm.utils.Address
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
-import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
-import org.web3j.utils.Numeric
+import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util
@@ -39,7 +39,7 @@ case class AccountForgingStakeInfo(
 
     listOfParams.add(new Bytes32(stakeId))
     listOfParams.add(new Uint256(forgerStakeData.stakedAmount))
-    listOfParams.add(new Address(Numeric.toHexString(forgerStakeData.ownerPublicKey.address())))
+    listOfParams.add(new AbiAddress(forgerStakeData.ownerPublicKey.address().toString))
 
     listOfParams.addAll(forgerPublicKeysParams)
 
@@ -130,13 +130,13 @@ object ForgerPublicKeysSerializer extends SparkzSerializer[ForgerPublicKeys] {
 
 case class AddNewStakeCmdInput(
             forgerPublicKeys: ForgerPublicKeys,
-            ownerAddress: AddressProposition) extends ABIEncodable[StaticStruct] {
+            ownerAddress: Address) extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
     val forgerPublicKeysAbi = forgerPublicKeys.asABIType()
     val listOfParams: util.List[Type[_]] = new util.ArrayList(forgerPublicKeysAbi.getValue.asInstanceOf[util.List[Type[_]]])
     //val listOfParams = new util.ArrayList(forgerPublicKeysAbi.getValue)
-    listOfParams.add(new Address(Numeric.toHexString(ownerAddress.address())))
+    listOfParams.add(new AbiAddress(ownerAddress.toString))
     new StaticStruct(listOfParams)
   }
 
@@ -151,13 +151,13 @@ object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes1]() {},
-      new TypeReference[Address]() {}))
+      new TypeReference[AbiAddress]() {}))
 
    override def createType(listOfParams: util.List[Type[_]]): AddNewStakeCmdInput = {
     val forgerPublicKey = new PublicKey25519Proposition(listOfParams.get(0).asInstanceOf[Bytes32].getValue)
     val vrfKey = decodeVrfKey(listOfParams.get(1).asInstanceOf[Bytes32], listOfParams.get(2).asInstanceOf[Bytes1])
     val forgerPublicKeys = ForgerPublicKeys(forgerPublicKey, vrfKey)
-    val ownerPublicKey = new AddressProposition(org.web3j.utils.Numeric.hexStringToByteArray(listOfParams.get(3).asInstanceOf[Address].getValue))
+    val ownerPublicKey = new Address(listOfParams.get(3).asInstanceOf[AbiAddress].toString)
 
     AddNewStakeCmdInput(forgerPublicKeys, ownerPublicKey)
   }

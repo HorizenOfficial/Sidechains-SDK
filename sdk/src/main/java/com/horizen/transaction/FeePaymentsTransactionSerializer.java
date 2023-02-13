@@ -3,8 +3,8 @@ package com.horizen.transaction;
 import com.horizen.box.ZenBox;
 import com.horizen.box.ZenBoxSerializer;
 import com.horizen.utils.ListSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 import java.util.List;
 

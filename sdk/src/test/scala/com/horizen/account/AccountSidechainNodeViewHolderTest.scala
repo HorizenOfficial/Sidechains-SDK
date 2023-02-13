@@ -22,7 +22,7 @@ import org.junit.{Before, Test}
 import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.ModifierId
+import sparkz.util.{ModifierId, SparkzEncoding}
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
@@ -37,7 +37,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
   with MockedAccountSidechainNodeViewHolderFixture
   with AccountBlockFixture
   with CompanionsFixture
-  with sparkz.core.utils.SparkzEncoding
+  with SparkzEncoding
 {
   var history: AccountHistory = _
   var state: AccountState = _

@@ -7,13 +7,15 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.{AccountState, AccountStateView, MessageProcessor}
+import com.horizen.account.state.{AccountState, AccountStateView, MessageProcessor, MockedHistoryBlockHashProvider}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
 import com.horizen.evm.Database
+import com.horizen.evm.utils.Address
 import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainSecretStorage
@@ -26,6 +28,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
+import sparkz.util.SparkzEncoding
 
 import java.io.{BufferedWriter, FileWriter}
 import java.math.BigInteger
@@ -40,7 +43,7 @@ class AccountSidechainNodeViewHolderPerfTest
     extends JUnitSuite
       with EthereumTransactionFixture
       with StoreFixture
-      with sparkz.core.utils.SparkzEncoding {
+      with SparkzEncoding {
   var historyMock: AccountHistory = _
   var state: AccountState = _
   var stateViewMock: AccountStateView = _
@@ -50,7 +53,7 @@ class AccountSidechainNodeViewHolderPerfTest
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
 
-  val mockStateDbNonces = TrieMap[ByteArrayWrapper, BigInteger]()
+  val mockStateDbNonces = TrieMap[Address, BigInteger]()
 
   @Before
   def setUp(): Unit = {
@@ -58,14 +61,14 @@ class AccountSidechainNodeViewHolderPerfTest
 
     stateViewMock = mock[AccountStateView]
     Mockito
-      .when(stateViewMock.getBalance(ArgumentMatchers.any[Array[Byte]]))
+      .when(stateViewMock.getBalance(ArgumentMatchers.any[Address]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
-    Mockito.when(stateViewMock.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenReturn(true)
+    Mockito.when(stateViewMock.isEoaAccount(ArgumentMatchers.any[Address])).thenReturn(true)
     Mockito.when(stateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
-    Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer { answer =>
+    Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Address])).thenAnswer { answer =>
       {
-        mockStateDbNonces.getOrElse(new ByteArrayWrapper(answer.getArgument(0).asInstanceOf[Array[Byte]]), BigInteger.ZERO)
+        mockStateDbNonces.getOrElse(answer.getArgument(0).asInstanceOf[Address], BigInteger.ZERO)
       }
     }
 
@@ -449,7 +452,7 @@ class AccountSidechainNodeViewHolderPerfTest
       Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
       // Update the nonces in the mock state
       listOfTxsInBlock.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -479,7 +482,7 @@ class AccountSidechainNodeViewHolderPerfTest
       // First resetting the nonces (so it will restart from 0), then put the new nonces for txs in appliedBlock2
       mockStateDbNonces.clear()
       listOfTxsInBlock2.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       )
       println("Starting test")
       val startTime2 = System.currentTimeMillis()
@@ -567,7 +570,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       // Update the nonces
       listOfExecTransactionsToApply.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.asInstanceOf[EthereumTransaction].getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.asInstanceOf[EthereumTransaction].getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -606,7 +609,7 @@ class AccountSidechainNodeViewHolderPerfTest
       // First resetting the nonces in the mock state, then the ones in appliedBlock2
       mockStateDbNonces.clear()
       listOfBlocks2.foreach( block => block.transactions.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.asInstanceOf[EthereumTransaction].getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.asInstanceOf[EthereumTransaction].getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       ))
       println("Starting test")
       val startTime2 = System.currentTimeMillis()
@@ -661,7 +664,7 @@ class AccountSidechainNodeViewHolderPerfTest
       Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
       // Update the nonces
       listOfTxsInBlock.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -782,6 +785,7 @@ class AccountSidechainNodeViewHolderPerfTest
     Mockito.when(sidechainSettings.wallet).thenReturn(mockWalletSettings)
     val params: NetworkParams = mock[NetworkParams]
     Mockito.when(params.chainId).thenReturn(1997)
+    Mockito.when(params.circuitType).thenReturn(NaiveThresholdSignatureCircuit)
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]
@@ -795,7 +799,15 @@ class AccountSidechainNodeViewHolderPerfTest
 
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
 
-    state = new AccountState(params, timeProvider, versionTag, stateMetadataStorage, stateDbStorage, Seq()) {
+    state = new AccountState(
+      params,
+      timeProvider,
+      MockedHistoryBlockHashProvider,
+      versionTag,
+      stateMetadataStorage,
+      stateDbStorage,
+      Seq()
+    ) {
       override def getView: AccountStateView = stateViewMock
     }
 

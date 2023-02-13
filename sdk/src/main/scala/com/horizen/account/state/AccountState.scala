@@ -6,25 +6,25 @@ import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
+import com.horizen.account.utils.Secp256k1.generateContractAddress
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
 import com.horizen.account.validation.InvalidTransactionChainIdException
-import com.horizen.account.receipt.Bloom
-import com.horizen.account.utils.FeeUtils
-import com.horizen.account.utils.Account.generateContractAddress
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
+import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.util.bytesToId
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
+
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -34,6 +34,7 @@ import scala.util.{Failure, Success, Try}
 class AccountState(
     val params: NetworkParams,
     timeProvider: NetworkTimeProvider,
+    blockHashProvider: HistoryBlockHashProvider,
     override val version: VersionTag,
     stateMetadataStorage: AccountStateMetadataStorage,
     stateDbStorage: Database,
@@ -42,7 +43,7 @@ class AccountState(
       with TransactionValidation[SidechainTypes#SCAT]
       with NodeAccountState
       with ClosableResourceHandler
-      with ScorexLogging {
+      with SparkzLogging {
 
   override type NVCT = AccountState
 
@@ -141,8 +142,14 @@ class AccountState(
       var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
       val blockGasPool = new GasPool(mod.header.gasLimit)
-      val blockContext =
-        new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch, params.chainId)
+      val blockContext = new BlockContext(
+        mod.header,
+        blockNumber,
+        consensusEpochNumber,
+        modWithdrawalEpochInfo.epoch,
+        params.chainId,
+        blockHashProvider
+      )
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
         stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
@@ -174,10 +181,9 @@ class AccountState(
 
             receiptList += fullReceipt
 
-            val baseFeePerGas = blockContext.baseFee
-            val (txBaseFeePerGas, txMaxPriorityFeePerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
+            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, blockContext.baseFee)
             cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
-            cumForgerTips = cumForgerTips.add(txMaxPriorityFeePerGas.multiply(txGasUsed))
+            cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
 
           case Failure(err: GasLimitReached) =>
             log.error("Could not apply tx, block gas limit exceeded")
@@ -220,6 +226,7 @@ class AccountState(
       new AccountState(
         params,
         timeProvider,
+        blockHashProvider,
         idToVersion(mod.id),
         stateMetadataStorage,
         stateDbStorage,
@@ -247,7 +254,7 @@ class AccountState(
       }
 
       // add rewards to forgers balance
-      feePayments.foreach(payment => stateView.addBalance(payment.addressBytes, payment.value))
+      feePayments.foreach(payment => stateView.addBalance(payment.address.address(), payment.value))
 
     } else {
       // No fee payments expected
@@ -305,7 +312,7 @@ class AccountState(
   override def rollbackTo(version: VersionTag): Try[AccountState] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
-    new AccountState(params, timeProvider, version, newMetaState, stateDbStorage, messageProcessors)
+    new AccountState(params, timeProvider, blockHashProvider, version, newMetaState, stateDbStorage, messageProcessors)
   } recoverWith { case exception =>
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
@@ -317,7 +324,7 @@ class AccountState(
   // View
   override def getView: AccountStateView = {
     // get state root
-    val stateRoot = stateMetadataStorage.getAccountStateRoot
+    val stateRoot = new Hash(stateMetadataStorage.getAccountStateRoot)
     val statedb = new StateDB(stateDbStorage, stateRoot)
 
     new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
@@ -325,7 +332,7 @@ class AccountState(
 
   // get a view over state db which is built with the given state root
   def getStateDbViewFromRoot(stateRoot: Array[Byte]): StateDbAccountStateView =
-    new StateDbAccountStateView(new StateDB(stateDbStorage, stateRoot), messageProcessors)
+    new StateDbAccountStateView(new StateDB(stateDbStorage, new Hash(stateRoot)), messageProcessors)
 
   // Base getters
   override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
@@ -340,7 +347,7 @@ class AccountState(
   }
 
   override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
-    if (withdrawalEpoch == -1)
+    if (withdrawalEpoch == -1 || params.circuitType == NaiveThresholdSignatureCircuit)
       Some(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
     else {
       using(getView)(_.certifiersKeys(withdrawalEpoch))
@@ -394,13 +401,13 @@ class AccountState(
   }
 
   // Account specific getters
-  override def getBalance(address: Array[Byte]): BigInteger = using(getView)(_.getBalance(address))
+  override def getBalance(address: Address): BigInteger = using(getView)(_.getBalance(address))
 
   override def getAccountStateRoot: Array[Byte] = stateMetadataStorage.getAccountStateRoot
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = using(getView)(_.getCodeHash(address))
+  override def getCodeHash(address: Address): Array[Byte] = using(getView)(_.getCodeHash(address))
 
-  override def getNonce(address: Array[Byte]): BigInteger = using(getView)(_.getNonce(address))
+  override def getNonce(address: Address): BigInteger = using(getView)(_.getNonce(address))
 
   override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgersStakes)
 
@@ -412,7 +419,7 @@ class AccountState(
 
   override def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
 
-  override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
+  override def getCode(address: Address): Array[Byte] = using(getView)(_.getCode(address))
 
   override def getNextBaseFee: BigInteger = using(getView)(_.getNextBaseFee)
 
@@ -420,15 +427,15 @@ class AccountState(
 
   override def getStateDbHandle: ResourceHandle = using(getView)(_.getStateDbHandle)
 
-  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorage(address, key))
+  override def getAccountStorage(address: Address, key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorage(address, key))
 
-  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorageBytes(address, key))
+  override def getAccountStorageBytes(address: Address, key: Array[Byte]): Array[Byte] = using(getView)(_.getAccountStorageBytes(address, key))
 
-  override def accountExists(address: Array[Byte]): Boolean = using(getView)(_.accountExists(address))
+  override def accountExists(address: Address): Boolean = using(getView)(_.accountExists(address))
 
-  override def isEoaAccount(address: Array[Byte]): Boolean = using(getView)(_.isEoaAccount(address))
+  override def isEoaAccount(address: Address): Boolean = using(getView)(_.isEoaAccount(address))
 
-  override def isSmartContractAccount(address: Array[Byte]): Boolean = using(getView)(_.isSmartContractAccount(address))
+  override def isSmartContractAccount(address: Address): Boolean = using(getView)(_.isSmartContractAccount(address))
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
 
@@ -496,13 +503,14 @@ class AccountState(
   }
 }
 
-object AccountState extends ScorexLogging {
+object AccountState extends SparkzLogging {
   private[horizen] def restoreState(
       stateMetadataStorage: AccountStateMetadataStorage,
       stateDbStorage: Database,
       messageProcessors: Seq[MessageProcessor],
       params: NetworkParams,
-      timeProvider: NetworkTimeProvider
+      timeProvider: NetworkTimeProvider,
+      blockHashProvider: HistoryBlockHashProvider
   ): Option[AccountState] = {
 
     if (stateMetadataStorage.isEmpty) {
@@ -512,6 +520,7 @@ object AccountState extends ScorexLogging {
         new AccountState(
           params,
           timeProvider,
+          blockHashProvider,
           bytesToVersion(stateMetadataStorage.lastVersionId.get.data),
           stateMetadataStorage,
           stateDbStorage,
@@ -527,6 +536,7 @@ object AccountState extends ScorexLogging {
       messageProcessors: Seq[MessageProcessor],
       params: NetworkParams,
       timeProvider: NetworkTimeProvider,
+      blockHashProvider: HistoryBlockHashProvider,
       genesisBlock: AccountBlock
   ): Try[AccountState] = Try {
 
@@ -535,6 +545,7 @@ object AccountState extends ScorexLogging {
     new AccountState(
       params,
       timeProvider,
+      blockHashProvider,
       idToVersion(genesisBlock.parentId),
       stateMetadataStorage,
       stateDbStorage,

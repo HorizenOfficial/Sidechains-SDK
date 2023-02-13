@@ -119,36 +119,50 @@ class SCNodeConfiguration(object):
                  cert_submitter_enabled=True,
                  cert_signing_enabled=True,
                  submitter_private_keys_indexes=None,
-                 max_connections=100,
+                 max_incoming_connections=100,
+                 max_outgoing_connections=100,
+                 get_peers_interval="2m",
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
                  forger_options=SCForgerConfiguration(),
                  mempool_max_size=300,
                  mempool_min_fee_rate=0,
+                 max_nonce_gap=16
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  initial_private_keys=[],
+                 remote_keys_manager_enabled=False,
+                 known_peers=[],
+                 declared_address=None,
                  initial_signing_private_keys=[],
                  remote_keys_manager_enabled=False,
-                 max_nonce_gap=16):
+                 storage_backup_interval='15m',
+                 storage_backup_delay='5m'):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
         self.cert_submitter_enabled = cert_submitter_enabled
         self.cert_signing_enabled = cert_signing_enabled
         self.submitter_private_keys_indexes = submitter_private_keys_indexes
-        self.max_connections = max_connections
+        self.max_incoming_connections = max_incoming_connections
+        self.max_outgoing_connections = max_outgoing_connections
+        self.get_peers_interval = get_peers_interval
         self.automatic_fee_computation = automatic_fee_computation
         self.certificate_fee = certificate_fee
         self.forger_options = forger_options
         self.api_key = api_key
         self.max_fee = max_fee
+        self.max_nonce_gap = max_nonce_gap
         self.mempool_max_size = mempool_max_size
         self.mempool_min_fee_rate = mempool_min_fee_rate
         self.initial_private_keys = initial_private_keys
         self.initial_signing_private_keys = initial_signing_private_keys
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
-        self.max_nonce_gap = max_nonce_gap
+        self.known_peers = known_peers
+        if declared_address is not None:
+            self.declared_address = declared_address
+        self.storage_backup_interval = storage_backup_interval
+        self.storage_backup_delay = storage_backup_delay
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

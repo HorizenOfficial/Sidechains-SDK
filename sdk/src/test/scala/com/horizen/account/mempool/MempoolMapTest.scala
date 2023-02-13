@@ -6,6 +6,7 @@ import com.horizen.account.mempool.exception.NonceGapTooWideException
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
@@ -13,8 +14,7 @@ import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import scorex.util.ModifierId
-
+import sparkz.util.ModifierId
 import java.math.BigInteger
 import scala.util.{Failure, Random, Success}
 
@@ -38,7 +38,7 @@ class MempoolMapTest
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
     Mockito
-      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address]))
       .thenReturn(BigInteger.ZERO)
 
   }

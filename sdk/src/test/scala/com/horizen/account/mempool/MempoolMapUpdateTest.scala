@@ -8,6 +8,7 @@ import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creat
 import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
@@ -36,11 +37,11 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
   @Before
   def setUp(): Unit = {
     Mockito
-      .when(accountStateViewMock.getBalance(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getBalance(ArgumentMatchers.any[Address]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
 
     Mockito
-      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address]))
       .thenReturn(BigInteger.ZERO)
     Mockito.reset(rejectedBlock)
     Mockito.reset(appliedBlock)

@@ -17,8 +17,10 @@ import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
+import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
+
 import java.math.BigInteger
 import scala.util.{Failure, Random, Try}
 
@@ -43,6 +45,7 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
            sidechainTransactions: Seq[SidechainTypes#SCAT] = null,
            mainchainHeaders: Seq[MainchainHeader] = null,
            vrfProof: VrfProof = null,
+           vrfOutput: VrfOutput = null,
            merklePath: MerklePath = null,
            companion: SidechainAccountTransactionsCompanion,
            params: NetworkParams,
@@ -68,6 +71,7 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
       ownerPrivateKey,
       forgingStakeInfo,
       firstOrSecond(vrfProof, initialBlock.header.vrfProof),
+      firstOrSecond(vrfOutput, initialBlock.header.vrfOutput),
       firstOrSecond(merklePath, initialBlock.header.forgingStakeMerklePath),
       initialBlock.header.feePaymentsHash,
       initialBlock.header.stateRoot,
@@ -101,11 +105,14 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
                            timestampOpt: Option[Block.Timestamp] = None,
                            includeReference: Boolean = true,
                            vrfKeysOpt: Option[(VrfSecretKey, VrfPublicKey)] = None,
-                           vrfProofOpt: Option[VrfProof] = None
+                           vrfProofOpt: Option[VrfProof] = None,
+                           vrfOutputOpt: Option[VrfOutput] = None
                             ): AccountBlock = {
+    assert(vrfProofOpt.isDefined == vrfOutputOpt.isDefined, "VRF proof and output must be both defined or not")
     val vrfKey = VrfKeyGenerator.getInstance().generateSecret(Array.fill(32)(basicSeed.toByte))
     val vrfMessage = "Some non random string as input".getBytes
     val vrfProof = vrfProofOpt.getOrElse(vrfKey.prove(vrfMessage).getKey)
+    val vrfOutput = vrfOutputOpt.getOrElse(vrfProof.proofToVrfOutput(vrfKey.publicImage(), vrfMessage).get())
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))
     val timestamp = timestampOpt.getOrElse(Instant.now.getEpochSecond - 10000)
@@ -135,6 +142,7 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
       ownerPrivateKey,
       forgingStakeInfo,
       vrfProof,
+      vrfOutput,
       MerkleTreeFixture.generateRandomMerklePath(basicSeed),
       new Array[Byte](32),
       new Array[Byte](32),

@@ -20,6 +20,19 @@ var instance *lib.Service
 // initialize logger
 var logger = log.NewGlogHandler(log.FuncHandler(logToCallback))
 var logFormatter = log.JSONFormatEx(false, false)
+var logCallbackHandle int
+
+func callbackProxy(handle int, args string) string {
+	argsStr := C.CString(args)
+	defer C.free(unsafe.Pointer(argsStr))
+	var result *C.char
+	result = C.invokeCallbackProxy(C.int(handle), argsStr)
+	defer C.free(unsafe.Pointer(result))
+	if result == nil {
+		return ""
+	}
+	return C.GoString(result)
+}
 
 func logToCallback(r *log.Record) error {
 	// see comments on stack.Call.Format for available format specifiers
@@ -31,9 +44,8 @@ func logToCallback(r *log.Record) error {
 		// function name (without additional path qualifiers because the filename will already be qualified)
 		"fn", fmt.Sprintf("%n", r.Call),
 	)
-	msg := C.CString(string(logFormatter.Format(r)))
-	defer C.free(unsafe.Pointer(msg))
-	C.invokeLog(msg)
+	msg := string(logFormatter.Format(r))
+	callbackProxy(logCallbackHandle, msg)
 	return nil
 }
 
@@ -44,20 +56,22 @@ func init() {
 	log.Root().SetHandler(logger)
 	// initialize instance of our service
 	instance = lib.New()
+	lib.SetCallbackProxy(callbackProxy)
 }
 
 // main function is required by cgo, but doesn't do anything nor is it ever called
 func main() {
 }
 
-//export SetLogLevel
-func SetLogLevel(level *C.char) {
+//export SetupLogging
+func SetupLogging(handle int, level *C.char) {
 	parsedLevel, err := log.LvlFromString(C.GoString(level))
 	if err != nil {
 		log.Error("unable to parse log level", "error", err)
 		return
 	}
 	logger.Verbosity(parsedLevel)
+	logCallbackHandle = handle
 }
 
 //export Invoke

@@ -1,10 +1,10 @@
 import json
 
 
-# execute a transaction/createLegacyTransaction call
-def createLegacyTransaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce, gasLimit,
-                            gasPrice, value=0, data='', signature_v=None, signature_r=None,
-                            signature_s=None, api_key=None):
+def createLegacyTransaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce=None, gasLimit=21000,
+                            gasPrice=1000000000, value=0, data='',
+                            signature_v=None, signature_r=None, signature_s=None, api_key=None):
+
     j = {
         "from": fromAddress,
         "to": toAddress,

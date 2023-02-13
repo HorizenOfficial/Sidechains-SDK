@@ -5,7 +5,7 @@ import com.horizen.account.utils.AccountBlockFeeInfo
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.utils.WithdrawalEpochInfo
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 // expect this storage to be passed by the app during SidechainApp initialization
 trait AccountStateMetadataStorageReader {

@@ -11,7 +11,7 @@ import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.utils._
 import com.horizen.wallet.ApplicationWallet
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}
 

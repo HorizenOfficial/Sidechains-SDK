@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.block._
 import com.horizen.utils.ListSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 
 import scala.collection.JavaConverters._
@@ -35,7 +35,7 @@ class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) e
 
   override def parse(r: Reader): AccountBlock = {
 
-    require(r.remaining <= SidechainBlock.MAX_BLOCK_SIZE)
+    require(r.remaining <= AccountBlock.MAX_ACCOUNT_BLOCK_SIZE)
 
     val SidechainAccountBlockHeader: AccountBlockHeader = AccountBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r).asScala

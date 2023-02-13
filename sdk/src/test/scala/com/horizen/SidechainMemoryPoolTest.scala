@@ -9,7 +9,7 @@ import com.horizen.fixtures._
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.FeeRate
 import org.mockito.Mockito
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import org.scalatestplus.mockito.MockitoSugar
 
 import scala.collection.JavaConverters._

@@ -293,6 +293,44 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         return serializedHash;
     }
 
+    @Override
+    public byte[] getMsgToSignForSigningKeyUpdate(byte[] newSigningKeyBytes, int epochNumber, byte[] sidechainId) {
+        byte[] messageAsBytes;
+        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
+        SchnorrPublicKey newSigningKey = SchnorrPublicKey.deserialize(newSigningKeyBytes);
+        try {
+            FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForSigningKeyUpdate(newSigningKey,
+                    epochNumber, sidechainIdFe);
+            messageAsBytes = messageToSign.serializeFieldElement();
+            messageToSign.freeFieldElement();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            sidechainIdFe.freeFieldElement();
+            newSigningKey.freePublicKey();
+        }
+        return messageAsBytes;
+    }
+
+    @Override
+    public byte[] getMsgToSignForMasterKeyUpdate(byte[] newMasterKeyBytes, int epochNumber, byte[] sidechainId) {
+        byte[] messageAsBytes;
+        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
+        SchnorrPublicKey newMasterKey = SchnorrPublicKey.deserialize(newMasterKeyBytes);
+        try {
+            FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForMasterKeyUpdate(newMasterKey,
+                    epochNumber, sidechainIdFe);
+            messageAsBytes = messageToSign.serializeFieldElement();
+            messageToSign.freeFieldElement();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            sidechainIdFe.freeFieldElement();
+            newMasterKey.freePublicKey();
+        }
+        return messageAsBytes;
+    }
+
     private static List<SchnorrPublicKey> byteArrayToKeysList(Seq<SchnorrProposition> schnorrPublicKeysBytesList) {
         return scala.collection.JavaConverters.<SchnorrProposition>seqAsJavaList(schnorrPublicKeysBytesList)
                 .stream().map(SchnorrProposition::pubKeyBytes).map(SchnorrPublicKey::deserialize).collect(Collectors.toList());

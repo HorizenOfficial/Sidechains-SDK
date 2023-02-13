@@ -6,7 +6,7 @@ import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.secret.PrivateKey25519;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 import com.google.common.primitives.Bytes;
 import java.util.Arrays;
 

@@ -65,8 +65,28 @@ abstract class TransactionBaseApiRoute[
         case Success(tx) =>
           //TO-DO JSON representation of transaction
           ApiResponseUtil.toResponse(RespDecodeTransactionBytes(tx))
-        case Failure(exp) =>
-          ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, JOptional.of(exp)))
+        case Failure(exception) =>
+          ApiResponseUtil.toResponse(ErrorByteTransactionParsing("ErrorByteTransactionParsing", JOptional.of(exception)))
+      }
+    }
+  }
+
+  /**
+   * Validate and send a transaction, given its serialization as input.
+   * Return error in case of invalid transaction or parsing error, otherwise return the id of the transaction.
+   */
+  def sendTransaction: Route = (post & path("sendTransaction")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqSendTransaction]) { body =>
+          val transactionBytes = BytesUtils.fromHexString(body.transactionBytes)
+          companion.parseBytesTry(transactionBytes) match {
+            case Success(transaction) =>
+              validateAndSendTransaction(transaction)
+            case Failure(exception) =>
+              ApiResponseUtil.toResponse(ErrorByteTransactionParsing("ErrorByteTransactionParsing", JOptional.of(exception)))
+          }
+        }
       }
     }
   }
@@ -74,6 +94,11 @@ abstract class TransactionBaseApiRoute[
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
   val defaultTransactionResponseRepresentation: TX => SuccessResponse = {
     transaction => TransactionIdDTO(transaction.id)
+  }
+
+  val rawTransactionResponseRepresentation: TX => SuccessResponse = {
+    transaction =>
+      TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction)))
   }
 
   protected def validateAndSendTransaction(transaction: TX,
@@ -85,8 +110,8 @@ abstract class TransactionBaseApiRoute[
     onComplete(barrier) {
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-      case Failure(exp) =>
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp)))
+      case Failure(exception) =>
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
     }
 
   }
@@ -108,19 +133,22 @@ object TransactionBaseRestScheme {
   private[api] case class TransactionDTO[TX](transaction: TX) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
+  case class ReqSendTransaction(transactionBytes: String)
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespDecodeTransactionBytes[TX](transaction: TX) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllForgingStakesInfo(stakes: List[ForgingStakeInfo]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
 }
 
 object TransactionBaseErrorResponse {

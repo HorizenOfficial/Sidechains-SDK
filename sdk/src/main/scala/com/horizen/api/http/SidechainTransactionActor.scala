@@ -5,18 +5,18 @@ import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.Broadca
 import com.horizen.transaction.Transaction
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Promise}
 
 class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef: ActorRef)(implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging {
+  extends Actor with SparkzLogging {
 
   private val transactionMap : TrieMap[String, Promise[ModifierId]] = TrieMap()
 
   override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[T]])
+    context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[_]])
     context.system.eventStream.subscribe(self, classOf[FailedTransaction])
   }
 
@@ -31,7 +31,7 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef: Ac
       val future = promise.future
       transactionMap(transaction.id) = promise
       sender() ! future
-      sidechainNodeViewHolderRef ! LocallyGeneratedTransaction[Transaction](transaction)
+      sidechainNodeViewHolderRef ! LocallyGeneratedTransaction(transaction)
   }
 
   protected def sidechainNodeViewHolderEvents: Receive = {
