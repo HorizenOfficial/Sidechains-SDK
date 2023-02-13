@@ -5,10 +5,10 @@ import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.GasUtil
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.EthereumTransactionUtils
+import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.utils.BytesUtils
 
-import java.lang
+import java.{lang, util}
 import java.math.BigInteger
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
@@ -70,10 +70,21 @@ trait EthereumTransactionFixture {
     new EthereumTransaction(unsignedTx, signature)
   }
 
+  def getTransactionList(listSize: Int): util.List[EthereumTransaction] = {
+    val list: util.List[EthereumTransaction] = new util.ArrayList[EthereumTransaction]()
+    for (a <- 1 to listSize ) {
+      list.add(createLegacyTransaction(
+        value=ZenWeiConverter.convertZenniesToWei(a),
+        nonce=BigInteger.valueOf(a))
+      )
+    }
+    list
+  }
+
   def getEoa2EoaLegacyTransaction: EthereumTransaction = {
     new EthereumTransaction(
       EthereumTransactionUtils.getToAddressFromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
-            BigInteger.valueOf(70L), // nonce
+      BigInteger.valueOf(70L), // nonce
       BigInteger.valueOf(3).pow(9), // gasPrice
       GasUtil.TxGas,  // gasLimit
       BigInteger.TEN.pow(19), // value
@@ -193,6 +204,9 @@ trait EthereumTransactionFixture {
   }
 
   def getPartiallySignedEip155LegacyTransaction: EthereumTransaction = {
+    // partially signed means this is not a real signature nor a null signature object
+    // but has v=chainId and empty arrays for r,s
+    // Such signature is produced for EIP155 unsigned transactions in the encoding phase
     new EthereumTransaction(
       88L,
       EthereumTransactionUtils.getToAddressFromString("0x3535353535353535353535353535353535353535"),
@@ -242,7 +256,7 @@ trait EthereumTransactionFixture {
       inTo.get()
     } else {
         if (inTx.getTo.isPresent) {
-          BytesUtils.toHexString(inTx.getTo.get().address())
+          inTx.getTo.get().address().toString
         }
         else
           ""
@@ -280,7 +294,7 @@ trait EthereumTransactionFixture {
       inTo.get()
     } else {
       if (inTx.getTo.isPresent) {
-        BytesUtils.toHexString(inTx.getTo.get().address())
+        inTx.getTo.get().address().toString
       }
       else
         ""
@@ -327,7 +341,7 @@ trait EthereumTransactionFixture {
       inTo.get()
     } else {
       if (inTx.getTo.isPresent) {
-        BytesUtils.toHexString(inTx.getTo.get().address())
+        inTx.getTo.get().address().toString
       }
       else
         ""
@@ -388,7 +402,7 @@ trait EthereumTransactionFixture {
       val currentNonce = BigInteger.valueOf(nonceTx)
 
       listOfAccounts.zipWithIndex.foreach {
-        case (keyOpt, idx) => {
+        case (keyOpt, idx) =>
           if (idx % 10 == 0 && orphanIdx >= 0 && nonceTx >= orphanIdx) { // Create orphans
             listOfTxs += createEIP1559Transaction(
               value,
@@ -405,7 +419,7 @@ trait EthereumTransactionFixture {
               gasFee = maxGasFee,
               priorityGasFee = gasBuilder.nextPriorityGas()
             )
-        }
+
       }
     })
     listOfTxs

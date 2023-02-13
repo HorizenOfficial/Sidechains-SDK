@@ -6,7 +6,7 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.transaction.Transaction
 import com.horizen.utils.WithdrawalEpochInfo
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.transaction.state.MinimalState
 
 abstract class AbstractState[

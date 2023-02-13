@@ -5,7 +5,7 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import org.web3j.rlp.{RlpDecoder, RlpEncoder, RlpList, RlpString, RlpType}
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.util
 
@@ -26,14 +26,14 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
 
   def rlpDecode(values: RlpList): EvmLog = {
     val addressBytes = values.getValues.get(0).asInstanceOf[RlpString].getBytes
-    val address = Address.fromBytes(addressBytes)
+    val address = new Address(addressBytes)
     val topicsRlp = values.getValues.get(1).asInstanceOf[RlpList]
     val hashList = new util.ArrayList[Hash]
     val topicsListSize = topicsRlp.getValues.size
     if (topicsListSize > 0) { // loop on list and decode all topics
       for (i <- 0 until topicsListSize) {
         val topicBytes = topicsRlp.getValues.get(i).asInstanceOf[RlpString].getBytes
-        hashList.add(Hash.fromBytes(topicBytes))
+        hashList.add(new Hash(topicBytes))
       }
     }
     val topics = hashList.toArray(new Array[Hash](0))
@@ -75,18 +75,18 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
   }
 
   override def parse(reader: Reader): EvmLog = {
-    val address: Array[Byte] = reader.getBytes(Address.LENGTH)
+    val address: Address = new Address(reader.getBytes(Address.LENGTH))
 
     val topicsArraySize: Int = reader.getInt
     val topics: util.ArrayList[Hash] = new util.ArrayList[Hash]
     for (_ <- 0 until topicsArraySize) {
-      topics.add(Hash.fromBytes(reader.getBytes(Hash.LENGTH)))
+      topics.add(new Hash(reader.getBytes(Hash.LENGTH)))
     }
 
     val dataLength: Int = reader.getInt
     val data: Array[Byte] = reader.getBytes(dataLength)
 
-    new EvmLog(Address.fromBytes(address), topics.toArray(new Array[Hash](0)), data)
+    new EvmLog(address, topics.toArray(new Array[Hash](0)), data)
   }
 }
 

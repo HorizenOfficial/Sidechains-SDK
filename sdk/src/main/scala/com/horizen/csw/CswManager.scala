@@ -15,10 +15,10 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{CswProofStatusSerializer, Views}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochUtils}
 import com.horizen._
-import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
+import sparkz.util.SparkzLogging
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -30,7 +30,7 @@ import scala.util.{Failure, Success, Try}
 class CswManager(settings: SidechainSettings,
                  params: NetworkParams,
                  sidechainNodeViewHolderRef: ActorRef) (implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging {
+  extends Actor with SparkzLogging {
 
   import com.horizen.csw.CswManager.InternalReceivableMessages.{CswProofFailed, CswProofSuccessfullyGenerated, TryToScheduleProofGeneration}
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]

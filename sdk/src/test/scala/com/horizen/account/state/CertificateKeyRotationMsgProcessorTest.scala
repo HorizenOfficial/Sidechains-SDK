@@ -1,14 +1,14 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig
 import com.horizen.account.utils.FeeUtils
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.evm.utils.Address
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
-import com.horizen.schnorrnative.SchnorrPublicKey
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
@@ -31,11 +31,11 @@ class CertificateKeyRotationMsgProcessorTest
     with ClosableResourceHandler
     with StoreFixture {
 
-  val bigIntegerZero: BigInteger = BigInteger.ZERO
-
+  val sidechainId: Array[Byte] = Array[Byte](0, 1, 0)
   val mockNetworkParams: NetworkParams = mock[NetworkParams]
+  when(mockNetworkParams.sidechainId).thenReturn(sidechainId)
   val certificateKeyRotationMsgProcessor: CertificateKeyRotationMsgProcessor = CertificateKeyRotationMsgProcessor(mockNetworkParams)
-  val contractAddress: Array[Byte] = certificateKeyRotationMsgProcessor.contractAddress
+  val contractAddress: Address = certificateKeyRotationMsgProcessor.contractAddress
 
   val SubmitKeyRotation: Array[Byte] = getEventSignature("submitKeyRotation(uint32,uint32,bytes32,bytes1,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)")
   val NumberOfParams: Int = 6
@@ -53,15 +53,15 @@ class CertificateKeyRotationMsgProcessorTest
     (1 to n).map(_ => keyGenerator.generateSecret(Random.nextDouble().toByte.toByteArray))
   }
 
-  def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = bigIntegerZero): Message = {
+  def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = 0): Message = {
     val data = Bytes.concat(opCode, arguments)
     new Message(
-      Optional.of(new AddressProposition(origin)),
-      Optional.of(new AddressProposition(contractAddress)), // to
-      bigIntegerZero, // gasPrice
-      bigIntegerZero, // gasFeeCap
-      bigIntegerZero, // gasTipCap
-      bigIntegerZero, // gasLimit
+      origin,
+      Optional.of(contractAddress), // to
+      0, // gasPrice
+      0, // gasFeeCap
+      0, // gasTipCap
+      0, // gasLimit
       value,
       nonce,
       data,
@@ -81,11 +81,16 @@ class CertificateKeyRotationMsgProcessorTest
     }
   }
 
-  private def buildKeyRotationProof(`type`: KeyRotationProofType, index: Int, newKey: SchnorrSecret, oldSigningKey: SchnorrSecret, oldMasterKey: SchnorrSecret) = {
-    val messageToSign = SchnorrPublicKey.deserialize(newKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+  private def buildKeyRotationProof(keyType: KeyRotationProofType, index: Int, epoch: Int, newKey: SchnorrSecret, oldSigningKey: SchnorrSecret, oldMasterKey: SchnorrSecret) = {
+    val messageToSign = keyType match {
+      case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForSigningKeyUpdate(newKey.publicImage().pubKeyBytes(), epoch, sidechainId)
+      case MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForMasterKeyUpdate(newKey.publicImage().pubKeyBytes(), epoch, sidechainId)
+    }
 
     KeyRotationProof(
-      `type`,
+      keyType,
       index,
       newKey.publicImage(),
       oldSigningKey.sign(messageToSign),
@@ -98,9 +103,14 @@ class CertificateKeyRotationMsgProcessorTest
       if (epoch == 0)
         defaultBlockContext
       else
-        new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1)
+        new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1)
 
-    val messageToSign = SchnorrPublicKey.deserialize(newKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
+    val messageToSign = keyRotationProof.keyType match {
+      case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForSigningKeyUpdate(newKey.publicImage().pubKeyBytes(), epoch, sidechainId)
+      case MasterKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .getMsgToSignForMasterKeyUpdate(newKey.publicImage().pubKeyBytes(), epoch, sidechainId)
+    }
 
     withGas {
       certificateKeyRotationMsgProcessor.process(
@@ -128,7 +138,7 @@ class CertificateKeyRotationMsgProcessorTest
     newMasterKey
     ) = generateKeys(3)
 
-    val keyRotationProof = buildKeyRotationProof(masterKeyType, index = 0, newMasterKey, oldSigningKey, oldMasterKey)
+    val keyRotationProof = buildKeyRotationProof(masterKeyType, index = 0, epoch = 0, newMasterKey, oldSigningKey, oldMasterKey)
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
@@ -136,14 +146,7 @@ class CertificateKeyRotationMsgProcessorTest
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey.publicImage()))
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
-      val messageToSign = SchnorrPublicKey.deserialize(newMasterKey.publicImage().pubKeyBytes()).getHash.serializeFieldElement()
-      val cmdInput = SubmitKeyRotationCmdInput(keyRotationProof, newMasterKey.sign(messageToSign))
-      val data: Array[Byte] = cmdInput.encode()
-      val msg = getMessage(to = contractAddress, data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ data, nonce = randomNonce)
-
-      withGas {
-        certificateKeyRotationMsgProcessor.process(msg, view, _, defaultBlockContext)
-      }
+      processKeyRotationMessage(newMasterKey, keyRotationProof, view)
 
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(masterKeyType, index = 0, view) shouldBe KeyRotationHistory(epochNumbers = List(0))
       certificateKeyRotationMsgProcessor.getKeysRotationHistory(signingKeyType, index = 0, view) shouldBe KeyRotationHistory(epochNumbers = List())
@@ -173,8 +176,8 @@ class CertificateKeyRotationMsgProcessorTest
     newMasterKeySecond
     ) = generateKeys(4)
 
-    val keyRotationProofFirst = buildKeyRotationProof(masterKeyType, index = 0, newMasterKeyFirst, oldSigningKey, oldMasterKey)
-    val keyRotationProofSecond = buildKeyRotationProof(masterKeyType, index = 0, newMasterKeySecond, oldSigningKey, oldMasterKey)
+    val keyRotationProofFirst = buildKeyRotationProof(masterKeyType, index = 0, epoch = 0, newMasterKeyFirst, oldSigningKey, oldMasterKey)
+    val keyRotationProofSecond = buildKeyRotationProof(masterKeyType, index = 0, epoch = 0, newMasterKeySecond, oldSigningKey, oldMasterKey)
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
@@ -231,13 +234,13 @@ class CertificateKeyRotationMsgProcessorTest
     masterKey1Updated,
     ) = generateKeys(9)
 
-    val keyRotationEpoch_0_MK_0 = buildKeyRotationProof(masterKeyType, index = 0, masterKey0FirstUpdate, oldSigningKey0, oldMasterKey0)
+    val keyRotationEpoch_0_MK_0 = buildKeyRotationProof(masterKeyType, index = 0, epoch = 0, masterKey0FirstUpdate, oldSigningKey0, oldMasterKey0)
 
-    val keyRotationEpoch_1_MK_0 = buildKeyRotationProof(masterKeyType, index = 0, masterKey0SecondUpdate, oldSigningKey0, masterKey0FirstUpdate)
-    val keyRotationEpoch_1_SK_0 = buildKeyRotationProof(signingKeyType, index = 0, signingKey0Updated, oldSigningKey0, masterKey0FirstUpdate)
+    val keyRotationEpoch_1_MK_0 = buildKeyRotationProof(masterKeyType, index = 0, epoch = 1, masterKey0SecondUpdate, oldSigningKey0, masterKey0FirstUpdate)
+    val keyRotationEpoch_1_SK_0 = buildKeyRotationProof(signingKeyType, index = 0, epoch = 1, signingKey0Updated, oldSigningKey0, masterKey0FirstUpdate)
 
-    val keyRotationEpoch_2_MK_0 = buildKeyRotationProof(masterKeyType, index = 0, masterKey0ThirdUpdate, signingKey0Updated, masterKey0SecondUpdate)
-    val keyRotationEpoch_2_MK_1 = buildKeyRotationProof(masterKeyType, index = 1, masterKey1Updated, oldSigningKey1, oldMasterKey1)
+    val keyRotationEpoch_2_MK_0 = buildKeyRotationProof(masterKeyType, index = 0, epoch = 2, masterKey0ThirdUpdate, signingKey0Updated, masterKey0SecondUpdate)
+    val keyRotationEpoch_2_MK_1 = buildKeyRotationProof(masterKeyType, index = 1, epoch = 2, masterKey1Updated, oldSigningKey1, oldMasterKey1)
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 

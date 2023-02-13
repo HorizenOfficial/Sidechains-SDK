@@ -2,7 +2,8 @@ package com.horizen.certificatesubmitter.strategies
 
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import com.horizen.{AbstractHistory, AbstractState}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
+import sparkz.core.NodeViewHolder.CurrentView
 
 trait CertificateSubmissionStrategy {
 

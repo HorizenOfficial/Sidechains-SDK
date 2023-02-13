@@ -5,7 +5,7 @@ import com.google.common.primitives.Ints;
 import com.horizen.node.NodeWalletBase;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 
 import java.util.List;
 

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-import json
 import logging
 from decimal import Decimal
 
 from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyEIP155Transaction import \
+    createLegacyEIP155Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.scutil import generate_next_block
 
 from httpCalls.transaction.allTransactions import allTransactions
@@ -38,24 +40,27 @@ class SCEvmEOA2EOA(AccountChainSetup):
 
         # Create an EOA to EOA transaction.
         # Amount should be expressed in zennies
-        amount_in_zennies = convertZenToZennies(amount_in_zen)
         amount_in_wei = convertZenToWei(amount_in_zen)
 
-        j = {
-            "from": from_addr,
-            "to": to_addr,
-            "value": amount_in_zennies,
-        }
-        if nonce is not None:
-            j["nonce"] = nonce
-        if isEIP155:
-            j["EIP155"] = True
+        try:
+            if isEIP155:
+                tx_hash = createLegacyEIP155Transaction(from_sc_node,
+                    fromAddress=from_addr,
+                    toAddress=to_addr,
+                    value=amount_in_wei,
+                    nonce=nonce
+                )
+            else:
+                tx_hash = createLegacyTransaction(from_sc_node,
+                    fromAddress=from_addr,
+                    toAddress=to_addr,
+                    value=amount_in_wei,
+                    nonce=nonce
+                )
+        except RuntimeError as err:
+            logging.info("Expected exception thrown: {}".format(err))
+            return False, "send failed: " + str(err), None
 
-        response = from_sc_node.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            return False, "send failed: " + str(response), None
-
-        tx_hash = response['result']["transactionId"]
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
@@ -206,17 +211,17 @@ class SCEvmEOA2EOA(AccountChainSetup):
             fail("EOA2EOA with too big an amount should not work")
 
         logging.info(
-            "Create an EOA to EOA transaction moving a fund to a fake contract address (forger stakes)  ==> SHOULD FAIL")
+            "Create an EOA to EOA transaction moving a fund to a native contract address (forger stakes)  ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('1')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
                                        transferred_amount_in_zen)
         if not ret:
             logging.info("Expected failure: {}".format(msg))
         else:
-            fail("EOA2EOA to fake smart contract should not work")
+            fail("EOA2EOA to native smart contract should not work")
 
         logging.info(
-            "Create an EOA to EOA transaction moving a fund to a fake contract address (withdrawal reqs) ==> SHOULD "
+            "Create an EOA to EOA transaction moving a fund to a native contract address (withdrawal reqs) ==> SHOULD "
             "FAIL")
         transferred_amount_in_zen = Decimal('1')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
@@ -224,7 +229,7 @@ class SCEvmEOA2EOA(AccountChainSetup):
         if not ret:
             logging.info("Expected failure: {}".format(msg))
         else:
-            fail("EOA2EOA to fake smart contract should not work")
+            fail("EOA2EOA to native smart contract should not work")
 
 
 if __name__ == "__main__":

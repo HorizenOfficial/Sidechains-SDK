@@ -2,8 +2,8 @@ package com.horizen.box;
 
 import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.ZenBoxDataSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public final class ZenBoxSerializer
     implements BoxSerializer<ZenBox>

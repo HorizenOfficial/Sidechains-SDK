@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.block._
 import com.horizen.utils.ListSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 
 import scala.collection.JavaConverters._

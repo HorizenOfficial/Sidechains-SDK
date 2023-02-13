@@ -37,15 +37,15 @@ class AccountBlockApiRouteTest extends AccountSidechainApiRouteTest with TableDr
         val path = basePath + route
 
         if (expectedCode == StatusCodes.BadRequest.intValue) {
-          Post(path).withHeaders(apiTokenHeader) ~> sidechainBlockApiRoute ~> check {
+          Post(path).addCredentials(credentials) ~> sidechainBlockApiRoute ~> check {
             rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
           }
-          Post(path).withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainBlockApiRoute ~> check {
+          Post(path).addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainBlockApiRoute ~> check {
             rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
           }
         }
 
-        Post(path).withHeaders(apiTokenHeader) ~> Route.seal(sidechainBlockApiRoute) ~> check {
+        Post(path).addCredentials(credentials) ~> Route.seal(sidechainBlockApiRoute) ~> check {
           status.intValue() shouldBe expectedCode
           if (expectedCode != StatusCodes.InternalServerError.intValue && expectedCode != StatusCodes.NotFound.intValue) {
             responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -53,7 +53,7 @@ class AccountBlockApiRouteTest extends AccountSidechainApiRouteTest with TableDr
         }
 
         if (expectedCode != StatusCodes.NotFound.intValue && route != "startForging" && route != "stopForging") {
-          Post(path).withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> sidechainBlockApiRoute ~> check {
+          Post(path).addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainBlockApiRoute ~> check {
             rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
           }
         }
@@ -63,13 +63,13 @@ class AccountBlockApiRouteTest extends AccountSidechainApiRouteTest with TableDr
     "reply at /getForwardTransfers" in {
       val path = basePath + "getForwardTransfers"
       var json = """{"blockId": "0000000000000000000000000000000000000000000000000000000000000000"}"""
-      Post(path).withHeaders(apiTokenHeader).withEntity(json) ~> sidechainBlockApiRoute ~> check {
+      Post(path).addCredentials(credentials).withEntity(json) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       json = """{"blockId": "123"}"""
-      Post(path).withHeaders(apiTokenHeader).withEntity(json) ~> sidechainBlockApiRoute ~> check {
+      Post(path).addCredentials(credentials).withEntity(json) ~> sidechainBlockApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
     }
@@ -77,13 +77,13 @@ class AccountBlockApiRouteTest extends AccountSidechainApiRouteTest with TableDr
     "reply at /getFeePayments" in {
       val path = basePath + "getFeePayments"
       var json = """{"blockId": "0000000000000000000000000000000000000000000000000000000000000000"}"""
-      Post(path).withHeaders(apiTokenHeader).withEntity(json) ~> sidechainBlockApiRoute ~> check {
+      Post(path).addCredentials(credentials).withEntity(json) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       json = """{"blockId": "123"}"""
-      Post(path).withHeaders(apiTokenHeader).withEntity(json) ~> sidechainBlockApiRoute ~> check {
+      Post(path).addCredentials(credentials).withEntity(json) ~> sidechainBlockApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
     }

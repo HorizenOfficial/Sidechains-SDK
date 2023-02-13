@@ -13,7 +13,7 @@ import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.io.Source
 import scala.util.{Failure, Success}

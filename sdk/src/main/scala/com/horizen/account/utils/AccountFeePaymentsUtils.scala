@@ -1,12 +1,11 @@
 package com.horizen.account.utils
 
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.evm.{StateDB, TrieHasher}
 
 import java.math.BigInteger
 
 object AccountFeePaymentsUtils {
-  val DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH: Array[Byte] = StateDB.EMPTY_ROOT_HASH
+  val DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH: Array[Byte] = StateDB.EMPTY_ROOT_HASH.toBytes
 
   def calculateFeePaymentsHash(feePayments: Seq[AccountPayment]): Array[Byte] = {
     if(feePayments.isEmpty) {
@@ -14,7 +13,7 @@ object AccountFeePaymentsUtils {
       DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH
     } else {
       // turn seq elements into leaves and compute merkel root hash
-      TrieHasher.Root(feePayments.map(payment => payment.bytes).toArray)
+      TrieHasher.Root(feePayments.map(payment => payment.bytes).toArray).toBytes
     }
   }
 
@@ -42,21 +41,17 @@ object AccountFeePaymentsUtils {
     }
 
     // Aggregate together payments for the same forger
-    val forgerKeys: Seq[AddressProposition] = allForgersRewards.map(_.address).distinct
+    val forgerKeys = allForgersRewards.map(_.address).distinct
 
-    val forgersRewards: Seq[AccountPayment] = forgerKeys.map {
-      forgerKey => { // consider this forger
-
-        // sum all rewards for this forger address
+    // sum all rewards for per forger address
+    forgerKeys.map {
+      forgerKey => {
         val forgerTotalFee = allForgersRewards
           .filter(info => forgerKey.equals(info.address))
           .foldLeft(BigInteger.ZERO)((sum, info) => sum.add(info.value))
-
         // return the resulting entry
         AccountPayment(forgerKey, forgerTotalFee)
       }
     }
-
-    forgersRewards
   }
 }

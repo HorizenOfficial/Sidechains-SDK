@@ -1,8 +1,8 @@
 package com.horizen.proposition;
 
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public class SchnorrPropositionSerializer implements PropositionSerializer<SchnorrProposition> {
     private static SchnorrPropositionSerializer serializer;

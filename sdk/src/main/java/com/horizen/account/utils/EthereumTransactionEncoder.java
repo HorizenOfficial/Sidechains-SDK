@@ -7,7 +7,7 @@ import org.bouncycastle.util.BigIntegers;
 import org.web3j.rlp.*;
 import org.web3j.utils.Numeric;
 import scala.Array;
-
+import sparkz.util.serialization.Writer;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -21,16 +21,7 @@ public class EthereumTransactionEncoder {
         // prevent instantiation
     }
 
-    public static byte[] encodeAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
-        if (tx.isEIP1559()) {
-            return encodeEip1559AsRlpValues(tx, accountSignature);
-        } else {
-            return encodeLegacyAsRlpValues(tx, accountSignature);
-        }
-    }
-
-    private static byte[] encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature) {
-
+    private static RlpList LegacyTransaction2RlpList(EthereumTransaction tx, boolean accountSignature) {
         List<RlpType> result = new ArrayList<>();
 
         result.add(RlpString.create(tx.getNonce()));
@@ -40,42 +31,49 @@ public class EthereumTransactionEncoder {
 
         // an empty to address (contract creation) should not be encoded as a numeric 0 value
         // addresses that start with zeros should be encoded with the zeros included, not as numeric values
-        result.add(RlpString.create(tx.getTo().map(AddressProposition::address).orElse(Array.emptyByteArray())));
+        result.add(RlpString.create(tx.getTo().map(AddressProposition::pubKeyBytes).orElse(Array.emptyByteArray())));
         result.add(RlpString.create(tx.getValue()));
 
         // value field will already be hex encoded, so we need to convert into binary first
         result.add(RlpString.create(tx.getData()));
 
         if (accountSignature) {
-            if (!tx.isSigned())
-                throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
-            SignatureSecp256k1 txSignature = tx.getSignature();
+            byte[] v = new byte[0];
+            byte[] r = new byte[0];
+            byte[] s = new byte[0];
 
-            byte[] v = txSignature.getV();
-            byte[] r = txSignature.getR();
-            byte[] s = txSignature.getS();
+            if (tx.isSigned()) {
 
-            if (tx.isEIP155()) {
-                v = createEip155v(v, tx.getChainId());
+                SignatureSecp256k1 txSignature = tx.getSignature();
+
+                v = txSignature.getV();
+                r = txSignature.getR();
+                s = txSignature.getS();
+
+                if (tx.isEIP155()) {
+                    v = createEip155v(v, tx.getChainId());
+                }
+            } else {
+                if (tx.isEIP155()) {
+                    v = EthereumTransactionUtils.convertToBytes(tx.getChainId());
+                }
             }
 
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(v)));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(r)));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(s)));
+            result.add(RlpString.create(v));
+            result.add(RlpString.create(r));
+            result.add(RlpString.create(s));
         } else {
             if (tx.isEIP155()) {
-                result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(EthereumTransactionUtils.convertToBytes(tx.getChainId()))));
-                result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(new byte[] {})));
-                result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(new byte[] {})));
+                result.add(RlpString.create(EthereumTransactionUtils.convertToBytes(tx.getChainId())));
+                result.add(RlpString.create(new byte[] {}));
+                result.add(RlpString.create(new byte[] {}));
             }
         }
 
-        RlpList rlpList = new RlpList(result);
-        return RlpEncoder.encode(rlpList);
+        return new RlpList(result);
     }
 
-    private static byte[] encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature) {
-
+    private static RlpList EIP1559Transaction2RlpList(EthereumTransaction tx, boolean accountSignature) {
         List<RlpType> result = new ArrayList<>();
 
         result.add(RlpString.create(tx.getChainId()));
@@ -88,7 +86,7 @@ public class EthereumTransactionEncoder {
 
         // an empty to address (contract creation) should not be encoded as a numeric 0 value
         // addresses that start with zeros should be encoded with the zeros included, not as numeric values
-        result.add(RlpString.create(tx.getTo().map(AddressProposition::address).orElse(Array.emptyByteArray())));
+        result.add(RlpString.create(tx.getTo().map(AddressProposition::pubKeyBytes).orElse(Array.emptyByteArray())));
         result.add(RlpString.create(tx.getValue()));
 
         // value field will already be hex encoded, so we need to convert into binary first
@@ -98,22 +96,43 @@ public class EthereumTransactionEncoder {
         result.add(new RlpList());
 
         if (accountSignature) {
-            if (!tx.isSigned())
-                throw new IllegalArgumentException("We should take signature into account for encoding, but tx is not signed!");
+            byte[] r = new byte[0];
+            byte[] s = new byte[0];
 
-            SignatureSecp256k1 txSignature = tx.getSignature();
-            result.add(RlpString.create(getRecId(txSignature.getV(), tx.getChainId())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(txSignature.getR())));
-            result.add(RlpString.create(EthereumTransactionUtils.trimLeadingZeroes(txSignature.getS())));
+            if (tx.isSigned()) {
+
+                SignatureSecp256k1 txSignature = tx.getSignature();
+                r = txSignature.getR();
+                s = txSignature.getS();
+                result.add(RlpString.create(getRecId(txSignature.getV(), tx.getChainId())));
+
+            } else {
+                result.add(RlpString.create(tx.getChainId()));
+            }
+            result.add(RlpString.create(r));
+            result.add(RlpString.create(s));
         }
 
-        RlpList rlpList = new RlpList(result);
-        byte[] encoded = RlpEncoder.encode(rlpList);
+        return new RlpList(result);
+    }
 
-        return ByteBuffer.allocate(encoded.length + 1)
-                .put(tx.version())
-                .put(encoded)
-                .array();
+    public static void encodeAsRlpValues(EthereumTransaction tx, boolean accountSignature, Writer writer) {
+        if (tx.isEIP1559()) {
+            encodeEip1559AsRlpValues(tx, accountSignature, writer);
+        } else {
+            encodeLegacyAsRlpValues(tx, accountSignature, writer);
+        }
+    }
+
+    private static void encodeLegacyAsRlpValues(EthereumTransaction tx, boolean accountSignature, Writer writer) {
+        RlpList rlpList = LegacyTransaction2RlpList(tx, accountSignature);
+        RlpStreamEncoder.encode(rlpList, writer);
+    }
+
+    private static void encodeEip1559AsRlpValues(EthereumTransaction tx, boolean accountSignature, Writer writer) {
+        writer.putUByte(tx.version());
+        RlpList rlpList = EIP1559Transaction2RlpList(tx, accountSignature);
+        RlpStreamEncoder.encode(rlpList, writer);
     }
 
     private static byte[] createEip155v(byte[] realV, long chainId) {
