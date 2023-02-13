@@ -26,11 +26,13 @@ class StateTransition(
   def transition(msg: Message): Array[Byte] = {
     // do preliminary checks
     preCheck(msg)
+    // save the remaining block gas before any changes
+    val initialBlockGas = blockGasPool.getGas
     // create a snapshot before any changes are made
-    val revisionStart = view.snapshot
-    // allocate gas for processing this message
-    val gasPool = buyGas(msg)
+    val initialRevision = view.snapshot
     try {
+      // allocate gas for processing this message
+      val gasPool = buyGas(msg)
       // consume intrinsic gas
       val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
@@ -74,9 +76,9 @@ class StateTransition(
       // any other exception will bubble up and invalidate the block
       case err =>
         // revert all changes, even buying gas and increasing the nonce
-        view.revertToSnapshot(revisionStart)
-        // restore gas to the block gas pool
-        blockGasPool.addGas(gasPool.getInitialGas)
+        view.revertToSnapshot(initialRevision)
+        // revert any changes to the block gas pool
+        blockGasPool.addGas(initialBlockGas.subtract(blockGasPool.getGas))
         throw err
     }
   }
@@ -124,7 +126,8 @@ class StateTransition(
     // deduct gas from gasPool of the current block (unused gas will be returned after execution)
     if (blockGasPool.getGas.compareTo(gas) < 0) {
       // we want to throw the block "gas limit reached" exception here instead of "out of gas"
-      // the latter would just fail the current message, but this is an invalid message
+      // the latter would just result in a failed message, but this message must not be applied at all
+      // either the block is full or this message tries to use more gas than the block gas limit
       throw GasLimitReached()
     }
     blockGasPool.subGas(gas)
