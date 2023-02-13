@@ -9,7 +9,11 @@ import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
+import com.horizen.block.{
+  MainchainBlockReferenceData,
+  MainchainTxForwardTransferCrosschainOutput,
+  MainchainTxSidechainCreationCrosschainOutput
+}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
@@ -74,7 +78,6 @@ class StateDbAccountStateView(
           val scOut: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
           val stakedAmount = ZenWeiConverter.convertZenniesToWei(scOut.amount)
           val ownerAddress = MainchainTxCrosschainOutputAddressUtil.getAccountAddress(scOut.address)
-
 
           // customData = vrf key | blockSignerKey
           val vrfPublicKey = new VrfPublicKey(scOut.customCreationData.take(VrfPublicKey.KEY_LENGTH))

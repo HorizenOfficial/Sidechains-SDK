@@ -24,7 +24,14 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.state.BaseStateReader
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
+import com.horizen.utils.{
+  BytesUtils,
+  DynamicTypedSerializer,
+  MerklePath,
+  Pair,
+  TestSidechainsVersionsManager,
+  WithdrawalEpochInfo
+}
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test

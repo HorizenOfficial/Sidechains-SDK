@@ -126,7 +126,9 @@ class AccountForgeMessageBuilder(
       if (blockSize + txSize > getMaxBlockSize()) {
         // block size limit exceeded
         // keep trying to fit transactions into the block: this TX did not fit, but another one might
-        log.trace(s"Could not apply tx, reason: block size limit exceeded (block size: $blockSize, tx size: $txSize, limit: ${getMaxBlockSize()}")
+        log.trace(
+          s"Could not apply tx, reason: block size limit exceeded (block size: $blockSize, tx size: $txSize, limit: ${getMaxBlockSize()}"
+        )
         // skip all txs from the same account
         priceAndNonceIter.removeAndSkipAccount()
       } else {
@@ -236,7 +238,14 @@ class AccountForgeMessageBuilder(
             // - the list of transactions successfully applied to the state ---> to be included in the forged block
             // - the fee payments related to this block
             val resultTuple: (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) =
-              computeBlockInfo(dummyView, sidechainTransactions, mainchainBlockReferencesData, blockContext, forgerAddress, inputBlockSize)
+              computeBlockInfo(
+                dummyView,
+                sidechainTransactions,
+                mainchainBlockReferencesData,
+                blockContext,
+                forgerAddress,
+                inputBlockSize
+              )
 
             val receiptList = resultTuple._1
             val appliedTxList = resultTuple._2
