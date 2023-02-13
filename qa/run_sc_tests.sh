@@ -94,7 +94,13 @@ testScriptsEvm=(
     'sc_evm_test_erc721.py'
     'sc_evm_test_contract_contract_deployment_and_interaction.py'
     'sc_evm_test_metamask_related.py'
+    'sc_evm_test_prevrandao.py'
     'sc_evm_storage_recovery.py'
+    'sc_evm_raw_tx_http_api.py'
+    'sc_evm_import_export_keys.py'
+    'sc_evm_delegatecall_contract.py'
+    'sc_evm_mc_fork.py'
+    'sc_evm_context_blockhash.py'
 );
 
 testScriptsUtxo=(
@@ -173,6 +179,15 @@ testScriptsUtxo=(
     'sc_big_block.py'
 );
 
+testScriptsNetworking=(
+    'net_declared_address.py'
+    'net_first_known_peers.py'
+    'net_incoming_connections.py'
+    'net_peers_storage_persistence.py'
+    'net_ring_of_nodes.py'
+    'net_skip_down_known_peer.py'
+)
+
 # decide whether to have only evm tests or only utxo tests or the whole set
 if [ ! -z "$EVM_ONLY" ] && [ ! -z "$UTXO_ONLY" ]; then
     echo -e "\nCan not have both options '-evm_only' and '-utxo_only'" | tee /dev/fd/3
@@ -186,6 +201,7 @@ elif [ ! -z "$UTXO_ONLY" ] && [ "${UTXO_ONLY}" = "true" ]; then
 else
   testScripts+=( "${testScriptsEvm[@]}" )
   testScripts+=( "${testScriptsUtxo[@]}")
+  testScripts+=( "${testScriptsNetworking[@]}" )
 fi
 
 # include extended tests (not used as of now)

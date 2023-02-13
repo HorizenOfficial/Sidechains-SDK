@@ -13,6 +13,8 @@ try:
     import urllib.parse as urlparse
 except ImportError:
     import urlparse
+from base64 import b64encode
+import pprint
 
 USER_AGENT = "SidechainAuthServiceProxy/0.1"
 
@@ -23,7 +25,13 @@ class SCAPIException(Exception):
     def __init__(self, sc_api_error):
         Exception.__init__(self)
         self.error = sc_api_error
-        
+
+# Authorization token: we need to base 64 encode it 
+# and then decode it to acsii as python 3 stores it as a byte string
+def basic_auth(username, password):
+    token = b64encode(f"{username}:{password}".encode('utf-8')).decode("ascii")
+    return f'Basic {token}'
+
 """
    Adaption of AuthServiceProxy class from BTF for SDK REST API. Differences are very minimal:
    1) Method names follows a path-like style. Therefore method names are passed to __call__ method with underscores
@@ -45,18 +53,11 @@ class SidechainAuthServiceProxy(object):
             port = 80
         else:
             port = self.__url.port
-        (user, passwd) = (self.__url.username, self.__url.password)
-        try:
-            user = user.encode('utf8')
-        except AttributeError:
-            pass
-        try:
-            passwd = passwd.encode('utf8')
-        except AttributeError:
-            pass
-        #Still to identify which kind of authentication we will have
-        authpair = user + b':' + passwd
-        self.__auth_header = b'Basic ' + base64.b64encode(authpair)
+
+        if auth_api_key != None:
+            self._user = "user"
+            self._passwd = auth_api_key
+            self.__auth_header = basic_auth(self._user, self._passwd).encode('utf8')
 
         if connection:
             # Callables re-use the connection of the original proxy
@@ -82,12 +83,11 @@ class SidechainAuthServiceProxy(object):
         
         headers = {'Host': self.__url.hostname,
                    'User-Agent': USER_AGENT,
-                   'Authorization': self.__auth_header,
                    'Content-type': 'application/json',}
         if api_key != None:
-            headers.update({"api_key":api_key})
-        elif self.auth_api_key != None:
-            headers.update({"api_key":self.auth_api_key})
+            headers.update({"Authorization": basic_auth(self._user, api_key)})
+        elif self.__auth_header != None:
+            headers.update({"Authorization": self.__auth_header})
 
         try:
             self.__conn.request(method, path, postdata, headers)

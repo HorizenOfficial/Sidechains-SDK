@@ -3,13 +3,14 @@ package com.horizen.account.storage
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer}
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
+import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.storage.Storage
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 import sparkz.core.{VersionTag, versionToBytes}
 
 import java.math.BigInteger
@@ -19,7 +20,7 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMetadataStorageReader with ScorexLogging {
+class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMetadataStorageReader with SparkzLogging {
 
   require(storage != null, "Storage must be NOT NULL.")
 
@@ -33,6 +34,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private val undefinedBlockFeeInfoCounter: Int = -1
 
   private[horizen] var hasCeasedOpt: Option[Boolean] = None
+
   private[horizen] var withdrawalEpochInfoOpt: Option[WithdrawalEpochInfo] = None
   private[horizen] var topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = None
   private[horizen] var lastCertificateReferencedEpochOpt: Option[Int] = None
@@ -81,11 +83,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       }
     }
 
-    withdrawalEpochInfoOpt.foreach(epochInfo => {
-      if (epochInfo.epoch == withdrawalEpochNumber) {
-        blockFeeInfoOpt.foreach(blockFeeInfo => blockFees.append(blockFeeInfo))
-      }
-    })
+    if (getWithdrawalEpochInfo.epoch == withdrawalEpochNumber) {
+      blockFeeInfoOpt.foreach(blockFeeInfo => blockFees.append(blockFeeInfo))
+    }
+
     blockFees
   }
 
@@ -217,7 +218,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     receiptsOpt = Some(receipts)
   }
 
-  def addFeePayment(blockFeeInfo: AccountBlockFeeInfo): Unit = {
+  def updateFeePaymentInfo(blockFeeInfo: AccountBlockFeeInfo): Unit = {
     blockFeeInfoOpt = Some(blockFeeInfo)
   }
 
@@ -233,13 +234,12 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     nextBaseFeeOpt = Some(baseFee)
   }
 
-  def getNextBaseFromFromStorage: Option[BigInteger] = {
+  def getNextBaseFeeFromStorage: Option[BigInteger] = {
     storage.get(baseFeeKey).asScala.map(wrapper => new BigInteger(wrapper.data))
   }
 
   def getNextBaseFee: BigInteger = {
-    // TODO: default to initial base fee, not zero
-    nextBaseFeeOpt.orElse(getNextBaseFromFromStorage).getOrElse(BigInteger.ZERO)
+    nextBaseFeeOpt.orElse(getNextBaseFeeFromStorage).getOrElse(FeeUtils.INITIAL_BASE_FEE)
   }
 
   def setCeased(): Unit = hasCeasedOpt = Some(true)
@@ -254,6 +254,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     result match {
       case Failure(exception) =>
         log.error(s"Error while committing metadata for version $version. The modifications won't be saved", exception)
+        throw exception
       case Success(_) =>
     }
   }
@@ -324,8 +325,11 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
 
     // update the height unless we have the very first version of the db
-    // TODO improve this: we are assuming that the saveToStorage() is call on a per-block base, this is an exception, is it the only one?
-    if (!version.equals(new ByteArrayWrapper(Utils.ZEROS_HASH))) {
+    //--
+    // We are assuming that the saveToStorage() is called on a per-block base.
+    // The only exception is in the Sidechain initialization phase, where a commit takes place using as a
+    // version `genesisBlock.parentId`, which btw is defined as the empty byte array.
+    if (!version.equals(new ByteArrayWrapper(GENESIS_BLOCK_PARENT_ID))) {
       val nextHeight = getHeight + 1
       updateList.add(new JPair(heightKey, new ByteArrayWrapper(Ints.toByteArray(nextHeight))))
     }
@@ -344,8 +348,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
           val certEpochNumberToRemove: Int = epochInfo.epoch - 4
           removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
 
-          // TODO: is it safe to remove outdated AccountBlockFeeInfo?
-          //       Can it have an impact in case we need to debug_block (eth rpc call) with fee payments in the past?
           val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1
           for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
             removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))

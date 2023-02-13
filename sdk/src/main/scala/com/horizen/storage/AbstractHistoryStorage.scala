@@ -7,8 +7,8 @@ import com.horizen.params.NetworkParams
 import com.horizen.utils.ByteArrayWrapper
 import sparkz.core.consensus.ModifierSemanticValidity
 import com.horizen.transaction.Transaction
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
@@ -35,7 +35,7 @@ abstract class AbstractHistoryStorage[
   )
   extends SidechainBlockInfoProvider
     with SidechainStorageInfo
-    with ScorexLogging {
+    with SparkzLogging {
   this: S =>
   // Version - RandomBytes(32)
 

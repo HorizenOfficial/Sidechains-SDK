@@ -1,7 +1,6 @@
 package com.horizen.transaction
 
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.box.{Box, ZenBox}
@@ -13,7 +12,7 @@ import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.core.utils.SparkzEncoder
+import sparkz.util.SparkzEncoder
 
 class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
 {

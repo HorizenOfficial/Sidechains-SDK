@@ -12,7 +12,6 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.Cert
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies.{CertificateSubmissionStrategy, CircuitStrategy, SubmissionWindowStatus}
-import com.horizen.certnative.BackwardTransfer
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.fork.ForkManager
@@ -25,7 +24,7 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.BytesUtils
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -51,21 +50,21 @@ abstract class AbstractCertificateSubmitter[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H] : ClassTag,
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR],
+  HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS],
+  MS <: AbstractState[TX, H, PM, MS],
+  VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL],
+  MP <: MemoryPool[TX, MP],
   T <: CertificateData](settings: SidechainSettings,
                         sidechainNodeViewHolderRef: ActorRef,
                         secureEnclaveApiClient: SecureEnclaveApiClient,
                         params: NetworkParams,
                         mainchainChannel: MainchainNodeCertificateApi,
                         submissionStrategy: CertificateSubmissionStrategy,
-                        keyRotationStrategy: CircuitStrategy[TX, H, PM, T])
-  (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
+                        keyRotationStrategy: CircuitStrategy[TX, H, PM, HIS, MS, T])
+  (implicit ec: ExecutionContext) extends Actor with Timers with SparkzLogging
 {
-  type FPI <: AbstractFeePaymentsInfo
-  type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
-  type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
-  type MS <: AbstractState[TX, H, PM, MS]
-  type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
-  type MP <: MemoryPool[TX, MP]
 
   type View = CurrentView[HIS, MS, VL, MP]
 
@@ -85,7 +84,6 @@ abstract class AbstractCertificateSubmitter[
   override def preStart(): Unit = {
     super.preStart()
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[PM]])
-    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     context.system.eventStream.subscribe(self, CertificateSubmissionStarted.getClass)
     context.system.eventStream.subscribe(self, CertificateSubmissionStopped.getClass)
@@ -252,7 +250,7 @@ abstract class AbstractCertificateSubmitter[
   }
 
   private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(view => keyRotationStrategy.getMessageToSign(view, referencedWithdrawalEpochNumber)),
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => keyRotationStrategy.getMessageToSign(view.history, view.state, referencedWithdrawalEpochNumber)),
       timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
   }
 
@@ -260,7 +258,7 @@ abstract class AbstractCertificateSubmitter[
   // Note: We can't rely on `State.getWithdrawalEpochInfo`, because it shows the tip info,
   // but the older block may being applied at the moment.
   private def getSubmissionWindowStatus(block: PM): Try[SubmissionWindowStatus] = Try {
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(submissionStrategy.getStatus[HIS, MS](_, block.id)), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => submissionStrategy.getStatus(view.history, view.state, block.id)), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
 
   private[certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
@@ -375,7 +373,7 @@ abstract class AbstractCertificateSubmitter[
           // Check quality again, in case better Certificate appeared.
           if (submissionStrategy.checkQuality(status)) {
 
-            val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(keyRotationStrategy.buildCertificateData(_, status)), timeoutDuration)
+            val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => keyRotationStrategy.buildCertificateData(view.history, view.state, status)), timeoutDuration)
               .asInstanceOf[T]
             log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
 
@@ -464,6 +462,7 @@ abstract class AbstractCertificateSubmitter[
 }
 
 object AbstractCertificateSubmitter {
+
   // Events:
   sealed trait SubmitterEvent
 

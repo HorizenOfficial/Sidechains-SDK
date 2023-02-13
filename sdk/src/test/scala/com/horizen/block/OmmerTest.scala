@@ -13,7 +13,7 @@ import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.io.Source
 import scala.util.{Failure, Success}
@@ -311,7 +311,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     var bytes = ommer.bytes
 
     var serializedOmmerTry = OmmerSerializer.parseBytesTry(bytes)
-    assertTrue("Ommer expected to by parsed.", serializedOmmerTry.isSuccess)
+    assertTrue("Ommer expected to be parsed.", serializedOmmerTry.isSuccess)
 
     var serializedOmmer = serializedOmmerTry.get
     assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, serializedOmmer.header.id)
@@ -363,7 +363,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     }
 
     serializedOmmerTry = OmmerSerializer.parseBytesTry(bytes)
-    assertTrue("Ommer expected to by parsed.", serializedOmmerTry.isSuccess)
+    assertTrue("Ommer expected to be parsed.", serializedOmmerTry.isSuccess)
 
     serializedOmmer = serializedOmmerTry.get
     assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, serializedOmmer.header.id)
@@ -423,7 +423,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val ommer = Ommer.toOmmer(block)
 
     val deserializedOmmerTry = OmmerSerializer.parseBytesTry(bytes)
-    assertTrue("Ommer expected to by parsed.", deserializedOmmerTry.isSuccess)
+    assertTrue("Ommer expected to be parsed.", deserializedOmmerTry.isSuccess)
 
     val deserializedOmmer = deserializedOmmerTry.get
     assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, deserializedOmmer.header.id)

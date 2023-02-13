@@ -16,7 +16,7 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.mockito.Mockito.when
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.BytesUtils
 import sparkz.core.NodeViewHolder.CurrentView
@@ -96,7 +96,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    var status: SubmissionWindowStatus = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    var status: SubmissionWindowStatus = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertFalse("Epoch 0 block 1 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -110,7 +110,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertFalse("Epoch 1 block 0 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -125,7 +125,7 @@ class NonCeasingSidechainTest extends JUnitSuite
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
 
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertTrue("Epoch 1 block 1 must be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -133,7 +133,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     // Withdral Epoch 1 block 1 with previous certificate
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => Some(0))
 
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertFalse("Epoch 1 block 1 with last certepoch = 0 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 1", status.referencedWithdrawalEpochNumber, 1)
@@ -147,7 +147,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     })
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
 
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertTrue("Epoch 2 block 0 without last certificate must be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -155,7 +155,7 @@ class NonCeasingSidechainTest extends JUnitSuite
     // Withdral Epoch 2 block 0 with previous certificate
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => Some(0))
 
-    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = nonCeasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertFalse("Epoch 2 block 0 with last cert epoch = 0 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 1", status.referencedWithdrawalEpochNumber, 1)

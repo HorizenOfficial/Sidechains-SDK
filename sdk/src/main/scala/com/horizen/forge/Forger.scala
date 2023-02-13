@@ -46,7 +46,12 @@ object ForgerRef {
             companion: SidechainTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
             params: NetworkParams)
-           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
+           (implicit system: ActorSystem): ActorRef = {
+    val ref = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+
+  }
 
   def apply(name: String,
             settings: SidechainSettings,
@@ -55,5 +60,9 @@ object ForgerRef {
             companion: SidechainTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
             params: NetworkParams)
-           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params), name)
+           (implicit system: ActorSystem): ActorRef = {
+    val ref = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params), name)
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 }

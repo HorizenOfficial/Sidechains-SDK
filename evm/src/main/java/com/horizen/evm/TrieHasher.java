@@ -1,10 +1,12 @@
 package com.horizen.evm;
 
-public final class TrieHasher {
-    private TrieHasher() {
-    }
+import com.horizen.evm.interop.HashParams;
+import com.horizen.evm.utils.Hash;
 
-    public static byte[] Root(byte[][] values) {
-        return LibEvm.hashRoot(values);
+public final class TrieHasher {
+    private TrieHasher() {}
+
+    public static Hash Root(byte[][] values) {
+        return LibEvm.invoke("HashRoot", new HashParams(values), Hash.class);
     }
 }

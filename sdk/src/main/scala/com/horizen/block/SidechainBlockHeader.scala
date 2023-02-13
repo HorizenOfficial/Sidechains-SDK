@@ -6,16 +6,15 @@ import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
-import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
-import com.horizen.utils.{MerklePath, MerklePathSerializer}
+import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
+import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
+import sparkz.util.ModifierId
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.{Failure, Success, Try}
 
@@ -23,7 +22,7 @@ import scala.util.{Failure, Success, Try}
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
 case class SidechainBlockHeader(
                                  override val version: Block.Version,
-                                 @JsonSerialize(using = classOf[ScorexModifierIdSerializer])override val parentId: ModifierId,
+                                 @JsonSerialize(using = classOf[SparkzModifierIdSerializer])override val parentId: ModifierId,
                                  override val timestamp: Block.Timestamp,
                                  override val forgingStakeInfo: ForgingStakeInfo,
                                  @JsonSerialize(using = classOf[MerklePathJsonSerializer])override val forgingStakeMerklePath: MerklePath,
@@ -39,9 +38,6 @@ case class SidechainBlockHeader(
   override type M = SidechainBlockHeader
 
   override def serializer: SparkzSerializer[SidechainBlockHeader] = SidechainBlockHeaderSerializer
-
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
-  override lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
@@ -124,11 +120,11 @@ object SidechainBlockHeaderSerializer extends SparkzSerializer[SidechainBlockHea
 
     val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
 
-    val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val sidechainTransactionsMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val mainchainMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val ommersCumulativeScore: Long = r.getLong()
 

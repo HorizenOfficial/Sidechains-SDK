@@ -7,7 +7,7 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.{AbstractWallet, SidechainTypes}
 import sparkz.core.VersionTag
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
@@ -18,7 +18,7 @@ class AccountWallet private[horizen](seed: Array[Byte],
     SidechainTypes#SCAT,
     AccountBlock,
     AccountWallet](seed, secretStorage)
-    with ScorexLogging
+    with SparkzLogging
     with NodeWalletBase {
   override type NVCT = this.type
 
@@ -28,10 +28,14 @@ class AccountWallet private[horizen](seed: Array[Byte],
     this
   }
 
+  //AccountWallet doesn't need to store any information from the block, unlike UTXO, because
+  // Account model doesn't currently support CSW, fee payments and forger stakes are stored by AccountState in the metadata
+  // storage and in StateDb respectively.
   override def scanPersistent(modifier: AccountBlock): AccountWallet = {
     this
   }
 
+  //AccountWallet doesn't store forger stakes information because they are stored by AccountState in the StateDb.
   override def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): AccountWallet = {
     this
   }

@@ -25,7 +25,7 @@ import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
@@ -68,8 +68,8 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       messageToSign = Array(135.toByte),
       knownSigs = ArrayBuffer(certificateSignatureInfo)
     )
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mock[ThresholdSignatureCircuit])
-    val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView().asInstanceOf[keyRotationStrategy.View], signaturesStatus)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mock[ThresholdSignatureCircuit])
+    val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView().history, sidechainNodeView().state, signaturesStatus)
     assert(certificateDataWithoutKeyRotation.utxoMerkleTreeRoot.isDefined)
     assertResult(10)(certificateDataWithoutKeyRotation.referencedEpochNumber)
     assertResult(32)(certificateDataWithoutKeyRotation.sidechainId.length)
@@ -141,7 +141,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       assertResult(true)(answer.getArgument(12).asInstanceOf[Boolean]) // compressProof
       new com.horizen.utils.Pair(key, 425L)
     })
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     val pair: utils.Pair[Array[Byte], lang.Long] = keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")
     assert(pair.getValue == 425L)
     info.foreach(element => {
@@ -166,8 +166,8 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       assert(answer.getArgument(6).asInstanceOf[java.util.Optional[Byte]].isPresent)
       new com.horizen.utils.Pair(Array(67.toByte), 425L)
     })
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
-    keyRotationStrategy.getMessageToSign(sidechainNodeView().asInstanceOf[keyRotationStrategy.View], WithoutKeyRotationCircuitStrategyTest.epochNumber)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
+    keyRotationStrategy.getMessageToSign(sidechainNodeView().history, sidechainNodeView().state, WithoutKeyRotationCircuitStrategyTest.epochNumber)
   }
 
   private def settings(): SidechainSettings = {
@@ -208,6 +208,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
     val sidechainBlockInfo = mock[SidechainBlockInfo]
     val historyStorageMock: SidechainHistoryStorage = mock[SidechainHistoryStorage]
     when(history.storage).thenAnswer(_ => historyStorageMock)
+    when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => sidechainBlockInfo)
     when(historyStorageMock.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => sidechainBlockInfo)
     when(sidechainBlockInfo.timestamp).thenAnswer(_ => params.sidechainGenesisBlockTimestamp + 1)
     CurrentView(history, sidechainState, mock[SidechainWallet], mock[SidechainMemoryPool])

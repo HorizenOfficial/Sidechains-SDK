@@ -1,37 +1,24 @@
 package com.horizen.state
 
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
-import com.horizen.account.state.{BlockContext, GasPool}
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.utils.AccountBlockFeeInfo
-import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
 import com.horizen.utils.WithdrawalEpochInfo
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.VersionTag
 
-import scala.util.Try
+import java.math.BigInteger
 
 trait StateView[TX <: Transaction] extends BaseStateReader {
-  def applyMainchainBlockReferenceData(
-      refData: MainchainBlockReferenceData,
-      blockId: ModifierId
-  ): Try[Unit]
 
-  def applyTransaction(
-      tx: TX,
-      txIndex: Int,
-      blockGasPool: GasPool,
-      blockContext: BlockContext,
-      finalizeChanges: Boolean = true
-  ): Try[EthereumConsensusDataReceipt]
-
-  def addCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit
-  def addFeeInfo(info: AccountBlockFeeInfo): Unit
   def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit
+  def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit
+  def updateFeePaymentInfo(info: AccountBlockFeeInfo): Unit
   def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit
   def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit
+  def updateNextBaseFee(baseFee: BigInteger): Unit
   def setCeased(): Unit
-
-  def commit(version: VersionTag): Try[Unit]
+  def commit(version: VersionTag): Unit
 }

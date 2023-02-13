@@ -1,10 +1,10 @@
 package com.horizen.account.state
 
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 
-class GasPool(initialGas: BigInteger) extends ScorexLogging {
+class GasPool(initialGas: BigInteger) extends SparkzLogging {
 
   private var currentGas = initialGas
 
@@ -17,7 +17,7 @@ class GasPool(initialGas: BigInteger) extends ScorexLogging {
     if (gas.signum() == -1)
       throw new IllegalArgumentException("cannot consume a negative amount of gas")
     if (currentGas.compareTo(gas) < 0) {
-      throw new OutOfGasException()
+      throw new OutOfGasException(s"trying to remove gas=$gas from current-gas=$currentGas")
     }
     log.trace(s"subtracting $gas from currentGas=$currentGas")
     currentGas = currentGas.subtract(gas)

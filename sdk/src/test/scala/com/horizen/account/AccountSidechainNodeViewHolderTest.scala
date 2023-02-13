@@ -9,7 +9,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountFixture, MockedAccountSidechainNodeViewHolderFixture}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.{AccountState, AccountStateReaderProvider}
+import com.horizen.account.state.{AccountState, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
@@ -21,12 +21,13 @@ import org.junit.{Before, Test}
 import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.ModifierId
+import sparkz.util.{ModifierId, SparkzEncoding}
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{VersionTag, idToVersion}
+
 import java.util
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
@@ -35,13 +36,14 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
   with MockedAccountSidechainNodeViewHolderFixture
   with AccountBlockFixture
   with CompanionsFixture
-  with sparkz.core.utils.SparkzEncoding
+  with SparkzEncoding
 {
   var history: AccountHistory = _
   var state: AccountState = _
   var wallet: AccountWallet = _
   var mempool: AccountMemoryPool = _
   var accountStateReaderProvider: AccountStateReaderProvider = _
+  var baseStateReaderProvider: BaseStateReaderProvider = _
 
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
@@ -59,7 +61,8 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     state = mock[AccountState]
     wallet = mock[AccountWallet]
     accountStateReaderProvider = mock[AccountStateReaderProvider]
-    mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider)
+    baseStateReaderProvider = mock[BaseStateReaderProvider]
+    mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider)
     mockedNodeViewHolderRef = getMockedAccountSidechainNodeViewHolderRef(history, state, wallet, mempool)
   }
 
@@ -293,7 +296,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
 
     // Mock state fee payments with checks
-    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])).thenAnswer(args => {
+    Mockito.when(state.getFeePaymentsInfo(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])).thenAnswer(args => {
       Seq()
     })
 
@@ -318,7 +321,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Thread.sleep(100)
 
     // Verify that all the checks passed
-    Mockito.verify(state, times(0)).getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])
+    Mockito.verify(state, times(0)).getFeePaymentsInfo(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])
   }
 
   @Test
@@ -342,7 +345,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock state fee payments with checks
     val expectedFeePayments: Seq[AccountPayment] = Seq(ForgerAccountFixture.getAccountPayment(0L), ForgerAccountFixture.getAccountPayment(1L))
-    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]]())).thenAnswer(args => {
+    Mockito.when(state.getFeePaymentsInfo(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]]())).thenAnswer(args => {
       val epochNumber: Int = args.getArgument(0)
       assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
       expectedFeePayments
@@ -368,7 +371,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Thread.sleep(100)
 
     // Verify that all the checks passed
-    Mockito.verify(state, times(1)).getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])
+    Mockito.verify(state, times(1)).getFeePaymentsInfo(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])
   }
 
   @Test

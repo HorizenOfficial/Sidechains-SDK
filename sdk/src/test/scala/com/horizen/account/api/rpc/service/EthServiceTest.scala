@@ -3,7 +3,6 @@ package com.horizen.account.api.rpc.service
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.horizen.SidechainTypes
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.types.Quantity
@@ -20,21 +19,24 @@ import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionTy
 import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActorRef
-import com.horizen.evm.utils.Hash
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
+import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
 import sparkz.core.bytesToId
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
+import sparkz.util.ByteArrayBuilder
+import sparkz.util.serialization.VLQByteBufferWriter
 
 import java.math.BigInteger
 import java.util.Optional
@@ -52,9 +54,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       "0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba1"
     )
   private val blockViewOutput =
-    """{"number":"0x1","hash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","parentHash":"0xnull","nonce":"0x0000000000000000","sha3Uncles":"0x","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","transactionsRoot":"0x1234567891011121314112345678910111213141","stateRoot":"0x1234567891011121314112345678910111213141","receiptsRoot":"0x1234567891011121314112345678910111213141","miner":"0x1234567891011121314112345678910111213141","mixHash":"0x","extraData":"0x","size":"0x100","gasLimit":"0x1c9c380","gasUsed":"0x3b9aca01","timestamp":"0x3b9aca00","transactions":[{"blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","hash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","type":"0x2","nonce":"0x0","to":null,"gas":"0x1","value":"0x1","input":"0x","maxPriorityFeePerGas":"0x1","maxFeePerGas":"0x3b9aca64","gasPrice":"0x342770c1","accessList":null,"chainId":"0x10f447","v":"0x1c","r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023","s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"}],"author":"0x1234567891011121314112345678910111213141","difficulty":"0x0","totalDifficulty":"0x0","uncles":[],"sealFields":[],"baseFeePerGas":"0x342770c0"}"""
+    """{"number":"0x1","hash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000123","nonce":"0x0000000000000000","sha3Uncles":"0x","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","transactionsRoot":"0x1234567891011121314112345678910111213141010203040506070809111222","stateRoot":"0x1234567891011121314112345678910111213141010203040506070809111333","receiptsRoot":"0x1234567891011121314112345678910111213141010203040506070809111444","miner":"0x1234567891011121314112345678910111213141","mixHash":"0xa9d6c4e78efce5051dedf51d9be422ef8af247a8414368d256e4ab7b8029951e","extraData":"0x","size":"0x100","gasLimit":"0x1c9c380","gasUsed":"0x3b9aca01","timestamp":"0x3b9aca00","transactions":[{"blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","hash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","type":"0x2","nonce":"0x0","to":null,"gas":"0x1","value":"0x1","input":"0x","maxPriorityFeePerGas":"0x1","maxFeePerGas":"0x3b9aca64","gasPrice":"0x342770c1","accessList":null,"chainId":"0x10f447","v":"0x1c","r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023","s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"}],"author":"0x1234567891011121314112345678910111213141","difficulty":"0x0","totalDifficulty":"0x0","uncles":[],"sealFields":[],"baseFeePerGas":"0x342770c0"}"""
   private val blockViewOutputTxHashes =
-    """{"number":"0x1","hash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","parentHash":"0xnull","nonce":"0x0000000000000000","sha3Uncles":"0x","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","transactionsRoot":"0x1234567891011121314112345678910111213141","stateRoot":"0x1234567891011121314112345678910111213141","receiptsRoot":"0x1234567891011121314112345678910111213141","miner":"0x1234567891011121314112345678910111213141","mixHash":"0x","extraData":"0x","size":"0x100","gasLimit":"0x1c9c380","gasUsed":"0x3b9aca01","timestamp":"0x3b9aca00","transactions":["0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"],"author":"0x1234567891011121314112345678910111213141","difficulty":"0x0","totalDifficulty":"0x0","uncles":[],"sealFields":[],"baseFeePerGas":"0x342770c0"}"""
+    """{"number":"0x1","hash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000123","nonce":"0x0000000000000000","sha3Uncles":"0x","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","transactionsRoot":"0x1234567891011121314112345678910111213141010203040506070809111222","stateRoot":"0x1234567891011121314112345678910111213141010203040506070809111333","receiptsRoot":"0x1234567891011121314112345678910111213141010203040506070809111444","miner":"0x1234567891011121314112345678910111213141","mixHash":"0xa9d6c4e78efce5051dedf51d9be422ef8af247a8414368d256e4ab7b8029951e","extraData":"0x","size":"0x100","gasLimit":"0x1c9c380","gasUsed":"0x3b9aca01","timestamp":"0x3b9aca00","transactions":["0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"],"author":"0x1234567891011121314112345678910111213141","difficulty":"0x0","totalDifficulty":"0x0","uncles":[],"sealFields":[],"baseFeePerGas":"0x342770c0"}"""
   private val txViewOutput =
     """{"blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","hash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","type":"0x2","nonce":"0x0","to":null,"gas":"0x1","value":"0x1","input":"0x","maxPriorityFeePerGas":"0x1","maxFeePerGas":"0x3b9aca64","gasPrice":"0x342770c1","accessList":null,"chainId":"0x10f447","v":"0x1c","r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023","s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"}"""
   private val txJsonNoSecret =
@@ -63,8 +65,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   val txPoolStatusOutput = """{"pending":3,"queued":1}"""
   val txPoolContentOutput = """{"pending":{"0x15532e34426cd5c37371ff455a5ba07501c0f522":{"16":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044","input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4","nonce":"0x10","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0xe4e1c0"},"24":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0x081d8a5b696ec5dfce641568e6665b6be2410ce2","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37","input":"0x8c64fe48688ab096dfb6ac2eeefcf213","nonce":"0x18","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x493e00"}},"0xb039865dbea73df08e23f185847bab8e6a44108d":{"32":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0xb3151940f923813eca1d70ad405a852bcd2d7609","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd","input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4","nonce":"0x20","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x112a880"}}},"queued":{"0x15532e34426cd5c37371ff455a5ba07501c0f522":{"40":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0xc803d7146a4df6937b609f7951bc7eda3def09fb","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165","input":"0x4aa64a075647e3621bbc14b03e4087903f2c9503","nonce":"0x28","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x3c14dc0"}}}}"""
   var ethService: EthService = _
-  var txJson: String = null
-  var senderWithSecret: String = null
+  var txJson: String = _
+  var senderWithSecret: String = _
 
   private def assertJsonLength(expected: String, actual: Object): Unit = {
     // TODO: mapper must be configured exactly like the one used in the actual RPC response
@@ -94,7 +96,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         EthereumTransactionType.DynamicFeeTxType.ordinal(),
         transactionIndex = 0,
         blockNumber = 2,
-        address = BytesUtils.fromHexString("d2a538a476aad6ecd245099df9297df6a129c2c5"),
+        address = new Address("0xd2a538a476aad6ecd245099df9297df6a129c2c5"),
         txHash = Some(BytesUtils.fromHexString("6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
         blockHash = "0456"
       )
@@ -116,7 +118,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       new Array[Byte](0),
       goodSignature
     )
-    val encodedMessage = EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned)
+    val writer = new VLQByteBufferWriter(new ByteArrayBuilder)
+    EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned, writer)
+    val encodedMessage = writer.toBytes
     val txHash = BytesUtils.toHexString(Keccak256.hash(encodedMessage))
 
     txs.append(txEip1559.asInstanceOf[SidechainTypes#SCAT])
@@ -126,16 +130,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       0,
       FeeUtils.GAS_LIMIT,
       genesisBlockId,
-      bytesToId(new Array[Byte](32))
-    )
+      bytesToId(new Array[Byte](32)))
     val mockedBlock: AccountBlock = mockHelper.getMockedBlock(
       BigInteger.valueOf(875000000),
       txEip1559.getEffectiveGasPrice(FeeUtils.INITIAL_BASE_FEE).longValueExact(),
       FeeUtils.GAS_LIMIT,
-      bytesToId(Numeric.hexStringToByteArray("dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")),
-      genesisBlockId,
-      txs
-    )
+      bytesToId(Numeric.hexStringToByteArray("dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")), genesisBlockId, txs)
     val mockedHistory: AccountHistory = mockHelper.getMockedAccountHistory(
       Some(mockedBlock),
       Some(genesisBlock),
@@ -146,12 +146,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val secret = PrivateKeySecp256k1Creator
       .getInstance()
       .generateSecret(BytesUtils.fromHexString("1231231231231231231231231231231231231231231123123123123123123123"))
-    senderWithSecret = Numeric.toHexString(secret.publicImage().address())
+    senderWithSecret = secret.publicImage().address().toString
     txJson =
       s"""{"from": "$senderWithSecret", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675", "nonce": "0x1"}"""
     val mockedWallet: AccountWallet = mockHelper.getMockedWallet(secret)
 
-    val mockedMemoryPool: AccountMemoryPool = mockHelper.getMockedAccoutMemoryPool()
+    val mockedMemoryPool: AccountMemoryPool = mockHelper.getMockedAccoutMemoryPool
 
     val mockedSidechainNodeViewHolder = TestProbe()
 
@@ -176,7 +176,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-    ethService = new EthService(nodeViewHolderRef, new FiniteDuration(10, SECONDS), networkParams, transactionActorRef)
+    val ethServiceSettings = EthServiceSettings()
+    ethService = new EthService(nodeViewHolderRef, new FiniteDuration(10, SECONDS), networkParams, ethServiceSettings, transactionActorRef)
   }
 
   @Test
@@ -268,7 +269,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block tag", "Transaction index", "Expected output"),
       ("latest", "0", txViewOutput),
-      ("pending", "0", txViewOutput),
       (null, "0", txViewOutput),
       ("0x2", "0", txViewOutput),
       ("2", "0", txViewOutput),
@@ -396,7 +396,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block tag", "Full transaction objects", "Expected output"),
       ("latest", true, blockViewOutput),
-      ("pending", false, blockViewOutputTxHashes),
+      ("latest", false, blockViewOutputTxHashes),
       ("0x2", true, blockViewOutput)
     )
 
@@ -456,7 +456,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block tag / index", "Expected output"),
       ("latest", "0x1"),
-      ("pending", "0x1"),
       ("0x2", "0x1"),
       ("0x1", "0x0")
     )
@@ -722,7 +721,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         "0x1234567890123456789012345678901234567890",
         "latest",
-        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+        """{"address":"0x1234567890123456789012345678901234567890","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
       )
     )
 
@@ -823,7 +822,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         senderWithSecret,
         "0x0000000000000000000011111111111111111111",
-        "0x9950a60fdbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+        "0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
         "0xE8D4A51000",
         "0x4B9ACA00",
         "0x1",
@@ -882,7 +881,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         senderWithSecret,
         "0x0000000000000000000011111111111111111111",
-        "0x9950a60fdbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+        "0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
         "0xE8D4A51000",
         "0x4B9ACA00",
         "0x1",

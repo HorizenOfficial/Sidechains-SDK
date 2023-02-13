@@ -3,13 +3,15 @@ package com.horizen.account
 import com.google.inject.Provides
 import com.google.inject.name.Named
 import com.horizen.account.helper.{AccountTransactionSubmitHelper, AccountTransactionSubmitHelperImpl}
+import com.horizen.account.helper.{AccountNodeViewHelper, AccountNodeViewHelperImpl}
 import com.horizen.account.state.MessageProcessor
 import com.horizen.api.http.ApplicationApiGroup
 import com.horizen.fork.ForkConfigurator
+import com.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
 import com.horizen.secret.SecretSerializer
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
-import com.horizen.{ChainInfo, SidechainAppStopper, SidechainSettings, SidechainTypes}
+import com.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppStopper, SidechainSettings, SidechainTypes}
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -22,6 +24,16 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
 
     bind(classOf[AccountTransactionSubmitHelper])
       .to(classOf[AccountTransactionSubmitHelperImpl])
+
+
+    bind(classOf[AbstractSidechainApp])
+      .to(classOf[AccountSidechainApp])
+
+    bind(classOf[AccountNodeViewHelper])
+      .to(classOf[AccountNodeViewHelperImpl])
+
+    bind(classOf[SecretSubmitHelper])
+      .to(classOf[SecretSubmitHelperImpl])
 
     configureApp()
   }
@@ -38,7 +50,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           @Named("ChainInfo") chainInfo : ChainInfo,
           @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
-          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator
+          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
+          @Named("ConsensusSecondsInSlot") secondsInSlot: Int
          ): AccountSidechainApp = {
     synchronized {
       if (app == null) {
@@ -51,7 +64,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           customMessageProcessors,
           applicationStopper,
           forkConfigurator,
-          chainInfo
+          chainInfo,
+          secondsInSlot
         )
       }
     }

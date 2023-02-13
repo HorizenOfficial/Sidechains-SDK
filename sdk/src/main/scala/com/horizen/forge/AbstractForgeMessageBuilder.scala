@@ -17,7 +17,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.block.Block
 import sparkz.core.transaction.MemoryPool
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.transaction.state.MinimalState
 
 import scala.collection.JavaConverters._
@@ -32,7 +32,7 @@ abstract class AbstractForgeMessageBuilder[
     mainchainSynchronizer: MainchainSynchronizer,
     companion: DynamicTypedSerializer[TX, TransactionSerializer[TX]],
     val params: NetworkParams,
-    allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging
+    allowNoWebsocketConnectionInRegtest: Boolean) extends SparkzLogging
 {
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
@@ -100,8 +100,18 @@ abstract class AbstractForgeMessageBuilder[
       val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
       val forgingResult = eligibleForgerOpt
-        .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
-          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout, forcedTx)
+        .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, vrfOutput) =>
+          forgeBlock(
+            nodeView,
+            nextBlockTimestamp,
+            branchPointInfo,
+            forgingStakeMerklePathInfo,
+            privateKey25519,
+            vrfProof,
+            vrfOutput,
+            timeout,
+            forcedTx
+          )
         }
         .getOrElse(SkipSlot("No eligible forging stake found."))
       forgingResult
@@ -219,12 +229,18 @@ abstract class AbstractForgeMessageBuilder[
     }
   }
 
+  // the max size of the block excluding txs
+  def getMaxBlockOverheadSize() : Int
+  // the max size of the block including txs
+  def getMaxBlockSize() : Int
+
   protected def forgeBlock(nodeView: View,
                            timestamp: Long,
                            branchPointInfo: BranchPointInfo,
                            forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                            blockSignPrivateKey: PrivateKey25519,
                            vrfProof: VrfProof,
+                           vrfOutput: VrfOutput,
                            timeout: Timeout,
                            forcedTx: Iterable[TX]): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
@@ -254,14 +270,12 @@ abstract class AbstractForgeMessageBuilder[
     var ommers: Seq[Ommer[H]] = Seq()
     var blockId = nodeView.history.bestBlockId
     while (blockId != parentBlockId) {
-      val block = nodeView.history.getBlockById(blockId).get // TODO: replace with method blockById with no Option
+      val block = nodeView.history.getBlockById(blockId).get
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers
     }
 
     // Update block size with Ommers
-    //val ommersSerializer = new ListSerializer[Ommer[H]](OmmerSerializer)
-    //blockSize += ommersSerializer.toBytes(ommers.asJava).length
     blockSize += getOmmersSize(ommers)
 
     // Get all needed MainchainBlockReferences from the MC Node
@@ -277,7 +291,7 @@ abstract class AbstractForgeMessageBuilder[
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if (blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+          if (blockSize + refDataSize > getMaxBlockOverheadSize())
             false // stop data collection
           else {
             mainchainReferenceData.append(ref.data)
@@ -319,6 +333,7 @@ abstract class AbstractForgeMessageBuilder[
       blockSignPrivateKey,
       forgingStakeMerklePathInfo.forgingStakeInfo,
       vrfProof,
+      vrfOutput,
       forgingStakeMerklePathInfo.merklePath,
       companion,
       blockSize
@@ -343,6 +358,7 @@ abstract class AbstractForgeMessageBuilder[
                      blockSignPrivateKey: PrivateKey25519,
                      forgingStakeInfo: ForgingStakeInfo,
                      vrfProof: VrfProof,
+                     vrfOutput: VrfOutput,
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
                      inputBlockSize: Int,

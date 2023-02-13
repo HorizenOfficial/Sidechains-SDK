@@ -3,17 +3,18 @@ package com.horizen
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
-import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, SDKModifiersCache}
 import com.horizen.validation._
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
-import sparkz.core.{ModifiersCache, idToVersion}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
-import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.settings.SparkzSettings
+import sparkz.core.utils.NetworkTimeProvider
+import sparkz.core.{ModifiersCache, idToVersion}
+
 import scala.util.{Failure, Success, Try}
 
 abstract class AbstractSidechainNodeViewHolder[
@@ -27,6 +28,8 @@ abstract class AbstractSidechainNodeViewHolder[
   override type SI = SidechainSyncInfo
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR]
+
+  type NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _]
 
   override type HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS]
   override type MS <: AbstractState[TX, H, PMOD, MS]
@@ -97,16 +100,60 @@ abstract class AbstractSidechainNodeViewHolder[
       super.receive
   }
 
-  override def postStop(): Unit = {
-    log.info("AbstractSidechainNodeViewHolder actor is stopping...")
-    super.postStop()
+
+
+  protected def getCurrentSidechainNodeViewInfo[A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
+      NV,
+      A]@unchecked =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
+          val l: NV = getNodeView()
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
   }
 
-  protected def getCurrentSidechainNodeViewInfo: Receive
 
-  protected def applyFunctionOnNodeView: Receive
 
-  protected def applyBiFunctionOnNodeView[T, A]: Receive
+  protected def getNodeView(): NV
+
+  protected def applyFunctionOnNodeView[A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[NV,
+      A]@unchecked =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
+          val l: NV = getNodeView()
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+
+  }
+
+
+  protected def applyBiFunctionOnNodeView[T, A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[NV,
+      T, A]@unchecked =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParams) => try {
+          val l: NV = getNodeView()
+          sender() ! f(l, functionParams)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+  }
+
 
   /**
    * Process new modifiers from remote.
@@ -156,7 +203,12 @@ abstract class AbstractSidechainNodeViewHolder[
       sender() ! getStorageVersions
   }
 
-  def processLocallyGeneratedTransaction: Receive
+  protected def applyLocallyGeneratedTransactions(newTxs: Iterable[TX]): Unit
+
+  def processLocallyGeneratedTransaction: Receive = {
+    case newTxs: LocallyGeneratedTransaction[TX] =>
+      applyLocallyGeneratedTransactions(newTxs.txs)
+  }
 
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
@@ -217,7 +269,7 @@ abstract class AbstractSidechainNodeViewHolder[
     // Do rollback if chain switch needed
     val (walletToApplyTry: Try[VL], stateToApplyTry: Try[MS], suffixTrimmed: IndexedSeq[PMOD]) = if (progressInfo.chainSwitchingNeeded) {
       @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-      val branchingPoint = progressInfo.branchPoint.get //todo: .get
+      val branchingPoint = progressInfo.branchPoint.get
       if (state.version != branchingPoint) {
         log.debug(s"chain reorg needed, rolling back state and wallet to branching point: $branchingPoint")
         (
@@ -258,7 +310,7 @@ abstract class AbstractSidechainNodeViewHolder[
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.trimChainSuffix method.
-  protected def trimChainSuffix(suffix: IndexedSeq[PMOD], rollbackPoint: scorex.util.ModifierId): IndexedSeq[PMOD] = {
+  protected def trimChainSuffix(suffix: IndexedSeq[PMOD], rollbackPoint: sparkz.util.ModifierId): IndexedSeq[PMOD] = {
     val idx = suffix.indexWhere(_.id == rollbackPoint)
     if (idx == -1) IndexedSeq() else suffix.drop(idx)
   }
@@ -330,7 +382,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
               val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
               val (historyResult, walletResult) = if (stateAfterApply.isWithdrawalEpochLastIndex) {
-                val feePayments = getFeePaymentsInfo(stateAfterApply, stateWithdrawalEpochNumber)
+                val feePayments : FPI = getFeePaymentsInfo(stateAfterApply, stateWithdrawalEpochNumber)
                 var historyAfterUpdateFee = newHistory
                 if (!feePayments.isEmpty) {
                   historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, feePayments)
@@ -353,7 +405,7 @@ abstract class AbstractSidechainNodeViewHolder[
               }
 
             case Failure(e) =>
-              log.error(s"Could not apply modifier ${modToApply.id}, exception:" + e)
+              log.error(s"Could not apply modifier ${modToApply.id}, exception:", e)
               newHistory.reportModifierIsInvalid(modToApply, progressInfo).map {
                 case (historyAfterApply, newProgressInfo) =>
                   context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
@@ -368,68 +420,26 @@ abstract class AbstractSidechainNodeViewHolder[
     }
   }
 
-
-
-  // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
-  protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
-
   def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
   def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
 
-  // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
-  // Scan modifier by the Wallet considering the forger fee payments.
-  protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL) = {
-    val stateWithdrawalEpochNumber: Int = state.getWithdrawalEpochInfo.epoch
-    if (state.isWithdrawalEpochLastIndex) {
-      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, getFeePaymentsInfo(state, stateWithdrawalEpochNumber))
-      val walletAfterApply: VL = getScanPersistentWallet(modToApply, Some(state), stateWithdrawalEpochNumber, wallet)
-      (historyAfterUpdateFee, walletAfterApply)
-    } else {
-      val walletAfterApply: VL = getScanPersistentWallet(modToApply, None, stateWithdrawalEpochNumber, wallet)
-      (history, walletAfterApply)
-    }
+  override def postStop(): Unit = {
+    log.info(s"${getClass.getSimpleName} actor is stopping...")
+    super.postStop()
   }
-
-
-
 }
 
 object AbstractSidechainNodeViewHolder {
   object ReceivableMessages {
-    case class GetDataFromCurrentSidechainNodeView[TX <: Transaction,
-      H <: SidechainBlockHeaderBase,
-      PMOD <: SidechainBlockBase[TX, H],
-      FPI <: AbstractFeePaymentsInfo,
-      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
-      NS <: NodeStateBase,
-      NW <: NodeWalletBase,
-      NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
-      A](f: NV => A)
+
+    case class GetDataFromCurrentSidechainNodeView[NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _], A](f: NV => A)
 
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
 
-    case class ApplyFunctionOnNodeView[TX <: Transaction,
-      H <: SidechainBlockHeaderBase,
-      PMOD <: SidechainBlockBase[TX, H],
-      FPI <: AbstractFeePaymentsInfo,
-      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
-      NS <: NodeStateBase,
-      NW <: NodeWalletBase,
-      NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
-      A](f: java.util.function.Function[NV, A])
+    case class ApplyFunctionOnNodeView[NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _], A](f: java.util.function.Function[NV, A])
 
     case class ApplyBiFunctionOnNodeView[
-      TX <: Transaction,
-      H <: SidechainBlockHeaderBase,
-      PMOD <: SidechainBlockBase[TX, H],
-      FPI <: AbstractFeePaymentsInfo,
-      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
-      NS <: NodeStateBase,
-      NW <: NodeWalletBase,
-      NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
+      NV <: SidechainNodeViewBase[_, _, _, _, _, _, _, _],
       T,
       A](f: java.util.function.BiFunction[NV, T, A], functionParameter: T)
 
@@ -439,14 +449,6 @@ object AbstractSidechainNodeViewHolder {
 
   protected[horizen] object InternalReceivableMessages {
     case class ApplyModifier[PMOD](applied: Seq[PMOD])
-
-    sealed trait NewLocallyGeneratedTransactions[TX <: Transaction] {
-      val txs: Iterable[TX]
-    }
-
-    case class LocallyGeneratedTransaction[TX <: Transaction](tx: TX) extends NewLocallyGeneratedTransactions[TX] {
-      override val txs: Iterable[TX] = Iterable(tx)
-    }
   }
 
 }

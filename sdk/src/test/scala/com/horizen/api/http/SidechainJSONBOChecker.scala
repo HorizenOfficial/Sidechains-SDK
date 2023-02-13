@@ -9,7 +9,7 @@ import com.horizen.chain.SidechainBlockInfo
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertEquals, _}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.Console.println
 import scala.collection.JavaConverters._
@@ -59,7 +59,7 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("fee").isNumber)
     assertEquals(transaction.fee(), json.get("fee").asLong())
     assertTrue(json.get("id").isTextual)
-    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(ModifierId @@ transaction.id)), json.get("id").asText())
+    assertEquals(BytesUtils.toHexString(sparkz.util.idToBytes(ModifierId @@ transaction.id)), json.get("id").asText())
     assertTrue(json.get("modifierTypeId").isNumber)
     assertEquals(transaction.modifierTypeId.toInt, json.get("modifierTypeId").asInt())
 
@@ -162,8 +162,8 @@ class SidechainJSONBOChecker {
     assertTrue(headerJson.get("feePaymentsHash").isTextual)
     assertTrue(headerJson.get("signature").isObject)
 
-    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.parentId)), json.get("parentId").asText())
-    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.id)), json.get("id").asText())
+    assertEquals(BytesUtils.toHexString(sparkz.util.idToBytes(block.parentId)), json.get("parentId").asText())
+    assertEquals(BytesUtils.toHexString(sparkz.util.idToBytes(block.id)), json.get("id").asText())
     assertEquals(block.timestamp.toLong, json.get("timestamp").asLong())
 
     val forgingStakeInfo = headerJson.get("forgingStakeInfo")
@@ -205,7 +205,7 @@ class SidechainJSONBOChecker {
 
     assertEquals(block.height, json.get("height").asInt)
     assertEquals(block.score.toLong, json.get("score").asLong)
-    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.parentId)),json.get("parentId").asText)
+    assertEquals(BytesUtils.toHexString(sparkz.util.idToBytes(block.parentId)),json.get("parentId").asText)
     assertEquals(block.timestamp.toLong, json.get("timestamp").asLong)
     assertEquals(block.semanticValidity.toString, json.get("semanticValidity").asText)
     assertEquals(block.mainchainHeaderBaseInfo.size, json.get("mainchainHeaderBaseInfo").elements.asScala.toList.size)
@@ -222,7 +222,7 @@ class SidechainJSONBOChecker {
     assertEquals(block.withdrawalEpochInfo.epoch, json.get("withdrawalEpochInfo").get("epoch").asInt)
     assertEquals(block.withdrawalEpochInfo.lastEpochIndex, json.get("withdrawalEpochInfo").get("lastEpochIndex").asInt)
     assertEquals(BytesUtils.toHexString(block.vrfOutputOpt.get.bytes()), json.get("vrfOutputOpt").get("bytes").asText)
-    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.lastBlockInPreviousConsensusEpoch)), json.get("lastBlockInPreviousConsensusEpoch").asText)
+    assertEquals(BytesUtils.toHexString(sparkz.util.idToBytes(block.lastBlockInPreviousConsensusEpoch)), json.get("lastBlockInPreviousConsensusEpoch").asText)
   }
 
 

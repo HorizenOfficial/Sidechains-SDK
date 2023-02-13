@@ -1,6 +1,5 @@
 package com.horizen.block
 
-import java.math.BigInteger
 import com.google.common.primitives.UnsignedInts
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.params.NetworkParams
@@ -8,6 +7,7 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, Utils}
 
+import java.math.BigInteger
 import scala.util.control.Breaks._
 
 object ProofOfWorkVerifier {
@@ -31,9 +31,9 @@ object ProofOfWorkVerifier {
 
   // Check that PoW target (bits) is correct for all MainchainHeaders and Ommers' MainchainHeaders (recursively) included into SidechainBlock.
   // The order of MainchainHeaders in Block (both active and orphaned) verified in block semantic validity method
-  def checkNextWorkRequired[TX <: Transaction,
+  def checkNextWorkRequired[
     H <: SidechainBlockHeaderBase,
-    PMOD <: SidechainBlockBase[TX, H],
+    PMOD <: SidechainBlockBase[_ <: Transaction, H],
     FPI <: AbstractFeePaymentsInfo,
     HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR]](block: PMOD,
                                                   historyStorage: HSTOR,

@@ -2,8 +2,8 @@ package com.horizen.box.data;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 
 public final class ZenBoxDataSerializer implements BoxDataSerializer<ZenBoxData> {

@@ -10,17 +10,21 @@ import com.horizen.api.http.BlockBaseRestSchema._
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
-import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging}
+import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
+import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.forge.ForgingInfo
 import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
+import sparkz.util.ModifierId
+import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -37,7 +41,10 @@ abstract class BlockBaseApiRoute[
   NP <: NodeMemoryPoolBase[TX],
   NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](
                                   override val settings: RESTApiSettings,
-                                  forgerRef: ActorRef)
+                                  sidechainBlockActorRef: ActorRef,
+                                  companion: SparkzSerializer[TX],
+                                  forgerRef: ActorRef,
+                                  params: NetworkParams)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
 
@@ -134,24 +141,32 @@ abstract class BlockBaseApiRoute[
   }
 
   def startForging: Route = (post & path("startForging")) {
-    val future = forgerRef ? StartForging
-    val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
-    result match {
-      case Success(_) =>
-        ApiResponseUtil.toResponse(RespStartForging)
-      case Failure(e) =>
-        ApiResponseUtil.toResponse(ErrorStartForging(s"Failed to start forging: ${e.getMessage}", JOptional.empty()))
+    withBasicAuth {
+      _ => {
+        val future = forgerRef ? StartForging
+        val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
+        result match {
+          case Success(_) =>
+            ApiResponseUtil.toResponse(RespStartForging)
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorStartForging(s"Failed to start forging: ${e.getMessage}", JOptional.of(e)))
+        }
+      }
     }
   }
 
   def stopForging: Route = (post & path("stopForging")) {
-    val future = forgerRef ? StopForging
-    val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
-    result match {
-      case Success(_) =>
-        ApiResponseUtil.toResponse(RespStopForging)
-      case Failure(e) =>
-        ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", JOptional.empty()))
+    withBasicAuth {
+      _ => {
+        val future = forgerRef ? StopForging
+        val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
+        result match {
+          case Success(_) =>
+            ApiResponseUtil.toResponse(RespStopForging)
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", JOptional.empty()))
+        }
+      }
     }
   }
 
@@ -168,10 +183,36 @@ abstract class BlockBaseApiRoute[
           forgingInfo.forgingEnabled
         )
       )
-      case Failure(ex) => ApiResponseUtil.toResponse(ErrorGetForgingInfo(s"Failed to get forging info: ${ex.getMessage}", JOptional.empty()))
+      case Failure(ex) =>
+        ApiResponseUtil.toResponse(ErrorGetForgingInfo(s"Failed to get forging info: ${ex.getMessage}", JOptional.of(ex)))
     }
   }
 
+
+  def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
+    entity(as[ReqGenerateByEpochAndSlot]) { body =>
+
+      if (body.transactionsBytes.nonEmpty && !params.isInstanceOf[RegTestParams]) {
+        ApiResponseUtil.toResponse(ErrorBlockNotCreated(
+          s"Block was not created: transactionsBytes parameter can be used only in regtest", JOptional.empty()))
+      } else {
+
+        val forcedTx: Iterable[TX] = body.transactionsBytes
+          .map(txBytes => companion.parseBytesTry(BytesUtils.fromHexString(txBytes)))
+          .flatten(maybeTx => maybeTx.map(Seq(_)).getOrElse(None))
+
+        val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber), forcedTx)
+        val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
+
+        Await.result(submitResultFuture, timeout.duration) match {
+          case Success(id) =>
+            ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", JOptional.of(e)))
+        }
+      }
+    }
+  }
 }
 
 
@@ -258,7 +299,7 @@ object BlockBaseRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFeePayments(blockId: String) {
+  case class ReqFeePayments(blockId: String) {
     require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlockBase.BlockIdHexStringLength}")
   }
 

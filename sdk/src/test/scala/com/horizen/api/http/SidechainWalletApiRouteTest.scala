@@ -2,13 +2,14 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent}
+import com.horizen.api.http.WalletBaseErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent}
 import com.horizen.api.http.SidechainWalletRestScheme._
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.WalletBaseRestScheme.ReqAllPropositions
+import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpSecrets, ReqExportSecret, ReqImportSecret}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
+
 import java.io.File
 import scala.collection.JavaConverters._
 import java.util.{Scanner, Optional => JOptional}
@@ -27,99 +28,99 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "createPrivateKey25519").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "createPrivateKey25519").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
-      Post(basePath + "createVrfSecret").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "createVrfSecret").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
       Post(basePath + "allBoxes").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "allBoxes").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "allBoxes").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "allBoxes").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "allBoxes").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
-      Post(basePath + "coinsBalance").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "coinsBalance").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
       Post(basePath + "balanceOfType").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "balanceOfType").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "balanceOfType").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "balanceOfType").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "balanceOfType").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
       Post(basePath + "allPublicKeys").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "allPublicKeys").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "allPublicKeys").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "allPublicKeys").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "allPublicKeys").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
 
-      Post(basePath + "importSecret").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "importSecret").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "importSecret").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "importSecret").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "importSecret").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "importSecret").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
-      Post(basePath + "exportSecret").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "exportSecret").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "exportSecret").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "exportSecret").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "exportSecret").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "exportSecret").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
-      Post(basePath + "dumpSecrets").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "dumpSecrets").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "dumpSecrets").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "dumpSecrets").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "dumpSecrets").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "dumpSecrets").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
-      Post(basePath + "importSecrets").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "importSecrets").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "importSecrets").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "importSecrets").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "importSecrets").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "importSecrets").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
     }
 
     "reply at /allBoxes" in {
-      Post(basePath + "allBoxes").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "allBoxes").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -137,14 +138,14 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
           jsonChecker.assertsOnBoxJson(box_json(i), allBoxes.get(i))
       }
       Post(basePath + "allBoxes")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), None))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       Post(basePath + "allBoxes")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqAllBoxes(None, Some(Seq(
             BytesUtils.toHexString(allBoxes.get(0).id()), BytesUtils.toHexString(allBoxes.get(1).id())))))) ~> sidechainWalletApiRoute ~> check {
@@ -163,7 +164,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         assertEquals(allBoxes.size() - 2, node.elements().asScala.length)
       }
       Post(basePath + "allBoxes")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), Some(Seq("boxId_1", "boxId_2"))))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
@@ -172,7 +173,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /coinsBalance" in {
-      Post(basePath + "coinsBalance").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "coinsBalance").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -190,7 +191,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
 
     "reply at /balanceOfType" in {
       Post(basePath + "balanceOfType")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqBalance("a_class"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
@@ -201,7 +202,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /createVrfSecret" in {
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
       // secret is added
-      Post(basePath + "createVrfSecret").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createVrfSecret").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -218,7 +219,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
-      Post(basePath + "createVrfSecret").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createVrfSecret").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", JOptional.empty()).code)
@@ -228,7 +229,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /createPrivateKey25519" in {
       // secret is added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
-      Post(basePath + "createPrivateKey25519").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createPrivateKey25519").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -246,7 +247,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
-      Post(basePath + "createPrivateKey25519").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createPrivateKey25519").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", JOptional.empty()).code)
@@ -254,7 +255,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /allPublicKeys" in {
-      Post(basePath + "allPublicKeys").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "allPublicKeys").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -270,7 +271,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         assertEquals(2, node.findValues("publicKey").size())
       }
       Post(basePath + "allPublicKeys")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqAllPropositions(Some("proptype")))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
@@ -282,7 +283,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       // private25519 secret is added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
       Post(basePath + "importSecret")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqImportSecret("002b64a179846da0b13ed5b4354dbdeb85a500c60ccb12c01a0fded2bd5d8b58e58bb8302e2b46763c830099c6fd862da0774a7b8f1323db5bbd96d3652176e485"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -302,7 +303,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       //private25519 secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
       Post(basePath + "importSecret")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqImportSecret("002b64a179846da0b13ed5b4354dbdeb85a500c60ccb12c01a0fded2bd5d8b58e58bb8302e2b46763c830099c6fd862da0774a7b8f1323db5bbd96d3652176e485"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -312,7 +313,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       // vrf secret is added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
       Post(basePath + "importSecret")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqImportSecret("03ff697dccef0a296a9a6682cd97a10056580f7447a2ff3e9b8609f35757b4661a076a9191a89fee51439600b0455db357a9899694d1cdad6a3c71bf65e6cce53280"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -333,7 +334,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       //vrf secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
       Post(basePath + "importSecret")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqImportSecret("03ff697dccef0a296a9a6682cd97a10056580f7447a2ff3e9b8609f35757b4661a076a9191a89fee51439600b0455db357a9899694d1cdad6a3c71bf65e6cce53280"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -343,7 +344,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       // schnorr secret is added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
       Post(basePath + "importSecret")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqImportSecret("04a785e48940b0e4653d67f7b347def796a8fc601f583c8dd238c13c93de127f35effcc974d518c9ca00bbbde69041141b5901cd325d237a1f3bf489ff804e712400"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -364,7 +365,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       //schnorr secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
       Post(basePath + "importSecret")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqImportSecret("04a785e48940b0e4653d67f7b347def796a8fc601f583c8dd238c13c93de127f35effcc974d518c9ca00bbbde69041141b5901cd325d237a1f3bf489ff804e712400"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -376,7 +377,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /exportSecret" in {
       // private25519 secret is exported
       Post(basePath + "exportSecret")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqExportSecret(BytesUtils.toHexString(utilMocks.listOfPropositions.head.pubKeyBytes())))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -395,7 +396,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       // private25519 secret not found in the wallet
       Post(basePath + "exportSecret")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
           SerializationUtil.serialize(ReqExportSecret(BytesUtils.toHexString(getPrivateKey25519.publicImage().bytes())))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -407,9 +408,9 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /dumpSecrets" in {
       // dump all secrets
       Post(basePath + "dumpSecrets")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -446,9 +447,9 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
       createDumpSecretsFile(false, false)
       Post(basePath + "importSecrets")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -483,9 +484,9 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       // failed because can't deserialize the secret
       createDumpSecretsFile(true, false)
       Post(basePath + "importSecrets")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -502,9 +503,9 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       // fail because a proposition doesn't match the corresponding secret
       createDumpSecretsFile(false, true)
       Post(basePath + "importSecrets")
-        .withHeaders(apiTokenHeader)
+        .addCredentials(credentials)
         .withEntity(
-          SerializationUtil.serialize(ReqDumpWallet(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqDumpSecrets(dumpSecretsFilePath))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])

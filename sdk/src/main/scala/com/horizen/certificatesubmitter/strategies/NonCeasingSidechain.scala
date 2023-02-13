@@ -4,7 +4,7 @@ import com.horizen.certificatesubmitter.strategies.NonCeasingSidechain.NON_CEASI
 import com.horizen.params.NetworkParams
 import com.horizen.utils.WithdrawalEpochInfo
 import com.horizen.{AbstractHistory, AbstractState}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 
 class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionStrategy {
@@ -12,14 +12,14 @@ class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionSt
   override def getStatus[
     H <: AbstractHistory[_, _, _, _, _, _],
     S <: AbstractState[_, _, _, _]
-  ](sidechainNodeView: CurrentView[H, S, _, _], id: ModifierId): SubmissionWindowStatus = {
+  ](history: H, state: S, id: ModifierId): SubmissionWindowStatus = {
     // Take withdrawal epoch info for block from the History.
     // Note: We can't rely on `State.getWithdrawalEpochInfo`, because it shows the tip info,
     // but the older block may being applied at the moment.
-    val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(id).withdrawalEpochInfo
+    val withdrawalEpochInfo: WithdrawalEpochInfo = history.blockInfoById(id).withdrawalEpochInfo
 
     // Withdrawal epoch for which NEXT certificate needs to be applied
-    val nextCertReferencedEpochNumber = sidechainNodeView.state.lastCertificateReferencedEpoch.getOrElse(-1) + 1
+    val nextCertReferencedEpochNumber = state.lastCertificateReferencedEpoch.getOrElse(-1) + 1
 
     val certSubmissionEpoch = nextCertReferencedEpochNumber + 1
 

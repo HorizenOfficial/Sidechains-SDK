@@ -11,7 +11,7 @@ import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.utils._
 import com.horizen.wallet.ApplicationWallet
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}
 
@@ -20,12 +20,6 @@ import java.util.{ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-
-
-trait BoxWallet {
-  def boxes(): Seq[WalletBox]
-}
-
 
 class SidechainWallet private[horizen] (seed: Array[Byte],
                                         walletBoxStorage: SidechainWalletBoxStorage,
@@ -42,7 +36,6 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                  SidechainWallet](seed, secretStorage)
   with SidechainTypes
   with NodeWallet
-  with BoxWallet
 {
   override type NVCT = SidechainWallet
 
@@ -64,7 +57,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     this
   }
 
-  override def boxes(): Seq[WalletBox] = {
+  def boxes(): Seq[WalletBox] = {
     walletBoxStorage.getAll
   }
 
@@ -204,29 +197,21 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       .asJava
   }
 
-  override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]]): JList[Box[Proposition]] = {
+  def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]]): JList[Box[Proposition]] = {
     walletBoxStorage.getByType(boxType)
       .map(_.box)
       .asJava
   }
 
-  override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: JList[Array[Byte]]): JList[Box[Proposition]] = {
+  def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: JList[Array[Byte]]): JList[Box[Proposition]] = {
     walletBoxStorage.getByType(boxType)
       .filter((wb: WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
       .map(_.box)
       .asJava
   }
 
-  override def boxesBalance(boxType: Class[_ <: Box[_ <: Proposition]]): java.lang.Long = {
+  def boxesBalance(boxType: Class[_ <: Box[_ <: Proposition]]): java.lang.Long = {
     walletBoxStorage.getBoxesBalance(boxType)
-  }
-
-   override def allSecrets(): JList[Secret] = {
-    secretStorage.getAll.asJava
-  }
-
-  override def secretsOfType(secretType: Class[_ <: Secret]): JList[Secret] = {
-    secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
   }
 
   override def allCoinsBoxesBalance(): lang.Long = {

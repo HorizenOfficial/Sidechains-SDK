@@ -1,8 +1,19 @@
 package com.horizen.account.state;
 
+
+// This interface models the entity which is responsible for handling the application of a transaction to a state view.
+// More in detail, a transaction is converted into a 'Message' object, which is processed
+// by a specific instance of MessageProcessor.
+// The specific instance of MessageProcessor is selected by looping on a list (initialized
+// at genesis state creation) and executing the method 'canProcess'.
+// Currently there are 3 main MessageProcessor types:
+//  - Eoa2Eoa: handling regular coin transfers between EOA accounts
+//  - Evm: handling transactions requiring EVM invocations (such as smart contract deployment/invocation/...)
+//  - NativeSmartContract: Handling SC custom logic not requiring EVM invocations (Forger Stake handling, Withdrawal request ...)
+// It is possible to extend the MessageProcessors list in the application level by adding custom instances
 public interface MessageProcessor {
     // Initialization is going to happen only once at genesis State creation.
-    // Common pattern: declare a new fake smart contract account in the View
+    // Common pattern: declare a new native smart contract account in the View
     void init(BaseAccountStateView view) throws MessageProcessorInitializationException;
 
     // Checks if the processor is applicable to the Message

@@ -75,6 +75,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
     val certificateSignaturesManagerRef: TestActorRef[CertificateSignaturesManager] = TestActorRef(
       Props(new CertificateSignaturesManager(networkControllerRef, submitterRef, params, networkSettings)))
+    actorSystem.eventStream.subscribe(certificateSignaturesManagerRef, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     // Send initialization event
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
@@ -169,6 +170,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
     val certificateSignaturesManagerRef: TestActorRef[CertificateSignaturesManager] = TestActorRef(
       Props(new CertificateSignaturesManager(networkControllerRef, submitterRef, params, networkSettings)))
+    actorSystem.eventStream.subscribe(certificateSignaturesManagerRef, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     // decrease the delay to speedup the test
     certificateSignaturesManagerRef.underlyingActor.setLocallyGeneratedSignatureBroadcastingDelay(timeout.duration / 2)
@@ -343,6 +345,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
     val certificateSignaturesManagerRef: TestActorRef[CertificateSignaturesManager] = TestActorRef(
       Props(new CertificateSignaturesManager(networkControllerRef, submitterRef, params, networkSettings)))
+    actorSystem.eventStream.subscribe(certificateSignaturesManagerRef, SidechainAppEvents.SidechainApplicationStart.getClass)
 
 
     var statusOpt: Option[SignaturesStatus] = None

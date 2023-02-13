@@ -7,7 +7,7 @@ import com.horizen.utils.BytesUtils
 import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val size: Int = 255
@@ -33,9 +33,9 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     val info: SidechainSyncInfo = SidechainSyncInfo(modifiers)
     val bytes = info.bytes
 
-    // Test 1: try to deserializer valid bytes
+    // Test 1: try to deserialize valid bytes
     val serializedInfoTry = SidechainSyncInfoSerializer.parseBytesTry(bytes)
-    assertTrue("SidechainSyncInfo expected to by parsed", serializedInfoTry.isSuccess)
+    assertTrue("SidechainSyncInfo expected to be parsed", serializedInfoTry.isSuccess)
     assertEquals("SidechainSyncInfo known blocks count is different", info.knownBlockIds.size, serializedInfoTry.get.knownBlockIds.size)
     for(i <- info.knownBlockIds.indices)
       assertEquals("SidechainSyncInfo known block %d is different".format(i), info.knownBlockIds(i), serializedInfoTry.get.knownBlockIds(i))
@@ -67,7 +67,7 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     }
 
     val serializedInfoTry = SidechainSyncInfoSerializer.parseBytesTry(bytes)
-    assertTrue("SidechainSyncInfo expected to by parsed.", serializedInfoTry.isSuccess)
+    assertTrue("SidechainSyncInfo expected to be parsed.", serializedInfoTry.isSuccess)
     for(i <- modifiers.indices)
       assertEquals("SidechainSyncInfo known block %d is different".format(i), modifiers(i), serializedInfoTry.get.knownBlockIds(i))
   }

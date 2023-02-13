@@ -1,4 +1,0 @@
-**Evm Simple App**
----------
-
-TODO

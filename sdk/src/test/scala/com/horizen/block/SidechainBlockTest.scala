@@ -19,7 +19,7 @@ import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.{ModifierId, idToBytes}
+import sparkz.util.{ModifierId, idToBytes}
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -98,21 +98,21 @@ class SidechainBlockTest
       assertEquals("Block id json value must be the same.",
         BytesUtils.toHexString(idToBytes(sb.id)), id)
     }catch {
-      case _: Throwable => fail("Block id doesn't not found in json.")
+      case _: Exception => fail("Block id doesn't not found in json.")
     }
     try {
       val parentId = node.path("parentId").asText()
       assertEquals("Block parentId json value must be the same.",
         BytesUtils.toHexString(idToBytes(sb.parentId)), parentId)
     }catch {
-      case _: Throwable => fail("Block parentId doesn't not found in json.")
+      case _: Exception => fail("Block parentId doesn't not found in json.")
     }
     try {
       val timestamp = node.path("timestamp").asLong()
       assertEquals("Block timestamp json value must be the same.",
         sb.timestamp, timestamp)
     }catch {
-      case _: Throwable => fail("Block timestamp doesn't not found in json.")
+      case _: Exception => fail("Block timestamp doesn't not found in json.")
     }
 
   }
@@ -159,7 +159,7 @@ class SidechainBlockTest
 
 
     val deserializedBlockTry = sidechainBlockSerializer.parseBytesTry(bytes)
-    assertTrue("SidechainBlock expected to by parsed.", deserializedBlockTry.isSuccess)
+    assertTrue("SidechainBlock expected to be parsed.", deserializedBlockTry.isSuccess)
 
     val deserializedBlock = deserializedBlockTry.get
     assertEquals("Deserialized Block transactions are different.", block.transactions, deserializedBlock.transactions)
@@ -370,7 +370,7 @@ class SidechainBlockTest
 
     // Test 13: Too big SidechainBlock
     invalidBlock = createBlock(
-      sidechainTransactions = generateExceedingTransactions(SidechainBlockBase.MAX_BLOCK_SIZE)
+      sidechainTransactions = generateExceedingTransactions(SidechainBlock.MAX_BLOCK_SIZE)
     )
     invalidBlock.semanticValidity(params) match {
       case Success(_) =>

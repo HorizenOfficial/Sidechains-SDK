@@ -1,15 +1,145 @@
 package lib
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"libevm/test"
 	"math/big"
 	"reflect"
 	"testing"
 )
 
-func TestEvmTrace(t *testing.T) {
+// CallTracer logger response structure used in tests
+type CallTracer struct {
+	Type    string
+	From    string
+	To      string
+	Value   string
+	Gas     string
+	GasUsed string
+	Input   string
+	Output  string
+	Error   string
+	Calls   []CallTracer
+}
+
+func TestEvmStructLogger(t *testing.T) {
+	var (
+		instance     = New()
+		err          error
+		initialValue = common.Big0
+		sender       = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
+	)
+	dbHandle := instance.OpenMemoryDB()
+	err, stateDbHandle := instance.StateOpen(StateParams{
+		DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           common.Hash{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err, result := instance.EvmApply(EvmParams{
+		HandleParams: HandleParams{
+			Handle: stateDbHandle,
+		},
+		From:  sender,
+		To:    nil,
+		Input: test.Storage.Deploy(initialValue),
+		Context: EvmContext{
+			Coinbase: common.Address{},
+			BaseFee:  (*hexutil.Big)(new(big.Int)),
+		},
+		TraceOptions: &TraceOptions{
+			EnableMemory:     true,
+			DisableStack:     false,
+			DisableStorage:   false,
+			EnableReturnData: true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// retrieve the result and check that its structure is of type logger.ExecutionResult
+	var traceResult *logger.ExecutionResult
+	if err = json.Unmarshal(result.TracerResult, &traceResult); err != nil {
+		t.Fatal(err)
+	}
+	// do a coarse correctness check that does not immediately break on different versions of the solidity compiler
+	if minimum, actual := 130, len(traceResult.StructLogs); minimum > actual {
+		t.Fatalf("unexpected number of trace logs: expected at least %d, actual %d", minimum, actual)
+	}
+	// cherry-pick the one SSTORE instruction that should be in there
+	sstoreInstructions := 0
+	for _, trace := range traceResult.StructLogs {
+		if trace.Op != "SSTORE" {
+			continue
+		}
+		sstoreInstructions += 1
+		if expected, actual := "SSTORE", trace.Op; expected != actual {
+			t.Fatalf("unexpected op code: expected %s, actual %s", expected, actual)
+		}
+		if expected, actual := 1, len(*trace.Storage); expected != actual {
+			t.Fatalf("unexpected number of accessed storage keys: expected %d, actual %d", expected, actual)
+		}
+	}
+	if sstoreInstructions != 1 {
+		t.Fatalf("unexpected number of SSTORE instructions: expected %d, actual %d", 1, sstoreInstructions)
+	}
+}
+
+func TestEvmCallTracer(t *testing.T) {
+	var (
+		instance     = New()
+		err          error
+		initialValue = common.Big0
+		sender       = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
+	)
+	dbHandle := instance.OpenMemoryDB()
+	err, stateDbHandle := instance.StateOpen(StateParams{
+		DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           common.Hash{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err, result := instance.EvmApply(EvmParams{
+		HandleParams: HandleParams{
+			Handle: stateDbHandle,
+		},
+		From:  sender,
+		To:    nil,
+		Input: test.Storage.Deploy(initialValue),
+		Context: EvmContext{
+			Coinbase: common.Address{},
+			BaseFee:  (*hexutil.Big)(new(big.Int)),
+		},
+		TraceOptions: &TraceOptions{
+			Tracer: "callTracer",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// retrieve the result and check that its structure is of type CallFrame
+	var traceResult *CallTracer
+	if err = json.Unmarshal(result.TracerResult, &traceResult); err != nil {
+		t.Fatal(err)
+	}
+	if traceResult.Type != "CREATE" {
+		t.Fatal(err)
+	}
+	if traceResult.From != "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b" {
+		t.Fatal(err)
+	}
+	if traceResult.To != "0x6f8c38b30df9967a414543a1338d4497f2570775" {
+		t.Fatal(err)
+	}
+}
+
+func TestEvmCallTracerWithTracerConfig(t *testing.T) {
 	var (
 		instance     = New()
 		err          error
@@ -32,41 +162,75 @@ func TestEvmTrace(t *testing.T) {
 		},
 		From:  sender,
 		To:    nil,
-		Input: test.StorageContractDeploy(initialValue),
+		Input: test.Storage.Deploy(initialValue),
 		Context: EvmContext{
 			Coinbase: common.Address{},
 			BaseFee:  (*hexutil.Big)(new(big.Int)),
 		},
 		TraceOptions: &TraceOptions{
-			EnableMemory:     true,
-			DisableStack:     false,
-			DisableStorage:   false,
-			EnableReturnData: true,
+			Tracer:       "callTracer",
+			TracerConfig: json.RawMessage(`{"onlyTopCall": true, "withLog": false}`),
 		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// do a coarse correctness check that does not immediately break on different versions of the solidity compiler
-	if minimum, actual := 130, len(result.TraceLogs); minimum > actual {
-		t.Fatalf("unexpected number of trace logs: expected at least %d, actual %d", minimum, actual)
+	// retrieve the result and check that its structure is of type CallFrame
+	var traceResult *CallTracer
+	if err = json.Unmarshal(result.TracerResult, &traceResult); err != nil {
+		t.Fatal(err)
 	}
-	// cherry-pick the one SSTORE instruction that should be in there
-	sstoreInstructions := 0
-	for _, trace := range result.TraceLogs {
-		if trace.Op != "SSTORE" {
-			continue
-		}
-		sstoreInstructions += 1
-		if expected, actual := "SSTORE", trace.Op; expected != actual {
-			t.Fatalf("unexpected op code: expected %s, actual %s", expected, actual)
-		}
-		if expected, actual := 1, len(*trace.Storage); expected != actual {
-			t.Fatalf("unexpected number of accessed storage keys: expected %d, actual %d", expected, actual)
-		}
+	if traceResult.Type != "CREATE" {
+		t.Fatal(err)
 	}
-	if sstoreInstructions != 1 {
-		t.Fatalf("unexpected number of SSTORE instructions: expected %d, actual %d", 1, sstoreInstructions)
+	if traceResult.From != "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b" {
+		t.Fatal(err)
+	}
+	if traceResult.To != "0x6f8c38b30df9967a414543a1338d4497f2570775" {
+		t.Fatal(err)
+	}
+}
+
+func TestEvmFourByteTrace(t *testing.T) {
+	var (
+		instance     = New()
+		err          error
+		initialValue = common.Big0
+		sender       = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
+	)
+	dbHandle := instance.OpenMemoryDB()
+	err, stateDbHandle := instance.StateOpen(StateParams{
+		DatabaseParams: DatabaseParams{
+			DatabaseHandle: dbHandle,
+		},
+		Root: common.Hash{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err, result := instance.EvmApply(EvmParams{
+		HandleParams: HandleParams{
+			Handle: stateDbHandle,
+		},
+		From:  sender,
+		To:    nil,
+		Input: test.Storage.Deploy(initialValue),
+		Context: EvmContext{
+			Coinbase: common.Address{},
+			BaseFee:  (*hexutil.Big)(new(big.Int)),
+		},
+		TraceOptions: &TraceOptions{
+			Tracer:       "4byteTracer",
+			TracerConfig: json.RawMessage(`{"onlyTopCall": true, "withLog": false}`),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// retrieve the result and check that its structure is a string-int map
+	var traceResult map[string]int
+	if err = json.Unmarshal(result.TracerResult, &traceResult); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -77,26 +241,29 @@ func TestEvmOpCodes(t *testing.T) {
 	)
 	dbHandle := instance.OpenMemoryDB()
 	_, stateHandle := instance.StateOpen(StateParams{
-		DatabaseParams: DatabaseParams{
-			dbHandle,
-		},
-		Root: test.EmptyHash,
+		DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           test.EmptyHash,
 	})
 	_, statedb := instance.statedbs.Get(stateHandle)
 
 	// deploy "OpCodes" contract
-	_, resultDeploy := instance.EvmApply(EvmParams{
+
+	var evmParamsTemp = EvmParams{
 		HandleParams: HandleParams{Handle: stateHandle},
 		From:         user,
 		To:           nil,
-		Input:        test.OpCodesContractDeploy(),
+		Input:        test.OpCodes.Deploy(),
 		AvailableGas: 200000,
-	})
+	}
+	err, resultDeploy := instance.EvmApply(evmParamsTemp)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resultDeploy.EvmError != "" {
 		t.Fatalf("vm error: %v", resultDeploy.EvmError)
 	}
 	deployedCode := statedb.GetCode(*resultDeploy.ContractAddress)
-	if common.Bytes2Hex(test.OpCodesContractRuntimeCode()) != common.Bytes2Hex(deployedCode) {
+	if common.Bytes2Hex(test.OpCodes.RuntimeCode()) != common.Bytes2Hex(deployedCode) {
 		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(deployedCode))
 	}
 
@@ -109,12 +276,31 @@ func TestEvmOpCodes(t *testing.T) {
 		time        = big.NewInt(1669144595)
 		baseFee     = big.NewInt(123872)
 		random      = common.HexToHash("0x0a5d85d0f0e021c04643e05e38f8f28029275683ee743910670154d78322b6eb")
+		blockHash   = common.HexToHash("0xc01a0d15649a201418433e1760af47a0c3381bc7aec566f1e6258d77ffd2e2c9")
 	)
 
 	// redefine this interface here, because it is not exported from GETH
 	type bytesBacked interface {
 		Bytes() []byte
 	}
+
+	// setup callback proxy for the BLOCKHASH opcode
+	const blockHashCallbackHandle = 5132
+	SetCallbackProxy(func(handle int, args string) string {
+		switch handle {
+		case blockHashCallbackHandle:
+			actual := new(big.Int)
+			actual.SetString(args[2:], 16)
+			// the getBlockHash() function of OpCodes.sol will always call blockhash of blockNumber - 1
+			// verify that the argument arrived here as expected
+			if expected := new(big.Int).Sub(blockNumber, common.Big1); actual.Cmp(expected) != 0 {
+				panic(fmt.Sprintf("BLOCKHASH opcode called with unexpected block number: want %v got %v", expected, actual))
+			}
+			return blockHash.String()
+		default:
+			panic(fmt.Sprintf("callback proxy called with unknown handle: %v args: %s", handle, args))
+		}
+	})
 
 	checks := []struct {
 		name     string
@@ -128,6 +314,7 @@ func TestEvmOpCodes(t *testing.T) {
 		{"TIME", time},
 		{"BASEFEE", baseFee},
 		{"RANDOM", random},
+		{"BLOCKHASH", blockHash},
 	}
 
 	for _, check := range checks {
@@ -137,17 +324,18 @@ func TestEvmOpCodes(t *testing.T) {
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
 				To:           resultDeploy.ContractAddress,
-				Input:        test.OpCodesContractCall(check.name),
+				Input:        test.OpCodes.Call(check.name),
 				AvailableGas: 200000,
 				GasPrice:     (*hexutil.Big)(gasPrice),
 				Context: EvmContext{
-					ChainID:     hexutil.Uint64(chainID),
-					Coinbase:    coinbase,
-					GasLimit:    hexutil.Uint64(gasLimit),
-					BlockNumber: (*hexutil.Big)(blockNumber),
-					Time:        (*hexutil.Big)(time),
-					BaseFee:     (*hexutil.Big)(baseFee),
-					Random:      &random,
+					ChainID:           hexutil.Uint64(chainID),
+					Coinbase:          coinbase,
+					GasLimit:          hexutil.Uint64(gasLimit),
+					BlockNumber:       (*hexutil.Big)(blockNumber),
+					Time:              (*hexutil.Big)(time),
+					BaseFee:           (*hexutil.Big)(baseFee),
+					Random:            random,
+					BlockHashCallback: &BlockHashCallback{Callback(blockHashCallbackHandle)},
 				},
 			})
 			if err != nil {
@@ -171,10 +359,8 @@ func TestEvmErrors(t *testing.T) {
 	)
 	dbHandle := instance.OpenMemoryDB()
 	_, stateHandle := instance.StateOpen(StateParams{
-		DatabaseParams: DatabaseParams{
-			dbHandle,
-		},
-		Root: test.EmptyHash,
+		DatabaseParams: DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           test.EmptyHash,
 	})
 	_, statedb := instance.statedbs.Get(stateHandle)
 
@@ -183,7 +369,7 @@ func TestEvmErrors(t *testing.T) {
 		HandleParams: HandleParams{Handle: stateHandle},
 		From:         user,
 		To:           nil,
-		Input:        test.StorageContractDeploy(common.Big0),
+		Input:        test.Storage.Deploy(common.Big0),
 		AvailableGas: 200000,
 	})
 	if resultDeploy.EvmError != "" {
@@ -216,7 +402,7 @@ func TestEvmErrors(t *testing.T) {
 			params: EvmParams{
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
-				Input:        test.StorageContractDeploy(common.Big0),
+				Input:        test.Storage.Deploy(common.Big0),
 				AvailableGas: 123,
 			},
 		},
@@ -226,7 +412,7 @@ func TestEvmErrors(t *testing.T) {
 			params: EvmParams{
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
-				Input:        test.StorageContractDeploy(common.Big0),
+				Input:        test.Storage.Deploy(common.Big0),
 				AvailableGas: 50000,
 			},
 		},
@@ -239,7 +425,7 @@ func TestEvmErrors(t *testing.T) {
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
 				Value:        (*hexutil.Big)(big.NewInt(100)),
-				Input:        test.StorageContractDeploy(common.Big0),
+				Input:        test.Storage.Deploy(common.Big0),
 				AvailableGas: 200000,
 			},
 		},
@@ -262,7 +448,7 @@ func TestEvmErrors(t *testing.T) {
 				HandleParams: HandleParams{Handle: stateHandle},
 				From:         user,
 				To:           resultDeploy.ContractAddress,
-				Input:        test.StorageContractStore(common.Big3),
+				Input:        test.Storage.Store(common.Big3),
 				AvailableGas: 2000,
 			},
 		},

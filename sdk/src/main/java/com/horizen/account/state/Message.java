@@ -1,13 +1,16 @@
 package com.horizen.account.state;
 
-import com.horizen.account.proposition.AddressProposition;
+import com.horizen.evm.utils.Address;
+import com.horizen.utils.BytesUtils;
+import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Optional;
 
 public class Message {
-    private final AddressProposition from;
-    private final AddressProposition to;
+    private final Address from;
+    private final Optional<Address> to;
 
     private final BigInteger gasPrice;
     private final BigInteger gasFeeCap;
@@ -21,16 +24,16 @@ public class Message {
     private final boolean fakeMsg;
 
     public Message(
-            AddressProposition from,
-            AddressProposition to,
-            BigInteger gasPrice,
-            BigInteger gasFeeCap,
-            BigInteger gasTipCap,
-            BigInteger gasLimit,
-            BigInteger value,
-            BigInteger nonce,
-            byte[] data,
-            boolean fakeMsg
+        Address from,
+        Optional<Address> to,
+        BigInteger gasPrice,
+        BigInteger gasFeeCap,
+        BigInteger gasTipCap,
+        BigInteger gasLimit,
+        BigInteger value,
+        BigInteger nonce,
+        byte[] data,
+        boolean fakeMsg
     ) {
         this.from = from;
         this.to = to;
@@ -44,11 +47,11 @@ public class Message {
         this.fakeMsg = fakeMsg;
     }
 
-    public AddressProposition getFrom() {
+    public Address getFrom() {
         return from;
     }
 
-    public AddressProposition getTo() {
+    public Optional<Address> getTo() {
         return to;
     }
 
@@ -81,4 +84,20 @@ public class Message {
     }
 
     public boolean getIsFakeMsg() { return fakeMsg; }
+
+    public String toString() {
+        return String.format(
+            "Message{from=%s, to=%s, gasPrice=%s, gasFeeCap=%s, gasTipCap=%s, gasLimit=%s, value=%s, nonce=%s, data=%s, fakeMsg=%s}",
+            from.toString(),
+            to.map(Address::toString).orElse(""),
+            gasPrice != null ? Numeric.toHexStringWithPrefix(gasPrice) : "null",
+            gasFeeCap != null ? Numeric.toHexStringWithPrefix(gasFeeCap) : "null",
+            gasTipCap != null ? Numeric.toHexStringWithPrefix(gasTipCap) : "null",
+            gasLimit != null ? Numeric.toHexStringWithPrefix(gasLimit) : "null",
+            value != null ? Numeric.toHexStringWithPrefix(value) : "null",
+            nonce != null ? Numeric.toHexStringWithPrefix(nonce) : "null",
+            data != null ? BytesUtils.toHexString(data) : "null",
+            fakeMsg ? "YES" : "NO"
+        );
+    }
 }

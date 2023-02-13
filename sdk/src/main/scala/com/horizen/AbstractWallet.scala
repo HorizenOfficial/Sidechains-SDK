@@ -1,13 +1,12 @@
 package com.horizen
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.util.{List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
@@ -32,8 +31,8 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.co
 
 abstract class AbstractWallet[
   TX <: Transaction,
-  PM <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase],
-  W <: AbstractWallet[TX, PM, W]] private[horizen]
+  PMOD <: sparkz.core.PersistentNodeViewModifier,
+  W <: AbstractWallet[TX, PMOD, W]] private[horizen]
 (
   seed: Array[Byte],
   secretStorage: SidechainSecretStorage
@@ -41,9 +40,9 @@ abstract class AbstractWallet[
   extends Wallet[SidechainTypes#SCS,
     SidechainTypes#SCP,
     TX,
-    PM,
+    PMOD,
     W]
-    with ScorexLogging
+    with SparkzLogging
     with NodeWalletBase
     with SidechainTypes {
 

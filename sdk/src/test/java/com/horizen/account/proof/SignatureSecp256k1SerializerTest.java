@@ -7,7 +7,6 @@ import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
@@ -35,7 +34,7 @@ public class SignatureSecp256k1SerializerTest {
 
         // Test 1: Correct bytes deserialization
         Try<SignatureSecp256k1> t = serializer.parseBytesTry(bytes);
-        assertTrue("Proof serialization failed.", t.isSuccess());
+        assertTrue("Proof serialization failed with " + t.toString() + ".", t.isSuccess());
         assertEquals("Deserialized proof expected to be equal", signatureSecp256k1.toString(), t.get().toString());
 
         // Test 2: try to parse broken bytes

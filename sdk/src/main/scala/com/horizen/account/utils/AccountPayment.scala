@@ -3,7 +3,7 @@ package com.horizen.account.utils
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.serialization.Views
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import java.math.BigInteger
@@ -12,7 +12,6 @@ import java.math.BigInteger
 case class AccountPayment(address: AddressProposition, value: BigInteger) extends BytesSerializable {
   override type M = AccountPayment
   override def serializer: SparkzSerializer[AccountPayment] = AccountPaymentSerializer
-  def addressBytes: Array[Byte] = address.address()
 }
 
 object AccountPaymentSerializer extends SparkzSerializer[AccountPayment] {

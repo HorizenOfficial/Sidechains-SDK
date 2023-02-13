@@ -13,8 +13,9 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import com.horizen.fork.ForkManager
+import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 
 import scala.collection.JavaConverters._
@@ -55,6 +56,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  ownerPrivateKey: PrivateKey25519,
                  forgingStakeInfo: ForgingStakeInfo,
                  vrfProof: VrfProof,
+                 vrfOutput: VrfOutput,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
                  inputBlockSize: Int,
@@ -162,7 +164,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       .filter(tx => {
         val txSize = tx.bytes.length + 4 // placeholder for Tx length
         txsCounter += 1
-        if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+        if (txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > getMaxBlockSize())
           false // stop data collection
         else {
           blockSize += txSize
@@ -180,6 +182,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: SidechainWallet, history: SidechainHistory, state: SidechainState, branchPointInfo: BranchPointInfo, nextBlockTimestamp: Long): Seq[ForgingStakeMerklePathInfo] =
      wallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
 
+  // in UTXO model we have the same limit for both sizes, no special partition reserved for transactions
+  override def getMaxBlockOverheadSize(): Int = SidechainBlock.MAX_BLOCK_SIZE
+  override def getMaxBlockSize(): Int = getMaxBlockOverheadSize()
 }
 
 

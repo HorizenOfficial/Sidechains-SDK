@@ -4,13 +4,13 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.storage.{SidechainStorageInfo, Storage}
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
 import com.horizen.utils.Utils
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ScorexLogging
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.SparkzLogging
 
 import scala.compat.java8.OptionConverters._
 
 class ConsensusDataStorage(consensusEpochInfoStorage: Storage)
-  extends ScorexLogging
+  extends SparkzLogging
   with SidechainStorageInfo {
   def addStakeConsensusEpochInfo(epochId: ConsensusEpochId, stakeEpochInfo: StakeConsensusEpochInfo): Unit = {
     log.info(s"Storage with id:${this.hashCode()} -- Add stake to consensus data storage: for epochId ${epochId} stake info: ${stakeEpochInfo}")

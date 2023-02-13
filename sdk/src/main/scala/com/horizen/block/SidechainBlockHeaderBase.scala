@@ -5,13 +5,13 @@ import com.google.common.primitives.Bytes
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.serialization.ScorexModifierIdSerializer
-import com.horizen.utils.MerklePath
+import com.horizen.serialization.SparkzModifierIdSerializer
+import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import sparkz.core.block.Block
-import sparkz.core.bytesToId
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
+import sparkz.core.{NodeViewModifier, bytesToId}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.ModifierId
 
 import scala.util.Try
 
@@ -31,19 +31,19 @@ trait SidechainBlockHeaderBase {
   val signature: Signature25519
 
 
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
+  @JsonSerialize(using = classOf[SparkzModifierIdSerializer])
   lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   val messageToSign: Array[Byte]
 
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
     if(parentId.length != 64
-      || sidechainTransactionsMerkleRootHash.length != 32
-      || mainchainMerkleRootHash.length != 32
-      || ommersMerkleRootHash.length != 32
+      || sidechainTransactionsMerkleRootHash.length != MerkleTree.ROOT_HASH_LENGTH
+      || mainchainMerkleRootHash.length != MerkleTree.ROOT_HASH_LENGTH
+      || ommersMerkleRootHash.length != MerkleTree.ROOT_HASH_LENGTH
       || ommersCumulativeScore < 0
-      || feePaymentsHash.length != 32
+      || feePaymentsHash.length != NodeViewModifier.ModifierIdSize
       || timestamp <= 0)
-      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeaderBase $id contains out of bound fields.")
+      throw new InvalidSidechainBlockHeaderException(s"${getClass.getSimpleName} $id contains out of bound fields.")
   }
 }

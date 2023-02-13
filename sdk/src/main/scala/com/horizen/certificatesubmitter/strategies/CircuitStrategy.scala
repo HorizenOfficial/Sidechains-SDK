@@ -4,41 +4,32 @@ import com.horizen._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateData
-import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
-import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.transaction.MemoryPool
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.reflect.ClassTag
 import scala.util.Try
 
 abstract class CircuitStrategy[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
-  PM <: SidechainBlockBase[TX, H] : ClassTag,
-  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{
+  PM <: SidechainBlockBase[TX, H],
+  HIS <: AbstractHistory[TX, H, PM, _, _, _],
+  MS <: AbstractState[TX, H, PM, MS],
+  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends SparkzLogging{
   
   def generateProof(certificateData: T, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
-  type FPI <: AbstractFeePaymentsInfo
-  type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
-  type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
-  type MS <: AbstractState[TX, H, PM, MS]
-  type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
-  type MP <: MemoryPool[TX, MP]
+  def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): T
 
-  type View = CurrentView[HIS, MS, VL, MP]
-
-  def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): T
-
-  def getMessageToSign(view: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
+  def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
 
   // No MBTRs support, so no sense to specify btrFee different to zero.
   def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
@@ -56,7 +47,7 @@ abstract class CircuitStrategy[
   protected def lastConsensusEpochNumberForWithdrawalEpochNumber(history: HIS, state: MS, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
     val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, state, withdrawalEpochNumber)
 
-    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(headerInfo.sidechainBlockId)
+    val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(headerInfo.sidechainBlockId)
     TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
   }
 

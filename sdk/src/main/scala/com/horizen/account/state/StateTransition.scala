@@ -1,16 +1,16 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 
 class StateTransition(
-    view: AccountStateView,
+    view: StateDbAccountStateView,
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
     blockContext: BlockContext
-) extends ScorexLogging {
+) extends SparkzLogging {
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -20,9 +20,11 @@ class StateTransition(
     // allocate gas for processing this message
     val gasPool = buyGas(msg)
     // consume intrinsic gas
-    val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo == null)
+    val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
     if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
     gasPool.subGas(intrinsicGas)
+    // reset and prepare account access list
+    view.setupAccessList(msg)
     // find and execute the first matching processor
     messageProcessors.find(_.canProcess(msg, view)) match {
       case None =>
@@ -30,7 +32,7 @@ class StateTransition(
         throw new IllegalArgumentException("Unable to process message.")
       case Some(processor) =>
         // increase the nonce by 1
-        view.increaseNonce(msg.getFrom.address())
+        view.increaseNonce(msg.getFrom)
         // create a snapshot to rollback to in case of execution errors
         val revisionId = view.snapshot
         try {
@@ -56,8 +58,7 @@ class StateTransition(
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
-    // call these only once as they are not a simple getters
-    val sender = msg.getFrom.address()
+    val sender = msg.getFrom
 
     // Check the nonce
     if (!msg.getIsFakeMsg) {
@@ -89,7 +90,7 @@ class StateTransition(
     // maxFees is calculated using the feeCap, even if the cap was not reached, i.e. baseFee+tip < feeCap
     val maxFees = if (msg.getGasFeeCap == null) effectiveFees else gas.multiply(msg.getGasFeeCap)
     // make sure the sender has enough balance to cover max fees plus value
-    val sender = msg.getFrom.address()
+    val sender = msg.getFrom
     val have = view.getBalance(sender)
     val want = maxFees.add(msg.getValue)
     if (have.compareTo(want) < 0) throw InsufficientFundsException(sender, have, want)
@@ -111,7 +112,7 @@ class StateTransition(
     gas.addGas(view.getRefund.min(gas.getUsedGas.divide(GasUtil.RefundQuotientEIP3529)))
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = gas.getGas.multiply(msg.getGasPrice)
-    view.addBalance(msg.getFrom.address(), remaining)
+    view.addBalance(msg.getFrom, remaining)
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
     blockGasPool.addGas(gas.getGas)
   }

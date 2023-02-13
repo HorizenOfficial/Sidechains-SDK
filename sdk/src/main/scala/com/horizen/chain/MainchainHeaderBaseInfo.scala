@@ -7,7 +7,7 @@ import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.transaction.Transaction
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -30,7 +30,7 @@ case class MainchainHeaderBaseInfo (hash: MainchainHeaderHash,
 }
 
 object MainchainHeaderBaseInfo {
-  def getMainchainHeaderBaseInfoSeqFromBlock[TX <: Transaction](sidechainBlock: SidechainBlockBase[TX, _<: SidechainBlockHeaderBase], initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
+  def getMainchainHeaderBaseInfoSeqFromBlock(sidechainBlock: SidechainBlockBase[_ <: Transaction, _<: SidechainBlockHeaderBase], initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
     val mcHeaderBaseInfoList: ArrayBuffer[MainchainHeaderBaseInfo] = ArrayBuffer()
     var prevCumulativeHash: Array[Byte] = initialCumulativeHash
 

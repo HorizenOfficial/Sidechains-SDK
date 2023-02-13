@@ -4,14 +4,14 @@ import java.net.URI
 
 import javax.websocket._
 import org.glassfish.tyrus.client.{ClientManager, ClientProperties}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
 
 @ClientEndpoint
-class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDuration, messageHandler: WebSocketMessageHandler, reconnectionHandler: WebSocketReconnectionHandler) extends WebSocketConnector with WebSocketChannel with ScorexLogging {
+class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDuration, messageHandler: WebSocketMessageHandler, reconnectionHandler: WebSocketReconnectionHandler) extends WebSocketConnector with WebSocketChannel with SparkzLogging {
 
   private var userSession: Session = _
   private val client = ClientManager.createClient()
@@ -53,7 +53,7 @@ class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDurat
 
     userSession.addMessageHandler(new MessageHandler.Whole[String]() {
       override def onMessage(t: String): Unit = {
-        log.info("Message received from server: " + t)
+        log.trace("Message received from server: " + t)
         messageHandler.onReceivedMessage(t)
       }
     })

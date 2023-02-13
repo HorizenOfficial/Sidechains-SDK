@@ -5,7 +5,7 @@ import json
 def signTransaction(sidechainNode, *, fromAddress=None, payload, api_key=None):
     j = {
         "from": fromAddress,
-        "payload": payload
+        "transactionBytes": payload
     }
     request = json.dumps(j)
     if api_key is not None:
@@ -14,7 +14,7 @@ def signTransaction(sidechainNode, *, fromAddress=None, payload, api_key=None):
         response = sidechainNode.transaction_signTransaction(request)
 
     if "result" in response:
-        if "transactionId" in response["result"]:
-            return response["result"]["transactionData"]
+        if "transactionBytes" in response["result"]:
+            return response["result"]["transactionBytes"]
 
     raise RuntimeError("Something went wrong, see {}".format(str(response)))

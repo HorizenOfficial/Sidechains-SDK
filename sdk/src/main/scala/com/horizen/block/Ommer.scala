@@ -2,14 +2,13 @@ package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.{AccountBlockHeader, AccountBlockHeaderSerializer}
+import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
+import sparkz.util.idToBytes
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
-import scorex.util.idToBytes
-import com.horizen.params.NetworkParams
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -133,7 +132,7 @@ case class Ommer[H <: SidechainBlockHeaderBase](
 }
 
 object Ommer {
-  def toOmmer[TX <: Transaction, H <: SidechainBlockHeaderBase](block: SidechainBlockBase[TX, H]): Ommer[H] = {
+  def toOmmer[H <: SidechainBlockHeaderBase](block: SidechainBlockBase[_, H]): Ommer[H] = {
     val mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]] = {
       val referencesDataHashes: Seq[Array[Byte]] = block.mainchainBlockReferencesData.map(_.headerHash)
       if (referencesDataHashes.isEmpty)

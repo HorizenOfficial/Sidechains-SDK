@@ -2,8 +2,8 @@ package com.horizen.transaction.mainchain;
 
 import scala.util.Try;
 import sparkz.core.serialization.SparkzSerializer;
-import scorex.util.serialization.Reader;
-import scorex.util.serialization.Writer;
+import sparkz.util.serialization.Reader;
+import sparkz.util.serialization.Writer;
 
 public interface SidechainRelatedMainchainOutputSerializer<T extends SidechainRelatedMainchainOutput> extends SparkzSerializer<T>
 {

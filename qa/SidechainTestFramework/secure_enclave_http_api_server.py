@@ -1,7 +1,7 @@
 import logging
+import multiprocessing
 import os
 import subprocess
-import threading
 
 from flask import Flask, request, json
 
@@ -27,7 +27,7 @@ class SecureEnclaveApiServer(object):
         def sign_message():
             content = json.loads(request.data)
             logging.info("SecureEnclaveApiServer /api/v1/createSignature received request " + str(content))
-            if ('privateKey' not in content):
+            if 'privateKey' not in content:
                 pk = content['publicKey']
                 index = self.schnorr_public_keys.index(pk)
                 sk = self.schnorr_secrets[index]
@@ -63,15 +63,13 @@ class SecureEnclaveApiServer(object):
             logging.info("SecureEnclaveApiServer /api/v1/listKeys result" + result)
             return result
 
-        self.thread = threading.Thread(target=self.app.run(debug=False))
-        self.thread.run()
+        multiprocessing.Process(daemon=True, target=lambda: self.app.run(debug=False, use_reloader=False)).start()
 
     def __init__(self, schnorr_secrets=None, schnorr_public_keys=None):
         if schnorr_public_keys is None:
             schnorr_public_keys = []
         if schnorr_secrets is None:
             schnorr_secrets = []
-        self.thread = None
         self.app = Flask(__name__)
         self.schnorr_secrets = schnorr_secrets
         self.schnorr_public_keys = schnorr_public_keys

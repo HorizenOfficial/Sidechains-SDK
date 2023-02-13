@@ -20,6 +20,7 @@ import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.evm.LevelDBDatabase
 import com.horizen.fork.ForkConfigurator
+import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl}
 import com.horizen.node.NodeWalletBase
 import com.horizen.secret.SecretSerializer
 import com.horizen.storage._
@@ -37,19 +38,19 @@ import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.collection.mutable
 
 
 class AccountSidechainApp @Inject()
   (@Named("SidechainSettings") sidechainSettings: SidechainSettings,
    @Named("CustomSecretSerializers") customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
-   @Named("CustomAccountTransactionSerializers") val customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
+   @Named("CustomAccountTransactionSerializers") customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
    @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
+   @Named("RejectedApiPaths") rejectedApiPaths: JList[Pair[String, String]],
    @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
-   @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
-   @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
-   @Named("ChainInfo") chainInfo : ChainInfo
+   @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
+   @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
+   @Named("ChainInfo") chainInfo: ChainInfo,
+   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -58,7 +59,8 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
-    chainInfo
+    chainInfo,
+    secondsInSlot
   )
 {
 
@@ -66,19 +68,12 @@ class AccountSidechainApp @Inject()
   override type PMOD = AccountBlock
   override type NVHT = AccountSidechainNodeViewHolder
 
-  private val storageList = mutable.ListBuffer[Storage]()
-
-  log.info(s"Starting account application with settings \n$sidechainSettings")
-
-  protected lazy val sidechainAccountTransactionsCompanion: SidechainAccountTransactionsCompanion = SidechainAccountTransactionsCompanion(customAccountTransactionSerializers)
+  protected lazy val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = SidechainAccountTransactionsCompanion(customAccountTransactionSerializers)
 
   // Deserialize genesis block bytes
-  lazy val genesisBlock: AccountBlock = new AccountBlockSerializer(sidechainAccountTransactionsCompanion).parseBytes(
+  override lazy val genesisBlock: AccountBlock = new AccountBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
-
-  // It is a fast and dirty workaround to set 12 sec block rate for EvmApp
-  override lazy val consensusSecondsInSlot: Int = 12
 
   require (!isCSWEnabled, "Ceased Sidechain Withdrawal (CSW) should not be enabled in AccountSidechainApp!")
 
@@ -90,22 +85,21 @@ class AccountSidechainApp @Inject()
 
   // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
-    registerStorage(new VersionedLevelDbStorageAdapter(secretStore)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore)),
     sidechainSecretsCompanion)
 
   protected val stateMetadataStorage = new AccountStateMetadataStorage(
-    registerStorage(new VersionedLevelDbStorageAdapter(metaStateStore)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore)))
 
-  // TODO for the time being not registered
-  protected val stateDbStorage = new LevelDBDatabase(dataDirAbsolutePath + "/evm-state")
+  protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
 
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
-    registerStorage(new VersionedLevelDbStorageAdapter(historyStore)),
-    sidechainAccountTransactionsCompanion,
+    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore)),
+    sidechainTransactionsCompanion,
     params)
 
   protected val consensusDataStorage = new ConsensusDataStorage(
-    registerStorage(new VersionedLevelDbStorageAdapter(consensusStore)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore)))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -130,8 +124,8 @@ class AccountSidechainApp @Inject()
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
   def modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
-    Map(SidechainBlockBase.ModifierTypeId -> new AccountBlockSerializer(sidechainAccountTransactionsCompanion),
-      Transaction.ModifierTypeId -> sidechainAccountTransactionsCompanion)
+    Map(SidechainBlockBase.ModifierTypeId -> new AccountBlockSerializer(sidechainTransactionsCompanion),
+      Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
   override val nodeViewSynchronizer: ActorRef =
     actorSystem.actorOf(AccountNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
@@ -139,7 +133,7 @@ class AccountSidechainApp @Inject()
 
   // Init Forger with a proper web socket client
   val sidechainBlockForgerActorRef: ActorRef = AccountForgerRef("AccountForger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer,
-     sidechainAccountTransactionsCompanion, timeProvider, params)
+     sidechainTransactionsCompanion, timeProvider, params)
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
@@ -149,29 +143,38 @@ class AccountSidechainApp @Inject()
   val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
-  // Init API
-  rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
-  // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
-  // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
-  customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
-
-  coreApiRoutes = Seq[ApiRoute](
+  override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainAccountTransactionsCompanion, sidechainBlockForgerActorRef),
+    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
-    AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params, circuitType),
-    AccountWalletApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef, circuitType),
+    AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
+    AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
+    SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala)
   )
 
-  /*
-  override def stopAll(): Unit = {
-    super.stopAll()
-    storageList.foreach(_.close())
-  }
-   */
+  val nodeViewProvider: NodeViewProvider[
+    TX,
+    AccountBlockHeader,
+    PMOD,
+    AccountFeePaymentsInfo,
+    NodeAccountHistory,
+    NodeAccountState,
+    NodeWalletBase,
+    NodeAccountMemoryPool,
+    AccountNodeView] = new NodeViewProviderImpl(nodeViewHolderRef)
+
+  def getNodeViewProvider: NodeViewProvider[
+    TX,
+    AccountBlockHeader,
+    PMOD,
+    AccountFeePaymentsInfo,
+    NodeAccountHistory,
+    NodeAccountState,
+    NodeWalletBase,
+    NodeAccountMemoryPool,
+    AccountNodeView] = nodeViewProvider
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 

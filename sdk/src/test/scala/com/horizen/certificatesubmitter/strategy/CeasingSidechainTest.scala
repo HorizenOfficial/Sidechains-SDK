@@ -16,7 +16,7 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.mockito.Mockito.when
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.BytesUtils
 import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
@@ -178,7 +178,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    var status: SubmissionWindowStatus = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    var status: SubmissionWindowStatus = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertFalse("Epoch 0 block 1 must not be in withdrawal window", status.isInWindow)
 
@@ -191,7 +191,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertFalse("Epoch 0 block 20 must not be in withdrawal window", status.isInWindow)
 
@@ -204,7 +204,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertTrue("Epoch 1 block 0 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -218,7 +218,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertTrue("Epoch 1 block 20 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)
@@ -232,7 +232,7 @@ class CeasingSidechainTest extends JUnitSuite
     })
 
     when(state.lastCertificateReferencedEpoch()).thenAnswer(_ => None)
-    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder, block.id)
+    status = ceasingSidechainStrategy.getStatus(mockedNodeViewHolder.history, mockedNodeViewHolder.state, block.id)
 
     assertFalse("Epoch 1 block 21 must not be in withdrawal window", status.isInWindow)
     assertEquals("Withdrawal reference epoch number must be 0", status.referencedWithdrawalEpochNumber, 0)

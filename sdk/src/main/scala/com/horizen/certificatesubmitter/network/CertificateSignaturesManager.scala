@@ -13,7 +13,7 @@ import sparkz.core.network.message.{Message, MessageSpec}
 import sparkz.core.network.peer.PenaltyType
 import sparkz.core.network._
 import sparkz.core.settings.NetworkSettings
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}
@@ -31,7 +31,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
                                    certificateSubmitterRef: ActorRef,
                                    params: NetworkParams,
                                    settings: NetworkSettings)
-  (implicit ec: ExecutionContext) extends Actor with Synchronizer with ScorexLogging
+  (implicit ec: ExecutionContext) extends Actor with Synchronizer with SparkzLogging
 {
 
   private implicit val timeout: Timeout = Timeout(settings.syncTimeout.getOrElse(5 seconds))
@@ -50,8 +50,6 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
 
   override def preStart: Unit = {
     super.preStart()
-    // subscribe on Application Start event to be sure that Submitter itself was initialized.
-    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
   }
 
   override def postStop(): Unit = {
@@ -211,10 +209,18 @@ object CertificateSignaturesManagerRef {
     Props(new CertificateSignaturesManager(networkControllerRef, certificateSubmitterRef, params, settings))
 
   def apply(networkControllerRef: ActorRef, certificateSubmitterRef: ActorRef,
-            params: NetworkParams, settings: NetworkSettings)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(networkControllerRef, certificateSubmitterRef, params, settings))
+            params: NetworkParams, settings: NetworkSettings)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(networkControllerRef, certificateSubmitterRef, params, settings))
+    // subscribe on Application Start event to be sure that Submitter itself was initialized.
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 
   def apply(name: String, networkControllerRef: ActorRef, certificateSubmitterRef: ActorRef,
-            params: NetworkParams, settings: NetworkSettings)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(networkControllerRef, certificateSubmitterRef, params, settings), name)
+            params: NetworkParams, settings: NetworkSettings)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val ref = system.actorOf(props(networkControllerRef, certificateSubmitterRef, params, settings), name)
+    // subscribe on Application Start event to be sure that Submitter itself was initialized.
+    system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
+    ref
+  }
 }

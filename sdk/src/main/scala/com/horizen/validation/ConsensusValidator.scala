@@ -1,5 +1,6 @@
 package com.horizen.validation
 import com.horizen.AbstractHistory
+import com.horizen.account.block.AccountBlock
 import com.horizen.block.{OmmersContainer, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
 import com.horizen.consensus._
@@ -11,7 +12,7 @@ import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.core.utils.TimeProvider
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.util.Try
 
@@ -27,7 +28,7 @@ class ConsensusValidator[
   timeProvider: TimeProvider
 )
   extends HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HT]
-    with ScorexLogging {
+    with SparkzLogging {
 
   override def validate(block: PMOD, history: HT): Try[Unit] = Try {
     if (history.isGenesisBlock(block.id)) {
@@ -59,6 +60,15 @@ class ConsensusValidator[
     val vrfOutput: VrfOutput = history.getVrfOutput(verifiedBlock.header, currentConsensusEpochInfo.nonceConsensusEpochInfo)
       .getOrElse(throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed"))
 
+    // Check vrfOutput consistency
+    verifiedBlock match {
+      case b: AccountBlock =>
+        // check calculated vrfOutput against the one in the Header
+        if (vrfOutput != b.header.vrfOutput)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader ${b.id}: vrfOutput value is invalid")
+      case _ => // do nothing for other block types because it is not a part of the Header
+    }
+    
     val consensusEpoch = TimeToEpochUtils.timeStampToEpochNumber(history.params, verifiedBlock.timestamp)
     val stakePercentageForkApplied = ForkManager.getSidechainConsensusEpochFork(consensusEpoch).stakePercentageForkApplied
     verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput, stakePercentageForkApplied)
