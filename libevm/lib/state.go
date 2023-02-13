@@ -4,8 +4,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
+
+var emptyCodeHash = crypto.Keccak256Hash(nil)
 
 type StateParams struct {
 	DatabaseParams
@@ -103,6 +107,27 @@ func (s *Service) StateEmpty(params AccountParams) (error, bool) {
 		return err, false
 	}
 	return nil, statedb.Empty(params.Address)
+}
+
+// StateIsEoa tests if a given account is an EOA or not,
+// by verifying the address does not match any of the precompiled native contracts and there is no code in the account
+func (s *Service) StateIsEoa(params AccountParams) (error, bool) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, false
+	}
+	// test for addresses of precompiled native contracts
+	if _, ok := vm.PrecompiledContractsBerlin[params.Address]; ok {
+		return nil, false
+	}
+	// test for code in the account
+	// note: for empty accounts the code hash will be zero,
+	// for existing accounts without code the hash will the empty-hash
+	// if neither is true it must be a smart contract account
+	if codeHash := statedb.GetCodeHash(params.Address); codeHash != emptyCodeHash && codeHash != (common.Hash{}) {
+		return nil, false
+	}
+	return nil, true
 }
 
 func (s *Service) StateGetBalance(params AccountParams) (error, *hexutil.Big) {
