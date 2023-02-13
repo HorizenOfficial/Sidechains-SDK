@@ -202,11 +202,10 @@ class AccountForgeMessageBuilderTest
   def testCreateNewBlockFailingIfAddressSizeIsZero(): Unit = {
     val nodeView = mock[forger.View]
     val vlMock = mock[forger.VL]
-    val secretsMock = mock[java.util.List[Secret]]
+    val secrets = new java.util.ArrayList[Secret]()
 
-    Mockito.when(secretsMock.size()).thenReturn(0)
     Mockito.when(nodeView.vault).thenReturn(vlMock)
-    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => secretsMock)
+    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => secrets)
 
     val branchPointInfo = mock[forger.BranchPointInfo]
     val mainchainBlockReferencesData = Seq(mock[MainchainBlockReferenceData])
