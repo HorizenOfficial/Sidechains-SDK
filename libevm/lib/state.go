@@ -122,7 +122,7 @@ func (s *Service) StateIsEoa(params AccountParams) (error, bool) {
 	}
 	// test for code in the account
 	// note: for empty accounts the code hash will be zero,
-	// for existing accounts without code the hash will the empty-hash
+	// for existing accounts without code the hash will be the empty-hash,
 	// if neither is true it must be a smart contract account
 	if codeHash := statedb.GetCodeHash(params.Address); codeHash != emptyCodeHash && codeHash != (common.Hash{}) {
 		return nil, false
