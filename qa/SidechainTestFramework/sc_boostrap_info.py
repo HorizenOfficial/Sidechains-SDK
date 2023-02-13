@@ -130,15 +130,15 @@ class SCNodeConfiguration(object):
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  initial_private_keys=[],
-                 remote_keys_manager_enabled=False,
                  known_peers=[],
                  declared_address=None,
                  initial_signing_private_keys=[],
+                 remote_keys_manager_enabled=False,
                  storage_backup_interval='15m',
                  storage_backup_delay='5m',
                  max_nonce_gap=16,
                  max_account_slots=16,
-                 max_mempool_slots=6144):
+                 max_mempool_slots=6144,):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info

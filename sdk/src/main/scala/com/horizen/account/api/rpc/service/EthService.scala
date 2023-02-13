@@ -423,25 +423,46 @@ class EthService(
     (block, blockInfo)
   }
 
+  /**
+   * Returns a SidechainBlockInfo for a given blockId
+   * blockId = null is a valid case, returning pending block info
+   * Throws RpcException for not found blockId or errors while creating pending block
+   */
+  private def getBlockInfoById(nodeView: NV, blockId: ModifierId): SidechainBlockInfo = {
+    val blockInfo = if (blockId == null) {
+      val parentId = getBlockIdByTag(nodeView, "latest")
+      getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId)
+      )
+    } else {
+        nodeView.history.blockInfoById(blockId)
+    }
+    blockInfo
+  }
+
   private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
     val blockId = getBlockIdByTag(nodeView, tag)
     val (block, blockInfo) = getBlockById(nodeView, blockId)
     (block, blockInfo)
   }
 
-  private def getBlockContext(block: AccountBlock, blockInfo: SidechainBlockInfo): BlockContext = {
+  private def getBlockContext(
+      block: AccountBlock,
+      blockInfo: SidechainBlockInfo,
+      blockHashProvider: HistoryBlockHashProvider
+  ): BlockContext = {
     new BlockContext(
       block.header,
       blockInfo.height,
       TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
       blockInfo.withdrawalEpochInfo.epoch,
-      networkParams.chainId
+      networkParams.chainId,
+      blockHashProvider
     )
   }
 
   private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, BlockContext) ⇒ A): A = {
     val (block, blockInfo) = getBlockByTag(nodeView, tag)
-    val blockContext = getBlockContext(block, blockInfo)
+    val blockContext = getBlockContext(block, blockInfo, nodeView.history)
     if (tag == "pending") {
       using(getPendingStateView(nodeView, block, blockInfo))(fun(_, blockContext))
     } else {
@@ -472,6 +493,14 @@ class EthService(
       case height => ModifierId(nodeView.history.blockIdByHeight(height).get)
     }
     blockId
+  }
+
+  private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
+    if (tag.length == 66 && tag.substring(0, 2) == "0x")
+      bytesToId(BytesUtils.fromHexString(tag.substring(2)))
+    else {
+      getBlockIdByTag(nodeView, tag)
+    }
   }
 
   @RpcMethod("net_version")
@@ -538,7 +567,7 @@ class EthService(
       null,
       null,
       parentInfo.withdrawalEpochInfo,
-      None,
+      parentInfo.vrfOutputOpt, // same as for parent block, used as a source of BlockContext.random field
       parentInfo.lastBlockInPreviousConsensusEpoch
     )
   }
@@ -562,7 +591,7 @@ class EthService(
 
     // apply transactions
     for ((tx, i) <- block.transactions.zipWithIndex) {
-      pendingStateView.applyTransaction(tx, i, gasPool, getBlockContext(block, blockInfo)) match {
+      pendingStateView.applyTransaction(tx, i, gasPool, getBlockContext(block, blockInfo, nodeView.history)) match {
         case Success(consensusDataReceipt) =>
           val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
 
@@ -785,6 +814,32 @@ class EthService(
 
         // apply requested transaction with tracing enabled
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
+
+        // return the tracer result from the evm
+        if(blockContext.getEvmResult != null) {
+          blockContext.getEvmResult.tracerResult
+        } else Unit
+      }
+    }
+  }
+
+  @RpcMethod("debug_traceCall")
+  @RpcOptionalParameters(1)
+  def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): Any = {
+
+    applyOnAccountView { nodeView =>
+      // get block info
+      val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
+
+      // get state at selected block
+      getStateViewAtTag(nodeView, if(tag=="pending") "pending" else (blockInfo.height).toString) { (tagStateView, blockContext) =>
+
+        // use default trace params if none are given
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+
+        // apply requested message with tracing enabled
+        val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
+        tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
 
         // return the tracer result from the evm
         if (blockContext.getEvmResult != null) {

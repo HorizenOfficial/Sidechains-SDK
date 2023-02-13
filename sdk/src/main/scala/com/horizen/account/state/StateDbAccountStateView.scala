@@ -35,6 +35,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
     messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider =
     messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
+  // certificateKeysProvider is present only for NaiveThresholdSignatureCircuitWithKeyRotation
   lazy val certificateKeysProvider: CertificateKeysProvider =
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
 
@@ -178,7 +179,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
 
-    // should never happen if the tx has been accepted in mempool.
+    // It should never happen if the tx has been accepted in mempool.
     // In some negative test scenario this can happen when forcing an unsigned tx to be forged in a block.
     // In this case the 'from' attribute in the msg would not be
     // set, and it would be difficult to rootcause the reason why gas and nonce checks would fail

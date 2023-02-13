@@ -23,16 +23,15 @@ case class WebSocketSettings(
     wsServerPort: Int = 8025,
 )
 
-case class GenesisDataSettings(
-    scGenesisBlockHex: String,
-    scId: String,
-    mcBlockHeight: Int,
-    powData: String,
-    mcNetwork: String,
-    withdrawalEpochLength: Int,
-    initialCumulativeCommTreeHash: String,
-    isNonCeasing: Boolean = false,
-)
+case class GenesisDataSettings(scGenesisBlockHex: String,
+                               scId: String,
+                               mcBlockHeight: Int,
+                               powData: String,
+                               mcNetwork: String,
+                               withdrawalEpochLength: Int,
+                               initialCumulativeCommTreeHash: String,
+                               isNonCeasing: Boolean
+                              )
 
 case class WithdrawalEpochCertificateSettings(
     submitterIsEnabled: Boolean,

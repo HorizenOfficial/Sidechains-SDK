@@ -7,18 +7,19 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.{AccountState, AccountStateView, MessageProcessor}
+import com.horizen.account.state.{AccountState, AccountStateView, MessageProcessor, MockedHistoryBlockHashProvider}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
 import com.horizen.evm.Database
 import com.horizen.evm.utils.Address
 import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainSecretStorage
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.BytesUtils
 import com.horizen.{AccountMempoolSettings, SidechainSettings, SidechainTypes, WalletSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
@@ -889,6 +890,7 @@ class AccountSidechainNodeViewHolderPerfTest
     Mockito.when(sidechainSettings.wallet).thenReturn(mockWalletSettings)
     val params: NetworkParams = mock[NetworkParams]
     Mockito.when(params.chainId).thenReturn(1997)
+    Mockito.when(params.circuitType).thenReturn(NaiveThresholdSignatureCircuit)
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]
@@ -902,7 +904,15 @@ class AccountSidechainNodeViewHolderPerfTest
 
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
 
-    state = new AccountState(params, timeProvider, versionTag, stateMetadataStorage, stateDbStorage, Seq()) {
+    state = new AccountState(
+      params,
+      timeProvider,
+      MockedHistoryBlockHashProvider,
+      versionTag,
+      stateMetadataStorage,
+      stateDbStorage,
+      Seq()
+    ) {
       override def getView: AccountStateView = stateViewMock
     }
 
