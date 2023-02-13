@@ -127,11 +127,10 @@ class SCNodeConfiguration(object):
                  forger_options=SCForgerConfiguration(),
                  mempool_max_size=300,
                  mempool_min_fee_rate=0,
-                 max_nonce_gap=16
+                 max_nonce_gap=16,
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  initial_private_keys=[],
-                 remote_keys_manager_enabled=False,
                  known_peers=[],
                  declared_address=None,
                  initial_signing_private_keys=[],
