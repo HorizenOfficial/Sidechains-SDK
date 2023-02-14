@@ -26,7 +26,7 @@ public class ChaChaPrngSecureRandomTest {
         }
         assertArrayEquals(expected1, output);
         rng.nextBytes(output);
-        if (output[0] != expected1[0]) {
+        if (output[0] != expected2[0]) {
             throw new Exception(printArray(output));
         }
         assertArrayEquals(expected2, output);
