@@ -14,7 +14,7 @@ import com.horizen.serialization.SerializationUtil
 
 import javax.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
 import javax.websocket.server.ServerEndpoint
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.io.{PrintWriter, StringWriter}
 import java.util.concurrent.atomic.AtomicInteger
@@ -32,7 +32,7 @@ case object NEW_PENDING_TRANSACTIONS_SUBSCRIPTION extends WebSocketAccountSubscr
 case object LOGS_SUBSCRIPTION extends WebSocketAccountSubscription("logs")
 
 @ServerEndpoint("/")
-class WebSocketAccountServerEndpoint() extends ScorexLogging {
+class WebSocketAccountServerEndpoint() extends SparkzLogging {
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
 
   @OnClose
@@ -156,7 +156,7 @@ class WebSocketAccountServerEndpoint() extends ScorexLogging {
   }
 }
 
-private object WebSocketAccountServerEndpoint extends ScorexLogging {
+private object WebSocketAccountServerEndpoint extends SparkzLogging {
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
   var subscriptionCounter: AtomicInteger = new AtomicInteger(0)
   var newHeadsSubscriptions: util.ArrayList[Subscription] = new util.ArrayList[Subscription]()
@@ -189,7 +189,7 @@ private object WebSocketAccountServerEndpoint extends ScorexLogging {
   def notifyNewPendingTransaction(tx: EthereumTransaction): Unit = {
     log.info("Websocket received new tx: "+tx.id())
 
-    if (walletKeys.contains(tx.getFromAddressString)) {
+    if (walletKeys.contains(tx.getFromAddress.toString)) {
       val responsePayload = mapper.createObjectNode()
       responsePayload.put("result", Numeric.prependHexPrefix(tx.id()))
 
