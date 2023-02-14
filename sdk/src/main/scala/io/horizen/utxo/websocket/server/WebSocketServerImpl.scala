@@ -1,5 +1,6 @@
 package io.horizen.utxo.websocket.server
 
+import com.horizen.websocket.server.WebSocketServerBaseImpl
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.websocket.server.WebSocketServerBaseImpl
 import jakarta.websocket.ClientEndpoint
