@@ -1,18 +1,15 @@
 package com.horizen.websocket.client
 
-import com.horizen.WebSocketSettings
+import com.horizen.WebSocketClientSettings
 import org.glassfish.tyrus.server.Server
+import org.junit.Assert._
 import org.junit.{After, Before, Test}
-import org.junit.Assert.{assertEquals, assertFalse, _}
-import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{FiniteDuration, _}
-import scala.util.{Failure, Success}
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
@@ -22,7 +19,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
   private var server: Server = _
 
   private val pushServer: Server = new Server(serverHost, 0, null, null, classOf[WebSocketServerPushEndpoint])
-  val pushServerPort = pushServer.getPort
+  val pushServerPort: Int = pushServer.getPort
 
   @Before
   def setUp(): Unit = {
@@ -39,11 +36,10 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
         isStarted = true;
 
       } catch {
-        case _: Throwable =>  {
+        case _: Throwable =>
           attemptsLeft -= 1
           println(s"Server was not started on port ${server.getPort}, attempts left $attemptsLeft");
           Thread.sleep(100)
-        }
       }
     }
   }
@@ -59,13 +55,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
   def multipleStartConnectionOperations(): Unit = {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
-      reconnectionMaxAttempts = 1,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 1
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -104,13 +99,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
   def multipleCloseConnectionOperationsWithoutStart(): Unit = {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
-      reconnectionMaxAttempts = 1,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 1
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -144,13 +138,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
   def multipleCloseConnectionOperationsWithoutServerStarted(): Unit = {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
-      reconnectionMaxAttempts = 1,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 1
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -184,13 +177,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
   def multipleCloseConnectionOperations(): Unit = {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
-      reconnectionMaxAttempts = 1,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 1
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -227,13 +219,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
   def openAndCloseConnection(): Unit = {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
-      reconnectionMaxAttempts = 1,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 1
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -304,13 +295,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
   def successEchoMessage(): Unit = {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
-      reconnectionMaxAttempts = 3,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 3
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -369,13 +359,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     // We try to connect but the server is not started
     // Remember the parameter of the configuration 'reconnectionMaxAttempts = 3'
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
-      reconnectionMaxAttempts = 3,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 3
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -415,13 +404,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     // We try to connect but the server is not started
     // Remember the parameter of the configuration 'reconnectionMaxAttempts = 3'
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
-      reconnectionMaxAttempts = 3,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 3
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -479,13 +467,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
   def failEchoMessage(): Unit = {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
-      reconnectionMaxAttempts = 2,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 2
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -533,13 +520,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
-      reconnectionMaxAttempts = 3,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 3
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -582,13 +568,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
-      reconnectionMaxAttempts = 3,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 3
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -648,13 +633,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     pushServer.start()
 
-    val conf = WebSocketSettings(
+    val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + pushServerPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
-      reconnectionMaxAttempts = 2,
-      wsServer = false,
-      wsServerPort = 0
+      reconnectionMaxAttempts = 2
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)

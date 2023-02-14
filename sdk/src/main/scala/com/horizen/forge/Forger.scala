@@ -35,7 +35,7 @@ object ForgerRef {
             companion: SidechainTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
             params: NetworkParams): Props = {
-    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
+    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocketClient.allowNoConnectionInRegtest)
 
     Props(new Forger(settings, viewHolderRef, forgeMessageBuilder, timeProvider, params))
   }

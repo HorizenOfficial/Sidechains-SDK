@@ -34,7 +34,8 @@ object SidechainSettingsReader
   }
 
   def fromConfig(config: Config): SidechainSettings = {
-    val webSocketConnectorConfigurationSettings = config.as[WebSocketSettings]("sparkz.websocket")
+    val webSocketClientSettings = config.as[WebSocketClientSettings]("sparkz.websocketClient")
+    val webSocketServerSettings = config.as[WebSocketServerSettings]("sparkz.websocketServer")
     val sparkzSettings = config.as[SparkzSettings]("sparkz")
     val genesisSettings = config.as[GenesisDataSettings]("sparkz.genesis")
     val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("sparkz.withdrawalEpochCertificate")
@@ -46,7 +47,7 @@ object SidechainSettingsReader
     val logInfoSettings = config.as[LogInfoSettings]("sparkz.logInfo")
     val ethServiceSettings = config.as[EthServiceSettings]("sparkz.ethService")
 
-    SidechainSettings(sparkzSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
+    SidechainSettings(sparkzSettings, genesisSettings, webSocketClientSettings, webSocketServerSettings, certificateSettings,
       remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings,
       ethServiceSettings)
   }
