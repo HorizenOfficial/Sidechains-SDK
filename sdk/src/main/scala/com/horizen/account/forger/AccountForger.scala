@@ -39,7 +39,7 @@ object AccountForgerRef {
             companion: SidechainAccountTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
             params: NetworkParams): Props = {
-    val forgeMessageBuilder: AccountForgeMessageBuilder = new AccountForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
+    val forgeMessageBuilder: AccountForgeMessageBuilder = new AccountForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocketClient.allowNoConnectionInRegtest)
 
     Props(new AccountForger(settings, viewHolderRef, forgeMessageBuilder, timeProvider, params))
   }
