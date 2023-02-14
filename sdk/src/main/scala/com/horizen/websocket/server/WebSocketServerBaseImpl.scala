@@ -4,7 +4,7 @@ import com.horizen.websocket.client.WebSocketConnector
 import org.glassfish.tyrus.server.Server
 import sparkz.util.SparkzLogging
 
-import javax.websocket._
+import jakarta.websocket._
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
 

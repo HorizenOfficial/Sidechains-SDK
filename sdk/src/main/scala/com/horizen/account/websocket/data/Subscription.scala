@@ -6,7 +6,7 @@ import com.horizen.evm.utils.Hash
 import com.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 
-import javax.websocket.Session
+import jakarta.websocket.Session
 
 trait BaseSubscription {
   def session: Session
