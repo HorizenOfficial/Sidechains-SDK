@@ -83,5 +83,9 @@ public class EthereumBlockView {
             .collect(Collectors.toList());
         return new EthereumBlockView(blockNumber, blockHash, block, txViews);
     }
+
+    public static EthereumBlockView withoutTransactions(Long blockNumber, Hash blockHash, AccountBlock block) {
+        return new EthereumBlockView(blockNumber, blockHash, block, new ArrayList<>());
+    }
 }
 
