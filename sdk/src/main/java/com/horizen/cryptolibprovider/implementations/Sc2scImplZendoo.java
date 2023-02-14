@@ -24,7 +24,7 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
         return new byte[1];
     }
     @Override
-    public MerklePath gerCrossChainMessageMerklePath(List<CrossChainMessage> messages, CrossChainMessage leaf){
+    public MerklePath getCrossChainMessageMerklePath(List<CrossChainMessage> messages, CrossChainMessage leaf){
         return  MerklePath.deserialize(new byte[0]);
     }
 

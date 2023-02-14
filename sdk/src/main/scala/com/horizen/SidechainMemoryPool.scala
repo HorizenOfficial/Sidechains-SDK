@@ -1,7 +1,9 @@
 package com.horizen
 
 import java.util.{Comparator, Optional, ArrayList => JArrayList, List => JList}
+
 import com.horizen.box.{Box, WithdrawalRequestBox}
+import com.horizen.mempool.MempoolTakeFilter
 import com.horizen.node.NodeMemoryPool
 import com.horizen.transaction.BoxTransaction
 import com.horizen.utils.MempoolMap
@@ -59,14 +61,13 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
     unconfirmed.values.toSeq.sortWith(sortFunc).take(limit).map(tx => tx.getUnconfirmedTx())
   }
 
-  def takeWithWithdrawalBoxesLimit(allowedWithdrawalBoxes: Int): Iterable[SidechainTypes#SCBT] = {
+  def takeWithFilterLimit(filters: Seq[MempoolTakeFilter]): Iterable[SidechainTypes#SCBT] = {
     val filteredTxs: JArrayList[SidechainTypes#SCBT] = new JArrayList[SidechainTypes#SCBT]()
-    var newWithdrawalBoxes = 0
     take(size).foreach( tx => {
-      val txWithdrawalBoxes = tx.newBoxes().asScala.count(box => box.isInstanceOf[WithdrawalRequestBox])
-      if( txWithdrawalBoxes + newWithdrawalBoxes <= allowedWithdrawalBoxes) {
-        newWithdrawalBoxes += txWithdrawalBoxes
+      val limitReached = filters.count(f => f.evaluateTx(tx) == false) > 0
+      if (!limitReached) {
         filteredTxs.add(tx)
+        filters.foreach(f => f.accumulateTx(tx))
       }
     })
     filteredTxs.asScala.toList

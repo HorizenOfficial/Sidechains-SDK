@@ -46,7 +46,7 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
 
 
   /**
-    * Return a redeem message from  a previouslt posted CrossChainMessage
+    * Return a redeem message from  a previously posted CrossChainMessage
     */
   def createRedeemMessage: Route = (post & path("createRedeemMessage")) {
     withAuth {

@@ -17,7 +17,7 @@ public interface Sc2scCircuit {
 
     byte[] getCrossChainMessageTreeRoot(List<CrossChainMessage> messages);
 
-    MerklePath gerCrossChainMessageMerklePath(List<CrossChainMessage> messages, CrossChainMessage leaf);
+    MerklePath getCrossChainMessageMerklePath(List<CrossChainMessage> messages, CrossChainMessage leaf);
 
     byte[] createRedeemProof(CrossChainMessageHash messageHash,
                              MerklePath messageMerkePath,

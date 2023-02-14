@@ -1,6 +1,7 @@
 package com.horizen.box.data;
 
 import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Shorts;
 import com.horizen.box.CrossChainMessageBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.sc2sc.CrossChainProtocolVersion;
@@ -67,7 +68,8 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
 
     @Override
     public byte[] customFieldsHash() {
-        return Blake2b256.hash(Bytes.concat(new byte[]{messageType.byteValue()}, receiverSidechain, receiverAddress, payload));
+        return Blake2b256.hash(Bytes.concat(Shorts.toByteArray(protocolVersion.getVal()),
+                new byte[]{messageType.byteValue()}, receiverSidechain, receiverAddress, payload));
     }
 }
 

@@ -283,7 +283,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           }
         })
         //crosschain messages validation: check max number of boxes per epoch
-        checkCrosschainMessagesBoxesAllowed(mod, allCrossMessagesBox.size)
+        checkCrosschainMessagesBoxesAllowed(mod.mainchainBlockReferencesData.size, allCrossMessagesBox.size)
       }
     }
 
@@ -336,9 +336,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       (params.maxWBsAllowed * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
   }
 
-  private def checkCrosschainMessagesBoxesAllowed(mod: SidechainBlock, boxInThisBlock: Int): Unit = {
+  private def checkCrosschainMessagesBoxesAllowed(mainchainBlockReferenceInBlock: Int, boxInThisBlock: Int): Unit = {
     val alreadyMined = getAlreadyMinedCrosschainMessagesInCurrentEpoch
-    val mainchainBlockReferenceInBlock = mod.mainchainBlockReferencesData.size
     val allowed = getAllowedCrosschainMessageBoxes(mainchainBlockReferenceInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate)
     val total = alreadyMined + boxInThisBlock
     if (total > allowed) {

@@ -53,7 +53,7 @@ trait Sc2ScUtils[
           throw new Sc2ScException("Unable to build redeem message, epoch too recent")
         }else{
           //collect all the data needed for proof creation
-          val messageMerklePath : MerklePath = sc2scCircuitFunctions.gerCrossChainMessageMerklePath(
+          val messageMerklePath : MerklePath = sc2scCircuitFunctions.getCrossChainMessageMerklePath(
               state.getCrossChainMessages(messagePostedEpoch).asJava, sourceMessage);
           val topCertInfos =  getTopCertInfoByEpoch(messagePostedEpoch, state, history, true).getOrElse(
             throw new Sc2ScException("Unable to retrieve certificate associated with this message epoch")
