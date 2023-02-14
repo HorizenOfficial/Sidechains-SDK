@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"libevm/test"
 	"math/big"
@@ -48,30 +49,31 @@ func TestStateEmpty(t *testing.T) {
 	checks := []struct {
 		name          string
 		shouldBeEmpty bool
+		shouldBeEoa   bool
 		change        func(service *Service, account AccountParams)
 	}{
-		{"non-zero balance", false, func(service *Service, account AccountParams) {
+		{"non-zero balance", false, true, func(service *Service, account AccountParams) {
 			// set some non-zero balance
 			_ = service.StateSetBalance(BalanceParams{
 				AccountParams: account,
 				Amount:        (*hexutil.Big)(big.NewInt(123)),
 			})
 		}},
-		{"non-zero nonce", false, func(service *Service, account AccountParams) {
+		{"non-zero nonce", false, true, func(service *Service, account AccountParams) {
 			// set a non-zero nonce
 			_ = service.StateSetNonce(NonceParams{
 				AccountParams: account,
 				Nonce:         123,
 			})
 		}},
-		{"non-nil code", false, func(service *Service, account AccountParams) {
+		{"non-nil code", false, false, func(service *Service, account AccountParams) {
 			// set some non-nil code
 			_ = service.StateSetCode(CodeParams{
 				AccountParams: account,
 				Code:          common.FromHex("0xdeadbeef"),
 			})
 		}},
-		{"non-empty storage", true, func(service *Service, account AccountParams) {
+		{"non-empty storage", true, true, func(service *Service, account AccountParams) {
 			// "negative" test: even with data in the storage trie, accounts are still considered empty
 			_ = service.StateSetStorage(SetStorageParams{
 				StorageParams: StorageParams{
@@ -108,7 +110,61 @@ func TestStateEmpty(t *testing.T) {
 			if _, isEmpty := instance.StateEmpty(accountParams); isEmpty != check.shouldBeEmpty {
 				t.Errorf("unexpected account empty-status: want %v is %v", check.shouldBeEmpty, isEmpty)
 			}
+			// make sure EOA status still matches expectation
+			if _, isEoa := instance.StateIsEoa(accountParams); isEoa != check.shouldBeEoa {
+				t.Errorf("unexpected account EOA-status: want %v is %v", check.shouldBeEoa, isEoa)
+			}
 		})
+	}
+}
+
+func TestStateIsEoa(t *testing.T) {
+	var (
+		instance, _, stateHandle = SetupTest()
+		account                  = AccountParams{
+			HandleParams: HandleParams{
+				Handle: stateHandle,
+			},
+		}
+	)
+
+	if _, isEoa := instance.StateIsEoa(account); !isEoa {
+		t.Errorf("the zero-address should be considered EOA: %v", account.Address)
+	}
+
+	for _, addr := range vm.PrecompiledAddressesBerlin {
+		account.Address = addr
+		if _, isEoa := instance.StateIsEoa(account); isEoa {
+			t.Errorf("precompiled native contract should not be considered EOA: %v", addr)
+		}
+	}
+
+	for i := 0; i < 100; i++ {
+		account.Address = test.RandomAddress()
+		if _, isEoa := instance.StateIsEoa(account); !isEoa {
+			t.Errorf("should be EOA account: %v", account.Address)
+		}
+		_ = instance.StateSetBalance(BalanceParams{
+			AccountParams: account,
+			Amount:        (*hexutil.Big)(big.NewInt(int64(1234 + i))),
+		})
+		if _, isEoa := instance.StateIsEoa(account); !isEoa {
+			t.Errorf("should be EOA account: %v", account.Address)
+		}
+		_ = instance.StateSetNonce(NonceParams{
+			AccountParams: account,
+			Nonce:         (hexutil.Uint64)(42 + i),
+		})
+		if _, isEoa := instance.StateIsEoa(account); !isEoa {
+			t.Errorf("should be EOA account: %v", account.Address)
+		}
+		_ = instance.StateSetCode(CodeParams{
+			AccountParams: account,
+			Code:          test.RandomBytes(17 + i),
+		})
+		if _, isEoa := instance.StateIsEoa(account); isEoa {
+			t.Errorf("should be not EOA account: %v", account.Address)
+		}
 	}
 }
 

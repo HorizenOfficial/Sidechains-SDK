@@ -79,13 +79,14 @@ public class StateDB extends ResourceHandle {
      * <ol>
      * <li>account doesn't exist in the StateDB (first time it receives coins);</li>
      * <li>account has no code (code hash is a keccak256 hash of empty array).</li>
+     * <li>account address does not match any of the precompiled native contracts.</li>
      * </ol>
      *
      * @param address account address
      * @return true if account is EOA, otherwise false
      */
     public boolean isEoaAccount(Address address) {
-        return isEmpty(address) || EMPTY_CODE_HASH.equals(getCodeHash(address));
+        return LibEvm.invoke("StateIsEoa", new AccountParams(handle, address), boolean.class);
     }
 
     /**
