@@ -42,7 +42,7 @@ case class SubscriptionWithFilter(session: Session, subscriptionId: String,
   def filterTransactionLogsByTopic(logTopics: Array[Hash]): Option[Array[String]] = {
     topics match {
       case Some(topicFilters) =>
-        val matchedTopics = topicFilters.filter(topic => logTopics.contains(Hash.fromBytes(BytesUtils.fromHexString(topic.substring(2)))))
+        val matchedTopics = topicFilters.filter(topic => logTopics.contains(new Hash(BytesUtils.fromHexString(Numeric.cleanHexPrefix(topic)))))
         Some(matchedTopics)
       case None =>
         Some(logTopics.map(topic => BytesUtils.toHexString(topic.toBytes)))

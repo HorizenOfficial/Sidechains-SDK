@@ -6,13 +6,13 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.transaction.EthereumTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedVault, SemanticallySuccessfulModifier, SuccessfulTransaction}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.ExecutionContext
 
 class WebSocketAccountServer(wsPort: Int)
   extends Actor
-  with ScorexLogging {
+  with SparkzLogging {
   val websocket = new WebSocketAccountServerImpl(wsPort, classOf[WebSocketAccountServerEndpoint]);
 
   try {

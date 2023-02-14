@@ -3,7 +3,7 @@ package com.horizen.account.websocket
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class WebSocketAccountChannelImpl extends WebSocketAccountChannel with ScorexLogging{
+class WebSocketAccountChannelImpl extends WebSocketAccountChannel with SparkzLogging{
   implicit val duration: Timeout = 20 seconds
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
@@ -103,7 +103,7 @@ class WebSocketAccountChannelImpl extends WebSocketAccountChannel with ScorexLog
   override def accountBlockToWebsocketJson(block: AccountBlock): ObjectNode = {
     applyOnAccountView { nodeView =>
       val blockNumber = nodeView.history.getBlockHeightById(block.id).get().toLong
-      val blockHash = Hash.fromBytes(block.id.toBytes)
+      val blockHash = new Hash(block.id.toBytes)
       val ethereumBlockView = EthereumBlockView.withoutTransactions(blockNumber, blockHash, block)
 
       val blockJson = mapper.createObjectNode()
@@ -112,15 +112,15 @@ class WebSocketAccountChannelImpl extends WebSocketAccountChannel with ScorexLog
       blockJson.put("gasLimit", ethereumBlockView.gasLimit)
       blockJson.put("gasUsed", ethereumBlockView.gasUsed)
       blockJson.put("logsBloom", ethereumBlockView.logsBloom)
-      blockJson.put("miner", ethereumBlockView.miner)
+      blockJson.put("miner", ethereumBlockView.miner.toString)
       blockJson.put("nonce", ethereumBlockView.nonce)
       blockJson.put("number", ethereumBlockView.number)
-      blockJson.put("parentHash", ethereumBlockView.parentHash)
-      blockJson.put("receiptRoot", ethereumBlockView.receiptsRoot)
+      blockJson.put("parentHash", ethereumBlockView.parentHash.toString)
+      blockJson.put("receiptRoot", ethereumBlockView.receiptsRoot.toString)
       blockJson.put("sha3Uncles", ethereumBlockView.sha3Uncles)
-      blockJson.put("stateRoot", ethereumBlockView.stateRoot)
+      blockJson.put("stateRoot", ethereumBlockView.stateRoot.toString)
       blockJson.put("timestamp", ethereumBlockView.timestamp)
-      blockJson.put("transactionsRoot", ethereumBlockView.transactionsRoot)
+      blockJson.put("transactionsRoot", ethereumBlockView.transactionsRoot.toString)
 
       blockJson
     }
