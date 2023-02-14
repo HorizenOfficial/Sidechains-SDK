@@ -5,7 +5,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.websocket.server.WebSocketServerBaseImpl
 
-import javax.websocket._
+import jakarta.websocket._
 
 @ClientEndpoint
 class WebSocketAccountServerImpl(bindPort: Int, configuration: Class[_]) extends WebSocketServerBaseImpl(bindPort, configuration) {
