@@ -460,6 +460,10 @@ object AbstractSidechainNodeViewHolder {
       T,
       A](f: java.util.function.BiFunction[NV, T, A], functionParameter: T)
 
+    case class MempoolReAddedTransactions[T <: SidechainTypes#SCAT](readdedTxs: Seq[T])
+
+    case class RemovedMempoolTransactions[T <: SidechainTypes#SCAT](removedTxs: Seq[T])
+
     case object GetStorageVersions
 
   }

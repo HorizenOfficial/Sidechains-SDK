@@ -1,6 +1,7 @@
 package io.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{MempoolReAddedTransactions, RemovedMempoolTransactions}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.history.AccountHistory
@@ -21,7 +22,6 @@ import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, RollbackFailed}
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.idToVersion
 
 import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
@@ -194,7 +194,13 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   override protected def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock], memPool: MP, state: MS): MP = {
-    memPool.updateMemPool(removedBlocks, appliedBlocks)
+    //Send a RemovedMempoolTransactions event with the transactions removed from the mempool
+    val listOfRejectedBlocksTxs = removedBlocks.flatMap(_.transactions)
+    context.system.eventStream.publish(RemovedMempoolTransactions(listOfRejectedBlocksTxs))
+
+    //Update the new mempool and send a MempollRaddedTransactions with the transactions removed from the blocks and re added to the mempool
+    val updatedMempool = memPool.updateMemPool(removedBlocks, appliedBlocks, (addedTx: Seq[SidechainTypes#SCAT]) => {context.system.eventStream.publish(MempoolReAddedTransactions(addedTx))})
+    updatedMempool
   }
 
 }

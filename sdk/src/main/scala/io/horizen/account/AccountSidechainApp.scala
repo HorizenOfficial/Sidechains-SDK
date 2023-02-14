@@ -3,6 +3,7 @@ package io.horizen.account
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.horizen.account.websocket.WebSocketAccountServerRef
 import io.horizen._
 import io.horizen.account.api.http.route
 import io.horizen.account.api.http.route.{AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
@@ -147,6 +148,11 @@ class AccountSidechainApp @Inject()
 
   // Init Sync Status actor
   val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
+  //Websocket server for the Explorer
+
+  if(sidechainSettings.websocket.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  }
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
