@@ -267,6 +267,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito
       .when(block.header.forgerAddress)
       .thenReturn(forgerAddress)
+    Mockito.when(block.forgerPublicKey).thenReturn(new AddressProposition(BytesUtils.fromHexString("1111111111213141010203040506070809111222")))
     Mockito.when(block.sidechainTransactions).thenReturn(txs)
     Mockito.when(block.transactions).thenReturn(txs)
     Mockito.when(block.mainchainHeaders).thenReturn(Seq(mcBlockRef.header))

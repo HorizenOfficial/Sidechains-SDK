@@ -18,7 +18,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
+import com.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
 import com.horizen.account.utils.Secp256k1.generateContractAddress
 import com.horizen.account.utils.{EthereumTransactionDecoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
@@ -46,6 +46,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
+import scala.util.control.Breaks.break
 import scala.util.{Failure, Success, Try}
 
 class EthService(
@@ -480,8 +481,78 @@ class EthService(
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, "latest") { (_, blockContext) => new Quantity(blockContext.baseFee) }
+      getStateViewAtTag(nodeView, "latest") {
+        // get gas tip and add current base fee
+        (_, blockContext) => new Quantity(calculateGasPrice(nodeView, blockContext.baseFee))
+      }
     }
+  }
+
+  /**
+   * DefaultMaxPrice = 500 GWei, DefaultIgnorePrice = 2 Wei
+   * https://github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go
+   * FullNode Defaults: Blocks = 20, Percentile = 60
+   * LightClient Defaults: Blocks = 2, Percentile = 60
+   * https://github.com/ethereum/go-ethereum/blob/master/eth/ethconfig/config.go
+   */
+  private def calculateGasPrice(nodeView: NV, baseFee: BigInteger): BigInteger = {
+    val nrOfBlocks = 20
+    val percentile = 60
+    val maxPrice = INITIAL_BASE_FEE.multiply(BigInteger.valueOf(500))
+    val ignorePrice = BigInteger.TWO
+    suggestTipCap(nodeView, nrOfBlocks, percentile, maxPrice, ignorePrice).add(baseFee)
+  }
+
+  /**
+   * Get tip cap that newly created transactions can use to have a high chance to be included in the following blocks.
+   * Replication of the original implementation in GETH w/o caching, see:
+   * github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go#L150
+   */
+  private def suggestTipCap(nodeView: NV, blockCount: Int, percentile: Int, maxPrice: BigInteger, ignorePrice: BigInteger): BigInteger = {
+    val requestedBlockInfo = getBlockByTag(nodeView, "latest")._2
+    // limit the range of blocks by the number of available blocks and cap at 1024
+    val blocks: Integer = (blockCount*2).min(requestedBlockInfo.height).min(1024)
+
+    // define limit for included gas prices each block
+    val limit = 3
+    var collected = 0
+    val prices: Seq[BigInteger] = {
+      // Return lowest tx gas prices of each requested block, sorted in ascending order.
+      // Breaks, if enough data was collected within blockCount blocks, queries up to 2*blockCount blocks, if not.
+      (0 until blocks).map { i =>
+        if (i >= blockCount && collected > 1)
+          break
+        val block = nodeView.history
+          .blockIdByHeight(requestedBlockInfo.height - i)
+          .map(ModifierId(_))
+          .flatMap(nodeView.history.getStorageBlockById)
+          .get
+        val blockPrices = getBlockPrices(block, ignorePrice, limit)
+        collected += blockPrices.length
+        blockPrices
+      }
+    }.flatten
+
+    prices
+      .sorted
+      .lift((prices.length - 1) * percentile / 100)
+      .getOrElse(BigInteger.ZERO)
+      .min(maxPrice)
+  }
+
+  /**
+   * Calculates the lowest transaction gas price in a given block
+   * If the block is empty or all transactions are sent by the miner itself, null is returned.
+   * Replication of the original implementation in GETH, see:
+   * github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go#L258
+   */
+  private def getBlockPrices(block: AccountBlock, ignoreUnder: BigInteger, limit: Int): Seq[BigInteger] = {
+    block.transactions
+      .filter(tx => !(tx.getFrom.bytes() sameElements block.forgerPublicKey.bytes()))
+      .map(tx => getEffectiveGasTip(tx.asInstanceOf[EthereumTransaction], block.header.baseFee))
+      .filter(gasTip => ignoreUnder != null && gasTip.compareTo(ignoreUnder) >= 0)
+      .sorted
+      .take(limit)
   }
 
   private def getTransactionAndReceipt(transactionHash: Hash)
