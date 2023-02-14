@@ -148,10 +148,9 @@ class AccountSidechainApp @Inject()
 
   // Init Sync Status actor
   val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
-  //Websocket server for the Explorer
-
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  
+  if(sidechainSettings.websocketServer.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
