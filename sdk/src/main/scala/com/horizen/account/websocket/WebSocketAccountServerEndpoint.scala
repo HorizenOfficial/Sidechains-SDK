@@ -12,8 +12,8 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebsocketAccountResponse}
 import com.horizen.serialization.SerializationUtil
 
-import javax.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
-import javax.websocket.server.ServerEndpoint
+import jakarta.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
+import jakarta.websocket.server.ServerEndpoint
 import sparkz.util.SparkzLogging
 
 import java.io.{PrintWriter, StringWriter}
