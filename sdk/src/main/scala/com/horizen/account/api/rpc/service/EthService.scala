@@ -482,7 +482,6 @@ class EthService(
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, "latest") {
-        // get gas tip and add current base fee
         (_, blockContext) => new Quantity(calculateGasPrice(nodeView, blockContext.baseFee))
       }
     }
