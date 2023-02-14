@@ -5,7 +5,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
 import com.horizen.storage.SidechainSecretStorage
-import com.horizen.{AbstractWallet, SidechainTypes}
+import com.horizen.{AbstractWallet, SidechainTypes, WalletReader}
 import sparkz.core.VersionTag
 import sparkz.util.SparkzLogging
 
@@ -39,6 +39,18 @@ class AccountWallet private[horizen](seed: Array[Byte],
   override def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): AccountWallet = {
     this
   }
+
+   def getWalletReader: WalletReader = {
+    new AccountWalletReader(secretStorage)
+  }
+}
+
+class AccountWalletReader(secretStorage: SidechainSecretStorage) extends WalletReader {
+  override def getPublicKeys: Set[Array[Byte]] = {
+    secretStorage.getAll.map(secret => secret.publicImage().pubKeyBytes()).toSet
+  }
+
+  override type NVCT = this.type
 }
 
 object AccountWallet {

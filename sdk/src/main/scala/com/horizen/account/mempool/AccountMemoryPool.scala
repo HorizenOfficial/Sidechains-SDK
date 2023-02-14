@@ -143,8 +143,8 @@ class AccountMemoryPool(
     )
   }
 
-  def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): AccountMemoryPool = {
-    unconfirmed.updateMemPool(removedBlocks, appliedBlocks)
+  def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock], notifyAddedTx: Seq[SidechainTypes#SCAT] => Unit): AccountMemoryPool = {
+    notifyAddedTx(unconfirmed.updateMemPool(removedBlocks, appliedBlocks))
     new AccountMemoryPool(unconfirmed, accountStateReaderProvider, baseStateReaderProvider)
   }
 }

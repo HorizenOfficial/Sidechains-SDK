@@ -28,6 +28,9 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.co
   def publicKeys(): Set[P]
 }
 
+trait WalletReader extends sparkz.core.transaction.wallet.VaultReader {
+  def getPublicKeys: Set[Array[Byte]]
+}
 
 abstract class AbstractWallet[
   TX <: Transaction,

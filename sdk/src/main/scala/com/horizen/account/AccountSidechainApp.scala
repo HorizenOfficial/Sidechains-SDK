@@ -28,7 +28,9 @@ import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen._
+import com.horizen.account.websocket.WebSocketAccountServerRef
 import com.horizen.helper.{TransactionSubmitProvider, TransactionSubmitProviderImpl}
+import com.horizen.websocket.server.WebSocketServerRef
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -143,6 +145,10 @@ class AccountSidechainApp @Inject()
   val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
+  //Websocket server for the Explorer
+  if(sidechainSettings.websocket.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  }
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
