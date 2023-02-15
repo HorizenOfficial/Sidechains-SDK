@@ -61,14 +61,13 @@ public class EvmMessageProcessor implements MessageProcessor {
                 blockContext.getTraceParams()
             );
             blockContext.setEvmResult(result);
-            var returnData = result.returnData == null ? new byte[0] : result.returnData;
             // consume gas the EVM has used:
             // the EVM will never consume more gas than is available, hence this should never throw
             // and ExecutionFailedException is thrown if the EVM reported "out of gas"
             gas.subGas(result.usedGas);
-            if (result.reverted) throw new ExecutionRevertedException(returnData);
+            if (result.reverted) throw new ExecutionRevertedException(result.returnData);
             if (!result.evmError.isEmpty()) throw new ExecutionFailedException(result.evmError);
-            return returnData;
+            return result.returnData;
         }
     }
 

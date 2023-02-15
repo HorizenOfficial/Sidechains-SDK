@@ -235,6 +235,11 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		evmError = vmerr.Error()
 	}
 
+	if returnData == nil {
+		// we want [] rather than null in the response
+		returnData = make([]byte, 0)
+	}
+
 	result := EvmResult{
 		UsedGas:         uint64(params.AvailableGas) - gas,
 		EvmError:        evmError,
