@@ -1,4 +1,4 @@
-package com.horizen.account.utils;
+package com.horizen.utils;
 
 import com.horizen.utils.ChaChaPrngSecureRandom;
 import org.junit.Test;
