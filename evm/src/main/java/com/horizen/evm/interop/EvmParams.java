@@ -1,5 +1,6 @@
 package com.horizen.evm.interop;
 
+import com.horizen.evm.EvmContext;
 import com.horizen.evm.utils.Address;
 
 import java.math.BigInteger;
@@ -11,9 +12,7 @@ public class EvmParams extends HandleParams {
     public byte[] input;
     public BigInteger availableGas; // uint64
     public BigInteger gasPrice;
-
     public EvmContext context;
-
     public TraceOptions traceOptions;
 
     public EvmParams(

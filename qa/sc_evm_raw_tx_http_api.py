@@ -33,11 +33,13 @@ Test:
     - send raw tx to the network
     
     Negative tests
+    - Try decode, sign or send tx with invalid payload
     - Try send an tx with invalid signature to mempool
     - Try send an unsigned tx to mempool
     - Try send a tx with bad chainid to mempool
     - Try to forge a block forcing an unsigned tx (see api)
     - Try the same with a tx with bad chainid
+    - Try sending a raw tx with bad payload via eth rpc
      
 """
 
@@ -138,7 +140,43 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
         self.do_test_raw_tx(
             raw_tx=raw_tx, sc_node=sc_node_1, evm_signer_address=evm_address_sc1)
 
+
         # Negative tests
+        # 0.1) create a raw tx, add 1 byte at the end and verify it can not be decoded via api
+        raw_tx = createRawLegacyTransaction(sc_node_1,
+                                            fromAddress=evm_address_sc1,
+                                            toAddress=evm_address_sc2,
+                                            value=convertZenToWei(transferred_amount_in_zen))
+
+        raw_tx_with_extra_byte = raw_tx + "ab"
+        try:
+            decodeTransaction(sc_node_2, payload=raw_tx_with_extra_byte)
+            fail("Trailing bytes in raw object should not work")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("Spurious bytes" in str(err) )
+
+        # 0.2) verify the same with signing by api
+        try:
+            signTransaction(sc_node_1, fromAddress=evm_address_sc1, payload=raw_tx_with_extra_byte)
+            fail("Trailing bytes in raw object should not work")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("Spurious bytes"  in str(err) )
+
+        # 0.3) signe the raw tx, add 1 byte at the end and verify it can not be sent by api
+        signed_raw_tx = signTransaction(sc_node_1, fromAddress=evm_address_sc1, payload=raw_tx)
+        raw_tx_with_extra_byte = signed_raw_tx + "cd"
+        try:
+            sendTransaction(sc_node_1, payload=raw_tx_with_extra_byte)
+            fail("Trailing bytes in raw object should not work")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("Spurious bytes" in str(err))
+
         # 1) use a wrong address for signature
         wrong_signer_address = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
@@ -262,6 +300,19 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
             assert_true("does not match network chain ID " in str(e))
 
         self.sc_sync_all()
+
+        # 5.1) try sending a badly encoded RLP tx via eth rpc
+        raw_tx = "96dc24d6874a9b01e4a7b7e5b74db504db3731f764293769caef100f551efadf7d378a015faca6ae62ae30a9bf5e3c6aa94f58597edc381d0ec167fa0c84635e12a2d13ab965866ebf7c7aae458afedef1c17e08eb641135f592774e18401e0104f8e7f8e0d98e3230332e3133322e39342e31333784787beded84556c094cf8528c39342e3133372e342e31333982765fb840621168019b7491921722649cd1aa9608f23f8857d782e7495fb6765b821002c4aac6ba5da28a5c91b432e5fcc078931f802ffb5a3ababa42adee7a0c927ff49ef8528c3136322e3234332e34362e39829dd4b840e437a4836b77ad9d9ffe73ee782ef2614e6d8370fcf62191a6e488276e23717147073a7ce0b444d485fff5a0c34c4577251a7a990cf80d8542e21b95aa8c5e6cdd8e3230332e3133322e39342e31333788ffffffffa5aadb3a84556c095384556c0919"
+        response = sc_node_1.rpc_eth_sendRawTransaction(raw_tx)
+        assert_true("error" in response)
+        assert_true("Internal error" in response['error']['message'])
+
+        # 5.2) try sending a tx via eth rpc with trailing spurious bytes
+        raw_tx = "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3ef"
+        response = sc_node_1.rpc_eth_sendRawTransaction(raw_tx)
+        assert_true("error" in response)
+        assert_true("Spurious bytes" in response['error']['data'])
+
 
 
 

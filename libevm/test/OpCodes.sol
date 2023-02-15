@@ -7,7 +7,6 @@ pragma solidity >=0.8.0 <0.9.0;
  * @dev uses specific opcodes for testing
  */
 contract OpCodes {
-
     function getGasPrice() external view returns (uint256) {
         return tx.gasprice;
     }
@@ -40,5 +39,9 @@ contract OpCodes {
         // TODO: use block.prevrandao as soons as Solidity has this implemented
         // note: the emitted opcode remains the same, so there is no functional difference - it's just a cosmetic rename
         return block.difficulty;
+    }
+
+    function getBlockHash() external view returns (bytes32) {
+        return blockhash(block.number - 1);
     }
 }
