@@ -42,7 +42,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
                 new PublicKey25519Proposition(keyPair.getValue()),
                 VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed));
 
-     //Set to true and run if you want to update regression data.
+        //Set to true and run if you want to update regression data.
         if (false) {
             try {
                 BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/forgerbox_hex"));

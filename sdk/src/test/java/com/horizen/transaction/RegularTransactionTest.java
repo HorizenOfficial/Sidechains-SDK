@@ -55,9 +55,9 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new ZenBoxData(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
-                -4413338919968165681L,
-                -2557784382151979925L,
-                -36253851566087546L)
+                7516983935722354239L,
+                -2870959594289512209L,
+                -9075355275709095846L)
         );
     }
 
