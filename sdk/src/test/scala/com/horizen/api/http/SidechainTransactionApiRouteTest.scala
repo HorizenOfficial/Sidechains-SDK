@@ -462,7 +462,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqSendTransactionPost(BytesUtils.toHexString(RegularTransactionSerializer.getSerializer.toBytes(transaction))))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", JOptional.empty()).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorByteTransactionParsing("", JOptional.empty()).code)
       }
       sidechainApiMockConfiguration.setShould_transactionActor_BroadcastTransaction_reply(false)
       Post(basePath + "sendTransaction")

@@ -31,7 +31,7 @@ Test:
 """
 
 
-class SCEvmDeployingContract(AccountChainSetup):
+class SCEvmDelegateCall(AccountChainSetup):
 
     def __init__(self):
         super().__init__(withdrawalEpochLength=100)
@@ -83,4 +83,4 @@ class SCEvmDeployingContract(AccountChainSetup):
 
 
 if __name__ == "__main__":
-    SCEvmDeployingContract().main()
+    SCEvmDelegateCall().main()

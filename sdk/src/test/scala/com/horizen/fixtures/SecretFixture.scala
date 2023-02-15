@@ -18,6 +18,7 @@ import scala.util.Random
 
 trait SecretFixture {
   val pkc: PrivateKey25519Creator = PrivateKey25519Creator.getInstance()
+  val schnorr: SchnorrKeyGenerator = SchnorrKeyGenerator.getInstance()
 
   val pk1: PrivateKey25519 = pkc.generateSecret("seed1".getBytes())
   val pk2: PrivateKey25519 = pkc.generateSecret("seed2".getBytes())
@@ -27,6 +28,7 @@ trait SecretFixture {
   val pk6: PrivateKey25519 = pkc.generateSecret("seed6".getBytes())
 
   val pk7: PrivateKey25519 = pkc.generateSecret("seed7".getBytes())
+  val schnorrPk: SchnorrSecret = schnorr.generateSecret("seed8".getBytes())
 
   def getPrivateKey25519: PrivateKey25519 = {
     val seed = new Array[Byte](32)
@@ -122,6 +124,12 @@ trait SecretFixture {
 
   def getAddressProposition(seed: Long): AddressProposition = {
     getPrivateKeySecp256k1(seed).publicImage()
+  }
+
+  def getSchnorrKey: SchnorrSecret = {
+    val seed = new Array[Byte](32)
+    Random.nextBytes(seed)
+    schnorr.generateSecret(seed)
   }
 }
 

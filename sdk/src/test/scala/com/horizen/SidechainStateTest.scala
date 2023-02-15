@@ -3,13 +3,15 @@ package com.horizen
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.{CircuitTypes, FieldElementUtils}
-import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import com.horizen.fixtures.{FieldElementFixture, SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.params.MainNetParams
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
@@ -117,18 +119,39 @@ class SidechainStateTest
     OpenStakeTransaction.create(from, getPrivateKey25519List(1).get(0).publicImage(), forgerIndex, fee.orElseGet(() => 5L))
   }
 
-  def getKeyRotationTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), typeOfKey: KeyRotationProofTypes.KeyRotationProofType, keyIndex: Int, newKeySecret: SchnorrSecret, oldSigningKeySecret: SchnorrSecret, oldMasterKeySecret: SchnorrSecret, wrongNewKey: Boolean = false): CertificateKeyRotationTransaction = {
-    val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
-    val messageToSign = newKeySecret.publicImage().getHash
+  def getKeyRotationTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519),
+                                typeOfKey: KeyRotationProofTypes.KeyRotationProofType,
+                                keyIndex: Int,
+                                newKeySecret: SchnorrSecret,
+                                oldSigningKeySecret: SchnorrSecret,
+                                oldMasterKeySecret: SchnorrSecret,
+                                withdrawalEpochNumber: Int,
+                                params: NetworkParams,
+                                wrongNewKey: Boolean = false): CertificateKeyRotationTransaction = {
+    val from: JPair[ZenBox, PrivateKey25519] = new JPair[ZenBox, PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
+    val messageToSign = typeOfKey match {
+      case SigningKeyRotationProofType =>
+        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+          .getMsgToSignForSigningKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), withdrawalEpochNumber, params.sidechainId)
+      case MasterKeyRotationProofType =>
+        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+          .getMsgToSignForMasterKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), withdrawalEpochNumber, params.sidechainId)
+    }
     val oldSigningKeySignature = oldSigningKeySecret.sign(messageToSign)
     val newMasterKeySignature = oldMasterKeySecret.sign(messageToSign)
-    val newKeySignature = wrongNewKey match {
-      case true =>
-        oldSigningKeySignature
-      case false =>
-        newKeySecret.sign(messageToSign)
-    }
-    CertificateKeyRotationTransaction.create(from, getPrivateKey25519List(1).get(0).publicImage(), 0, typeOfKey.id, keyIndex, newKeySecret.publicImage(), oldSigningKeySignature, newMasterKeySignature, newKeySignature)
+
+    val newKeySignature = if (wrongNewKey) oldSigningKeySignature else newKeySecret.sign(messageToSign)
+
+    CertificateKeyRotationTransaction.create(
+      from,
+      getPrivateKey25519List(1).get(0).publicImage(),
+      0,
+      typeOfKey.id,
+      keyIndex,
+      newKeySecret.publicImage(),
+      oldSigningKeySignature,
+      newMasterKeySignature,
+      newKeySignature)
   }
 
   @Test
@@ -1172,35 +1195,49 @@ class SidechainStateTest
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
+    val keysNumber: Int = 3
+
     val signingKeys = new JArrayList[SchnorrSecret]()
     val masterKeys = new JArrayList[SchnorrSecret]()
-    for (i <- 0 until 3) {
+    for (i <- 0 until keysNumber) {
       signingKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(("signingSeed"+i).getBytes))
       masterKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(("masterSeed"+i).getBytes()))
     }
 
+    val withdrawalEpochNumber: Int = 10
     val certifiersKeys = CertifiersKeys(signingKeys.asScala.toVector.map(key => key.publicImage()), masterKeys.asScala.toVector.map(key => key.publicImage()))
-    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
-    Mockito.when(mockedStateStorage.getCertifiersKeys(0)).thenReturn(Some(certifiersKeys))
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(withdrawalEpochNumber, 0)))
+    Mockito.when(mockedStateStorage.getCertifiersKeys(withdrawalEpochNumber - 1)).thenReturn(Some(certifiersKeys))
 
     val newSigningKey = SchnorrKeyGenerator.getInstance().generateSecret("newKey1".getBytes())
 
-    var keyRotationTransaction = getKeyRotationTransaction((boxList.head.asInstanceOf[ZenBox], secretList.head), KeyRotationProofTypes.SigningKeyRotationProofType, 4, newSigningKey, signingKeys.get(0), masterKeys.get(0))
+    val mockedParams = mock[NetworkParams]
+    Mockito.when(mockedParams.sidechainId).thenReturn(FieldElementFixture.generateFieldElement())
+
+    var keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      keysNumber + 1,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(0),
+      withdrawalEpochNumber,
+      mockedParams
+    )
+
 
     // NEGATIVE TESTS
 
-
     // Test key rotation transaction with wrong circuit type
-    val mockedParams = mock[MainNetParams]
     Mockito.when(mockedParams.circuitType).thenReturn(CircuitTypes.NaiveThresholdSignatureCircuit)
 
     var sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     var tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
-    assertFalse("Transaction validation must fail.",
-      tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("CertificateKeyRotationTransaction is not allowed with this kind of circuit!"))
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    assertEquals("CertificateKeyRotationTransaction is not allowed with this kind of circuit!", tryValidate.failed.get.getMessage)
+
 
     // Test key rotation with wrong key index
     Mockito.when(mockedParams.signersPublicKeys).thenReturn(signingKeys.asScala.toVector.map(key => key.publicImage()))
@@ -1211,40 +1248,94 @@ class SidechainStateTest
       mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
-    assertFalse("Transaction validation must fail.",
-      tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("Key index in CertificateKeyRotationTransaction is out of range!"))
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    assertEquals("Key index in CertificateKeyRotationTransaction is out of range!", tryValidate.failed.get.getMessage)
+
 
     // Test with wrong old signing proof
-    keyRotationTransaction = getKeyRotationTransaction((boxList.head.asInstanceOf[ZenBox], secretList.head), KeyRotationProofTypes.SigningKeyRotationProofType, 0, newSigningKey, signingKeys.get(1), masterKeys.get(0))
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(1),
+      masterKeys.get(0),
+      withdrawalEpochNumber,
+      mockedParams
+    )
 
     tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
-    assertFalse("Transaction validation must fail.",
-      tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("Signing key signature in CertificateKeyRotationTransaction is not valid!"))
+    assertFalse("Transaction validation must fail.",tryValidate.isSuccess)
+    assertEquals("Signing key signature in CertificateKeyRotationTransaction is not valid!", tryValidate.failed.get.getMessage)
+
 
     // Test with wrong old master proof
-    keyRotationTransaction = getKeyRotationTransaction((boxList.head.asInstanceOf[ZenBox], secretList.head), KeyRotationProofTypes.SigningKeyRotationProofType, 0, newSigningKey, signingKeys.get(0), masterKeys.get(1))
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.MasterKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(1),
+      withdrawalEpochNumber,
+      mockedParams
+    )
 
     tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
-    assertFalse("Transaction validation must fail.",
-      tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("Master key signature in CertificateKeyRotationTransaction is not valid!"))
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    assertEquals("Master key signature in CertificateKeyRotationTransaction is not valid!", tryValidate.failed.get.getMessage)
+
 
     // Test with wrong old new proof
-    keyRotationTransaction = getKeyRotationTransaction((boxList.head.asInstanceOf[ZenBox], secretList.head), KeyRotationProofTypes.SigningKeyRotationProofType, 0, newSigningKey, signingKeys.get(0), masterKeys.get(0), true)
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(0),
+      withdrawalEpochNumber,
+      mockedParams,
+      wrongNewKey = true
+    )
 
     tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
-    assertFalse("Transaction validation must fail.",
-      tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("New key signature in CertificateKeyRotationTransaction is not valid!"))
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    assertEquals("New key signature in CertificateKeyRotationTransaction is not valid!", tryValidate.failed.get.getMessage)
+
+
+    // Test with wrong epoch number of the message to sign for the key rotation transaction
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(0),
+      withdrawalEpochNumber - 1,
+      mockedParams
+    )
+
+    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    // We expect to see invalid signing key signature, since it is the first one to be validated.
+    assertEquals("Signing key signature in CertificateKeyRotationTransaction is not valid!", tryValidate.failed.get.getMessage)
+
 
     // POSITIVE TESTS
-
     // Test with a valid transaction
-    keyRotationTransaction = getKeyRotationTransaction((boxList.head.asInstanceOf[ZenBox], secretList.head), KeyRotationProofTypes.SigningKeyRotationProofType, 0, newSigningKey, signingKeys.get(0), masterKeys.get(0))
-    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
-    assertTrue("Transaction validation must be succesfull!", tryValidate.isSuccess)
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(0),
+      withdrawalEpochNumber,
+      mockedParams
+    )
 
+    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertTrue("Transaction validation must be successful!", tryValidate.isSuccess)
   }
 }

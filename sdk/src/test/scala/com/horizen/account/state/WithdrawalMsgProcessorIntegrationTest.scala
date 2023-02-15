@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
 import org.junit._
@@ -12,14 +12,15 @@ import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.crypto.hash.Keccak256
+
 import java.math.BigInteger
 import java.util
 
 class WithdrawalMsgProcessorIntegrationTest
     extends JUnitSuite
-    with MockitoSugar
-    with WithdrawalMsgProcessorFixture
-    with ClosableResourceHandler {
+      with MockitoSugar
+      with WithdrawalMsgProcessorFixture
+      with ClosableResourceHandler {
 
   @Before
   def setUp(): Unit = {}
@@ -35,7 +36,8 @@ class WithdrawalMsgProcessorIntegrationTest
       assertArrayEquals(
         "Wrong initial code hash",
         WithdrawalMsgProcessor.contractCodeHash,
-        view.getCodeHash(address))
+        view.getCodeHash(address)
+      )
       assertTrue(view.isSmartContractAccount(address))
     }
   }
@@ -46,7 +48,18 @@ class WithdrawalMsgProcessorIntegrationTest
       WithdrawalMsgProcessor.init(view)
 
       val withdrawalEpoch = 102
-      val blockContext = new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, withdrawalEpoch, 1)
+      val blockContext = new BlockContext(
+        Address.ZERO,
+        0,
+        0,
+        FeeUtils.GAS_LIMIT,
+        0,
+        0,
+        withdrawalEpoch,
+        1,
+        MockedHistoryBlockHashProvider,
+        Hash.ZERO
+      )
 
       // GetListOfWithdrawalRequest without withdrawal requests yet
       val msgForListOfWR = listWithdrawalRequestsMessage(withdrawalEpoch)
@@ -128,23 +141,27 @@ class WithdrawalMsgProcessorIntegrationTest
     assertEquals(
       "Wrong address",
       WithdrawalMsgProcessor.contractAddress,
-      actualEvent.address)
+      actualEvent.address
+    )
     // The first topic is the hash of the signature of the event
     assertEquals("Wrong number of topics", NumOfIndexedEvtParams + 1, actualEvent.topics.length)
     assertArrayEquals("Wrong event signature", AddNewWithdrawalRequestEventSig, actualEvent.topics(0).toBytes)
     assertEquals(
       "Wrong from address in topic",
       expectedEvent.from,
-      decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
+      decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString))
+    )
     assertEquals(
       "Wrong mcAddr in topic",
       expectedEvent.mcDest,
-      decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.mcDest.getTypeAsString)))
+      decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.mcDest.getTypeAsString))
+    )
 
     val listOfRefs = util.Arrays
       .asList(
         TypeReference.makeTypeReference(expectedEvent.value.getTypeAsString),
-        TypeReference.makeTypeReference(expectedEvent.epochNumber.getTypeAsString))
+        TypeReference.makeTypeReference(expectedEvent.epochNumber.getTypeAsString)
+      )
       .asInstanceOf[util.List[TypeReference[Type[_]]]]
     val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
     assertEquals("Wrong amount in data", expectedEvent.value, listOfDecodedData.get(0))

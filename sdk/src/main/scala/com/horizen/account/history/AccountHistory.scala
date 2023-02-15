@@ -10,9 +10,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import sparkz.util.{SparkzEncoding, SparkzLogging}
 
-import java.util.{Optional => JOptional}
 import scala.util.Try
-
 
 class AccountHistory private(storage: AccountHistoryStorage,
                              consensusDataStorage: ConsensusDataStorage,

@@ -1,38 +1,24 @@
 package com.horizen.evm;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.jna.Callback;
-import com.sun.jna.Pointer;
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 
-final class LibEvmLogCallback implements Callback {
-    private LibEvmLogCallback() {
-        // this is a singleton, prevent more instances
-    }
-
-    static void Register() {
-        // register log callback
-        LibEvm.SetLogCallback(LibEvmLogCallback.instance);
-        // propagate log4j log level to glog
-        LibEvm.SetLogLevel(log4jToGlogLevel(logger.getLevel()));
-    }
-
-    // this singleton instance of the callback will be passed to libevm to be used for logging,
-    // the static reference here will also prevent the callback instance from being garbage collected,
-    // because without it the only reference might be from native code (libevm) and the JVM does not know about that
-    private static final LibEvmLogCallback instance = new LibEvmLogCallback();
-
+class GlogCallback extends LibEvmCallback {
     private static final ObjectMapper mapper = new ObjectMapper();
-    private static final Logger logger = LogManager.getLogger(LibEvm.class);
 
-    public void callback(Pointer message) {
+    private final Logger logger;
+
+    GlogCallback(Logger logger) {
+        this.logger = logger;
+    }
+
+    @Override
+    public String invoke(String args) {
         try {
-            var json = message.getString(0);
-            var data = mapper.readValue(json, HashMap.class);
+            var data = mapper.readValue(args, HashMap.class);
             // parse and remove known properties from the map
             var level = glogToLog4jLevel((String) data.remove("lvl"));
             var file = data.remove("file");
@@ -49,9 +35,10 @@ final class LibEvmLogCallback implements Callback {
             // the raw json string itself
             logger.warn("received invalid log message data from libevm", e);
         }
+        return null;
     }
 
-    private static Level glogToLog4jLevel(String glogLevel) {
+    static Level glogToLog4jLevel(String glogLevel) {
         switch (glogLevel) {
             case "trce":
                 return Level.TRACE;
@@ -69,7 +56,7 @@ final class LibEvmLogCallback implements Callback {
         }
     }
 
-    private static String log4jToGlogLevel(Level level) {
+    static String log4jToGlogLevel(Level level) {
         switch (level.toString()) {
             default:
             case "ALL":

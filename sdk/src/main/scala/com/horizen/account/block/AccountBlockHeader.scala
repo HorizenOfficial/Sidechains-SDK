@@ -13,12 +13,14 @@ import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, Vr
 import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
+import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import sparkz.util.ModifierId
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
+
 import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
 
@@ -31,6 +33,7 @@ case class AccountBlockHeader(
                                override val forgingStakeInfo: ForgingStakeInfo,
                                @JsonSerialize(using = classOf[MerklePathJsonSerializer]) override val forgingStakeMerklePath: MerklePath,
                                override val vrfProof: VrfProof,
+                               vrfOutput: VrfOutput, // explicitly set in AccountBlockHeader to by used as a PREVRANDAO/random in the BlockContext
                                override val sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
                                override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                stateRoot: Array[Byte],
@@ -56,7 +59,8 @@ case class AccountBlockHeader(
       idToBytes(parentId),
       Longs.toByteArray(timestamp),
       forgingStakeInfo.hash,
-      vrfProof.bytes, // TO DO: is it ok or define vrfProof.id() ?
+      vrfProof.bytes,
+      vrfOutput.bytes(),
       forgingStakeMerklePath.bytes(),
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
@@ -151,6 +155,8 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     VrfProofSerializer.getSerializer.serialize(obj.vrfProof, w)
 
+    VrfOutputSerializer.getSerializer.serialize(obj.vrfOutput, w)
+
     w.putBytes(obj.sidechainTransactionsMerkleRootHash)
 
     w.putBytes(obj.mainchainMerkleRootHash)
@@ -200,6 +206,8 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
 
     val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
 
+    val vrfOutput: VrfOutput = VrfOutputSerializer.getSerializer.parse(r)
+
     val sidechainTransactionsMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val mainchainMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
@@ -236,6 +244,7 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
       forgingStakeInfo,
       forgingStakeMerkle,
       vrfProof,
+      vrfOutput,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
       stateRoot,
