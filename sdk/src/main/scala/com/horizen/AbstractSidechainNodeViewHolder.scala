@@ -6,7 +6,7 @@ import com.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, b
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{BytesUtils, SDKModifiersCache}
+import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
