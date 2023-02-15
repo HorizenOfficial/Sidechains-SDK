@@ -1250,7 +1250,8 @@ class MempoolMapTest
     var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
     assertEquals("Wrong mempool size in slots", 0, mempoolMap.getMempoolSizeInSlots)
 
-    //Test 1: fill an account with exec txs of 1 slot each. Verify that adding an additional exec tx will evict the oldest already present
+    //Test 1: fill an account with exec txs of 1 slot each. Verify that adding an additional exec tx will evict the oldest
+    // already present
     val listOfTxs = (0 until MaxMempoolSlots).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt))
     listOfTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
     assertEquals("Wrong number of txs in mempool", listOfTxs.size, mempoolMap.size)
@@ -1268,6 +1269,9 @@ class MempoolMapTest
     assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
     assertTrue("Rejected tx wasn't added to the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id))
     assertFalse("Oldest tx wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ oldestTx.id))
+    //Check that after having evicted the oldest tx, all the remaining ones have become non executable
+    assertTrue(mempoolMap.mempoolTransactions(true).isEmpty)
+    assertEquals(listOfTxs.size, mempoolMap.mempoolTransactions(false).size)
 
     //Test 2: same as test 1 but with exceeding tx from a different account and with a size corresponding to 4 slots =>
     // 4 txs will be evicted
@@ -1297,7 +1301,7 @@ class MempoolMapTest
       MempoolMap.MaxTxSize
     )
     assertTrue("Adding transaction failed",
-        mempoolMap.add(oldestTx).isSuccess
+      mempoolMap.add(oldestTx).isSuccess
     )
     assertTrue("Adding transaction failed",
       mempoolMap.add(
@@ -1328,11 +1332,17 @@ class MempoolMapTest
     assertTrue("Rejected tx wasn't added to the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id))
     assertFalse("Oldest tx wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ oldestTx.id))
 
+  }
 
-    // Test 4: fill the mempool with exec and non exec txs of 1 slot each. Verify that trying to replace an existing tx with
+  @Test
+  def testReplaceTxMempoolSizeCheck(): Unit = {
+
+    // Test 1: fill the mempool with exec and non exec txs of 1 slot each. Verify that trying to replace an existing tx with
     // a bigger one will evict oldest txs.
     // Reset mempool
-    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
+    val MaxMempoolSlots = 10
+    val mempoolSettings: AccountMempoolSettings = AccountMempoolSettings(maxMemPoolSlots = MaxMempoolSlots)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
     val txToReplace1 = createEIP1559Transaction(value = BigInteger.ONE,
       nonce = BigInteger.ZERO,
       keyOpt = account1KeyOpt,
@@ -1341,7 +1351,7 @@ class MempoolMapTest
     )
     assertTrue("Adding exec transaction failed", mempoolMap.add(txToReplace1).isSuccess)
 
-    oldestTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(1), keyOpt = account1KeyOpt)
+    val oldestTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(1), keyOpt = account1KeyOpt)
     assertTrue("Adding exec transaction failed", mempoolMap.add(oldestTx).isSuccess)
     (2 until 4).foreach(nonce => assertTrue("Adding exec transaction failed",
       mempoolMap.add(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt)).isSuccess))
@@ -1360,7 +1370,25 @@ class MempoolMapTest
     assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
 
 
-    //First create a tx with the same nonce of an existing one but with greater gas fee, tip (for allowing replacing) and
+    //First create a tx with the same nonce of an existing one but with same gas fee and tip (so it can't replace the old one)
+    // but greater size. Verify that it is rejected and no txs are evicted
+
+    var exceedingTx = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TWO,
+      nonce = txToReplace1.getNonce,
+      keyOpt = account1KeyOpt,
+      gasFee = txToReplace1.getMaxFeePerGas,
+      priorityGasFee = txToReplace1.getMaxPriorityFeePerGas,
+    ),
+      MempoolMap.TxSlotSize + 1 //2 slots
+    )
+
+    assertTrue("Transaction should have been rejected", mempoolMap.add(exceedingTx).isFailure)
+
+    assertEquals("Wrong number of txs in the mempool", MaxMempoolSlots, mempoolMap.size)
+    assertTrue("Old tx is no more in the mempool", mempoolMap.contains(ModifierId @@ txToReplace1.id()))
+    assertFalse("Exceeding tx is in the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id()))
+
+    //Create a tx with the same nonce of an existing one but with greater gas fee, tip (for allowing replacing) and
     // same size. Verify that it replaces the old one
 
     exceedingTx = createEIP1559Transaction(value = BigInteger.TWO,
@@ -1397,8 +1425,45 @@ class MempoolMapTest
     }
     assertEquals("Wrong number of txs in mempool", 9, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 10, mempoolMap.getMempoolSizeInSlots)
-    assertTrue("Rejected tx wasn't added to the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id))
+    assertTrue("Exceeding tx wasn't added to the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id))
     assertFalse("Oldest tx wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ oldestTx.id))
+
+
+    //Corner case: try to replace an existing tx with another one with bigger size and mempool full. The existing tx
+    // is the oldest so it is the one that will be evicted.
+
+    // Reset mempool
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
+
+    //Fill the mempool with exec txs from the same account
+    val listOfTxs = (0 until MaxMempoolSlots).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt))
+    listOfTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
+    assertEquals("Wrong number of txs in mempool", listOfTxs.size, mempoolMap.size)
+    assertEquals("Wrong account size in slots", MaxMempoolSlots, mempoolMap.getAccountSizeInSlots(account1KeyOpt.get.publicImage()))
+    assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
+
+    val txToReplace = listOfTxs.head
+    val replacingTx = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.ONE,
+      nonce = txToReplace.getNonce,
+      gasFee = txToReplace.getMaxFeePerGas.add(BigInteger.TEN),
+      priorityGasFee = txToReplace.getMaxPriorityFeePerGas.add(BigInteger.TEN),
+      keyOpt = account1KeyOpt),
+      MempoolMap.TxSlotSize + 1 //2 slots => 2 txs to be removed
+    )
+
+    mempoolMap = mempoolMap.add(replacingTx) match {
+      case Success(m) => m
+      case Failure(e) => fail(s"Adding exec transaction to a full mempool failed with exception $e", e)
+    }
+    assertEquals("Wrong number of txs in mempool", listOfTxs.size - 1, mempoolMap.size)
+    assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
+    assertTrue("Replacing tx wasn't added to the mempool", mempoolMap.contains(ModifierId @@ replacingTx.id))
+    assertFalse("Tx to be replaced wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ txToReplace.id))
+    assertFalse("Second oldest tx wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ listOfTxs(1).id))
+
+    //Check that after having evicted the oldest 2 txs, all the remaining ones have become non executable
+    assertEquals("Replacing tx should be executable", 1, mempoolMap.mempoolTransactions(true).size)
+    assertEquals("Remaining txs should be non executable", listOfTxs.size - 2, mempoolMap.mempoolTransactions(false).size)
 
   }
 

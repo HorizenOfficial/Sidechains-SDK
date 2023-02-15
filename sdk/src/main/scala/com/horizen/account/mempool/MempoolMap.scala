@@ -40,23 +40,55 @@ class MempoolMap(
   // Next expected nonce for each account. It is the max nonce of the executable txs plus 1, if any, otherwise it has the same value of the statedb nonce.
   private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap.empty[SidechainTypes#SCP, BigInteger]
 
+  private def findTxWithSameNonce(account: SidechainTypes#SCP, nonce: BigInteger): Option[SidechainTypes#SCAT] = {
+    val txOpt: Option[SidechainTypes#SCAT] = executableTxs.get(account).flatMap(map => map.get(nonce).map(txCache(_)))
+    txOpt.orElse(nonExecutableTxs.get(account).flatMap(map => map.get(nonce).map(txCache(_))))
+  }
+
+
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
 
-    val account = ethTransaction.getFrom
     if (!contains(ethTransaction.id)) {
+      val account = ethTransaction.getFrom
 
-      if (ethTransaction.size() > MaxTxSize) {
-        log.trace(s"Transaction $ethTransaction size exceeds maximum allowed size: current size ${ethTransaction.size()}, " +
+      //Reject transactions that are too big
+      val txSize = ethTransaction.size()
+      if (txSize > MaxTxSize) {
+        log.trace(s"Transaction $ethTransaction size exceeds maximum allowed size: current size $txSize, " +
           s"maximum size: $MaxTxSize")
-        throw TxOversizedException(account.asInstanceOf[AddressProposition].address(), ethTransaction.size())
+        throw TxOversizedException(account.asInstanceOf[AddressProposition].address(), txSize)
       }
 
+      //Reject transactions with a nonce gap too big
       val stateNonce = accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
       if (ethTransaction.getNonce.subtract(stateNonce).compareTo(MaxNonceGap) >= 0) {
         log.trace(s"Transaction $ethTransaction nonce gap respect state nonce exceeds maximum allowed size: tx nonce ${ethTransaction.getNonce}, " +
           s"state nonce: $stateNonce")
         throw NonceGapTooWideException(ethTransaction.id, ethTransaction.getNonce, stateNonce)
+      }
+
+      // Reject transactions in case their account doesn't have enough space for it. If the new tx is replacing an
+      // existing one, the space used by the old one must be taken into account.
+
+      val txToReplace = findTxWithSameNonce(account, ethTransaction.getNonce)
+      val numOfSlotsOfTxToReplace = if (txToReplace.isDefined){
+        if (!canPayHigherFee(ethTransaction, txToReplace.get)) {
+          log.trace(s"Transaction $ethTransaction cannot replace ${txToReplace.get} because it is underpriced")
+          throw TransactionReplaceUnderpricedException(ethTransaction.id)
+        }
+        txSizeInSlot(txToReplace.get)
+      }
+      else
+         0
+
+      val newTxSizeInSlot = bytesToSlot(txSize)
+      val additionalSlots = math.max(newTxSizeInSlot - numOfSlotsOfTxToReplace, 0)
+
+      val accountSlotsNumber = getAccountSizeInSlots(account)
+      if (accountSlotsNumber + additionalSlots > MaxSlotsPerAccount) {
+        log.trace(s"Adding transaction $ethTransaction exceeds maximum allowed size per account ($MaxSlotsPerAccount slots)")
+        throw AccountMemPoolOutOfBoundException(ethTransaction.id)
       }
 
       val expectedNonce = nonces.getOrElseUpdate(
@@ -84,13 +116,13 @@ class MempoolMap(
               }
             })
           nonces.put(account, nextNonce)
-        case AddReplaceNonExecTransaction =>
+        case AddOrReplaceNonExecTransaction =>
           val nonExecTxsPerAccount =
             nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
           val existingTxWithSameNonceIdOpt = nonExecTxsPerAccount.get(ethTransaction.getNonce)
           if (existingTxWithSameNonceIdOpt.isDefined) {
             val existingTxWithSameNonceId = existingTxWithSameNonceIdOpt.get
-            replaceIfCanPayHigherFee(existingTxWithSameNonceId, ethTransaction, nonExecTxsPerAccount)
+            replaceTransaction(existingTxWithSameNonceId, ethTransaction, nonExecTxsPerAccount)
           } else {
             addNewTransaction(nonExecTxsPerAccount, ethTransaction)
           }
@@ -98,25 +130,21 @@ class MempoolMap(
           // This case means there is already an executable tx with the same nonce in the mem pool
           val executableTxsPerAccount = executableTxs(account)
           val existingTxWithSameNonceId = executableTxsPerAccount(ethTransaction.getNonce)
-          replaceIfCanPayHigherFee(existingTxWithSameNonceId, ethTransaction, executableTxsPerAccount)
+          replaceTransaction(existingTxWithSameNonceId, ethTransaction, executableTxsPerAccount)
       }
+
+      //After having added the new tx, check the resulting size of the mempool. If it exceeds the maximum, free some space.
+      if (getMempoolSizeInSlots > MaxMemPoolSlots) {
+        log.trace(s"Adding transaction $ethTransaction exceeded maximum allowed memory pool size ($MaxMemPoolSlots slots). " +
+          s"Evicting oldest transactions")
+        freeMempoolSlots()
+      }
+
     }
     this
   }
 
   private[mempool] def addNewTransaction(txByNonceMap: TxIdByNonceMap, ethTransaction: SidechainTypes#SCAT) = {
-    val account = ethTransaction.getFrom
-    val accountSize = getAccountSizeInSlots(account)
-    val txSize = txSizeInSlot(ethTransaction)
-    if (accountSize + txSize > MaxSlotsPerAccount) {
-      log.trace(s"Adding transaction $ethTransaction exceeds maximum allowed size per account ($MaxSlotsPerAccount slots)")
-      throw AccountMemPoolOutOfBoundException(ethTransaction.id)
-    }
-    if (getMempoolSizeInSlots + txSize > MaxMemPoolSlots) {
-      log.trace(s"Adding transaction $ethTransaction exceeds maximum allowed memory pool size ($MaxMemPoolSlots slots). " +
-        s"Evicting oldest transactions")
-      freeMempoolSlots(txSize)
-    }
     txCache.add(ethTransaction)
     txByNonceMap.put(ethTransaction.getNonce, ethTransaction.id)
   }
@@ -139,33 +167,10 @@ class MempoolMap(
     while (getMempoolSizeInSlots + additionalSlotsToFree > MaxMemPoolSlots)
   }
 
-  private[mempool] def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap) = {
-    val existingTxWithSameNonce = txCache(existingTxId)
-    val diffSize: Int = txSizeInSlot(newTx) - txSizeInSlot(existingTxWithSameNonce)
-    if (diffSize > 0){
-      val accountSize = getAccountSizeInSlots(newTx.getFrom)
-      if (accountSize + diffSize > MaxSlotsPerAccount) {
-        log.trace(s"Transaction $newTx cannot replace $existingTxId because it exceeds maximum allowed size per account")
-        throw AccountMemPoolOutOfBoundException(newTx.id)
-      }
-      if (getMempoolSizeInSlots + diffSize > MaxMemPoolSlots) {
-        log.trace(s"Transaction $newTx replacing $existingTxId exceeds maximum allowed memory pool size ($MaxMemPoolSlots slots)." +
-          s"Evicting oldest transactions")
-        freeMempoolSlots(diffSize)
-      }
-    }
-
-    if (canPayHigherFee(newTx, existingTxWithSameNonce)) {
-      log.trace(s"Replacing transaction $existingTxWithSameNonce with $newTx")
-      txCache.remove(existingTxId)
-      txCache.add(newTx)
-      mapOfTxsByNonce.put(newTx.getNonce, newTx.id)
-    }
-    else {
-      log.trace(s"Transaction $newTx cannot replace $existingTxWithSameNonce because it is underpriced")
-      throw TransactionReplaceUnderpricedException(newTx.id)
-    }
-
+  private[mempool] def replaceTransaction(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap) = {
+    txCache.remove(existingTxId)
+    txCache.add(newTx)
+    mapOfTxsByNonce.put(newTx.getNonce, newTx.id)
   }
 
   def remove(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
@@ -622,7 +627,7 @@ trait TransactionsByPriceAndNonceIter extends Iterator[SidechainTypes#SCAT] {
 
 object MempoolMap {
   private val AddNewExecTransaction: Int = 0
-  private val AddReplaceNonExecTransaction: Int = -1
+  private val AddOrReplaceNonExecTransaction: Int = -1
   private val ReplaceExecTransaction: Int = 1
 
 
