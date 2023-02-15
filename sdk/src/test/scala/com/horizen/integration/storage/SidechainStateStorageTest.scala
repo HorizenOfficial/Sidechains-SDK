@@ -28,7 +28,7 @@ class SidechainStateStorageTest
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers, false)
 
   val withdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)

@@ -37,7 +37,7 @@ class SidechainStateIntegrationTest
     with MockitoSugar
     with SidechainTypesTestsExtension
 {
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap(), false)
   val applicationState = new DefaultApplicationState()
 
   var stateStorage: SidechainStateStorage = _

@@ -24,7 +24,7 @@ class SidechainBackup @Inject()
    @Named("Params") val params : NetworkParams
   ) extends ScorexLogging
   {
-    protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
+    protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers, true)
     protected val backupStorage = new BackupStorage(backUpStorage, sidechainBoxesCompanion)
 
 
