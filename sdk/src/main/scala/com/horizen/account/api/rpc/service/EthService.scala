@@ -517,7 +517,7 @@ class EthService(
       var collected = 0
       var moreBlocksNeeded = false
       // Return lowest tx gas prices of each requested block, sorted in ascending order.
-      // Breaks, if enough data was collected within blockCount blocks, queries up to 2*blockCount blocks, if not.
+      // Queries up to 2*blockCount blocks, but stops in range > blockCount if enough samples were found.
       (0 until blocks).withFilter(_ => !moreBlocksNeeded || collected < 2).map { i =>
           val block = nodeView.history
             .blockIdByHeight(requestedBlockInfo.height - i)
