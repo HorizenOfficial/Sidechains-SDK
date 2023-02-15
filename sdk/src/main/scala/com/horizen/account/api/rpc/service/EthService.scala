@@ -46,7 +46,6 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
-import scala.util.control.Breaks.break
 import scala.util.{Failure, Success, Try}
 
 class EthService(
@@ -499,7 +498,7 @@ class EthService(
     val percentile = 60
     val maxPrice = INITIAL_BASE_FEE.multiply(BigInteger.valueOf(500))
     val ignorePrice = BigInteger.TWO
-    suggestTipCap(nodeView, nrOfBlocks, percentile, maxPrice, ignorePrice).add(baseFee)
+    suggestTipCap(nodeView, nrOfBlocks, percentile, maxPrice, ignorePrice).add(baseFee).min(maxPrice)
   }
 
   /**
@@ -514,22 +513,22 @@ class EthService(
 
     // define limit for included gas prices each block
     val limit = 3
-    var collected = 0
     val prices: Seq[BigInteger] = {
+      var collected = 0
+      var moreBlocksNeeded = false
       // Return lowest tx gas prices of each requested block, sorted in ascending order.
       // Breaks, if enough data was collected within blockCount blocks, queries up to 2*blockCount blocks, if not.
-      (0 until blocks).map { i =>
-        if (i >= blockCount && collected > 1)
-          break
-        val block = nodeView.history
-          .blockIdByHeight(requestedBlockInfo.height - i)
-          .map(ModifierId(_))
-          .flatMap(nodeView.history.getStorageBlockById)
-          .get
-        val blockPrices = getBlockPrices(block, ignorePrice, limit)
-        collected += blockPrices.length
-        blockPrices
-      }
+      (0 until blocks).withFilter(_ => !moreBlocksNeeded || collected < 2).map { i =>
+          val block = nodeView.history
+            .blockIdByHeight(requestedBlockInfo.height - i)
+            .map(ModifierId(_))
+            .flatMap(nodeView.history.getStorageBlockById)
+            .get
+          val blockPrices = getBlockPrices(block, ignorePrice, limit)
+          collected += blockPrices.length
+          if (i >= blockCount) moreBlocksNeeded = true
+          blockPrices
+        }
     }.flatten
 
     prices
