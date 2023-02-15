@@ -32,7 +32,7 @@ class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with Acco
   }
 
   val vrfProofOpt: Option[VrfProof] = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed))
-  val vrfOutputOpt: Option[VrfOutput] = Option(VrfGeneratedDataProvider.getVrfOutput(vrfGenerationPrefix, vrfGenerationDataSeed))
+  val vrfOutputOpt: Option[VrfOutput] = Option(VrfGeneratedDataProvider.getVrfOutput(vrfGenerationDataSeed))
   val header: AccountBlockHeader = createUnsignedBlockHeader(123L, vrfKeyPair, vrfProofOpt, vrfOutputOpt)._1
   val params: NetworkParams = MainNetParams()
 

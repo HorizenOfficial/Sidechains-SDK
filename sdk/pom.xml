@@ -295,7 +295,6 @@
           <include>regulartransaction_hex</include>
           <include>RegularTransactionSerializerTestVrfPublicKey111</include>
           <include>RegularTransactionSerializerTestVrfPublicKey221</include>
-          <include>SidechainBlockInfoTestVrfOutput234</include>
           <include>SidechainBlockTestVrfProof908</include>
           <include>SidechainBlockTestVrfSecretKey908</include>
           <include>SidechainBlockHeaderTestVrfProof178</include>

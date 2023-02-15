@@ -9,7 +9,6 @@ import com.horizen.secret.VrfSecretKey;
 import com.horizen.secret.VrfSecretKeySerializer;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
@@ -43,14 +42,8 @@ public class VrfGeneratedDataProvider {
         return readFromFile(prefix, seed, VrfPublicKey.class);
     }
 
-
-    public static void updateVrfOutput(String prefix, Integer seed) {
-        VrfOutput obj = VrfGenerator.generateVrfOutput(seed);
-        writeToFile(prefix, seed, obj.getClass(), obj.bytes());
-    }
-
-    public static VrfOutput getVrfOutput(String prefix, Integer seed) {
-        return readFromFile(prefix, seed, VrfOutput.class);
+    public static VrfOutput getVrfOutput(Integer seed) {
+        return VrfGenerator.generateVrfOutput(seed);
     }
 
     public static void updateVrfProof(String prefix, Integer seed) {
