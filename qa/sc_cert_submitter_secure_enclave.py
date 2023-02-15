@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import multiprocessing
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -46,7 +45,7 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list([0, 1, 2],), remote_keys_manager_enabled=True
+            True, True, list([0, 1, 2], ), remote_keys_manager_enabled=True
             # certificate submitter is enabled, signing is enabled with 3 schnorr PKs
         )
 
@@ -65,12 +64,10 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         sc_node1 = self.sc_nodes[0]
 
         api_server = SecureEnclaveApiServer(
-            self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_secrets[4:],
-            self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_public_keys[4:],
+            self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_signers_secrets[4:],
+            self.sc_nodes_bootstrap_info.certificate_proof_info.public_signing_keys[4:],
         )
-
-        api_server_thread = multiprocessing.Process(target=lambda: api_server.start())
-        api_server_thread.start()
+        api_server.start()
 
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
         # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
@@ -101,7 +98,6 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         assert_equal(6, mc_node.getrawtransaction(mc_node.getrawmempool()[0], 1)['cert']['quality'],
                      "Certificate has wrong quality")
         logging.info("Node with Secure Enclave was able to sign, collect signatures and emit certificate.")
-        api_server_thread.terminate()
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ package com.horizen.consensus
 
 import java.security.MessageDigest
 import com.google.common.primitives.{Ints, Longs}
-import com.horizen.block.SidechainBlockHeader
+import com.horizen.block.{SidechainBlockHeader, SidechainBlockHeaderBase}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
@@ -12,26 +12,31 @@ import com.horizen.vrf.VrfOutput
 import com.horizen.utils.ByteArrayWrapper
 import sparkz.core.block.Block
 import sparkz.core.block.Block.Timestamp
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.compat.java8.OptionConverters._
 
 trait ConsensusDataProvider {
     this: NetworkParamsUtils
-    with ScorexLogging {
+    with SparkzLogging {
     val storage: SidechainBlockInfoProvider
     val consensusDataStorage: ConsensusDataStorage
     val params: NetworkParams
   } =>
 
   def getStakeConsensusEpochInfo(blockTimestamp: Block.Timestamp, parentBlockId: ModifierId): Option[StakeConsensusEpochInfo] = {
+    consensusDataStorage.getStakeConsensusEpochInfo(
+      blockIdToEpochId(getLastBlockIdOfPrePreviousEpochs(blockTimestamp, parentBlockId)))
+  }
+
+  def getLastBlockIdOfPrePreviousEpochs(blockTimestamp: Block.Timestamp, parentBlockId: ModifierId): ModifierId = {
     if (isGenesisBlock(blockTimestamp, parentBlockId)) {
-      consensusDataStorage.getStakeConsensusEpochInfo(blockIdToEpochId(params.sidechainGenesisBlockId))
+      params.sidechainGenesisBlockId
     }
     else {
       val lastBlockInPreviousEpoch = getLastBlockInPreviousConsensusEpoch(blockTimestamp, parentBlockId)
       val blockInPrePreviousEpoch = storage.blockInfoById(lastBlockInPreviousEpoch).lastBlockInPreviousConsensusEpoch
-      consensusDataStorage.getStakeConsensusEpochInfo(blockIdToEpochId(blockInPrePreviousEpoch))
+      blockInPrePreviousEpoch
     }
   }
 
@@ -150,7 +155,7 @@ trait ConsensusDataProvider {
     }
   }
 
-  def getVrfOutput(blockHeader: SidechainBlockHeader, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
+  def getVrfOutput(blockHeader: SidechainBlockHeaderBase, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
     //try to get cached value, if no in cache then calculate
     val key = ConsensusDataProvider.blockIdAndNonceToKey(blockHeader.id, nonceConsensusEpochInfo)
     val cachedValue = ConsensusDataProvider.vrfOutputCache.get(key)
@@ -165,7 +170,7 @@ trait ConsensusDataProvider {
     }
   }
 
-  private def calculateVrfOutput(blockHeader: SidechainBlockHeader, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
+  private def calculateVrfOutput(blockHeader: SidechainBlockHeaderBase, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
     val slotNumber: ConsensusSlotNumber = TimeToEpochUtils.timeStampToSlotNumber(params, blockHeader.timestamp)
     val vrfMessage: VrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
 

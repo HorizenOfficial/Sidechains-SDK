@@ -1,40 +1,57 @@
 import logging
 import os
 import sys
-
 import json
-from decimal import Decimal
-
-from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, \
-    SCCreationInfo, DEFAULT_API_KEY
-from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
 import socket
 from contextlib import closing
+from decimal import Decimal
+from eth_utils import add_0x_prefix
+from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
+    AccountKey, VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, SCCreationInfo, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, \
+    NO_KEY_ROTATION_CIRCUIT
 
-from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
-from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal
+from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
+from test_framework.mc_test.mc_test import generate_random_field_element_hex
+from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal, \
+    assert_false, get_field_element_with_padding
 
 WAIT_CONST = 1
 
 # log levels of the log4j trace system used by java applications
-LEVEL_OFF = "off"
-LEVEL_FATAL = "fatal"
-LEVEL_ERROR = "error"
-LEVEL_WARN = "warn"
-LEVEL_INFO = "info"
-LEVEL_DEBUG = "debug"
-LEVEL_TRACE = "trace"
-LEVEL_ALL = "all"
+APP_LEVEL_OFF = "off"
+APP_LEVEL_FATAL = "fatal"
+APP_LEVEL_ERROR = "error"
+APP_LEVEL_WARN = "warn"
+APP_LEVEL_INFO = "info"
+APP_LEVEL_DEBUG = "debug"
+APP_LEVEL_TRACE = "trace"
+APP_LEVEL_ALL = "all"
+
+# log levels of the python logging trace system
+TEST_LEVEL_NOTSET = "notset"
+TEST_LEVEL_FATAL = "fatal"
+TEST_LEVEL_ERROR = "error"
+TEST_LEVEL_WARN = "warn"
+TEST_LEVEL_INFO = "info"
+TEST_LEVEL_DEBUG = "debug"
+
 
 # timeout in secs for rest api
 DEFAULT_REST_API_TIMEOUT = 5
 
 # max P2P message size for a Modifier
-DEFAULT_MAX_PACKET_SIZE = 5242980
+DEFAULT_MAX_PACKET_SIZE = 5*1024*1024+100
+DEFAULT_ACCOUNT_MODEL_MAX_PACKET_SIZE = 7*1024*1024+100
 
+SLOTS_IN_EPOCH = 720
+SIMPLE_APP_SLOT_TIME = 120  # seconds
+EVM_APP_SLOT_TIME = 12  # seconds
+
+DEFAULT_SIMPLE_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * SIMPLE_APP_SLOT_TIME * 5  # 5 epochs
+DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 5  # 5 epochs
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -42,7 +59,7 @@ class TimeoutException(Exception):
 
 
 class LogInfo(object):
-    def __init__(self, logFileLevel=LEVEL_ALL, logConsoleLevel=LEVEL_ERROR):
+    def __init__(self, logFileLevel=APP_LEVEL_ALL, logConsoleLevel=APP_LEVEL_ERROR):
         self.logFileLevel = logFileLevel
         self.logConsoleLevel = logConsoleLevel
 
@@ -123,7 +140,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.5.0.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.6.0-SNAPSHOT.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -145,7 +162,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.5.0.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.6.0-SNAPSHOT.jar",
                                 storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -158,12 +175,14 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
 
 
 """
-Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
+Generate a genesis info by calling ScBootstrappingTool with command "genesisinfo"
 Parameters:
  - genesis_info: genesis info provided by a mainchain node
  - genesis_secret: private key 25519 secret to sign SC block
  - vrf_secret: vrk secret key to check consensus rules SC block
  - block_timestamp_rewind: rewind genesis block timestamp by some value
+ - virtual_withdrawal_epoch_length - actual withdrawal epoch length from SC perspective in case of non-ceasing sidechain
+    Note: must be undefined or 0 in case of ceasing sidechain; >0 in case of non-ceasing sidechain.
  
 Output: a JSON object to be included in the settings file of the sidechain node nth.
 {
@@ -178,9 +197,10 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 """
 
 
-def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
-    jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
-                      "regtestBlockTimestampRewind": block_timestamp_rewind}
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind, model, virtual_withdrawal_epoch_length):
+    jsonParameters = {"model": model,
+                      "secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
+                      "regtestBlockTimestampRewind": block_timestamp_rewind, "virtualWithdrawalEpochLength": virtual_withdrawal_epoch_length}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
 
@@ -231,6 +251,18 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
     return vrf_keys
 
 
+def generate_account_proposition(seed, number_of_acc_props):
+    acc_props = []
+    secrets = []
+    for i in range(number_of_acc_props):
+        jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
+        secrets.append(launch_bootstrap_tool("generateAccountKey", jsonParameters))
+
+    for i in range(len(secrets)):
+        secret = secrets[i]
+        acc_props.append(AccountKey(secret["accountSecret"], secret["accountProposition"]))
+    return acc_props
+
 """
 Generate Schnorr keys by calling ScBootstrappingTools with command "generateCertificateSignerKey"
 Parameters:
@@ -267,31 +299,46 @@ Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
 
 
-def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths, is_csw_enabled):
+def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths,
+                                    is_csw_enabled, circuit_type):
     signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
 
     signer_secrets = []
-    signer_public_keys = []
+    public_signing_keys = []
+    master_secrets = []
+    public_master_keys = []
     for i in range(len(signer_keys)):
-        keys = signer_keys[i]
-        signer_secrets.append(keys.secret)
-        signer_public_keys.append(keys.publicKey)
+        signer_key = signer_keys[i]
+        signer_secrets.append(signer_key.secret)
+        public_signing_keys.append(signer_key.publicKey)
 
     json_parameters = {
-        "signersPublicKeys": signer_public_keys,
+        "signersPublicKeys": public_signing_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
         "isCSWEnabled": is_csw_enabled
     }
-    output = launch_bootstrap_tool("generateCertProofInfo", json_parameters)
+
+    if circuit_type == KEY_ROTATION_CIRCUIT:
+        master_keys = generate_cert_signer_secrets("master" + seed, number_of_signer_keys)
+        for i in range((len(master_keys))):
+            master_key = master_keys[i]
+            master_secrets.append(master_key.secret)
+            public_master_keys.append(master_key.publicKey)
+
+        json_parameters["mastersPublicKeys"] = public_master_keys
+
+    output = launch_bootstrap_tool("generateCertProofInfo",
+                                   json_parameters) if circuit_type == NO_KEY_ROTATION_CIRCUIT else \
+        launch_bootstrap_tool("generateCertWithKeyRotationProofInfo", json_parameters)
 
     threshold = output["threshold"]
     verification_key = output["verificationKey"]
     gen_sys_constant = output["genSysConstant"]
 
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
-                                                  signer_public_keys)
+                                                  public_signing_keys, master_secrets, public_master_keys)
     return certificate_proof_info
 
 
@@ -373,12 +420,30 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
-    all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
-    signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
+    if bootstrap_info.genesis_evm_account is not None:
+        genesis_secrets.append(bootstrap_info.genesis_evm_account.secret)
+
+
+    all_signers_private_keys = bootstrap_info.certificate_proof_info.schnorr_signers_secrets
+    signer_private_keys = [all_signers_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
     api_key_hash = ""
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
-    genesis_secrets += sc_node_config.initial_private_keys
+
+    if bootstrap_info.genesis_account is not None:
+        # we choose to tell the secrtes only to bootstrapped node 0
+        genesis_secrets += sc_node_config.initial_private_keys
+
+    if (sc_node_config.forger_options.restrict_forgers and
+        bootstrap_info.genesis_vrf_account is not None and
+        bootstrap_info.genesis_account is not None):
+        sc_node_config.forger_options.allowed_forgers.append(
+            '{ blockSignProposition = "' + bootstrap_info.genesis_account.publicKey + '" NEW_LINE vrfPublicKey = "' + bootstrap_info.genesis_vrf_account.publicKey + '" }')
+
+    if bootstrap_info.genesis_evm_account is not None:
+        max_modifiers_spec_message_size = DEFAULT_ACCOUNT_MODEL_MAX_PACKET_SIZE
+    else:
+        max_modifiers_spec_message_size = DEFAULT_MAX_PACKET_SIZE
 
     config = tmpConfig % {
         'NODE_NUMBER': n,
@@ -391,7 +456,13 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': (str(rest_api_timeout) + "s"),
         'BIND_PORT': str(bindPort),
-        'MAX_CONNECTIONS': sc_node_config.max_connections,
+        'MAX_INCOMING_CONNECTIONS': sc_node_config.max_incoming_connections,
+        'MAX_OUTGOING_CONNECTIONS': sc_node_config.max_outgoing_connections,
+        'GET_PEERS_INTERVAL': sc_node_config.get_peers_interval,
+        'DECLARED_ADDRESS': f'declaredAddress = "{sc_node_config.declared_address}"' if hasattr(sc_node_config, 'declared_address') else "",
+        'KNOWN_PEERS': json.dumps(sc_node_config.known_peers),
+        'STORAGE_BACKUP_INTERVAL': json.dumps(sc_node_config.storage_backup_interval),
+        'STORAGE_BACKUP_DELAY': json.dumps(sc_node_config.storage_backup_delay),
         'OFFLINE_GENERATION': "false",
         'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'MAX_TX_FEE': sc_node_config.max_fee,
@@ -402,6 +473,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'POW_DATA': bootstrap_info.pow_data,
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
+        'NON_CEASING': ("true" if bootstrap_info.is_non_ceasing else "false"),
         'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
         'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.initial_cumulative_comm_tree_hash,
         'WEBSOCKET_ADDRESS': websocket_config.address,
@@ -411,9 +483,11 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
-        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_signing_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
-        "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_master_keys),
+        # This should be NON empty only in case of Key Rotation Circuit
+        "MAX_PKS": len(bootstrap_info.certificate_proof_info.public_signing_keys),
         "CERT_PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
         "CERT_VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
         "AUTOMATIC_FEE_COMPUTATION": ("true" if sc_node_config.automatic_fee_computation else "false"),
@@ -422,8 +496,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
-        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE,
-        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false"),
+        "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),
+        "CIRCUIT_TYPE": bootstrap_info.circuit_type,
+        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false")
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -454,25 +529,28 @@ def initialize_default_sc_datadir(dirname, n, api_key):
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
+
     cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, cert_threshold_sig_max_keys=7, isCSWEnabled=False)
     csw_keys_paths = csw_proof_keys_paths(ps_keys_dir,
                                           LARGE_WITHDRAWAL_EPOCH_LENGTH)  # withdrawal epoch length taken from the config file.
     resourcesDir = get_resources_dir()
     with open(resourcesDir + '/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
-    api_key_hash = ""
-    if api_key != "":
-        api_key_hash = calculateApiKeyHash(api_key)
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
-        'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': "5s",
         'BIND_PORT': str(bindPort),
-        'MAX_CONNECTIONS': 100,
+        'MAX_INCOMING_CONNECTIONS': 100,
+        'MAX_OUTGOING_CONNECTIONS': 100,
+        'KNOWN_PEERS': [],
+        'STORAGE_BACKUP_INTERVAL': "15m",
+        'STORAGE_BACKUP_DELAY': "5m",
+        'GET_PEERS_INTERVAL': "2m",
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
         "CERTIFICATE_SIGNING": "false",
@@ -482,7 +560,8 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path,
         "RESTRICT_FORGERS": "false",
         "ALLOWED_FORGERS_LIST": [],
-        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE
+        "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": DEFAULT_MAX_PACKET_SIZE,
+        "REMOTE_KEY_MANAGER_ENABLED": "false"
     }
 
     configsData.append({
@@ -518,6 +597,22 @@ def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
 
+
+def get_lib_separator():
+    lib_separator = ":"
+    if sys.platform.startswith('win'):
+        lib_separator = ";"
+    return lib_separator
+
+def get_examples_dir():
+    return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
+
+SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* com.horizen.examples.EvmApp"
+
+
+
+
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
                   auth_api_key=None):
     """
@@ -525,13 +620,8 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     """
     # Will we have  extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node" + str(i))
-    lib_separator = ":"
-
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
-    examples_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
     if binary is None:
-        binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0.jar" + lib_separator + f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = SIMPLE_APP_BINARY
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -549,13 +639,13 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     The --add-opens VM option remove this warning.
     '''
     bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
+
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
     else:
         sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
-
-    url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
+    url = "http://%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url, auth_api_key=auth_api_key)
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir  # store the name of the datadir
@@ -630,7 +720,8 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
     while True:
         if time.time() - start >= wait_for:
             raise (TimeoutException("Trying to connect to node{0}".format(node_num)))
-        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("remoteAddress") == "/" + ip_port):
+        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if
+               i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
 
@@ -745,8 +836,14 @@ Parameters:
 
 def check_wallet_coins_balance(sc_node, expected_wallet_balance):
     response = sc_node.wallet_coinsBalance()
-    balance = response["result"]
-    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
+
+    if "result" in response:
+        balance = response["result"]
+        assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
+
+        return
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
 
 """
@@ -763,29 +860,41 @@ Parameters:
 
 def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, expected_balance):
     response = sc_node.wallet_allBoxes()
-    boxes = response["result"]["boxes"]
-    boxes_balance = 0
-    boxes_count = 0
-    pub_key = account.publicKey
-    for box in boxes:
-        if box["proposition"]["publicKey"] == pub_key and (box_class_name is None or box["typeName"] == box_class_name):
-            box_value = box["value"]
-            assert_true(box_value > 0,
-                        "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
-            boxes_balance += box_value
-            boxes_count += 1
 
-    assert_equal(expected_boxes_count, boxes_count,
-                 "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
-                 .format(pub_key, expected_boxes_count, boxes_count))
-    assert_equal(expected_balance * 100000000, boxes_balance,
-                 "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
-                 .format(pub_key, expected_balance * 100000000, boxes_balance))
+    if "result" in response:
+        if "boxes" in response["result"]:
+            boxes = response["result"]["boxes"]
+            boxes_balance = 0
+            boxes_count = 0
+            pub_key = account.publicKey
+            for box in boxes:
+                if box["proposition"]["publicKey"] == pub_key and (
+                        box_class_name is None or box["typeName"] == box_class_name):
+                    box_value = box["value"]
+                    assert_true(box_value > 0,
+                                "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
+                    boxes_balance += box_value
+                    boxes_count += 1
+
+            assert_equal(expected_boxes_count, boxes_count,
+                         "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
+                         .format(pub_key, expected_boxes_count, boxes_count))
+            assert_equal(expected_balance * 100000000, boxes_balance,
+                         "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
+                         .format(pub_key, expected_balance * 100000000, boxes_balance))
+            return
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
 
 # In STF we need to create SC genesis block with a timestamp in the past to be able to forge next block
 # without receiving "block in future" error. By default we rewind half of the consensus epoch.
 DefaultBlockTimestampRewind = 720 * 120 / 2
+
+# UTXO / Account model string
+UtxoModel = "utxo"
+AccountModel = "account"
+DefaultModel = UtxoModel
 
 """
 Bootstrap a network of sidechain nodes.
@@ -839,7 +948,8 @@ network: {
 
 
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
-                              block_timestamp_rewind=DefaultBlockTimestampRewind):
+                              block_timestamp_rewind=DefaultBlockTimestampRewind, model=DefaultModel):
+
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     logging.info(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
@@ -847,7 +957,8 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys, sc_creation_info.csw_enabled)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys, sc_creation_info.csw_enabled,
+                                            sc_creation_info.circuit_type)
     if sc_creation_info.csw_enabled:
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
     else:
@@ -856,7 +967,8 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
                                                block_timestamp_rewind,
                                                cert_keys_paths,
-                                               csw_keys_paths)
+                                               csw_keys_paths,
+                                               model)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,
@@ -868,8 +980,11 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
+                                                            sc_nodes_bootstrap_info.is_non_ceasing,
                                                             cert_keys_paths,
-                                                            csw_keys_paths)
+                                                            csw_keys_paths,
+                                                            None,
+                                                            sc_creation_info.circuit_type)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -881,13 +996,23 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False,
+                          circuit_type=NO_KEY_ROTATION_CIRCUIT):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
-    pk = "cert_marlin_snark_pk"
-    vk = "cert_marlin_snark_vk"
-    if isCSWEnabled is False:
-        pk = "cert_marlin_snark_pk_csw_disabled"
-        vk = "cert_marlin_snark_vk_csw_disabled"
+    if (circuit_type == NO_KEY_ROTATION_CIRCUIT):
+        if isCSWEnabled:
+            pk = "cert_marlin_snark_pk"
+            vk = "cert_marlin_snark_vk"
+        else:
+            pk = "cert_marlin_snark_pk_csw_disabled"
+            vk = "cert_marlin_snark_vk_csw_disabled"
+    elif circuit_type == KEY_ROTATION_CIRCUIT:
+        assert_false(isCSWEnabled)
+        pk = "cert_marlin_snark_pk_with_key_rotation"
+        vk = "cert_marlin_snark_vk_with_key_rotation"
+    else:
+        assert "type is not supported " + str(circuit_type)
+
     return ProofKeysPaths(
         os.path.join(dirname, pk + str(cert_threshold_sig_max_keys)).replace("\\", "/"),
         os.path.join(dirname, vk + str(cert_threshold_sig_max_keys)).replace("\\", "/"))
@@ -911,22 +1036,33 @@ Parameters:
 """
 
 
-def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths,
+                     model=DefaultModel):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
+    withdrawal_epoch_length = 0 if sc_creation_info.non_ceasing else sc_creation_info.withdrawal_epoch_length
+    virtual_withdrawal_epoch_length = sc_creation_info.withdrawal_epoch_length if sc_creation_info.non_ceasing else 0
     certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys,
                                                              sc_creation_info.cert_sig_threshold, cert_keys_paths,
-                                                             sc_creation_info.csw_enabled)
+                                                             sc_creation_info.csw_enabled,
+                                                             sc_creation_info.circuit_type)
     if csw_keys_paths is None:
         csw_verification_key = ""
     else:
         csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
 
+    genesis_evm_account = None
+    evm_account_public_key = None
+    if (model == AccountModel):
+        evm_accounts = generate_account_proposition("seed", 1)
+        genesis_evm_account = evm_accounts[0]
+        evm_account_public_key = genesis_evm_account.proposition
+
     genesis_info = initialize_new_sidechain_in_mainchain(
         sc_creation_info.mc_node,
-        sc_creation_info.withdrawal_epoch_length,
+        withdrawal_epoch_length,
         genesis_account.publicKey,
         sc_creation_info.forward_amount,
         vrf_key.publicKey,
@@ -935,16 +1071,20 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         csw_verification_key,
         sc_creation_info.btr_data_length,
         sc_creation_info.sc_creation_version,
-        sc_creation_info.csw_enabled)
+        sc_creation_info.csw_enabled,
+        sc_creation_info.circuit_type,
+        evm_account_public_key)
+
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
-                                         block_timestamp_rewind)
+                                         block_timestamp_rewind, model, virtual_withdrawal_epoch_length)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
+                           genesis_data["initialCumulativeCommTreeHash"], sc_creation_info.non_ceasing, cert_keys_paths, csw_keys_paths,
+                           genesis_evm_account, sc_creation_info.circuit_type)
 
 
 def calculateApiKeyHash(auth_api_key):
@@ -997,9 +1137,28 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
     forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
     # "while" will break if whole epoch no generated block, due changed error code
+    # ErrorBlockNotCreated = 0105
+    count_slot = 720
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
+        if ("ForgerStakes list can't be empty" in forge_result["error"]["description"]):
+            raise AssertionError("Empty forger stakes list")
+        if ("top quality certificate" in forge_result["error"]["description"]):
+            raise AssertionError("Inconsistent top quality certificate")
+        if ("the sidechain has ceased" in forge_result["error"]["description"]):
+            raise AssertionError("Sidechain has ceased")
+        if ("semantically invalid" in forge_result["error"]["description"]):
+            raise AssertionError("One transaction in the block is semantically invalid")
+        if ("CertificateKeyRotationTransaction" in forge_result["error"]["description"]):
+            raise AssertionError("CertificateKeyRotationTransaction error: {}".format(forge_result["error"]["description"]))
+
+        count_slot -= 1
+        if (count_slot <= 0):
+            errMsg = "Could not generate any block in this epoch: {}".format(forge_result["error"]["description"])
+            logging.warning("Api Error msg not handled: " + errMsg)
+            raise AssertionError(errMsg)
+
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
@@ -1047,7 +1206,8 @@ def get_scinfo_data(scid, mc_node):
 
 def create_alien_sidechain(mcTest, mc_node, scVersion, epochLength, customHexTag, feCfgList=[]):
     sc_tag = customHexTag
-    vk = mcTest.generate_params(sc_tag)
+    keyrot = True if scVersion == 2 else False
+    vk = mcTest.generate_params(sc_tag, keyrot = keyrot)
     constant = generate_random_field_element_hex()
     # we use this field to store sc_tag, used by mcTool when creating certificates
     customData = sc_tag
@@ -1078,7 +1238,7 @@ def create_alien_sidechain(mcTest, mc_node, scVersion, epochLength, customHexTag
     return ret
 
 
-def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
+def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray, prev_cert_data_hash = None):
     epoch_number_1, epoch_cum_tree_hash_1, sc_version, constant, sc_tag = get_scinfo_data(scid, mc_node)
 
     logging.info("sc_tag[{}]".format(sc_tag))
@@ -1104,13 +1264,17 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
         feList.append(get_field_element_with_padding(pattern, sc_version))
     scid_swapped = str(swap_bytes(scid))
 
+    prev_cert_hash = prev_cert_data_hash
+    if sc_version == 2 and prev_cert_data_hash == None:
+        prev_cert_hash = 0
+
     scProof = mcTest.create_test_proof(
         sc_tag, scid_swapped, epoch_number_1, quality=10,
         btr_fee=MBTR_SC_FEE, ft_min_amount=FT_SC_FEE,
         end_cum_comm_tree_root=epoch_cum_tree_hash_1, constant=constant,
-        pks=[], amounts=[], custom_fields=feList)
+        pks=[], amounts=[], custom_fields=feList, prev_cert_hash=prev_cert_hash)
 
-    logging.info("cum =", epoch_cum_tree_hash_1)
+    logging.info("cum =", str(epoch_cum_tree_hash_1))
     params = {
         'scid': scid,
         'quality': 10,
@@ -1132,5 +1296,16 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
     assert_equal(True, cert in mc_node.getrawmempool())
     return cert
 
+
 def get_resources_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'resources'))
+
+
+
+
+def get_withdrawal_epoch(sc_node):
+    j = {
+        "blockId": sc_node.block_best()["result"]["block"]["id"]
+    }
+    request = json.dumps(j)
+    return sc_node.block_findBlockInfoById(request)["result"]["blockInfo"]["withdrawalEpochInfo"]["epoch"]

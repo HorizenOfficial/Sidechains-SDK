@@ -1,20 +1,36 @@
 package com.horizen.validation
-import com.horizen.SidechainHistory
-import com.horizen.block.{OmmersContainer, SidechainBlock, SidechainBlockHeader}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.AbstractHistory
+import com.horizen.account.block.AccountBlock
+import com.horizen.block.{OmmersContainer, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
 import com.horizen.consensus._
 import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
-import com.horizen.utils.TimeToEpochUtils
+import com.horizen.storage.AbstractHistoryStorage
+import com.horizen.transaction.Transaction
+import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.core.utils.TimeProvider
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.util.Try
 
-class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidator with ScorexLogging {
-  override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
+class ConsensusValidator[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PMOD <: SidechainBlockBase[TX, H],
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
+  HT <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HT]
+]
+(
+  timeProvider: TimeProvider
+)
+  extends HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HT]
+    with SparkzLogging {
+
+  override def validate(block: PMOD, history: HT): Try[Unit] = Try {
     if (history.isGenesisBlock(block.id)) {
       validateGenesisBlock(block, history)
     }
@@ -23,7 +39,7 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
     }
   }
 
-  private def validateGenesisBlock(block: SidechainBlock, history: SidechainHistory): Unit = {
+  private def validateGenesisBlock(block: PMOD, history: HT): Unit = {
     if (block.timestamp != history.params.sidechainGenesisBlockTimestamp) {
       throw new IllegalArgumentException(s"Genesis block timestamp ${block.timestamp} is differ than expected timestamp from configuration ${history.params.sidechainGenesisBlockTimestamp}")
     }
@@ -35,7 +51,7 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
   }
 
 
-  private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
+  private def validateNonGenesisBlock(verifiedBlock: PMOD, history: HT): Unit = {
     val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(verifiedBlock.parentId)
     verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history.params)
 
@@ -44,6 +60,15 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
     val vrfOutput: VrfOutput = history.getVrfOutput(verifiedBlock.header, currentConsensusEpochInfo.nonceConsensusEpochInfo)
       .getOrElse(throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed"))
 
+    // Check vrfOutput consistency
+    verifiedBlock match {
+      case b: AccountBlock =>
+        // check calculated vrfOutput against the one in the Header
+        if (vrfOutput != b.header.vrfOutput)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader ${b.id}: vrfOutput value is invalid")
+      case _ => // do nothing for other block types because it is not a part of the Header
+    }
+    
     val consensusEpoch = TimeToEpochUtils.timeStampToEpochNumber(history.params, verifiedBlock.timestamp)
     val stakePercentageForkApplied = ForkManager.getSidechainConsensusEpochFork(consensusEpoch).stakePercentageForkApplied
     verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput, stakePercentageForkApplied)
@@ -67,7 +92,7 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock > 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 
-  private def verifyTimestampInFuture(verifiedBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
+  private def verifyTimestampInFuture(verifiedBlockTimestamp: Block.Timestamp, history: HT): Unit = {
     // According to Ouroboros Praos paper (page 5: "Time and Slots"): Block timestamp is valid,
     // if it belongs to the same or earlier Slot than current time Slot.
     // Check if timestamp is not too far in the future
@@ -93,12 +118,12 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
       It should be taken in consideration during Ommers VRF calculation,
       so proper Nonce info should be used for such an Ommer with all sub-ommers recursively.
    */
-  private[horizen] def verifyOmmers(ommersContainer: OmmersContainer,
+  private[horizen] def verifyOmmers(ommersContainer: OmmersContainer[H],
                                     currentFullConsensusEpochInfo: FullConsensusEpochInfo,
                                     previousFullConsensusEpochInfoOpt: Option[FullConsensusEpochInfo],
                                     bestKnownParentId: ModifierId,
                                     bestKnownParentInfo: SidechainBlockInfo,
-                                    history: SidechainHistory,
+                                    history: HT,
                                     previousEpochOmmersInfoAccumulator: Seq[(VrfOutput, ConsensusSlotNumber)]
                                    ): Unit = {
     val ommers = ommersContainer.ommers
@@ -150,13 +175,13 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
   }
 
   //Verify that forging stake info in block is correct (including stake), exist in history and had enough stake to be forger
-  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
+  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
     log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${header.forgingStakeMerklePath.bytes().deep.mkString}")
 
     val forgingStakeIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgingStakeMerklePath.apply(header.forgingStakeInfo.hash))
     if (!forgingStakeIsCorrect) {
       log.debug(s"Actual stakeInfo: rootHash: ${stakeConsensusEpochInfo.rootHash}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
-      throw new IllegalStateException(s"Forging stake merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash.deep.mkString(",")}")
+      throw new IllegalStateException(s"Forging stake merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${BytesUtils.toHexString(stakeConsensusEpochInfo.rootHash)}")
     }
 
     val value = header.forgingStakeInfo.stakeAmount

@@ -1,12 +1,14 @@
 package com.horizen.api.http
 
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
@@ -14,7 +16,7 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, SchnorrKeyGenerator}
 import com.horizen.state.ApplicationState
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
@@ -24,7 +26,8 @@ import org.scalatestplus.mockito.MockitoSugar
 import com.horizen.utils.WithdrawalEpochInfo
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.collection.JavaConverters._
 import scala.io.Source
@@ -158,14 +161,6 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
       }
       else Optional.empty())
 
-    Mockito.when(history.searchTransactionInsideBlockchain(ArgumentMatchers.any[String])).thenAnswer(asw => {
-      if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlockchain_return_value()) {
-        val id = asw.getArgument(0).asInstanceOf[String]
-        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(ModifierId @@ tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
-      } else
-        Optional.empty()
-    })
-
     Mockito.when(history.searchTransactionInsideSidechainBlock(ArgumentMatchers.any[String], ArgumentMatchers.any[String])).thenAnswer(asw => {
       if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlock_return_value()) {
         val id = asw.getArgument(0).asInstanceOf[String]
@@ -294,6 +289,55 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
         getNodeMemoryPoolMock(sidechainApiMockConfiguration),
         mock[ApplicationState],
         mock[ApplicationWallet])
+
+  val schnorrSecret = SchnorrKeyGenerator.getInstance().generateSecret("seed".getBytes)
+  val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes)
+  val schnorrSecret3 = SchnorrKeyGenerator.getInstance().generateSecret("seed3".getBytes)
+  val schnorrSecret4 = SchnorrKeyGenerator.getInstance().generateSecret("seed4".getBytes)
+
+  val schnorrProof = schnorrSecret.sign("Message".getBytes)
+  val keyRotationProof = KeyRotationProof(KeyRotationProofTypes(0), 0, schnorrSecret.publicImage(), schnorrProof, schnorrProof)
+  val signerKeys = Seq(schnorrSecret.publicImage(), schnorrSecret2.publicImage())
+  val masterKeys = Seq(schnorrSecret3.publicImage(), schnorrSecret4.publicImage())
+  val certifiersKeys = CertifiersKeys(signerKeys.toVector, masterKeys.toVector)
+
+  type NodeView = CurrentView[Any, Any, Any, Any]
+
+  def getSidechainNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainHistory = {
+    val history: SidechainHistory = mock[SidechainHistory]
+    history
+  }
+
+  def getSidechainNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainState = {
+    val nodeState: SidechainState = mock[SidechainState]
+
+    Mockito.when(nodeState.keyRotationProof(ArgumentMatchers.any[Int], ArgumentMatchers.any[Int], ArgumentMatchers.any[Int])).thenReturn(Some(keyRotationProof))
+
+    Mockito.when(nodeState.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0,0))
+
+    Mockito.when(nodeState.certifiersKeys(ArgumentMatchers.any[Int])).thenReturn(Some(certifiersKeys))
+
+    nodeState
+  }
+
+  def getSidechainNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainWallet = {
+    val wallet: SidechainWallet = mock[SidechainWallet]
+    wallet
+  }
+
+  def getSidechainNodeMemoryPoolMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainMemoryPool = {
+    val memoryPool: SidechainMemoryPool = mock[SidechainMemoryPool]
+    memoryPool
+  }
+
+  def getNodeView(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeView = {
+    new NodeView(
+      getSidechainNodeHistoryMock(sidechainApiMockConfiguration),
+      getSidechainNodeStateMock(sidechainApiMockConfiguration),
+      getSidechainNodeWalletMock(sidechainApiMockConfiguration),
+      getSidechainNodeMemoryPoolMock(sidechainApiMockConfiguration),
+    )
+  }
 
   val listOfNodeStorageVersion : Map[String, String] =  Map(("history", "jdfhsjghf"), ("wallet", ""), ("state", "dsdfg4353nfsgsg"))
   val sidechainId = "1f56e0a44b48148ed70a69ad3529d646a8ca6c537f941f80ea9cf445460c7809"

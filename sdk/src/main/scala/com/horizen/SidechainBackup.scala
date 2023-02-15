@@ -5,11 +5,12 @@ import com.google.inject.name.Named
 import com.horizen.backup.BoxIterator
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.params.NetworkParams
 import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.apache.commons.io.FileUtils
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.io._
 import java.lang.{Byte => JByte}
@@ -19,8 +20,9 @@ import scala.util.{Failure, Success}
 class SidechainBackup @Inject()
   (@Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
    @Named("BackupStorage") val backUpStorage: Storage,
-   @Named("BackUpper") val backUpper : BoxBackupInterface
-  ) extends ScorexLogging
+   @Named("BackUpper") val backUpper : BoxBackupInterface,
+   @Named("Params") val params : NetworkParams
+  ) extends SparkzLogging
   {
     protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
     protected val backupStorage = new BackupStorage(backUpStorage, sidechainBoxesCompanion)
@@ -43,7 +45,7 @@ class SidechainBackup @Inject()
         }
       }
       val storage = new VersionedLevelDbStorageAdapter(new File(storagePath))
-      val sidechainStateStorage = new SidechainStateStorage(storage, sidechainBoxesCompanion)
+      val sidechainStateStorage = new SidechainStateStorage(storage, sidechainBoxesCompanion, params)
       sidechainStateStorage.rollback(new ByteArrayWrapper(BytesUtils.fromHexString(sidechainBlockIdToRollback))) match {
         case Success(stateStorage) =>
           log.info(s"Rollback of the SidechainStateStorage completed successfully!")

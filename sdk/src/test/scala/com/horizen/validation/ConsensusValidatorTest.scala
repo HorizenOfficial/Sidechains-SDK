@@ -7,7 +7,7 @@ import com.horizen.fixtures.VrfGenerator
 import com.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.TestNetParams
-import org.junit.{Test}
+import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 
 import java.time.Instant

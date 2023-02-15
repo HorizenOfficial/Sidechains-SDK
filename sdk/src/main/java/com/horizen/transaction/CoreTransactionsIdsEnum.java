@@ -4,7 +4,8 @@ public enum CoreTransactionsIdsEnum {
     SidechainCoreTransactionId((byte)1),
     MC2SCAggregatedTransactionId((byte)2),
     FeePaymentsTransactionId((byte)3),
-    OpenStakeTransactionId((byte)4);
+    OpenStakeTransactionId((byte)4),
+    KeyRotationTransactionId((byte)5);
 
     private final byte id;
 

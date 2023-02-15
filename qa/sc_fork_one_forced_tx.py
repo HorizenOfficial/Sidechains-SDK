@@ -58,7 +58,7 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
             forger_options=forger_configuration,
-            initial_private_keys=list(map(lambda forger: forger.secret, self.allowed_forger_propositions)),
+            initial_signing_private_keys=list(map(lambda forger: forger.secret, self.allowed_forger_propositions)),
             max_fee=10000000000000
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
@@ -117,15 +117,18 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
         forging_info = http_block_forging_info(sc_node1)
         assert_equal(2, forging_info["bestEpochNumber"])
 
-        # Generate block with unverified tx with low amount, it should fail to validate agains stake
+        # Generate block with unverified tx with low amount, it should fail to validate against stake
         low_amount_tx_bytes = sendCoinsToAddressDryRun(sc_node1, new_public_key, 0, 0)["transactionBytes"]
+        error_occurred = False
         try:
             generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True,
                                 forced_tx=[low_amount_tx_bytes])
-            assert_true(False, "Forced transaction should fail to verify agains stake")
         except Exception as e:
-            assert_true("There was an internal server error." in e.error)
+            logging.info("We had an exception as expected: {}".format(str(e)))
+            assert_true("semantically invalid" in str(e))
+            error_occurred = True
 
+        assert_true(error_occurred, "Forced transaction should fail to verify against stake")
         # Generate block with forced unverified openStakeTransaction, it should succeed and transaction be included
         forger0_box = self.find_box(allBoxes, self.allowed_forger_propositions[0].publicKey)
         open_stake_tx_bytes = createOpenStakeTransaction(sc_node1, forger0_box["id"], new_public_key, forger_index=0, fee=forger0_box["value"])["transactionBytes"]

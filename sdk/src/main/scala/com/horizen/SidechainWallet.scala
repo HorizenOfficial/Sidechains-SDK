@@ -7,39 +7,19 @@ import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingS
 import com.horizen.node.NodeWallet
 import com.horizen.params.NetworkParams
 import com.horizen.proposition._
-import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
+import com.horizen.secret.Secret
 import com.horizen.storage._
-import com.horizen.transaction.Transaction
 import com.horizen.utils._
 import com.horizen.wallet.ApplicationWallet
+import sparkz.util.ModifierId
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}
-import scorex.util.{ModifierId, ScorexLogging}
 
-import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
-import java.{lang, util}
+import java.lang
+import java.util.{ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-
-
-trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
-  extends sparkz.core.transaction.wallet.Vault[TX, PMOD, W] {
-  self: W =>
-
-  def addSecret(secret: S): Try[W]
-
-  def removeSecret(publicImage: P): Try[W]
-
-  def secret(publicImage: P): Option[S]
-
-  def secrets(): Set[S]
-
-  def boxes(): Seq[WalletBox]
-
-  def publicKeys(): Set[P]
-}
-
 
 class SidechainWallet private[horizen] (seed: Array[Byte],
                                         walletBoxStorage: SidechainWalletBoxStorage,
@@ -50,14 +30,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                                         params: NetworkParams,
                                         val version: VersionTag,
                                         val applicationWallet: ApplicationWallet)
-  extends Wallet[SidechainTypes#SCS,
-                 SidechainTypes#SCP,
+  extends AbstractWallet[
                  SidechainTypes#SCBT,
                  SidechainBlock,
-                 SidechainWallet]
+                 SidechainWallet](seed, secretStorage)
   with SidechainTypes
   with NodeWallet
-  with ScorexLogging {
+{
   override type NVCT = SidechainWallet
 
   require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")
@@ -65,8 +44,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion
   override def addSecret(secret: SidechainTypes#SCS): Try[SidechainWallet] = Try {
-    require(secret != null, "Secret must be NOT NULL.")
-    secretStorage.add(secret).get
+    super.addSecret(secret).get
     applicationWallet.onAddSecret(secret)
     this
   }
@@ -74,33 +52,14 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   // 1) check for existence
   // 2) remove from SecretStore (note: provide a unique version to SecretStore)
   override def removeSecret(publicImage: SidechainTypes#SCP): Try[SidechainWallet] = Try {
-    require(publicImage != null, "PublicImage must be NOT NULL.")
-    secretStorage.remove(publicImage).get
+    super.removeSecret(publicImage).get
     applicationWallet.onRemoveSecret(publicImage)
     this
   }
 
-  override def secret(publicImage: SidechainTypes#SCP): Option[SidechainTypes#SCS] = {
-    secretStorage.get(publicImage)
-  }
-
-  override def secrets(): Set[SidechainTypes#SCS] = {
-    secretStorage.getAll.toSet
-  }
-
-  override def boxes(): Seq[WalletBox] = {
+  def boxes(): Seq[WalletBox] = {
     walletBoxStorage.getAll
   }
-
-  override def publicKeys(): Set[SidechainTypes#SCP] = {
-    secretStorage.getAll.map(_.publicImage()).toSet
-  }
-
-  // just do nothing, we don't need to care about offchain objects inside the wallet
-  override def scanOffchain(tx: SidechainTypes#SCBT): SidechainWallet = this
-
-  // just do nothing, we don't need to care about offchain objects inside the wallet
-  override def scanOffchain(txs: Seq[SidechainTypes#SCBT]): SidechainWallet = this
 
   @Deprecated
   override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
@@ -238,70 +197,28 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       .asJava
   }
 
-  override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]]): JList[Box[Proposition]] = {
+  def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]]): JList[Box[Proposition]] = {
     walletBoxStorage.getByType(boxType)
       .map(_.box)
       .asJava
   }
 
-  override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: JList[Array[Byte]]): JList[Box[Proposition]] = {
+  def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: JList[Array[Byte]]): JList[Box[Proposition]] = {
     walletBoxStorage.getByType(boxType)
       .filter((wb: WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
       .map(_.box)
       .asJava
   }
 
-  override def boxesBalance(boxType: Class[_ <: Box[_ <: Proposition]]): java.lang.Long = {
+  def boxesBalance(boxType: Class[_ <: Box[_ <: Proposition]]): java.lang.Long = {
     walletBoxStorage.getBoxesBalance(boxType)
-  }
-
-  override def secretByPublicKey25519Proposition(publicKey: PublicKey25519Proposition): JOptional[PrivateKey25519] = {
-    secretStorage.get(publicKey) match {
-      case Some(secret) => JOptional.of(secret.asInstanceOf[PrivateKey25519])
-      case None => JOptional.empty()
-    }
-  }
-
-  override def secretBySchnorrProposition(publicKey: SchnorrProposition): JOptional[SchnorrSecret] = {
-    secretStorage.get(publicKey) match {
-      case Some(secret) => JOptional.of(secret.asInstanceOf[SchnorrSecret])
-      case None => JOptional.empty()
-    }
-  }
-
-  override def secretByVrfPublicKey(publicKey: VrfPublicKey): JOptional[VrfSecretKey] = {
-    secretStorage.get(publicKey) match {
-      case Some(secret) => JOptional.of(secret.asInstanceOf[VrfSecretKey])
-      case None => JOptional.empty()
-    }
-  }
-
-  override def secretsByProposition[S <: SCS](proposition: ProofOfKnowledgeProposition[S]): JList[S] = {
-      proposition.canBeProvedBy(secretStorage.getAll.asJava).secretsNeeded()
-  }
-
-  override def secretByPublicKeyBytes[S <: SCS](proposition: Array[Byte]): JOptional[S] = {
-    secretStorage.getAll.find(secret => util.Arrays.equals(secret.publicImage().pubKeyBytes(), proposition)) match {
-      case Some(s) => JOptional.of(s.asInstanceOf[S])
-      case None => JOptional.empty()
-    }
-  }
-
-  override def allSecrets(): JList[Secret] = {
-    secretStorage.getAll.asJava
-  }
-
-  override def secretsOfType(secretType: Class[_ <: Secret]): JList[Secret] = {
-    secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
   }
 
   override def allCoinsBoxesBalance(): lang.Long = {
     walletBoxStorage.getAll.withFilter(_.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(_.box.value()).sum
   }
 
-  override def walletSeed(): Array[Byte] = seed
-
-  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = {
+  override def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = {
     val merkleTreeLeaves = epochInfo.forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
     // Calculate merkle path for all delegated forgerBoxes

@@ -2,7 +2,6 @@ package com.horizen
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
-
 import com.google.inject.name.Named
 import com.google.inject.Provides
 import com.horizen.api.http.ApplicationApiGroup
@@ -27,6 +26,9 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
     bind(classOf[TransactionSubmitHelper])
       .to(classOf[TransactionSubmitHelperImpl])
+
+    bind(classOf[AbstractSidechainApp])
+      .to(classOf[SidechainApp])
 
     bind(classOf[SecretSubmitHelper])
       .to(classOf[SecretSubmitHelperImpl])
@@ -58,7 +60,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
-          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator
+          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
+          @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -83,7 +86,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           customApiGroups,
           rejectedApiPaths,
           applicationStopper,
-          forkConfigurator
+          forkConfigurator,
+          secondsInSlot
         )
       }
     }

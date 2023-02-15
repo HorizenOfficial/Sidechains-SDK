@@ -1,9 +1,9 @@
 package com.horizen.utils
 
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.librustsidechains.FieldElement
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 case class UtxoMerkleTreeLeafInfo(leaf: Array[Byte], position: Long) extends BytesSerializable {
   require(leaf.length == FieldElementUtils.fieldElementLength(), "Storage must be NOT NULL.")

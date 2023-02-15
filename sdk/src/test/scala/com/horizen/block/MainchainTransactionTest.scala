@@ -1,10 +1,11 @@
 package com.horizen.block
 
+import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil
+import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{Test, Ignore}
+import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import com.horizen.librustsidechains.{ Utils => ScCryptoUtils }
 
 import scala.io.Source
 
@@ -164,6 +165,38 @@ class MainchainTransactionTest extends JUnitSuite {
     assertEquals("Sidechain creation address is different.", "acb24b2f08e8e56fe1784f1600879c697c7cd90846e076724b090fd72206b1a5",
       BytesUtils.toHexString(creation.address))
     assertEquals("Sidechain creation custom data is different.", "24838d861f3d1b54e7e8eae852341454bbb4507473050b27cea9bbd706ca9f2b80",
+      BytesUtils.toHexString(creation.customCreationData))
+  }
+
+  @Test
+  def tx_vminus4_account_sc_creation(): Unit = {
+    val hex: String = Source.fromResource("mctx_v-4_account_sc_creation").getLines().next()
+    val bytes: Array[Byte] = BytesUtils.fromHexString(hex)
+
+    val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
+    val sidechainIdHex: String = "0e9b4115620ac8bcd19d1de444f75eee513ae61713ac68e268c34004eae449a9"
+
+
+    val expectedTxHash: String = "eacaf5aa0b2ad29bf18d5f60ef2db0c68fb422acb8cdd93a433b04ba6c15e4a9"
+    val expectedTxSize: Int = 8232
+    val expectedAmount: Long = 5000000000L // 50 Zen
+    val expectedWithdrawalEpochLength: Int = 900
+
+    assertEquals("Tx Hash is different.", expectedTxHash, tx.hashBigEndianHex)
+    assertEquals("Tx Size is different.", expectedTxSize, tx.size)
+
+    val crosschainOutputs: Seq[MainchainTxCrosschainOutput] = tx.getCrosschainOutputs
+    assertEquals(s"Tx expected to have different number of crosschain outputs related to sidechainId '$sidechainIdHex'.", 1, crosschainOutputs.size)
+
+
+    assertTrue("Crosschain output type is different.", crosschainOutputs.head.isInstanceOf[MainchainTxSidechainCreationCrosschainOutput])
+    val creation: MainchainTxSidechainCreationCrosschainOutput = crosschainOutputs.head.asInstanceOf[MainchainTxSidechainCreationCrosschainOutput]
+    assertEquals("Sidechain creation sc id is different.", sidechainIdHex, creation.sidechainIdBigEndianHex())
+    assertEquals("Sidechain creation withdrawal epoch length is different.", expectedWithdrawalEpochLength, creation.withdrawalEpochLength)
+    assertEquals("Sidechain creation amount is different.", expectedAmount, creation.amount)
+    assertEquals("Sidechain creation address is different.", "0x2667a78e0e368545680e9ee8ff39f56685df3d27",
+      MainchainTxCrosschainOutputAddressUtil.getAccountAddress(creation.address).toString)
+    assertEquals("Sidechain creation custom data is different.", "d3024ae1dfaf8cd75888478f29f8ba833ea635bc50a26085a56501c361890c2e00a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac",
       BytesUtils.toHexString(creation.customCreationData))
   }
 

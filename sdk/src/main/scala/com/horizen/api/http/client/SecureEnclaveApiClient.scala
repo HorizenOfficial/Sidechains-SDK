@@ -8,17 +8,17 @@ import akka.http.scaladsl.{Http, HttpExt}
 import com.horizen.RemoteKeysManagerSettings
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.client.SecureEnclaveApiClient.{CreateSignatureRequest, CreateSignatureResponse, ListPublicKeysRequest, ListPublicKeysResponse}
-import com.horizen.certificatesubmitter.CertificateSubmitter.CertificateSignatureInfo
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.CertificateSignatureInfo
 import com.horizen.proof.SchnorrSignatureSerializer
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
 import com.horizen.utils.BytesUtils
 import io.circe.generic.auto._
 import io.circe.syntax._
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit system: ActorSystem, ec: ExecutionContext) extends ScorexLogging {
+class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit system: ActorSystem, ec: ExecutionContext) extends SparkzLogging {
 
   private[client] val http: HttpExt = Http(system)
   private val keySerializer: SchnorrPropositionSerializer = SchnorrPropositionSerializer.getSerializer

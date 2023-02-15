@@ -3,22 +3,23 @@ package com.horizen.block
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.account.block.{AccountBlock, AccountBlockSerializer}
 import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, PrivateKey25519Serializer, VrfSecretKey}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
-import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
+import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.{ModifierId, idToBytes}
+import sparkz.util.{ModifierId, idToBytes}
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -97,21 +98,21 @@ class SidechainBlockTest
       assertEquals("Block id json value must be the same.",
         BytesUtils.toHexString(idToBytes(sb.id)), id)
     }catch {
-      case _: Throwable => fail("Block id doesn't not found in json.")
+      case _: Exception => fail("Block id doesn't not found in json.")
     }
     try {
       val parentId = node.path("parentId").asText()
       assertEquals("Block parentId json value must be the same.",
         BytesUtils.toHexString(idToBytes(sb.parentId)), parentId)
     }catch {
-      case _: Throwable => fail("Block parentId doesn't not found in json.")
+      case _: Exception => fail("Block parentId doesn't not found in json.")
     }
     try {
       val timestamp = node.path("timestamp").asLong()
       assertEquals("Block timestamp json value must be the same.",
         sb.timestamp, timestamp)
     }catch {
-      case _: Throwable => fail("Block timestamp doesn't not found in json.")
+      case _: Exception => fail("Block timestamp doesn't not found in json.")
     }
 
   }
@@ -158,7 +159,7 @@ class SidechainBlockTest
 
 
     val deserializedBlockTry = sidechainBlockSerializer.parseBytesTry(bytes)
-    assertTrue("SidechainBlock expected to by parsed.", deserializedBlockTry.isSuccess)
+    assertTrue("SidechainBlock expected to be parsed.", deserializedBlockTry.isSuccess)
 
     val deserializedBlock = deserializedBlockTry.get
     assertEquals("Deserialized Block transactions are different.", block.transactions, deserializedBlock.transactions)
@@ -403,7 +404,7 @@ class SidechainBlockTest
     // In this test verifyOmmersSeqData() method of OmmersContainer is tested
     // The same check both for Block and Ommer classes
 
-    val ommers: Seq[Ommer] = generateOmmersSeq(parentId, 122444L,
+    val ommers: Seq[Ommer[SidechainBlockHeader]] = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(mcBlockRef1.data), Seq(mcBlockRef1.header, mcBlockRef2.header)),
         (Seq(), Seq()),
@@ -590,7 +591,7 @@ class SidechainBlockTest
 
     // Test 6: SidechainBlock with not consistent Ommers mc headers chain -> must be invalid
     // First Ommer is invalid, it has no mc headers at all
-    var invalidOmmers: Seq[Ommer] = generateOmmersSeq(parentId, 122444L,
+    var invalidOmmers: Seq[Ommer[SidechainBlockHeader]] = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(), Seq()),
         (Seq(mcBlockRef1.data), Seq()),
@@ -770,13 +771,13 @@ class SidechainBlockTest
     }
 
     // Test 13: SidechainBlock contains Ommers that are not properly ordered in epochs&slots
-    val slotOmmer1: Ommer = generateOmmersSeq(parentId, 122444L,
+    val slotOmmer1: Ommer[SidechainBlockHeader] = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(mcBlockRef1.data), Seq(mcBlockRef2.header))
       )
     ).head
 
-    val slotOmmer2: Ommer = generateOmmersSeq(slotOmmer1.header.id, 121444L, // Ommer Slot is before previous Ommer Slot
+    val slotOmmer2: Ommer[SidechainBlockHeader] = generateOmmersSeq(slotOmmer1.header.id, 121444L, // Ommer Slot is before previous Ommer Slot
       Seq(
         (Seq(), Seq(mcBlockRef2.header))
       )
@@ -858,7 +859,7 @@ class SidechainBlockTest
                           sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = Seq(),
                           mainchainBlockReferencesData: Seq[MainchainBlockReferenceData] = Seq(),
                           mainchainHeaders: Seq[MainchainHeader] = Seq(),
-                          ommers: Seq[Ommer] = Seq(),
+                          ommers: Seq[Ommer[SidechainBlockHeader]] = Seq(),
                           rnd: Random = new Random()
                          ): SidechainBlock = {
     SidechainBlock.create(
@@ -883,7 +884,7 @@ class SidechainBlockTest
                               sidechainTransactionsOpt: Option[Seq[SidechainTransaction[Proposition, Box[Proposition]]]] = None,
                               mainchainBlockReferencesDataOpt: Option[Seq[MainchainBlockReferenceData]] = None,
                               mainchainHeadersOpt: Option[Seq[MainchainHeader]] = None,
-                              ommersOpt: Option[Seq[Ommer]] = None): SidechainBlock = {
+                              ommersOpt: Option[Seq[Ommer[SidechainBlockHeader]]] = None): SidechainBlock = {
     new SidechainBlock(
       headerOpt.getOrElse(block.header),
       sidechainTransactionsOpt.getOrElse(block.sidechainTransactions),
@@ -895,7 +896,7 @@ class SidechainBlockTest
   }
 
 
-  private def generateOmmersSeq(parent: ModifierId, firstTimestamp: Long, ommersData: Seq[(Seq[MainchainBlockReferenceData], Seq[MainchainHeader])], rnd: Random = new Random()): Seq[Ommer] = {
+  private def generateOmmersSeq(parent: ModifierId, firstTimestamp: Long, ommersData: Seq[(Seq[MainchainBlockReferenceData], Seq[MainchainHeader])], rnd: Random = new Random()): Seq[Ommer[SidechainBlockHeader]] = {
     var blockSeq: Seq[SidechainBlock] = Seq()
     var currentTimestamp = firstTimestamp
     var currentParent = parent

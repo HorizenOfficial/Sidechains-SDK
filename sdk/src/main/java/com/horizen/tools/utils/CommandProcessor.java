@@ -9,7 +9,7 @@ public abstract class CommandProcessor {
         this.printer = printer;
     }
 
-    protected abstract void processCommand(String input) throws IOException;
+    protected abstract void processCommand(String input) throws Exception;
 
     protected abstract Command parseCommand(String input) throws IOException;
 

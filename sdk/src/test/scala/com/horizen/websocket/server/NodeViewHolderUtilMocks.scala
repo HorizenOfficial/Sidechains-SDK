@@ -9,7 +9,7 @@ import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, Sidec
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ForgerBox, ZenBox}
-import com.horizen.chain.{FeePaymentsInfo, SidechainBlockInfo}
+import com.horizen.chain.{SidechainFeePaymentsInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -21,7 +21,7 @@ import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
 import scala.io.Source
@@ -81,7 +81,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
 
   val feePaymentsBlockId: ModifierId = getRandomModifier()
   val feePaymentsBlockHeight: Int = 10000
-  val feePaymentsInfo: FeePaymentsInfo = FeePaymentsInfo(Seq(getZenBox, getZenBox, getZenBox))
+  val feePaymentsInfo: SidechainFeePaymentsInfo = SidechainFeePaymentsInfo(Seq(getZenBox, getZenBox, getZenBox))
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainHistory = {
     val history: SidechainHistory = mock[SidechainHistory]
@@ -163,14 +163,6 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
         }
       }
       else Optional.empty())
-
-    Mockito.when(history.searchTransactionInsideBlockchain(ArgumentMatchers.any[String])).thenAnswer(asw => {
-      if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlockchain_return_value()) {
-        val id = asw.getArgument(0).asInstanceOf[String]
-        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(ModifierId @@ tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
-      } else
-        Optional.empty()
-    })
 
     Mockito.when(history.searchTransactionInsideSidechainBlock(ArgumentMatchers.any[String], ArgumentMatchers.any[String])).thenAnswer(asw => {
       if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlock_return_value()) {

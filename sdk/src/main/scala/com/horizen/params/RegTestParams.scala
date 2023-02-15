@@ -1,13 +1,15 @@
 package com.horizen.params
 
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
+
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
+import com.horizen.cryptolibprovider.utils.{CircuitTypes, CumulativeHashFunctions}
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
-import scorex.util.ModifierId
-import scorex.util.bytesToId
+import sparkz.util.ModifierId
+import sparkz.util.bytesToId
 
 case class RegTestParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
@@ -21,6 +23,8 @@ case class RegTestParams(
                           override val consensusSecondsInSlot: Int = 120,
                           override val consensusSlotsInEpoch: Int = 720,
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
+                          override val mastersPublicKeys: Seq[SchnorrProposition] = Seq(),
+                          override val circuitType: CircuitTypes = CircuitTypes.NaiveThresholdSignatureCircuit,
                           override val signersThreshold: Int = 0,
                           override val certProvingKeyFilePath: String = "",
                           override val certVerificationKeyFilePath: String = "",
@@ -32,7 +36,9 @@ case class RegTestParams(
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
-                          override val isCSWEnabled: Boolean = true
+                          override val chainId: Long = 1111111,
+                          override val isCSWEnabled: Boolean = true,
+                          override val isNonCeasing: Boolean = false
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
@@ -44,4 +50,6 @@ case class RegTestParams(
   override val nPowMaxAdjustDown: Int = 0 // Turn off adjustment down
   override val nPowMaxAdjustUp: Int = 0 // Turn off adjustment up
   override val nPowTargetSpacing: Int = 150 // 2.5 * 60
+
+  override val minVirtualWithdrawalEpochLength: Int = 10
 }

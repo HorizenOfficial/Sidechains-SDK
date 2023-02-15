@@ -1,15 +1,14 @@
 package com.horizen
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.SidechainBlockBase
 import sparkz.core.NodeViewModifier
 import sparkz.core.consensus.History.ModifierIds
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.consensus.SyncInfo
-
 import sparkz.core.network.message.SyncInfoMessageSpec
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.serialization.{Reader, Writer}
-import scorex.util.{bytesToId, idToBytes}
+import sparkz.util.serialization.{Reader, Writer}
+import sparkz.util.{bytesToId, idToBytes}
 
 
 // knownBlockIds ordered backward most recent one to oldest
@@ -21,7 +20,7 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
   // get most recent block
   override def startingPoints: ModifierIds = {
     knownBlockIds.headOption match {
-      case Some(id) => Seq(SidechainBlock.ModifierTypeId -> id)
+      case Some(id) => Seq(SidechainBlockBase.ModifierTypeId -> id)
       case None => Seq()
     }
   }

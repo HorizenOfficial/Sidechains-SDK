@@ -1,7 +1,7 @@
 package com.horizen.websocket.server
 
 import java.util
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainWallet}
 import com.horizen.block.SidechainBlock
-import com.horizen.chain.FeePaymentsInfo
+import com.horizen.chain.SidechainFeePaymentsInfo
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -21,8 +21,8 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
 import scala.language.postfixOps
 
-
-class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging {
+// TODO must be tested for Account model
+class SidechainNodeChannelImpl() extends SidechainNodeChannel with SparkzLogging {
 
   implicit val duration: Timeout = 20 seconds
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -53,6 +53,8 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
         if (sblockOpt.isEmpty) throw new IllegalStateException(s"Block not found for hash: " + sidechainBlockHash)
 
         // get fee payments made during the block apply if exists.
+        // TODO must be generalized for Account model
+
         val feePaymentsInfoOpt = sidechainNodeView.history.feePaymentsInfo(blockId)
         (sblockOpt.get, feePaymentsInfoOpt)
       }
@@ -133,7 +135,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
   }
 
   override def getBestBlockInfo(): Try[ObjectNode] = Try {
-    val (bestBlock: SidechainBlock, height: Int, feePaymentsInfoOpt: Option[FeePaymentsInfo]) = applyOnNodeView { sidechainNodeView =>
+    val (bestBlock: SidechainBlock, height: Int, feePaymentsInfoOpt: Option[SidechainFeePaymentsInfo]) = applyOnNodeView { sidechainNodeView =>
       //get best block
       val bBlock = sidechainNodeView.history.bestBlock
       //get block height by hash
@@ -147,7 +149,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
   }
 
   override def getBlockInfo(block: SidechainBlock): Try[ObjectNode] = Try {
-    val (height: Int, feePaymentsInfoOpt: Option[FeePaymentsInfo])  = applyOnNodeView { sidechainNodeView =>
+    val (height: Int, feePaymentsInfoOpt: Option[SidechainFeePaymentsInfo])  = applyOnNodeView { sidechainNodeView =>
         (sidechainNodeView.history.blockInfoById(block.id).height,
           sidechainNodeView.history.feePaymentsInfo(block.id))
     }
@@ -155,7 +157,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
     calculateBlockPayload(block, height, feePaymentsInfoOpt)
   }
 
-  private def calculateBlockPayload(block: SidechainBlock, height: Int, feePaymentsInfoOpt: Option[FeePaymentsInfo]): ObjectNode = {
+  private def calculateBlockPayload(block: SidechainBlock, height: Int, feePaymentsInfoOpt: Option[SidechainFeePaymentsInfo]): ObjectNode = {
     val eventPayload = mapper.createObjectNode()
 
     val blockJson = mapper.readTree(SerializationUtil.serialize(block))

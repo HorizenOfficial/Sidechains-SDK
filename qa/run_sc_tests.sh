@@ -30,6 +30,14 @@ for i in "$@"; do
       EXCLUDE="${i#*=}"
       shift
       ;;
+    -evm_only)
+      EVM_ONLY="true"
+      shift
+      ;;
+    -utxo_only)
+      UTXO_ONLY="true"
+      shift
+      ;;
     -split=*)
       SPLIT="${i#*=}"
       shift
@@ -42,7 +50,56 @@ for i in "$@"; do
 done
 
 #Run the tests
-testScripts=(
+testScripts=();
+
+testScriptsEvm=(
+    'sc_evm_bootstrap.py'
+    'sc_evm_eoa2eoa.py'
+    'sc_evm_forward_transfer.py'
+    'sc_evm_backward_transfer.py'
+    'sc_evm_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_evm_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_evm_backward_transfer_2.py'
+    'sc_evm_backward_transfer_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_evm_backward_transfer_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_evm_base_fee.py'
+    'sc_evm_bwt_corner_cases.py'
+    'sc_evm_bwt_corner_cases.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_evm_bwt_corner_cases.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_evm_cert_key_rotation.py'
+    'sc_evm_cert_key_rotation.py --nonceasing'
+    'sc_evm_cert_key_rotation_across_epoch.py'
+    'sc_evm_cert_key_rotation_across_epoch.py --nonceasing'
+    'sc_evm_cert_key_rotation_old_circuit.py'
+    'sc_evm_multiple_pending_certs_non_ceasing.py'
+    'sc_evm_contract_deployment_create2.py'
+    'sc_evm_forger.py'
+    'sc_evm_forger_delegation.py'
+    'sc_evm_closed_forger.py'
+    'sc_evm_forging_fee_payments.py'
+    'sc_evm_fee_payments_rpc.py'
+    'sc_evm_mempool.py'
+    'sc_evm_mempool_invalid_txs.py'
+    'sc_evm_orphan_txs.py'
+    'sc_evm_rpc_invalid_txs.py'
+    'sc_evm_test_debug_methods.py'
+    'sc_evm_estimateGas.py'
+    'sc_evm_test_block_bloom_filter.py'
+    'sc_evm_test_storage_contract.py'
+    'sc_evm_test_erc20.py'
+    'sc_evm_test_erc721.py'
+    'sc_evm_test_contract_contract_deployment_and_interaction.py'
+    'sc_evm_test_metamask_related.py'
+    'sc_evm_test_prevrandao.py'
+    'sc_evm_storage_recovery.py'
+    'sc_evm_raw_tx_http_api.py'
+    'sc_evm_import_export_keys.py'
+    'sc_evm_delegatecall_contract.py'
+    'sc_evm_mc_fork.py'
+    'sc_evm_context_blockhash.py'
+);
+
+testScriptsUtxo=(
     'mc_sc_connected_nodes.py'
     'mc_sc_forging1.py'
     'mc_sc_forging2.py'
@@ -53,17 +110,36 @@ testScripts=(
     'mc_sc_forging_fee_payments.py'
     'mc_sc_nodes_alive.py'
     'sc_backward_transfer.py'
+    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_blockid_for_backup.py'
     'sc_bootstrap.py'
     'sc_bt_limit.py'
+    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_bt_limit.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_bt_limit_across_fork.py'
+    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_bt_limit_across_fork.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_bwt_minimum_value.py'
+    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_bwt_minimum_value.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_ceased.py'
     'sc_cert_fee_conf.py'
     'sc_cert_no_coin_record.py'
     'sc_cert_submission_decentralization.py'
+    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_cert_submission_decentralization.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_cert_submitter_after_sync_1.py'
+    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_cert_submitter_after_sync_1.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_cert_submitter_after_sync_2.py'
+    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_cert_submitter_after_sync_2.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_cert_key_rotation_old_circuit.py'
+    'sc_cert_key_rotation.py'
+    'sc_cert_key_rotation.py --nonceasing'
+    'sc_cert_key_rotation_across_epoch.py'
+    'sc_cert_key_rotation_across_epoch.py --nonceasing'
     'sc_cert_submitter_secure_enclave.py'
     'sc_closed_forger.py'
     'sc_csw_ceased_at_epoch_1.py'
@@ -81,6 +157,8 @@ testScripts=(
     'sc_mempool_max_size.py'
     'sc_mempool_min_fee_rate.py'
     'sc_multiple_certs.py'
+    'sc_multiple_certs.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_multiple_pending_certs_non_ceasing.py'
     'sc_node_api_test.py'
     'sc_node_response_along_sync.py'
     'sc_nodes_initialize.py'
@@ -97,7 +175,32 @@ testScripts=(
     'sc_big_block.py'
 );
 
-# include extended tests
+testScriptsNetworking=(
+    'net_declared_address.py'
+    'net_first_known_peers.py'
+    'net_incoming_connections.py'
+    'net_peers_storage_persistence.py'
+    'net_ring_of_nodes.py'
+    'net_skip_down_known_peer.py'
+)
+
+# decide whether to have only evm tests or only utxo tests or the whole set
+if [ ! -z "$EVM_ONLY" ] && [ ! -z "$UTXO_ONLY" ]; then
+    echo -e "\nCan not have both options '-evm_only' and '-utxo_only'" | tee /dev/fd/3
+    exit 1
+fi
+
+if [ ! -z "$EVM_ONLY" ] && [ "${EVM_ONLY}" = "true" ]; then
+  testScripts+=( "${testScriptsEvm[@]}" )
+elif [ ! -z "$UTXO_ONLY" ] && [ "${UTXO_ONLY}" = "true" ]; then
+  testScripts+=( "${testScriptsUtxo[@]}" )
+else
+  testScripts+=( "${testScriptsEvm[@]}" )
+  testScripts+=( "${testScriptsUtxo[@]}")
+  testScripts+=( "${testScriptsNetworking[@]}" )
+fi
+
+# include extended tests (not used as of now)
 if [ ! -z "$EXTENDED" ] && [ "${EXTENDED}" = "true" ]; then
   testScripts+=( "${testScriptsExt[@]}" )
 fi

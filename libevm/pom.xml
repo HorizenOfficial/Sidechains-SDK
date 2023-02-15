@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.horizen</groupId>
+  <artifactId>libevm</artifactId>
+  <version>0.6.0-SNAPSHOT</version>
+  <packaging>mvn-golang</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <mvn.golang.go.version>1.18.5</mvn.golang.go.version>
+    <os.system>linux-x86-64</os.system>
+    <final.extension>.so</final.extension>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>build-windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <os.system>windows64</os.system>
+        <final.extension>.dll</final.extension>
+      </properties>
+    </profile>
+    <profile>
+      <id>if-apfel-system</id>
+      <activation>
+        <os>
+          <name>Mac OS X</name>
+        </os>
+      </activation>
+      <properties>
+        <os.system>darwin</os.system>
+        <final.extension>.dylib</final.extension>
+      </properties>
+    </profile>
+  </profiles>
+
+  <build>
+    <sourceDirectory>${basedir}</sourceDirectory>
+    <directory>${basedir}${file.separator}bin${file.separator}${os.system}</directory>
+    <defaultGoal>clean package</defaultGoal>
+    <finalName>${project.artifactId}${final.extension}</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.1.0</version>
+        <configuration>
+          <followSymLinks>false</followSymLinks>
+          <excludeDefaultDirectories>true</excludeDefaultDirectories>
+          <filesets>
+            <fileset>
+              <directory>${basedir}${file.separator}test${file.separator}compiled</directory>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.igormaznitsa</groupId>
+        <artifactId>mvn-golang-wrapper</artifactId>
+        <version>2.3.9</version>
+        <extensions>true</extensions>
+        <configuration>
+          <buildMode>c-shared</buildMode>
+        </configuration>
+        <executions>
+          <execution>
+            <!-- move "go fix" after "go generate" to prevent errors because of missing files generated with go:generate -->
+            <id>default-fix</id>
+            <phase>generate-sources</phase>
+          </execution>
+          <execution>
+            <!-- build shared object in an earlier phase, so that it is available during tests of other modules -->
+            <id>default-build</id>
+            <phase>generate-resources</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

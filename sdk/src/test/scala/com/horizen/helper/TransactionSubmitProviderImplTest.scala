@@ -2,26 +2,27 @@ package com.horizen.helper
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
-import akka.pattern.ask
 import akka.util.Timeout
+import com.horizen.SidechainTypes
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
-import com.horizen.transaction.RegularTransaction
-import org.junit.Assert.{assertEquals, assertTrue, assertFalse}
+import com.horizen.transaction.Transaction
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
-import scala.concurrent.{ExecutionContext, Promise}
-import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Promise}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
-class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar with TransactionFixture with SidechainTypesTestsExtension {
+abstract class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar with SidechainTypesTestsExtension {
   implicit lazy val actorSystem: ActorSystem = ActorSystem("tx-actor-test")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   implicit val timeout: Timeout = 5 seconds
+  type TX <: Transaction
 
   @Test
   def submitTransactionSuccessful(): Unit = {
@@ -32,15 +33,15 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
           val promise = Promise[ModifierId]
           val future = promise.future
           sender ! future
-          promise.success(ModifierId @@ tx.id())
+          promise.success(tx.id)
       }
       TestActor.KeepRunning
     })
 
     val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
-    val transactionSubmitProvider: TransactionSubmitProviderImpl = new TransactionSubmitProviderImpl(mockedSidechainTransactionActorRef)
+    val transactionSubmitProvider: TransactionSubmitProviderImpl[TX] = new TransactionSubmitProviderImpl[TX](mockedSidechainTransactionActorRef)
 
-    val transaction: RegularTransaction = getRegularTransaction
+    val transaction: TX = getTransaction
     val tryRes: Try[Unit] = Try {
       transactionSubmitProvider.submitTransaction(transaction)
     }
@@ -67,9 +68,9 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
     })
 
     val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
-    val transactionSubmitProvider: TransactionSubmitProviderImpl = new TransactionSubmitProviderImpl(mockedSidechainTransactionActorRef)
+    val transactionSubmitProvider: TransactionSubmitProviderImpl[TX] = new TransactionSubmitProviderImpl(mockedSidechainTransactionActorRef)
 
-    val transaction: RegularTransaction = getRegularTransaction
+    val transaction: TX = getTransaction
     val tryRes: Try[Unit] = Try {
       transactionSubmitProvider.submitTransaction(transaction)
     }
@@ -87,24 +88,24 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
     mockedSidechainTransactionActor.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
         case BroadcastTransaction(tx) =>
-          val promise = Promise[ModifierId]
+         val promise = Promise[ModifierId]
           val future = promise.future
           sender ! future
-          promise.success(ModifierId @@ tx.id())
+          promise.success(tx.id)
       }
       TestActor.KeepRunning
     })
 
     val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
-    val transactionSubmitProvider: TransactionSubmitProviderImpl = new TransactionSubmitProviderImpl(mockedSidechainTransactionActorRef)
+    val transactionSubmitProvider: TransactionSubmitProviderImpl[TX] = new TransactionSubmitProviderImpl(mockedSidechainTransactionActorRef)
 
-    val transaction: RegularTransaction = getRegularTransaction
+    val transaction: TX = getTransaction
 
-    var callbackCondition = false;
-    var asyncOpCondition = false;
+    var callbackCondition = false
+    var asyncOpCondition = false
 
     def callback(res: Boolean, errorOpt: Option[Throwable]): Unit = synchronized {
-      var attempts = 10;
+      var attempts = 10
       while (!asyncOpCondition && attempts > 0) {
         Thread.sleep(100)
         attempts -= 1
@@ -113,7 +114,7 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
 
       assertTrue("Transaction expected to be submitted.", res)
       assertTrue("No errors on success result", errorOpt.isEmpty)
-      callbackCondition = true;
+      callbackCondition = true
     }
 
     // Start submission operation ...
@@ -122,7 +123,7 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
     asyncOpCondition = true
 
     // wait for callback completion.
-    var attempts = 10;
+    var attempts = 10
     while (!callbackCondition && attempts > 0) {
       Thread.sleep(100)
       attempts -= 1
@@ -147,15 +148,15 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
     })
 
     val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
-    val transactionSubmitProvider: TransactionSubmitProviderImpl = new TransactionSubmitProviderImpl(mockedSidechainTransactionActorRef)
+    val transactionSubmitProvider: TransactionSubmitProviderImpl[TX] = new TransactionSubmitProviderImpl(mockedSidechainTransactionActorRef)
 
-    val transaction: RegularTransaction = getRegularTransaction
+    val transaction: TX = getTransaction
 
-    var callbackCondition = false;
-    var asyncOpCondition = false;
+    var callbackCondition = false
+    var asyncOpCondition = false
 
     def callback(res: Boolean, errorOpt: Option[Throwable]): Unit = synchronized {
-      var attempts = 10;
+      var attempts = 10
       while (!asyncOpCondition && attempts > 0) {
         Thread.sleep(100)
         attempts -= 1
@@ -165,7 +166,7 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
       assertFalse("Transaction expected to be not submitted.", res)
       assertTrue("Error expected to be present on failure", errorOpt.isDefined)
       assertEquals("Transaction submission failed but with different exception.", ex, errorOpt.get)
-      callbackCondition = true;
+      callbackCondition = true
     }
 
     // Start submission operation ...
@@ -174,11 +175,19 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
     asyncOpCondition = true
 
     // wait for callback completion.
-    var attempts = 10;
+    var attempts = 10
     while (!callbackCondition && attempts > 0) {
       Thread.sleep(100)
       attempts -= 1
     }
     assertTrue("Callback was not executed in time", callbackCondition)
   }
+
+  def getTransaction: TX
+}
+
+class TransactionSubmitProviderImplUTXOTest extends TransactionSubmitProviderImplTest with TransactionFixture {
+  override type TX = SidechainTypes#SCBT
+
+  override  def getTransaction: TX = getRegularTransaction
 }

@@ -1,25 +1,24 @@
 package com.horizen.helper
+
 import akka.actor.ActorRef
-import com.horizen.box.Box
-import com.horizen.proposition.Proposition
-import com.horizen.transaction.BoxTransaction
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import scorex.util.ModifierId
+import com.horizen.transaction.Transaction
+import sparkz.util.ModifierId
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success}
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
-class TransactionSubmitProviderImpl(transactionActor: ActorRef) extends TransactionSubmitProvider {
+class TransactionSubmitProviderImpl[TX <: Transaction ](transactionActor: ActorRef) extends TransactionSubmitProvider[TX] {
 
   implicit val timeout: Timeout = 20 seconds
 
   @throws(classOf[IllegalArgumentException])
-  override def submitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]]): Unit = {
+  override def submitTransaction(tx: TX): Unit = {
     val resFuture = Await.result(transactionActor ? BroadcastTransaction(tx), timeout.duration).asInstanceOf[Future[ModifierId]]
     Await.ready(resFuture, timeout.duration).value.get match {
       case Success(_) =>
@@ -27,14 +26,14 @@ class TransactionSubmitProviderImpl(transactionActor: ActorRef) extends Transact
     }
   }
 
-  override def asyncSubmitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]], callback:(Boolean, Option[Throwable]) => Unit): Unit = {
+  override def asyncSubmitTransaction(tx: TX, callback:(Boolean, Option[Throwable]) => Unit): Unit = {
     val barrier : Future[Unit] = Await.result(
       transactionActor ? BroadcastTransaction(tx), timeout.duration).asInstanceOf[Future[Unit]]
-      barrier onComplete{
-        case Success(_) =>
-          callback(true, None)
-        case Failure(exp) =>
-          callback(false, Some(exp))
-      }
+    barrier onComplete{
+      case Success(_) =>
+        callback(true, None)
+      case Failure(exp) =>
+        callback(false, Some(exp))
     }
+  }
 }

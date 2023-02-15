@@ -1,15 +1,17 @@
 package com.horizen
 
-import java.io.File
-import java.net.URL
-import java.util.{Optional => JOptional}
-
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{Config, ConfigException, ConfigFactory}
+import com.typesafe.scalalogging.LazyLogging
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import sparkz.core.settings.{SparkzSettings, SettingsReaders}
-import com.typesafe.scalalogging.LazyLogging
+import net.ceedubs.ficus.readers.ValueReader
+import net.ceedubs.ficus.readers.EnumerationReader._
+import sparkz.core.settings.{SettingsReaders, SparkzSettings}
 
+import java.io.File
+import java.math.BigInteger
+import java.net.URL
+import java.util.{Optional => JOptional}
 import scala.compat.java8.OptionConverters.toScala
 
 
@@ -18,6 +20,18 @@ object SidechainSettingsReader
     with SettingsReaders
 {
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
+
+  // allows config values to be parsed into BigInteger
+  private implicit val bigIntegerReader: ValueReader[BigInteger] = new ValueReader[BigInteger] { config =>
+    def read(config: Config, path: String): BigInteger = {
+      val s = config.getString(path)
+      try {
+        new BigInteger(s, 10)
+      } catch {
+        case e: NumberFormatException => throw new ConfigException.WrongType(config.origin(), path, "java.math.BigInteger", "String", e)
+      }
+    }
+  }
 
   def fromConfig(config: Config): SidechainSettings = {
     val webSocketConnectorConfigurationSettings = config.as[WebSocketSettings]("sparkz.websocket")
@@ -30,9 +44,11 @@ object SidechainSettingsReader
     val forgerSettings = config.as[ForgerSettings]("sparkz.forger")
     val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("sparkz.csw")
     val logInfoSettings = config.as[LogInfoSettings]("sparkz.logInfo")
+    val ethServiceSettings = config.as[EthServiceSettings]("sparkz.ethService")
 
     SidechainSettings(sparkzSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
-      remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings)
+      remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings,
+      ethServiceSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

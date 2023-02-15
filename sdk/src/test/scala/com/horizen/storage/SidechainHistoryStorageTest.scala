@@ -6,7 +6,7 @@ import com.horizen.SidechainTypes
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
@@ -19,8 +19,8 @@ import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -31,6 +31,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
   val mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
+
   var params: NetworkParams = _
 
   val height = 10
@@ -580,7 +581,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     exceptionThrown = false
     try {
-      val stateStorage = new SidechainHistoryStorage(mockedStorage, null, params)
+      val histStorage = new SidechainHistoryStorage(mockedStorage, null, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }
@@ -590,7 +591,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     exceptionThrown = false
     try {
-      val stateStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, null)
+      val histStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, null)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }

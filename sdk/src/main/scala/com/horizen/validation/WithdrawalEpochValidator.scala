@@ -1,17 +1,34 @@
 package com.horizen.validation
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.params.NetworkParams
-import com.horizen.SidechainHistory
+import com.horizen.AbstractHistory
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.CommonCircuit
+import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.utils.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.storage.AbstractHistoryStorage
+import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, WithdrawalEpochUtils}
-import scorex.util.idToBytes
+import sparkz.util.idToBytes
 
 import scala.util.Try
 
-class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValidator {
-  override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
+class WithdrawalEpochValidator[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PMOD <: SidechainBlockBase[TX, H],
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
+  HT <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HT]
+]
+(
+  params: NetworkParams
+)
+  extends HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HT] {
+
+  override def validate(block: PMOD, history: HT): Try[Unit] = Try {
     if (block.id.equals(params.sidechainGenesisBlockId))
       validateGenesisBlock(block).get
     else
@@ -19,18 +36,29 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
   }
 
 
-  private def validateGenesisBlock(block: SidechainBlock): Try[Unit] = Try {
+  private def validateGenesisBlock(block: PMOD): Try[Unit] = Try {
     // Verify that block contains only 1 MC block reference data with a valid Sidechain Creation info
     if(block.mainchainBlockReferencesData.size != 1)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block should contain single MC block reference.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
 
     val sidechainCreation = BlockUtils.tryGetSidechainCreation(block).get
-    if(sidechainCreation.withdrawalEpochLength() != params.withdrawalEpochLength)
+    if(!params.isNonCeasing && sidechainCreation.withdrawalEpochLength() != params.withdrawalEpochLength)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block contains different withdrawal epoch length than expected in configs.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
     // Check that sidechain declares proper number of custom fields
-    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
+    val expectedNumOfCustomFields = params.circuitType match {
+      case NaiveThresholdSignatureCircuit =>
+        params.isCSWEnabled match {
+          case true =>
+            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW
+          case false =>
+            CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION
+        }
+      case NaiveThresholdSignatureCircuitWithKeyRotation =>
+        CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION
+    }
+
     if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != expectedNumOfCustomFields) {
         throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
           "genesis block declares sidechain with different number of custom field configs. " +
@@ -50,7 +78,7 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
     }
   }
 
-  private def validateBlock(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
+  private def validateBlock(block: PMOD, history: HT): Try[Unit] = Try {
     for(data <- block.mainchainBlockReferencesData) {
       data.sidechainRelatedAggregatedTransaction match {
         case Some(aggTx) =>
@@ -62,7 +90,7 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
 
     history.storage.blockInfoOptionById(block.parentId) match {
       case Some(parentBlockInfo) => // Parent block is present
-        val blockEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
+        val blockEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, parentBlockInfo.withdrawalEpochInfo, params)
         if (blockEpochInfo.epoch > parentBlockInfo.withdrawalEpochInfo.epoch) { // epoch increased
           if (parentBlockInfo.withdrawalEpochInfo.lastEpochIndex != params.withdrawalEpochLength) // parent index was not the last index of the block -> Block contains MC Block refs from different Epochs
             throw new IllegalArgumentException("Sidechain block %s contains MC Block references, that belong to different withdrawal epochs.".format(BytesUtils.toHexString(idToBytes(block.id))))

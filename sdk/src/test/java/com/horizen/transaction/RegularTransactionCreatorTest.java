@@ -135,6 +135,11 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
+    public Optional<Secret> secretByPublicKey(Proposition publicKey) {
+        return Optional.empty(); // TODO FOR MERGE
+    }
+
+    @Override
     public List<Secret> allSecrets() {
         return null;
     }

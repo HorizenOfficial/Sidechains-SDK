@@ -5,7 +5,7 @@ import com.horizen.box.{Box, WithdrawalRequestBox}
 import com.horizen.node.NodeMemoryPool
 import com.horizen.transaction.BoxTransaction
 import com.horizen.utils.MempoolMap
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.transaction.MempoolReader
 
 import scala.util.{Failure, Success, Try}
@@ -15,7 +15,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
   extends sparkz.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
   with SidechainTypes
   with NodeMemoryPool
-  with ScorexLogging
+  with SparkzLogging
 {
   var maxPoolSizeBytes : Long =  mempoolSettings.maxSize * 1024 * 1024
   val minFeeRate : Long = mempoolSettings.minFeeRate
@@ -149,7 +149,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
         //the pool is empty but txsize exceeds its  limit,
         //or the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool
         //In both cases the insert will fail
-        return false;
+        return false
       }
       unconfirmed.remove(lastEntry.get.getUnconfirmedTx().id())
     }
@@ -157,7 +157,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
     true
   }
 
-  // TO DO: check usage in Scorex core
+  // TO DO: check usage in Sparkz core
   // Probably, we need to do a Global check inside for both new and existing transactions.
   override def putWithoutCheck(txs: Iterable[SidechainTypes#SCBT]): SidechainMemoryPool = {
     for (t <- txs.tails) {

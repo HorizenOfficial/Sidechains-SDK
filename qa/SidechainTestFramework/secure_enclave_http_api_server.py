@@ -1,7 +1,7 @@
 import logging
+import multiprocessing
 import os
 import subprocess
-import threading
 
 from flask import Flask, request, json
 
@@ -12,10 +12,12 @@ class SecureEnclaveApiServer(object):
         # REQUEST
         # {
         #     "message": message,
-        #     "publicKey": publicKey,
+        #     "publicKey": publicKey, (optional)
         #     "privateKey": privateKey, (optional)
         #     "type": "string"["schnorr"]
         # }
+        # Either publicKey or privateKey must be specified.
+        #
         # RESPONSE
         # {
         #     "signature": signature,
@@ -25,11 +27,12 @@ class SecureEnclaveApiServer(object):
         def sign_message():
             content = json.loads(request.data)
             logging.info("SecureEnclaveApiServer /api/v1/createSignature received request " + str(content))
-            pk = content['publicKey']
-            index = self.schnorr_public_keys.index(pk)
-            sk = self.schnorr_secrets[index]
-            content.pop('publicKey', None)
-            content['privateKey'] = sk
+            if 'privateKey' not in content:
+                pk = content['publicKey']
+                index = self.schnorr_public_keys.index(pk)
+                sk = self.schnorr_secrets[index]
+                content['privateKey'] = sk
+                content.pop('publicKey', None)
 
             result = launch_signing_tool(content)
             logging.info("SecureEnclaveApiServer /api/v1/createSignature result " + str(result))
@@ -60,15 +63,13 @@ class SecureEnclaveApiServer(object):
             logging.info("SecureEnclaveApiServer /api/v1/listKeys result" + result)
             return result
 
-        self.thread = threading.Thread(target=self.app.run(debug=False))
-        self.thread.run()
+        multiprocessing.Process(daemon=True, target=lambda: self.app.run(debug=False, use_reloader=False)).start()
 
     def __init__(self, schnorr_secrets=None, schnorr_public_keys=None):
         if schnorr_public_keys is None:
             schnorr_public_keys = []
         if schnorr_secrets is None:
             schnorr_secrets = []
-        self.thread = None
         self.app = Flask(__name__)
         self.schnorr_secrets = schnorr_secrets
         self.schnorr_public_keys = schnorr_public_keys
@@ -79,7 +80,7 @@ def launch_signing_tool(json_parameters):
 
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK", "..")
-                                + "/tools/signingtool/target/sidechains-sdk-signingtools-0.5.0-SNAPSHOT.jar",
+                                + "/tools/signingtool/target/sidechains-sdk-signingtools-0.6.0-SNAPSHOT.jar",
                                 "createSignature", json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:

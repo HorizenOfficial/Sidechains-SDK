@@ -3,37 +3,35 @@ package com.horizen
 import java.util
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
-import akka.util.Timeout
 import com.horizen.block.SidechainBlock
+import akka.util.Timeout
 import com.horizen.box.ZenBox
-import com.horizen.chain.FeePaymentsInfo
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{BlockFeeInfo, CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
+import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
 import sparkz.core.validation.RecoverableModifierError
-import sparkz.core.settings.NetworkSettings
 import sparkz.core.{VersionTag, idToVersion}
-import scorex.util.ModifierId
+import sparkz.util.{ModifierId, SparkzEncoding}
 
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
   with SidechainBlockFixture
   with CompanionsFixture
-  with sparkz.core.utils.SparkzEncoding
+  with SparkzEncoding
 {
   var history: SidechainHistory = _
   var state: SidechainState = _
@@ -75,7 +73,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]))))
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     // Mock state to notify that any incoming block to append will lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(true)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(true)
     // Mock state to apply incoming block successfully
     Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
     // Mock state withdrawal epoch methods
@@ -84,28 +82,18 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock wallet to apply incoming block successfully
     Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock], ArgumentMatchers.any[Int](), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(wallet)
 
-
-    var stateNotificationExecuted: Boolean = false
     Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
-      stateNotificationExecuted = true
       val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes()))
       (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
     })
 
-
-    var historyNotificationExecuted: Boolean = false
     Mockito.when(history.applyFullConsensusInfo(ArgumentMatchers.any[ModifierId], ArgumentMatchers.any[FullConsensusEpochInfo])).thenAnswer(_ => {
-      historyNotificationExecuted = true
       history
     })
 
-
-    var walletNotificationExecuted: Boolean = false
     Mockito.when(wallet.applyConsensusEpochInfo(ArgumentMatchers.any[ConsensusEpochInfo])).thenAnswer(_ => {
-      walletNotificationExecuted = true
       wallet
     })
-
 
     // Send locally generated block to the NodeViewHolder
     val eventListener = TestProbe()
@@ -119,9 +107,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     eventListener.expectMsgType[SemanticallySuccessfulModifier[SidechainBlock]]
 
     // Verify that all Consensus Epoch switching methods were executed
-    assertTrue("State epoch info calculation was not emitted.", stateNotificationExecuted)
-    assertTrue("History epoch info processing was not emitted.", historyNotificationExecuted)
-    assertTrue("Wallet epoch info processing was not emitted.", walletNotificationExecuted)
+    Mockito.verify(state, times(1)).getCurrentConsensusEpochInfo
+    Mockito.verify(history, times(1)).applyFullConsensusInfo(ArgumentMatchers.any[ModifierId], ArgumentMatchers.any[FullConsensusEpochInfo])
+    Mockito.verify(wallet, times(1)).applyConsensusEpochInfo(ArgumentMatchers.any[ConsensusEpochInfo])
   }
 
   @Test
@@ -165,7 +153,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Consensus epoch switching checks
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Check that consensus epoch data was not requested from the State.
     Mockito.when(state.getCurrentConsensusEpochInfo).thenAnswer( _ => {
       fail("Consensus epoch data should not being requested from the State.")
@@ -208,7 +196,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
         firstBlockInFork.id, validBlock.id)
       history
       })
-      .thenAnswer( answer => {
+      .thenAnswer( answer =>  Try {
       val validBlock: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("History received semantically valid notification about different block. Second fork block expected.",
         secondBlockInFork.id, validBlock.id)
@@ -265,7 +253,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Consensus epoch switching checks
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Check that consensus epoch data was not requested from the State.
     Mockito.when(state.getCurrentConsensusEpochInfo).thenAnswer( _ => {
       fail("Consensus epoch data should not being requested from the State.")
@@ -293,7 +281,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]))))
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Mock state to apply incoming block successfully
     Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
 
@@ -303,14 +291,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
 
     // Mock state fee payments with checks
-    var feePaymentsCalculationEvent: Boolean = false
     Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[BlockFeeInfo]])).thenAnswer(args => {
-      feePaymentsCalculationEvent = true
       Seq()
     })
 
     // Mock wallet scanPersistent with checks
-    var walletChecksPassed: Boolean = false
     Mockito.when(wallet.scanPersistent(
       ArgumentMatchers.any[SidechainBlock],
       ArgumentMatchers.any[Int](),
@@ -324,7 +309,6 @@ class SidechainNodeViewHolderTest extends JUnitSuite
         assertTrue("No fee payments expected while not in the end of the withdrawal epoch.", feePayments.isEmpty)
         assertTrue("No UtxoMerkleTreeView expected while not in the end of the withdrawal epoch.", utxoView.isEmpty)
 
-        walletChecksPassed = true
         wallet
       })
 
@@ -340,8 +324,12 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Thread.sleep(100)
 
     // Verify that all the checks passed
-    assertFalse("State feePayments calculation should no occur.", feePaymentsCalculationEvent)
-    assertTrue("Wallet scanPersistent checks failed.", walletChecksPassed)
+    Mockito.verify(state, times(0)).getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[BlockFeeInfo]])
+    Mockito.verify(wallet, times(1)).scanPersistent(
+      ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any[Seq[ZenBox]](),
+      ArgumentMatchers.any[Option[UtxoMerkleTreeView]]())
   }
 
   @Test
@@ -352,9 +340,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]))))
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
-    Mockito.when(history.updateFeePaymentsInfo(ArgumentMatchers.any[ModifierId],ArgumentMatchers.any[FeePaymentsInfo])).thenReturn(history)
+    Mockito.when(history.updateFeePaymentsInfo(ArgumentMatchers.any[ModifierId],ArgumentMatchers.any[SidechainFeePaymentsInfo])).thenReturn(history)
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Mock state to apply incoming block successfully
     Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
 
@@ -364,18 +352,14 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(true)
 
     // Mock state fee payments with checks
-    var stateChecksPassed: Boolean = false
     val expectedFeePayments: Seq[ZenBox] = Seq(getZenBox, getZenBox)
     Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[BlockFeeInfo]]())).thenAnswer(args => {
       val epochNumber: Int = args.getArgument(0)
       assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
-
-      stateChecksPassed = true
       expectedFeePayments
     })
 
     // Mock wallet scanPersistent with checks
-    var walletChecksPassed: Boolean = false
     Mockito.when(wallet.scanPersistent(
       ArgumentMatchers.any[SidechainBlock],
       ArgumentMatchers.any[Int](),
@@ -389,7 +373,6 @@ class SidechainNodeViewHolderTest extends JUnitSuite
         assertEquals("Different fee payments expected while in the end of the withdrawal epoch.", expectedFeePayments, feePayments)
         assertTrue("UtxoMerkleTreeView expected to be defined while in the end of the withdrawal epoch.", utxoView.isDefined)
 
-        walletChecksPassed = true
         wallet
       })
 
@@ -405,8 +388,12 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Thread.sleep(100)
 
     // Verify that all the checks passed
-    assertTrue("State feePayments checks failed.", stateChecksPassed)
-    assertTrue("Wallet scanPersistent checks failed.", walletChecksPassed)
+    Mockito.verify(state, times(2)).getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[BlockFeeInfo]])
+    Mockito.verify(wallet, times(1))scanPersistent(
+      ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any[Seq[ZenBox]](),
+      ArgumentMatchers.any[Option[UtxoMerkleTreeView]]())
   }
 
   @Test
@@ -440,7 +427,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
 
     mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
 
@@ -498,7 +485,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
 
     mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
     mockedNodeViewHolderRef ! ModifiersFromRemote(secondRequestBlocks)
@@ -562,7 +549,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
 
     mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
     countDownController.await(3000)
@@ -625,7 +612,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
 
     mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
 

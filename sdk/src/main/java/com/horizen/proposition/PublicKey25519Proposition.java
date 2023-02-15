@@ -6,14 +6,14 @@ import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.secret.PrivateKey25519;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 import com.google.common.primitives.Bytes;
 import java.util.Arrays;
 
 
 @JsonView(Views.Default.class)
 public final class PublicKey25519Proposition
-    extends AbstractSingleSecretProofOfKnowledgeProposition<PrivateKey25519>
+    implements SingleSecretProofOfKnowledgeProposition<PrivateKey25519>
 {
     public static final byte ADDRESS_VERSION = 1;
     public static final int CHECKSUM_LENGTH = 4;
@@ -21,7 +21,7 @@ public final class PublicKey25519Proposition
     public static final int ADDRESS_LENGTH = 1 + KEY_LENGTH + CHECKSUM_LENGTH;
 
     @JsonProperty("publicKey")
-    private byte[] _pubKeyBytes;
+    private final byte[] _pubKeyBytes;
 
     public PublicKey25519Proposition(byte[] pubKeyBytes)
     {

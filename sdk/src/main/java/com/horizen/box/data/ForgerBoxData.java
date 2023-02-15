@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes;
 import com.horizen.box.ForgerBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.VrfPublicKey;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 import java.util.Objects;
 
 public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {

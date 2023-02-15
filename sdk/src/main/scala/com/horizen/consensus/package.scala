@@ -1,10 +1,11 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.vrf.VrfOutput
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import supertagged.TaggedType
 
 import java.math.{BigDecimal, BigInteger, MathContext}
@@ -18,6 +19,9 @@ package object consensus {
   val consensusPreForkLength: Int = 4 + 8 + consensusHardcodedSaltString.length
   val forgerStakePercentPrecision: BigDecimal = BigDecimal.valueOf(1000000) // where 1 / forgerStakePercentPrecision -- minimal possible forger stake percentage to be able to forge
   val stakeConsensusDivideMathContext: MathContext = MathContext.DECIMAL128 //shall be used during dividing, otherwise ArithmeticException is thrown in case of irrational number as division result
+
+  val minSecondsInSlot: Int = 10
+  val maxSecondsInSlot:Int = 300
 
   object ConsensusEpochNumber extends TaggedType[Int]
   type ConsensusEpochNumber = ConsensusEpochNumber.Type

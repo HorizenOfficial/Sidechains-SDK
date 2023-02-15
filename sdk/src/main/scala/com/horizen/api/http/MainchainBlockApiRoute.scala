@@ -3,26 +3,38 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainNodeViewBase
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.MainchainErrorResponse._
 import com.horizen.api.http.MainchainRestSchema._
-import com.horizen.block.MainchainBlockReference
-import com.horizen.chain.MainchainHeaderInfo
+import com.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderInfo}
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.Views
+import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
 import java.util.{Optional => JOptional}
+import scala.reflect.ClassTag
 
-case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute
+case class MainchainBlockApiRoute[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  FPI <: AbstractFeePaymentsInfo,
+  NH <: NodeHistoryBase[TX, H, PM, FPI],
+  NS <: NodeStateBase,
+  NW <: NodeWalletBase,
+  NP <: NodeMemoryPoolBase[TX],
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
+  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV]
     with SparkzEncoding {
-
   override val route: Route = pathPrefix("mainchain") {
       bestBlockReferenceInfo ~
       genesisBlockReferenceInfo ~

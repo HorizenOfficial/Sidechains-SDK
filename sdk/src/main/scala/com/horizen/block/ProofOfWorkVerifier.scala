@@ -1,12 +1,13 @@
 package com.horizen.block
 
-import java.math.BigInteger
-
 import com.google.common.primitives.UnsignedInts
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.params.NetworkParams
-import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.storage.AbstractHistoryStorage
+import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, Utils}
 
+import java.math.BigInteger
 import scala.util.control.Breaks._
 
 object ProofOfWorkVerifier {
@@ -30,7 +31,13 @@ object ProofOfWorkVerifier {
 
   // Check that PoW target (bits) is correct for all MainchainHeaders and Ommers' MainchainHeaders (recursively) included into SidechainBlock.
   // The order of MainchainHeaders in Block (both active and orphaned) verified in block semantic validity method
-  def checkNextWorkRequired(block: SidechainBlock, sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams): Boolean = {
+  def checkNextWorkRequired[
+    H <: SidechainBlockHeaderBase,
+    PMOD <: SidechainBlockBase[_ <: Transaction, H],
+    FPI <: AbstractFeePaymentsInfo,
+    HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR]](block: PMOD,
+                                                  historyStorage: HSTOR,
+                                                  params: NetworkParams): Boolean = {
     if(block.mainchainHeaders.isEmpty)
       return true
 
@@ -39,7 +46,7 @@ object ProofOfWorkVerifier {
     var timeBitsData = List[Tuple2[Int, Int]]()
     // Take firt MC Ref header if exists, else get first nextMCHeader
     var currentHeader = block.mainchainHeaders.head
-    var currentBlock: SidechainBlock = block
+    var currentBlock: PMOD = block
     breakable {
       while (true) {
         if (currentHeader.hash.sameElements(params.genesisMainchainBlockHash)) {
@@ -53,8 +60,8 @@ object ProofOfWorkVerifier {
         }
 
         // get previous block
-        currentBlock = sidechainHistoryStorage.blockById(currentBlock.parentId) match {
-          case b: Some[SidechainBlock] => b.get
+        currentBlock = historyStorage.blockById(currentBlock.parentId) match {
+          case b: Some[PMOD] => b.get
           case _ => return false
         }
 
@@ -89,7 +96,7 @@ object ProofOfWorkVerifier {
     true
   }
 
-  private def checkOmmersContainerNextWorkRequired(ommersContainer: OmmersContainer,
+  private def checkOmmersContainerNextWorkRequired[H <: SidechainBlockHeaderBase](ommersContainer: OmmersContainer[H],
                                                    initialTimeBitsData: List[Tuple2[Int, Int]],
                                                    initialBitsTotal: BigInteger,
                                                    params: NetworkParams): OmmersContainerNextWorkRequiredResult = {

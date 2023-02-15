@@ -9,10 +9,10 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
-import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
-import scorex.crypto.hash.Blake2b256;
+import com.horizen.utils.WithdrawalEpochUtils;
+import sparkz.crypto.hash.Blake2b256;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Collections;
@@ -30,7 +30,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public final static int MAX_TRANSACTION_SIZE = 500000; // size in bytes
     public final static int MAX_TRANSACTION_UNLOCKERS = 1000;
     public final static int MAX_TRANSACTION_NEW_BOXES = 1000;
-    public final static int MAX_WITHDRAWAL_BOXES_ALLOWED = 3999;
+    public final static int MAX_WITHDRAWAL_BOXES_ALLOWED = WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch();
 
     @JsonProperty("unlockers")
     public abstract List<BoxUnlocker<P>> unlockers();
@@ -66,8 +66,6 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
     @JsonProperty("isCustom")
     public Boolean isCustom() { return true; } // All transactions presume customs until it not defined otherwise
-
-    public abstract void semanticValidity() throws TransactionSemanticValidityException;
 
     // Transactions custom data to be considered during Transaction id calculation.
     // Note: in case custom field must be protected by the box unlocker proof,

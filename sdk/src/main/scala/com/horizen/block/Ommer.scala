@@ -1,28 +1,34 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.account.block.{AccountBlockHeader, AccountBlockHeaderSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
+import sparkz.util.idToBytes
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
-import scorex.util.idToBytes
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("id"))
-case class Ommer(
-                  override val header: SidechainBlockHeader,
+case class Ommer[H <: SidechainBlockHeaderBase](
+                  override val header: H,
                   mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]], // Empty if no mainchainBlockReferencesData present in block.
                   override val mainchainHeaders: Seq[MainchainHeader],
-                  override val ommers: Seq[Ommer]
-                ) extends OmmersContainer with BytesSerializable {
-  override type M = Ommer
+                  override val ommers: Seq[Ommer[H]]
+                ) extends OmmersContainer[H] with BytesSerializable {
+  override type M = Ommer[H]
 
-  override def serializer: SparkzSerializer[Ommer] = OmmerSerializer
+  override def serializer: SparkzSerializer[Ommer[H]] = header match {
+    case h: SidechainBlockHeader => OmmerSerializer.asInstanceOf[SparkzSerializer[Ommer[H]]]
+    case h: AccountBlockHeader => AccountOmmerSerializer.asInstanceOf[SparkzSerializer[Ommer[H]]]
+    case other => throw new UnsupportedOperationException(s"No Ommer serializer found with header type ${other.getClass.toString}")
+  }
+
 
   lazy val id: Array[Byte] = idToBytes(header.id)
 
@@ -113,7 +119,7 @@ case class Ommer(
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case ommer: Ommer =>
+      case ommer: Ommer[H] =>
         id.sameElements(ommer.id) &&
           mainchainHeaders.equals(ommer.mainchainHeaders) &&
           ommers.equals(ommer.ommers) &&
@@ -122,11 +128,11 @@ case class Ommer(
       case _ => false
     }
   }
+
 }
 
-
 object Ommer {
-  def toOmmer(block: SidechainBlock): Ommer = {
+  def toOmmer[H <: SidechainBlockHeaderBase](block: SidechainBlockBase[_, H]): Ommer[H] = {
     val mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]] = {
       val referencesDataHashes: Seq[Array[Byte]] = block.mainchainBlockReferencesData.map(_.headerHash)
       if (referencesDataHashes.isEmpty)
@@ -135,7 +141,7 @@ object Ommer {
         Some(MerkleTree.createMerkleTree(referencesDataHashes.asJava).rootHash())
     }
 
-    Ommer(
+    Ommer[H](
       block.header,
       mainchainReferencesDataMerkleRootHashOption,
       block.mainchainHeaders,
@@ -145,11 +151,12 @@ object Ommer {
 }
 
 
-object OmmerSerializer extends SparkzSerializer[Ommer] {
-  private val mainchainHeaderListSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
-  private val ommersListSerializer = new ListSerializer[Ommer](OmmerSerializer)
+object OmmerSerializer extends SparkzSerializer[Ommer[SidechainBlockHeader]] {
 
-  override def serialize(obj: Ommer, w: Writer): Unit = {
+  private val mainchainHeaderListSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
+  private val ommersListSerializer = new ListSerializer[Ommer[SidechainBlockHeader]](OmmerSerializer)
+
+  override def serialize(obj: Ommer[SidechainBlockHeader], w: Writer): Unit = {
     SidechainBlockHeaderSerializer.serialize(obj.header, w)
     obj.mainchainReferencesDataMerkleRootHashOption match {
       case Some(rootHash) =>
@@ -162,7 +169,7 @@ object OmmerSerializer extends SparkzSerializer[Ommer] {
     ommersListSerializer.serialize(obj.ommers.asJava, w)
   }
 
-  override def parse(r: Reader): Ommer = {
+  override def parse(r: Reader): Ommer[SidechainBlockHeader] = {
     val header: SidechainBlockHeader = SidechainBlockHeaderSerializer.parse(r)
     val referencesDataHashLength: Int = r.getInt()
     val mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]] = if(referencesDataHashLength == 0)
@@ -172,7 +179,40 @@ object OmmerSerializer extends SparkzSerializer[Ommer] {
 
     val mainchainHeaders: Seq[MainchainHeader] = mainchainHeaderListSerializer.parse(r).asScala
 
-    val ommers: Seq[Ommer] = ommersListSerializer.parse(r).asScala
+    val ommers: Seq[Ommer[SidechainBlockHeader]] = ommersListSerializer.parse(r).asScala
+
+    Ommer(header, mainchainReferencesDataMerkleRootHashOption, mainchainHeaders, ommers)
+  }
+}
+
+object AccountOmmerSerializer extends SparkzSerializer[Ommer[AccountBlockHeader]] {
+  private val mainchainHeaderListSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
+  private val ommersListSerializer = new ListSerializer[Ommer[AccountBlockHeader]](AccountOmmerSerializer)
+
+  override def serialize(obj: Ommer[AccountBlockHeader], w: Writer): Unit = {
+    AccountBlockHeaderSerializer.serialize(obj.header, w)
+    obj.mainchainReferencesDataMerkleRootHashOption match {
+      case Some(rootHash) =>
+        w.putInt(rootHash.length)
+        w.putBytes(rootHash)
+      case None =>
+        w.putInt(0)
+    }
+    mainchainHeaderListSerializer.serialize(obj.mainchainHeaders.asJava, w)
+    ommersListSerializer.serialize(obj.ommers.asJava, w)
+  }
+
+  override def parse(r: Reader): Ommer[AccountBlockHeader] = {
+    val header: AccountBlockHeader = AccountBlockHeaderSerializer.parse(r)
+    val referencesDataHashLength: Int = r.getInt()
+    val mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]] = if(referencesDataHashLength == 0)
+      None
+    else
+      Some(r.getBytes(referencesDataHashLength))
+
+    val mainchainHeaders: Seq[MainchainHeader] = mainchainHeaderListSerializer.parse(r).asScala
+
+    val ommers: Seq[Ommer[AccountBlockHeader]] = ommersListSerializer.parse(r).asScala
 
     Ommer(header, mainchainReferencesDataMerkleRootHashOption, mainchainHeaders, ommers)
   }

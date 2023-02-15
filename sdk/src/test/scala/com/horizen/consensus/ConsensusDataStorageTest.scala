@@ -4,7 +4,7 @@ import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.utils._
 import org.junit.{Before, Test}
-import scorex.util._
+import sparkz.util._
 import org.junit.Assert._
 
 import scala.util.Random

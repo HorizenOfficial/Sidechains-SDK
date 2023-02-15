@@ -11,7 +11,7 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
 import scala.Array;
-import scorex.util.encode.Base16;
+import sparkz.util.encode.Base16;
 import java.util.*;
 import static com.horizen.transaction.CoreTransactionsIdsEnum.MC2SCAggregatedTransactionId;
 
@@ -28,6 +28,7 @@ public final class MC2SCAggregatedTransaction
     private final byte version;
 
     public final static byte MC2SC_AGGREGATED_TRANSACTION_VERSION = 1;
+    public final static int MAX_MC2SC_AGGREGATED_TRANSACTION_SIZE = 2*1024*1024;
 
     public MC2SCAggregatedTransaction(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, byte version) {
         if(mc2scTransactionsOutputs.isEmpty())
@@ -114,8 +115,8 @@ public final class MC2SCAggregatedTransaction
                     "unsupported version number.", id()));
         }
 
-        if (bytes().length > MAX_TRANSACTION_SIZE) {
-            throw new TransactionSemanticValidityException("Transaction is too large.");
+        if (bytes().length > MAX_MC2SC_AGGREGATED_TRANSACTION_SIZE) {
+            throw new TransactionSemanticValidityException("Transaction is too large: " + bytes().length);
         }
     }
 

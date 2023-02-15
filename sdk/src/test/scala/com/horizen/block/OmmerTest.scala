@@ -13,7 +13,7 @@ import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.io.Source
 import scala.util.{Failure, Success}
@@ -43,7 +43,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     // Test 1: ommer with valid SidechainBlockHeader and no headers&ommers at all must be valid
     // Create Block with no MainchainBlockReferencesData and MainchainHeaders
     var block: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(100000L), includeReference = false)
-    var ommer: Ommer = Ommer.toOmmer(block)
+    var ommer: Ommer[SidechainBlockHeader] = Ommer.toOmmer(block)
     ommer.verifyDataConsistency() match {
       case Success(_) =>
       case Failure(e) => jFail(s"Ommer expected to have consistent data, instead exception: ${e.getMessage}")
@@ -263,32 +263,32 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val vrfProofOpt = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationSeed))
 
     val block1: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(100000L), includeReference = false, vrfKeysOpt = vrfKeyPairOpt, vrfProofOpt = vrfProofOpt)
-    val ommer1: Ommer = Ommer.toOmmer(block1)
+    val ommer1: Ommer[SidechainBlockHeader] = Ommer.toOmmer(block1)
 
     // Test 1: Compare different ommers:
     val block2: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 555L, timestampOpt = Some(100000L), includeReference = false)
-    val ommer2: Ommer = Ommer.toOmmer(block2)
+    val ommer2: Ommer[SidechainBlockHeader] = Ommer.toOmmer(block2)
     assertNotEquals("Ommers expected to be different", ommer1.hashCode(), ommer2.hashCode())
     assertNotEquals("Ommers expected to be different", ommer1, ommer2)
 
 
     // Test 2: Compare equal ommers:
     val block3: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(100000L), includeReference = false, vrfKeysOpt = vrfKeyPairOpt, vrfProofOpt = vrfProofOpt)
-    val ommer3: Ommer = Ommer.toOmmer(block3)
+    val ommer3: Ommer[SidechainBlockHeader] = Ommer.toOmmer(block3)
     assertEquals("Ommers expected to be equal", ommer1.hashCode(), ommer3.hashCode())
     assertEquals("Ommers expected to be equal", ommer1, ommer3)
 
 
     // Test 3: Compare equal ommers with MC data:
     val block4: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 666L, timestampOpt = Some(100000L), includeReference = true)
-    val ommer4: Ommer = Ommer.toOmmer(block4)
-    val ommer5: Ommer = ommer4.copy()
+    val ommer4: Ommer[SidechainBlockHeader] = Ommer.toOmmer(block4)
+    val ommer5: Ommer[SidechainBlockHeader] = ommer4.copy()
     assertEquals("Ommers expected to be equal", ommer4.hashCode(), ommer5.hashCode())
     assertEquals("Ommers expected to be equal", ommer4, ommer5)
 
 
     // Test 4: Compare different ommers with MC data:
-    val ommer6: Ommer = ommer4.copy(mainchainHeaders = Seq())
+    val ommer6: Ommer[SidechainBlockHeader] = ommer4.copy(mainchainHeaders = Seq())
     assertEquals("Ommers expected to be equal", ommer4.hashCode(), ommer6.hashCode())
     assertNotEquals("Ommers expected to be different", ommer4, ommer6)
 
@@ -307,11 +307,11 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       timestampOpt = Some(100000L),
       includeReference = false
     )
-    var ommer: Ommer = Ommer.toOmmer(block)
+    var ommer: Ommer[SidechainBlockHeader] = Ommer.toOmmer(block)
     var bytes = ommer.bytes
 
     var serializedOmmerTry = OmmerSerializer.parseBytesTry(bytes)
-    assertTrue("Ommer expected to by parsed.", serializedOmmerTry.isSuccess)
+    assertTrue("Ommer expected to be parsed.", serializedOmmerTry.isSuccess)
 
     var serializedOmmer = serializedOmmerTry.get
     assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, serializedOmmer.header.id)
@@ -363,7 +363,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     }
 
     serializedOmmerTry = OmmerSerializer.parseBytesTry(bytes)
-    assertTrue("Ommer expected to by parsed.", serializedOmmerTry.isSuccess)
+    assertTrue("Ommer expected to be parsed.", serializedOmmerTry.isSuccess)
 
     serializedOmmer = serializedOmmerTry.get
     assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, serializedOmmer.header.id)
@@ -423,7 +423,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val ommer = Ommer.toOmmer(block)
 
     val deserializedOmmerTry = OmmerSerializer.parseBytesTry(bytes)
-    assertTrue("Ommer expected to by parsed.", deserializedOmmerTry.isSuccess)
+    assertTrue("Ommer expected to be parsed.", deserializedOmmerTry.isSuccess)
 
     val deserializedOmmer = deserializedOmmerTry.get
     assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, deserializedOmmer.header.id)

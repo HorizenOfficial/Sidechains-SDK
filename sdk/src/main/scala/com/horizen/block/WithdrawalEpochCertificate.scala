@@ -4,30 +4,30 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
 import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
-case class FieldElementCertificateField(rawData: Array[Byte]) extends ScorexLogging {
+case class FieldElementCertificateField(rawData: Array[Byte]) extends SparkzLogging {
   def fieldElementBytes(version: SidechainCreationVersion): Array[Byte] = {
-    logger.debug("Fe before: " + BytesUtils.toHexString(rawData))
+    logger.trace("Fe before: " + BytesUtils.toHexString(rawData))
     val bytes = version match {
       case SidechainCreationVersion0 =>
-        logger.debug(s"sc version=${SidechainCreationVersion0}: prepend raw data to the FieldElement of size=${rawData.length}")
+        logger.trace(s"sc version=${SidechainCreationVersion0}: prepend raw data to the FieldElement of size=${rawData.length}")
           // prepend raw data to the FieldElement size
         Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
       case other =>
-        logger.debug(s"sc version=${version}: append raw data to the FieldElement of size=${rawData.length}")
+        logger.trace(s"sc version=${version}: append raw data to the FieldElement of size=${rawData.length}")
         // append raw data to the FieldElement size
         Bytes.concat(rawData, new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length))
     }
-    logger.debug("Fe after:  " + BytesUtils.toHexString(bytes))
+    logger.trace("Fe after:  " + BytesUtils.toHexString(bytes))
     bytes
   }
 }
@@ -79,6 +79,14 @@ case class WithdrawalEpochCertificate
 }
 
 object WithdrawalEpochCertificate {
+  /** Source: consensus.h of Zen MC code:
+   * The minimum theoretical possible size of a consistent cert.
+   * Large of its part is taken by the proof, which has a the minimum theoretical possible size of ~1086
+   * (was 2850 assuming SegmentSize = 1 << 18)
+   * static const unsigned int MIN_CERT_SIZE = MIN_PROOF_SIZE + 100;
+   */
+  val MIN_CERT_SIZE: Int = 1186
+
   def parse(certificateBytes: Array[Byte], offset: Int) : WithdrawalEpochCertificate = {
 
     var currentOffset: Int = offset

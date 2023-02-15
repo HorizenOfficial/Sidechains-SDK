@@ -3,7 +3,7 @@ package com.horizen.network
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import com.horizen._
-import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
+import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockSerializer}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.SidechainBlockFixture.{getDefaultTransactionsCompanion, sidechainTransactionsCompanion}
 import com.horizen.fixtures.SidechainBlockInfoFixture
@@ -26,7 +26,7 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import java.io.{BufferedReader, FileReader}
 import java.net.InetSocketAddress
@@ -142,7 +142,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
     val transactionHexBytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
 
     val additianalBytes: Array[Byte] = Array(0x00, 0x0a, 0x01, 0x0b)
-    val regularTransactionSerializer = RegularTransactionSerializer.getSerializer()
+    val regularTransactionSerializer = RegularTransactionSerializer.getSerializer
 
     val deserializedTransactionTry = regularTransactionSerializer.parseBytesTry(transactionHexBytes)
     assertTrue("Cannot deserialize original Sidechain transaction", deserializedTransactionTry.isSuccess)
@@ -191,11 +191,11 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       Requested
     })
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlock.ModifierTypeId, Map(deserializedBlock.id -> blockBytes))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Map(deserializedBlock.id -> blockBytes))), Some(peer)))
     viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
     networkControllerProbe.expectNoMessage()
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlock.ModifierTypeId, Map(deserializedBlock.id -> transferData))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Map(deserializedBlock.id -> transferData))), Some(peer)))
     viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
     // Check that sender was penalize
     networkControllerProbe.expectMsgType[PenalizePeer]
@@ -222,7 +222,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
     val tracker: DeliveryTracker = mock[DeliveryTracker]
 
     val modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
-    Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
+    Map(SidechainBlockBase.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
     val nodeViewSynchronizerRef = actorSystem.actorOf(Props(

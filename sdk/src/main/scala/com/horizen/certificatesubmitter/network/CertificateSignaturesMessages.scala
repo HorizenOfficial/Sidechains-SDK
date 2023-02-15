@@ -1,10 +1,10 @@
 package com.horizen.certificatesubmitter.network
 
-import com.horizen.certificatesubmitter.CertificateSubmitter.CertificateSignatureInfo
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.CertificateSignatureInfo
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.proof.SchnorrSignatureSerializer
 import sparkz.core.network.message.{Message, MessageSpecV1}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 
 /**
  * Specify the unknown certificate signatures indexes

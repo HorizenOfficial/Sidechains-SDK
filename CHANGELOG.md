@@ -1,3 +1,13 @@
+**0.6.0**
+1. Sidechain version 2 support with the new circuit type - threshold signature circuit with key rotation.
+2. Certificate key rotation API endpoints added. 
+3. Non ceasing sidechain support. 
+4. Bootstrapping tool: virtualWithdrawalEpochLength parameter added to `genesisinfo` command. 
+5. Bootstrapping tool: `generateCertWithKeyRotationProofInfo` command added for certificate circuit with key rotation.
+6. Remote keys manager added to the CertificateSubmitter: submitter is able to sign certificates using the Secure Enclave hosted keys.
+7. Config file structure updated: remote keys manager configuration section added `sparkz.remoteKeysManager`.
+8. Signing tool introduced.
+
 **0.5.0**
 1. Scorex dependency has been updated from Scorex 2.0.0-RC6 to Sparkz 2.0.0-RC9 (package name has been changed to sparkz).
 2. Bootstrapping tool interface changed: cert proof info was separated from signers key generation.

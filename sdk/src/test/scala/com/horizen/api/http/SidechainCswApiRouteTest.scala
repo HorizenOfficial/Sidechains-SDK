@@ -49,12 +49,12 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       Post(basePath + "generateCswProof").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
-      Post(basePath + "generateCswProof").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
+      Post(basePath + "generateCswProof").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "generateCswProof").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      Post(basePath + "generateCswProof").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Unauthorized.intValue
       }
 
       Post(basePath + "cswInfo").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
@@ -95,7 +95,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         assertTrue(result.get("state").asBoolean)
       }
       //Testing response in case of internal error
-      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(false)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentNodeView_reply(false)
       Post(basePath + "hasCeased") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -194,7 +194,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
 
     "reply at /generateCswProof" in {
       Post(basePath + "generateCswProof")
-        .withHeaders(apiTokenHeader).withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRoute ~> check {
+        .addCredentials(credentials).withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -216,7 +216,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
     val sidechainCswApiRouteWithDisabledCSW = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,params).route
 
     "reply at /hasCeased" in {
-      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(true)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentNodeView_reply(true)
       Post(basePath + "hasCeased") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

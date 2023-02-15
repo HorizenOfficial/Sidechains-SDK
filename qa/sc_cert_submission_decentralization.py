@@ -4,7 +4,7 @@ import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
@@ -28,6 +28,14 @@ Configuration:
     
     Network schema:
         N1 <-> N2 <-> N3 <-> N4
+Note:
+    This test can be executed in two modes:
+    1. using no key rotation circuit (by default)
+    2. using key rotation circuit (with --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation)
+    With key rotation circuit can be executed in two modes:
+    1. ceasing (by default)
+    2. non-ceasing (with --nonceasing flag)
+    
 Test:
     For the SC node:
         - generate MC and SC blocks to reach the end of the Withdrawal epoch 0
@@ -41,8 +49,9 @@ Test:
         - check for the epoch 1 certificate in the MC mempool
         - validate certificate quality, all keys expected to be involved (quality = 7 of 7)
 """
-class SCCertSubmissionDecentralization(SidechainTestFramework):
 
+
+class SCCertSubmissionDecentralization(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sc_nodes = 4
 
@@ -52,23 +61,25 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1',
+                                        '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
+
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             True,  # Certificate submission is enabled
             True,  # Certificate signing is enabled
             [0, 1],  # owns 2 schnorr PKs for certificate signing
-            1  # set max connections to prevent node 1 and nodes 3,4 connection
+            get_peers_interval="60m" # set get_peers interval message interval to 60 minutes to prevent node 1 and nodes 3,4 connection
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             False,  # Certificate submission is disabled
             True,  # Certificate signing is enabled
             [2, 3],  # owns 2 schnorr PKs for certificate signing
-            2  # set max connections to prevent node 2 and node 4 connection
+            get_peers_interval="60m" # set get_peers interval message interval to 60 minutes to prevent node 1 and nodes 3,4 connection
         )
 
         sc_node_3_configuration = SCNodeConfiguration(
@@ -76,7 +87,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             False,  # Certificate submission is disabled
             False,  # Certificate signing is disabled
             [0, 1, 2, 3, 4, 5, 6],  # owns 3 schnorr PKs for certificate signing
-            1  # set max connections to prevent node 4 and nodes 1,2 connection
+            get_peers_interval="60m" # set get_peers interval message interval to 60 minutes to prevent node 1 and nodes 3,4 connection
         )
 
         sc_node_4_configuration = SCNodeConfiguration(
@@ -84,12 +95,19 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
             False,  # Certificate submission is disabled
             True,  # Certificate signing is enabled
             [4, 5, 6],  # owns 3 schnorr PKs for certificate signing
-            2  # set max connections to prevent node 3 and node 1 connection
+            get_peers_interval="60m" # set get_peers interval message interval to 60 minutes to prevent node 1 and nodes 3,4 connection
         )
 
-        network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
-            sc_node_1_configuration,
+        if self.options.certcircuittype == KEY_ROTATION_CIRCUIT:
+            sc_creation_version = SC_CREATION_VERSION_2  # non-ceasing could be only SC_CREATION_VERSION_2>=2
+        else:
+            sc_creation_version = SC_CREATION_VERSION_1
+
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length,
+                                                sc_creation_version=sc_creation_version,
+                                                is_non_ceasing=self.options.nonceasing,
+                                                circuit_type=self.options.certcircuittype),
+                                 sc_node_1_configuration,
             sc_node_2_configuration,
             sc_node_3_configuration,
             sc_node_4_configuration
@@ -174,7 +192,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         disconnect_sc_nodes_bi(self.sc_nodes, 2, 3)
         # Check network configuration
         assert_equal(1, len(sc_connected_peers(sc_node1)), "Sc Node 1 expect to have only 1 connection.")
-        assert_equal(2, len(sc_connected_peers(sc_node2)), "Sc Node 2 expect to only 1 connection.")
+        assert_equal(2, len(sc_connected_peers(sc_node2)), "Sc Node 2 expect to only 2 connection.")
         assert_equal(1, len(sc_connected_peers(sc_node3)), "Sc Node 3 expect to only 1 connection.")
         assert_equal(0, len(sc_connected_peers(sc_node4)), "Sc Node 4 expect to have no connections.")
 

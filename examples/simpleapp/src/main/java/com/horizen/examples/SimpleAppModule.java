@@ -5,10 +5,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-
 import com.horizen.SidechainAppModule;
 import com.horizen.SidechainAppStopper;
 import com.horizen.SidechainSettings;
@@ -70,6 +68,8 @@ public class SimpleAppModule extends SidechainAppModule
 
         AppForkConfigurator forkConfigurator = new AppForkConfigurator();
 
+        // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.
+        int consensusSecondsInSlot = 120;
 
         // Here I can add my custom rest api and/or override existing one
         List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
@@ -155,6 +155,8 @@ public class SimpleAppModule extends SidechainAppModule
         bind(ForkConfigurator.class)
                 .annotatedWith(Names.named("ForkConfiguration"))
                 .toInstance(forkConfigurator);
-
+        bind(Integer.class)
+                .annotatedWith(Names.named("ConsensusSecondsInSlot"))
+                .toInstance(consensusSecondsInSlot);
     }
 }

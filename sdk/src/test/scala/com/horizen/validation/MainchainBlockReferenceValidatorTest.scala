@@ -1,13 +1,13 @@
 package com.horizen.validation
 
 import java.util.{Optional => JOptional}
-
-import com.horizen.SidechainHistory
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
+import com.horizen.{SidechainHistory, SidechainTypes}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock, SidechainBlockHeader}
+import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo, SidechainFeePaymentsInfo}
 import com.horizen.fixtures.{FieldElementFixture, MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.poseidonnative.PoseidonHash
+import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, fail => jFail}
 import org.junit.Test
@@ -15,7 +15,7 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.consensus.ModifierSemanticValidity
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 import scala.util.{Failure, Success}
 
@@ -26,10 +26,12 @@ class MainchainBlockReferenceValidatorTest
   with MainchainBlockReferenceFixture
   with SidechainBlockInfoFixture {
 
+  type BoxMainchainBlockReferenceValidator = MainchainBlockReferenceValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage, SidechainHistory]
+
   val genesisParentBlockId: ModifierId = bytesToId(new Array[Byte](32))
   val genesisBlockId: ModifierId = bytesToId(new Array[Byte](32))
   val params: NetworkParams = MainNetParams(sidechainGenesisBlockId = genesisBlockId)
-  val validator: MainchainBlockReferenceValidator = new MainchainBlockReferenceValidator(params)
+  val validator: BoxMainchainBlockReferenceValidator = new BoxMainchainBlockReferenceValidator(params)
 
 
   @Test

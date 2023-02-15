@@ -4,25 +4,45 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainCswErrorResponse._
 import com.horizen.api.http.SidechainCswRestScheme._
-import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCswBoxIds, GetCswInfo}
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.csw.CswManager.Responses._
-import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
+import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCswBoxIds, GetCswInfo}
+import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import com.horizen.params.NetworkParams
+import sparkz.core.settings.RESTApiSettings
+
+import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 
 
-abstract class SidechainCswApiRoute(override val settings: RESTApiSettings,
-                                    val sidechainNodeViewHolderRef: ActorRef,
-                                    val params: NetworkParams)
-                                   (implicit val context: ActorRefFactory, override val ec: ExecutionContext)  extends SidechainApiRoute {
+abstract class SidechainCswApiRoute (override val settings: RESTApiSettings,
+                                                           val sidechainNodeViewHolderRef: ActorRef,
+                                                           val params: NetworkParams)
+                                                           (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends SidechainApiRoute[
+    SidechainTypes#SCBT,
+    SidechainBlockHeader,
+    SidechainBlock,
+    SidechainFeePaymentsInfo,
+    NodeHistory,
+    NodeState,
+    NodeWallet,
+    NodeMemoryPool,
+    SidechainNodeView] {
+
+  override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
+
 
   /**
    * Return ceasing status of the Sidechain
@@ -81,27 +101,29 @@ object SidechainCswApiRoute {
      * Then inform about current status of this proof
      */
     def generateCswProof: Route = (post & path("generateCswProof")) {
-      withAuth {
-        entity(as[ReqGenerationCswState]) { body =>
-          Try {
-            Await.result(cswManager ? GenerateCswProof(BytesUtils.fromHexString(body.boxId), body.receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
-          } match {
-            case Success(res) =>
-              res match {
-                case SidechainIsAlive => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
-                case InvalidAddress => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Invalid MC address"))
-                case NoProofData => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
-                case ProofGenerationStarted => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is started"))
-                case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation in process"))
-                case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is finished"))
+      withBasicAuth {
+        _ => {
+          entity(as[ReqGenerationCswState]) { body =>
+            Try {
+              Await.result(cswManager ? GenerateCswProof(BytesUtils.fromHexString(body.boxId), body.receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+            } match {
+              case Success(res) =>
+                res match {
+                  case SidechainIsAlive => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
+                  case InvalidAddress => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Invalid MC address"))
+                  case NoProofData => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
+                  case ProofGenerationStarted => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is started"))
+                  case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation in process"))
+                  case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is finished"))
+                }
+              case Failure(e) => {
+                log.error("Unexpected error during CSW proof generation.")
+                ApiResponseUtil.toResponse(ErrorCswGenerationState("Unexpected error during CSW proof generation.", JOptional.of(e)))
               }
-            case Failure(e) => {
-              log.error("Unexpected error during CSW proof generation.")
-              ApiResponseUtil.toResponse(ErrorCswGenerationState("Unexpected error during CSW proof generation.", JOptional.of(e)))
             }
           }
         }
-      }
+        }
     }
 
     /**

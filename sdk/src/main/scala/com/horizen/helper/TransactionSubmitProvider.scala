@@ -1,14 +1,12 @@
 package com.horizen.helper
 
-import com.horizen.box.Box
-import com.horizen.proposition.Proposition
-import com.horizen.transaction.BoxTransaction
+import com.horizen.transaction.Transaction
 
-trait TransactionSubmitProvider {
+trait TransactionSubmitProvider[TX <: Transaction] {
 
   @throws(classOf[IllegalArgumentException])
-  def submitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]]): Unit
+  def submitTransaction(tx: TX): Unit
 
-  def asyncSubmitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]],
-                        callback:(Boolean, Option[Throwable]) => Unit): Unit
+  def asyncSubmitTransaction(tx: TX,
+                             callback:(Boolean, Option[Throwable]) => Unit): Unit
 }

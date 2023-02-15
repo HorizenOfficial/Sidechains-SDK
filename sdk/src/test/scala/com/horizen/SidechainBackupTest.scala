@@ -5,6 +5,7 @@ import com.horizen.box.{BoxSerializer, CoinsBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.storage.{BackupStorage, BoxBackupInterface}
@@ -13,7 +14,7 @@ import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.rules.TemporaryFolder
 import org.junit.{Before, Rule, Test}
 import org.scalatestplus.junit.JUnitSuite
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
@@ -38,8 +39,9 @@ class SidechainBackupTest
   val firstModifierBoxLength = 7
 
   val firstModifier: ByteArrayWrapper = getVersion
-  val secondModifier: ByteArrayWrapper = getVersion;
+  val secondModifier: ByteArrayWrapper = getVersion
 
+  val params: NetworkParams = MainNetParams()
 
   val backupper: BoxBackupInterface = new BoxBackupInterface {
     override def backup(source: BoxIterator, db: BackupStorage): Unit = {
@@ -104,7 +106,7 @@ class SidechainBackupTest
     stateStorage.close()
 
     //Instantiate a SidechainBackup class and call createBackup with no Copy option
-    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper);
+    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper, params = params);
     sidechainBakcup.createBackup(stateStorageFile.getPath, BytesUtils.toHexString(firstModifier.data()), false)
 
     //Read the backup storage created and verify that contains only firstModifierBoxLength elements. (We did a rollback to the first modifier)
@@ -142,7 +144,7 @@ class SidechainBackupTest
     stateStorage.close()
 
     //Instantiate a SidechainBackup class and call createBackup
-    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper);
+    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper, params = params);
     sidechainBakcup.createBackup(stateStorageFile.getPath, BytesUtils.toHexString(firstModifier.data()), true)
 
     //Read the backup storage created and verify that contains only firstModifierBoxLength elements. (We did a rollback to the first modifier)

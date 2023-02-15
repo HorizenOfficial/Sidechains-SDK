@@ -8,7 +8,7 @@ import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertFalse}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.core.utils.SparkzEncoder
+import sparkz.util.SparkzEncoder
 
 class Signature25519ScalaTest
   extends JUnitSuite

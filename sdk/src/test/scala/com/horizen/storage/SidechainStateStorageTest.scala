@@ -3,11 +3,13 @@ package com.horizen.storage
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
 import com.horizen.backup.{BackupBox, BoxIterator}
+import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{BoxSerializer, CoinsBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, BytesUtils, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
@@ -16,7 +18,7 @@ import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 import java.lang.{Byte => JByte}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
@@ -34,6 +36,7 @@ class SidechainStateStorageTest
     with StoreFixture
     with MockitoSugar
     with SidechainTypes
+    with WithdrawalEpochCertificateFixture
 {
   val mockedPhysicalStorage: Storage = mock[VersionedLevelDbStorageAdapter]
 
@@ -50,6 +53,10 @@ class SidechainStateStorageTest
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
 
   val _temporaryFolder = new TemporaryFolder()
+
+  val params: NetworkParams = MainNetParams()
+
+  val nonCeasingParams: NetworkParams = MainNetParams(isNonCeasing = true)
 
   @Rule  def temporaryFolder = _temporaryFolder
 
@@ -86,7 +93,7 @@ class SidechainStateStorageTest
 
   @Test
   def testUpdate(): Unit = {
-    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion, params)
     var tryRes: Try[SidechainStateStorage] = null
     val expectedException = new IllegalArgumentException("on update exception")
 
@@ -155,11 +162,94 @@ class SidechainStateStorageTest
     assertEquals("Storage should return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
   }
 
+
+  @Test
+  def testUpdateNonCeasing(): Unit = {
+    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion, nonCeasingParams)
+    var tryRes: Try[SidechainStateStorage] = null
+    val expectedException = new IllegalArgumentException("on update exception")
+
+    // Test1: get one item
+    assertEquals("Storage must return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
+
+    // Test 2: try get non-existing item
+    assertEquals("Storage must NOT contain requested Box.", None, stateStorage.getBox("non-existing id".getBytes()))
+
+    // Data for Test 1:
+    val version: ByteArrayWrapper = getVersion
+    val toUpdate = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
+    val toRemove = new JArrayList[ByteArrayWrapper]()
+    toUpdate.add(storedBoxList.head)
+
+    // withdrawals info
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.withdrawalEpochInformationKey),
+      new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
+
+    // Certificate
+    val referenceEpochNumber = 0
+    val cert: WithdrawalEpochCertificate = generateWithdrawalEpochCertificate(epochNumber = Some(referenceEpochNumber))
+
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateSidechainBlockIdKey), version))
+
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateEpochNumberKey),
+      new ByteArrayWrapper(new ByteArrayWrapper(Ints.toByteArray(referenceEpochNumber)))))
+
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getTopQualityCertificateKey(referenceEpochNumber)),
+      new ByteArrayWrapper(WithdrawalEpochCertificateSerializer.toBytes(cert))))
+
+    // block fee info
+    val nextBlockFeeInfoCounter: Int = 0
+    val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getBlockFeeInfoCounterKey(withdrawalEpochInfo.epoch)),
+      new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getBlockFeeInfoKey(withdrawalEpochInfo.epoch, nextBlockFeeInfoCounter)),
+      new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfo))))
+
+    // consensus epoch
+    toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
+    toRemove.add(storedBoxList(2).getKey)
+
+    //forger list indexes
+    toUpdate.add(new Pair(stateStorage.forgerListIndexKey, new ByteArrayWrapper(Array[Byte](0.toByte))))
+
+    Mockito.when(mockedPhysicalStorage.update(
+      ArgumentMatchers.any[ByteArrayWrapper](),
+      ArgumentMatchers.anyList[Pair[ByteArrayWrapper, ByteArrayWrapper]](),
+      ArgumentMatchers.anyList[ByteArrayWrapper]()))
+      // For Test 1:
+      .thenAnswer(args => {
+        val actualVersion = args.getArgument(0).asInstanceOf[ByteArrayWrapper]
+        val actualToUpdate = args.getArgument(1).asInstanceOf[java.util.List[Pair[ByteArrayWrapper, ByteArrayWrapper]]]
+        val actualToRemove = args.getArgument(2).asInstanceOf[java.util.List[ByteArrayWrapper]]
+        assertEquals("StateStorage.update(...) actual Version is wrong.", version, actualVersion)
+        assertEquals("StateStorage.update(...) actual toUpdate list is wrong.", toUpdate, actualToUpdate)
+        assertEquals("StateStorage.update(...) actual toRemove list is wrong.", toRemove, actualToRemove)
+      })
+      // For Test 2:
+      .thenAnswer(_ => throw expectedException)
+
+    // Test 1: test successful update
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
+      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), consensusEpoch, Some(cert), blockFeeInfo, None, false, new Array[Int](0), 0)
+    assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if (tryRes.isFailure) tryRes.failed.get.getMessage else ""),
+      tryRes.isSuccess)
+
+    // Test 2: test failed update, when Storage throws an exception
+    val box = getZenBox
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box),
+      Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0)
+    assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
+    assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
+    assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
+    assertTrue("Storage should contain Box that was tried to remove.", stateStorage.getBox(boxList(3).id()).isDefined)
+    assertEquals("Storage should return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
+  }
+
   @Test
   def testRestoreNonCoinBoxes(): Unit = {
     //Create temporary SidechainStateStorage
     val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
-    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion, params)
 
     //Create temporary BackupStorage
     val backupStorageFile = temporaryFolder.newFolder("backupStorage")
@@ -188,7 +278,7 @@ class SidechainStateStorageTest
   def testRestoreCoinBoxes(): Unit = {
     //Create temporary SidechainStateStorage
     val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
-    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion, params)
 
     //Create temporary BackupStorage
     val backupStorageFile = temporaryFolder.newFolder("backupStorage")
@@ -223,7 +313,7 @@ class SidechainStateStorageTest
     var exceptionThrown = false
 
     try {
-      val stateStorage = new SidechainStateStorage(null, sidechainBoxesCompanion)
+      val stateStorage = new SidechainStateStorage(null, sidechainBoxesCompanion, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }
@@ -233,7 +323,7 @@ class SidechainStateStorageTest
 
     exceptionThrown = false
     try {
-      val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, null)
+      val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, null, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }
@@ -241,7 +331,7 @@ class SidechainStateStorageTest
     assertTrue("SidechainStateStorage constructor. Exception must be thrown if boxesCompation is not specified.",
       exceptionThrown)
 
-    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion, params)
 
     assertTrue("SidechainStorage.rollback. Method must return Failure if NULL version specified.",
       stateStorage.rollback(null).isFailure)

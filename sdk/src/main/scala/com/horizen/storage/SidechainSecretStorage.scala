@@ -3,18 +3,19 @@ package com.horizen.storage
 import java.util.{ArrayList => JArrayList}
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
+import com.horizen.utils.Utils.nextVersion
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.util.{Random, Try}
+import scala.util.Try
 
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
     with SidechainStorageInfo
-    with ScorexLogging
+    with SparkzLogging
 {
   // Version - RandomBytes(32)
   // Key - Blake2b256 hash from public key bytes
@@ -44,14 +45,8 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   def getAll: List[SidechainTypes#SCS] = secrets.values.toList
 
-  private def nextVersion: Array[Byte] = {
-    val version = new Array[Byte](32)
-    Random.nextBytes(version)
-    version
-  }
-
   def add (secret: SidechainTypes#SCS): Try[SidechainSecretStorage] = Try {
-    require(secret != null, "Secret must be NOT NULL.")
+    require(secret != null, "Can not add to storage: Secret must be NOT NULL.")
 
     val key = calculateKey(secret.publicImage())
 
@@ -59,7 +54,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
 
-    storage.update(new ByteArrayWrapper(nextVersion),
+    storage.update(new ByteArrayWrapper(Utils.nextVersion),
       List(new JPair(key, value)).asJava,
       List[ByteArrayWrapper]().asJava)
 
@@ -69,7 +64,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   }
 
   def add (secretList: List[SidechainTypes#SCS]): Try[SidechainSecretStorage] = Try {
-    require(!secretList.contains(null), "Secret must be NOT NULL.")
+    require(!secretList.contains(null), "Null secret in list: Secret must be NOT NULL.")
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
     for (s <- secretList) {
@@ -80,7 +75,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
         new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(s))))
     }
 
-    storage.update(new ByteArrayWrapper(nextVersion),
+    storage.update(new ByteArrayWrapper(Utils.nextVersion),
       updateList,
       List[ByteArrayWrapper]().asJava)
 
@@ -92,7 +87,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
     val key = calculateKey(proposition)
 
-    storage.update(new ByteArrayWrapper(nextVersion),
+    storage.update(new ByteArrayWrapper(Utils.nextVersion),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       List(key).asJava)
 
@@ -111,7 +106,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
       removeList.add(key)
     }
 
-    storage.update(new ByteArrayWrapper(nextVersion),
+    storage.update(new ByteArrayWrapper(Utils.nextVersion),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       removeList)
 

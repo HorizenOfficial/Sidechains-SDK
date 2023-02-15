@@ -3,6 +3,7 @@ package com.horizen.fixtures;
 import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.proof.VrfProof;
 import com.horizen.secret.VrfSecretKey;
+import com.horizen.utils.Pair;
 import com.horizen.vrf.VrfOutput;
 
 import java.util.Random;
@@ -17,13 +18,20 @@ public class VrfGenerator {
         return randomBytes;
     }
 
-    public static VrfProof generateProof(long seed) {
+    public static Pair<VrfProof, VrfOutput> generateProofAndOutput(long seed) {
         Random rnd = new Random(seed);
         byte[] vrfSeed = new byte[32];
         rnd.nextBytes(vrfSeed);
         VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(vrfSeed);
-        byte[] randomBytes = generateRandomMessage(seed);
-        return vrfSecretKey.prove(randomBytes).getKey();
+        byte[] message = generateRandomMessage(seed);
+        VrfProof proof = vrfSecretKey.prove(message).getKey();
+        VrfOutput output = proof.proofToVrfOutput(vrfSecretKey.publicImage(), message).get();
+
+        return new Pair<>(proof, output);
+    }
+
+    public static VrfProof generateProof(long seed) {
+        return generateProofAndOutput(seed).getKey();
     }
 
     public static VrfOutput generateVrfOutput(long seed) {

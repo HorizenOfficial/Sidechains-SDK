@@ -15,13 +15,16 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties("valid")
 public class VrfPublicKey
-        extends AbstractSingleSecretProofOfKnowledgeProposition<VrfSecretKey> {
+        implements SingleSecretProofOfKnowledgeProposition<VrfSecretKey> {
     public final static int KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfPublicKeyLen();
 
     private final byte[] publicBytes;
 
     public VrfPublicKey(byte[] publicKey) {
         Objects.requireNonNull(publicKey, "Public key can't be null");
+
+        if(publicKey.length != KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, publicKey.length));
 
         publicBytes = Arrays.copyOf(publicKey, publicKey.length);
     }

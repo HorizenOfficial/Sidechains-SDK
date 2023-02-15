@@ -1,6 +1,6 @@
 package com.horizen.utils;
 
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -11,9 +11,9 @@ public final class Utils
 {
     private Utils() {}
 
-    public static final byte[] ZEROS_HASH = new byte[32];
-
     public static final int SHA256_LENGTH = 32;
+
+    public static final byte[] ZEROS_HASH = new byte[SHA256_LENGTH];
 
     public static byte[] doubleSHA256Hash(byte[] bytes) {
         try {
@@ -65,9 +65,9 @@ public final class Utils
         long result;
         int size = value.toByteArray().length;
         if (size <= 3)
-            result = value.longValue() << 8 * (3 - size);
+            result = value.longValueExact() << 8 * (3 - size);
         else
-            result = value.shiftRight(8 * (size - 3)).longValue();
+            result = value.shiftRight(8 * (size - 3)).longValueExact();
         // The 0x00800000 bit denotes the sign.
         // Thus, if it is already set, divide the mantissa by 256 and increase the exponent.
         if ((result & 0x00800000L) != 0) {

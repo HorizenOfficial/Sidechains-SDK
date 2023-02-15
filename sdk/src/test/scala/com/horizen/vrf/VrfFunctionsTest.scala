@@ -3,7 +3,8 @@ package com.horizen.vrf
 import java.util
 
 import com.horizen.cryptolibprovider.VrfFunctions.{KeyType, ProofType}
-import com.horizen.cryptolibprovider.{FieldElementUtils, CryptoLibProvider}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
 

@@ -12,7 +12,7 @@ import com.horizen.consensus._
 import com.horizen.secret.VrfKeyGenerator
 import org.junit.Test
 import sparkz.core.block.Block
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 
 class sc_node_holder_fixter_settings extends CompanionsFixture {
@@ -44,8 +44,8 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
     val mainchainHeaders = mainchainBlockReferences.map(_.header)
 
     val sidechainTransactionsMerkleRootHash: Array[Byte] = SidechainBlock.calculateTransactionsMerkleRootHash(Seq())
-    val mainchainMerkleRootHash: Array[Byte] = SidechainBlock.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
-    val ommersMerkleRootHash: Array[Byte] = SidechainBlock.calculateOmmersMerkleRootHash(Seq())
+    val mainchainMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
+    val ommersMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateOmmersMerkleRootHash(Seq())
 
     val blockVersion: Block.Version = 1: Byte
 

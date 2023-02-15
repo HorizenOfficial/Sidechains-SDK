@@ -3,18 +3,21 @@ package com.horizen
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.cryptolibprovider.FieldElementUtils
-import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.{CircuitTypes, FieldElementUtils}
+import com.horizen.fixtures.{FieldElementFixture, SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.forge.ForgerList
-import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.params.MainNetParams
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.secret.PrivateKey25519
+import com.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.transaction.{BoxTransaction, OpenStakeTransaction, RegularTransaction}
+import com.horizen.transaction.{BoxTransaction, CertificateKeyRotationTransaction, OpenStakeTransaction, RegularTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
 import org.junit._
@@ -22,11 +25,12 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.{bytesToId, bytesToVersion}
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
+import scala.collection.Seq
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Success}
@@ -113,6 +117,41 @@ class SidechainStateTest
   def getOpenStakeTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), forgerIndex: Int, fee: JOptional[Long]): OpenStakeTransaction = {
     val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
     OpenStakeTransaction.create(from, getPrivateKey25519List(1).get(0).publicImage(), forgerIndex, fee.orElseGet(() => 5L))
+  }
+
+  def getKeyRotationTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519),
+                                typeOfKey: KeyRotationProofTypes.KeyRotationProofType,
+                                keyIndex: Int,
+                                newKeySecret: SchnorrSecret,
+                                oldSigningKeySecret: SchnorrSecret,
+                                oldMasterKeySecret: SchnorrSecret,
+                                withdrawalEpochNumber: Int,
+                                params: NetworkParams,
+                                wrongNewKey: Boolean = false): CertificateKeyRotationTransaction = {
+    val from: JPair[ZenBox, PrivateKey25519] = new JPair[ZenBox, PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
+    val messageToSign = typeOfKey match {
+      case SigningKeyRotationProofType =>
+        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+          .getMsgToSignForSigningKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), withdrawalEpochNumber, params.sidechainId)
+      case MasterKeyRotationProofType =>
+        CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+          .getMsgToSignForMasterKeyUpdate(newKeySecret.publicImage().pubKeyBytes(), withdrawalEpochNumber, params.sidechainId)
+    }
+    val oldSigningKeySignature = oldSigningKeySecret.sign(messageToSign)
+    val newMasterKeySignature = oldMasterKeySecret.sign(messageToSign)
+
+    val newKeySignature = if (wrongNewKey) oldSigningKeySignature else newKeySecret.sign(messageToSign)
+
+    CertificateKeyRotationTransaction.create(
+      from,
+      getPrivateKey25519List(1).get(0).publicImage(),
+      0,
+      typeOfKey.id,
+      keyIndex,
+      newKeySecret.publicImage(),
+      oldSigningKeySignature,
+      newMasterKeySignature,
+      newKeySignature)
   }
 
   @Test
@@ -320,7 +359,9 @@ class SidechainStateTest
       ArgumentMatchers.any[Option[Array[Byte]]](),
       ArgumentMatchers.any[Boolean](),
       ArgumentMatchers.any[Array[Int]],
-      ArgumentMatchers.any[Int]))
+      ArgumentMatchers.any[Int],
+      ArgumentMatchers.any[Seq[KeyRotationProof]],
+      ArgumentMatchers.any[Option[CertifiersKeys]]))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
@@ -633,6 +674,8 @@ class SidechainStateTest
 
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
 
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
+
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
         buildRegularTransaction(0,1,0,Seq(),1)
@@ -731,6 +774,8 @@ class SidechainStateTest
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
       })
+
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -885,6 +930,8 @@ class SidechainStateTest
 
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
 
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
+
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
         buildRegularTransaction(0,1,0,Seq(),1)
@@ -921,7 +968,7 @@ class SidechainStateTest
     secretList ++= getPrivateKey25519List(10).asScala
     // Set base Box data
     boxList.clear()
-    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    boxList ++= getZenBoxList(secretList.asJava, 599).asScala.toList // Transaction with 1 output and 10 withdrawal requests requires at least 599 coins in the box(54*11+5)
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
@@ -966,8 +1013,7 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
-    Mockito.when(mockedBlock.transactions)
-      .thenReturn(transactionList.toList)
+    Mockito.when(mockedBlock.transactions).thenReturn(transactionList.toList)
 
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
 
@@ -975,8 +1021,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     Mockito.when(mockedBlock.timestamp).thenReturn(86401)
 
@@ -1002,11 +1046,6 @@ class SidechainStateTest
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
 
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
-
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
       validateTry.isSuccess)
@@ -1017,11 +1056,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
     assertFalse("Block validation must fail.",
@@ -1036,11 +1070,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
     assertFalse("Block validation must fail.",
@@ -1059,11 +1088,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData))
 
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
-
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
       validateTry.isSuccess)
@@ -1075,11 +1099,6 @@ class SidechainStateTest
     }
 
     Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(wbs.asScala.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
@@ -1093,11 +1112,6 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
     assertFalse("Block validation must fail.",
@@ -1114,15 +1128,11 @@ class SidechainStateTest
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
 
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn(bytesToId(stateVersion.last.data))
-      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
-
     validateTry = sidechainState.validate(mockedBlock)
     assertTrue("Block validation must be successful.",
       validateTry.isSuccess)
   }
+
   @Test
   def testCoinBoxFeeBeforeAndAfterFork(): Unit = {
     secretList.clear()
@@ -1137,6 +1147,9 @@ class SidechainStateTest
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
       })
+
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(0,0)))
+
     val sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       params, bytesToVersion(getVersion.data()), mockedApplicationState)
 
@@ -1154,5 +1167,175 @@ class SidechainStateTest
     val tryValidateAfterFork2 = sidechainState.validate(tx2)
     assertEquals(s"Transaction [${tx2.id()}] is semantically invalid: Coin box value [30] is below the threshold[54].",
       tryValidateAfterFork2.failed.get.getMessage)
+  }
+
+  @Test
+  def keyRotationTransactionTest(): Unit = {
+    // Set base Secrets data
+    secretList.clear()
+    secretList ++= getPrivateKey25519List(5).asScala
+
+    // Set base Box data
+    boxList.clear()
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    stateVersion.clear()
+    stateVersion += getVersion
+    transactionList.clear()
+    transactionList += buildRegularTransaction(1, 1, 0, Seq(), 5)
+
+    Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
+      .thenAnswer(answer => {
+        val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
+        boxList.find(_.id().sameElements(boxId))
+      })
+
+    Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    val keysNumber: Int = 3
+
+    val signingKeys = new JArrayList[SchnorrSecret]()
+    val masterKeys = new JArrayList[SchnorrSecret]()
+    for (i <- 0 until keysNumber) {
+      signingKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(("signingSeed"+i).getBytes))
+      masterKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(("masterSeed"+i).getBytes()))
+    }
+
+    val withdrawalEpochNumber: Int = 10
+    val certifiersKeys = CertifiersKeys(signingKeys.asScala.toVector.map(key => key.publicImage()), masterKeys.asScala.toVector.map(key => key.publicImage()))
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(withdrawalEpochNumber, 0)))
+    Mockito.when(mockedStateStorage.getCertifiersKeys(withdrawalEpochNumber - 1)).thenReturn(Some(certifiersKeys))
+
+    val newSigningKey = SchnorrKeyGenerator.getInstance().generateSecret("newKey1".getBytes())
+
+    val mockedParams = mock[NetworkParams]
+    Mockito.when(mockedParams.sidechainId).thenReturn(FieldElementFixture.generateFieldElement())
+
+    var keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      keysNumber + 1,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(0),
+      withdrawalEpochNumber,
+      mockedParams
+    )
+
+
+    // NEGATIVE TESTS
+
+    // Test key rotation transaction with wrong circuit type
+    Mockito.when(mockedParams.circuitType).thenReturn(CircuitTypes.NaiveThresholdSignatureCircuit)
+
+    var sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
+      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+
+    var tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    assertEquals("CertificateKeyRotationTransaction is not allowed with this kind of circuit!", tryValidate.failed.get.getMessage)
+
+
+    // Test key rotation with wrong key index
+    Mockito.when(mockedParams.signersPublicKeys).thenReturn(signingKeys.asScala.toVector.map(key => key.publicImage()))
+    Mockito.when(mockedParams.mastersPublicKeys).thenReturn(masterKeys.asScala.toVector.map(key => key.publicImage()))
+    Mockito.when(mockedParams.circuitType).thenReturn(CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation)
+
+    sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
+      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+
+    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    assertEquals("Key index in CertificateKeyRotationTransaction is out of range!", tryValidate.failed.get.getMessage)
+
+
+    // Test with wrong old signing proof
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(1),
+      masterKeys.get(0),
+      withdrawalEpochNumber,
+      mockedParams
+    )
+
+    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",tryValidate.isSuccess)
+    assertEquals("Signing key signature in CertificateKeyRotationTransaction is not valid!", tryValidate.failed.get.getMessage)
+
+
+    // Test with wrong old master proof
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.MasterKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(1),
+      withdrawalEpochNumber,
+      mockedParams
+    )
+
+    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    assertEquals("Master key signature in CertificateKeyRotationTransaction is not valid!", tryValidate.failed.get.getMessage)
+
+
+    // Test with wrong old new proof
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(0),
+      withdrawalEpochNumber,
+      mockedParams,
+      wrongNewKey = true
+    )
+
+    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    assertEquals("New key signature in CertificateKeyRotationTransaction is not valid!", tryValidate.failed.get.getMessage)
+
+
+    // Test with wrong epoch number of the message to sign for the key rotation transaction
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(0),
+      withdrawalEpochNumber - 1,
+      mockedParams
+    )
+
+    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.", tryValidate.isSuccess)
+    // We expect to see invalid signing key signature, since it is the first one to be validated.
+    assertEquals("Signing key signature in CertificateKeyRotationTransaction is not valid!", tryValidate.failed.get.getMessage)
+
+
+    // POSITIVE TESTS
+    // Test with a valid transaction
+    keyRotationTransaction = getKeyRotationTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      KeyRotationProofTypes.SigningKeyRotationProofType,
+      0,
+      newSigningKey,
+      signingKeys.get(0),
+      masterKeys.get(0),
+      withdrawalEpochNumber,
+      mockedParams
+    )
+
+    tryValidate = sidechainState.validate(keyRotationTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertTrue("Transaction validation must be successful!", tryValidate.isSuccess)
   }
 }

@@ -13,9 +13,9 @@ import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -32,9 +32,9 @@ import scala.util.{Failure, Success, Try}
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("hash", "hashHex"))
 case class MainchainBlockReference(
-                    header: MainchainHeader,
-                    data: MainchainBlockReferenceData
-                    )
+                                    header: MainchainHeader,
+                                    data: MainchainBlockReferenceData
+                                  )
   extends BytesSerializable
 {
 
@@ -55,10 +55,10 @@ case class MainchainBlockReference(
 
     if (header.version != MainchainBlockReference.SC_CERT_BLOCK_VERSION) {
       if (data.sidechainRelatedAggregatedTransaction.isDefined ||
-          data.topQualityCertificate.isDefined ||
-          data.lowerCertificateLeaves.nonEmpty ||
-          data.existenceProof.isDefined ||
-          data.absenceProof.isDefined) {
+        data.topQualityCertificate.isDefined ||
+        data.lowerCertificateLeaves.nonEmpty ||
+        data.existenceProof.isDefined ||
+        data.absenceProof.isDefined) {
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader. " +
           s"MainchainBlock without SC support should have no SC related data.")
       }
@@ -125,7 +125,7 @@ case class MainchainBlockReference(
   }
 }
 
-object MainchainBlockReference extends ScorexLogging {
+object MainchainBlockReference extends SparkzLogging {
   val MAX_MAINCHAIN_BLOCK_SIZE: Int = 4000000 // 4Mb since SC fork activated
   val SC_CERT_BLOCK_VERSION = 3
 
@@ -244,7 +244,7 @@ object MainchainBlockReference extends ScorexLogging {
   // Try to parse Mainchain block and return MainchainHeader, Transactions, Certificates
   // and the actual size of the parsed block.
   def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
-    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[WithdrawalEpochCertificate], Int)] = Try {
+  Try[(MainchainHeader, Seq[MainchainTransaction], Seq[WithdrawalEpochCertificate], Int)] = Try {
     var offset: Int = 0
 
     MainchainHeader.create(mainchainBlockBytes, offset) match {
@@ -267,15 +267,15 @@ object MainchainBlockReference extends ScorexLogging {
 
         // Parse certificates only if version is the same as specified and there is bytes to parse.
         if (header.version == SC_CERT_BLOCK_VERSION) {
-            val certificatesCount: CompactSize = BytesUtils.getCompactSize(mainchainBlockBytes, offset)
-            offset += certificatesCount.size()
+          val certificatesCount: CompactSize = BytesUtils.getCompactSize(mainchainBlockBytes, offset)
+          offset += certificatesCount.size()
 
-            while (certificates.size < certificatesCount.value()) {
-              log.debug(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
-              val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
-              certificates = certificates :+ c
-              offset += c.size
-            }
+          while (certificates.size < certificatesCount.value()) {
+            log.debug(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
+            val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
+            certificates = certificates :+ c
+            offset += c.size
+          }
         }
 
         (header, transactions, certificates, offset)

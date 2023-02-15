@@ -8,10 +8,9 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
-import java.util.{Optional => JOptional}
 
-import scala.collection.JavaConverters._
 import java.util.{Optional => JOptional}
+import scala.collection.JavaConverters._
 
 class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
 

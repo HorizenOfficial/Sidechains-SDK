@@ -6,44 +6,40 @@ import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
-import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
-import com.horizen.utils.{MerklePath, MerklePathSerializer}
+import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
+import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
+import sparkz.util.ModifierId
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
 case class SidechainBlockHeader(
-                                 version: Block.Version,
-                                 @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) parentId: ModifierId,
-                                 timestamp: Block.Timestamp,
-                                 forgingStakeInfo: ForgingStakeInfo,
-                                 @JsonSerialize(using = classOf[MerklePathJsonSerializer]) forgingStakeMerklePath: MerklePath,
-                                 vrfProof: VrfProof,
-                                 sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
-                                 mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
-                                 ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
-                                 ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
-                                 feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
-                                 signature: Signature25519
-                               ) extends BytesSerializable {
+                                 override val version: Block.Version,
+                                 @JsonSerialize(using = classOf[SparkzModifierIdSerializer])override val parentId: ModifierId,
+                                 override val timestamp: Block.Timestamp,
+                                 override val forgingStakeInfo: ForgingStakeInfo,
+                                 @JsonSerialize(using = classOf[MerklePathJsonSerializer])override val forgingStakeMerklePath: MerklePath,
+                                 override val vrfProof: VrfProof,
+                                 override val sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
+                                 override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
+                                 override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
+                                 override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
+                                 override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
+                                 override val signature: Signature25519
+                               ) extends SidechainBlockHeaderBase with BytesSerializable {
 
   override type M = SidechainBlockHeader
 
   override def serializer: SparkzSerializer[SidechainBlockHeader] = SidechainBlockHeaderSerializer
 
-  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
-  lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
-
-  lazy val messageToSign: Array[Byte] = {
+  override lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
       Array[Byte]{version},
       idToBytes(parentId),
@@ -59,22 +55,20 @@ case class SidechainBlockHeader(
     )
   }
 
-  def semanticValidity(params: NetworkParams): Try[Unit] = Try {
-    if(parentId.length != 64
-      || sidechainTransactionsMerkleRootHash.length != 32
-      || mainchainMerkleRootHash.length != 32
-      || ommersMerkleRootHash.length != 32
-      || ommersCumulativeScore < 0
-      || feePaymentsHash.length != 32
-      || timestamp <= 0)
-      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id contains out of bound fields.")
+  override def semanticValidity(params: NetworkParams): Try[Unit] = Try {
+    super.semanticValidity(params) match {
+      case Success(_) =>
 
-    if(version != SidechainBlock.BLOCK_VERSION)
-      throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
+        if (version != SidechainBlock.BLOCK_VERSION)
+          throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
 
-    // check, that signature is valid
-    if(!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
-      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
+        // check, that signature is valid
+        if (!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
+          throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
+
+      case Failure(exception) =>
+        throw exception
+    }
   }
 
 
@@ -126,11 +120,11 @@ object SidechainBlockHeaderSerializer extends SparkzSerializer[SidechainBlockHea
 
     val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
 
-    val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val sidechainTransactionsMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val mainchainMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
-    val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 
     val ommersCumulativeScore: Long = r.getLong()
 
