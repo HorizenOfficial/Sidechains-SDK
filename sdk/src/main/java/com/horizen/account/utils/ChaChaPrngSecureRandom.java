@@ -1,18 +1,20 @@
 package com.horizen.account.utils;
 
-
 import sparkz.crypto.hash.Blake2b256;
-
 import java.security.*;
 import java.util.Arrays;
 
 class ChaChaPrngSecureRandomProvider extends Provider {
+    protected static final String NAME = "HorizenCrypto";
+
     public ChaChaPrngSecureRandomProvider() {
-        super(ChaChaPrngSecureRandom.NAME,
+        super(NAME,
                 "1.0",
-                "A Cryptographically-Secure PRNG based on ChaCha20");
-        put("SecureRandom." + ChaChaPrngSecureRandom.NAME, ChaChaPrngSecureRandom.class.getName());
-        put("SecureRandom." + ChaChaPrngSecureRandom.NAME + " ImplementedIn", "Software");
+                NAME +
+                        " Provider (Implements a Cryptographically-Secure PRNG based on " +
+                        ChaChaPrngSecureRandom.ALGO + ")");
+        put("SecureRandom." + ChaChaPrngSecureRandom.ALGO, ChaChaPrngSecureRandom.class.getName());
+        put("SecureRandom." + ChaChaPrngSecureRandom.ALGO + " ImplementedIn", "Software");
     }
 }
 
@@ -24,24 +26,26 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
     private long mStream = 0;
     private static final int DEFAULT_WORD_INDEX = 16;
 
-    protected static final String NAME = "ChaChaPRNG";
+    protected static final String ALGO = "ChaCha20PRNG";
+
+    static {
+        if (Security.getProvider(ChaChaPrngSecureRandomProvider.NAME) == null) {
+            int pos = Security.addProvider(new ChaChaPrngSecureRandomProvider());
+            if (pos < 0) {
+                throw new RuntimeException("Could not add " + ChaChaPrngSecureRandomProvider.NAME + " provider for algorithm " + ChaChaPrngSecureRandom.ALGO);
+            }
+        }
+    }
 
     public static SecureRandom getInstance(byte[] seed) throws SecurityException {
-        Provider[] providers = Security.getProviders("SecureRandom." + NAME);
-        if ((providers == null)
-            || (providers.length < 1)
-            || (!providers[0].getClass().equals(ChaChaPrngSecureRandomProvider.class))){
-            Security.insertProviderAt(new ChaChaPrngSecureRandomProvider(), 1);
-        }
-
         SecureRandom rng;
         try {
-            rng = SecureRandom.getInstance(NAME);
-        } catch (NoSuchAlgorithmException e) {
-            throw new SecurityException(NAME + " not available", e);
+            rng = SecureRandom.getInstance(ALGO, ChaChaPrngSecureRandomProvider.NAME);
+        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+            throw new SecurityException(ALGO + "/" + ChaChaPrngSecureRandomProvider.NAME + " not available", e);
         }
         if (!ChaChaPrngSecureRandomProvider.class.equals(rng.getProvider().getClass())) {
-            throw new SecurityException("SecureRandom.getInstance(\"" + NAME + "\") backed by wrong provider: " + rng.getProvider().getClass());
+            throw new SecurityException("SecureRandom.getInstance(\"" + ALGO + "\", \"" + ChaChaPrngSecureRandomProvider.NAME + "\") backed by wrong provider: " + rng.getProvider().getClass());
         }
         rng.setSeed(seed);
         return rng;
@@ -138,7 +142,6 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
         if (mState[12] == 0) {
             mState[13]++;
             if (mState[13] == 0) {
-                // throw new Exception("chacha: counter overflow");
                 mStream++;
                 if (mStream == 0) {
                     repackState();
@@ -205,7 +208,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
             seed[i + 2] = (byte)(mState[j + 4] >> 8);
             seed[i + 3] = (byte)mState[j + 4];
         }
-        seed = Blake2b256.hash(seed);
+        seed = (byte[]) Blake2b256.hash(seed);
         engineSetSeed(seed);
     }
 
@@ -227,7 +230,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
         // Add a prefix for domain separation
         Arrays.fill(toHash, 0, 32, (byte)0xff);
         System.arraycopy(seed, 0, toHash, 32, seed.length);
-        seed = Blake2b256.hash(toHash);
+        seed = (byte[]) Blake2b256.hash(toHash);
         for (int i = 0, j = 0; i < 32; i += 4, j++) {
             intSeed[j] = seed[i] << 24;
             intSeed[j] |= seed[i + 1] << 16;
