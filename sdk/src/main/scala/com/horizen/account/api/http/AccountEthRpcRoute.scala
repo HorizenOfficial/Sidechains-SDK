@@ -11,6 +11,7 @@ import com.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import com.horizen.account.serialization.EthJsonMapper
 import com.horizen.account.state.MessageProcessor
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.api.http.JacksonSupport._
@@ -18,7 +19,6 @@ import com.horizen.api.http.{SidechainApiResponse, SidechainApiRoute}
 import com.horizen.evm.LevelDBDatabase
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
 import sparkz.core.api.http.ApiDirectives
@@ -97,9 +97,9 @@ case class AccountEthRpcRoute(
             })
 
             val json = if (responses.length > 1) {
-              SerializationUtil.serialize(responses)
+              EthJsonMapper.serialize(responses)
             } else {
-              SerializationUtil.serialize(responses.head)
+              EthJsonMapper.serialize(responses.head)
             }
 
             log.trace(s"RPC message response << $json")

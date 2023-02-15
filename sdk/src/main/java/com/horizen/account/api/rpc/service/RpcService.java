@@ -1,20 +1,16 @@
 package com.horizen.account.api.rpc.service;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.horizen.account.api.rpc.handler.RpcException;
 import com.horizen.account.api.rpc.request.RpcRequest;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
-import com.horizen.evm.utils.BigIntegerDeserializer;
-import com.horizen.evm.utils.BigIntegerSerializer;
+import com.horizen.account.serialization.EthJsonMapper;
 import org.apache.logging.log4j.LogManager;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.math.BigInteger;
 import java.util.HashMap;
 
 public class RpcService {
@@ -29,14 +25,7 @@ public class RpcService {
             if (annotation == null) continue;
             rpcMethods.put(annotation.value(), method);
         }
-        var module = new SimpleModule();
-        module.addSerializer(BigInteger.class, new BigIntegerSerializer());
-        module.addDeserializer(BigInteger.class, new BigIntegerDeserializer());
-        mapper = new ObjectMapper();
-        mapper.registerModule(module);
-        // do not serialize null or empty values
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        mapper = EthJsonMapper.getMapper();
     }
 
     public boolean hasMethod(String method) {
