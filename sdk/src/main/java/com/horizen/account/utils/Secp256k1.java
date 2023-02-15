@@ -2,6 +2,7 @@ package com.horizen.account.utils;
 
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.evm.utils.Address;
+import com.horizen.utils.ChaChaPrngSecureRandom;
 import com.horizen.utils.Pair;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;

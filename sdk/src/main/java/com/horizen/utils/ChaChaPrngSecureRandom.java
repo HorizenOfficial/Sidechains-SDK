@@ -1,22 +1,8 @@
-package com.horizen.account.utils;
+package com.horizen.utils;
 
 import sparkz.crypto.hash.Blake2b256;
 import java.security.*;
 import java.util.Arrays;
-
-class ChaChaPrngSecureRandomProvider extends Provider {
-    protected static final String NAME = "HorizenCrypto";
-
-    public ChaChaPrngSecureRandomProvider() {
-        super(NAME,
-                "1.0",
-                NAME +
-                        " Provider (Implements a Cryptographically-Secure PRNG based on " +
-                        ChaChaPrngSecureRandom.ALGO + ")");
-        put("SecureRandom." + ChaChaPrngSecureRandom.ALGO, ChaChaPrngSecureRandom.class.getName());
-        put("SecureRandom." + ChaChaPrngSecureRandom.ALGO + " ImplementedIn", "Software");
-    }
-}
 
 public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRandomParameters {
     private int[] mState = new int[16];
@@ -29,12 +15,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
     protected static final String ALGO = "ChaCha20PRNG";
 
     static {
-        if (Security.getProvider(ChaChaPrngSecureRandomProvider.NAME) == null) {
-            int pos = Security.addProvider(new ChaChaPrngSecureRandomProvider());
-            if (pos < 0) {
-                throw new RuntimeException("Could not add " + ChaChaPrngSecureRandomProvider.NAME + " provider for algorithm " + ChaChaPrngSecureRandom.ALGO);
-            }
-        }
+        ChaChaPrngSecureRandomProvider.init();
     }
 
     public static SecureRandom getInstance(byte[] seed) throws SecurityException {

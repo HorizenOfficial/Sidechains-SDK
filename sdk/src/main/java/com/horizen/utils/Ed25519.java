@@ -1,6 +1,5 @@
 package com.horizen.utils;
 
-import com.horizen.account.utils.ChaChaPrngSecureRandom;
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import java.security.SecureRandom;
