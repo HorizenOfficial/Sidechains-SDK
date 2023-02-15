@@ -44,8 +44,8 @@ for i in "$@"; do
       ;;
     -parallel=*)
       PARALLEL="${i#*=}"
-    shift
-    ;;
+      shift
+      ;;
     *)
       # unknown option/passOn
       passOn+="${i} "
@@ -251,6 +251,11 @@ failuresFile="/tmp/failuresList.txt"
 flock_file="/tmp/flock_file.lock"
 testsFile="/tmp/tests.txt"
 
+function deleteTempFiles
+{
+  rm -f $flock_file $testsFile $successCountFile $notFoundCountFile $failureCountFile $failuresFile
+}
+
 function updateCountFile
 {
   (
@@ -350,12 +355,10 @@ function runTestScript
     #Remove first arg $1 from args passed to function, shifting the full file location to arg $1.
     shift
 
-    runningMessage="=== Running testscript ${testName} ==="
-    if [ "$PARALLEL" ]; then
-      runningMessage="$runningMessage (Parallel Group: $parallelGroup)"
+    if [ -z "$PARALLEL" ]; then
+      echo -e "=== Running testscript ${testName} ===" | tee /dev/fd/3
     fi;
 
-    echo -e "$runningMessage" | tee /dev/fd/3
     #Log test start time
     testStart=$(date +%s)
     runTimeMessage="Run Time: $testRuntime"
@@ -379,7 +382,6 @@ function runTests
 {
   # Assign any parameter given to the shell script, then remove from this functions args
   scriptArg=$1; shift
-
   # Assign remaining args (which should be the test scripts array)
   testsToRun=("$@")
   runningInfoMessage="Of ${#testsToRun[@]} Tests"
@@ -408,10 +410,8 @@ function runParallelTests
 
   while true; do
     # Acquire the lock for the array and retrieve the first test and a count of remaining tests
-    result=$(flock -w 1 $testsFile -c "head -n 1 $testsFile; sed -i '1d' $testsFile; echo \$(wc -l $testsFile | awk '{print \$1}')")
-
-    test=$(echo $result | awk '{print $1}')
-    num_lines=$(echo $result | awk '{print $2}')
+    test=$(flock -w 1 $testsFile -c "head -n 1 $testsFile; sed -i '1d' $testsFile")
+    num_lines=$(flock -x $testsFile sh -c "wc -l < $testsFile")
 
     if [ -z "$test" ] || [ "$test" = " " ] || [ "$test" = "0" ] ; then
       break
@@ -419,13 +419,10 @@ function runParallelTests
 
     testNumber=$((${#testScripts[@]}-$num_lines))
 
-    echo "Running test \"$test\" ($testNumber of $testCount) in parallel group: $parallelGroup" | tee /dev/fd/3
-
-    runningInfoMessage="Of $testCount Tests :: Parallel Group $parallelGroup ::"
-
     if checkFileExists "$test"; then
-          if checkScriptArgsValid "$scriptArg $test"; then
-            echo "Running $testNumber $runningInfoMessage" | tee /dev/fd/3
+          if checkScriptArgsValid "$scriptArg"  \
+                                  "$test"; then
+            echo "== Running $testNumber Of $testCount Tests: \"$test\"  == Parallel: $parallelGroup" | tee /dev/fd/3
             testFileWithArgs="${BASH_SOURCE%/*}/$test --parallel=$parallelGroup"
 
             runTestScript \
@@ -439,8 +436,9 @@ function runParallelTests
 startTime=$(date +%s)
 
 if [ ! -z "$PARALLEL" ]; then
-  rm -f /tmp/tests.txt
-  printf "%s\n" "${testScripts[@]}" > /tmp/tests.txt
+  deleteTempFiles
+  printf "%s\n" "${testScripts[@]}" > $testsFile
+
   for (( i=1; i<=$PARALLEL; i++ )); do
     runParallelTests  \
         "$1"  \
@@ -475,9 +473,6 @@ if [ "$PARALLEL" ]; then
   fi
 fi
 
-# Clean up files
-trap "rm -f $flock_file $testsFile $successCountFile $notFoundCountFile $failureCountFile $failuresFile" INT TERM EXIT
-
 endTime=$(date +%s)
 runtime=$((endTime-startTime))
 total=$((successCount + failureCount))
@@ -490,6 +485,8 @@ failingTestsMessage="\nFailing tests: ${failures[*]}"
 echo -e "$testsRunMessage" | tee /dev/fd/3
 echo -e "$summaryMessage" | tee /dev/fd/3
 echo -e "$testRunTimeMessage" | tee /dev/fd/3
+
+deleteTempFiles
 
 if [ $total -eq 0 ]; then
   echo -e "\n!! WARNING: No test files were found. !!" | tee /dev/fd/3
