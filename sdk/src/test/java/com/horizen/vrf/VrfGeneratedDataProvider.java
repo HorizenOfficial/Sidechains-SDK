@@ -7,27 +7,22 @@ import com.horizen.proof.VrfProof;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.secret.VrfSecretKey;
-import com.horizen.secret.VrfSecretKeySerializer;
 import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Pair;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.net.URL;
-import java.util.Random;
 
-// TODO: as soon as VRFSecret generation will become deterministic,
-//  we may remove this class and all the related files from resources
 public class VrfGeneratedDataProvider {
-    private static String pathPrefix = "src/test/resources/";
+    private static final String pathPrefix = "src/test/resources/";
     private static final ClassLoader classLoader = VrfGeneratedDataProvider.class.getClassLoader();
 
     public static VrfSecretKey getVrfSecretKey(Integer seed) {
         return VrfKeyGenerator.getInstance().generateSecret(Ints.toByteArray(seed));
     }
 
-    public static VrfPublicKey getVrfPublicKey(String prefix, Integer seed) {
+    public static VrfPublicKey getVrfPublicKey(Integer seed) {
         return VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes()).publicImage();
     }
 
@@ -35,23 +30,16 @@ public class VrfGeneratedDataProvider {
         return VrfGenerator.generateVrfOutput(seed);
     }
 
+    // vrf proof is not deterministic, even if the same parameters are passed to the creation method,
+    // there is an internal random component in its generation
     public static void updateVrfProof(String prefix, Integer seed) {
         VrfProof obj = VrfGenerator.generateProof(seed);
         writeToFile(prefix, seed, obj.getClass(), obj.bytes());
     }
 
-    public static void updateVrfProofAndOutput(String prefix, Integer seed) {
-        Pair<VrfProof, VrfOutput> proofAndOutput = VrfGenerator.generateProofAndOutput(seed);
-        VrfProof proof = proofAndOutput.getKey();
-        VrfOutput output = proofAndOutput.getValue();
-        writeToFile(prefix, seed, proof.getClass(), proof.bytes());
-        writeToFile(prefix, seed, output.getClass(), output.bytes());
-    }
-
     public static VrfProof getVrfProof(String prefix, Integer seed) {
         return readFromFile(prefix, seed, VrfProof.class);
     }
-
 
     private static <T> String getFileName(String prefix, Integer seed, Class<T> classToProcess) {
         return prefix + classToProcess.getSimpleName() + seed.toString();

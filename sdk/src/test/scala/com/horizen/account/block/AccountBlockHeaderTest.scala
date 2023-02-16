@@ -19,9 +19,9 @@ import scala.util.{Failure, Success}
 class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with AccountBlockFixture {
   val vrfGenerationDataSeed = 178
   val vrfGenerationPrefix = "AccountBlockHeaderTest"
-  //set to true for update vrf related data
+  //set to true for update vrf proof
   if (false) {
-    VrfGeneratedDataProvider.updateVrfProofAndOutput(vrfGenerationPrefix, vrfGenerationDataSeed)
+    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {

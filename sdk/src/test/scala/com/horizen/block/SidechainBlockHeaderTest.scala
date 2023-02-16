@@ -1,9 +1,9 @@
 package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxGenerationMetadata, SidechainBlockFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.proof.VrfProof
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.BytesUtils
@@ -25,11 +25,11 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
     val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationDataSeed)
-    val publicKey: VrfPublicKey = secret.publicImage();
+    val publicKey: VrfPublicKey = secret.publicImage()
     Option((secret, publicKey))
   }
 
-  val vrfProofOpt = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed))
+  val vrfProofOpt: Option[VrfProof] = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed))
   val header: SidechainBlockHeader =
     createUnsignedBlockHeader(123L, vrfKeyPair, vrfProofOpt)._1
   val params: NetworkParams = MainNetParams()

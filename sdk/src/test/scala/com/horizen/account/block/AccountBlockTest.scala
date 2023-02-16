@@ -56,9 +56,9 @@ class AccountBlockTest
 
   val generatedDataSeed = 908
   val vrfGenerationPrefix = "AccountBlockTest"
-
+  //set to true for update vrf proof
   if (false) {
-    VrfGeneratedDataProvider.updateVrfProofAndOutput(vrfGenerationPrefix, generatedDataSeed)
+    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, generatedDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {

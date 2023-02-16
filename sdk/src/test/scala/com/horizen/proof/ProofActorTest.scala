@@ -1,6 +1,6 @@
 package com.horizen.proof
 
-import java.io.{BufferedReader, File, FileReader}
+import java.io.File
 import java.util
 import java.util.Optional
 import akka.actor.{Actor, ActorSystem, Props}
@@ -12,16 +12,12 @@ import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.fixtures.FieldElementFixture
+import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
-import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertTrue, fail}
 import org.junit.{Before, Ignore, Test}
-
-import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -35,13 +31,10 @@ case object ProofMessage
  */
 
 class ProofActorReceiver
-  extends Actor {
+  extends Actor with SecretFixture {
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
 
-  private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
-    SchnorrKeyPair.generate(BigInteger.valueOf(index).toByteArray).getSecretKey
-  }
 
   case class DataForProofGeneration(sidechainId: Array[Byte],
                                     processedEpochNumber: Int,

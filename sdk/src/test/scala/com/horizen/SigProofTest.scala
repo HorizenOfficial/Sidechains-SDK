@@ -4,7 +4,7 @@ import com.google.common.io.Files
 import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.fixtures.FieldElementFixture
+import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
 import com.horizen.secret.SchnorrKeyGenerator
@@ -19,7 +19,7 @@ import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class SigProofTest {
+class SigProofTest extends SecretFixture {
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val sigCircuit: ThresholdSignatureCircuitImplZendoo = new ThresholdSignatureCircuitImplZendoo()
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
@@ -33,10 +33,6 @@ class SigProofTest {
     new File(provingKeyPath).delete()
     new File(verificationKeyPath).delete()
     tmpDir.delete()
-  }
-
-  private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
-    SchnorrKeyPair.generate(BigInteger.valueOf(index).toByteArray).getSecretKey
   }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuit

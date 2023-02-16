@@ -3,20 +3,19 @@ package com.horizen.block
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.account.block.{AccountBlock, AccountBlockSerializer}
 import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, PrivateKey25519Serializer, VrfSecretKey}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
-import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
+import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.{ModifierId, idToBytes}
@@ -54,7 +53,7 @@ class SidechainBlockTest
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
     val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(generatedDataSeed)
-    val publicKey: VrfPublicKey = secret.publicImage();
+    val publicKey: VrfPublicKey = secret.publicImage()
     Option((secret, publicKey))
   }
 

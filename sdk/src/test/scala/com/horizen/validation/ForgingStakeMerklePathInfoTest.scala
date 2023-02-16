@@ -23,7 +23,7 @@ class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
     1000L,
     100L,
     getPrivateKey25519("456".getBytes()).publicImage(),
-    VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed)
+    VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationSeed)
   )
   val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value())
 
