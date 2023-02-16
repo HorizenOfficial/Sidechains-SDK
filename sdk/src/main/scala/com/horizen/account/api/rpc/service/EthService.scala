@@ -856,20 +856,15 @@ class EthService(
   }
 
   @RpcMethod("zen_getFeePayments")
-  def getFeePayments(blockId: String): AccountFeePaymentsInfo = {
+  def getFeePayments(blockId: Hash): AccountFeePaymentsInfo = {
     if (blockId == null) {
       return null
     }
-
-    var feePayments: AccountFeePaymentsInfo = null
-
     applyOnAccountView { nodeView =>
       nodeView.history
-        .getFeePaymentsInfo(blockId)
-        .ifPresent(p => feePayments = p)
+        .feePaymentsInfo(bytesToId(blockId.toBytes))
+        .orNull
     }
-
-    feePayments
   }
 
   @RpcMethod("eth_accounts")
