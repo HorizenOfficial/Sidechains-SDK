@@ -24,7 +24,7 @@ object AccountPaymentSerializer extends SparkzSerializer[AccountPayment] {
   override def parse(r: Reader): AccountPayment = {
     val address = AddressPropositionSerializer.getSerializer.parse(r)
     val valueLength = r.getInt
-    val value = new BigInteger(r.getBytes(valueLength))
+    val value = new BigIntegerUInt256(r.getBytes(valueLength)).getBigInt
 
     AccountPayment(address, value)
   }
