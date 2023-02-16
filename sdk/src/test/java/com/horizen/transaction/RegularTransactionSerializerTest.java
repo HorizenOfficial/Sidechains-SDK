@@ -33,11 +33,6 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
 
     @Before
     public void beforeEachTest() {
-        //Set to true if you want to update Vrf related data
-        if (false) {
-            VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed1);
-            VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed2);
-        }
 
         long fee = 10;
 

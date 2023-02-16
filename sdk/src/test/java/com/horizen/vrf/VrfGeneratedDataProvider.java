@@ -28,18 +28,11 @@ public class VrfGeneratedDataProvider {
     }
 
     public static VrfSecretKey getVrfSecretKey(String prefix, Integer seed) {
-
         return VrfSecretKeySerializer.getSerializer().parseBytes(readBytesFromFile(prefix, seed, VrfSecretKey.class));
     }
 
-    public static VrfPublicKey updateVrfPublicKey(String prefix, Integer seed) {
-        VrfPublicKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes()).publicImage();
-        writeToFile(prefix, seed, obj.getClass(), obj.bytes());
-        return obj;
-    }
-
     public static VrfPublicKey getVrfPublicKey(String prefix, Integer seed) {
-        return readFromFile(prefix, seed, VrfPublicKey.class);
+        return VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes()).publicImage();
     }
 
     public static VrfOutput getVrfOutput(Integer seed) {

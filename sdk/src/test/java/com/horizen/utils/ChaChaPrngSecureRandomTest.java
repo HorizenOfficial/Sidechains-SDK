@@ -1,10 +1,7 @@
 package com.horizen.utils;
 
-import com.horizen.utils.ChaChaPrngSecureRandom;
 import org.junit.Test;
-
 import java.security.SecureRandom;
-
 import static org.junit.Assert.*;
 
 public class ChaChaPrngSecureRandomTest {

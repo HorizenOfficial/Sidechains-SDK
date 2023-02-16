@@ -293,14 +293,11 @@
           <include>publickey25519proposition_hex</include>
           <include>privatekey25519_hex</include>
           <include>regulartransaction_hex</include>
-          <include>RegularTransactionSerializerTestVrfPublicKey111</include>
-          <include>RegularTransactionSerializerTestVrfPublicKey221</include>
           <include>SidechainBlockTestVrfProof908</include>
           <include>SidechainBlockTestVrfSecretKey908</include>
           <include>SidechainBlockHeaderTestVrfProof178</include>
           <include>SidechainBlockHeaderTestVrfSecretKey178</include>
           <include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
-          <include>ForgerBoxSerializationTestVrfPublicKey901</include>
           <include>AccountBlockHeaderTestVrfOutput178</include>
           <include>AccountBlockHeaderTestVrfProof178</include>
           <include>AccountBlockHeaderTestVrfSecretKey178</include>

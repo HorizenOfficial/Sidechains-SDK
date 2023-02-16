@@ -18,11 +18,6 @@ class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
   val vrfGenerationSeed = 907
   val vrfGenerationPrefix = "ForgerBoxMerklePathInfoTest"
 
-  //uncomment if you want update vrf related data
-  if (false) {
-    VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed)
-  }
-
   val forgerBox: ForgerBox = getForgerBox(
     getPrivateKey25519("123".getBytes()).publicImage(),
     1000L,

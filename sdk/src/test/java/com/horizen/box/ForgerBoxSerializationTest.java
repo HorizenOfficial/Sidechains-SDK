@@ -28,11 +28,6 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
         int vrfGenerationSeed = 901;
         String vrfGenerationPrefix = "ForgerBoxSerializationTest";
 
-        //uncomment if you want update vrf related data
-        if (false) {
-            VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed);
-        }
-
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
         // Note: current box bytes are also stored in "src/test/resources/forgerbox_hex"
         box = getForgerBox(
