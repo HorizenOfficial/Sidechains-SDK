@@ -569,7 +569,7 @@ class EthService(
 
   /**
    * Calculates the lowest transaction gas price in a given block
-   * If the block is empty or all transactions are sent by the miner itself, null is returned.
+   * If the block is empty or all transactions are sent by the miner itself, empty sequence is returned.
    * Replication of the original implementation in GETH, see:
    * github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go#L258
    */
@@ -577,7 +577,7 @@ class EthService(
     block.transactions
       .filter(tx => !(tx.getFrom.bytes() sameElements block.forgerPublicKey.bytes()))
       .map(tx => getEffectiveGasTip(tx.asInstanceOf[EthereumTransaction], block.header.baseFee))
-      .filter(gasTip => ignoreUnder != null && gasTip.compareTo(ignoreUnder) >= 0)
+      .filter(gasTip => ignoreUnder == null || gasTip.compareTo(ignoreUnder) >= 0)
       .sorted
       .take(limit)
   }
