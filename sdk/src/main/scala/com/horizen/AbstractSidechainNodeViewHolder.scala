@@ -6,14 +6,14 @@ import com.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, b
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{BytesUtils, SDKModifiersCache}
+import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.{ModifiersCache, idToVersion}
+import sparkz.core.{DefaultModifiersCache, ModifiersCache, idToVersion}
 
 import scala.util.{Failure, Success, Try}
 
@@ -45,7 +45,7 @@ abstract class AbstractSidechainNodeViewHolder[
    * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
    */
   protected override lazy val modifiersCache: ModifiersCache[PMOD, HIS] =
-    new SDKModifiersCache[PMOD, HIS](sparksSettings.network.maxModifiersCacheSize)
+    new DefaultModifiersCache[PMOD, HIS](sparksSettings.network.maxModifiersCacheSize)
 
 
   case class SidechainNodeUpdateInformation(history: HIS,
