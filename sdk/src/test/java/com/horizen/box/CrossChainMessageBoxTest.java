@@ -13,8 +13,7 @@ import org.junit.Test;
 
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class CrossChainMessageBoxTest extends BoxFixtureClass {
 
@@ -26,7 +25,7 @@ public class CrossChainMessageBoxTest extends BoxFixtureClass {
     String payload;
     byte[] sidechainId;
     byte[] receivingSidechain;
-
+    byte[] receivingSidechain2;
     @Before
     public void setUp() {
         byte[] anotherSeed = "testseed".getBytes();
@@ -40,6 +39,8 @@ public class CrossChainMessageBoxTest extends BoxFixtureClass {
         new Random().nextBytes(sidechainId);
         receivingSidechain = new byte[16];
         new Random().nextBytes(receivingSidechain);
+        receivingSidechain2 = new byte[16];
+        new Random().nextBytes(receivingSidechain2);
     }
     @Test
     public void creationTest() {
@@ -62,6 +63,16 @@ public class CrossChainMessageBoxTest extends BoxFixtureClass {
         assertEquals("CrossChainMessageBox deserialize error: proposition is wrong", proposition, box2.proposition());
         assertEquals("CrossChainMessageBox deserialize error: nonce is wrong", box2.nonce(), nonce);
         assertEquals("CrossChainMessageBox deserialize error: value is wrong", box2.value(), value);
+    }
+
+    @Test
+    public void differentIdTest() {
+        CrossChainMessageBox box = getCrossMessageBox(proposition, protocolVersion,
+                messageTYpe, sidechainId, receivingSidechain, payload.getBytes(),  nonce);
+        CrossChainMessageBox box2 = getCrossMessageBox(proposition, protocolVersion,
+                messageTYpe, sidechainId, receivingSidechain2, payload.getBytes(),  nonce);
+        assertNotEquals("CrossChainMessageBox id should change with different input data", box.id(), box2.id());
+
     }
 
 }

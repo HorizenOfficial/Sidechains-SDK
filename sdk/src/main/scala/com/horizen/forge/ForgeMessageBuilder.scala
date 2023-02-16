@@ -155,11 +155,11 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled()) {
       //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
       val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
-      takeFilters = takeFilters :+ new MempoolTakeFilterWithMaxBoxType[WithdrawalRequestBox](allowedWithdrawalRequestBoxes)
+      takeFilters = takeFilters :+ new MempoolTakeFilterWithMaxBoxType[WithdrawalRequestBox](classOf[WithdrawalRequestBox],allowedWithdrawalRequestBoxes)
     }
     if (sc2ScConfigurator.canSendMessages) {
       val allowedCrossChainMessageBoxes = nodeView.state.getAllowedCrosschainMessageBoxes(mainchainBlockReferenceData.size, CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate) - nodeView.state.getAlreadyMinedCrosschainMessagesInCurrentEpoch
-      takeFilters = takeFilters :+ new MempoolTakeFilterWithMaxBoxType[CrossChainMessageBox](allowedCrossChainMessageBoxes)
+      takeFilters = takeFilters :+ new MempoolTakeFilterWithMaxBoxType[CrossChainMessageBox](classOf[CrossChainMessageBox],allowedCrossChainMessageBoxes)
     }
     val mempoolTx =
       if (takeFilters.size > 0)
