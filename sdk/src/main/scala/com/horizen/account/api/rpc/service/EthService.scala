@@ -31,12 +31,14 @@ import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.{NodeViewHolder, bytesToId}
 import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.io.{File, FileReader}
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -505,6 +507,23 @@ class EthService(
 
   @RpcMethod("net_version")
   def version: String = String.valueOf(networkParams.chainId)
+
+  @RpcMethod("web3_clientVersion")
+  def clientVersion: String = {
+    val architecture = System.getProperty("os.arch")
+    val javaVersion = System.getProperty("java.specification.version")
+    val pomFile = new File("pom.xml")
+    val pomReader = new MavenXpp3Reader()
+    try {
+      val pom = pomReader.read(new FileReader(pomFile))
+      val artifactId = pom.getArtifactId
+      val artifactVersion = pom.getVersion
+      val version = s"$artifactId/$artifactVersion/$architecture/jdk$javaVersion"
+      version
+    } catch {
+      case _ => throw new RpcException(RpcError.fromCode(RpcCode.InternalError, "Could not get artifact id"))
+    }
+  }
 
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
