@@ -20,7 +20,6 @@ public class EthJsonMapper {
         module.addDeserializer(byte[].class, new EthByteDeserializer());
         mapper = new ObjectMapper();
         mapper.registerModule(module);
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         // do not serialize null or empty values
 //        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 //        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
