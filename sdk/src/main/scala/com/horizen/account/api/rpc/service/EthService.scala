@@ -20,7 +20,7 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.utils.Secp256k1.generateContractAddress
-import com.horizen.account.utils.{EthereumTransactionDecoder, FeeUtils}
+import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
@@ -165,24 +165,23 @@ class EthService(
   }
 
   @RpcMethod("eth_getBlockTransactionCountByHash")
-  def getBlockTransactionCountByHash(hash: Hash): Quantity = {
+  def getBlockTransactionCountByHash(hash: Hash): BigInteger = {
     blockTransactionCount(_ => bytesToId(hash.toBytes))
   }
 
   @RpcMethod("eth_getBlockTransactionCountByNumber")
-  def getBlockTransactionCountByNumber(tag: String): Quantity = {
+  def getBlockTransactionCountByNumber(tag: String): BigInteger = {
     blockTransactionCount(nodeView => getBlockIdByTag(nodeView, tag))
   }
 
-  private def blockTransactionCount(getBlockId: NV => ModifierId): Quantity = {
+  private def blockTransactionCount(getBlockId: NV => ModifierId): BigInteger = {
     applyOnAccountView { nodeView =>
       val blockId = getBlockId(nodeView)
       if (blockId == null) {
-        new Quantity(nodeView.pool.getExecutableTransactionsMap.map(_._2.size).sum)
+        BigInteger.valueOf(nodeView.pool.getExecutableTransactionsMap.map(_._2.size).sum)
       } else {
         nodeView.history.getStorageBlockById(blockId)
-          .map(_.transactions.size)
-          .map(new Quantity(_))
+          .map(block => BigInteger.valueOf(block.transactions.size))
           .orNull
       }
     }
@@ -272,7 +271,7 @@ class EthService(
 
   @RpcMethod("eth_estimateGas")
   @RpcOptionalParameters(1)
-  def estimateGas(params: TransactionArgs, tag: String): Quantity = {
+  def estimateGas(params: TransactionArgs, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
       // Binary search the gas requirement, as it may be higher than the amount used
       val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
@@ -338,34 +337,34 @@ class EthService(
           throw new RpcException(error)
         }
       }
-      new Quantity(requiredGasLimit)
+      requiredGasLimit
     }
   }
 
   @RpcMethod("eth_blockNumber")
-  def blockNumber: Quantity = applyOnAccountView { nodeView =>
-    new Quantity(nodeView.history.getCurrentHeight)
+  def blockNumber: BigInteger = applyOnAccountView { nodeView =>
+    BigInteger.valueOf(nodeView.history.getCurrentHeight)
   }
 
   @RpcMethod("eth_chainId")
-  def chainId: Quantity = new Quantity(networkParams.chainId)
+  def chainId: BigInteger = BigInteger.valueOf(networkParams.chainId)
 
   @RpcMethod("eth_getBalance")
   @RpcOptionalParameters(1)
-  def getBalance(address: Address, tag: String): Quantity = {
+  def getBalance(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        new Quantity(tagStateView.getBalance(address))
+        tagStateView.getBalance(address)
       }
     }
   }
 
   @RpcMethod("eth_getTransactionCount")
   @RpcOptionalParameters(1)
-  def getTransactionCount(address: Address, tag: String): Quantity = {
+  def getTransactionCount(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        new Quantity(tagStateView.getNonce(address))
+        tagStateView.getNonce(address)
       }
     }
   }
@@ -480,9 +479,9 @@ class EthService(
   def version: String = String.valueOf(networkParams.chainId)
 
   @RpcMethod("eth_gasPrice")
-  def gasPrice: Quantity = {
+  def gasPrice: BigInteger = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, "latest") { (_, blockContext) => new Quantity(blockContext.baseFee) }
+      getStateViewAtTag(nodeView, "latest") { (_, blockContext) => blockContext.baseFee }
     }
   }
 
@@ -514,12 +513,12 @@ class EthService(
   }
 
   @RpcMethod("eth_getTransactionByBlockHashAndIndex")
-  def getTransactionByBlockHashAndIndex(hash: Hash, index: Quantity): EthereumTransactionView = {
+  def getTransactionByBlockHashAndIndex(hash: Hash, index: BigInteger): EthereumTransactionView = {
     blockTransactionByIndex(_ => bytesToId(hash.toBytes), index)
   }
 
   @RpcMethod("eth_getTransactionByBlockNumberAndIndex")
-  def getTransactionByBlockNumberAndIndex(tag: String, index: Quantity): EthereumTransactionView = {
+  def getTransactionByBlockNumberAndIndex(tag: String, index: BigInteger): EthereumTransactionView = {
     blockTransactionByIndex(nodeView => getBlockIdByTag(nodeView, tag), index)
   }
 
@@ -610,8 +609,8 @@ class EthService(
     pendingStateView
   }
 
-  private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: Quantity): EthereumTransactionView = {
-    val txIndex = index.toNumber.intValueExact()
+  private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: BigInteger): EthereumTransactionView = {
+    val txIndex = index.intValueExact()
     applyOnAccountView { nodeView =>
       val blockId = getBlockId(nodeView)
       val (block, blockInfo): (AccountBlock, SidechainBlockInfo) =
@@ -686,16 +685,16 @@ class EthService(
   // - eth_getUncleCountByBlockHash and eth_getUncleCountByBlockNumber always return 0x0
   // - eth_getUncleByBlockHashAndIndex and eth_getUncleByBlockNumberAndIndex always return null (as no block was found)
   @RpcMethod("eth_getUncleCountByBlockHash")
-  def getUncleCountByBlockHash(hash: Hash) = new Quantity(0L)
+  def getUncleCountByBlockHash(hash: Hash): BigInteger = BigInteger.ZERO
 
   @RpcMethod("eth_getUncleCountByBlockNumber")
-  def eth_getUncleCountByBlockNumber(tag: String) = new Quantity(0L)
+  def eth_getUncleCountByBlockNumber(tag: String): BigInteger = BigInteger.ZERO
 
   @RpcMethod("eth_getUncleByBlockHashAndIndex")
-  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: Quantity): Null = null
+  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: BigInteger): Null = null
 
   @RpcMethod("eth_getUncleByBlockNumberAndIndex")
-  def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity): Null = null
+  def eth_getUncleByBlockNumberAndIndex(tag: String, index: BigInteger): Null = null
 
   // Eth Syncing RPC
   @RpcMethod("eth_syncing")
@@ -836,8 +835,8 @@ class EthService(
 
   @RpcMethod("eth_getStorageAt")
   @RpcOptionalParameters(1)
-  def getStorageAt(address: Address, key: Quantity, tag: String): Hash = {
-    val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
+  def getStorageAt(address: Address, key: BigInteger, tag: String): Hash = {
+    val storageKey = BigIntegerUtil.toUint256Bytes(key)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
         new Hash(stateView.getAccountStorage(address, storageKey))
@@ -847,8 +846,8 @@ class EthService(
 
   @RpcMethod("eth_getProof")
   @RpcOptionalParameters(1)
-  def getProof(address: Address, keys: Array[Quantity], tag: String): EthereumAccountProofView = {
-    val storageKeys = keys.map(key => Numeric.toBytesPadded(key.toNumber, 32))
+  def getProof(address: Address, keys: Array[BigInteger], tag: String): EthereumAccountProofView = {
+    val storageKeys = keys.map(BigIntegerUtil.toUint256Bytes)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
         new EthereumAccountProofView(stateView.getProof(address, storageKeys))
@@ -886,7 +885,7 @@ class EthService(
   @RpcMethod("eth_feeHistory")
   @RpcOptionalParameters(1)
   def feeHistory(
-      blockCount: Quantity,
+      blockCount: BigInteger,
       newestBlock: String,
       rewardPercentiles: Array[Double]
   ): EthereumFeeHistoryView = {
@@ -894,7 +893,7 @@ class EthService(
     applyOnAccountView { nodeView =>
       val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, newestBlock)
       // limit the range of blocks by the number of available blocks and cap at 1024
-      val blocks = blockCount.toNumber.intValueExact().min(requestedBlockInfo.height).min(1024)
+      val blocks = blockCount.intValueExact().min(requestedBlockInfo.height).min(1024)
       // geth comment: returning with no data and no error means there are no retrievable blocks
       if (blocks < 1) return new EthereumFeeHistoryView()
       // calculate block number of the "oldest" block in the range

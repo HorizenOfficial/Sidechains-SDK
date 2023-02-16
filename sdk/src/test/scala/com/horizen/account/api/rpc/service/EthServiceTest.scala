@@ -2,8 +2,7 @@ package com.horizen.account.api.rpc.service
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
-import com.fasterxml.jackson.databind.node.JsonNodeType
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.block.AccountBlock
@@ -44,7 +43,6 @@ import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
-import scala.jdk.CollectionConverters.asScalaIteratorConverter
 
 class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture with TableDrivenPropertyChecks {
   private val mapper = new ObjectMapper()
@@ -80,35 +78,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       expected.length,
       actualJson.length
     )
-  }
-
-  private def assertJsonEquals(expected: String, actual: Object): Unit = {
-    val actualJson = EthJsonMapper.serialize(actual)
-    val actualTree = mapper.readTree(actualJson)
-    val expectedTree = mapper.readTree(expected)
-    // try to produce are more precise error message than the one below
-    if (!expectedTree.equals(actualTree)) {
-      throwFirstJsonDifference(expectedTree, actualTree)
-    }
-    // JsonNode.equals() implements a full deep-equality check
-    assertEquals("JSON should be equal", expectedTree, actualTree)
-  }
-
-  private def throwFirstJsonDifference(expected: JsonNode, actual: JsonNode): Unit = {
-    expected.getNodeType match {
-      case JsonNodeType.OBJECT =>
-        for (name <- expected.fieldNames().asScala) {
-          assertEquals(s"object field should match: $name", expected.get(name), actual.get(name))
-        }
-      case JsonNodeType.ARRAY =>
-        for (i <- 0 until expected.size()) {
-          assertEquals(s"array item should match: $i", expected.get(i), actual.get(i))
-        }
-      case JsonNodeType.STRING => assertEquals("string value should match", expected.textValue(), actual.textValue())
-      case JsonNodeType.NUMBER =>
-        assertEquals("number value should match", expected.numberValue(), actual.numberValue())
-      case _ => assertEquals("json should match", expected, actual)
-    }
   }
 
   @Before
@@ -302,13 +271,13 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getTransactionByBlockNumberAndIndex"
     val validCases = Table(
       ("Block tag", "Transaction index", "Expected output"),
-      ("latest", "0", txViewOutput),
-      (null, "0", txViewOutput),
-      ("0x2", "0", txViewOutput),
-      ("2", "0", txViewOutput),
-      ("1", "0", "null"),
-      ("earliest", "0", "null"),
-      ("earliest", "1", "null")
+      ("latest", "0x0", txViewOutput),
+      (null, "0x0", txViewOutput),
+      ("0x2", "0x0", txViewOutput),
+      ("2", "0x0", txViewOutput),
+      ("1", "0x0", "null"),
+      ("earliest", "0x0", "null"),
+      ("earliest", "0x1", "null")
     )
 
     val invalidCases =
@@ -334,10 +303,10 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("Block hash", "Transaction index", "Expected output"),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0", txViewOutput),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "1", "null"),
-      ("0x0000000000000000000000000000000000000000000000000000000000000123", "0", "null"),
-      ("0x0000000000000000000000000000000000000000000000000000000000000456", "0", "null")
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0x0", txViewOutput),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0x1", "null"),
+      ("0x0000000000000000000000000000000000000000000000000000000000000123", "0x0", "null"),
+      ("0x0000000000000000000000000000000000000000000000000000000000000456", "0x0", "null")
     )
 
     val invalidCases =
@@ -392,7 +361,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     } else {
       "[]"
     }
-    val json = s"""{"id":"1","jsonrpc":"2.0","method":"$method", "params":$jsonParams}"""
+    val json = s"""{"jsonrpc":"2.0","id":"1","method":"$method", "params":$jsonParams}"""
     new RpcRequest((new ObjectMapper).readTree(json))
   }
 
@@ -758,7 +727,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         ethService.execute(
           new RpcRequest(
             mapper.readTree(
-              s"""{"jsonrpc":"2.0","method":"$method", "params":["$address", ["0x1", "0x2"], "$tag"],"id":1}"""
+              s"""{"jsonrpc":"2.0","id":1,"method":"$method","params":["$address", ["0x1", "0x2"],"$tag"]}"""
             )
           )
         )
@@ -770,7 +739,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         ethService.execute(
           new RpcRequest(
             mapper.readTree(
-              s"""{"jsonrpc":"2.0","method":"$method", "params":["$address", ["0x1", "0x2"], "$tag"],"id":1}"""
+              s"""{"jsonrpc":"2.0","id":1,"method":"$method","params":["$address", ["0x1", "0x2"],"$tag"]}"""
             )
           )
         )
@@ -1007,7 +976,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   @Test
   def invalidJsonRpcData(): Unit = {
     // Test 1: Try to read json request with missing data
-    val json = """{"id":"1", "jsonrpc":"2.0", "params":[]}}"""
+    val json = """{"jsonrpc":"2.0","id":"1","params":[]}}"""
     val request = (new ObjectMapper).readTree(json)
     assertThrows[RpcException] {
       new RpcRequest(request)
