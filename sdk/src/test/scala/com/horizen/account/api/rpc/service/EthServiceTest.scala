@@ -348,7 +348,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       if (params.length != paramValues.length)
         throw new IllegalArgumentException("Number of parameters given must be equal to number of values given")
       (params zip paramValues)
-        .map(param => s""""${param._1}":"${param._2}"""")
+        .map { case (key, value) => s""""$key":"$value"""" }
         .mkString("[{", ", ", "}]")
     } else if (paramValues != null) {
       paramValues

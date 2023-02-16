@@ -40,7 +40,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     "reply at /ethv1 - single request" in {
       rpc(
         """{"jsonrpc":"2.0","id":"196","method":"eth_chainId","params":[]}""",
-        """{"jsonrpc":"2.0","id":"196","result":"""" + checkChainId + """"}"""
+        s"""{"jsonrpc":"2.0","id":"196","result":"$checkChainId"}"""
       )
     }
 
@@ -67,12 +67,12 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           {"jsonrpc":"2.0","id":32,"method":"eth_chainId","params":[]},
           {"jsonrpc":"2.0","id":40,"method":"eth_chainId","params":[]}
         ]""",
-        """[
-          {"jsonrpc":"2.0","id":8,"result":"""" + checkChainId + """"},
-          {"jsonrpc":"2.0","id":16,"result":"""" + checkChainId + """"},
-          {"jsonrpc":"2.0","id":24,"result":"""" + checkChainId + """"},
-          {"jsonrpc":"2.0","id":32,"result":"""" + checkChainId + """"},
-          {"jsonrpc":"2.0","id":40,"result":"""" + checkChainId + """"}
+        s"""[
+          {"jsonrpc":"2.0","id":8,"result":"$checkChainId"},
+          {"jsonrpc":"2.0","id":16,"result":"$checkChainId"},
+          {"jsonrpc":"2.0","id":24,"result":"$checkChainId"},
+          {"jsonrpc":"2.0","id":32,"result":"$checkChainId"},
+          {"jsonrpc":"2.0","id":40,"result":"$checkChainId"}
         ]"""
       )
     }
@@ -83,9 +83,9 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           {"jsonrpc":"2.0","id":8,"method":"eth_chainId_","params":[]},
           {"jsonrpc":"2.0","id":16,"method":"eth_chainId","params":[]}
         ]""",
-        """[
+        s"""[
           {"jsonrpc":"2.0","id":8,"error":{"code":-32601,"message":"Method not found"}},
-          {"jsonrpc":"2.0","id":16,"result":"""" + checkChainId + """"}
+          {"jsonrpc":"2.0","id":16,"result":"$checkChainId"}
         ]"""
       )
     }
@@ -96,8 +96,8 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           {"jsonrpc":"2.0","id":8,"method":"eth_chainId","params":[]},
           {"jsonrpc":"2.0","method":"eth_chainId","params":[]}
         ]""",
-        """[
-          {"jsonrpc":"2.0","id":8,"result":"""" + checkChainId + """"},
+        s"""[
+          {"jsonrpc":"2.0","id":8,"result":"$checkChainId"},
           {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: id"}}
         ]"""
       )
@@ -110,10 +110,10 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           24,
           {"jsonrpc":"2.0","id":16,"method":"eth_chainId","params":[]}
         ]""",
-        """[
-          {"jsonrpc":"2.0","id":8,"result":"""" + checkChainId +""""},
+        s"""[
+          {"jsonrpc":"2.0","id":8,"result":"$checkChainId"},
           {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: jsonrpc"}},
-          {"jsonrpc":"2.0","id":16,"result":"""" + checkChainId +""""}
+          {"jsonrpc":"2.0","id":16,"result":"$checkChainId"}
         ]"""
       )
     }
@@ -153,9 +153,9 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           {"jsonrpc":"2.0","id":-258,"method":"eth_chainId","params":[]},
           {"jsonrpc":"2.0","id":16,"method":"eth_chainId","params":[]}
         ]""",
-        """[
+        s"""[
           {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"Rpc Id can't be a negative number"}},
-          {"jsonrpc":"2.0","id":16,"result":"""" + checkChainId + """"}
+          {"jsonrpc":"2.0","id":16,"result":"$checkChainId"}
         ]"""
       )
     }
