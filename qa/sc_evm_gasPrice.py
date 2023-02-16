@@ -41,7 +41,7 @@ class SCEvmGasPrice(AccountChainSetup):
         tx_hash = sendTransaction(sc_node, payload=signed_raw_tx)
         return tx_hash
 
-    def __do_check_gas_price(self, maxPriorityFeePerGas, generate_blocks=1):
+    def __do_check_gas_price(self, minerFee, generate_blocks=1):
         maxPrice = 500000000000
         sc_node = self.sc_nodes[0]
 
@@ -49,10 +49,10 @@ class SCEvmGasPrice(AccountChainSetup):
             generate_next_blocks(sc_node, "first node", generate_blocks)
 
         expected_price = int(sc_node.rpc_eth_getBlockByNumber('latest', True)['result']['baseFeePerGas'], 16)
-        if (maxPriorityFeePerGas + expected_price) > maxPrice:
+        if (minerFee + expected_price) > maxPrice:
             expected_price = maxPrice
         else:
-            expected_price += maxPriorityFeePerGas
+            expected_price += minerFee
 
         assert_true(int(sc_node.rpc_eth_gasPrice()['result'], 16) == expected_price)
 
@@ -66,7 +66,7 @@ class SCEvmGasPrice(AccountChainSetup):
         evm_address_2 = sc_node.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
         # no txs available - return current base fee
-        self.__do_check_gas_price(maxPriorityFeePerGas=0, generate_blocks=1)
+        self.__do_check_gas_price(0, generate_blocks=1)
 
         nonce_addr_1 = 0
         maxPriorityFeePerGas = 1500000
@@ -90,7 +90,7 @@ class SCEvmGasPrice(AccountChainSetup):
 
         self.__do_check_gas_price(maxPriorityFeePerGas, generate_blocks=15)
 
-        self.__do_check_gas_price(maxPriorityFeePerGas=0, generate_blocks=20)
+        self.__do_check_gas_price(0, generate_blocks=20)
 
         maxPriorityFeePerGas = 600000000000
         for i in range(5):
