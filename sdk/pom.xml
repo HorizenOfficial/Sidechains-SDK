@@ -55,8 +55,8 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>zendoo-sc-cryptolib</artifactId>
-      <!-- 0.6.0-SNAPSHOT without the fixes to circuit with key rotation-->
-      <version>0.6.0-20221202.200901-3</version>
+      <!-- 0.6.0-SNAPSHOT2 tag -->
+      <version>0.6.0-20230124.165959-5</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.sparkzfoundation/sparkz-core -->
@@ -302,6 +302,12 @@
           <include>SidechainBlockHeaderTestVrfSecretKey178</include>
           <include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
           <include>ForgerBoxSerializationTestVrfPublicKey901</include>
+          <include>AccountBlockHeaderTestVrfOutput178</include>
+          <include>AccountBlockHeaderTestVrfProof178</include>
+          <include>AccountBlockHeaderTestVrfSecretKey178</include>
+          <include>AccountBlockTestVrfOutput908</include>
+          <include>AccountBlockTestVrfProof908</include>
+          <include>AccountBlockTestVrfSecretKey908</include>
           <include>OmmerTestVrfProof143</include>
           <include>OmmerTestVrfSecretKey143</include>
           <include>zenbox_hex</include>

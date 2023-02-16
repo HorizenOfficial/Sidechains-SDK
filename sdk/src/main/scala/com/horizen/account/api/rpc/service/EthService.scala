@@ -17,9 +17,9 @@ import com.horizen.account.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.Account.generateContractAddress
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
+import com.horizen.account.utils.Secp256k1.generateContractAddress
 import com.horizen.account.utils.{EthereumTransactionDecoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
@@ -29,7 +29,7 @@ import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
@@ -172,7 +172,7 @@ class EthService(
       } else {
         (
           history.getBlockHeightById(blockId).get().toLong,
-          Hash.fromBytes(blockId.toBytes),
+          new Hash(blockId.toBytes),
           nodeView.state.getView
         )
       }
@@ -270,7 +270,7 @@ class EthService(
       .map(_.asInstanceOf[PrivateKeySecp256k1])
       .find(secret =>
         // if from address is given the secrets public key needs to match, otherwise check all of the secrets
-        fromAddress.forall(from => util.Arrays.equals(from.toBytes, secret.publicImage().address())) &&
+        fromAddress.forall(_.equals(secret.publicImage.address)) &&
           // TODO account for gas
           state.getBalance(secret.publicImage.address).compareTo(txCostInWei) >= 0
       )
@@ -382,7 +382,7 @@ class EthService(
   def getBalance(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        new Quantity(tagStateView.getBalance(address.toBytes))
+        new Quantity(tagStateView.getBalance(address))
       }
     }
   }
@@ -392,7 +392,7 @@ class EthService(
   def getTransactionCount(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        new Quantity(tagStateView.getNonce(address.toBytes))
+        new Quantity(tagStateView.getNonce(address))
       }
     }
   }
@@ -423,25 +423,46 @@ class EthService(
     (block, blockInfo)
   }
 
+  /**
+   * Returns a SidechainBlockInfo for a given blockId
+   * blockId = null is a valid case, returning pending block info
+   * Throws RpcException for not found blockId or errors while creating pending block
+   */
+  private def getBlockInfoById(nodeView: NV, blockId: ModifierId): SidechainBlockInfo = {
+    val blockInfo = if (blockId == null) {
+      val parentId = getBlockIdByTag(nodeView, "latest")
+      getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId)
+      )
+    } else {
+        nodeView.history.blockInfoById(blockId)
+    }
+    blockInfo
+  }
+
   private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
     val blockId = getBlockIdByTag(nodeView, tag)
     val (block, blockInfo) = getBlockById(nodeView, blockId)
     (block, blockInfo)
   }
 
-  private def getBlockContext(block: AccountBlock, blockInfo: SidechainBlockInfo): BlockContext = {
+  private def getBlockContext(
+      block: AccountBlock,
+      blockInfo: SidechainBlockInfo,
+      blockHashProvider: HistoryBlockHashProvider
+  ): BlockContext = {
     new BlockContext(
       block.header,
       blockInfo.height,
       TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
       blockInfo.withdrawalEpochInfo.epoch,
-      networkParams.chainId
+      networkParams.chainId,
+      blockHashProvider
     )
   }
 
   private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, BlockContext) ⇒ A): A = {
     val (block, blockInfo) = getBlockByTag(nodeView, tag)
-    val blockContext = getBlockContext(block, blockInfo)
+    val blockContext = getBlockContext(block, blockInfo, nodeView.history)
     if (tag == "pending") {
       using(getPendingStateView(nodeView, block, blockInfo))(fun(_, blockContext))
     } else {
@@ -472,6 +493,14 @@ class EthService(
       case height => ModifierId(nodeView.history.blockIdByHeight(height).get)
     }
     blockId
+  }
+
+  private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
+    if (tag.length == 66 && tag.substring(0, 2) == "0x")
+      bytesToId(BytesUtils.fromHexString(tag.substring(2)))
+    else {
+      getBlockIdByTag(nodeView, tag)
+    }
   }
 
   @RpcMethod("net_version")
@@ -538,7 +567,7 @@ class EthService(
       null,
       null,
       parentInfo.withdrawalEpochInfo,
-      None,
+      parentInfo.vrfOutputOpt, // same as for parent block, used as a source of BlockContext.random field
       parentInfo.lastBlockInPreviousConsensusEpoch
     )
   }
@@ -562,7 +591,7 @@ class EthService(
 
     // apply transactions
     for ((tx, i) <- block.transactions.zipWithIndex) {
-      pendingStateView.applyTransaction(tx, i, gasPool, getBlockContext(block, blockInfo)) match {
+      pendingStateView.applyTransaction(tx, i, gasPool, getBlockContext(block, blockInfo, nodeView.history)) match {
         case Success(consensusDataReceipt) =>
           val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
 
@@ -670,7 +699,7 @@ class EthService(
   def getCode(address: Address, tag: String): String = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        val code = Option.apply(tagStateView.getCode(address.toBytes)).getOrElse(Array.emptyByteArray)
+        val code = Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
         Numeric.toHexString(code)
       }
     }
@@ -787,6 +816,32 @@ class EthService(
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         // return the tracer result from the evm
+        if(blockContext.getEvmResult != null) {
+          blockContext.getEvmResult.tracerResult
+        } else Unit
+      }
+    }
+  }
+
+  @RpcMethod("debug_traceCall")
+  @RpcOptionalParameters(1)
+  def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): Any = {
+
+    applyOnAccountView { nodeView =>
+      // get block info
+      val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
+
+      // get state at selected block
+      getStateViewAtTag(nodeView, if(tag=="pending") "pending" else (blockInfo.height).toString) { (tagStateView, blockContext) =>
+
+        // use default trace params if none are given
+        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+
+        // apply requested message with tracing enabled
+        val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
+        tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
+
+        // return the tracer result from the evm
         if (blockContext.getEvmResult != null) {
           blockContext.getEvmResult.tracerResult
         } else Unit
@@ -811,7 +866,7 @@ class EthService(
     val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        Hash.fromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
+        new Hash(stateView.getAccountStorage(address, storageKey))
       }
     }
   }
@@ -822,7 +877,7 @@ class EthService(
     val storageKeys = keys.map(key => Numeric.toBytesPadded(key.toNumber, 32))
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        new EthereumAccountProofView(stateView.getProof(address.toBytes, storageKeys))
+        new EthereumAccountProofView(stateView.getProof(address, storageKeys))
       }
     }
   }

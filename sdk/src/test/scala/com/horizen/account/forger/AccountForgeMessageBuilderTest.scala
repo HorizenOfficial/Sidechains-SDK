@@ -16,6 +16,7 @@ import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEnco
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.ForgingStakeInfo
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import com.horizen.params.TestNetParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -23,14 +24,8 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.state.BaseStateReader
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{
-  BytesUtils,
-  DynamicTypedSerializer,
-  MerklePath,
-  Pair,
-  TestSidechainsVersionsManager,
-  WithdrawalEpochInfo
-}
+import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
+import com.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any
@@ -38,34 +33,40 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
-import sparkz.crypto.hash.Keccak256
-import sparkz.util.bytesToId
 import sparkz.core.transaction.state.Secret
+import sparkz.crypto.hash.Keccak256
+import sparkz.util.serialization.VLQByteBufferWriter
+import sparkz.util.{ByteArrayBuilder, bytesToId}
 
 import java.math.BigInteger
 import java.time.Instant
 import java.util
-import java.util.{Arrays, Optional}
+import java.util.Optional
 import scala.io.Source
 
 class AccountForgeMessageBuilderTest
     extends MockitoSugar
       with MessageProcessorFixture
       with EthereumTransactionFixture
-      with SidechainTypes with ReceiptFixture with CompanionsFixture with SecretFixture
+      with SidechainTypes
+      with ReceiptFixture
+      with CompanionsFixture
+      with SecretFixture
       with SidechainRelatedMainchainOutputFixture {
 
   @Test
   def testConsistentStateAfterMissingMsgProcessorError(): Unit = {
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       10000000000L,
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     usingView { stateView =>
@@ -82,12 +83,14 @@ class AccountForgeMessageBuilderTest
         Seq[SidechainTypes#SCAT](transaction.asInstanceOf[SidechainTypes#SCAT])
       )
 
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertTrue(appliedTxs.isEmpty)
 
@@ -111,14 +114,16 @@ class AccountForgeMessageBuilderTest
     val invalidTx = new BuggyTransaction(tmpTx, tmpTx.getSignature)
 
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       10000000000L,
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -136,12 +141,14 @@ class AccountForgeMessageBuilderTest
           invalidTx.asInstanceOf[SidechainTypes#SCAT]
         )
       )
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertTrue(appliedTxs.isEmpty)
 
@@ -174,14 +181,16 @@ class AccountForgeMessageBuilderTest
     )
 
     val blockContext = new BlockContext(
-      Array.empty[Byte],
+      Address.ZERO,
       1000,
       BigInteger.ZERO,
       gasLimit.longValueExact(), // Just enough for 1 tx
       11,
       2,
       3,
-      1
+      1,
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
     )
 
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
@@ -204,12 +213,14 @@ class AccountForgeMessageBuilderTest
           validTx.asInstanceOf[SidechainTypes#SCAT]
         )
       )
+      val inputBlockSize = 100L
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
         Seq.empty,
         blockContext,
-        null
+        null,
+        inputBlockSize
       )
       assertEquals(1, appliedTxs.size)
       assertEquals(validTx.id(), appliedTxs.head.id)
@@ -234,6 +245,7 @@ class AccountForgeMessageBuilderTest
     val ownerPrivateKey = mock[PrivateKey25519]
     val forgingStakeInfo = mock[ForgingStakeInfo]
     val vrfProof = mock[VrfProof]
+    val vrfOutput = mock[VrfOutput]
     val forgingStakeInfoMerklePath = mock[MerklePath]
     val companion = mock[DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]]]
     val inputBlockSize = 0
@@ -256,6 +268,7 @@ class AccountForgeMessageBuilderTest
         ownerPrivateKey,
         forgingStakeInfo,
         vrfProof,
+        vrfOutput,
         forgingStakeInfoMerklePath,
         companion,
         inputBlockSize,
@@ -273,7 +286,7 @@ class AccountForgeMessageBuilderTest
 
     Mockito.when(secretsMock.size()).thenReturn(0)
     Mockito.when(nodeView.vault).thenReturn(vlMock)
-    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => Arrays.asList(fittingSecret))
+    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => util.Arrays.asList(fittingSecret))
 
     Mockito.when(nodeView.history).thenReturn(mock[AccountHistory])
     val epochSizeInSlots = 15
@@ -299,7 +312,7 @@ class AccountForgeMessageBuilderTest
         EthereumTransactionType.DynamicFeeTxType.ordinal(),
         transactionIndex = 0,
         blockNumber = 2,
-        address = BytesUtils.fromHexString("d2a538a476aad6ecd245099df9297df6a129c2c5"),
+        address = new Address("0xd2a538a476aad6ecd245099df9297df6a129c2c5"),
         txHash = Some(BytesUtils.fromHexString("6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
         blockHash = "0456"
       )
@@ -320,7 +333,9 @@ class AccountForgeMessageBuilderTest
       new Array[Byte](0),
       goodSignature
     )
-    val encodedMessage = EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned)
+    val writer = new VLQByteBufferWriter(new ByteArrayBuilder)
+    EthereumTransactionEncoder.encodeAsRlpValues(txEip1559, txEip1559.isSigned, writer)
+    val encodedMessage = writer.toBytes
     val txHash = BytesUtils.toHexString(Keccak256.hash(encodedMessage))
     val mockedState: AccountState =
       AccountMockDataHelper(false).getMockedState(receipt, Numeric.hexStringToByteArray(txHash))
@@ -340,7 +355,7 @@ class AccountForgeMessageBuilderTest
     val accountStateViewMock = mock[AccountStateReader]
     val baseStateViewMock = mock[BaseStateReader]
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
-    Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(initialStateNonce)
+    Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address])).thenReturn(initialStateNonce)
 
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock, () => baseStateViewMock)
 
@@ -367,7 +382,9 @@ class AccountForgeMessageBuilderTest
       new Array[Byte](PublicKey25519Proposition.KEY_LENGTH)
     )
 
-    val vrfProof = VrfGenerator.generateProof(123)
+    val proofAndOutput = VrfGenerator.generateProofAndOutput(123)
+    val vrfProof = proofAndOutput.getKey
+    val vrfOutput = proofAndOutput.getValue
     val forgingStakeInfo =
       new ForgingStakeInfo(ownerPrivateKey.publicImage(), new VrfPublicKey(new Array[Byte](VrfPublicKey.KEY_LENGTH)), 1)
     val forgingStakeInfoMerklePath = new MerklePath(new util.ArrayList[Pair[java.lang.Byte, Array[Byte]]])
@@ -390,6 +407,7 @@ class AccountForgeMessageBuilderTest
       ownerPrivateKey,
       forgingStakeInfo,
       vrfProof,
+      vrfOutput,
       forgingStakeInfoMerklePath,
       companion,
       inputBlockSize,

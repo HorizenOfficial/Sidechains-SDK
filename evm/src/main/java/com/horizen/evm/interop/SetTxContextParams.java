@@ -6,9 +6,9 @@ public class SetTxContextParams extends HandleParams {
     public Hash txHash;
     public Integer txIndex;
 
-    public SetTxContextParams(int handle, byte[] txHash, Integer txIndex) {
+    public SetTxContextParams(int handle, Hash txHash, Integer txIndex) {
         super(handle);
-        this.txHash = Hash.fromBytes(txHash);
+        this.txHash = txHash;
         this.txIndex = txIndex;
     }
 }

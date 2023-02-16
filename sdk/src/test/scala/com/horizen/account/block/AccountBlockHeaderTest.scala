@@ -8,7 +8,7 @@ import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.BytesUtils
 import com.horizen.validation.InvalidSidechainBlockHeaderException
-import com.horizen.vrf.VrfGeneratedDataProvider
+import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
@@ -18,10 +18,10 @@ import scala.util.{Failure, Success}
 
 class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with AccountBlockFixture {
   val vrfGenerationDataSeed = 178
-  val vrfGenerationPrefix = "SidechainBlockHeaderTest"
+  val vrfGenerationPrefix = "AccountBlockHeaderTest"
   //set to true for update vrf related data
   if (false) {
-    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed)
+    VrfGeneratedDataProvider.updateVrfProofAndOutput(vrfGenerationPrefix, vrfGenerationDataSeed)
     VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, vrfGenerationDataSeed)
   }
 
@@ -32,7 +32,8 @@ class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with Acco
   }
 
   val vrfProofOpt: Option[VrfProof] = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed))
-  val header: AccountBlockHeader = createUnsignedBlockHeader(123L, vrfKeyPair, vrfProofOpt)._1
+  val vrfOutputOpt: Option[VrfOutput] = Option(VrfGeneratedDataProvider.getVrfOutput(vrfGenerationPrefix, vrfGenerationDataSeed))
+  val header: AccountBlockHeader = createUnsignedBlockHeader(123L, vrfKeyPair, vrfProofOpt, vrfOutputOpt)._1
   val params: NetworkParams = MainNetParams()
 
   @Test

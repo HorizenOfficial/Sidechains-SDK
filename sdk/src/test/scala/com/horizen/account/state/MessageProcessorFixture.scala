@@ -1,9 +1,9 @@
 package com.horizen.account.state
 
-import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.AccountFixture
 import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.account.utils.{Account, FeeUtils}
-import com.horizen.evm.utils.Hash
+import com.horizen.account.utils.FeeUtils
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.evm.{MemoryDatabase, StateDB}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
@@ -14,32 +14,16 @@ import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 import java.math.BigInteger
 import java.util.Optional
 import scala.language.implicitConversions
-import scala.util.{Random, Try}
+import scala.util.Try
 
-trait MessageProcessorFixture extends ClosableResourceHandler {
-  // simplifies using BigIntegers within the tests
-  implicit def longToBigInteger(x: Long): BigInteger = BigInteger.valueOf(x)
-
+trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
-  val hashNull: Array[Byte] = Array.fill(32)(0)
-  val origin: Array[Byte] = randomAddress
-  val defaultBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1)
-
-  def randomBytes(n: Int): Array[Byte] = {
-    val bytes = new Array[Byte](n)
-    Random.nextBytes(bytes)
-    bytes
-  }
-
-  def randomU256: BigInteger = new BigInteger(randomBytes(32))
-
-  def randomHash: Array[Byte] = randomBytes(32)
-
-  def randomAddress: Array[Byte] = randomBytes(Account.ADDRESS_SIZE)
-
+  val origin: Address = randomAddress
+  val defaultBlockContext =
+    new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>
-      val stateDb = new StateDB(db, hashNull)
+      val stateDb = new StateDB(db, Hash.ZERO)
       using(new AccountStateView(metadataStorageView, stateDb, processors))(fun)
     }
   }
@@ -53,25 +37,19 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   }
 
   def getMessage(
-      to: Array[Byte],
+      to: Address,
       value: BigInteger = BigInteger.ZERO,
       data: Array[Byte] = Array.emptyByteArray,
       nonce: BigInteger = BigInteger.ZERO,
-      from: Array[Byte] = null
+      from: Address = origin
   ): Message = {
     val gasPrice = BigInteger.ZERO
     val gasFeeCap = BigInteger.valueOf(1000001)
     val gasTipCap = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(500000)
     new Message(
-      if (from == null)
-        Optional.of(new AddressProposition(origin))
-      else
-        Optional.of(new AddressProposition(from)),
-      if (to == null)
-        Optional.empty()
-      else
-        Optional.of(new AddressProposition(to)),
+      from,
+      Optional.ofNullable(to),
       gasPrice,
       gasFeeCap,
       gasTipCap,

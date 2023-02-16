@@ -2,6 +2,7 @@ package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -46,9 +47,9 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
   @Test
   def testInit(): Unit = {
     Mockito
-      .when(mockStateView.addAccount(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]]))
+      .when(mockStateView.addAccount(ArgumentMatchers.any[Address], ArgumentMatchers.any[Array[Byte]]))
       .thenAnswer(args => {
-        assertArrayEquals("Different address expected.", WithdrawalMsgProcessor.contractAddress, args.getArgument(0))
+        assertEquals("Different address expected.", WithdrawalMsgProcessor.contractAddress, args.getArgument(0))
         assertArrayEquals("Different code expected.", WithdrawalMsgProcessor.contractCode, args.getArgument(1))
       })
     WithdrawalMsgProcessor.init(mockStateView)
@@ -61,7 +62,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
       "Message for WithdrawalMsgProcessor cannot be processed",
       WithdrawalMsgProcessor.canProcess(msg, mockStateView)
     )
-    val wrongAddress = BytesUtils.fromHexString("35fdd51e73221f467b40946c97791a3e19799bea")
+    val wrongAddress = new Address("0x35fdd51e73221f467b40946c97791a3e19799bea")
     val msgNotProcessable = getMessage(wrongAddress, BigInteger.ZERO, Array.emptyByteArray)
     assertFalse(
       "Message not for WithdrawalMsgProcessor can be processed",
@@ -97,7 +98,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     // helper: mock balance call and assert that the withdrawal request throws
     val withdraw = (balance: BigInteger, withdrawalAmount: BigInteger, blockContext: BlockContext) => {
       val msg = addWithdrawalRequestMessage(withdrawalAmount)
-      Mockito.when(mockStateView.getBalance(msg.getFromAddressBytes)).thenReturn(balance)
+      Mockito.when(mockStateView.getBalance(msg.getFrom)).thenReturn(balance)
       assertThrows[ExecutionFailedException](
         withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, blockContext))
       )
@@ -111,7 +112,8 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     withdraw(ZenWeiConverter.convertZenniesToWei(1300), ZenWeiConverter.convertZenniesToWei(13), defaultBlockContext)
     // Withdrawal request processing when max number of wt was already reached should result in ExecutionFailed
     val epochNum = 102
-    val testEpochBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epochNum, 1)
+    val testEpochBlockContext =
+      new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epochNum, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
     val key = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
     val numOfWithdrawalReqs = Bytes.concat(
       new Array[Byte](32 - Ints.BYTES),
@@ -129,7 +131,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
 
     // Invalid data
     var msg = getMessage(WithdrawalMsgProcessor.contractAddress, BigInteger.ZERO, Array.emptyByteArray)
-    Mockito.when(mockStateView.accountExists(msg.getToAddressBytes)).thenReturn(true)
+    Mockito.when(mockStateView.accountExists(WithdrawalMsgProcessor.contractAddress)).thenReturn(true)
 
     // Withdrawal request list with invalid data should throw ExecutionFailedException
     assertThrows[ExecutionFailedException](
@@ -168,7 +170,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     }
 
     Mockito
-      .when(mockStateView.getAccountStorageBytes(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]]))
+      .when(mockStateView.getAccountStorageBytes(ArgumentMatchers.any[Address], ArgumentMatchers.any[Array[Byte]]))
       .thenAnswer(answer => {
         val key: Array[Byte] = answer.getArgument(1)
         mockWithdrawalRequestsList.get(new ByteArrayWrapper(key))

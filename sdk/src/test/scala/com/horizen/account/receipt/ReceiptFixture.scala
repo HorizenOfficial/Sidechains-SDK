@@ -1,5 +1,6 @@
 package com.horizen.account.receipt
 
+import com.horizen.account.AccountFixture
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.BytesUtils
@@ -7,41 +8,38 @@ import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
-trait ReceiptFixture {
-    def getRandomHash(): Array[Byte] = {
-      val hashBuffer = new Array[Byte](Hash.LENGTH)
-      Random.nextBytes(hashBuffer)
+trait ReceiptFixture extends AccountFixture {
 
-      hashBuffer
-    }
+  def createTestEvmLog(address: Option[Address]): EvmLog = {
+    val topics = Array[Hash](
+      new Hash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      new Hash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+      new Hash("0x2222222222222222222222222222222222222222222222222222222222222222"),
+      new Hash("0x3333333333333333333333333333333333333333333333333333333333333333"),
+    )
+    val data = BytesUtils.fromHexString("aabbccddeeff")
+    new EvmLog(address.getOrElse(randomAddress), topics, data)
+  }
 
-    def createTestEvmLog(addressBytes: Option[Array[Byte]]): EvmLog = {
-      // random address and fixed topics/data
-      val addressBytesTemp: Array[Byte] = addressBytes.getOrElse(getRandomHash().slice(0, 20))
-      val address = Address.fromBytes(addressBytesTemp)
-
-      val topics = new Array[Hash](4)
-      topics(0) = Hash.fromBytes(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
-      topics(1) = Hash.fromBytes(BytesUtils.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"))
-      topics(2) = Hash.fromBytes(BytesUtils.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"))
-      topics(3) = Hash.fromBytes(BytesUtils.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"))
-
-      val data = BytesUtils.fromHexString("aabbccddeeff")
-      new EvmLog(address, topics, data)
-    }
-
-  def createTestEthereumReceipt(txType: Integer, num_logs: Integer = 2, contractAddressPresence : Boolean = true, txHash: Option[Array[Byte]] = None, address: Array[Byte] = Address.addressZero().toBytes,
-                                blockHash: String = "blockhash", blockNumber: Int = 22, transactionIndex: Int = 33): EthereumReceipt = {
-    val txHashTemp: Array[Byte] = txHash.getOrElse(getRandomHash())
+  def createTestEthereumReceipt(
+      txType: Integer,
+      num_logs: Integer = 2,
+      contractAddressPresence: Boolean = true,
+      txHash: Option[Array[Byte]] = None,
+      address: Address = Address.ZERO,
+      blockHash: String = "blockhash",
+      blockNumber: Int = 22,
+      transactionIndex: Int = 33
+  ): EthereumReceipt = {
+    val txHashTemp: Array[Byte] = txHash.getOrElse(randomHash)
 
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
       logs += createTestEvmLog(Some(address))
 
     val contractAddress = if (contractAddressPresence) {
-      Option(BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
+      Option(new Address("0x1122334455667788990011223344556677889900"))
     } else {
       None
     }
@@ -58,9 +56,11 @@ trait ReceiptFixture {
     receipt
   }
 
-  def createTestEthereumConsensusDataReceipt(txType: Integer, num_logs: Integer, address: Array[Byte] = null): EthereumConsensusDataReceipt = {
-    val txHash = new Array[Byte](32)
-    Random.nextBytes(txHash)
+  def createTestEthereumConsensusDataReceipt(
+      txType: Integer,
+      num_logs: Integer,
+      address: Address = null
+  ): EthereumConsensusDataReceipt = {
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
       logs += createTestEvmLog(Some(address))

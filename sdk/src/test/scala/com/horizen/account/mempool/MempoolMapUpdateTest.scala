@@ -7,12 +7,14 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
+
 import java.math.BigInteger
 
 class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture with SidechainTypes with MockitoSugar {
@@ -34,11 +36,11 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
   @Before
   def setUp(): Unit = {
     Mockito
-      .when(accountStateViewMock.getBalance(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getBalance(ArgumentMatchers.any[Address]))
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
 
     Mockito
-      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]]))
+      .when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address]))
       .thenReturn(BigInteger.ZERO)
     Mockito.reset(rejectedBlock)
     Mockito.reset(appliedBlock)

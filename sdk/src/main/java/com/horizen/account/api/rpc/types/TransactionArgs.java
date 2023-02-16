@@ -52,8 +52,8 @@ public class TransactionArgs {
     /**
      * Set sender address or use zero address if none specified.
      */
-    public byte[] getFrom() {
-        return from == null ? new byte[Address.LENGTH] : from.toBytes();
+    public Address getFrom() {
+        return from == null ? Address.ZERO : from;
     }
 
     public EthereumTransaction toTransaction(NetworkParams params) throws RpcException {
@@ -66,7 +66,7 @@ public class TransactionArgs {
         }
         var saneType = type == null ? 0 : type.intValueExact();
 
-        var optionalToAddress = Optional.ofNullable(to == null ? null : new AddressProposition(to.toBytes()));
+        var optionalToAddress = Optional.ofNullable(to == null ? null : new AddressProposition(to));
         var dataBytes = EthereumTransactionUtils.getDataFromString(this.getDataString());
 
         switch (saneType) {
@@ -157,8 +157,8 @@ public class TransactionArgs {
             }
         }
         return new Message(
-            from == null ? Optional.empty() : Optional.of(new AddressProposition(from.toBytes())),
-            to == null ? Optional.empty() : Optional.of(new AddressProposition(to.toBytes())),
+            getFrom(),
+            to == null ? Optional.empty() : Optional.of(to),
             effectiveGasPrice,
             gasFeeCap,
             gasTipCap,

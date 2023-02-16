@@ -90,10 +90,13 @@ testScriptsEvm=(
     'sc_evm_test_erc721.py'
     'sc_evm_test_contract_contract_deployment_and_interaction.py'
     'sc_evm_test_metamask_related.py'
+    'sc_evm_test_prevrandao.py'
     'sc_evm_storage_recovery.py'
     'sc_evm_raw_tx_http_api.py'
     'sc_evm_import_export_keys.py'
     'sc_evm_delegatecall_contract.py'
+    'sc_evm_mc_fork.py'
+    'sc_evm_context_blockhash.py'
 );
 
 testScriptsUtxo=(

@@ -65,8 +65,8 @@ abstract class TransactionBaseApiRoute[
         case Success(tx) =>
           //TO-DO JSON representation of transaction
           ApiResponseUtil.toResponse(RespDecodeTransactionBytes(tx))
-        case Failure(exp) =>
-          ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, JOptional.of(exp)))
+        case Failure(exception) =>
+          ApiResponseUtil.toResponse(ErrorByteTransactionParsing("ErrorByteTransactionParsing", JOptional.of(exception)))
       }
     }
   }
@@ -84,7 +84,7 @@ abstract class TransactionBaseApiRoute[
             case Success(transaction) =>
               validateAndSendTransaction(transaction)
             case Failure(exception) =>
-              ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
+              ApiResponseUtil.toResponse(ErrorByteTransactionParsing("ErrorByteTransactionParsing", JOptional.of(exception)))
           }
         }
       }
@@ -110,8 +110,8 @@ abstract class TransactionBaseApiRoute[
     onComplete(barrier) {
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-      case Failure(exp) =>
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp)))
+      case Failure(exception) =>
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
     }
 
   }

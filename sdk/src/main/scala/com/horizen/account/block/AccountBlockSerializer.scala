@@ -35,7 +35,7 @@ class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) e
 
   override def parse(r: Reader): AccountBlock = {
 
-    require(r.remaining <= SidechainBlock.MAX_BLOCK_SIZE)
+    require(r.remaining <= AccountBlock.MAX_ACCOUNT_BLOCK_SIZE)
 
     val SidechainAccountBlockHeader: AccountBlockHeader = AccountBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r).asScala
