@@ -45,6 +45,7 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
+import scala.jdk.CollectionConverters
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -98,45 +99,21 @@ class EthService(
     )
   }
 
+  private def convertMempoolMap(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
+    CollectionConverters.mapAsJavaMap(
+      poolMap.map { case (proposition, txByNonce) =>
+        new Address(proposition.bytes()) -> CollectionConverters.mapAsJavaMap(
+          txByNonce.mapValues(tx => new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction]))
+        )
+      }
+    )
+
   @RpcMethod("txpool_content")
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
-    new TxPoolContent(getPoolTxs(nodeView, executable = true), getPoolTxs(nodeView, executable = false))
-  }
-
-  private def getPoolTxs(
-      nodeView: NV,
-      executable: Boolean
-  ): util.Map[String, util.Map[BigInteger, TxPoolTransaction]] = {
-    val returnAddressNonceTxsMap = {
-      val addressNonceTxsMap = new java.util.HashMap[String, util.Map[BigInteger, TxPoolTransaction]]
-      var mempoolTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
-      if (executable) mempoolTxsMap = nodeView.pool.getExecutableTransactionsMap
-      else mempoolTxsMap = nodeView.pool.getNonExecutableTransactionsMap
-      for ((from, nonceTransactionsMap) <- mempoolTxsMap) {
-        val returnNonceTxsMap = {
-          val nonceTxsMap = new java.util.HashMap[BigInteger, TxPoolTransaction]
-          for ((txNonce, tx) <- nonceTransactionsMap) {
-            nonceTxsMap.put(
-              txNonce,
-              new TxPoolTransaction(
-                tx.getFrom.bytes(),
-                tx.getGasLimit,
-                tx.getGasPrice,
-                tx.id.toBytes,
-                tx.getData,
-                tx.getNonce,
-                tx.getTo.get().bytes(),
-                tx.getValue
-              )
-            )
-          }
-          nonceTxsMap
-        }
-        addressNonceTxsMap.put(Numeric.toHexString(from.bytes()), returnNonceTxsMap)
-      }
-      addressNonceTxsMap
-    }
-    returnAddressNonceTxsMap
+    new TxPoolContent(
+      convertMempoolMap(nodeView.pool.getExecutableTransactionsMap),
+      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMap)
+    )
   }
 
   @RpcMethod("eth_getBlockByNumber")
@@ -201,7 +178,7 @@ class EthService(
     applyOnAccountView { nodeView =>
       val blockId = getBlockId(nodeView)
       if (blockId == null) {
-        new Quantity(getPoolTxs(nodeView, true).values().flatMap(_.values()).size)
+        new Quantity(nodeView.pool.getExecutableTransactionsMap.map(_._2.size).sum)
       } else {
         nodeView.history.getStorageBlockById(blockId)
           .map(_.transactions.size)
@@ -220,11 +197,7 @@ class EthService(
 
   @RpcMethod("eth_call")
   @RpcOptionalParameters(1)
-  def call(params: TransactionArgs, tag: String): String = {
-    applyOnAccountView { nodeView =>
-      Option.apply(doCall(nodeView, params, tag)).map(Numeric.toHexString).orNull
-    }
-  }
+  def call(params: TransactionArgs, tag: String): Array[Byte] = applyOnAccountView(doCall(_, params, tag))
 
   @RpcMethod("eth_sendTransaction")
   def sendTransaction(params: TransactionArgs): String = {
@@ -855,7 +828,8 @@ class EthService(
     applyOnAccountView { nodeView =>
       nodeView.history
         .getStorageBlockById(getBlockIdByTag(nodeView, blockId))
-        .map(block => new ForwardTransfersView(getForwardTransfersForBlock(block).asJava, false))
+        .map(getForwardTransfersForBlock(_).asJava)
+        .map(new ForwardTransfersView(_))
         .orNull
     }
   }
@@ -900,13 +874,11 @@ class EthService(
   }
 
   @RpcMethod("eth_accounts")
-  def getAccounts: Array[String] = {
+  def getAccounts: Array[Address] = {
     applyOnAccountView { nodeView =>
       nodeView.vault
         .secretsOfType(classOf[PrivateKeySecp256k1])
-        .map(_.asInstanceOf[PrivateKeySecp256k1])
-        .map(_.publicImage())
-        .map(_.checksumAddress())
+        .map(_.asInstanceOf[PrivateKeySecp256k1].publicImage().address())
         .toArray
     }
   }

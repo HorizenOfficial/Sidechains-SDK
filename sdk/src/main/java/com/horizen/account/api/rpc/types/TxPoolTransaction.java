@@ -2,40 +2,40 @@ package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.evm.utils.Address;
+import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
-import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 
 @JsonView(Views.Default.class)
 @JsonInclude()
 public class TxPoolTransaction {
+    // fixed default value
+    public final Hash blockHash = Hash.ZERO;
+    // always null
+    public final BigInteger blockNumber = null;
+    // always null
+    public final BigInteger transactionIndex = null;
 
-    private final static String DEFAULT_BLOCK_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
-    public final String blockHash;         // fixed default value
-    public final String blockNumber;       // always null
-    public final String from;
-    public final String gas;
-    public final String gasPrice;
-    public final String hash;              // transaction modifier id
-    public final String input;             // transaction data
-    public final String nonce;
-    public final String to;
-    public final String transactionIndex;  // always null
-    public final String value;
+    public final Hash hash;
+    public final Address from;
+    public final Address to;
+    public final BigInteger nonce;
+    public final BigInteger gas;
+    public final BigInteger gasPrice;
+    public final byte[] input;
+    public final BigInteger value;
 
-    public TxPoolTransaction(byte[] from, BigInteger gas, BigInteger gasPrice, byte[] hash,
-                             byte[] input, BigInteger nonce, byte[] to, BigInteger value) {
-        this.blockHash = DEFAULT_BLOCK_HASH;
-        this.blockNumber = null;
-        this.from = (from!=null) ? Numeric.toHexString(from) : null;;
-        this.gas = Numeric.encodeQuantity(gas);
-        this.gasPrice = Numeric.encodeQuantity(gasPrice);
-        this.hash = (hash!=null) ? Numeric.toHexString(hash) : null;
-        this.input = (input!=null) ? Numeric.toHexString(input) : null;
-        this.nonce = Numeric.encodeQuantity(nonce);
-        this.to = (to!=null) ? Numeric.toHexString(to) : null;;
-        this.transactionIndex = null;
-        this.value = Numeric.encodeQuantity(value);
+    public TxPoolTransaction(EthereumTransaction tx) {
+        this.hash = new Hash("0x" + tx.id());
+        this.from = tx.getFromAddress();
+        this.to = tx.getToAddress();
+        this.nonce = tx.getNonce();
+        this.gas = tx.getGasLimit();
+        this.gasPrice = tx.getGasPrice();
+        this.input = tx.getData();
+        this.value = tx.getValue();
     }
 }
