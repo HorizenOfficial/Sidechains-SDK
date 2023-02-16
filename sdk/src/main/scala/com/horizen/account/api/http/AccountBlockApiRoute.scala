@@ -2,15 +2,14 @@ package com.horizen.account.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import com.fasterxml.jackson.annotation.{JsonUnwrapped, JsonView}
+import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainTypes
 import com.horizen.account.api.http.AccountBlockRestSchema._
-import com.horizen.account.api.rpc.types.ForwardTransfersView
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.AccountPayment
+import com.horizen.account.utils.{AccountPayment, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.api.http.BlockBaseErrorResponse.ErrorInvalidBlockId
 import com.horizen.api.http.BlockBaseRestSchema.ReqFeePayments
 import com.horizen.api.http.JacksonSupport._
@@ -18,13 +17,13 @@ import com.horizen.api.http.{ApiResponseUtil, BlockBaseApiRoute, SuccessResponse
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
+import com.horizen.transaction.mainchain.ForwardTransfer
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
-import scala.collection.JavaConverters._
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.ExecutionContext
+import scala.jdk.OptionConverters.RichOptional
 
 case class AccountBlockApiRoute(
     override val settings: RESTApiSettings,
@@ -50,19 +49,25 @@ case class AccountBlockApiRoute(
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ getFeePayments ~ getForwardTransfers ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
   }
 
+  private def parseForwardTransfer(tx: ForwardTransfer): ForwardTransferData = {
+    val ftOutput = tx.getFtOutput
+    val address = MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOutput.propositionBytes)
+    val weiValue = ZenWeiConverter.convertZenniesToWei(ftOutput.amount)
+    ForwardTransferData(address.toBytes, String.valueOf(weiValue))
+  }
+
   /**
    * Return the list of forward transfers in a given block. Return error if specified block height does not exist.
    */
   def getForwardTransfers: Route = (post & path("getForwardTransfers")) {
     entity(as[ReqGetForwardTransfersRequests]) { body =>
       withNodeView { sidechainNodeView =>
-        val block = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
-        if (block.isEmpty) ApiResponseUtil.toResponse(ErrorInvalidBlockId(
-          s"Block with id: ${body.blockId} not found",
-          JOptional.empty()
-        ))
-        else ApiResponseUtil.toResponse(
-          RespAllForwardTransfers(new ForwardTransfersView(getForwardTransfersForBlock(block.get()).asJava))
+        ApiResponseUtil.toResponse(
+          sidechainNodeView.getNodeHistory.getBlockById(body.blockId).toScala
+            .map(getForwardTransfersForBlock)
+            .map(txs => txs.map(parseForwardTransfer))
+            .map(RespAllForwardTransfers)
+            .getOrElse(ErrorInvalidBlockId(s"Block with id: ${body.blockId} not found", JOptional.empty()))
         )
       }
     }
@@ -75,8 +80,8 @@ case class AccountBlockApiRoute(
   def getFeePayments: Route = (post & path("getFeePayments")) {
     entity(as[ReqFeePayments]) { body =>
       applyOnNodeView { sidechainNodeView =>
-        val sidechainHistory = sidechainNodeView.getNodeHistory
-        val payments = sidechainHistory.getFeePaymentsInfo(body.blockId).asScala.map(_.payments).getOrElse(Seq())
+        val payments = sidechainNodeView.getNodeHistory.getFeePaymentsInfo(body.blockId).toScala
+          .map(_.payments).getOrElse(Seq())
         ApiResponseUtil.toResponse(RespFeePayments(payments))
       }
     }
@@ -91,7 +96,10 @@ object AccountBlockRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllForwardTransfers(@JsonUnwrapped listOfFWT: ForwardTransfersView)
+  case class ForwardTransferData(to: Array[Byte], value: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllForwardTransfers(forwardTransfers: Seq[ForwardTransferData])
       extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
