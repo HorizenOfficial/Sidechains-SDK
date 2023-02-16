@@ -47,7 +47,10 @@ def websocket_port_by_mc_node_index(n):
 
 
 def obj_to_hex(obj):
-    """Recursively convert integers to """
+    """Recursively convert integers to hex"""
+    if isinstance(obj, bool):
+        # do not change booleans - for history reasons bool is a subclass of int in python
+        return obj
     if isinstance(obj, int):
         return hex(obj)
     if isinstance(obj, dict):
@@ -56,13 +59,13 @@ def obj_to_hex(obj):
         return [obj_to_hex(item) for item in obj]
     return obj
 
-# Helper for creating json rpc requests correctly
+
 def create_json2_rpc_request(method, args):
-    hexArgs = obj_to_hex(args)
+    """Helper for creating json rpc requests correctly"""
     return json.dumps({
         "jsonrpc": "2.0",
         "method": method,
-        "params": hexArgs,
+        "params": obj_to_hex(args),
         "id": "1"
     })
 
