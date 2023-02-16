@@ -1343,11 +1343,13 @@ class MempoolMapTest
     val MaxMempoolSlots = 10
     val mempoolSettings: AccountMempoolSettings = AccountMempoolSettings(maxMemPoolSlots = MaxMempoolSlots)
     var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
-    val txToReplace1 = createEIP1559Transaction(value = BigInteger.ONE,
+    val txToReplace1 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.ONE,
       nonce = BigInteger.ZERO,
       keyOpt = account1KeyOpt,
       gasFee = BigInteger.valueOf(20000),
       priorityGasFee = BigInteger.valueOf(20000),
+    ),
+      MempoolMap.TxSlotSize + 1 //2 slots
     )
     assertTrue("Adding exec transaction failed", mempoolMap.add(txToReplace1).isSuccess)
 
@@ -1364,9 +1366,9 @@ class MempoolMapTest
     )
     assertTrue("Adding exec transaction failed", mempoolMap.add(txToReplace2).isSuccess)
 
-    (6 to MaxMempoolSlots).foreach(nonce => assertTrue("Adding non exec transaction failed",
+    (6 until MaxMempoolSlots).foreach(nonce => assertTrue("Adding non exec transaction failed",
       mempoolMap.add(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account2KeyOpt)).isSuccess))
-    assertEquals("Wrong number of txs in mempool", MaxMempoolSlots, mempoolMap.size)
+    assertEquals("Wrong number of txs in mempool", MaxMempoolSlots - 1, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
 
 
@@ -1379,17 +1381,17 @@ class MempoolMapTest
       gasFee = txToReplace1.getMaxFeePerGas,
       priorityGasFee = txToReplace1.getMaxPriorityFeePerGas,
     ),
-      MempoolMap.TxSlotSize + 1 //2 slots
+      2 * MempoolMap.TxSlotSize + 1 //2 slots
     )
 
     assertTrue("Transaction should have been rejected", mempoolMap.add(exceedingTx).isFailure)
 
-    assertEquals("Wrong number of txs in the mempool", MaxMempoolSlots, mempoolMap.size)
+    assertEquals("Wrong number of txs in the mempool", MaxMempoolSlots - 1, mempoolMap.size)
     assertTrue("Old tx is no more in the mempool", mempoolMap.contains(ModifierId @@ txToReplace1.id()))
     assertFalse("Exceeding tx is in the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id()))
 
     //Create a tx with the same nonce of an existing one but with greater gas fee, tip (for allowing replacing) and
-    // same size. Verify that it replaces the old one
+    // smaller size. Verify that it replaces the old one
 
     exceedingTx = createEIP1559Transaction(value = BigInteger.TWO,
       nonce = txToReplace1.getNonce,
@@ -1400,9 +1402,10 @@ class MempoolMapTest
 
     assertTrue("Replacing transaction failed", mempoolMap.add(exceedingTx).isSuccess)
 
-    assertEquals("Wrong number of txs in the mempool", MaxMempoolSlots, mempoolMap.size)
+    assertEquals("Wrong number of txs in the mempool", MaxMempoolSlots - 1, mempoolMap.size)
     assertFalse("Old tx is still in the mempool", mempoolMap.contains(ModifierId @@ txToReplace1.id()))
     assertTrue("Exceeding tx is not in the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id()))
+    assertEquals("Wrong mempool size in slots", MaxMempoolSlots - 1, mempoolMap.getMempoolSizeInSlots)
 
 
     //Create a tx with the same nonce of an existing one but with greater gas fee, tip (for allowing replacing) and size.
@@ -1415,7 +1418,7 @@ class MempoolMapTest
         gasFee = txToReplace2.getMaxFeePerGas.add(BigInteger.TEN),
         priorityGasFee = txToReplace2.getMaxPriorityFeePerGas.add(BigInteger.TEN),
       ),
-      MempoolMap.TxSlotSize + 1 //2 slots
+      2 * MempoolMap.TxSlotSize + 1 //3 slots
     )
 
 
@@ -1423,7 +1426,7 @@ class MempoolMapTest
       case Success(m) => m
       case Failure(e) => fail(s"Adding exec transaction to a full mempool failed with exception $e", e)
     }
-    assertEquals("Wrong number of txs in mempool", 9, mempoolMap.size)
+    assertEquals("Wrong number of txs in mempool", 8, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 10, mempoolMap.getMempoolSizeInSlots)
     assertTrue("Exceeding tx wasn't added to the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id))
     assertFalse("Oldest tx wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ oldestTx.id))
