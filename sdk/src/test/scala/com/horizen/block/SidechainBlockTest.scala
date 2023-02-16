@@ -49,12 +49,11 @@ class SidechainBlockTest
   val vrfGenerationPrefix = "SidechainBlockTest"
 
   if (false) {
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
     VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, generatedDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
-    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(generatedDataSeed)
     val publicKey: VrfPublicKey = secret.publicImage();
     Option((secret, publicKey))
   }

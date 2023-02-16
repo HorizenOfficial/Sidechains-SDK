@@ -21,11 +21,10 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
   //set to true for update vrf related data
   if (false) {
     VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed)
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, vrfGenerationDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
-    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationDataSeed)
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationDataSeed)
     val publicKey: VrfPublicKey = secret.publicImage();
     Option((secret, publicKey))
   }

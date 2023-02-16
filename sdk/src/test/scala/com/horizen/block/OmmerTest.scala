@@ -34,7 +34,6 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
 
   //set to true if you want to update vrf related data
   if (false) {
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
     VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationSeed)
   }
 
@@ -256,7 +255,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
   @Test
   def compare(): Unit = {
     val vrfKeyPairOpt: Option[(VrfSecretKey, VrfPublicKey)] = {
-      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
+      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationSeed)
       val publicKey: VrfPublicKey = secret.publicImage();
       Option((secret, publicKey))
     }
@@ -328,7 +327,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val parentId: ModifierId = getRandomBlockId(seed)
 
     val vrfKeyPairOpt: Option[(VrfSecretKey, VrfPublicKey)] = {
-      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
+      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationSeed)
       val publicKey: VrfPublicKey = secret.publicImage();
       Option((secret, publicKey))
     }
@@ -396,7 +395,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
     val vrfKeyPairOpt: Option[(VrfSecretKey, VrfPublicKey)] = {
-      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
+      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationSeed)
       val publicKey: VrfPublicKey = secret.publicImage();
       Option((secret, publicKey))
     }

@@ -1,6 +1,7 @@
 package com.horizen.vrf;
 
 import com.google.common.base.Throwables;
+import com.google.common.primitives.Ints;
 import com.horizen.fixtures.VrfGenerator;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.VrfPublicKey;
@@ -14,6 +15,7 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.net.URL;
+import java.util.Random;
 
 // TODO: as soon as VRFSecret generation will become deterministic,
 //  we may remove this class and all the related files from resources
@@ -21,14 +23,8 @@ public class VrfGeneratedDataProvider {
     private static String pathPrefix = "src/test/resources/";
     private static final ClassLoader classLoader = VrfGeneratedDataProvider.class.getClassLoader();
 
-    public static VrfSecretKey updateVrfSecretKey(String prefix, Integer seed) {
-        VrfSecretKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes());
-        writeToFile(prefix, seed, VrfSecretKey.class, obj.bytes());
-        return obj;
-    }
-
-    public static VrfSecretKey getVrfSecretKey(String prefix, Integer seed) {
-        return VrfSecretKeySerializer.getSerializer().parseBytes(readBytesFromFile(prefix, seed, VrfSecretKey.class));
+    public static VrfSecretKey getVrfSecretKey(Integer seed) {
+        return VrfKeyGenerator.getInstance().generateSecret(Ints.toByteArray(seed));
     }
 
     public static VrfPublicKey getVrfPublicKey(String prefix, Integer seed) {

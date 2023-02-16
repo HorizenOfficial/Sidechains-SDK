@@ -58,12 +58,11 @@ class AccountBlockTest
   val vrfGenerationPrefix = "AccountBlockTest"
 
   if (false) {
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
     VrfGeneratedDataProvider.updateVrfProofAndOutput(vrfGenerationPrefix, generatedDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
-    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(generatedDataSeed)
     val publicKey: VrfPublicKey = secret.publicImage()
     Option((secret, publicKey))
   }
