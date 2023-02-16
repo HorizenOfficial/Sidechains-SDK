@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.receipt.{Bloom, BloomSerializer}
-import com.horizen.account.utils.{Account, BigIntegerUInt256, FeeUtils}
+import com.horizen.account.utils.{BigIntegerUInt256, FeeUtils}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
