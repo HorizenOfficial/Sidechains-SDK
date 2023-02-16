@@ -46,12 +46,23 @@ def websocket_port_by_mc_node_index(n):
     return 13000 + n + os.getpid() % 999
 
 
+def obj_to_hex(obj):
+    """Recursively convert integers to """
+    if isinstance(obj, int):
+        return hex(obj)
+    if isinstance(obj, dict):
+        return {key: obj_to_hex(value) for key, value in obj.items()}
+    if isinstance(obj, list) or isinstance(obj, tuple):
+        return [obj_to_hex(item) for item in obj]
+    return obj
+
 # Helper for creating json rpc requests correctly
 def create_json2_rpc_request(method, args):
+    hexArgs = obj_to_hex(args)
     return json.dumps({
         "jsonrpc": "2.0",
         "method": method,
-        "params": args,
+        "params": hexArgs,
         "id": "1"
     })
 

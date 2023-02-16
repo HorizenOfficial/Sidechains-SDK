@@ -12,7 +12,7 @@ public class BigIntegerDeserializer extends JsonDeserializer<BigInteger> {
     public BigInteger deserialize(JsonParser jsonParser, DeserializationContext ctx) throws IOException {
         var text = jsonParser.getText();
         if (text == null || !text.startsWith("0x")) {
-            throw new IOException("quantity must start with 0x");
+            throw new IOException("quantity must start with \"0x\" but received: " + text);
         }
         return new BigInteger(text.substring(2), 16);
     }
