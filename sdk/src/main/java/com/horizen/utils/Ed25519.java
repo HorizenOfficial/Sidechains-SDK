@@ -2,7 +2,7 @@ package com.horizen.utils;
 
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
-import sparkz.crypto.hash.Sha256;
+import java.security.SecureRandom;
 
 public final class Ed25519 {
 
@@ -20,9 +20,9 @@ public final class Ed25519 {
     }
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
-        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(Sha256.hash(seed), 0);
+        SecureRandom rnd = ChaChaPrngSecureRandom.getInstance(seed);
+        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(rnd);
         Ed25519PublicKeyParameters publicKey = privateKey.generatePublicKey();
-
         return new Pair<>(privateKey.getEncoded(), publicKey.getEncoded());
     }
 
@@ -36,7 +36,7 @@ public final class Ed25519 {
 
     public static byte[] sign(byte[] privateKey, byte[] message, byte[] publicKey) {
         byte[] signature = new byte[64];
-        org.bouncycastle.math.ec.rfc8032.Ed25519.sign(privateKey, 0, publicKey, 0, (byte[]) null, message, 0, message.length, signature, 0);
+        org.bouncycastle.math.ec.rfc8032.Ed25519.sign(privateKey, 0, publicKey, 0, null, message, 0, message.length, signature, 0);
         return signature;
     }
 }

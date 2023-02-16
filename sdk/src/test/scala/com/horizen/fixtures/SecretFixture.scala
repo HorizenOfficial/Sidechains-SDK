@@ -1,18 +1,16 @@
 package com.horizen.fixtures
 
 import com.google.common.primitives.Longs
-import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.utils.Secp256k1
 import com.horizen.secret._
 import com.horizen.customtypes._
-
-import java.util.{ ArrayList => JArrayList, List => JList}
+import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
-
-import java.nio.charset.StandardCharsets
+import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
+import java.math.BigInteger
 import java.util
 import scala.util.Random
 
@@ -43,7 +41,7 @@ trait SecretFixture {
   def getPrivateKey25519List(count: Int): JList[PrivateKey25519] = {
     val seed = new Array[Byte](32)
     val keysList : JList[PrivateKey25519] = new JArrayList()
-    for (i <- 1 to count) {
+    for (_ <- 1 to count) {
       Random.nextBytes(seed)
       keysList.add(pkc.generateSecret(seed))
     }
@@ -75,7 +73,7 @@ trait SecretFixture {
     val publicBytes = new Array[Byte](CustomPrivateKey.PUBLIC_KEY_LENGTH)
     val keysList: JList[CustomPrivateKey] = new JArrayList()
 
-    for (i <- 1 to count) {
+    for (_ <- 1 to count) {
       Random.nextBytes(privateBytes)
       Random.nextBytes(publicBytes)
 
@@ -102,7 +100,7 @@ trait SecretFixture {
   def getMCPublicKeyHashPropositionList(count: Int): JList[MCPublicKeyHashProposition] = {
     val keyList = new JArrayList[MCPublicKeyHashProposition]()
 
-    for (i <- 1 to count)
+    for (_ <- 1 to count)
       keyList.add(getMCPublicKeyHashProposition)
 
     keyList
@@ -117,7 +115,7 @@ trait SecretFixture {
   }
 
   def getPrivateKeySecp256k1(seed: Long): PrivateKeySecp256k1 = {
-    val pair = Secp256k1.createKeyPair(Longs.toByteArray(seed));
+    val pair = Secp256k1.createKeyPair(Longs.toByteArray(seed))
     val privateKey = util.Arrays.copyOf(pair.getKey, Secp256k1.PRIVATE_KEY_SIZE)
     new PrivateKeySecp256k1(privateKey)
   }
@@ -130,6 +128,10 @@ trait SecretFixture {
     val seed = new Array[Byte](32)
     Random.nextBytes(seed)
     schnorr.generateSecret(seed)
+  }
+
+  def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
+    SchnorrKeyPair.generate(BigInteger.valueOf(index).toByteArray).getSecretKey
   }
 }
 
