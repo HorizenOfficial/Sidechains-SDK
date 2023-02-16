@@ -1,6 +1,9 @@
 package com.horizen.sc2sc;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 
+@JsonView(Views.Default.class)
 public class CrossChainMessageImpl implements CrossChainMessage{
 
     private CrossChainProtocolVersion version;
