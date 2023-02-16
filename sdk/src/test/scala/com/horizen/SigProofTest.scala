@@ -6,11 +6,14 @@ import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.schnorrnative.SchnorrSecretKey
+import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
+import com.horizen.secret.SchnorrKeyGenerator
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{After, Ignore, Test}
+
 import java.io._
+import java.math.BigInteger
 import java.util.Optional
 import java.{lang, util}
 import scala.collection.JavaConverters._
@@ -33,18 +36,7 @@ class SigProofTest {
   }
 
   private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
-    var bytes: Array[Byte] = null
-    try {
-      val resourceName = "schnorr_sk0"+ index + "_hex"
-      val file = new FileReader(classLoader.getResource(resourceName).getFile)
-      bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
-    }
-    catch {
-      case e: Exception =>
-        assertEquals(e.toString(), true, false)
-    }
-
-    SchnorrSecretKey.deserialize(bytes)
+    SchnorrKeyPair.generate(BigInteger.valueOf(index).toByteArray).getSecretKey
   }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuit

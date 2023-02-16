@@ -16,11 +16,12 @@ import com.horizen.fixtures.FieldElementFixture
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.schnorrnative.SchnorrSecretKey
+import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{Before, Ignore, Test}
 
+import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -37,18 +38,7 @@ private class ProofThreadActorReceiver
     var proofWithQuality:com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
 
   private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
-    var bytes: Array[Byte] = null
-    try {
-      val resourceName = "schnorr_sk0"+ index + "_hex"
-      val file = new FileReader(classLoader.getResource(resourceName).getFile)
-      bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
-    }
-    catch {
-      case e: Exception =>
-        assertEquals(e.toString(), true, false)
-    }
-
-    SchnorrSecretKey.deserialize(bytes)
+    SchnorrKeyPair.generate(BigInteger.valueOf(index).toByteArray).getSecretKey
   }
 
   case class DataForProofGeneration(sidechainId: Array[Byte],

@@ -7,18 +7,20 @@ import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
+import com.horizen.cryptolibprovider.utils.SchnorrFunctions
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{MCPublicKeyHashProposition, SchnorrProposition}
-import com.horizen.schnorrnative.{SchnorrSecretKey, ValidatorKeysUpdatesList}
+import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey, ValidatorKeysUpdatesList}
 import com.horizen.secret.SchnorrSecret
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail}
 import org.junit.{After, Ignore, Test}
 
 import java.io._
+import java.math.BigInteger
 import java.util.Optional
 import java.{lang, util}
 import scala.collection.JavaConverters._
@@ -41,18 +43,9 @@ class SigProofWithKeyRotationTest {
   }
 
   private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
-    var bytes: Array[Byte] = null
-    try {
-      val resourceName = "schnorr_sk0"+ index + "_hex"
-      val file = new FileReader(classLoader.getResource(resourceName).getFile)
-      bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
-    }
-    catch {
-      case e: Exception =>
-        assertEquals(e.toString, true, false)
-    }
-
-    SchnorrSecretKey.deserialize(bytes)
+    val schnorrKeys: util.EnumMap[SchnorrFunctions.KeyType, Array[Byte]] =
+      CryptoLibProvider.schnorrFunctions.generateSchnorrKeys(BigInteger.valueOf(index).toByteArray)
+    SchnorrSecretKey.deserialize(schnorrKeys.get(SchnorrFunctions.KeyType.SECRET))
   }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuitWithKeyRotation

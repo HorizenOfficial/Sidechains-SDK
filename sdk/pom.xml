@@ -327,16 +327,6 @@
           <include>ethereumtransaction_contract_deployment_eip1559_hex</include>
           <include>ethereumtransaction_contract_call_eip155_legacy_hex</include>
           <include>mc_ccout_evm_address_hex</include>
-          <include>schnorr_sk01_hex</include>
-          <include>schnorr_sk02_hex</include>
-          <include>schnorr_sk03_hex</include>
-          <include>schnorr_sk04_hex</include>
-          <include>schnorr_sk05_hex</include>
-          <include>schnorr_sk06_hex</include>
-          <include>schnorr_sk07_hex</include>
-          <include>schnorr_sk08_hex</include>
-          <include>schnorr_sk09_hex</include>
-          <include>schnorr_sk00_hex</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
           <include>mcblock501173</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
