@@ -22,18 +22,22 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import sparkz.util.SparkzLogging
 import sparkz.core.api.http.ApiDirectives
 import sparkz.core.settings.RESTApiSettings
 
+import java.io.{File, FileReader}
 import java.util
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
+import scala.util.Try
 
 case class AccountEthRpcRoute(
     override val settings: RESTApiSettings,
     sidechainNodeViewHolderRef: ActorRef,
+    networkControllerRef: ActorRef,
     sidechainSettings: SidechainSettings,
     params: NetworkParams,
     sidechainTransactionActorRef: ActorRef,
@@ -64,9 +68,12 @@ case class AccountEthRpcRoute(
   val rpcHandler = new RpcHandler(
     new EthService(
       sidechainNodeViewHolderRef,
+      networkControllerRef,
       settings.timeout,
       params,
       sidechainSettings.ethService,
+      sidechainSettings.sparkzSettings.network.maxIncomingConnections,
+      getClientVersion,
       sidechainTransactionActorRef
     )
   )
@@ -120,5 +127,18 @@ case class AccountEthRpcRoute(
         }
       }
     }
+  }
+
+  private def getClientVersion: String = {
+    val default = "unknown"
+    val architecture = Try(System.getProperty("os.arch")).getOrElse(default)
+    val javaVersion = Try(System.getProperty("java.specification.version")).getOrElse(default)
+    val pom = Try(new MavenXpp3Reader().read(new FileReader(new File("pom.xml")))).toOption
+    val (artifactId, artifactVersion): (String, String) = pom match {
+      case Some(artifactInfo) => (artifactInfo.getArtifactId, artifactInfo.getVersion)
+      case None => (default, default)
+    }
+    val version = s"$artifactId/$artifactVersion/$architecture/jdk$javaVersion"
+    version
   }
 }

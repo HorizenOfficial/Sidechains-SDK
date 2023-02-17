@@ -27,6 +27,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
+import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.settings.RESTApiSettings
 
 import scala.concurrent.Future
@@ -114,6 +115,18 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   })
   val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
 
+  val mockedNetworkControllerActor = TestProbe()
+  mockedNetworkControllerActor.setAutoPilot((sender: ActorRef, msg: Any) => {
+    msg match {
+      case GetConnectedPeers =>
+        if (sidechainApiMockConfiguration.getShould_networkController_GetConnectedPeers_reply())
+          sender ! Seq()
+        else sender ! Failure(new Exception("No connected peers."))
+    }
+    TestActor.KeepRunning
+  })
+  val mockedNetworkControllerRef: ActorRef = mockedNetworkControllerActor.ref
+
   implicit def default() = RouteTestTimeout(3.second)
 
   val params = MainNetParams()
@@ -126,6 +139,7 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   val ethRpcRoute: Route = AccountEthRpcRoute(
     mockedRESTSettings,
     mockedSidechainNodeViewHolderRef,
+    mockedNetworkControllerRef,
     sidechainSettings,
     params,
     mockedSidechainTransactionActorRef,

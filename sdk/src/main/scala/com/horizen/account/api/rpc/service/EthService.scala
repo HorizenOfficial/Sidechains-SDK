@@ -31,38 +31,41 @@ import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
+import sparkz.core.network.ConnectedPeer
+import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.{NodeViewHolder, bytesToId}
 import sparkz.util.{ModifierId, SparkzLogging}
 
-import java.io.{File, FileReader}
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.concurrent.duration.{FiniteDuration}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 class EthService(
     scNodeViewHolderRef: ActorRef,
+    networkControllerRef: ActorRef,
     nvtimeout: FiniteDuration,
     networkParams: NetworkParams,
     settings: EthServiceSettings,
+    maxIncomingConnections: Int,
+    rpcClientVersion: String,
     sidechainTransactionActorRef: ActorRef
 ) extends RpcService
       with ClosableResourceHandler
       with SparkzLogging {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
+  implicit val timeout: Timeout = new Timeout(nvtimeout)
 
   private def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
-    implicit val timeout: Timeout = new Timeout(nvtimeout)
     val res = scNodeViewHolderRef
       .ask {
         NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
@@ -508,22 +511,19 @@ class EthService(
   @RpcMethod("net_version")
   def version: String = String.valueOf(networkParams.chainId)
 
-  @RpcMethod("web3_clientVersion")
-  def clientVersion: String = {
-    val architecture = System.getProperty("os.arch")
-    val javaVersion = System.getProperty("java.specification.version")
-    val pomFile = new File("pom.xml")
-    val pomReader = new MavenXpp3Reader()
-    try {
-      val pom = pomReader.read(new FileReader(pomFile))
-      val artifactId = pom.getArtifactId
-      val artifactVersion = pom.getVersion
-      val version = s"$artifactId/$artifactVersion/$architecture/jdk$javaVersion"
-      version
-    } catch {
-      case _ => throw new RpcException(RpcError.fromCode(RpcCode.InternalError, "Could not get artifact id"))
-    }
+  private def getPeerCount: Int = {
+    val peerReq = (networkControllerRef ? GetConnectedPeers).asInstanceOf[Future[Seq[ConnectedPeer]]]
+    Await.result(peerReq, nvtimeout).size
   }
+
+  @RpcMethod("net_peerCount")
+  def peerCount: Quantity = new Quantity(getPeerCount)
+
+  @RpcMethod("net_listening")
+  def listening: Boolean = getPeerCount < maxIncomingConnections
+
+  @RpcMethod("web3_clientVersion")
+  def clientVersion: String = rpcClientVersion
 
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
@@ -703,7 +703,6 @@ class EthService(
   @RpcMethod("eth_sendRawTransaction")
   def sendRawTransaction(signedTxData: String): String = {
     val tx = EthereumTransactionDecoder.decode(signedTxData)
-    implicit val timeout: Timeout = new Timeout(5, SECONDS)
     // submit tx to sidechain transaction actor
     val submit = (sidechainTransactionActorRef ? BroadcastTransaction(tx)).asInstanceOf[Future[Future[ModifierId]]]
     // wait for submit

@@ -18,7 +18,7 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.api.http.SidechainTransactionActorRef
+import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.RegTestParams
@@ -34,6 +34,7 @@ import sparkz.crypto.hash.Keccak256
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
 import sparkz.core.bytesToId
+import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
 import sparkz.util.ByteArrayBuilder
 import sparkz.util.serialization.VLQByteBufferWriter
@@ -43,6 +44,7 @@ import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.util.Failure
 
 class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture with TableDrivenPropertyChecks {
   private val mapper = new ObjectMapper()
@@ -174,10 +176,23 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       TestActor.KeepRunning
     })
 
+    val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
+    val mockedNetworkControllerActor = TestProbe()
+    mockedNetworkControllerActor.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case GetConnectedPeers =>
+          if (sidechainApiMockConfiguration.getShould_networkController_GetConnectedPeers_reply())
+            sender ! Seq()
+          else sender ! Failure(new Exception("No connected peers."))
+      }
+      TestActor.KeepRunning
+    })
+    val mockedNetworkControllerRef: ActorRef = mockedNetworkControllerActor.ref
+
     val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
     val ethServiceSettings = EthServiceSettings()
-    ethService = new EthService(nodeViewHolderRef, new FiniteDuration(10, SECONDS), networkParams, ethServiceSettings, transactionActorRef)
+    ethService = new EthService(nodeViewHolderRef, mockedNetworkControllerRef, new FiniteDuration(10, SECONDS), networkParams, ethServiceSettings, 10, "testVersion", transactionActorRef)
   }
 
   @Test
@@ -196,6 +211,21 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   @Test
   def net_version(): Unit = {
     assertEquals(String.valueOf(1111111), ethService.execute(getRpcRequest()))
+  }
+
+  @Test
+  def net_listening(): Unit = {
+    assertEquals(true, ethService.execute(getRpcRequest()))
+  }
+
+  @Test
+  def net_peerCount(): Unit = {
+    assertEquals("0x0", ethService.execute(getRpcRequest()).asInstanceOf[Quantity].getValue)
+  }
+
+  @Test
+  def web3_clientVersion(): Unit = {
+    assertEquals("testVersion", ethService.execute(getRpcRequest()))
   }
 
   @Test
