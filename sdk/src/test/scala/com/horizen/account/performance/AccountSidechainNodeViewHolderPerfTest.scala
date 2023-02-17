@@ -117,7 +117,8 @@ class AccountSidechainNodeViewHolderPerfTest
       val mempoolSettings = AccountMempoolSettings(
         maxNonceGap = numOfTxsPerSpammerAccounts,
         maxAccountSlots = numOfTxsPerSpammerAccounts,
-        maxMemPoolSlots = numOfTxs
+        maxMemPoolSlots = numOfTxs,
+        maxNonExecMemPoolSlots = numOfTxs - 1
       )
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
@@ -277,7 +278,8 @@ class AccountSidechainNodeViewHolderPerfTest
       val mempoolSettings = AccountMempoolSettings(
         maxNonceGap = numOfTxsPerSpammerAccounts,
         maxAccountSlots = numOfTxsPerSpammerAccounts,
-        maxMemPoolSlots = numOfTxs
+        maxMemPoolSlots = numOfTxs,
+        maxNonExecMemPoolSlots = numOfTxs - 1
       )
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
