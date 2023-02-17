@@ -93,6 +93,10 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
         WebSocketAccountServerEndpoint.send(new RpcResponseSuccess(rpcRequest.id, subscriptionId), session)
 
       case LOGS_SUBSCRIPTION.method =>
+        if (rpcParams.size() < 2)
+          WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
+            new RpcError(RpcCode.InvalidParams, "Missing filters (address, topcis).", "")),
+            session)
         val logs = rpcParams.get(1)
         val addressFilter = getLogAddresses(logs)
         val topicFilter = getLogTopics(logs)
