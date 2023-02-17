@@ -181,6 +181,7 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     Mockito.when(history.blockIdByHeight(any())).thenReturn(None)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))
+    Mockito.when(history.bestBlock).thenReturn(block.orNull)
 
     if (genesis) {
       Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
