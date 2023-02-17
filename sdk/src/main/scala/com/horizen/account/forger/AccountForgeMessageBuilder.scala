@@ -167,7 +167,7 @@ class AccountForgeMessageBuilder(
                 log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
                 priceAndNonceIter.next()
               case e =>
-                // skip all txs from the same account but remove any changes caused by the rejected tx
+                // skip all txs from the same account
                 log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
                 priceAndNonceIter.removeAndSkipAccount()
             }

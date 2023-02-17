@@ -4,15 +4,13 @@ import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 
-class GasPool(initialGas: BigInteger) extends SparkzLogging {
+class GasPool(val initialGas: BigInteger) extends SparkzLogging {
 
   private var currentGas = initialGas
 
   def getGas: BigInteger = currentGas
 
   def getUsedGas: BigInteger = initialGas.subtract(currentGas)
-
-  def getInitialGas: BigInteger = initialGas
 
   @throws(classOf[OutOfGasException])
   def subGas(gas: BigInteger): Unit = {
