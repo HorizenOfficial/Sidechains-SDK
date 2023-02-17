@@ -23,7 +23,7 @@ Configuration:
 
 class SCEvmMempoolSize(AccountChainSetup):
     def __init__(self):
-        super().__init__(max_nonce_gap=100, max_mempool_slots=16)
+        super().__init__(max_nonce_gap=100, max_mempool_slots=16, max_nonexec_pool_slots=15)
 
     def run_test(self):
         mc_node = self.nodes[0]
@@ -55,8 +55,8 @@ class SCEvmMempoolSize(AccountChainSetup):
         self.sc_sync_all()
 
         """
-        Test that adding a transaction when the mem pool is already full will evict the oldest tx
-        First a non exec tx (oldestTx) will be created. This will become the oldest tx that will be evicted.
+        Test that adding a transaction when the mem pool is already full will evict the oldest tx.
+        First an exec tx (oldestTx) will be created. This will become the oldest tx that will be evicted.
         After having generated some blocks (that will be reverted later), the mem pool is filled with txs. 
         Verify that when an exceeding tx is added to the mempool, oldestTx is evicted.
         """
@@ -85,8 +85,10 @@ class SCEvmMempoolSize(AccountChainSetup):
         assert_equal(1, len(response['transactionIds']), "Wrong number of txs in mem pool")
         assert_true(oldestTx in response['transactionIds'], "oldestTx is missing from mem pool")
 
-        # Create non exec txs so they won't be included in next block. They will be used later in the test
-        nonce += 1
+        # Create exec txs to fill the mempool. They won't be included in next block because the next block
+        # will be the one with the fork and this kind of blocks doesn't contain txs.
+        # The tx will be used later in the test
+      #  nonce += 1
         for i in range(self.max_mempool_slots - 1):
             createEIP1559Transaction(sc_node, fromAddress=evm_address_sc1, toAddress=evm_address_sc1, nonce=nonce,
                                      gasLimit=230000, maxPriorityFeePerGas=900000000,
@@ -109,11 +111,23 @@ class SCEvmMempoolSize(AccountChainSetup):
         assert_false(oldestTx in response['transactionIds'], "oldestTx is still in mem pool")
         txsInMempool = response['transactionIds']
 
+        #Now an additional non exec tx will be added to the mempool. This will evict the current oldest tx in the mempool,
+        # that is an exec tx. This will cause the other txs to become non exec and this will exceeds the max non exec size.
+        # A second tx will be evicted.
+        nonExecTx = createEIP1559Transaction(sc_node, fromAddress=evm_address_sc2, toAddress=evm_address_sc2,
+                                            nonce=15, gasLimit=23000, maxPriorityFeePerGas=900000000,
+                                            maxFeePerGas=900000000, value=1)
+
+        response = allTransactions(sc_node, False)
+        assert_equal(self.max_nonexec_pool_slots, len(response['transactionIds']), "Wrong number of txs in mempool")
+        assert_true(nonExecTx in response['transactionIds'], "oldestTx is still in mem pool")
+        txsInMempool = response['transactionIds']
+
+
         # Now the mainchain will revert to the block created with the second FT. All the txs in the sidechain blocks
         # created after that will be readded to the mem pool. Verify that only max_mempool_slots txs will be in the mem pool
         # and that oldestTxs are evicted
 
-        #  for mc_block_id in mc_block_hash:
         mc_node.invalidateblock(mc_block_hash[0])
         time.sleep(5)
         rs = mc_node.generate(max_num_of_blocks + 1)
