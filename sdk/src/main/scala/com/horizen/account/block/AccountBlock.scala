@@ -43,6 +43,8 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override lazy val transactions: Seq[SidechainTypes#SCAT] = sidechainTransactions
 
+  override def size: Long = bytes.length
+
   def forgerPublicKey: AddressProposition = header.forgerAddress
 
   @throws(classOf[InconsistentSidechainBlockDataException])

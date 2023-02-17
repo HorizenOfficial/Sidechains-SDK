@@ -283,6 +283,7 @@ case class AccountMockDataHelper(genesis: Boolean)
       .when(block.header.receiptsRoot)
       .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141010203040506070809111444"))
     Mockito.when(block.header.bytes).thenReturn(new Array[Byte](256))
+    Mockito.when(block.bytes).thenReturn(new Array[Byte](256))
     Mockito.when(block.header.vrfOutput).thenReturn(VrfGenerator.generateVrfOutput(1111))
     Mockito.when(block.timestamp).thenReturn(1000000000L)
     block

@@ -7,7 +7,7 @@ import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
-import com.horizen.utils.{FeePaymentsUtils, MerklePath, MerklePathSerializer, MerkleTree}
+import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import sparkz.util.ModifierId

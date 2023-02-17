@@ -282,6 +282,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
+    @JsonProperty("size")
     public long size() {
         return serializer().toBytes(this).length;
     }

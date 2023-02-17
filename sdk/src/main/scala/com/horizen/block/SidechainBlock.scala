@@ -74,6 +74,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
   override def blockTxSize(): Long = {
     new ListSerializer[SidechainTypes#SCBT](companion).toBytes(sidechainTransactions.asJava).length
   }
+
+  override def size: Long = bytes.length
 }
 
 

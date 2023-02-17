@@ -291,9 +291,10 @@ abstract class AbstractForgeMessageBuilder[
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if (blockSize + refDataSize > getMaxBlockOverheadSize())
+          if (blockSize + refDataSize > getMaxBlockOverheadSize()) {
+            log.info(s"Block size would exceed limit, stopping mc ref data collection. Block size $blockSize, Data collected so far: ${mainchainReferenceData.length}, refData skipped size: $refDataSize")
             false // stop data collection
-          else {
+          } else {
             mainchainReferenceData.append(ref.data)
             blockSize += refDataSize
             // Note: temporary solution because of the delays on MC Websocket server part.
