@@ -80,7 +80,7 @@ class WebSocketAccountChannelImpl extends WebSocketAccountChannel with SparkzLog
             }
 
             if (logFound) {
-              logJson.put("blockHash", BytesUtils.toHexString(transactionData.blockHash))
+              logJson.put("blockHash", Numeric.prependHexPrefix(BytesUtils.toHexString(transactionData.blockHash)))
               logJson.put("blockNumber", Numeric.toHexStringWithPrefix(BigInteger.valueOf(transactionData.blockNumber)))
               logJson.put("transactionHash", Numeric.prependHexPrefix(txHash))
               logJson.put("transactionIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(transactionData.transactionIndex)))
@@ -107,7 +107,7 @@ class WebSocketAccountChannelImpl extends WebSocketAccountChannel with SparkzLog
       val ethereumBlockView = EthereumBlockView.withoutTransactions(blockNumber, blockHash, block)
 
       val blockJson = mapper.createObjectNode()
-      blockJson.put("difficulty", Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockNumber)))
+      blockJson.put("difficulty", "0x0")
       blockJson.put("extraData", ethereumBlockView.extraData)
       blockJson.put("gasLimit", ethereumBlockView.gasLimit)
       blockJson.put("gasUsed", ethereumBlockView.gasUsed)
