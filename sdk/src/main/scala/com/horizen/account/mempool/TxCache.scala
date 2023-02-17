@@ -4,20 +4,26 @@ import com.horizen.SidechainTypes
 import com.horizen.account.mempool.MempoolMap.txSizeInSlot
 import sparkz.util.ModifierId
 
+import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 
 class TxCache {
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, TxMetaInfo] = TrieMap.empty[ModifierId, TxMetaInfo]
   private var sizeInSlots: Int = 0
+  private var nonExecSizeInSlots: Int = 0
 
   private var oldestTx: Option[TxMetaInfo] = None
   private var youngestTx: Option[TxMetaInfo] = None
 
-  def add(tx: SidechainTypes#SCAT): Unit = {
-    val txInf0 = TxMetaInfo(tx)
+  def add(tx: SidechainTypes#SCAT, isNonExec: Boolean): Unit = {
+    val txInf0 = TxMetaInfo(tx, isNonExec)
     all.put(tx.id, txInf0)
-    sizeInSlots += txSizeInSlot(tx)
+    val txSize = txSizeInSlot(tx)
+    sizeInSlots += txSize
+    if (isNonExec){
+      nonExecSizeInSlots += txSize
+    }
     if (oldestTx.isEmpty) {
       oldestTx = Some(txInf0)
       youngestTx = oldestTx
@@ -51,10 +57,29 @@ class TxCache {
         prev.get.next = next
         next.get.previous = prev
       }
-      sizeInSlots -= txSizeInSlot(txInfo.tx)
+      val txSize = txSizeInSlot(txInfo.tx)
+      sizeInSlots -= txSize
+      if (txInfo.isNotExecutable){
+        nonExecSizeInSlots -= txSize
+      }
       txInfo.tx
     }
 
+  }
+
+
+  def promoteTransaction(txId: ModifierId): Unit = {
+    all.get(txId).foreach { txInfo =>
+      txInfo.isNotExecutable = false
+      nonExecSizeInSlots -= txSizeInSlot(txInfo.tx)
+    }
+  }
+
+  def demoteTransaction(txId: ModifierId): Unit = {
+    all.get(txId).foreach { txInfo =>
+      txInfo.isNotExecutable = true
+      nonExecSizeInSlots += txSizeInSlot(txInfo.tx)
+    }
   }
 
   def getTransaction(txId: ModifierId): Option[SidechainTypes#SCAT] = all.get(txId).map(_.tx)
@@ -69,14 +94,49 @@ class TxCache {
 
   def getSizeInSlots: Int = sizeInSlots
 
+  def getNonExecSizeInSlots: Int = nonExecSizeInSlots
+
   def getOldestTransaction(): Option[SidechainTypes#SCAT] = oldestTx.map(_.tx)
 
   def getYoungestTransaction(): Option[SidechainTypes#SCAT] = youngestTx.map(_.tx)
 
+  def getNonExecIterator(): NonExecTransactionIterator = new NonExecTransactionIterator
 
-  case class TxMetaInfo(tx: SidechainTypes#SCAT) {
+  case class TxMetaInfo(tx: SidechainTypes#SCAT, var isNotExecutable: Boolean) {
     var next: Option[TxMetaInfo] = None
     var previous: Option[TxMetaInfo] = None
+  }
+
+  class NonExecTransactionIterator {
+
+    private var nextElem: Option[TxMetaInfo] = oldestTx
+
+
+    @tailrec
+    final private[mempool] def findNext(txInfo: Option[TxMetaInfo]): Option[TxMetaInfo] = {
+      if (txInfo.isEmpty || txInfo.get.isNotExecutable)
+        txInfo
+      else {
+        findNext(txInfo.get.next)
+      }
+    }
+
+    def hasNext: Boolean = {
+      findNext(nextElem).isDefined
+    }
+
+    def next: SidechainTypes#SCAT = {
+      val tmp = findNext(nextElem)
+      if (tmp.isEmpty) {
+        nextElem = tmp
+        throw new NoSuchElementException()
+      } else {
+        val txInfo = tmp.get
+        nextElem = txInfo.next
+        txInfo.tx
+      }
+    }
+
   }
 
 }

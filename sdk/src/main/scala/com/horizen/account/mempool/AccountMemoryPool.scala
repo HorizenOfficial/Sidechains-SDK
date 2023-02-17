@@ -102,7 +102,7 @@ class AccountMemoryPool(
   ): AccountMemoryPool = ???
 
   override def remove(tx: SidechainTypes#SCAT): AccountMemoryPool = {
-    unconfirmed.remove(tx) match {
+    unconfirmed.removeFromMempool(tx) match {
       case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
       case Failure(e) =>
         log.error(s"Exception while removing transaction $tx from MemPool", e)

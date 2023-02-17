@@ -595,9 +595,9 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
   @Test
   def testWithTxsInvalidForAccountSize(): Unit = {
 
-    val tx11 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(11), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
-    val tx12 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(12), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
-    val tx13 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(13), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
+    val tx11 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(11), keyOpt = accountKeyOpt), 4)
+    val tx12 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(12), keyOpt = accountKeyOpt), 4)
+    val tx13 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(13), keyOpt = accountKeyOpt), 4)
     val tx14 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(14), keyOpt = accountKeyOpt)
     val tx15 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(15), keyOpt = accountKeyOpt)
     val tx16 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(16), keyOpt = accountKeyOpt)
@@ -659,12 +659,12 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
   def testUpdateWithMempoolFull(): Unit = {
 
     val addressA = accountKeyOpt.get.publicImage().address()
-    val txA0 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(0), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
+    val txA0 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(0), keyOpt = accountKeyOpt), 4)
     val txA1 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(1), keyOpt = accountKeyOpt)
     val txA2 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(2), keyOpt = accountKeyOpt)
-    val txA3 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(3), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
+    val txA3 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(3), keyOpt = accountKeyOpt), 4)
     val txA4 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(4), keyOpt = accountKeyOpt)
-    val txA5 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(5), keyOpt = accountKeyOpt), MempoolMap.TxSlotSize + 1)
+    val txA5 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(5), keyOpt = accountKeyOpt), 2)
 
     val accountKeyBOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
     val addressB = accountKeyBOpt.get.publicImage().address()
@@ -679,7 +679,10 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Test 1: Txs from reverted blocks exceed mempool size. Verify that oldest txs are evicted
 
     //Initialize mempool
-    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings(maxMemPoolSlots = 8))
+    val mempoolMap = new MempoolMap(accountStateProvider,
+      baseStateProvider,
+      AccountMempoolSettings(maxMemPoolSlots = 8,
+        maxNonExecMemPoolSlots = 7))
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(addressA))
