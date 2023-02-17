@@ -524,7 +524,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),
         "CIRCUIT_TYPE": bootstrap_info.circuit_type,
-        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false")
+        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false"),
+        "REMOTE_SERVER_ADDRESS": (sc_node_config.remote_keys_server_address if sc_node_config.remote_keys_manager_enabled else "")
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -587,7 +588,8 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "RESTRICT_FORGERS": "false",
         "ALLOWED_FORGERS_LIST": [],
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": DEFAULT_MAX_PACKET_SIZE,
-        "REMOTE_KEY_MANAGER_ENABLED": "false"
+        "REMOTE_KEY_MANAGER_ENABLED": "false",
+        "REMOTE_SERVER_ADDRESS": ""
     }
 
     configsData.append({

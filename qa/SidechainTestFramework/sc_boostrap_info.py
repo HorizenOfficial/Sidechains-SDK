@@ -131,6 +131,7 @@ class SCNodeConfiguration(object):
                  max_fee=10000000,
                  initial_private_keys=[],
                  remote_keys_manager_enabled=False,
+                 remote_keys_server_address=None,
                  known_peers=[],
                  declared_address=None,
                  initial_signing_private_keys=[],
@@ -155,6 +156,8 @@ class SCNodeConfiguration(object):
         self.initial_private_keys = initial_private_keys
         self.initial_signing_private_keys = initial_signing_private_keys
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
+        if remote_keys_manager_enabled is True:
+            self.remote_keys_server_address = remote_keys_server_address
         self.known_peers = known_peers
         if declared_address is not None:
             self.declared_address = declared_address

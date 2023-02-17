@@ -174,7 +174,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--certcircuittype", dest="certcircuittype", default="NaiveThresholdSignatureCircuit", action="store",
                           help="Type of certificate circuit: NaiveThresholdSignatureCircuit"
                                "/NaiveThresholdSignatureCircuitWithKeyRotation")
-        parser.add_option("--parallel", dest="parallel", default=0, action="store",
+        parser.add_option("--parallel", dest="parallel", type=int, default=0, action="store",
                           help="Stores parallel process integer assigned to current test")
 
         self.add_options(parser)
