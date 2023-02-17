@@ -17,7 +17,7 @@ import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.Broadca
 import com.horizen.api.http._
 import com.horizen.evm.LevelDBDatabase
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.params.MainNetParams
+import com.horizen.params.{MainNetParams, TestNetParams}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.runner.RunWith
@@ -28,7 +28,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
-import sparkz.core.settings.RESTApiSettings
+import sparkz.core.settings.{NetworkSettings, RESTApiSettings, SparkzSettings}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -131,7 +131,11 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
 
   val params = MainNetParams()
 
-  val sidechainSettings = mock[SidechainSettings]
+  val mockedSidechainSettings = mock[SidechainSettings]
+  Mockito.when(mockedSidechainSettings.sparkzSettings).thenReturn(mock[SparkzSettings])
+  Mockito.when(mockedSidechainSettings.sparkzSettings.network).thenReturn(mock[NetworkSettings])
+  Mockito.when(mockedSidechainSettings.sparkzSettings.network.maxIncomingConnections).thenReturn(10)
+
   val metadataStorage = mock[AccountStateMetadataStorage]
   val stateDb = mock[LevelDBDatabase]
   val messageProcessors = mock[Seq[MessageProcessor]]
@@ -140,7 +144,7 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
     mockedRESTSettings,
     mockedSidechainNodeViewHolderRef,
     mockedNetworkControllerRef,
-    sidechainSettings,
+    mockedSidechainSettings,
     params,
     mockedSidechainTransactionActorRef,
     metadataStorage,
