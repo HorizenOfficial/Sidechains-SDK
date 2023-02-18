@@ -52,8 +52,7 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
     def __init__(self):
         super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT)
 
-    @staticmethod
-    def secure_enclave_create_signature(message_to_sign, public_key="", key=""):
+    def secure_enclave_create_signature(self, message_to_sign, public_key="", key=""):
         post_data = {
             "message": message_to_sign,
             "type": "schnorr"
@@ -66,7 +65,8 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
         else:
             raise Exception("Either public key or private key should be provided to call createSignature")
 
-        response = requests.post("http://127.0.0.1:5000/api/v1/createSignature", json=post_data)
+        response = requests.post(f"http://{self.remote_keys_ip_address}:"
+                                 f"{self.remote_keys_port}/api/v1/createSignature", json=post_data)
         json_response = json.loads(response.text)
         return json_response
 
@@ -89,6 +89,8 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
         SecureEnclaveApiServer(
             private_master_keys,
             public_master_keys,
+            self.remote_keys_ip_address,
+            self.remote_keys_port
         ).start()
 
         generate_next_blocks(sc_node, "first node", 1)
