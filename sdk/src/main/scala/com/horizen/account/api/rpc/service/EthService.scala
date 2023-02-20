@@ -38,7 +38,6 @@ import sparkz.core.{NodeViewHolder, bytesToId}
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
-import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -403,10 +402,9 @@ class EthService(
   private def getBlockInfoById(nodeView: NV, blockId: ModifierId): SidechainBlockInfo = {
     val blockInfo = if (blockId == null) {
       val parentId = getBlockIdByTag(nodeView, "latest")
-      getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId)
-      )
+      getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId))
     } else {
-        nodeView.history.blockInfoById(blockId)
+      nodeView.history.blockInfoById(blockId)
     }
     blockInfo
   }
@@ -788,7 +786,7 @@ class EthService(
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         // return the tracer result from the evm
-        if(blockContext.getEvmResult != null) {
+        if (blockContext.getEvmResult != null) {
           blockContext.getEvmResult.tracerResult
         } else Unit
       }
@@ -804,31 +802,39 @@ class EthService(
       val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
 
       // get state at selected block
-      getStateViewAtTag(nodeView, if(tag=="pending") "pending" else (blockInfo.height).toString) { (tagStateView, blockContext) =>
+      getStateViewAtTag(nodeView, if (tag == "pending") "pending" else (blockInfo.height).toString) {
+        (tagStateView, blockContext) =>
+          // use default trace params if none are given
+          blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
 
-        // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+          // apply requested message with tracing enabled
+          val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
+          tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
 
-        // apply requested message with tracing enabled
-        val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
-        tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
-
-        // return the tracer result from the evm
-        if (blockContext.getEvmResult != null) {
-          blockContext.getEvmResult.tracerResult
-        } else Unit
+          // return the tracer result from the evm
+          if (blockContext.getEvmResult != null) {
+            blockContext.getEvmResult.tracerResult
+          } else Unit
       }
     }
   }
 
   @RpcMethod("zen_getForwardTransfers")
-  def getForwardTransfers(blockId: String): ForwardTransfersView = {
-    if (blockId == null) return null
+  def getForwardTransfers(hash: Hash): ForwardTransfersView = {
     applyOnAccountView { nodeView =>
       nodeView.history
-        .getStorageBlockById(getBlockIdByTag(nodeView, blockId))
+        .getStorageBlockById(bytesToId(hash.toBytes))
         .map(getForwardTransfersForBlock(_).asJava)
         .map(new ForwardTransfersView(_))
+        .orNull
+    }
+  }
+
+  @RpcMethod("zen_getFeePayments")
+  def getFeePayments(hash: Hash): AccountFeePaymentsInfo = {
+    applyOnAccountView { nodeView =>
+      nodeView.history
+        .feePaymentsInfo(bytesToId(hash.toBytes))
         .orNull
     }
   }
@@ -852,18 +858,6 @@ class EthService(
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
         new EthereumAccountProofView(stateView.getProof(address, storageKeys))
       }
-    }
-  }
-
-  @RpcMethod("zen_getFeePayments")
-  def getFeePayments(blockId: Hash): AccountFeePaymentsInfo = {
-    if (blockId == null) {
-      return null
-    }
-    applyOnAccountView { nodeView =>
-      nodeView.history
-        .feePaymentsInfo(bytesToId(blockId.toBytes))
-        .orNull
     }
   }
 

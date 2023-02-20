@@ -12,7 +12,6 @@ import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{EthereumReceipt, ReceiptFixture}
 import com.horizen.account.secret.PrivateKeySecp256k1Creator
-import com.horizen.account.serialization.EthJsonMapper
 import com.horizen.account.state.AccountState
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
@@ -24,7 +23,6 @@ import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
 import com.horizen.{EthServiceSettings, SidechainTypes}
-import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
@@ -651,7 +649,10 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("Transaction parameters", "Expected output"),
-      (Array[Any](txJson), "\"0xf892018609184e72a0008276c09452cceccf519c4575a3cbf3bff5effa5e9181cec4849184e72aa9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f0724456751ca016a663f0c1372024737b6498df67128b64ad77fa4e29cce26195efc3d47b36eda02bb2a98dd10ae161d98adb4d127ede506ab155dc4730e5978167a27b965916c8\"")
+      (
+        Array[Any](txJson),
+        "\"0xf892018609184e72a0008276c09452cceccf519c4575a3cbf3bff5effa5e9181cec4849184e72aa9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f0724456751ca016a663f0c1372024737b6498df67128b64ad77fa4e29cce26195efc3d47b36eda02bb2a98dd10ae161d98adb4d127ede506ab155dc4730e5978167a27b965916c8\""
+      )
     )
 
     val invalidCases = Table("Transaction", Array[Any](txJsonNoSecret), "aaaa")
@@ -676,7 +677,11 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("Sender", "message", "Expected output"),
-      (senderWithSecret, "message", "\"0xe134cb1e4e8337c5071cb1355f58e7644686f27bf1160d7406eaf9f40854af903e18111c09301af31d599bf87abaeafaf176848623aff62e05c1a687178da6691c\"")
+      (
+        senderWithSecret,
+        "message",
+        "\"0xe134cb1e4e8337c5071cb1355f58e7644686f27bf1160d7406eaf9f40854af903e18111c09301af31d599bf87abaeafaf176848623aff62e05c1a687178da6691c\""
+      )
     )
 
     val invalidCases = Table(("sender", "message"), ("asd", "message"), ("aaaa", "message"))
@@ -888,15 +893,24 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   @Test
   def zen_getForwardTransfers(): Unit = {
     val method = "zen_getForwardTransfers"
-    val validCases = Table(("Block id", "Size"), ("latest", 150), ("earliest", 150))
+    val validCases =
+      Table(
+        ("Block id", "Expected output"),
+        (
+          "0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc",
+          """{"forwardTransfers":[
+            {"to":"0x5d3eff12e7c2f48e1bd660694101049f8fb678c9","value":"0x51b7d5554400"},
+            {"to":"0xaea09d1e14cbf1604dc36c76cc9d5cb1e7e493a7","value":"0x378d4bb3f000"}
+          ]}"""
+        )
+      )
 
-    val invalidCases = Table("Block id", "0x1337", "1337abcd")
+    val invalidCases = Table("Block id", "0x1337", "1337abcd", "latest")
 
-    forAll(validCases) { (id, size) =>
-      assertTrue(
-        EthJsonMapper
-          .serialize(ethService.execute(getRpcRequest(paramValues = Array(id), method = method)))
-          .length > size
+    forAll(validCases) { (id, expectedOutput) =>
+      assertJsonEquals(
+        expectedOutput,
+        ethService.execute(getRpcRequest(paramValues = Array(id), method = method))
       )
     }
 
