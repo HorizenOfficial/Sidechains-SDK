@@ -44,6 +44,34 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
   val exampleTransaction2: EthereumTransaction = createEIP1559Transaction(BigInteger.valueOf(10), keyOpt = Some(secret2))
   val nonIncludedTransaction: EthereumTransaction = createEIP1559Transaction(BigInteger.valueOf(10), keyOpt = Some(nonIncludedSecret))
 
+  val transactionTopic0 = new Hash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
+  val transactionTopic1 = new Hash("0x00000000000000000000000053e53e5d0bedbd9d13a0a0e0441597db24f255c3")
+  val transactionTopic2 = new Hash("0x000000000000000000000000b3eb3c0bf99677d0c9ff18030c66e1bb78967994")
+
+  val transactionLog = new EvmLog(
+    new Address("0x90dc4f6c07c2ecb76768a70276206436e77a6645"),
+    Array(transactionTopic0, transactionTopic1, transactionTopic2),
+    BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001")
+  )
+  val transactionLog2 = new EvmLog(
+    new Address("0x90dc4f6c07c2ecb76768a70276206436e77a6645"),
+    Array(transactionTopic0),
+    BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001")
+  )
+
+  val transactionReceipt: EthereumReceipt = EthereumReceipt(
+    new EthereumConsensusDataReceipt(0,
+      1,
+      new BigInteger("52321"),
+      Seq(transactionLog, transactionLog2)),
+    BytesUtils.fromHexString("0a5af1ca72ce63cbd07a86bba39d1aa88ae499a3c3eaa142ac2c2882874b6f6a"),
+    0,
+    BytesUtils.fromHexString("733e67a2770d7e7fef8507c2654ff5491946fb016b757daf001e0e862848ffa7"),
+    5,
+    new BigInteger("52321"),
+    Option.empty
+  )
+
   val transactionWithLogs = new EthereumTransaction(
     1997L,
     EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
@@ -54,23 +82,6 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
     BigInteger.ZERO,
     BytesUtils.fromHexString("a9059cbb000000000000000000000000b3eb3c0bf99677d0c9ff18030c66e1bb789679940000000000000000000000000000000000000000000000000000000000000001"),
     null
-  )
-  val transacionLog = new EvmLog(
-    new Address("0x90dc4f6c07c2ecb76768a70276206436e77a6645"),
-    Array(new Hash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"), new Hash("0x00000000000000000000000053e53e5d0bedbd9d13a0a0e0441597db24f255c3"), new Hash("0x000000000000000000000000b3eb3c0bf99677d0c9ff18030c66e1bb78967994")),
-    BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001")
-  )
-  val transactionReceipt: EthereumReceipt = EthereumReceipt(
-    new EthereumConsensusDataReceipt(0,
-      1,
-      new BigInteger("52321"),
-      Seq(transacionLog)),
-    BytesUtils.fromHexString("0a5af1ca72ce63cbd07a86bba39d1aa88ae499a3c3eaa142ac2c2882874b6f6a"),
-    0,
-    BytesUtils.fromHexString("733e67a2770d7e7fef8507c2654ff5491946fb016b757daf001e0e862848ffa7"),
-    5,
-    new BigInteger("52321"),
-    Option.empty
   )
 
   val blockWithTransaction = AccountBlockFixture.generateAccountBlock(sidechainAccountTransactionsCompanion,

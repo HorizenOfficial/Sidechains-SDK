@@ -415,13 +415,19 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
-
     publishNewBlockEvent(utilMocks.blockWithTransaction)
     assertTrue("No event message received.", countDownController.await(5000))
-    assertEquals(1, endpoint.receivedMessage.size())
+
+    countDownController.reset(1)
+    assertTrue("No event message received.", countDownController.await(5000))
+    assertEquals(2, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transacionLog, Option.apply(Array[String]{logAddress}), Option.empty)
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    endpoint.receivedMessage.remove(0)
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -446,13 +452,19 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
-
     publishNewBlockEvent(utilMocks.blockWithTransaction)
     assertTrue("No event message received.", countDownController.await(5000))
-    assertEquals(1, endpoint.receivedMessage.size())
+
+    countDownController.reset(1)
+    assertTrue("No event message received.", countDownController.await(5000))
+    assertEquals(2, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transacionLog, Option.apply(Array[String]{logAddress}), Option.empty)
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    endpoint.receivedMessage.remove(0)
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -489,9 +501,8 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Client 1 subscribe to logs method with one topic filter
     countDownController.reset(1)
     session = startSession(client, cec, endpoint)
-    val topics0 = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
     logFilters.removeAll()
-    logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(topics0))))
+    logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionTopic0))))
     sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
@@ -503,13 +514,19 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
-
     publishNewBlockEvent(utilMocks.blockWithTransaction)
     assertTrue("No event message received.", countDownController.await(5000))
-    assertEquals(1, endpoint.receivedMessage.size())
+
+    countDownController.reset(1)
+    assertTrue("No event message received.", countDownController.await(5000))
+    assertEquals(2, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transacionLog, Option.apply(Array[String]{logAddress}), Option.empty)
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    endpoint.receivedMessage.remove(0)
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -521,7 +538,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     countDownController.reset(1)
     session = startSession(client, cec, endpoint)
     logFilters.removeAll()
-    logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(topics0))))
+    logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionTopic0))))
     logFilters.put("address", logAddress)
     sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
@@ -534,13 +551,49 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
+    publishNewBlockEvent(utilMocks.blockWithTransaction)
+    assertTrue("No event message received.", countDownController.await(5000))
 
+    countDownController.reset(1)
+    assertTrue("No event message received.", countDownController.await(5000))
+    assertEquals(2, endpoint.receivedMessage.size())
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    endpoint.receivedMessage.remove(0)
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
+    endpoint.receivedMessage.remove(0)
+
+    // Disconnect client 1
+    session.close()
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    //Client 1 subscribe to logs method with one topic filter included only in 1 out of 2 tx logs and one address filter
+    countDownController.reset(1)
+    session = startSession(client, cec, endpoint)
+    logFilters.removeAll()
+    logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionTopic1))))
+    logFilters.put("address", logAddress)
+    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.apply(logFilters), session)
+    assertTrue("No event messages received.", countDownController.await(10000))
+
+    //Verify that we receive a positive response
+    assertEquals(1, endpoint.receivedMessage.size())
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkResponseMessage(response, clientId1)
+    endpoint.receivedMessage.remove(0)
+
+    //Publish a new block containing a transaction
+    countDownController.reset(1)
     publishNewBlockEvent(utilMocks.blockWithTransaction)
     assertTrue("No event message received.", countDownController.await(5000))
     assertEquals(1, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transacionLog, Option.apply(Array[String]{logAddress}), Option.empty)
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -630,22 +683,17 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals("Wrong transaction hash", txHashJson, Numeric.prependHexPrefix(tx.id()))
   }
 
-  private def checkLogs(wsResponse: JsonNode, transactionReceipt: EthereumReceipt, transactionLog: EvmLog, addressFilter: Option[Array[String]], topicsFilter: Option[Array[String]]): Unit = {
+  private def checkLogs(wsResponse: JsonNode, transactionReceipt: EthereumReceipt, transactionLog: EvmLog, addressFilter: Option[Array[String]], logIndex: String): Unit = {
     checkWsEventStaticFields(wsResponse)
 
     val logJson = wsResponse.get("params").get("result")
     if (addressFilter.isDefined && addressFilter.get.length > 0)
       assertTrue("Wrong log address", addressFilter.get.contains(logJson.get("address").asText()))
     val jsonTopics = logJson.get("topics")
-    if (topicsFilter.isDefined && topicsFilter.get.length > 0) {
-      val jsonTopics = logJson.get("topics")
-      jsonTopics.forEach(topic => assertTrue("Wrong log topics", topicsFilter.get.contains(topic.asText())))
-    } else {
-      jsonTopics.forEach(topic => assertTrue("Wrong log topics", transactionLog.topics.contains(new Hash(Numeric.prependHexPrefix(topic.asText())))))
-    }
+    jsonTopics.forEach(topic => assertTrue("Wrong log topics", transactionLog.topics.contains(new Hash(Numeric.prependHexPrefix(topic.asText())))))
 
     assertEquals("Wrong log data", logJson.get("data").asText(), Numeric.prependHexPrefix(BytesUtils.toHexString(transactionLog.data)))
-    assertEquals("Wrong log logIndex", logJson.get("logIndex").asText(), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    assertEquals("Wrong log logIndex", logJson.get("logIndex").asText(), logIndex)
     assertEquals("Wrong log blockHash", logJson.get("blockHash").asText(), Numeric.prependHexPrefix(BytesUtils.toHexString(transactionReceipt.blockHash)))
     assertEquals("Wrong log blockNumber", logJson.get("blockNumber").asText(), Numeric.toHexStringWithPrefix(BigInteger.valueOf(transactionReceipt.blockNumber)))
     assertEquals("Wrong log transactionHash", logJson.get("transactionHash").asText(), Numeric.prependHexPrefix(BytesUtils.toHexString(transactionReceipt.transactionHash)))
