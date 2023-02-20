@@ -1,9 +1,8 @@
 package com.horizen.account.state
 
+import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.evm.ResourceHandle
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
+import io.horizen.evm.{Address, ResourceHandle}
 
 import java.math.BigInteger
 
@@ -28,7 +27,7 @@ trait AccountStateReader {
   def isForgingOpen: Boolean
   def getAllowedForgerList: Seq[Int]
 
-  def getLogs(txHash: Array[Byte]): Array[EvmLog]
+  def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog]
   def getIntermediateRoot: Array[Byte]
 
   def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys]

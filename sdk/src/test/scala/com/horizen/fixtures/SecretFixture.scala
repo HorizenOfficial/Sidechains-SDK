@@ -4,14 +4,14 @@ import com.google.common.primitives.Longs
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.utils.Secp256k1
-import com.horizen.secret._
 import com.horizen.customtypes._
-import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
 import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
+import com.horizen.secret._
+
 import java.math.BigInteger
-import java.util
+import java.util.{ArrayList => JArrayList, List => JList}
 import scala.util.Random
 
 trait SecretFixture {
@@ -40,7 +40,7 @@ trait SecretFixture {
 
   def getPrivateKey25519List(count: Int): JList[PrivateKey25519] = {
     val seed = new Array[Byte](32)
-    val keysList : JList[PrivateKey25519] = new JArrayList()
+    val keysList: JList[PrivateKey25519] = new JArrayList()
     for (_ <- 1 to count) {
       Random.nextBytes(seed)
       keysList.add(pkc.generateSecret(seed))
@@ -116,8 +116,7 @@ trait SecretFixture {
 
   def getPrivateKeySecp256k1(seed: Long): PrivateKeySecp256k1 = {
     val pair = Secp256k1.createKeyPair(Longs.toByteArray(seed))
-    val privateKey = util.Arrays.copyOf(pair.getKey, Secp256k1.PRIVATE_KEY_SIZE)
-    new PrivateKeySecp256k1(privateKey)
+    new PrivateKeySecp256k1(pair.getKey)
   }
 
   def getAddressProposition(seed: Long): AddressProposition = {

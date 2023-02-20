@@ -1,10 +1,10 @@
 package com.horizen.account.state
 
 import com.horizen.account.events.AddWithdrawalRequest
+import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.evm.{Address, Hash}
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
@@ -137,7 +137,7 @@ class WithdrawalMsgProcessorIntegrationTest
     }
   }
 
-  def checkEvent(expectedEvent: AddWithdrawalRequest, actualEvent: EvmLog): Unit = {
+  def checkEvent(expectedEvent: AddWithdrawalRequest, actualEvent: EthereumConsensusDataLog): Unit = {
     assertEquals(
       "Wrong address",
       WithdrawalMsgProcessor.contractAddress,

@@ -9,10 +9,10 @@ import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMA
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import io.horizen.evm.Address
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
@@ -169,7 +169,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
     //publish event
     val keyRotationEvent = SubmitKeyRotation(keyType, keyIndex, keyRotationProof.newKey, currentEpochNum)
-    val evmLog = getEvmLog(keyRotationEvent)
+    val evmLog = getEthereumConsensusDataLog(keyRotationEvent)
     view.addLog(evmLog)
 
     keyRotationProof.encode()

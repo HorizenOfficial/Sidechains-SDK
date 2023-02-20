@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.scala.DefaultScalaModule;
-import com.horizen.evm.utils.BigIntegerDeserializer;
-import com.horizen.evm.utils.BigIntegerSerializer;
+import io.horizen.evm.utils.BigIntegerDeserializer;
+import io.horizen.evm.utils.BigIntegerSerializer;
 
 import java.math.BigInteger;
 

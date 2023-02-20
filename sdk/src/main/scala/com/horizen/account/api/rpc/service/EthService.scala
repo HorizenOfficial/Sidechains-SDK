@@ -8,7 +8,6 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
@@ -24,13 +23,13 @@ import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, Fe
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.{ProofAccountResult, TraceOptions}
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
+import io.horizen.evm.{Address, Hash, TraceOptions}
+import io.horizen.evm.results.ProofAccountResult
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -775,8 +774,8 @@ class EthService(
 
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
-        // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+        // enable tracing
+        blockContext.enableTracer(config)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
@@ -849,8 +848,8 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
 
-        // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+        // enable tracing
+        blockContext.enableTracer(config)
 
         // apply requested transaction with tracing enabled
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
@@ -870,10 +869,10 @@ class EthService(
       val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
 
       // get state at selected block
-      getStateViewAtTag(nodeView, if (tag == "pending") "pending" else (blockInfo.height).toString) {
+      getStateViewAtTag(nodeView, if (tag == "pending") "pending" else blockInfo.height.toString) {
         (tagStateView, blockContext) =>
-          // use default trace params if none are given
-          blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+          // enable tracing
+          blockContext.enableTracer(config)
 
           // apply requested message with tracing enabled
           val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
