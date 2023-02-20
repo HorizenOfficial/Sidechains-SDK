@@ -34,8 +34,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         ArgumentMatchers.any[SidechainTypes#SCAT],
         ArgumentMatchers.any[Int],
         ArgumentMatchers.any[GasPool],
-        ArgumentMatchers.any[BlockContext],
-        ArgumentMatchers.any[Boolean]
+        ArgumentMatchers.any[BlockContext]
       )
     )
     .thenAnswer(asw => {

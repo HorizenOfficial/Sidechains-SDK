@@ -248,7 +248,7 @@ public class StateDBTest extends LibEvmTestBase {
     }
 
     @Test
-    public void TestAccountTypes() throws Exception {
+    public void testAccountTypes() throws Exception {
         final var code = bytes("aa87aee0394326416058ef46b907882903f3646ef2a6d0d20f9e705b87c58c77");
         final var addr1 = new Address("0x1234561234561234561234561234561234561230");
 

@@ -24,13 +24,16 @@ public class ZenBoxSerializerTest extends BoxFixtureClass
         // Note: current box bytes are also stored in "src/test/resources/zenbox_hex"
         box = getZenBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 10);
 
-//     Uncomment and run if you want to update regression data.
-//        try {
-//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/zenbox_hex"));
-//            out.write(BytesUtils.toHexString(box.bytes()));
-//            out.close();
-//        } catch (Throwable e) {
-//        }
+        // Set to true and run if you want to update regression data.
+        if (false) {
+            try {
+                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/zenbox_hex"));
+                out.write(BytesUtils.toHexString(box.bytes()));
+                out.close();
+            } catch (Throwable e) {
+            }
+        }
+
     }
 
     @Test

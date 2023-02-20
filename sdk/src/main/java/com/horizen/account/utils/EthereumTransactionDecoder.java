@@ -149,7 +149,7 @@ public class EthereumTransactionDecoder {
                     BytesUtils.toHexString(rawValueBytes)
             );
         }
-        return rawValueString.asPositiveBigInteger();
+        return new BigIntegerUInt256(rawValueBytes).getBigInt();
     }
 
     private static EthereumTransaction RlpList2LegacyTransaction(RlpList rlpList) {
