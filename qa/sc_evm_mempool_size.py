@@ -17,7 +17,15 @@ Check mem pool behaviour when it reached its maximum size.
 Configuration:
     - 1 SC node
     - 1 MC node
-
+Tests:
+    - Create 3 MC blocks and 3 corresponding SC blocks, containing some transactions
+    - Add as many transactions as needed to reach the maximum mempool size. Add an additional tx and verify that the oldest
+    tx in the mempool is evicted. This eviction in turn will transform some txs from executable to non executable so
+    the non exec sub pool size will be exceeded too. A second tx will then be evicted.
+    - Revert the 3 MC blocks. This will revert the SC blocks and the contained transactions will be reinserted in the mempool.
+    The sum of the txs already in the mempool and of the reinserted txs will exceeds the maximum size of the mempool and 
+    the oldest txs will be evicted, including some of the reinserted txs. Check that the reinserted txs are evicted starting
+    from the biggest nonce.
 """
 
 
@@ -64,11 +72,11 @@ class SCEvmMempoolSize(AccountChainSetup):
                                             nonce=14, gasLimit=23000, maxPriorityFeePerGas=900000000,
                                             maxFeePerGas=900000000, value=1)
 
-        initial_block_height = sc_node.block_best()["result"]["height"]
+        sc_block_height_before_fork = sc_node.block_best()["result"]["height"]
 
         max_num_of_blocks = 3
         nonce = 0
-        mc_block_hash = []
+        list_of_mc_block_hash_to_be_reverted = []
         reinjected_txs = []
         for j in range(max_num_of_blocks):
             for i in range(j * self.max_account_slots, (j + 1) * (self.max_account_slots - 1)):
@@ -77,7 +85,7 @@ class SCEvmMempoolSize(AccountChainSetup):
                                                                gasLimit=230000, maxPriorityFeePerGas=900000000,
                                                                maxFeePerGas=900000000, value=1))
                 nonce += 1
-            mc_block_hash.append(mc_node.generate(1)[0])
+            list_of_mc_block_hash_to_be_reverted.append(mc_node.generate(1)[0])
             generate_next_block(sc_node, "first node")
 
         # Check that oldestTx ist still in mem pool
@@ -87,8 +95,8 @@ class SCEvmMempoolSize(AccountChainSetup):
 
         # Create exec txs to fill the mempool. They won't be included in next block because the next block
         # will be the one with the fork and this kind of blocks doesn't contain txs.
-        # The tx will be used later in the test
-      #  nonce += 1
+        # The txs will be used later in the test.
+
         for i in range(self.max_mempool_slots - 1):
             createEIP1559Transaction(sc_node, fromAddress=evm_address_sc1, toAddress=evm_address_sc1, nonce=nonce,
                                      gasLimit=230000, maxPriorityFeePerGas=900000000,
@@ -108,49 +116,55 @@ class SCEvmMempoolSize(AccountChainSetup):
 
         response = allTransactions(sc_node, False)
         assert_equal(self.max_mempool_slots, len(response['transactionIds']), "Wrong number of txs in mempool")
-        assert_false(oldestTx in response['transactionIds'], "oldestTx is still in mem pool")
-        txsInMempool = response['transactionIds']
+        assert_false(oldestTx in response['transactionIds'], "oldestTx was not evicted from mem pool")
 
-        #Now an additional non exec tx will be added to the mempool. This will evict the current oldest tx in the mempool,
-        # that is an exec tx. This will cause the other txs to become non exec and this will exceeds the max non exec size.
-        # A second tx will be evicted.
+        #Now an additional non exec tx will be added to the mempool, so the size of the mempool exceeds the allowed max size
+        # by one slot (that corresponds to 1 tx in this test). This will evict the current oldest tx in the mempool,
+        # that is an exec tx. This will cause in turn the other exec txs to become non exec, so in the mempool there will be
+        # only non exec txs. Their number will exceed the max non exec size. A second tx will be then evicted.
         nonExecTx = createEIP1559Transaction(sc_node, fromAddress=evm_address_sc2, toAddress=evm_address_sc2,
                                             nonce=15, gasLimit=23000, maxPriorityFeePerGas=900000000,
                                             maxFeePerGas=900000000, value=1)
 
         response = allTransactions(sc_node, False)
         assert_equal(self.max_nonexec_pool_slots, len(response['transactionIds']), "Wrong number of txs in mempool")
-        assert_true(nonExecTx in response['transactionIds'], "oldestTx is still in mem pool")
-        txsInMempool = response['transactionIds']
+        assert_true(nonExecTx in response['transactionIds'], "new tx is not in mem pool")
+        txs_in_mempool_before_fork = response['transactionIds']
 
 
         # Now the mainchain will revert to the block created with the second FT. All the txs in the sidechain blocks
-        # created after that will be readded to the mem pool. Verify that only max_mempool_slots txs will be in the mem pool
-        # and that oldestTxs are evicted
+        # created after that will be readded to the mem pool. The total number of reinserted txs is bigger than the max
+        # mem pool size so all the txs that were already in the mempool are evicted and then some reinserted too.
+        # Verify that only max_mempool_slots txs will be in the mem pool in the end. Verify that the oldest txs are evicted,
+        # that are the txs that were in the mempool, then that some reinserted txs are evicted too, starting from the ones
+        # with higher nonces.
 
-        mc_node.invalidateblock(mc_block_hash[0])
+        # Create a fork on MC: invalidate the old MC blocks and create new ones
+        mc_node.invalidateblock(list_of_mc_block_hash_to_be_reverted[0])
         time.sleep(5)
-        rs = mc_node.generate(max_num_of_blocks + 1)
+        mc_node.generate(max_num_of_blocks + 1)
 
-        # Generate a new sc block, in order to see the mc fork
+        # Generate a new sc block, in order to see the MC fork
         generate_next_block(sc_node, "first node")
+        # Verify that the SC has rejected the blocks related to the invalid MC blocks
         new_block_height = sc_node.block_best()["result"]["height"]
-        assert_equal(initial_block_height + 1, new_block_height, "Wrong block height after revert")
+        assert_equal(sc_block_height_before_fork + 1, new_block_height, "Wrong block height after revert")
 
         response = allTransactions(sc_node, False)
-        assert_equal(self.max_mempool_slots, len(response['transactionIds']), "Wrong number of txs in mempool")
+        txs_in_mempool_after_fork = response['transactionIds']
+        assert_equal(self.max_mempool_slots, len(txs_in_mempool_after_fork), "Wrong number of txs in mempool")
 
-        # Check that all txsInMempool txs were evicted
-        for tx in txsInMempool:
-            assert_false(tx in response['transactionIds'], "txsInMempool is still in mem pool")
+        # Check that all txs_in_mempool_before_fork txs were evicted
+        for tx in txs_in_mempool_before_fork:
+            assert_false(tx in txs_in_mempool_after_fork, "txs_in_mempool_before_fork is still in mem pool")
 
        # Check that in the mempool were just kept the reinjected txs with lowest nonce
 
         for i in range(self.max_mempool_slots):
-            assert_true(reinjected_txs[i] in response['transactionIds'], "tx is not in mem pool")
+            assert_true(reinjected_txs[i] in txs_in_mempool_after_fork, "tx is not in mem pool")
 
         for i in range(self.max_mempool_slots, len(reinjected_txs)):
-            assert_false(reinjected_txs[i] in response['transactionIds'], "tx should have been evicted from mem pool")
+            assert_false(reinjected_txs[i] in txs_in_mempool_after_fork, "tx should have been evicted from mem pool")
 
 
 
