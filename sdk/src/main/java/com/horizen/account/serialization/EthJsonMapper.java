@@ -1,7 +1,7 @@
 package com.horizen.account.serialization;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.horizen.evm.utils.BigIntegerDeserializer;
 import com.horizen.evm.utils.BigIntegerSerializer;
@@ -20,11 +20,7 @@ public class EthJsonMapper {
         module.addDeserializer(byte[].class, new EthByteDeserializer());
         mapper = new ObjectMapper();
         mapper.registerModule(module);
-        // do not serialize null or empty values
-//        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-//        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-//        mapper.setSerializationInclusion(JsonInclude.Include.NON_ABSENT);
-//        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
 
     private EthJsonMapper() {
