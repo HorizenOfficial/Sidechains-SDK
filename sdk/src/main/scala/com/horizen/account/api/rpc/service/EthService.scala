@@ -34,7 +34,7 @@ import com.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
-import sparkz.core.{NodeViewHolder, bytesToId}
+import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
@@ -198,17 +198,17 @@ class EthService(
   def call(params: TransactionArgs, tag: String): Array[Byte] = applyOnAccountView(doCall(_, params, tag))
 
   @RpcMethod("eth_sendTransaction")
-  def sendTransaction(params: TransactionArgs): String = {
+  def sendTransaction(params: TransactionArgs): Hash = {
     val tx = signTransaction(params)
     sendRawTransaction(tx)
   }
 
   @RpcMethod("eth_signTransaction")
-  def signTransaction(params: TransactionArgs): String = {
+  def signTransaction(params: TransactionArgs): Array[Byte] = {
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value.add(params.gas))
         .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
-        .map(tx => Numeric.toHexString(tx.encode(tx.isSigned)))
+        .map(tx => tx.encode(tx.isSigned))
         .orNull
     }
   }
@@ -218,14 +218,13 @@ class EthService(
    * gives context to the signed message and prevents signing of transactions.
    */
   @RpcMethod("eth_sign")
-  def sign(sender: Address, message: String): String = {
-    val data = Numeric.hexStringToByteArray(message)
-    val prefix = s"\u0019Ethereum Signed Message:\n${data.length}"
-    val messageToSign = prefix.getBytes() ++ data
+  def sign(sender: Address, message: Array[Byte]): Array[Byte] = {
+    val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
+    val messageToSign = prefix.getBytes() ++ message
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
         .map(secret => secret.sign(messageToSign))
-        .map(signature => Numeric.toHexString(signature.getR ++ signature.getS ++ signature.getV))
+        .map(signature => signature.getR ++ signature.getS ++ signature.getV)
         .orNull
     }
   }
@@ -699,7 +698,7 @@ class EthService(
         .headOption
         .map(_.asInstanceOf[EthereumTransaction])
         .flatMap(tx =>
-          using(view)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
+          using(view)(_.getTransactionReceipt(BytesUtils.fromHexString(tx.id)))
             .map(new EthereumTransactionView(tx, _, block.header.baseFee))
         ).orNull
       ethTxView
@@ -725,7 +724,7 @@ class EthService(
   }
 
   @RpcMethod("eth_sendRawTransaction")
-  def sendRawTransaction(signedTxData: String): String = {
+  def sendRawTransaction(signedTxData: Array[Byte]): Hash = {
     val tx = EthereumTransactionDecoder.decode(signedTxData)
     implicit val timeout: Timeout = new Timeout(5, SECONDS)
     // submit tx to sidechain transaction actor
@@ -734,16 +733,15 @@ class EthService(
     val validate = Await.result(submit, timeout.duration)
     // wait for validation of the transaction
     val txHash = Await.result(validate, timeout.duration)
-    Numeric.prependHexPrefix(txHash)
+    new Hash(idToBytes(txHash))
   }
 
   @RpcMethod("eth_getCode")
   @RpcOptionalParameters(1)
-  def getCode(address: Address, tag: String): String = {
+  def getCode(address: Address, tag: String): Array[Byte] = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        val code = Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
-        Numeric.toHexString(code)
+        Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
       }
     }
   }
@@ -767,7 +765,6 @@ class EthService(
   @RpcMethod("eth_getUncleByBlockNumberAndIndex")
   def eth_getUncleByBlockNumberAndIndex(tag: String, index: BigInteger): Null = null
 
-  // Eth Syncing RPC
   @RpcMethod("eth_syncing")
   def eth_syncing() = false
 
@@ -824,7 +821,7 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, config: TraceOptions): Any = {
+  def traceTransaction(transactionHash: Hash, config: TraceOptions): JsonNode = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -859,16 +856,14 @@ class EthService(
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         // return the tracer result from the evm
-        if (blockContext.getEvmResult != null) {
-          blockContext.getEvmResult.tracerResult
-        } else Unit
+        blockContext.getEvmResult.tracerResult
       }
     }
   }
 
   @RpcMethod("debug_traceCall")
   @RpcOptionalParameters(1)
-  def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): Any = {
+  def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): JsonNode = {
 
     applyOnAccountView { nodeView =>
       // get block info
@@ -885,9 +880,7 @@ class EthService(
           tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
 
           // return the tracer result from the evm
-          if (blockContext.getEvmResult != null) {
-            blockContext.getEvmResult.tracerResult
-          } else Unit
+          blockContext.getEvmResult.tracerResult
       }
     }
   }
@@ -1017,7 +1010,7 @@ class EthService(
     val sortedRewards = txs
       .map(tx =>
         GasAndReward(
-          stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)).get.gasUsed.longValueExact(),
+          stateView.getTransactionReceipt(BytesUtils.fromHexString(tx.id)).get.gasUsed.longValueExact(),
           getEffectiveGasTip(tx, block.header.baseFee)
         )
       )
