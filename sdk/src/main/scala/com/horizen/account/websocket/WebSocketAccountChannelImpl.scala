@@ -22,6 +22,7 @@ import com.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 
 import java.math.BigInteger
+import java.util
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -58,45 +59,33 @@ class WebSocketAccountChannelImpl extends WebSocketAccountChannel with SparkzLog
     }
   }
 
-  def getTransactionLogData(txHash: String, subscriptionWithFilter: SubscriptionWithFilter): Option[ObjectNode] = {
-    applyOnAccountView {nodeView =>
-      nodeView.state.getTransactionReceipt(BytesUtils.fromHexString(txHash)) match {
-        case Some(transactionData) =>
-          if (subscriptionWithFilter.checkSubscriptionInBloom(transactionData.consensusDataReceipt.logsBloom)) {
-            val logJson = mapper.createObjectNode()
+  def getTransactionLogData(txHash: String, subscriptionWithFilter: SubscriptionWithFilter): Array[ObjectNode] = {
+    val txLogs: java.util.ArrayList[ObjectNode] = new util.ArrayList[ObjectNode]()
+    applyOnAccountView { nodeView =>
+      if (nodeView.state.getTransactionReceipt(BytesUtils.fromHexString(txHash)).isDefined) {
+        val txReceipt = nodeView.state.getTransactionReceipt(BytesUtils.fromHexString(txHash)).get
 
-            var logFound = false
-            transactionData.consensusDataReceipt.logs.zipWithIndex.foreach{
-              case (log, index) =>
-                subscriptionWithFilter.filterTransactionLogs(log) match {
-                  case Some(topics) =>
-                    logFound = true
-                    logJson.put("address", log.address.toString)
-                    logJson.put("data", Numeric.prependHexPrefix(BytesUtils.toHexString(log.data)))
-                    logJson.put("logIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(index)))
-                    logJson.set("topics", mapper.readTree(SerializationUtil.serialize(topics)))
-                    None
-                }
-            }
+        if (subscriptionWithFilter.checkSubscriptionInBloom(txReceipt.consensusDataReceipt.logsBloom)) {
+          txReceipt.consensusDataReceipt.logs.zipWithIndex.foreach {
+            case (log, index) =>
+              if (subscriptionWithFilter.filterTransactionLogs(log)) {
+                val logJson = mapper.createObjectNode()
 
-            if (logFound) {
-              logJson.put("blockHash", Numeric.prependHexPrefix(BytesUtils.toHexString(transactionData.blockHash)))
-              logJson.put("blockNumber", Numeric.toHexStringWithPrefix(BigInteger.valueOf(transactionData.blockNumber)))
-              logJson.put("transactionHash", Numeric.prependHexPrefix(txHash))
-              logJson.put("transactionIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(transactionData.transactionIndex)))
-
-              Some(logJson)
-
-            } else {
-              Option.empty
-            }
-          } else {
-            Option.empty
+                logJson.put("blockHash", Numeric.prependHexPrefix(BytesUtils.toHexString(txReceipt.blockHash)))
+                logJson.put("blockNumber", Numeric.toHexStringWithPrefix(BigInteger.valueOf(txReceipt.blockNumber)))
+                logJson.put("transactionHash", Numeric.prependHexPrefix(txHash))
+                logJson.put("transactionIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(txReceipt.transactionIndex)))
+                logJson.put("address", log.address.toString)
+                logJson.put("data", Numeric.prependHexPrefix(BytesUtils.toHexString(log.data)))
+                logJson.put("logIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(index)))
+                logJson.set("topics", mapper.readTree(SerializationUtil.serialize(log.topics.map(topic => Numeric.prependHexPrefix(BytesUtils.toHexString(topic.toBytes))))))
+                txLogs.add(logJson)
+              }
           }
-        case None =>
-          Option.empty
+        }
       }
     }
+  txLogs.toArray(new Array[ObjectNode](0))
   }
 
 

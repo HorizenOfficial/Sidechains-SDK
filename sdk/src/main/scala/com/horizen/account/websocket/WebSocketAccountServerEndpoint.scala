@@ -218,16 +218,15 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
 
   private def getTransactionsLogData(tx: SidechainTypes#SCAT, subscription: SubscriptionWithFilter, removed: Boolean = false): Unit = {
 
-    val responsePayload = mapper.createObjectNode()
-
-    val txReceipt = webSocketAccountChannelImpl.getTransactionLogData(tx.id, subscription)
-    if (txReceipt.isDefined) {
-      responsePayload.set("result", txReceipt.get)
+    val txLogs = webSocketAccountChannelImpl.getTransactionLogData(tx.id, subscription)
+    txLogs.foreach(txLog => {
+      val responsePayload = mapper.createObjectNode()
+      responsePayload.set("result", txLog)
       responsePayload.put("subscription", subscription.subscriptionId)
       if (removed)
         responsePayload.put("removed", true)
       send(new WebsocketAccountResponse("eth_subscription", responsePayload), subscription.session)
-    }
+    })
   }
 
   def onVaultChanged(): Unit = {

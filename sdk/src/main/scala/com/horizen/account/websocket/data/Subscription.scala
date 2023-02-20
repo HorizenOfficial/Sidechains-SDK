@@ -32,21 +32,18 @@ case class SubscriptionWithFilter(session: Session, subscriptionId: String,
       true
   }
 
-  def filterTransactionLogs(log: EvmLog): Option[Array[String]] = {
+  def filterTransactionLogs(log: EvmLog): Boolean = {
     if (address.isDefined && !address.get.contains(log.address.toString))
-      Option.empty
+      false
     else
       filterTransactionLogsByTopic(log.topics)
   }
 
-  def filterTransactionLogsByTopic(logTopics: Array[Hash]): Option[Array[String]] = {
-    topics match {
-      case Some(topicFilters) =>
-        val matchedTopics = topicFilters.filter(topic => logTopics.contains(new Hash(BytesUtils.fromHexString(Numeric.cleanHexPrefix(topic)))))
-        Some(matchedTopics)
-      case None =>
-        Some(logTopics.map(topic => BytesUtils.toHexString(topic.toBytes)))
-    }
+  def filterTransactionLogsByTopic(logTopics: Array[Hash]): Boolean = {
+    if (topics.isDefined && topics.get.length > 0 && !topics.get.exists(topic => logTopics.contains(new Hash(BytesUtils.fromHexString(Numeric.cleanHexPrefix(topic))))))
+      false
+    else
+      true
   }
 
 }
