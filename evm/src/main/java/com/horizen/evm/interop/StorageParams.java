@@ -4,11 +4,10 @@ import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
 
 public class StorageParams extends AccountParams {
-    public Hash key;
+    public final Hash key;
 
     public StorageParams(int handle, Address address, Hash key) {
         super(handle, address);
-        this.address = address;
         this.key = key;
     }
 }

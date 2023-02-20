@@ -1,16 +1,24 @@
 package com.horizen.evm.interop;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TraceOptions {
-    private final boolean enableMemory;
-    private final boolean disableStack;
-    private final boolean disableStorage;
-    private final boolean enableReturnData;
-    private final String tracer;
-    private final String timeout;
-    private final Object tracerConfig;
+    public final boolean enableMemory;
+    public final boolean disableStack;
+    public final boolean disableStorage;
+    public final boolean enableReturnData;
+
+    /**
+     * Name of the tracer to use, e.g. "callTracer" or "4byteTracer".
+     */
+    public final String tracer;
+
+    /**
+     * Tracer configuration as raw JSON.
+     */
+    public final JsonNode tracerConfig;
 
     public TraceOptions() {
         enableMemory = false;
@@ -18,35 +26,6 @@ public class TraceOptions {
         disableStorage = false;
         enableReturnData = false;
         tracer = null;
-        timeout = null;
         tracerConfig = null;
-    }
-
-    public boolean isEnableMemory() {
-        return enableMemory;
-    }
-
-    public boolean isDisableStack() {
-        return disableStack;
-    }
-
-    public boolean isDisableStorage() {
-        return disableStorage;
-    }
-
-    public boolean isEnableReturnData() {
-        return enableReturnData;
-    }
-
-    public String getTracer() {
-        return tracer;
-    }
-
-    public String getTimeout() {
-        return timeout;
-    }
-
-    public Object getTracerConfig() {
-        return tracerConfig;
     }
 }

@@ -6,14 +6,14 @@ import com.horizen.evm.utils.Address;
 import java.math.BigInteger;
 
 public class EvmParams extends HandleParams {
-    public Address from;
-    public Address to;
-    public BigInteger value;
-    public byte[] input;
-    public BigInteger availableGas; // uint64
-    public BigInteger gasPrice;
-    public EvmContext context;
-    public TraceOptions traceOptions;
+    public final Address from;
+    public final Address to;
+    public final BigInteger value;
+    public final byte[] input;
+    public final BigInteger availableGas; // uint64
+    public final BigInteger gasPrice;
+    public final EvmContext context;
+    public final TraceOptions traceOptions;
 
     public EvmParams(
         int handle,

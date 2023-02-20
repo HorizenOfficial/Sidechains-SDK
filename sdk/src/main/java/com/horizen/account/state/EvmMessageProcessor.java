@@ -58,7 +58,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                 gas.getGas(),
                 msg.getGasPrice(),
                 context,
-                blockContext.getTraceParams()
+                blockContext.getTraceOptions()
             );
             blockContext.setEvmResult(result);
             // consume gas the EVM has used:

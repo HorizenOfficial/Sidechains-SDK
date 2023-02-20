@@ -8,7 +8,6 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
@@ -776,7 +775,7 @@ class EthService(
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
         // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+        blockContext.setTraceOptions(if (config == null) new TraceOptions() else config)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
@@ -850,7 +849,7 @@ class EthService(
         }
 
         // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+        blockContext.setTraceOptions(if (config == null) new TraceOptions() else config)
 
         // apply requested transaction with tracing enabled
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
@@ -870,10 +869,10 @@ class EthService(
       val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
 
       // get state at selected block
-      getStateViewAtTag(nodeView, if (tag == "pending") "pending" else (blockInfo.height).toString) {
+      getStateViewAtTag(nodeView, if (tag == "pending") "pending" else blockInfo.height.toString) {
         (tagStateView, blockContext) =>
           // use default trace params if none are given
-          blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+          blockContext.setTraceOptions(if (config == null) new TraceOptions() else config)
 
           // apply requested message with tracing enabled
           val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)

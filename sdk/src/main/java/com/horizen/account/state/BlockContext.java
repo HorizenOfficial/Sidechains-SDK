@@ -69,12 +69,12 @@ public class BlockContext {
         );
     }
 
-    public TraceOptions getTraceParams() {
+    public TraceOptions getTraceOptions() {
         return this.traceOptions;
     }
 
-    public void setTraceParams(TraceOptions tracer) {
-        this.traceOptions = tracer;
+    public void setTraceOptions(TraceOptions traceOptions) {
+        this.traceOptions = traceOptions;
     }
 
     public EvmResult getEvmResult() {
