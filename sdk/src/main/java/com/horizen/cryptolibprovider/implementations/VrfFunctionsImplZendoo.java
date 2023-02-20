@@ -13,10 +13,9 @@ import static com.horizen.cryptolibprovider.VrfFunctions.KeyType.PUBLIC;
 import static com.horizen.cryptolibprovider.VrfFunctions.KeyType.SECRET;
 
 public class VrfFunctionsImplZendoo implements VrfFunctions {
-    //@TODO Seed shall be supported from JNI side
     @Override
     public EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed) {
-        VRFKeyPair generated = VRFKeyPair.generate();
+        VRFKeyPair generated = VRFKeyPair.generate(seed);
         VRFSecretKey secretKey = generated.getSecretKey();
         VRFPublicKey publicKey = generated.getPublicKey();
 

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import time
+from binascii import hexlify
 
 import requests
+from eth_abi import decode
+from eth_utils import event_signature_to_log_topic, encode_hex
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
@@ -16,7 +19,7 @@ from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_signing_key, \
     http_get_key_rotation_message_to_sign_for_master_key
 from httpCalls.submitter.getKeyRotationProof import http_get_key_rotation_proof
-from test_framework.util import assert_equal, assert_true, assert_false
+from test_framework.util import assert_equal, assert_true, assert_false, hex_str_to_bytes
 
 """
 Configuration:
@@ -57,6 +60,25 @@ Test:
 
 def convertSecretToPrivateKey(secret):
     return secret[2:66]
+
+
+def check_key_rotation_event(event, key_type, key_index, key_value, epoch):
+    assert_equal(3, len(event['topics']), "Wrong number of topics in event")
+    event_id = event['topics'][0]
+
+    event_signature = encode_hex(event_signature_to_log_topic('SubmitKeyRotation(uint32,uint32,bytes32,bytes1,uint32)'))
+    assert_equal(event_signature, event_id, "Wrong event signature in topics")
+
+    key_type_actual = decode(['uint32'], hex_str_to_bytes(event['topics'][1][2:]))[0]
+    assert_equal(key_type, key_type_actual, "Wrong key type in topics")
+
+    key_index_actual = decode(['uint32'], hex_str_to_bytes(event['topics'][2][2:]))[0]
+    assert_equal(key_index, key_index_actual, "Wrong key index in topics")
+
+    (key_value_part1, key_value_part2, epoch_actual) = decode(['bytes32', 'bytes1', 'uint32'],
+                                                              hex_str_to_bytes(event['data'][2:]))
+    assert_equal(key_value, hexlify(key_value_part1 + key_value_part2).decode('ascii'), "Wrong key value in event")
+    assert_equal(epoch, epoch_actual, "Wrong epoch in event")
 
 
 class SCKeyRotationTest(AccountChainSetup):
@@ -217,22 +239,22 @@ class SCKeyRotationTest(AccountChainSetup):
 
         # Pass key_index out of range
         response = http_create_key_rotation_transaction_evm(sc_node,
-                                                     key_type=0,
-                                                     key_index=100,
-                                                     new_key=new_public_key,
-                                                     signing_key_signature=signing_signature,
-                                                     master_key_signature=master_signature,
-                                                     new_key_signature=new_key_signature)
+                                                            key_type=0,
+                                                            key_index=100,
+                                                            new_key=new_public_key,
+                                                            signing_key_signature=signing_signature,
+                                                            master_key_signature=master_signature,
+                                                            new_key_signature=new_key_signature)
         assert_true("key index out of range" in response['error']['description'])
 
         # Pass wrong key_type
         response = http_create_key_rotation_transaction_evm(sc_node,
-                                                     key_type=3,
-                                                     key_index=0,
-                                                     new_key=new_public_key,
-                                                     signing_key_signature=signing_signature,
-                                                     master_key_signature=master_signature,
-                                                     new_key_signature=new_key_signature)
+                                                            key_type=3,
+                                                            key_index=0,
+                                                            new_key=new_public_key,
+                                                            signing_key_signature=signing_signature,
+                                                            master_key_signature=master_signature,
+                                                            new_key_signature=new_key_signature)
         assert_true("key type enumeration value invalid" in response['error']['description'])
 
         # Pass wrong new key proof
@@ -260,6 +282,7 @@ class SCKeyRotationTest(AccountChainSetup):
         receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status, "Wrong tx status in receipt")
+        check_key_rotation_event(receipt['result']['logs'][0], 0, 0, new_public_key, 0)
         self.sc_sync_all()
 
         # Check that we have the keyRotationProof
@@ -342,6 +365,7 @@ class SCKeyRotationTest(AccountChainSetup):
         receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status, "Wrong tx status in receipt")
+        check_key_rotation_event(receipt['result']['logs'][0], 1, 0, new_public_key_3, 0)
         self.sc_sync_all()
 
         # Generate enough MC blocks to reach the end of the withdrawal epoch
