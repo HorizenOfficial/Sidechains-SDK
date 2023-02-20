@@ -27,15 +27,15 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
 
     @Override
     public PublicKey25519Proposition parse(Reader reader) {
-        return new PublicKey25519Proposition(reader.getBytes(PublicKey25519Proposition.KEY_LENGTH));
+        return parse(reader, false);
     }
 
-    public PublicKey25519Proposition parseAndCheck(Reader reader) {
-        return new PublicKey25519Proposition(reader.getBytes(PublicKey25519Proposition.KEY_LENGTH), true);
+    public PublicKey25519Proposition parse(Reader reader, boolean checkPubKey) {
+        return new PublicKey25519Proposition(reader.getBytes(PublicKey25519Proposition.KEY_LENGTH), checkPubKey);
     }
 
     public PublicKey25519Proposition parseBytesAndCheck(byte[] propositionBytes) {
         VLQByteBufferReader bufferReader = new VLQByteBufferReader(ByteBuffer.wrap(propositionBytes));
-        return parseAndCheck(bufferReader);
+        return parse(bufferReader, true);
     }
 }

@@ -115,4 +115,12 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
         return Constants.SCHNORR_SIGNATURE_LENGTH();
     }
 
+    @Override
+    public boolean propositionIsValid(byte[] propositionBytes) {
+        SchnorrPublicKey proposition = SchnorrPublicKey.deserialize(propositionBytes);
+        boolean keyIsValid = proposition.verifyKey();
+        proposition.freePublicKey();
+
+        return keyIsValid;
+    }
 }

@@ -631,7 +631,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
         element.value,
         PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
-        VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+        VrfPublicKeySerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.vrfPubKey))
       )
 
       outputs.add(forgingBoxToAdd.asInstanceOf[BoxData[Proposition, Box[Proposition]]])

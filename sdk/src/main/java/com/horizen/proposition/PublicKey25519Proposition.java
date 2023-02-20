@@ -25,10 +25,7 @@ public final class PublicKey25519Proposition
 
     public PublicKey25519Proposition(byte[] pubKeyBytes)
     {
-        if (pubKeyBytes.length != KEY_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, pubKeyBytes.length));
-
-        _pubKeyBytes = Arrays.copyOf(pubKeyBytes, KEY_LENGTH);
+        this(pubKeyBytes, false);
     }
 
     public PublicKey25519Proposition(byte[] pubKeyBytes, boolean checkPubKey)

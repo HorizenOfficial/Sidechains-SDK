@@ -20,7 +20,19 @@ public class SchnorrProposition
     private final byte[] publicBytes;
 
     public SchnorrProposition(byte[] publicKey) {
+        this(publicKey, false);
+    }
+
+    public SchnorrProposition(byte[] publicKey, boolean checkPublicKey) {
         Objects.requireNonNull(publicKey, "Public key can't be null");
+
+        if (publicKey.length != KEY_LENGTH) {
+            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, publicKey.length));
+        }
+
+        if (checkPublicKey && !CryptoLibProvider.schnorrFunctions().propositionIsValid(publicKey)) {
+            throw new IllegalArgumentException("Public keyis not valid.");
+        }
 
         publicBytes = Arrays.copyOf(publicKey, publicKey.length);
     }
@@ -58,5 +70,9 @@ public class SchnorrProposition
         return "SchnorrPublicKey{" +
                 "publicBytes=" + Arrays.toString(publicBytes) +
                 '}';
+    }
+
+    public boolean isValid() {
+        return CryptoLibProvider.schnorrFunctions().propositionIsValid(pubKeyBytes());
     }
 }
