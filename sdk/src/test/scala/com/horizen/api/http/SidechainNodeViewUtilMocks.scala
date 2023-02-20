@@ -87,7 +87,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
 
   val vrfGenerationSeed = 234
   val vrfGenerationPrefix = "SidechainBlockInfoTest"
-  val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(vrfGenerationPrefix, vrfGenerationSeed);
+  val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(vrfGenerationSeed);
 
   val genesisBlockInfo = SidechainBlockInfo(
     1,

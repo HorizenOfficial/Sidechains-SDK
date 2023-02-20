@@ -1,6 +1,6 @@
 package com.horizen.proof
 
-import java.io.{BufferedReader, File, FileReader}
+import java.io.File
 import java.util
 import java.util.Optional
 import com.google.common.io.Files
@@ -9,15 +9,12 @@ import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.fixtures.FieldElementFixture
+import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.schnorrnative.SchnorrSecretKey
-import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, fail}
+import org.junit.Assert.fail
 import org.junit.{Ignore, Test}
-
 import scala.collection.JavaConverters._
 import scala.util.Random
 
@@ -25,8 +22,7 @@ import scala.util.Random
  * This test was create for profiling of JVM memory use during proof generation.
  */
 
-class ProofThreadTest {
-  private val classLoader: ClassLoader = getClass.getClassLoader
+class ProofThreadTest extends SecretFixture {
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
   var proofWithQuality:com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
 
@@ -34,21 +30,6 @@ class ProofThreadTest {
   private val provingKeyPath: String = tmpDir.getAbsolutePath + "/snark_pk"
   private val verificationKeyPath: String = tmpDir.getAbsolutePath + "/snark_vk"
   val keyPairsLen = 7
-
-  private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
-    var bytes: Array[Byte] = null
-    try {
-      val resourceName = "schnorr_sk0"+ index + "_hex"
-      val file = new FileReader(classLoader.getResource(resourceName).getFile)
-      bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
-    }
-    catch {
-      case e: Exception =>
-        assertEquals(e.toString(), true, false)
-    }
-
-    SchnorrSecretKey.deserialize(bytes)
-  }
 
   case class DataForProofGeneration(sidechainId: Array[Byte],
                                     processedEpochNumber: Int,
@@ -62,17 +43,16 @@ class ProofThreadTest {
 
   class MyThread(val dataForProofGeneration:DataForProofGeneration) extends Thread
   {
-    override def run()
-    {
+    override def run(): Unit = {
       proofWithQuality = generateProof(dataForProofGeneration)
     }
   }
 
-  def tryGenerateProof = {
+  def tryGenerateProof: Boolean = {
     val params = new RegTestParams
     val dataForProofGeneration:DataForProofGeneration = buildDataForProofGeneration(params)
 
-    var th = new MyThread(dataForProofGeneration)
+    val th = new MyThread(dataForProofGeneration)
     th.start()
     th.join()
 
