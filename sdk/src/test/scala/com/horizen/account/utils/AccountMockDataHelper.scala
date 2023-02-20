@@ -202,6 +202,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex).thenReturn(1)
     Mockito.when(history.bestBlockId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
 
+    Mockito.when(history.feePaymentsInfo(any())).thenReturn(None)
+
     if (parentBlock.nonEmpty) {
       val parentId = parentBlock.get.id
       val blockInfo = new SidechainBlockInfo(

@@ -44,11 +44,12 @@ trait AccountFixture {
   def throwFirstJsonDifference(expected: JsonNode, actual: JsonNode): Unit = {
     expected.getNodeType match {
       case JsonNodeType.OBJECT =>
-        for (name <- expected.fieldNames().asScala) {
+        // need to iterate over both expected and actual to catch elements only existing in one of them
+        for (name <- expected.fieldNames().asScala ++ actual.fieldNames().asScala) {
           assertEquals(s"object field should match: $name", expected.get(name), actual.get(name))
         }
       case JsonNodeType.ARRAY =>
-        for (i <- 0 until expected.size()) {
+        for (i <- 0 until expected.size().max(actual.size())) {
           assertEquals(s"array item should match: $i", expected.get(i), actual.get(i))
         }
       case JsonNodeType.STRING => assertEquals("string value should match", expected.textValue(), actual.textValue())
