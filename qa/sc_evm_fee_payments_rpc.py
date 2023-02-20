@@ -199,16 +199,16 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
             if idx < pool_fee % len(sc_block_fee_info):
                 forger_fees[sc_block_fee.node] += 1
 
-        forger_data = sc_node_1.rpc_zen_getFeePayments(sc_middle_we_block_id)
+        forger_data = sc_node_1.rpc_zen_getFeePayments(add_0x_prefix(sc_middle_we_block_id))
         assert_equal(forger_data["result"], None)
 
-        (forger_data_1, forger_data_2) = sc_node_1.rpc_zen_getFeePayments(sc_last_we_block_id)["result"]["payments"]
+        (forger_data_1, forger_data_2) = sc_node_1.rpc_zen_getFeePayments(add_0x_prefix(sc_last_we_block_id))["result"]["payments"]
 
-        assert_equal(forger_data_1["address"]["address"], stakeList[0]["forgerStakeData"]["ownerPublicKey"]["address"])
-        assert_equal(forger_data_2["address"]["address"], stakeList[1]["forgerStakeData"]["ownerPublicKey"]["address"])
+        assert_equal(forger_data_1["address"], add_0x_prefix(stakeList[0]["forgerStakeData"]["ownerPublicKey"]["address"]))
+        assert_equal(forger_data_2["address"], add_0x_prefix(stakeList[1]["forgerStakeData"]["ownerPublicKey"]["address"]))
 
-        assert_equal(forger_data_1["value"], forger_fees[1])
-        assert_equal(forger_data_2["value"], forger_fees[2])
+        assert_equal(forger_data_1["value"], hex(forger_fees[1]))
+        assert_equal(forger_data_2["value"], hex(forger_fees[2]))
 
 
 if __name__ == "__main__":
