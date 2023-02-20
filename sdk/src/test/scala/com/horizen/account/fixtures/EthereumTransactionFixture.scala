@@ -381,6 +381,7 @@ trait EthereumTransactionFixture {
   def createTransactions(
                           numOfAccount: Int,
                           numOfTxsPerAccount: Int,
+                          seed: Int = 0,
                           orphanIdx: Int = -1
                         ): scala.collection.mutable.ListBuffer[EthereumTransaction] = {
     val value = BigInteger.valueOf(12)
@@ -395,7 +396,7 @@ trait EthereumTransactionFixture {
     val gasBuilder = new CircularPriorityGasBuilder(baseGas, 17)
 
     (1 to numOfAccount).foreach(idx => {
-      listOfAccounts += Some(PrivateKeySecp256k1Creator.getInstance().generateSecret(Ints.toByteArray(idx)))
+      listOfAccounts += Some(PrivateKeySecp256k1Creator.getInstance().generateSecret(Ints.toByteArray(seed + idx)))
     })
 
     (0 until numOfTxsPerAccount).foreach(nonceTx => {

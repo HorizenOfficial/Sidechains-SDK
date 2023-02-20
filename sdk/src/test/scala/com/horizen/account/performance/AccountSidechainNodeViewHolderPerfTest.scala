@@ -123,7 +123,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       listOfTxs ++= createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = -1)
 
-      listOfTxs ++= createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = -1)
+      listOfTxs ++= createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = -1)
 
       println("Starting test direct order")
       val numOfSnapshots = 10
@@ -140,6 +140,7 @@ class AccountSidechainNodeViewHolderPerfTest
         }
       }
       var totalTime = System.currentTimeMillis() - startTime
+
       assertEquals(numOfTxs, mempool.size)
 
       out.write(s"\n********************* Direct order test results *********************\n")
@@ -277,7 +278,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       listOfTxs ++= createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = -1)
 
-      listOfTxs ++= createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = -1)
+      listOfTxs ++= createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = -1)
 
       println("Starting test direct order")
       val numOfSnapshots = 10
@@ -431,7 +432,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
-      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
+      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = 75)
 
       val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts + 1, maxAccountSlots = numOfTxsPerSpammerAccounts +1)//+1 because there are orphans, so max nonce > num of txs
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
@@ -468,7 +469,7 @@ class AccountSidechainNodeViewHolderPerfTest
       mempool = newMemPool
       val rollBackBlock = appliedBlock
       // restore the mempool so its size is again numOfTxs
-      val additionalTxs = createTransactions(numOfTxsInBlock, 1)
+      val additionalTxs = createTransactions(numOfTxsInBlock, 1, seed = 2 * numOfNormalAccount + numOfSpammerAccount + 1)
       additionalTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
       assertEquals(numOfTxs, mempool.size)
 
@@ -547,7 +548,7 @@ class AccountSidechainNodeViewHolderPerfTest
       //This in real life should never happen, but taking some measures could be useful
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
-      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
+      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = 75)
 
       val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts + 1, maxAccountSlots = numOfTxsPerSpammerAccounts +1) //+1 because there are orphans, so max nonce > num of txs
       val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
@@ -586,7 +587,7 @@ class AccountSidechainNodeViewHolderPerfTest
       mempool = newMemPool
       val rollBackBlocks = listOfBlocks
       // restore the mempool so its size is again numOfTxs
-      val additionalTxs = createTransactions(numOfBlocks * numOfTxsInBlock, 1)
+      val additionalTxs = createTransactions(numOfBlocks * numOfTxsInBlock, 1, seed = 2 * numOfNormalAccount + numOfSpammerAccount + 1)
       additionalTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
       assertEquals(numOfTxs, mempool.size)
 

@@ -33,11 +33,6 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
 
     @Before
     public void beforeEachTest() {
-        //Set to true if you want to update Vrf related data
-        if (false) {
-            VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed1);
-            VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed2);
-        }
 
         long fee = 10;
 
@@ -64,8 +59,8 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
 
-        to.add(new ForgerBoxData(pk7.publicImage(), 20L, pk7.publicImage(), VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed1)));
-        to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed2)));
+        to.add(new ForgerBoxData(pk7.publicImage(), 20L, pk7.publicImage(), VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationSeed1)));
+        to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationSeed2)));
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, fee);

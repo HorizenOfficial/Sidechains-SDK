@@ -14,8 +14,5 @@ case class WithdrawForgerStake(
 
 object WithdrawForgerStake {
   def apply(owner: Address, stakeId: Array[Byte]): WithdrawForgerStake =
-    WithdrawForgerStake(
-      new AbiAddress(owner.toString),
-      new Bytes32(stakeId)
-    )
+    WithdrawForgerStake(new AbiAddress(owner.toString), new Bytes32(stakeId))
 }
