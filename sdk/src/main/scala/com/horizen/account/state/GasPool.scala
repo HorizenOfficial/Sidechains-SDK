@@ -4,7 +4,7 @@ import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 
-class GasPool(initialGas: BigInteger) extends SparkzLogging {
+class GasPool(val initialGas: BigInteger) extends SparkzLogging {
 
   private var currentGas = initialGas
 

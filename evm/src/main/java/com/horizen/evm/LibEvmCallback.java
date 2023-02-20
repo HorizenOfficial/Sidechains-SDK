@@ -50,7 +50,6 @@ abstract class LibEvmCallback implements AutoCloseable {
             logger.warn("received callback with invalid handle: {}", handle);
             return null;
         }
-        logger.trace("received callback with handle {}", handle);
         return callbacks.get(handle).invoke(args);
     }
 

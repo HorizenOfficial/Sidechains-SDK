@@ -24,7 +24,14 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.state.BaseStateReader
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
+import com.horizen.utils.{
+  BytesUtils,
+  DynamicTypedSerializer,
+  MerklePath,
+  Pair,
+  TestSidechainsVersionsManager,
+  WithdrawalEpochInfo
+}
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
@@ -101,18 +108,7 @@ class AccountForgeMessageBuilderTest
 
   @Test
   def testConsistentStateAfterRandomException(): Unit = {
-
-    class BuggyTransaction(th: EthereumTransaction, sign: SignatureSecp256k1)
-        extends EthereumTransaction(th, sign) {
-      override def version(): Byte = throw new Exception()
-    }
-
-    val tmpTx = createLegacyTransaction(
-      BigInteger.TEN,
-      gasLimit = BigInteger.valueOf(10000000)
-    )
-    val invalidTx = new BuggyTransaction(tmpTx, tmpTx.getSignature)
-
+    val invalidTx = createLegacyTransaction(BigInteger.TEN, gasLimit = 25000)
     val blockContext = new BlockContext(
       Address.ZERO,
       1000,
@@ -159,32 +155,14 @@ class AccountForgeMessageBuilderTest
 
   @Test
   def testConsistentBlockGasAfterRandomException(): Unit = {
-
-    class BuggyTransaction(th: EthereumTransaction, sign: SignatureSecp256k1)
-        extends EthereumTransaction(th, sign) {
-      override def version(): Byte = throw new Exception("Transaction %s failed to execute".format(th.id()))
-    }
-
-    val gasLimit = GasUtil.intrinsicGas(Array.empty[Byte], isContractCreation = true).add(BigInteger.TEN)
-    val tmpTx = createLegacyTransaction(
-      BigInteger.TEN,
-      gasLimit = gasLimit
-    )
-    val invalidTx = new BuggyTransaction(
-      tmpTx,
-      tmpTx.getSignature
-    )
-
-    val validTx = createLegacyTransaction(
-      BigInteger.TWO,
-      gasLimit = gasLimit
-    )
+    val invalidTx = createLegacyTransaction(BigInteger.TEN, gasLimit = 25000)
+    val validTx = createLegacyTransaction(BigInteger.TWO, gasLimit = 25000)
 
     val blockContext = new BlockContext(
       Address.ZERO,
       1000,
       BigInteger.ZERO,
-      gasLimit.longValueExact(), // Just enough for 1 tx
+      30000, // just enough for 1 tx
       11,
       2,
       3,
@@ -231,11 +209,10 @@ class AccountForgeMessageBuilderTest
   def testCreateNewBlockFailingIfAddressSizeIsZero(): Unit = {
     val nodeView = mock[forger.View]
     val vlMock = mock[forger.VL]
-    val secretsMock = mock[java.util.List[Secret]]
+    val secrets = new java.util.ArrayList[Secret]()
 
-    Mockito.when(secretsMock.size()).thenReturn(0)
     Mockito.when(nodeView.vault).thenReturn(vlMock)
-    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => secretsMock)
+    Mockito.when(vlMock.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => secrets)
 
     val branchPointInfo = mock[forger.BranchPointInfo]
     val mainchainBlockReferencesData = Seq(mock[MainchainBlockReferenceData])
@@ -436,6 +413,7 @@ class AccountForgeMessageBuilderTest
           ArgumentMatchers.any[BlockContext]
         )
       )
+      .thenThrow(new RuntimeException("kaputt"))
       .thenReturn(Array.empty[Byte])
     mockMsgProcessor
   }
@@ -443,7 +421,7 @@ class AccountForgeMessageBuilderTest
   private def setupTransactionsByPriceAndNonce(listOfTxs: Seq[SidechainTypes#SCAT]): Iterable[SidechainTypes#SCAT] = {
     val txsByPriceAndNonceIter: TransactionsByPriceAndNonceIter = new TransactionsByPriceAndNonceIter {
       var idx = 0
-      override def peek(): SidechainTypes#SCAT = listOfTxs(idx)
+      override def peek: SidechainTypes#SCAT = listOfTxs(idx)
 
       override def removeAndSkipAccount(): SidechainTypes#SCAT = {
         next()

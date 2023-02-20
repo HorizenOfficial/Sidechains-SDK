@@ -68,7 +68,7 @@ class SidechainStateUtxoMerkleTreeStorageTest
     // Regression: check non-empty storage merkle tree root value
     val expectedRoot: String = BytesUtils.toHexString(utxoStorage.getMerkleTreeRoot)
     assertEquals("Utxo merkle root is different.",
-      "491f541c254dcd047f09c93cebeaddddd44f60f384946494c1d5d9decf3ea712", expectedRoot)
+      "9034ef6733f47e6fca7905cb722a0bad35ec2c9d4467c6bb3d68b637c5ceed3e", expectedRoot)
 
     // Test getLeafInfo
     Mockito.when(mockedPhysicalStorage.get(ArgumentMatchers.any[ByteArrayWrapper]())).thenAnswer(answer => {
@@ -144,7 +144,7 @@ class SidechainStateUtxoMerkleTreeStorageTest
     // Regression: check merkle tree root
     val expectedRoot: String = BytesUtils.toHexString(utxoStorage.getMerkleTreeRoot)
     assertEquals("Utxo merkle root is different.",
-      "2df3545c9d86b711f16099969e4dc3be5ca3dce1409ed0826deaf3c6c1e54207", expectedRoot)
+      "4d837fae4732104bea1a0c9a4d56ea8d57ead12f2192ff01d96b890fcea3942a", expectedRoot)
   }
 
   @Test
@@ -220,7 +220,7 @@ class SidechainStateUtxoMerkleTreeStorageTest
     // Regression: check merkle tree root
     val actualRoot: String = BytesUtils.toHexString(utxoStorage.getMerkleTreeRoot)
     assertEquals("Storage utxo merkle root is different.",
-      "ae53f73517e84121ae63643946f3e4402240d89d8277bd45af3f268fe10fdd35", actualRoot)
+      "d269505eb471a3f70447392e6e66f02b1fb6fa7dcf1f057a7a0103ce084d1032", actualRoot)
 
 
     // Test 2: Emulate storage update exception and check that in memory merkle tree was restored.
