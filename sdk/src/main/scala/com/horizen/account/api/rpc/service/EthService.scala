@@ -24,7 +24,7 @@ import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, Fe
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.TraceOptions
+import com.horizen.evm.interop.{ProofAccountResult, TraceOptions}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
@@ -852,11 +852,11 @@ class EthService(
 
   @RpcMethod("eth_getProof")
   @RpcOptionalParameters(1)
-  def getProof(address: Address, keys: Array[BigInteger], tag: String): EthereumAccountProofView = {
+  def getProof(address: Address, keys: Array[BigInteger], tag: String): ProofAccountResult = {
     val storageKeys = keys.map(BigIntegerUtil.toUint256Bytes)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        new EthereumAccountProofView(stateView.getProof(address, storageKeys))
+        stateView.getProof(address, storageKeys)
       }
     }
   }
