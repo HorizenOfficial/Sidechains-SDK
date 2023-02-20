@@ -1,75 +1,45 @@
 package com.horizen.vrf;
 
 import com.google.common.base.Throwables;
+import com.google.common.primitives.Ints;
 import com.horizen.fixtures.VrfGenerator;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.secret.VrfSecretKey;
-import com.horizen.secret.VrfSecretKeySerializer;
 import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Pair;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.net.URL;
 
-// TODO: as soon as VRFSecret generation will become deterministic,
-//  we may remove this class and all the related files from resources
 public class VrfGeneratedDataProvider {
-    private static String pathPrefix = "src/test/resources/";
+    private static final String pathPrefix = "src/test/resources/";
     private static final ClassLoader classLoader = VrfGeneratedDataProvider.class.getClassLoader();
 
-    public static VrfSecretKey updateVrfSecretKey(String prefix, Integer seed) {
-        VrfSecretKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes());
-        writeToFile(prefix, seed, VrfSecretKey.class, obj.bytes());
-        return obj;
+    public static VrfSecretKey getVrfSecretKey(Integer seed) {
+        return VrfKeyGenerator.getInstance().generateSecret(Ints.toByteArray(seed));
     }
 
-    public static VrfSecretKey getVrfSecretKey(String prefix, Integer seed) {
-
-        return VrfSecretKeySerializer.getSerializer().parseBytes(readBytesFromFile(prefix, seed, VrfSecretKey.class));
+    public static VrfPublicKey getVrfPublicKey(Integer seed) {
+        return VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes()).publicImage();
     }
 
-    public static VrfPublicKey updateVrfPublicKey(String prefix, Integer seed) {
-        VrfPublicKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes()).publicImage();
-        writeToFile(prefix, seed, obj.getClass(), obj.bytes());
-        return obj;
+    public static VrfOutput getVrfOutput(Integer seed) {
+        return VrfGenerator.generateVrfOutput(seed);
     }
 
-    public static VrfPublicKey getVrfPublicKey(String prefix, Integer seed) {
-        return readFromFile(prefix, seed, VrfPublicKey.class);
-    }
-
-
-    public static void updateVrfOutput(String prefix, Integer seed) {
-        VrfOutput obj = VrfGenerator.generateVrfOutput(seed);
-        writeToFile(prefix, seed, obj.getClass(), obj.bytes());
-    }
-
-    public static VrfOutput getVrfOutput(String prefix, Integer seed) {
-        return readFromFile(prefix, seed, VrfOutput.class);
-    }
-
+    // vrf proof is not deterministic, even if the same parameters are passed to the creation method,
+    // there is an internal random component in its generation
     public static void updateVrfProof(String prefix, Integer seed) {
         VrfProof obj = VrfGenerator.generateProof(seed);
         writeToFile(prefix, seed, obj.getClass(), obj.bytes());
     }
 
-    public static void updateVrfProofAndOutput(String prefix, Integer seed) {
-        Pair<VrfProof, VrfOutput> proofAndOutput = VrfGenerator.generateProofAndOutput(seed);
-        VrfProof proof = proofAndOutput.getKey();
-        VrfOutput output = proofAndOutput.getValue();
-        writeToFile(prefix, seed, proof.getClass(), proof.bytes());
-        writeToFile(prefix, seed, output.getClass(), output.bytes());
-    }
-
     public static VrfProof getVrfProof(String prefix, Integer seed) {
         return readFromFile(prefix, seed, VrfProof.class);
     }
-
 
     private static <T> String getFileName(String prefix, Integer seed, Class<T> classToProcess) {
         return prefix + classToProcess.getSimpleName() + seed.toString();

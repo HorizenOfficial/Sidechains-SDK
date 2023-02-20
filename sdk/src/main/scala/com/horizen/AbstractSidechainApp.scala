@@ -4,7 +4,6 @@ package com.horizen
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import akka.stream.ActorMaterializer
 import com.horizen.api.http._
 import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
@@ -133,7 +132,7 @@ abstract class AbstractSidechainApp
 
   if (consensusSecondsInSlot < consensus.minSecondsInSlot || consensusSecondsInSlot > consensus.maxSecondsInSlot) {
     throw new IllegalArgumentException(s"Consensus seconds in slot is out of range. It should be no less than ${consensus.minSecondsInSlot} and be less or equal to ${consensus.maxSecondsInSlot}. " +
-      s"Current value: ${consensusSecondsInSlot}")
+      s"Current value: $consensusSecondsInSlot")
   }
 
   // Init proper NetworkParams depend on MC network

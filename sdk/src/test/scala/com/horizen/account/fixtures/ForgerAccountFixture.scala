@@ -8,7 +8,6 @@ import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.utils
 import com.horizen.utils.Ed25519
-
 import java.math.BigInteger
 import java.util
 import java.util.Random
@@ -36,13 +35,6 @@ object ForgerAccountFixture extends SecretFixture {
 
     // TODO get a deterministic value with createEcKeyPair
     val ownerAddressProposition = new AddressProposition(util.Arrays.copyOf(byteSeed, AddressProposition.LENGTH))
-
-    /*
-    val ownerKeyPair = Secp256k1.createKeyPair(Longs.toByteArray(seed));
-    val ownerPrivateKeyBytes = util.Arrays.copyOf(ownerKeyPair.getKey, Secp256k1.PRIVATE_KEY_SIZE)
-    val ownerPrivateKey = new PrivateKeySecp256k1(ownerPrivateKeyBytes)
-    val ownerAddressProposition = ownerPrivateKey.publicImage()
-    */
 
     val accountPayment = AccountPayment(ownerAddressProposition, BigInteger.valueOf(value))
     val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfo(blockSignProposition, vrfPubKey, value)

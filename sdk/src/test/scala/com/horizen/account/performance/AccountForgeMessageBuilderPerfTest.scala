@@ -34,8 +34,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         ArgumentMatchers.any[SidechainTypes#SCAT],
         ArgumentMatchers.any[Int],
         ArgumentMatchers.any[GasPool],
-        ArgumentMatchers.any[BlockContext],
-        ArgumentMatchers.any[Boolean]
+        ArgumentMatchers.any[BlockContext]
       )
     )
     .thenAnswer(asw => {
@@ -56,7 +55,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
   Mockito.when(state.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
   Mockito.when(state.getNonce(ArgumentMatchers.any[Address])).thenReturn(BigInteger.ZERO)
-  val mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, AccountMempoolSettings())
+  val mempool: AccountMemoryPool = AccountMemoryPool.createEmptyMempool(() => state, () => state, AccountMempoolSettings())
 
   val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool] =
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
@@ -96,8 +95,8 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val numOfAccounts = 1000
-      val numOfTxsPerAccount = 100
+      val numOfAccounts = 10000
+      val numOfTxsPerAccount = 10
       val numOfTxs = numOfAccounts * numOfTxsPerAccount
 
       out.write(s"Total number of transactions:                    $numOfTxs\n")
