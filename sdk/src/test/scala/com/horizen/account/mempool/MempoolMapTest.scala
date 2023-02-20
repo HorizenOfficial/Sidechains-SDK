@@ -1859,6 +1859,7 @@ class MempoolMapTest
     assertEquals("Wrong number of non exec txs", 3, mempoolMap.mempoolTransactions(false).size)
   }
 
+  @Test
   def testRemoveFromMempool(): Unit = {
     //The mempool has nonexec max size = 4 and max size 6. In it there will be 1 non exec
     // tx and 5 exec txs, each of 1 slot.
@@ -1891,12 +1892,12 @@ class MempoolMapTest
       case Failure(e) => fail(s"Removing transaction failed with exception $e", e)
     }
 
-    assertEquals("Wrong number of txs in mempool", 3, mempoolMap.size)
+    assertEquals("Wrong number of txs in mempool", 4, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 4, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 4, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertFalse("Exec tx was not removed from the mempool", mempoolMap.contains(ModifierId @@ listOfExecTxs.head.id))
     assertEquals("Wrong number of exec txs", 0, mempoolMap.mempoolTransactions(true).size)
-    assertEquals("Wrong number of non exec txs", 3, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of non exec txs", 4, mempoolMap.mempoolTransactions(false).size)
   }
 
 
