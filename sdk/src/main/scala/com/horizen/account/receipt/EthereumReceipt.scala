@@ -1,6 +1,5 @@
 package com.horizen.account.receipt
 
-import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
 import com.horizen.utils.BytesUtils
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
@@ -105,7 +104,7 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
     val cumGasUsedLength: Int = reader.getInt
     val cumGasUsed: BigInteger = new BigInteger(reader.getBytes(cumGasUsedLength))
 
-    val logs = ListBuffer[EvmLog]()
+    val logs = ListBuffer[EthereumConsensusDataLog]()
     val numberOfLogs = reader.getInt
     for (_ <- 0 until numberOfLogs)
       logs += EvmLogUtils.parse(reader)

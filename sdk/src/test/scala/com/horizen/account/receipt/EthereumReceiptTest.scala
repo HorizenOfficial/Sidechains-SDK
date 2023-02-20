@@ -3,19 +3,16 @@ package com.horizen.account.receipt
 
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.evm.TrieHasher
-import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import org.web3j.utils.Numeric
 
 import java.math.BigInteger
 import java.util
 import java.util.Map.entry
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
-import scala.collection.mutable.ListBuffer
 
 class EthereumReceiptTest
   extends JUnitSuite
@@ -140,9 +137,8 @@ class EthereumReceiptTest
   }
 
   // compatible with analogous go code in libevm/lib/service_hash_test.go
-  private def generateReceipts(count: Int) : scala.Seq[EthereumConsensusDataReceipt] = {
-    val receipts = new Array[EthereumConsensusDataReceipt](count)
-    for (i <- receipts.indices) {
+  private def generateReceipts(count: Int) : Seq[EthereumConsensusDataReceipt] = {
+    (0 until count).map(i => {
       var status = 1
       if (i % 7 == 0) { // mark a number of receipts as failed
         status = 0
@@ -150,11 +146,8 @@ class EthereumReceiptTest
       val txType = i % 3
       val cumGas = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(3))
       //println("cumGas =" + cumGas.toString())
-      val logs = new ListBuffer[EvmLog]
-      receipts(i) = new EthereumConsensusDataReceipt(txType, status, cumGas, logs)
-      //println("i=" + i + receipts[i].toString())
-    }
-    receipts.toSeq
+      new EthereumConsensusDataReceipt(txType, status, cumGas, Seq.empty)
+    })
   }
 
   @Test def ethereumReceiptRootHashTest(): Unit = {

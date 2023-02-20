@@ -3,7 +3,7 @@ package com.horizen.account.event;
 import com.horizen.account.event.annotation.Anonymous;
 import com.horizen.account.event.annotation.Indexed;
 import com.horizen.account.event.annotation.Parameter;
-import com.horizen.evm.interop.EvmLog;
+import com.horizen.account.receipt.EthereumConsensusDataLog;
 import org.junit.Test;
 import org.web3j.abi.TypeEncoder;
 import org.web3j.abi.datatypes.Address;
@@ -91,8 +91,8 @@ public class EthereumEventTest {
         // Test 12: Test that encoded topics are hashed, if size > 32 byte
         var inputString = new Utf8String("0xf878941122334455667788990011223344556677889900a07796b5efadd2f87e4c76de571ddbcd862cb6bab4d92c875069ea9c9f1b129291a0000000000000000000000000000000000000000000000000000000000000000aa00000000000000000000000000000000000000000000000000000000000000001");
         ScalaClassTestEvent4 event12 = new ScalaClassTestEvent4(inputString, new Uint256(BigInteger.ONE));
-        EvmLog event12Log = EthereumEvent.getEvmLog(contractAddress, event12);
-        assertArrayEquals((byte[]) Keccak256.hash(Numeric.hexStringToByteArray(TypeEncoder.encode(inputString))), event12Log.topics[1].toBytes());
+        var event12Log = EthereumEvent.getEvmLog(contractAddress, event12);
+        assertArrayEquals((byte[]) Keccak256.hash(Numeric.hexStringToByteArray(TypeEncoder.encode(inputString))), event12Log.topics()[1].toBytes());
         checkEvmLog(event12Log, "0xf878941122334455667788990011223344556677889900a0dcb8fdd491a45d818e875a4dc5db01c363eaecb7966131523424f03cc6762e72a062912b66659d157808f00d13d948a2149f644a16d1aaf0468dce8cd47d1d5fc7a00000000000000000000000000000000000000000000000000000000000000001");
 
         ScalaClassTestEvent5 event13 = new ScalaClassTestEvent5(addrB, new Uint256(BigInteger.ONE));
@@ -110,24 +110,24 @@ public class EthereumEventTest {
         assertThrows("Test16: Exception expected, because there are parameter annotations in the constructor (Scala ignores Java @Target)", IllegalArgumentException.class, () -> EthereumEvent.getEvmLog(contractAddress, event16));
     }
 
-    private void checkEvmLog(EvmLog log, String expected) {
+    private void checkEvmLog(EthereumConsensusDataLog log, String expected) {
         List<RlpType> list = new ArrayList<>();
-        list.add(RlpString.create(log.address.toBytes()));
-        for (var topic : log.topics) {
+        list.add(RlpString.create(log.address().toBytes()));
+        for (var topic : log.topics()) {
             list.add(RlpString.create(topic.toBytes()));
         }
-        list.add(RlpString.create(log.data));
+        list.add(RlpString.create(log.data()));
         var encoded = Numeric.toHexString(RlpEncoder.encode(new RlpList(list)));
-        assertEquals(encoded, expected);
+        assertEquals(expected, encoded);
     }
 
-    private void compareToExample(EvmLog log) {
-        assertEquals(3, log.topics.length);
-        assertArrayEquals(Numeric.hexStringToByteArray("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"), log.topics[0].toBytes());
-        assertArrayEquals(Numeric.hexStringToByteArray("0x000000000000000000000000c12e077934a3c783d7a42dc5f6d6435ef3d04705"), log.topics[1].toBytes());
-        assertArrayEquals(Numeric.hexStringToByteArray("0x00000000000000000000000027239549dd40e1d60f5b80b0c4196923745b1fd2"), log.topics[2].toBytes());
-        assertArrayEquals(Numeric.hexStringToByteArray("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"), log.address.toBytes());
-        assertArrayEquals(Numeric.hexStringToByteArray("0x000000000000000000000000000000000000000000000000016345785d8a0000"), log.data);
+    private void compareToExample(EthereumConsensusDataLog log) {
+        assertEquals(3, log.topics().length);
+        assertEquals("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", log.topics()[0].toString());
+        assertEquals("0x000000000000000000000000c12e077934a3c783d7a42dc5f6d6435ef3d04705", log.topics()[1].toString());
+        assertEquals("0x00000000000000000000000027239549dd40e1d60f5b80b0c4196923745b1fd2", log.topics()[2].toString());
+        assertEquals("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", log.address().toString());
+        assertArrayEquals(Numeric.hexStringToByteArray("0x000000000000000000000000000000000000000000000000016345785d8a0000"), log.data());
         checkEvmLog(log, "0xf89994c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efa0000000000000000000000000c12e077934a3c783d7a42dc5f6d6435ef3d04705a000000000000000000000000027239549dd40e1d60f5b80b0c4196923745b1fd2a0000000000000000000000000000000000000000000000000016345785d8a0000");
     }
 

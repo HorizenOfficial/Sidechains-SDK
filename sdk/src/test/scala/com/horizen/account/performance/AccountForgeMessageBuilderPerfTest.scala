@@ -11,7 +11,6 @@ import com.horizen.account.state._
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
-import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.assertEquals
@@ -44,7 +43,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
           throw GasLimitReached()
         }
         gasPool.subGas(GasUtil.TxGas)
-        new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, gasPool.getUsedGas, Array.empty[EvmLog])
+        new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, gasPool.getUsedGas, Seq.empty)
       }
     })
 

@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.account.event.EthereumEvent
-import com.horizen.evm.interop.EvmLog
+import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.evm.utils.Address
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
@@ -31,7 +31,7 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
     msg.getTo.asScala.exists(contractAddress.equals(_))
   }
 
-  def getEvmLog(event: Any): EvmLog = {
+  def getEvmLog(event: Any): EthereumConsensusDataLog = {
     EthereumEvent.getEvmLog(contractAddress, event)
   }
 }

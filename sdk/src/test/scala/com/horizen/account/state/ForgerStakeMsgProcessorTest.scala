@@ -3,10 +3,10 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
@@ -885,7 +885,7 @@ class ForgerStakeMsgProcessorTest
     assertArrayEquals(inputListData, returnedList)
   }
 
-  def checkAddNewForgerStakeEvent(expectedEvent: DelegateForgerStake, actualEvent: EvmLog): Unit = {
+  def checkAddNewForgerStakeEvent(expectedEvent: DelegateForgerStake, actualEvent: EthereumConsensusDataLog): Unit = {
     assertEquals("Wrong address", contractAddress, actualEvent.address)
     assertEquals("Wrong number of topics", NumOfIndexedAddNewStakeEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
     assertArrayEquals("Wrong event signature", AddNewForgerStakeEventSig, actualEvent.topics(0).toBytes)
@@ -901,7 +901,7 @@ class ForgerStakeMsgProcessorTest
     assertEquals("Wrong stakeId in data", expectedEvent.value, listOfDecodedData.get(1))
   }
 
-  def checkRemoveForgerStakeEvent(expectedEvent: WithdrawForgerStake, actualEvent: EvmLog): Unit = {
+  def checkRemoveForgerStakeEvent(expectedEvent: WithdrawForgerStake, actualEvent: EthereumConsensusDataLog): Unit = {
     assertEquals("Wrong address", contractAddress, actualEvent.address)
     assertEquals("Wrong number of topics", NumOfIndexedRemoveForgerStakeEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
     assertArrayEquals("Wrong event signature", RemoveForgerStakeEventSig, actualEvent.topics(0).toBytes)
@@ -913,7 +913,7 @@ class ForgerStakeMsgProcessorTest
   }
 
 
-  def checkOpenForgerStakeListEvent(expectedEvent: OpenForgerList, actualEvent: EvmLog): Unit = {
+  def checkOpenForgerStakeListEvent(expectedEvent: OpenForgerList, actualEvent: EthereumConsensusDataLog): Unit = {
     assertEquals("Wrong address", contractAddress, actualEvent.address)
     assertEquals("Wrong number of topics", NumOfIndexedOpenForgerStakeListEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
     assertArrayEquals("Wrong event signature", OpenForgerStakeListEventSig, actualEvent.topics(0).toBytes)

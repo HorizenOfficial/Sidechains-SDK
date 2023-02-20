@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
+import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.utils.BigIntegerUtil
-import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Hash
 import org.junit.Assert.assertEquals
 import org.junit._
@@ -140,8 +140,8 @@ class StateDbAccountStateViewGasTrackedTest
     }
   }
 
-  private def randomLog(topics: Int, data: Int): EvmLog = {
-    new EvmLog(randomAddress, Array.fill(topics)(new Hash(randomHash)), randomBytes(data))
+  private def randomLog(topics: Int, data: Int): EthereumConsensusDataLog = {
+    EthereumConsensusDataLog(randomAddress, Array.fill(topics)(new Hash(randomHash)), randomBytes(data))
   }
 
   @Test

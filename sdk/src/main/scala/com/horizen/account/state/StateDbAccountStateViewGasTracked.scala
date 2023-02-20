@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
+import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.evm.StateDB
-import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 
 import java.math.BigInteger
@@ -178,8 +178,8 @@ class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq
   }
 
   @throws(classOf[OutOfGasException])
-  override def addLog(evmLog: EvmLog): Unit = {
-    gas.subGas(GasUtil.logGas(evmLog))
-    super.addLog(evmLog)
+  override def addLog(log: EthereumConsensusDataLog): Unit = {
+    gas.subGas(GasUtil.logGas(log))
+    super.addLog(log)
   }
 }

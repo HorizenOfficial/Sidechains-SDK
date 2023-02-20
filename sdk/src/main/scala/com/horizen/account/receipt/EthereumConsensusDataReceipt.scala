@@ -4,7 +4,6 @@ import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.account.utils.{RlpStreamDecoder, RlpStreamEncoder}
-import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import org.web3j.rlp._
 import sparkz.util.ByteArrayBuilder
@@ -19,7 +18,7 @@ case class EthereumConsensusDataReceipt(
     transactionType: Int,
     status: Int,
     cumulativeGasUsed: BigInteger,
-    logs: Seq[EvmLog],
+    logs: Seq[EthereumConsensusDataLog],
     logsBloom: Bloom
 ) {
 
@@ -36,7 +35,7 @@ case class EthereumConsensusDataReceipt(
       transactionType: Int,
       status: Int,
       cumulativeGasUsed: BigInteger,
-      logs: Seq[EvmLog]
+      logs: Seq[EthereumConsensusDataLog]
   ) {
 
     this(
@@ -79,9 +78,9 @@ case class EthereumConsensusDataReceipt(
     obj match {
       case other: EthereumConsensusDataReceipt =>
         transactionType == other.transactionType &&
-          status == other.status &&
-          cumulativeGasUsed.equals(other.cumulativeGasUsed) &&
-          logs.equals(other.logs)
+        status == other.status &&
+        cumulativeGasUsed.equals(other.cumulativeGasUsed) &&
+        logs.equals(other.logs)
 
       case _ => false
     }
@@ -123,7 +122,7 @@ object EthereumConsensusDataReceipt {
 
     val reader = new VLQByteBufferReader(ByteBuffer.wrap(rlpData))
     val rlpList = RlpStreamDecoder.decode(reader)
-    if (reader.remaining > 0){
+    if (reader.remaining > 0) {
       throw new IllegalArgumentException("Spurious bytes after decoding stream")
     }
 
@@ -141,7 +140,7 @@ object EthereumConsensusDataReceipt {
       values.getValues.get(1).asInstanceOf[RlpString].asPositiveBigInteger
     val logsBloom = values.getValues.get(2).asInstanceOf[RlpString].getBytes
     val logList = values.getValues.get(3).asInstanceOf[RlpList]
-    val logs = new ListBuffer[EvmLog]
+    val logs = new ListBuffer[EthereumConsensusDataLog]
     val logsListSize = logList.getValues.size
     if (logsListSize > 0) {
       // loop on list and decode all logs

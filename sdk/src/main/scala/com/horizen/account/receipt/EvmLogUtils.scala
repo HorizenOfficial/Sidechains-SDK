@@ -1,30 +1,29 @@
 package com.horizen.account.receipt
 
 
-import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
-import org.web3j.rlp.{RlpDecoder, RlpEncoder, RlpList, RlpString, RlpType}
+import org.web3j.rlp._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
 
 import java.util
 
 
-object EvmLogUtils extends SparkzSerializer[EvmLog] {
+object EvmLogUtils extends SparkzSerializer[EthereumConsensusDataLog] {
   
-  def rlpEncode(r: EvmLog): Array[Byte] = {
+  def rlpEncode(r: EthereumConsensusDataLog): Array[Byte] = {
     val values = asRlpValues(r)
     val rlpList = new RlpList(values)
     val encoded = RlpEncoder.encode(rlpList)
     encoded
   }
 
-  def rlpDecode(rlpData: Array[Byte]): EvmLog = {
+  def rlpDecode(rlpData: Array[Byte]): EthereumConsensusDataLog = {
     val rlpList = RlpDecoder.decode(rlpData).getValues.get(0).asInstanceOf[RlpList]
     rlpDecode(rlpList)
   }
 
-  def rlpDecode(values: RlpList): EvmLog = {
+  def rlpDecode(values: RlpList): EthereumConsensusDataLog = {
     val addressBytes = values.getValues.get(0).asInstanceOf[RlpString].getBytes
     val address = new Address(addressBytes)
     val topicsRlp = values.getValues.get(1).asInstanceOf[RlpList]
@@ -39,10 +38,10 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
     val topics = hashList.toArray(new Array[Hash](0))
     val data = values.getValues.get(2).asInstanceOf[RlpString].getBytes
 
-    new EvmLog(address, topics, data)
+    EthereumConsensusDataLog(address, topics, data)
   }
 
-  def asRlpValues(log: EvmLog): util.List[RlpType] = {
+  def asRlpValues(log: EthereumConsensusDataLog): util.List[RlpType] = {
     val result = new util.ArrayList[RlpType]
     val rlpTopics = new util.ArrayList[RlpType]
     result.add(RlpString.create(log.address.toBytes))
@@ -59,7 +58,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
     result
   }
 
-  override def serialize(log: EvmLog, writer: Writer): Unit = {
+  override def serialize(log: EthereumConsensusDataLog, writer: Writer): Unit = {
     writer.putBytes(log.address.toBytes)
 
     // array of elements of fixed data size (32 bytes)
@@ -74,7 +73,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
     writer.putBytes(data)
   }
 
-  override def parse(reader: Reader): EvmLog = {
+  override def parse(reader: Reader): EthereumConsensusDataLog = {
     val address: Address = new Address(reader.getBytes(Address.LENGTH))
 
     val topicsArraySize: Int = reader.getInt
@@ -86,8 +85,6 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
     val dataLength: Int = reader.getInt
     val data: Array[Byte] = reader.getBytes(dataLength)
 
-    new EvmLog(address, topics.toArray(new Array[Hash](0)), data)
+    EthereumConsensusDataLog(address, topics.toArray(new Array[Hash](0)), data)
   }
 }
-
-
