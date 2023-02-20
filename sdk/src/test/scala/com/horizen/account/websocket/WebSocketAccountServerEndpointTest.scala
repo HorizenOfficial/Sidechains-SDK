@@ -49,7 +49,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
   mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
     msg match {
       case GetDataFromCurrentView(f) =>
-        sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
+        sender ! f(utilMocks.getNodeView)
     }
     TestActor.KeepRunning
   })
