@@ -8,7 +8,7 @@ trait WebSocketAccountChannel {
 
   def getWalletKeys: Set[String]
 
-  def getTransactionLogData(txHash: String, subscriptionWithFilter: SubscriptionWithFilter): Option[ObjectNode]
+  def getTransactionLogData(txHash: String, subscriptionWithFilter: SubscriptionWithFilter): Array[ObjectNode]
 
   def accountBlockToWebsocketJson(block: AccountBlock): ObjectNode
 
