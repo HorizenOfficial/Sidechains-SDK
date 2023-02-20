@@ -503,10 +503,16 @@ class EthService(
    * Replication of the original implementation in GETH w/o caching, see:
    * github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go#L150
    */
-  private def suggestTipCap(nodeView: NV, blockCount: Int, percentile: Int, maxPrice: BigInteger, ignorePrice: BigInteger): BigInteger = {
+  private def suggestTipCap(
+      nodeView: NV,
+      blockCount: Int,
+      percentile: Int,
+      maxPrice: BigInteger,
+      ignorePrice: BigInteger
+  ): BigInteger = {
     val blockHeight = nodeView.history.getCurrentHeight
     // limit the range of blocks by the number of available blocks and cap at 1024
-    val blocks: Integer = (blockCount*2).min(blockHeight).min(1024)
+    val blocks: Integer = (blockCount * 2).min(blockHeight).min(1024)
 
     // define limit for included gas prices each block
     val limit = 3
@@ -516,16 +522,16 @@ class EthService(
       // Return lowest tx gas prices of each requested block, sorted in ascending order.
       // Queries up to 2*blockCount blocks, but stops in range > blockCount if enough samples were found.
       (0 until blocks).withFilter(_ => !moreBlocksNeeded || collected < 2).map { i =>
-          val block = nodeView.history
-            .blockIdByHeight(blockHeight - i)
-            .map(ModifierId(_))
-            .flatMap(nodeView.history.getStorageBlockById)
-            .get
-          val blockPrices = getBlockPrices(block, ignorePrice, limit)
-          collected += blockPrices.length
-          if (i >= blockCount) moreBlocksNeeded = true
-          blockPrices
-        }
+        val block = nodeView.history
+          .blockIdByHeight(blockHeight - i)
+          .map(ModifierId(_))
+          .flatMap(nodeView.history.getStorageBlockById)
+          .get
+        val blockPrices = getBlockPrices(block, ignorePrice, limit)
+        collected += blockPrices.length
+        if (i >= blockCount) moreBlocksNeeded = true
+        blockPrices
+      }
     }.flatten
 
     prices
