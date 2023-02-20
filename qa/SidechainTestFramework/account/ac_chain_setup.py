@@ -19,7 +19,8 @@ class AccountChainSetup(SidechainTestFramework):
     def __init__(self, API_KEY='Horizen', number_of_mc_nodes=1, number_of_sidechain_nodes=1,
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
-                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False):
+                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
+                 remote_keys_server_address=None):
         super().__init__()
 
         self.evm_address = None
@@ -38,8 +39,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.initial_private_keys = initial_private_keys
         self.circuittype_override = circuittype_override
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
-        self.remote_keys_ip_address = None
-        self.remote_keys_port = None
+        self.remote_keys_server_address = remote_keys_server_address
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -58,12 +58,6 @@ class AccountChainSetup(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = []
-        remote_keys_server_address = ""
-        self.remote_keys_ip_address = "127.0.0.1"
-        self.remote_keys_port = 5000 + self.options.parallel
-
-        if self.remote_keys_manager_enabled:
-            remote_keys_server_address = f"http://{self.remote_keys_ip_address}:{self.remote_keys_port}"
 
         for x in range(self.number_of_sidechain_nodes):
             if self.forger_options is None:
@@ -72,7 +66,7 @@ class AccountChainSetup(SidechainTestFramework):
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
-                    remote_keys_server_address=remote_keys_server_address))
+                    remote_keys_server_address=self.remote_keys_server_address))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
@@ -81,7 +75,7 @@ class AccountChainSetup(SidechainTestFramework):
                     api_key=self.API_KEY,
                     initial_private_keys=self.initial_private_keys,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
-                    remote_keys_server_address=remote_keys_server_address))
+                    remote_keys_server_address=self.remote_keys_server_address))
 
         if self.circuittype_override is not None:
             circuit_type = self.circuittype_override
