@@ -928,7 +928,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     val oldestTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = accountKeyBOpt)
     assertTrue("Adding transaction failed", mempoolMap.add(oldestTx).isSuccess)
 
-    //Note to my future self: I don't need to reset state nonce and balance because they are not checked in the add function
+    //Note to my future self: I don't need to reset state nonce and balance because they are not checked in the add function.
     //initialize mem pool
     listOfTxs.foreach(tx => assertTrue(s"Error while adding tx $tx", mempoolMap.add(tx).isSuccess))
     assertEquals("Wrong mempool size in slots", 8, mempoolMap.getMempoolSizeInSlots)
@@ -937,7 +937,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of non exec txs", 4, mempoolMap.mempoolTransactions(false).size)
 
     //Reinsert some additional exec txs in order to reach the maximum size limit
-    val accountKeyCOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
+    val accountKeyCOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest3".getBytes()))
 
     val listOfTxsAccountC = (0 to 4).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = accountKeyCOpt)).toSeq
 
