@@ -10,7 +10,6 @@ import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -35,9 +34,8 @@ public class EthereumBlockView {
     // mixHash is set to a VRF output to support the PREVRANDAO EVM-opcode, just like Ethereum does since The Merge
     public final Hash mixHash;
 
-    public final List<String> uncles = new ArrayList<>();
-    public final List<String> sealFields = new ArrayList<>();
-
+    // we do not have uncles
+    public final Hash[] uncles = new Hash[0];
     // we use PoS and do not have difficulty, Ethereum mainnet also set this to zero since the switch to PoS
     public final String difficulty = "0x0";
     // total difficulty should be the sum of the difficulty of all previous blocks, since we never had PoW this is zero
