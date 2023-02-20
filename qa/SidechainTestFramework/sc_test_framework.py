@@ -108,7 +108,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         pass
 
     def setup_logger(self,  options):
-        logfile = os.path.abspath(os.path.join(os.path.dirname(__file__), '../', 'sc_test.log'))
+        logfile = os.path.abspath(os.path.join(os.path.dirname(__file__), "../", "sc_test.log"))
         filehandler = logging.FileHandler(logfile, "a+")
         streamhandler = logging.StreamHandler()
 
@@ -119,7 +119,11 @@ class SidechainTestFramework(BitcoinTestFramework):
             filehandler.setLevel(options.testlogfilelevel.upper())
             streamhandler.setLevel(options.testlogconsolelevel.upper())
 
-        logging.basicConfig(format="[%(asctime)s] : [%(levelname)s] : %(message)s",
+        logging_format = "[%(asctime)s] : [%(levelname)s] : %(message)s"
+        if options.parallel > 0:
+            logging_format = f"[ParallelGroup: {self.options.parallel}] : {logging_format}"
+
+        logging.basicConfig(format=logging_format,
                             handlers=[filehandler, streamhandler],
                             level=logging.DEBUG
                             )

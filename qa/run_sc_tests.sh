@@ -406,7 +406,7 @@ function runParallelTests
   # Assign any parameter given to the shell script, then remove from this functions args
   scriptArg=$1; shift
 
-  # Assign parallelGroup if running parallel tests, then remove from this functions args
+  # Assign parallelGroup then remove from this functions args
   parallelGroup=$1; shift
 
   while true; do

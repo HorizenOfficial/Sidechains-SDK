@@ -506,6 +506,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPTS': websocket_config.reconnectionMaxAttempts,
+        'WEBSOCKET_SERVER_ENABLED': "true" if sc_node_config.websocket_server_enabled else "false",
+        'WEBSOCKET_SERVER_PORT': sc_node_config.websocket_server_port,
         "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
