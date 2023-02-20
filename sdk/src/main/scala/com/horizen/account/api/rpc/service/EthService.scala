@@ -897,10 +897,11 @@ class EthService(
   }
 
   @RpcMethod("zen_getFeePayments")
-  def getFeePayments(hash: Hash): AccountFeePaymentsInfo = {
+  def getFeePayments(hash: Hash): FeePaymentsView = {
     applyOnAccountView { nodeView =>
       nodeView.history
         .feePaymentsInfo(bytesToId(hash.toBytes))
+        .map(new FeePaymentsView(_))
         .orNull
     }
   }
