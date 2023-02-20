@@ -1,16 +1,11 @@
 package com.horizen.account.api.rpc.types;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
-import com.horizen.serialization.Views;
 
 import java.math.BigInteger;
 
-@JsonView(Views.Default.class)
-@JsonInclude()
 public class TxPoolTransaction {
     // fixed default values
     public final Hash blockHash = Hash.ZERO;

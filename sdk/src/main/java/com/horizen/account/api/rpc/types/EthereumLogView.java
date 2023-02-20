@@ -1,15 +1,12 @@
 package com.horizen.account.api.rpc.types;
 
-import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.evm.interop.EvmLog;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
-import com.horizen.serialization.Views;
 
 import java.math.BigInteger;
 
-@JsonView(Views.Default.class)
 public class EthereumLogView {
     public final Address address;
     public final Hash[] topics;

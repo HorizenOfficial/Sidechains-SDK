@@ -1,12 +1,10 @@
 package com.horizen.account.api.rpc.types;
 
-import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.utils.AccountBlockUtil;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
-import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
@@ -14,7 +12,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@JsonView(Views.Default.class)
 public class EthereumBlockView {
     public final BigInteger number;
     public final Hash hash;

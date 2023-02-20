@@ -1,11 +1,7 @@
 package com.horizen.account.api.rpc.types;
 
-import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.serialization.Views;
-
 import java.math.BigInteger;
 
-@JsonView(Views.Default.class)
 public class EthereumFeeHistoryView {
     public final BigInteger oldestBlock;
     public final BigInteger[] baseFeePerGas;

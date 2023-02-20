@@ -1,18 +1,15 @@
 package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
-import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 
 import java.math.BigInteger;
 import java.util.Objects;
 
-@JsonView(Views.Default.class)
 public class EthereumTransactionView {
     // block data
     public final Hash blockHash;

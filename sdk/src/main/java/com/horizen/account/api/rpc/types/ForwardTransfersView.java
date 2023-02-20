@@ -1,17 +1,14 @@
 package com.horizen.account.api.rpc.types;
 
-import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.ZenWeiConverter;
 import com.horizen.evm.utils.Address;
-import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.ForwardTransfer;
 
 import java.math.BigInteger;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@JsonView(Views.Default.class)
 public class ForwardTransfersView {
     public final List<ForwardTransferData> forwardTransfers;
 
@@ -24,7 +21,6 @@ public class ForwardTransfersView {
         }).collect(Collectors.toList());
     }
 
-    @JsonView(Views.Default.class)
     private static class ForwardTransferData {
         public final Address to;
         public final BigInteger value;
