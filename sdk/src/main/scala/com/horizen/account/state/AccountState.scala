@@ -19,8 +19,10 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
+import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import sparkz.core._
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.FailedTransaction
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
@@ -455,6 +457,10 @@ class AccountState(
     }
 
     ethTx.semanticValidity()
+
+    if (!params.allowUnprotectedTxs && tx.isLegacy && !tx.isEIP155) {
+      throw new IllegalArgumentException("Legacy unprotected transaction are not allowed.")
+    }
 
     if (FeeUtils.GAS_LIMIT.compareTo(ethTx.getGasLimit) < 0)
       throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")

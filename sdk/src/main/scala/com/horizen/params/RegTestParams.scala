@@ -38,6 +38,7 @@ case class RegTestParams(
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
                           override val chainId: Long = 1111111,
                           override val isCSWEnabled: Boolean = true,
+                          override val allowUnprotectedTxs: Boolean = false,
                           override val isNonCeasing: Boolean = false
                         ) extends NetworkParams {
   override val EquihashN: Int = 48

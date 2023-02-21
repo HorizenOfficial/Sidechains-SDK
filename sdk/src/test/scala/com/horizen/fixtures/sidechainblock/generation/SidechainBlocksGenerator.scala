@@ -544,6 +544,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
       override val chainId: Long = 11111111
       override val isCSWEnabled: Boolean = params.isCSWEnabled
+      override val allowUnprotectedTxs: Boolean = params.allowUnprotectedTxs
       override val isNonCeasing: Boolean = params.isNonCeasing
       override val minVirtualWithdrawalEpochLength: Int = 10
     }

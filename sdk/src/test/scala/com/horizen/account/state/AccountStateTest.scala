@@ -27,7 +27,7 @@ class AccountStateTest
       with MockitoSugar
       with SidechainTypesTestsExtension {
 
-  val params: MainNetParams = MainNetParams()
+  var params: MainNetParams = MainNetParams()
   var state: AccountState = _
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
 
@@ -163,6 +163,19 @@ class AccountStateTest
 
     Mockito.when(tx.semanticValidity()).thenAnswer(_ => true)
     Mockito.when(tx.getGasLimit).thenReturn(FeeUtils.GAS_LIMIT.add(BigInteger.ONE))
+
+    state.validate(tx) match {
+      case Failure(_) =>
+      case Success(_) => Assert.fail("Transaction with gas limit greater than block is expected to fail")
+    }
+  }
+
+  @Test
+  def testForbidLegacyTransaction(): Unit = {
+    val tx = mock[EthereumTransaction]
+
+    Mockito.when(tx.isLegacy).thenReturn(true)
+    Mockito.when(tx.isEIP155).thenReturn(false)
 
     state.validate(tx) match {
       case Failure(_) =>

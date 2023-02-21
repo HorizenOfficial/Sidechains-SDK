@@ -49,5 +49,7 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
             return this.getValue().add(getGasLimit().multiply(getGasPrice()));
     }
 
+    public abstract boolean isLegacy();
 
+    public abstract boolean isEIP155();
 }

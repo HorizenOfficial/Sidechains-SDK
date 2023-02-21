@@ -135,7 +135,8 @@ class SCNodeConfiguration(object):
                  declared_address=None,
                  initial_signing_private_keys=[],
                  storage_backup_interval='15m',
-                 storage_backup_delay='5m'):
+                 storage_backup_delay='5m',
+                 allow_unprotected_txs=True):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -160,6 +161,7 @@ class SCNodeConfiguration(object):
             self.declared_address = declared_address
         self.storage_backup_interval = storage_backup_interval
         self.storage_backup_delay = storage_backup_delay
+        self.allow_unprotected_txs = allow_unprotected_txs
 
 
 """
