@@ -89,9 +89,9 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_split_network(self):
         pass
 
-    def sc_sync_all(self):
+    def sc_sync_all(self, mempool_cardinality_only=False):
         sync_sc_blocks(self.sc_nodes)
-        sync_sc_mempools(self.sc_nodes)
+        sync_sc_mempools(self.sc_nodes, mempool_cardinality_only=mempool_cardinality_only)
 
     def sc_sync_nodes(self, sc_nodes):
         sync_sc_blocks(sc_nodes)

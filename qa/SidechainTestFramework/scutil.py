@@ -106,7 +106,7 @@ def sync_sc_blocks(api_connections, wait_for=25, p=False):
     while True:
         if time.time() - start >= wait_for:
             raise TimeoutException("Syncing blocks")
-        counts = [int(x.block_best()["result"]["height"]) for x in api_connections]
+        counts = [int(x.block_currentHeight()["result"]["height"]) for x in api_connections]
         if p:
             logging.info(counts)
         if counts == [counts[0]] * len(counts):
@@ -114,18 +114,29 @@ def sync_sc_blocks(api_connections, wait_for=25, p=False):
         time.sleep(WAIT_CONST)
 
 
-def sync_sc_mempools(api_connections, wait_for=25):
+def sync_sc_mempools(api_connections, wait_for=25, mempool_cardinality_only=False):
     """
     Wait for maximum wait_for seconds for everybody to have the same transactions in their memory pools
     """
+    if mempool_cardinality_only:
+        format = False
+        tag = "transactionIds"
+    else:
+        format = True
+        tag = "transactions"
+
+
+    j = {"format": format}
+    request = json.dumps(j)
+
     start = time.time()
     while True:
-        refpool = api_connections[0].transaction_allTransactions()["result"]["transactions"]
+        refpool = api_connections[0].transaction_allTransactions(request)["result"][tag]
         if time.time() - start >= wait_for:
             raise TimeoutException("Syncing mempools")
         num_match = 1
         for i in range(1, len(api_connections)):
-            nodepool = api_connections[i].transaction_allTransactions()["result"]["transactions"]
+            nodepool = api_connections[i].transaction_allTransactions(request)["result"][tag]
             if nodepool == refpool:
                 num_match = num_match + 1
         if num_match == len(api_connections):
