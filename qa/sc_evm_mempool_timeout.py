@@ -11,9 +11,11 @@ from test_framework.util import forward_transfer_to_sidechain
 
 """
 Check that transactions staying too long in the mempool are evicted for timeout.
+2 SC nodes are used in order to verify that both locally and remotely generated transactions are
+treated the same way.
 
 Configuration:
-    - 2 SC node
+    - 2 SC nodes
     - 1 MC node
 Tests:
     - Add some non-exec txs (so cannot be mined) to the mempool node 1
@@ -33,7 +35,6 @@ class SCEvmMempoolTimeout(AccountChainSetup):
 
         # transfer some fund from MC to SC1 at a new evm address, then mine mc block
         evm_address_1 = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
-        evm_address_2 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
         ft_amount_in_zen = Decimal('3000.0')
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
@@ -51,7 +52,7 @@ class SCEvmMempoolTimeout(AccountChainSetup):
         num_of_txs_in_mempool = 5
         nonce = 2
         # Creates txs on node 1
-        for i in range(num_of_txs_in_mempool):
+        for _ in range(num_of_txs_in_mempool):
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_1,
                                      toAddress=evm_address_1, nonce=nonce, value=1)
             nonce += 1
