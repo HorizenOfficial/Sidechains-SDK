@@ -329,6 +329,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
     }
 
+    /**
+     * Calculate effective gas price, this will work for both legacy and EIP1559 transactions.
+     * @param base base fee applicable for this transaction
+     * @return effective gas price
+     */
     @Override
     @JsonIgnore
     public BigInteger getEffectiveGasPrice(BigInteger base) {

@@ -181,6 +181,7 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     Mockito.when(history.blockIdByHeight(any())).thenReturn(None)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))
+    Mockito.when(history.bestBlock).thenReturn(block.orNull)
 
     if (genesis) {
       Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
@@ -201,6 +202,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(history.bestBlockInfo.withdrawalEpochInfo).thenReturn(mock[WithdrawalEpochInfo])
     Mockito.when(history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex).thenReturn(1)
     Mockito.when(history.bestBlockId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
+
+    Mockito.when(history.feePaymentsInfo(any())).thenReturn(None)
 
     if (parentBlock.nonEmpty) {
       val parentId = parentBlock.get.id
@@ -237,8 +240,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     val block: AccountBlock = mock[AccountBlock]
 
     val scCr1: SidechainCreation = mock[SidechainCreation]
-    val ft1: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId)
-    val ft2: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId)
+    val ft1: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId, 1)
+    val ft2: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId, 2)
 
     val mc2scTransactionsOutputs: Seq[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] =
       Seq(scCr1, ft1, ft2)
@@ -267,6 +270,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito
       .when(block.header.forgerAddress)
       .thenReturn(forgerAddress)
+    Mockito.when(block.forgerPublicKey).thenReturn(new AddressProposition(BytesUtils.fromHexString("1111111111213141010203040506070809111222")))
     Mockito.when(block.sidechainTransactions).thenReturn(txs)
     Mockito.when(block.transactions).thenReturn(txs)
     Mockito.when(block.mainchainHeaders).thenReturn(Seq(mcBlockRef.header))

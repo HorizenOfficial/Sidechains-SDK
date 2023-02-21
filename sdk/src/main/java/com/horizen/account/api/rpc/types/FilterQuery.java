@@ -70,7 +70,7 @@ public class FilterQuery {
             switch (node.getNodeType()) {
                 case STRING:
                     try {
-                        return new Address[] { context.readTreeAsValue(node, Address.class) };
+                        return new Address[] {context.readTreeAsValue(node, Address.class)};
                     } catch (Exception err) {
                         throw new IOException(String.format("invalid address: %s", err.getMessage()), err);
                     }
@@ -115,7 +115,7 @@ public class FilterQuery {
                         break;
                     case STRING: {
                         // match specific topic
-                        topics[i] = new Hash[] { context.readTreeAsValue(topic, Hash.class) };
+                        topics[i] = new Hash[] {context.readTreeAsValue(topic, Hash.class)};
                         break;
                     }
                     case ARRAY: {

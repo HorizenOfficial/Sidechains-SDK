@@ -16,7 +16,6 @@ import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 import java.util.Optional;
 
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
     public BigInteger type;
