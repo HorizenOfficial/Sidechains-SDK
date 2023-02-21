@@ -1,25 +1,14 @@
 #!/usr/bin/env python3
-import json
 import logging
-import pprint
 import time
 from decimal import Decimal
-
 from eth_utils import add_0x_prefix, remove_0x_prefix
-
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.httpCalls.transaction.createLegacyEIP155Transaction import \
-    createLegacyEIP155Transaction
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
-from SidechainTestFramework.scutil import generate_next_block, check_mainchain_block_reference_info
-from SidechainTestFramework.websocket_client import WebsocketClient
-
+from SidechainTestFramework.scutil import generate_next_block
 from httpCalls.transaction.allTransactions import allTransactions
-from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei, convertWeiToZen, \
-    FORGER_STAKE_SMART_CONTRACT_ADDRESS, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
-from test_framework.util import (
-    assert_equal, assert_true, fail, forward_transfer_to_sidechain, )
+from SidechainTestFramework.account.utils import convertZenToWei
+from test_framework.util import assert_equal, assert_true
 
 """
 Configuration: 
@@ -27,7 +16,10 @@ Configuration:
     - 1 MC node
 
 Test:
-    xxx
+    Generate a huge number of ft outputs in some FT for this SC in order to have a large set of MC ref data to be
+    included in the next SC block. Verify that only up to 5 MB of the SC block size is used for MC ref data.
+    Moreover send many Eth txes having large size and check that only up to 2 MB of the remaining block size is used
+    for including tx.
      
 """
 
@@ -54,8 +46,6 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
             logging.info("Expected exception thrown: {}".format(err))
             return False, "send failed: " + str(err), None
 
-        #self.sc_sync_all()
-
         # get mempool contents and check contents are as expected
         response = allTransactions(from_sc_node, False)
         assert_true(tx_hash in response['transactionIds'])
@@ -63,9 +53,15 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
 
     def sc_setup_chain(self):
         # increase rest api timeout otherwise we might not be able to forge a huge block
-        self.options.restapitimeout = 300
+        # on dev machine it takes a little less than 10 secs
+        self.options.restapitimeout = 20
         super().sc_setup_chain()
 
+    def dump_delta_t(self, t_1, tag):
+        t_2 = time.time()
+        delta_t = t_2 - t_1
+        logging.info("{} - delta t = {}".format(tag, delta_t))
+        return time.time()
 
     def run_test(self):
 
@@ -78,24 +74,26 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
 
-        mc_block = mc_node.getbestblockhash()
-        logging.info("generating next block")
+        mc_node.getbestblockhash()
+
         generate_next_block(sc_node_1, "first node")
+        self.sc_sync_all()
 
         evm_address_sc1 = remove_0x_prefix(self.evm_address)
         evm_address_sc2 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
-
-        # create some MC block for having several mcRef data included in the next SC block
-        mc_return_address = mc_node.getnewaddress()
 
         # create huge FTs for filling up the MC ref data. This constant allows us to have tx with size ~96K, a little
         # below the 100K MC limit
         outputs_in_ft = 1050
 
-        logging.info("generating 1050 addresses")
+        mc_return_address = mc_node.getnewaddress()
+
+        logging.info("generating {} addresses".format(outputs_in_ft))
         addresses = []
+        t_0 = time.time()
         for k in range(0, outputs_in_ft):
             addresses.append(sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"])
+        self.dump_delta_t(t_0, "Addresses generated")
 
         # we have this number of big tx in one block, that implies a block size a little less than 400K
         ft_in_block = 4
@@ -127,42 +125,36 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
             block = mc_node.getblock(bh[0], True)
             logging.info("Generated MC block with sz {} [{}]".format(block['size'], bh[0]))
 
-            time.sleep(1.1)
+            self.sync_all()
 
-
-        amount_in_zen = Decimal('0.1')
-        # tx intrinsic gas should be (16+4)*64*1024 + 21000 = 1331720
-        big_data = '0001' * 64 * 1024
 
         # number of txes that fit in a block as far as gas usage is concerned (30000000 / 1331720 = ~22)
         numOfLargeTxes = 22
+
+        amount_in_zen = Decimal('0.1')
+
+        # tx intrinsic gas should be (16+4)*64*1024 + 21000 = 1331720
+        big_data = '0001' * 64 * 1024
+
+        # time snapshot
         for n in range(0, numOfLargeTxes):
             logging.info("Creating an EOA to EOA transaction...")
             self.sendEoa2EoaWithData(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
                                        amount_in_zen, data=big_data, gasLimit=1331720,nonce=n)
 
-        logging.info("getting all txes in mempool...")
-        response = allTransactions(sc_node_1, False)
-        logging.info("...done")
+        self.sc_sync_all(mempool_cardinality_only=True)
 
+        response = allTransactions(sc_node_1, False)
         assert_true(len(response['transactionIds']), numOfLargeTxes)
 
-
         logging.info("generating next block...")
-        generate_next_block(sc_node_1, "first node")
+        t_0 = time.time()
+        bl = generate_next_block(sc_node_1, "first node")
+        self.dump_delta_t(t_0, "Block {} generated".format(bl))
 
-        logging.info("sleeping...")
-        time.sleep(20)
-        logging.info("...done")
+        self.sc_sync_all(mempool_cardinality_only=True)
 
-        logging.info("getting best block...")
         sc_best_block = sc_node_1.block_best()["result"]['block']
-        logging.info("...done")
-
-        logging.info("getting block via rpc...")
-        block_id = sc_best_block['id']
-        last_block_eth = sc_node_1.rpc_eth_getBlockByHash(add_0x_prefix(block_id), False)
-        logging.info("...done")
 
         # verify we have all mc headers but not all mc ref data since we hit the block size limit
         lenMcRefDataList = len(sc_best_block['mainchainBlockReferencesData'])
@@ -210,12 +202,12 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
         # including one more tx would have created too big a block
         assert_true((blockSize + int(totTxSize)/numOfTxInBlock) > BLOCK_MAX_SIZE)
 
-        block_id = sc_best_block['id']
-        last_block_eth = sc_node_1.rpc_eth_getBlockByHash(add_0x_prefix(block_id), False)['result']
+        logging.info("generating next block...")
+        t_0 = time.time()
+        bl = generate_next_block(sc_node_1, "first node")
+        self.dump_delta_t(t_0, "Block {} generated".format(bl))
 
-
-        #generate_next_block(sc_node_1, "first node")
-        #time.sleep(20)
+        self.sc_sync_all()
 
 
 if __name__ == "__main__":
