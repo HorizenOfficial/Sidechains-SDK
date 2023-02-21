@@ -18,6 +18,7 @@ import org.scalatestplus.mockito._
 import sparkz.util.ModifierId
 
 import java.math.BigInteger
+import scala.concurrent.duration.DurationInt
 
 class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture with SidechainTypes with MockitoSugar {
 
@@ -761,9 +762,6 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
   def testUpdateWithMempoolFull(): Unit = {
 
     val addressA = accountKeyOpt.get.publicImage().address()
-    val txA0 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(0), keyOpt = accountKeyOpt), 4)
-    val txA1 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(1), keyOpt = accountKeyOpt)
-    val txA2 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(2), keyOpt = accountKeyOpt)
     val txA3 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(3), keyOpt = accountKeyOpt), 4)
     val txA4 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(4), keyOpt = accountKeyOpt)
     val txA5 = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(5), keyOpt = accountKeyOpt), 2)
@@ -771,7 +769,6 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     val accountKeyBOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
     val addressB = accountKeyBOpt.get.publicImage().address()
 
-    val txB0 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(0), keyOpt = accountKeyBOpt)
     val txB1 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(1), keyOpt = accountKeyBOpt)
     val txB2 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(2), keyOpt = accountKeyBOpt)
     val txB3 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(3), keyOpt = accountKeyBOpt)
@@ -992,6 +989,40 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong non exec mempool size in slots", 4, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 2, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 4, mempoolMap.mempoolTransactions(false).size)
+
+  }
+
+  @Test
+  def testTimedoutTxs() : Unit = {
+    var mempoolMap = new MempoolMap(accountStateProvider,
+      baseStateProvider,
+      AccountMempoolSettings(txLifetime = 2.seconds))
+
+    //Test 1: add some txs and wait for the timeout, then add other still valid txs. Verify that the update removes only the
+    // timed out txs
+
+    val listOfTimedoutTxs = (0 to 5).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = accountKeyOpt))
+    listOfTimedoutTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
+
+    Thread.sleep(mempoolMap.TxLifetime.toMillis)
+
+    val listOfValidTxs = (6 to 10).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = accountKeyOpt))
+    listOfValidTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
+
+    //initial check
+    assertEquals("Wrong number of txs in the mempool", 11, mempoolMap.size)
+    assertEquals("Wrong number of exec txs", 11, mempoolMap.mempoolTransactions(true).size)
+    assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+
+
+    Mockito.when(rejectedBlock.transactions).thenReturn(Seq.empty)
+    Mockito.when(appliedBlock.transactions).thenReturn(Seq.empty)
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 5, mempoolMap.size)
+    assertEquals("Wrong number of exec txs", 0, mempoolMap.mempoolTransactions(true).size)
+    assertEquals("Wrong number of non exec txs", 5, mempoolMap.mempoolTransactions(false).size)
 
   }
 

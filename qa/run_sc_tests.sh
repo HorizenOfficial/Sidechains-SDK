@@ -98,6 +98,7 @@ testScriptsEvm=(
     'sc_evm_mc_fork.py'
     'sc_evm_context_blockhash.py'
     'sc_evm_mempool_size.py'
+    'sc_evm_mempool_timeout.py'
 );
 
 testScriptsUtxo=(

@@ -34,6 +34,7 @@ import java.io.{BufferedWriter, FileWriter}
 import java.math.BigInteger
 import java.util.Calendar
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 /*
@@ -832,6 +833,75 @@ class AccountSidechainNodeViewHolderPerfTest
       println(s"total time $updateTime ms")
       out.write(s"\n********************* Testing $numOfRevertedBlocks rejected blocks results *********************\n")
       out.write(s"Duration of the test:                      $updateTime ms\n")
+
+    } finally {
+      out.write("\n\n")
+      out.close()
+    }
+  }
+
+  /* This test measures how long it takes to remove timed out transactions from the memory pool. */
+  @Test
+  //@Ignore
+  def updateTimedOutTxs(): Unit = {
+    val out = new BufferedWriter(new FileWriter("log/updateTimedOutTxs.txt", true))
+
+    val cal = Calendar.getInstance()
+    try {
+      out.write("************************************************************************\n\n")
+      out.write("*            Removing timed-out transactions performance test           \n\n")
+      out.write("************************************************************************\n\n")
+
+      out.write(s"Date and time of the test: ${cal.getTime}\n\n")
+
+
+      val numOfTxs = 100000
+      val numOfTxsPerAccounts = 1
+      val numOfAccounts = numOfTxs / numOfTxsPerAccounts
+      out.write(s"Total number of transactions:                    $numOfTxs\n")
+      out.write(s"Number of accounts:                       $numOfAccounts\n")
+      out.write(s"Number of transactions for each account:  $numOfTxsPerAccounts\n")
+
+      val nonceGap = if (numOfTxsPerAccounts > 16) numOfTxsPerAccounts else 16
+      val mempoolSettings = AccountMempoolSettings(
+        maxNonceGap = nonceGap,
+        maxAccountSlots = nonceGap,
+        maxMemPoolSlots = numOfTxs,
+        maxNonExecMemPoolSlots = numOfTxs - 1,
+        txLifetime = 1.seconds
+      )
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
+
+      val listOfTxs = scala.collection.mutable.ListBuffer[EthereumTransaction]()
+
+      println(s"*************** Removing timed-out transactions performance test ***************")
+      println(s"Total number of transaction: $numOfTxs")
+
+      listOfTxs ++= createTransactions(numOfAccounts, numOfTxsPerAccounts)
+      val randomOrderList = Random.shuffle(listOfTxs)
+
+      randomOrderList.foreach { tx =>
+        nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT])
+      }
+      assertEquals(numOfTxs, mempool.size)
+      val block: AccountBlock = mock[AccountBlock]
+      Mockito.when(block.transactions).thenReturn(Seq.empty[SidechainTypes#SCAT])
+      val listOfRejectedBlocks = Seq[AccountBlock](block)
+      val listOfAppliedBlocks = Seq[AccountBlock](block)
+
+      Thread.sleep(mempoolSettings.txLifetime.toMillis)
+
+      val startTime = System.currentTimeMillis()
+
+      nodeViewHolder.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks, mempool, state)
+      var totalTime = System.currentTimeMillis() - startTime
+
+      assertEquals(0, mempool.size)
+
+      out.write(s"\n********************* Test results *********************\n")
+
+      println(s"Total time $totalTime ms")
+      out.write(s"Duration of the test:                      $totalTime ms\n")
 
     } finally {
       out.write("\n\n")

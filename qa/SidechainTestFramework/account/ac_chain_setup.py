@@ -20,7 +20,8 @@ class AccountChainSetup(SidechainTestFramework):
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
                  initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
-                 max_nonce_gap=16, max_account_slots=16, max_mempool_slots=6144, max_nonexec_pool_slots=1024):
+                 max_nonce_gap=16, max_account_slots=16, max_mempool_slots=6144, max_nonexec_pool_slots=1024,
+                 tx_lifetime=10800):
 
         self.evm_address = None
         self.sc_nodes = None
@@ -42,6 +43,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.max_account_slots = max_account_slots
         self.max_mempool_slots = max_mempool_slots
         self.max_nonexec_pool_slots = max_nonexec_pool_slots
+        self.tx_lifetime = tx_lifetime
 
 
     def setup_nodes(self):
@@ -72,6 +74,7 @@ class AccountChainSetup(SidechainTestFramework):
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
+                    tx_lifetime =  self.tx_lifetime,
                 ))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
@@ -85,6 +88,7 @@ class AccountChainSetup(SidechainTestFramework):
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
+                    tx_lifetime = self.tx_lifetime
                 ))
 
         if self.circuittype_override is not None:

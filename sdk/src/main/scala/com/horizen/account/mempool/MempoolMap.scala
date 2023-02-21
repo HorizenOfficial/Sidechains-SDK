@@ -13,6 +13,7 @@ import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 class MempoolMap(
@@ -27,9 +28,10 @@ class MempoolMap(
   val MaxSlotsPerAccount: Int = mempoolSettings.maxAccountSlots
   val MaxMemPoolSlots: Int = mempoolSettings.maxMemPoolSlots
   val MaxNonExecSubPoolSlots: Int = mempoolSettings.maxNonExecMemPoolSlots
+  val TxLifetime: FiniteDuration = mempoolSettings.txLifetime
 
   // Cache of all transactions currently in the mempool
-  private val txCache = new TxCache()
+  private val txCache = new TxCache(TxLifetime)
 
   // Transaction ids of all currently processable transactions, grouped by account and ordered by nonce
   private val executableTxs: TrieMap[SidechainTypes#SCP, TxIdByNonceMap] =
@@ -180,6 +182,16 @@ class MempoolMap(
     while (getNonExecSubpoolSizeInSlots > MaxNonExecSubPoolSlots)
   }
 
+  private[mempool] def removeTimedoutTransactions(): Unit = {
+    var oldestTxInfoOpt = txCache.getOldestTransactionInfo()
+    while(oldestTxInfoOpt.isDefined && oldestTxInfoOpt.get.hasTimedOut){
+      log.trace(s"Removing timed out transaction ${oldestTxInfoOpt.get.tx}")
+      remove(oldestTxInfoOpt.get.tx)
+      oldestTxInfoOpt = txCache.getOldestTransactionInfo()
+    }
+  }
+
+
   def removeFromMempool(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     remove(ethTransaction).get
     // Only Non Exec sub pool size can change when removing a tx
@@ -322,6 +334,8 @@ class MempoolMap(
     appliedTxNoncesByAccount.foreach { case (account, nonce) =>
       updateAccount(account, nonce)
     }
+
+    removeTimedoutTransactions()
 
     checkMempoolSize()
   }

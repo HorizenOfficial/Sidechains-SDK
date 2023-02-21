@@ -6,8 +6,9 @@ import sparkz.util.ModifierId
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.duration.{Deadline, DurationInt, FiniteDuration}
 
-class TxCache {
+class TxCache(txLifetime: FiniteDuration = 3.hours) {
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, TxMetaInfo] = TrieMap.empty[ModifierId, TxMetaInfo]
   private var sizeInSlots: Int = 0
@@ -100,17 +101,21 @@ class TxCache {
 
   def getYoungestTransaction(): Option[SidechainTypes#SCAT] = youngestTx.map(_.tx)
 
+  def getOldestTransactionInfo(): Option[TxMetaInfo] = oldestTx
+
   def getNonExecIterator(): NonExecTransactionIterator = new NonExecTransactionIterator
 
   case class TxMetaInfo(tx: SidechainTypes#SCAT, var isNotExecutable: Boolean) {
+    val deadline: Deadline = txLifetime.fromNow
     var next: Option[TxMetaInfo] = None
     var previous: Option[TxMetaInfo] = None
+
+    def hasTimedOut: Boolean = deadline.isOverdue()
   }
 
   class NonExecTransactionIterator {
 
     private var nextElem: Option[TxMetaInfo] = oldestTx
-
 
     @tailrec
     final private[mempool] def findNext(txInfo: Option[TxMetaInfo]): Option[TxMetaInfo] = {

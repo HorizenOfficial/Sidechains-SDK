@@ -140,6 +140,7 @@ class SCNodeConfiguration(object):
                  max_account_slots=16,
                  max_mempool_slots=6144,
                  max_nonexec_pool_slots=1024,
+                 tx_lifetime=10800,
                  ):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
@@ -169,6 +170,7 @@ class SCNodeConfiguration(object):
         self.max_account_slots = max_account_slots
         self.max_mempool_slots = max_mempool_slots
         self.max_nonexec_pool_slots = max_nonexec_pool_slots
+        self.tx_lifetime = tx_lifetime
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.
