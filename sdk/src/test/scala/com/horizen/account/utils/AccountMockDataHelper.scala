@@ -307,15 +307,15 @@ case class AccountMockDataHelper(genesis: Boolean)
         msgProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
       override def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult = {
-        val proofRes = new ProofAccountResult()
-        proofRes.address = address
-        proofRes.accountProof = Array("123")
-        proofRes.nonce = BigInteger.ONE
-        proofRes.balance = BigInteger.valueOf(123L)
-        proofRes.codeHash = null
-        proofRes.storageHash = null
-        proofRes.storageProof = null
-        proofRes
+        new ProofAccountResult(
+          address,
+          Array("123"),
+          BigInteger.valueOf(123L),
+          null,
+          BigInteger.ONE,
+          null,
+          null
+        )
       }
 
       override def getIntermediateRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)

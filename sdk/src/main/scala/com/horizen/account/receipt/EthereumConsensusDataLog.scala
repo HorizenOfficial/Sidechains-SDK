@@ -10,6 +10,5 @@ case class EthereumConsensusDataLog(
 )
 
 object EthereumConsensusDataLog {
-  def apply(log: EvmLog): EthereumConsensusDataLog =
-    EthereumConsensusDataLog.apply(log.address, log.topics, Option(log.data).getOrElse(Array.empty))
+  def apply(log: EvmLog): EthereumConsensusDataLog = EthereumConsensusDataLog.apply(log.address, log.topics, log.data)
 }

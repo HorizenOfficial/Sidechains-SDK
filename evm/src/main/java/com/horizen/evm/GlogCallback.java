@@ -1,14 +1,12 @@
 package com.horizen.evm;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 
 class GlogCallback extends LibEvmCallback {
-    private static final ObjectMapper mapper = new ObjectMapper();
-
     private final Logger logger;
 
     GlogCallback(Logger logger) {
@@ -18,7 +16,8 @@ class GlogCallback extends LibEvmCallback {
     @Override
     public String invoke(String args) {
         try {
-            var data = mapper.readValue(args, HashMap.class);
+            HashMap<String, Object> data =
+                Converter.fromJson(args, TypeFactory.defaultInstance().constructType(HashMap.class));
             // parse and remove known properties from the map
             var level = glogToLog4jLevel((String) data.remove("lvl"));
             var file = data.remove("file");

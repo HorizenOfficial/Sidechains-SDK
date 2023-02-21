@@ -1,33 +1,11 @@
 package com.horizen.evm;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.horizen.evm.utils.BigIntegerDeserializer;
-import com.horizen.evm.utils.BigIntegerSerializer;
 import com.sun.jna.FromNativeContext;
 import com.sun.jna.NativeMapped;
 import com.sun.jna.Pointer;
 
-import java.io.IOException;
-import java.math.BigInteger;
-
 public class JsonPointer implements NativeMapped {
-    private static final ObjectMapper mapper;
-
-    static {
-        var module = new SimpleModule();
-        module.addSerializer(BigInteger.class, new BigIntegerSerializer());
-        module.addDeserializer(BigInteger.class, new BigIntegerDeserializer());
-        mapper = new ObjectMapper();
-        mapper.registerModule(module);
-        // do not serialize null or empty values
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-    }
-
     private final String json;
 
     public JsonPointer() {
@@ -64,11 +42,7 @@ public class JsonPointer implements NativeMapped {
      */
     @Override
     public Object toNative() {
-        try {
-            return mapper.writeValueAsString(this);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(e);
-        }
+        return Converter.toJson(this);
     }
 
     @Override
@@ -84,10 +58,6 @@ public class JsonPointer implements NativeMapped {
      * @return object instance deserialized from json
      */
     public <T> T deserialize(JavaType type) {
-        try {
-            return mapper.readValue(json, type);
-        } catch (IOException e) {
-            throw new IllegalArgumentException(e);
-        }
+        return Converter.fromJson(json, type);
     }
 }
