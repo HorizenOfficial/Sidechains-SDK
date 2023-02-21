@@ -63,7 +63,7 @@ final class LibEvm {
 
     /**
      * When receiving data from native we expect it to be a pointer to a standard C string, i.e. null-terminated
-     * character array, that is copied to a Java String and free'ed on the native end.
+     * character array, that is copied to a Java String and freed on the native end.
      */
     private static String readNativeString(Pointer ptr) {
         if (ptr == null) return null;

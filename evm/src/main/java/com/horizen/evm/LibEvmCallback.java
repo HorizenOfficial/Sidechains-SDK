@@ -56,6 +56,7 @@ abstract class LibEvmCallback implements AutoCloseable {
     static class CallbackProxy implements Callback {
         public String callback(int handle, Pointer msg) {
             try {
+                // we do not need to free the Pointer here, as it is freed on the libevm side when the callback returns
                 return invoke(handle, msg.getString(0));
             } catch (Exception e) {
                 // note: make sure we do not throw any exception here because this callback is called by native code
