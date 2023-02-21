@@ -1,8 +1,6 @@
 package com.horizen.evm.params;
 
-import com.horizen.evm.JsonPointer;
-
-public class HandleParams extends JsonPointer {
+public class HandleParams {
     public final int handle;
 
     public HandleParams(int handle) {

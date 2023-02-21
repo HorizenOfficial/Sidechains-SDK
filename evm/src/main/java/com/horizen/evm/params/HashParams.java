@@ -1,8 +1,6 @@
 package com.horizen.evm.params;
 
-import com.horizen.evm.JsonPointer;
-
-public class HashParams extends JsonPointer {
+public class HashParams {
     public final byte[][] values;
 
     public HashParams(byte[][] values) {

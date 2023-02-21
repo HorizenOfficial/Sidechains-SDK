@@ -13,7 +13,7 @@ final class LibEvm {
 
     private static native void SetupLogging(int callbackHandle, String level);
 
-    private static native JsonPointer Invoke(String method, JsonPointer args);
+    private static native Pointer Invoke(String method, String args);
 
     private static final Logger logger = LogManager.getLogger();
     private static final GlogCallback logCallback = new GlogCallback(logger);
@@ -62,15 +62,32 @@ final class LibEvm {
     }
 
     /**
+     * When receiving data from native we expect it to be a pointer to a standard C string, i.e. null-terminated
+     * character array, that is copied to a Java String and free'ed on the native end.
+     */
+    private static String readNativeString(Pointer ptr) {
+        if (ptr == null) return null;
+        try {
+            // copy string from native memory
+            return ptr.getString(0);
+        } finally {
+            // free the string pointer on the native end
+            LibEvm.Free(ptr);
+        }
+    }
+
+    /**
      * Invoke function that has arguments and a return value.
      */
-    static <R> R invoke(String method, JsonPointer args, Class<R> responseType) {
-        var json = Invoke(method, args);
+    static <R> R invoke(String method, Object args, Class<R> responseType) {
+        var argsJson = args == null ? null : Converter.toJson(args);
+        var ptr = Invoke(method, argsJson);
+        var json = readNativeString(ptr);
         // build type information to deserialize to generic type InteropResult<R>
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
-        InteropResult<R> response = json.deserialize(type);
+        InteropResult<R> response = Converter.fromJson(json, type);
         if (response.isError()) {
-            throw new LibEvmException(response.error, method, args);
+            throw new LibEvmException(response.error, method, argsJson);
         }
         return response.result;
     }
@@ -85,7 +102,7 @@ final class LibEvm {
     /**
      * Invoke function that has arguments, but no return value.
      */
-    static void invoke(String method, JsonPointer args) {
+    static void invoke(String method, Object args) {
         invoke(method, args, Void.class);
     }
 
