@@ -116,8 +116,12 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
     }
 
     @Override
-    public boolean propositionIsValid(byte[] propositionBytes) {
+    public boolean publicKeyIsValid(byte[] propositionBytes) {
         SchnorrPublicKey proposition = SchnorrPublicKey.deserialize(propositionBytes);
+        if (proposition == null) {
+            return false;
+        }
+
         boolean keyIsValid = proposition.verifyKey();
         proposition.freePublicKey();
 

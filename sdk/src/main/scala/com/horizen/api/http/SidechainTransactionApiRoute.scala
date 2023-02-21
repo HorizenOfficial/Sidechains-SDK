@@ -168,7 +168,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                   PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
                   new lang.Long(element.value),
                   PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
-                  VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+                  VrfPublicKeySerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.vrfPubKey))
                 )
 
                 outputs.add(forgerBoxToAdd.asInstanceOf[BoxData[Proposition, Box[Proposition]]])
@@ -374,7 +374,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                   PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
                   element.value,
                   PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
-                  VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+                  VrfPublicKeySerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.vrfPubKey))
                 )
 
                 outputs.add(forgerBoxToAdd.asInstanceOf[BoxData[Proposition, Box[Proposition]]])
@@ -494,7 +494,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                       fee,
                       body.keyType,
                       body.keyIndex,
-                      SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey)),
+                      SchnorrPropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(body.newKey)),
                       SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.signingKeySignature)),
                       SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.masterKeySignature)),
                       SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature)),

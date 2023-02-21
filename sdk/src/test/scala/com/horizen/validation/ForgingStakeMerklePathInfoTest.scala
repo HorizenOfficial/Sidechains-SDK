@@ -14,7 +14,6 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import java.nio.charset.StandardCharsets
 
-import java.nio.charset.StandardCharsets
 
 class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
   val vrfGenerationSeed = 907

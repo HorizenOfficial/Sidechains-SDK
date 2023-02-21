@@ -9,8 +9,6 @@ import sparkz.crypto.hash.Keccak256
 
 import java.nio.charset.StandardCharsets
 
-import java.nio.charset.StandardCharsets
-
 class BloomTest
     extends JUnitSuite
     with MockitoSugar

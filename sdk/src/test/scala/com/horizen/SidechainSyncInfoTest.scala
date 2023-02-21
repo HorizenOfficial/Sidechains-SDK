@@ -10,7 +10,6 @@ import sparkz.util.ModifierId
 
 import java.nio.charset.StandardCharsets
 
-import java.nio.charset.StandardCharsets
 
 class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val size: Int = 255

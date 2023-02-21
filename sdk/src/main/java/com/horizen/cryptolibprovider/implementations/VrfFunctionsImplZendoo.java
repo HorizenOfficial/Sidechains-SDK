@@ -61,6 +61,10 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     @Override
     public boolean publicKeyIsValid(byte[] publicKeyBytes) {
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
+        if (publicKey == null) {
+            return false;
+        }
+
         boolean keyIsValid = publicKey.verifyKey();
         publicKey.freePublicKey();
 

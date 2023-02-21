@@ -30,8 +30,8 @@ public class SchnorrProposition
             throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, publicKey.length));
         }
 
-        if (checkPublicKey && !CryptoLibProvider.schnorrFunctions().propositionIsValid(publicKey)) {
-            throw new IllegalArgumentException("Public keyis not valid.");
+        if (checkPublicKey && !CryptoLibProvider.schnorrFunctions().publicKeyIsValid(publicKey)) {
+            throw new IllegalArgumentException("Public key is not valid.");
         }
 
         publicBytes = Arrays.copyOf(publicKey, publicKey.length);
@@ -73,6 +73,6 @@ public class SchnorrProposition
     }
 
     public boolean isValid() {
-        return CryptoLibProvider.schnorrFunctions().propositionIsValid(pubKeyBytes());
+        return CryptoLibProvider.schnorrFunctions().publicKeyIsValid(pubKeyBytes());
     }
 }

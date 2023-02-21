@@ -16,8 +16,6 @@ import sparkz.util.{ModifierId, bytesToId}
 
 import java.nio.charset.StandardCharsets
 
-import java.nio.charset.StandardCharsets
-
 
 class sc_node_holder_fixter_settings extends CompanionsFixture {
   private val seed = 49850L

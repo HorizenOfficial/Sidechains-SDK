@@ -28,5 +28,5 @@ public interface SchnorrFunctions {
 
     int schnorrSignatureLength();
 
-    boolean propositionIsValid(byte[] propositionBytes);
+    boolean publicKeyIsValid(byte[] propositionBytes);
 }
