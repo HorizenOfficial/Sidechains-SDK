@@ -822,12 +822,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         "0x1234567891011121314151617181920212223242",
         "latest",
-        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":[]}"""
       ),
       (
         "0x1234567890123456789012345678901234567890",
         "latest",
-        """{"address":"0x1234567890123456789012345678901234567890","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+        """{"address":"0x1234567890123456789012345678901234567890","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":[]}"""
       )
     )
 

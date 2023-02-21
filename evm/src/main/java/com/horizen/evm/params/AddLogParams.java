@@ -1,18 +1,14 @@
 package com.horizen.evm.params;
 
-import com.horizen.evm.Address;
-import com.horizen.evm.Hash;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.horizen.evm.results.EvmLog;
 
 public class AddLogParams extends HandleParams {
-    public final Address address;
-    public final Hash[] topics;
-    public final byte[] data;
+    @JsonUnwrapped
+    public final EvmLog log;
 
-    public AddLogParams(int handle, EvmLog evmLog) {
+    public AddLogParams(int handle, EvmLog log) {
         super(handle);
-        this.address = evmLog.address;
-        this.topics = evmLog.topics;
-        this.data = evmLog.data;
+        this.log = log;
     }
 }

@@ -332,7 +332,7 @@ class StateDbAccountStateView(
   override def getCode(address: Address): Array[Byte] = stateDb.getCode(address)
 
   override def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog] =
-    stateDb.getLogs(new Hash(txHash)).map(EthereumConsensusDataLog.apply)
+    stateDb.getLogs(new Hash(txHash)).map(log => EthereumConsensusDataLog.apply(log.address, log.topics, log.data))
 
   override def addLog(log: EthereumConsensusDataLog): Unit =
     stateDb.addLog(new EvmLog(log.address, log.topics, log.data))
