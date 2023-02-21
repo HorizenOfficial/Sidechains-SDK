@@ -14,10 +14,10 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
-import com.horizen.evm._
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import io.horizen.evm._
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider

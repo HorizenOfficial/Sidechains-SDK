@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
-import com.horizen.evm.Address
 import com.horizen.fixtures.SecretFixture
+import io.horizen.evm.Address
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}

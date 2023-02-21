@@ -2,7 +2,7 @@ package com.horizen.account.state
 
 import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.evm.{Address, ResourceHandle}
+import io.horizen.evm.{Address, ResourceHandle}
 
 import java.math.BigInteger
 

@@ -1,6 +1,6 @@
 package com.horizen.account.utils
 
-import com.horizen.evm.Address
+import io.horizen.evm.Address
 
 object WellKnownAddresses {
 

@@ -27,9 +27,9 @@ import static org.junit.Assert.*;
 public class EthereumEventTest {
 
     // helper because we have a namespace collision here between org.web3j.abi.datatypes.Address and our
-    // com.horizen.evm.Address - which is why we need to use the fully qualified name
-    private com.horizen.evm.Address evmAddressFromHex(String hex) {
-        return new com.horizen.evm.Address(hex);
+    // io.horizen.evm.Address - which is why we need to use the fully qualified name
+    private io.horizen.evm.Address evmAddressFromHex(String hex) {
+        return new io.horizen.evm.Address(hex);
     }
 
     @Test

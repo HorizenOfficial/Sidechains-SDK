@@ -1,10 +1,10 @@
 package com.horizen.account.state;
 
 import com.horizen.account.block.AccountBlockHeader;
-import com.horizen.evm.results.EvmResult;
-import com.horizen.evm.TraceOptions;
-import com.horizen.evm.Address;
-import com.horizen.evm.Hash;
+import io.horizen.evm.results.EvmResult;
+import io.horizen.evm.TraceOptions;
+import io.horizen.evm.Address;
+import io.horizen.evm.Hash;
 
 import java.math.BigInteger;
 

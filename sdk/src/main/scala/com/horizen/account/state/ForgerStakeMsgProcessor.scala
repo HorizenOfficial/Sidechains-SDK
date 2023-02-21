@@ -10,11 +10,11 @@ import com.horizen.account.state.ForgerStakeMsgProcessor._
 import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
-import com.horizen.evm.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.Address
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
 
 import java.math.BigInteger

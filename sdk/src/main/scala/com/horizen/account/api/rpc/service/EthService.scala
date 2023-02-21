@@ -23,13 +23,13 @@ import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, Fe
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.results.ProofAccountResult
-import com.horizen.evm.{Address, Hash, TraceOptions}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
+import io.horizen.evm.{Address, Hash, TraceOptions}
+import io.horizen.evm.results.ProofAccountResult
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity

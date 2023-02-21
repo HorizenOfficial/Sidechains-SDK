@@ -13,12 +13,12 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.evm.{Address, Database}
 import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import com.horizen.{SidechainSettings, SidechainTypes, WalletSettings}
+import io.horizen.evm.{Address, Database}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

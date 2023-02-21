@@ -1,9 +1,9 @@
 package com.horizen.account.state;
 
-import com.horizen.evm.BlockHashCallback;
-import com.horizen.evm.Evm;
-import com.horizen.evm.EvmContext;
-import com.horizen.evm.Hash;
+import io.horizen.evm.BlockHashCallback;
+import io.horizen.evm.Evm;
+import io.horizen.evm.EvmContext;
+import io.horizen.evm.Hash;
 import com.horizen.utils.BytesUtils;
 import scala.compat.java8.OptionConverters;
 

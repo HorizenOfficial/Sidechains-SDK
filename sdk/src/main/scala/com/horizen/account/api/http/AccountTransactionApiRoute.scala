@@ -26,7 +26,6 @@ import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRot
 import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.evm.Address
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{SchnorrSignatureSerializer, Signature25519}
@@ -34,6 +33,7 @@ import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey2
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.Address
 import sparkz.core.settings.RESTApiSettings
 import java.math.BigInteger
 import java.util.{Optional => JOptional}

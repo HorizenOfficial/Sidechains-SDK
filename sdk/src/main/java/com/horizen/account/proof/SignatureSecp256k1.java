@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Secp256k1;
-import com.horizen.evm.Address;
+import io.horizen.evm.Address;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.serialization.Views;

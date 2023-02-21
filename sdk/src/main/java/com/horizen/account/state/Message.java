@@ -1,6 +1,6 @@
 package com.horizen.account.state;
 
-import com.horizen.evm.Address;
+import io.horizen.evm.Address;
 import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 

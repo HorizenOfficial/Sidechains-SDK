@@ -18,11 +18,11 @@ import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionTy
 import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActorRef
-import com.horizen.evm.Address
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
 import com.horizen.{EthServiceSettings, SidechainTypes}
+import io.horizen.evm.Address
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite

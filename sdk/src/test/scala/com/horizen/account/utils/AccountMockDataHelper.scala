@@ -19,8 +19,6 @@ import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, Sidechai
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
-import com.horizen.evm.results.ProofAccountResult
-import com.horizen.evm.{Address, Hash, StateDB}
 import com.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
@@ -30,6 +28,8 @@ import com.horizen.storage.{SidechainSecretStorage, Storage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
+import io.horizen.evm.{Address, Hash, StateDB}
+import io.horizen.evm.results.ProofAccountResult
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite

@@ -2,7 +2,7 @@ package com.horizen.account.state
 
 import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.utils.BigIntegerUtil
-import com.horizen.evm.Hash
+import io.horizen.evm.Hash
 import org.junit.Assert.assertEquals
 import org.junit._
 import org.scalatest.prop.TableDrivenPropertyChecks

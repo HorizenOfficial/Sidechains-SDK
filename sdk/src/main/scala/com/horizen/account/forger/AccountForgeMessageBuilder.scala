@@ -19,7 +19,6 @@ import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
-import com.horizen.evm.Hash
 import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -39,6 +38,7 @@ import com.horizen.utils.{
   WithdrawalEpochUtils
 }
 import com.horizen.vrf.VrfOutput
+import io.horizen.evm.Hash
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 import sparkz.util.{ModifierId, bytesToId}

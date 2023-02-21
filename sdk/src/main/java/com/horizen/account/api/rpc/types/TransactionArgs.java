@@ -9,7 +9,7 @@ import com.horizen.account.state.Message;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionUtils;
-import com.horizen.evm.Address;
+import io.horizen.evm.Address;
 import com.horizen.params.NetworkParams;
 import org.web3j.utils.Numeric;
 

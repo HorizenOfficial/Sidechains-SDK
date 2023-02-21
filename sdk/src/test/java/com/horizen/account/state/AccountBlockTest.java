@@ -3,7 +3,7 @@ package com.horizen.account.state;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.receipt.EthereumConsensusDataReceipt;
 import com.horizen.account.receipt.ReceiptFixture;
-import com.horizen.evm.Address;
+import io.horizen.evm.Address;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 import scala.Option;

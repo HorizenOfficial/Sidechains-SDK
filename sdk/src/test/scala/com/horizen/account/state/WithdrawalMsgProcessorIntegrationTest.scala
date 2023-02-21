@@ -3,8 +3,8 @@ package com.horizen.account.state
 import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
-import com.horizen.evm.{Address, Hash}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.evm.{Address, Hash}
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite

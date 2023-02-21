@@ -16,11 +16,11 @@ import com.horizen.block.{
 }
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.evm.results.{EvmLog, ProofAccountResult}
-import com.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
+import io.horizen.evm.results.{EvmLog, ProofAccountResult}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 

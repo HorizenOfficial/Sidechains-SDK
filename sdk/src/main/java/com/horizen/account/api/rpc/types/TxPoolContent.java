@@ -1,6 +1,6 @@
 package com.horizen.account.api.rpc.types;
 
-import com.horizen.evm.Address;
+import io.horizen.evm.Address;
 
 import java.math.BigInteger;
 import java.util.Map;

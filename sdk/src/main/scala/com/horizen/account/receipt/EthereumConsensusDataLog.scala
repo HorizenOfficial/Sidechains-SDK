@@ -1,7 +1,7 @@
 package com.horizen.account.receipt
 
-import com.horizen.evm.{Address, Hash}
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.{Address, Hash}
 
 import java.util
 

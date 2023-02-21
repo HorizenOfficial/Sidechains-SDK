@@ -5,11 +5,11 @@ import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.utils.BigIntegerUInt256
-import com.horizen.evm.Address
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Ed25519}
+import io.horizen.evm.Address
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
