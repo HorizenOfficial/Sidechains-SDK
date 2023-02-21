@@ -23,19 +23,19 @@ public class RpcRequest {
         for (var field : mandatoryFields) {
             if (!json.has(field)) {
                 throw new RpcException(
-                    RpcError.fromCode(RpcCode.ParseError, String.format("missing field: %s", field)));
+                    RpcError.fromCode(RpcCode.InvalidRequest, String.format("missing field: %s", field)));
             }
         }
         for (var field : stringFields) {
             if (!json.get(field).isTextual()) {
                 throw new RpcException(
-                    RpcError.fromCode(RpcCode.ParseError, String.format("field must be string: %s", field)));
+                    RpcError.fromCode(RpcCode.InvalidRequest, String.format("field must be string: %s", field)));
             }
         }
         try {
             id = new RpcId(json.get("id"));
         } catch (IllegalArgumentException e) {
-            throw new RpcException(RpcError.fromCode(RpcCode.ParseError, e.getMessage()));
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidRequest, e.getMessage()));
         }
         jsonrpc = json.get("jsonrpc").asText();
         method = json.get("method").asText();

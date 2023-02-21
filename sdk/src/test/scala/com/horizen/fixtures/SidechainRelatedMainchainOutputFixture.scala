@@ -10,7 +10,8 @@ import scala.util.Random
 
 trait SidechainRelatedMainchainOutputFixture extends SecretFixture {
 
-  def getForwardTransfer(proposition: PublicKey25519Proposition, sidechainId: Array[Byte]): ForwardTransfer = {
+  def getForwardTransfer(proposition: PublicKey25519Proposition, sidechainId: Array[Byte], seed: Long = 12345): ForwardTransfer = {
+    Random.setSeed(seed)
     val output = new MainchainTxForwardTransferCrosschainOutput(new Array[Byte](1), sidechainId,
       Random.nextInt(10000), BytesUtils.reverseBytes(proposition.bytes()), getMcReturnAddress)
     val forwardTransferHash = new Array[Byte](32)

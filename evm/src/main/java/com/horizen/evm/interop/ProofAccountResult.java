@@ -14,9 +14,18 @@ public class ProofAccountResult {
     public Hash storageHash;
     public ProofStorageResult[] storageProof;
 
+    public ProofAccountResult() {
+        accountProof = new String[0];
+        storageProof = new ProofStorageResult[0];
+    }
+
     public static class ProofStorageResult {
         public String key;
         public BigInteger value;
         public String[] proof;
+
+        public ProofStorageResult() {
+            proof = new String[0];
+        }
     }
 }

@@ -281,7 +281,7 @@ public class StateDBTest extends LibEvmTestBase {
                 statedb.addBalance(address, BigInteger.TEN);
                 statedb.setStorage(
                         address,
-                        new Hash((byte[]) Keccak256.hash(Hash.ZERO.toBytes())),
+                        Hash.ZERO,
                         padToHash(RlpEncoder.encode(RlpString.create(bytes("94de74da73d5102a796559933296c73e7d1c6f37fb"))))
                 );
                 statedb.setStorage(
@@ -293,21 +293,25 @@ public class StateDBTest extends LibEvmTestBase {
 
                 statedb.commit();
 
-                // this should throw an exception as the storageProof's length is always 0
-                assertThrows(
-                        InvokeException.class,
-                        () -> statedb.getProof(
-                                address,
-                                new Hash[]{Hash.ZERO})
-                );
-
                 // this should return the account proof with code hash, updated balance, empty storageProof
-                var proofAccountResult = statedb.getProof(
-                        address,
-                        null
+                var resultA = statedb.getProof(address, null);
+                assertEquals(BigInteger.TEN, resultA.balance);
+                assertEquals(1, resultA.accountProof.length);
+                assertEquals(0, resultA.storageProof.length);
+
+                var resultB = statedb.getProof(address, new Hash[] {Hash.ZERO});
+                assertEquals(BigInteger.TEN, resultB.balance);
+                assertEquals(1, resultB.accountProof.length);
+                assertEquals(1, resultB.storageProof.length);
+                assertEquals(2, resultB.storageProof[0].proof.length);
+                assertEquals(
+                    "0xf8518080a0cd5ca8a057cdc46dd649378e1cfbf1e166d25321c859d2918c955c48baf18f2d8080808080808080a08b7da99e493f28ab906f59591750bb1f2058beb82ab748f1cc2b66d4cf499f608080808080",
+                    resultB.storageProof[0].proof[0]
                 );
-                assertTrue(proofAccountResult.accountProof.length > 0);
-                assertEquals(0, proofAccountResult.storageProof.length);
+                assertEquals(
+                    "0xf839a0390decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56397969594de74da73d5102a796559933296c73e7d1c6f37fb",
+                    resultB.storageProof[0].proof[1]
+                );
             }
         }
     }
