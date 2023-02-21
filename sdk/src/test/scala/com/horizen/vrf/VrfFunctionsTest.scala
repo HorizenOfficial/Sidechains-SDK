@@ -1,13 +1,12 @@
 package com.horizen.vrf
 
-import java.util
-
-import com.horizen.cryptolibprovider.VrfFunctions.{KeyType, ProofType}
 import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.VrfFunctions.{KeyType, ProofType}
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
 
+import java.util
 import scala.util.Random
 
 
@@ -46,7 +45,7 @@ class VrfFunctionsTest {
       val secondVrfOutputBytes = CryptoLibProvider.vrfFunctions.proofToOutput(publicBytes, newMessage, secondVrfProofBytes).get
 
       assertEquals(firstVrfOutputBytes.deep, secondVrfOutputBytes.deep)
-      println(s"Vrf output determinism check: iteration ${i}, for message len ${newMessage.length}")
+      println(s"Vrf output determinism check: iteration $i, for message len ${newMessage.length}")
     }
   }
 
