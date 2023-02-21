@@ -1,13 +1,15 @@
 package com.horizen.account.sc2sc
 
 import java.math.BigInteger
+
 import com.google.common.primitives.Bytes
 import com.horizen.account.abi.ABIUtil.getFunctionSignature
-import com.horizen.account.state.{AccountStateViewGasTracked,  BaseAccountStateView, BlockContext, ExecutionFailedException, ExecutionRevertedException, GasPool, Message, MessageProcessorFixture, WithdrawalMsgProcessor}
+import com.horizen.account.state.{BaseAccountStateView, BlockContext, ExecutionFailedException, ExecutionRevertedException, GasPool, Message, MessageProcessorFixture, WithdrawalMsgProcessor}
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.BytesUtils
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 
 trait CrossChainMessageProcessorFixture extends MessageProcessorFixture {
 
@@ -26,12 +28,12 @@ trait CrossChainMessageProcessorFixture extends MessageProcessorFixture {
 
 class CrossChainMessageProcessorTestImpl(networkParams: NetworkParams)  extends AbstractCrossChainMessageProcessor(networkParams)  {
 
-  override val contractAddress: Array[Byte] = CrossChainMessageProcessorTestImpl.contractAddress
+  override val contractAddress: Address = CrossChainMessageProcessorTestImpl.contractAddress
   override val contractCode: Array[Byte] =   CrossChainMessageProcessorTestImpl.contractCode
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = new AccountStateViewGasTracked(view, gas)
+    val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case CrossChainMessageProcessorTestImpl.GetListOfCrosschainMessagesCmdSig =>
         execGetListOfCrosschainMessages(msg, gasView)
@@ -44,7 +46,7 @@ class CrossChainMessageProcessorTestImpl(networkParams: NetworkParams)  extends 
 }
 
 object CrossChainMessageProcessorTestImpl extends CrossChainMessageProcessorConstants {
-  override val contractAddress: Array[Byte] = BytesUtils.fromHexString("0000000000000000000001111111111111111111")
+  override val contractAddress: Address = new Address("0x35fdd51e73221f467b40946c97791a3e19799bea")
   override val contractCode: Array[Byte] = Keccak256.hash("CrossChainMessageProcessorTestImplCode")
 }
 

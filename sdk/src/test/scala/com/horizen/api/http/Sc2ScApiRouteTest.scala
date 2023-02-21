@@ -51,7 +51,7 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
     }
 
     "reply at /createRedeemMessage" in {
-      Post(basePath + "createRedeemMessage").withHeaders(apiTokenHeader)
+      Post(basePath + "createRedeemMessage").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(
           ReqCreateRedeemMessage(testCrossChainMessage)
           )) ~> sc2scApiRoute ~> check {
@@ -70,7 +70,7 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
 
     "reply with error at /createRedeemMessage" in {
       simulateEnError = true
-      Post(basePath + "createRedeemMessage").withHeaders(apiTokenHeader)
+      Post(basePath + "createRedeemMessage").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(
           ReqCreateRedeemMessage(testCrossChainMessage)
         )) ~> sc2scApiRoute ~> check {

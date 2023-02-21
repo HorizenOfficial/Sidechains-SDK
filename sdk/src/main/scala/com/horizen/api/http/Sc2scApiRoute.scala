@@ -55,7 +55,8 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
     * Return a redeem message from  a previously posted CrossChainMessage
     */
   def createRedeemMessage: Route = (post & path("createRedeemMessage")) {
-    withAuth {
+    withBasicAuth {
+      _ =>
       entity(as[ReqCreateRedeemMessage]) { body =>
 
         val crossChainMessage = new CrossChainMessageImpl(

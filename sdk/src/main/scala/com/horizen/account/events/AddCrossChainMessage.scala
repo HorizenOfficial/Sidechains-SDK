@@ -1,9 +1,9 @@
 package com.horizen.account.events
 
 import com.horizen.account.event.annotation.{Indexed, Parameter}
-import org.web3j.abi.datatypes.{Address, DynamicBytes}
+import org.web3j.abi.datatypes.{DynamicBytes}
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint256, Uint32}
-
+import com.horizen.evm.utils.Address
 import scala.annotation.meta.getter
 
 

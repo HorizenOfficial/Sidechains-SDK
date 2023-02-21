@@ -107,7 +107,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     // With some cross chain messages from different providers
     var fakeMessages : List[CrossChainMessage] = List()
     (0 until 3).foreach(index => {
-      fakeMessages = fakeMessages :+  AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount( getRandomAccountCrossMessage(index), params)
+      fakeMessages = fakeMessages :+  AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount( getRandomAccountCrossMessage(index), mockNetworkParams)
     })
 
     Mockito
@@ -135,7 +135,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     assertEquals("Crosschain message hash epoch incorrect",  epochNum, stateView.getCrossChainMessageHashEpoch(messageHash).get)
 
   }
-}
+
   @Test
   def testNullRecords(): Unit = {
     usingView(forgerStakeMessageProcessor) { view =>

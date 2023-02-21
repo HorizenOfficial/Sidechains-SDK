@@ -20,10 +20,10 @@ import com.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.websocket.client.MainchainNodeChannel
-import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.transaction.MemoryPool
+import sparkz.util.SparkzLogging
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -47,7 +47,7 @@ class Sc2ScProver [
                         )
                        (implicit ec: ExecutionContext) extends Actor
   with Timers
-  with ScorexLogging
+  with SparkzLogging
   with Sc2ScUtils[TX, H, PM, MS, HIS]
 {
 

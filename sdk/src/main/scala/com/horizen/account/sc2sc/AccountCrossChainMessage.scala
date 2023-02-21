@@ -3,7 +3,7 @@ package com.horizen.account.sc2sc
 import com.horizen.account.abi.ABIEncodable
 import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import org.web3j.abi.datatypes.generated.Uint32
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 case class AccountCrossChainMessage

@@ -7,26 +7,27 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData}
 import com.horizen.account.events.{AddCrossChainMessage}
-import com.horizen.account.state.{BaseAccountStateView, ExecutionRevertedException, FakeSmartContractMsgProcessor,  Message}
+import com.horizen.account.state.{BaseAccountStateView, ExecutionRevertedException, NativeSmartContractMsgProcessor,  Message}
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.utils.ZenCoinsUtils
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
+import org.web3j.abi.datatypes.{StaticStruct, Type}
 import org.web3j.abi.datatypes.generated.Uint32
-import scorex.crypto.hash.Keccak256
+import sparkz.crypto.hash.Keccak256
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import com.horizen.account.state.AccountStateView
-import com.horizen.account.state.FakeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import com.horizen.params.NetworkParams
 import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageImpl, CrossChainProtocolVersion}
+import com.horizen.evm.utils.Address
 
 trait CrossChainMessageProvider {
   private[horizen] def getCrossChainMesssages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage]
   private[horizen] def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash, view: BaseAccountStateView): Option[Int]
 }
 
-abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams)  extends FakeSmartContractMsgProcessor with CrossChainMessageProvider  {
+abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams)  extends NativeSmartContractMsgProcessor with CrossChainMessageProvider  {
 
   val MaxCrosschainMessagesPerEpoch = CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
@@ -80,7 +81,7 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
       throw new ExecutionRevertedException("Reached maximum number of CrosschainMessages per epoch: request is invalid")
     }
 
-    val request = AccountCrossChainMessage(messageType, sender.toUint.getValue.toByteArray, receiverSidechain, receiver, payload)
+    val request = AccountCrossChainMessage(messageType, sender.toBytes, receiverSidechain, receiver, payload)
     val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(request, networkParams))
 
     //check for duplicates in this and other message processor, in any epoch
@@ -168,6 +169,6 @@ object CrosschainMessagesListEncoder extends ABIListEncoder[AccountCrossChainMes
 
 abstract class CrossChainMessageProcessorConstants {
   val GetListOfCrosschainMessagesCmdSig: String = getABIMethodId("getCrossChainMessages(uint32)")
-  val contractAddress: Array[Byte]
+  val contractAddress: Address
   val contractCode: Array[Byte]
 }

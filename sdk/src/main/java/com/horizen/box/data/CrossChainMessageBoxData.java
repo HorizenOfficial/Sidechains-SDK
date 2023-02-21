@@ -5,7 +5,7 @@ import com.google.common.primitives.Shorts;
 import com.horizen.box.CrossChainMessageBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.sc2sc.CrossChainProtocolVersion;
-import scorex.crypto.hash.Blake2b256;
+import sparkz.crypto.hash.Blake2b256;
 
 import java.util.Objects;
 
