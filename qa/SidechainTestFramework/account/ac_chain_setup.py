@@ -74,7 +74,7 @@ class AccountChainSetup(SidechainTestFramework):
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
-                    tx_lifetime =  self.tx_lifetime,
+                    tx_lifetime =  self.tx_lifetime
                 ))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(

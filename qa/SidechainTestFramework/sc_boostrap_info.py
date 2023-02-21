@@ -140,7 +140,7 @@ class SCNodeConfiguration(object):
                  max_account_slots=16,
                  max_mempool_slots=6144,
                  max_nonexec_pool_slots=1024,
-                 tx_lifetime=10800,
+                 tx_lifetime=10800
                  ):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
