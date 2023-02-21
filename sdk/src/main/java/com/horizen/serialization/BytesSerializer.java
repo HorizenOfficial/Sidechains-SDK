@@ -8,7 +8,7 @@ import com.horizen.utils.BytesUtils;
 
 import java.io.IOException;
 
-public class ByteUtilsSerializer extends JsonSerializer<byte[]> {
+public class BytesSerializer extends JsonSerializer<byte[]> {
 
     @Override
     public void serialize(byte[] bytes, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {

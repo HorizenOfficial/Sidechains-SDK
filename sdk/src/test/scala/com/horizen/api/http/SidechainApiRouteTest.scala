@@ -33,7 +33,6 @@ import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import com.horizen.SidechainApp
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -55,9 +54,7 @@ import sparkz.core.utils.NetworkTimeProvider
 import sparkz.crypto.hash.Blake2b256
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import com.horizen.cryptolibprovider.utils.CircuitTypes
-import org.mindrot.jbcrypt
 import org.mindrot.jbcrypt.BCrypt
-
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
@@ -307,7 +304,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           sender ! true
         }
         case GetCswBoxIds => {
-          sender ! Seq(ByteUtils.fromHexString("1111"), ByteUtils.fromHexString("2222"), ByteUtils.fromHexString("3333"))
+          sender ! Seq(BytesUtils.fromHexString("1111"), BytesUtils.fromHexString("2222"), BytesUtils.fromHexString("3333"))
         }
         case GetCswInfo(boxId) => {
           val expectedBoxId: Array[Byte] = getRandomBoxId(0)
@@ -316,11 +313,11 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           } else {
             sender ! Success(CswInfo("UtxoCswData", // pure class name
               42,
-              ByteUtils.fromHexString("ABCD"),
-              ByteUtils.fromHexString("FFFF"),
-              CswProofInfo(Absent, Some(ByteUtils.fromHexString("FBFB")), Some("SomeDestination")),
-              Some(ByteUtils.fromHexString("BBBB")),
-              ByteUtils.fromHexString("CCCC")))
+              BytesUtils.fromHexString("ABCD"),
+              BytesUtils.fromHexString("FFFF"),
+              CswProofInfo(Absent, Some(BytesUtils.fromHexString("FBFB")), Some("SomeDestination")),
+              Some(BytesUtils.fromHexString("BBBB")),
+              BytesUtils.fromHexString("CCCC")))
           }
         }
         case GetBoxNullifier(boxId) => {
@@ -328,7 +325,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           if (boxId.deep != expectedBoxId.deep) {
             sender ! Failure(new IllegalArgumentException("Box was not found for given box id."))
           } else {
-            sender ! Success(ByteUtils.fromHexString("FAFA"))
+            sender ! Success(BytesUtils.fromHexString("FAFA"))
           }
         }
         case GenerateCswProof(boxId, receiverAddress) => {

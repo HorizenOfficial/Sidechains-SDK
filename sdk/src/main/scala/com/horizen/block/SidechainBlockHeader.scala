@@ -7,9 +7,8 @@ import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
-import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
+import com.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import sparkz.util.ModifierId
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
@@ -73,7 +72,7 @@ case class SidechainBlockHeader(
 
 
   override def toString =
-    s"SidechainBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, ${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, ${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
+    s"SidechainBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, ${BytesUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${BytesUtils.toHexString(mainchainMerkleRootHash)}, ${BytesUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
 }
 
 
