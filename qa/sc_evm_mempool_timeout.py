@@ -81,7 +81,7 @@ class SCEvmMempoolTimeout(AccountChainSetup):
         response = allTransactions(sc_node_1, False)
         assert_equal(0, len(response['transactionIds']), "Wrong number of txs in mem pool")
 
-        # Check the mem pool on node 1
+        # Check the mem pool on node 2
         response = allTransactions(sc_node_2, False)
         assert_equal(0, len(response['transactionIds']), "Wrong number of txs in mem pool")
 
