@@ -19,9 +19,8 @@ import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, Sidechai
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
-import com.horizen.evm.StateDB
-import com.horizen.evm.interop.ProofAccountResult
-import com.horizen.evm.utils.{Address, Hash}
+import com.horizen.evm.results.ProofAccountResult
+import com.horizen.evm.{Address, Hash, StateDB}
 import com.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}

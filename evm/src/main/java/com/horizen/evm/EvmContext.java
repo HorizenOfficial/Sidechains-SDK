@@ -1,8 +1,5 @@
 package com.horizen.evm;
 
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
-
 import java.math.BigInteger;
 
 public class EvmContext {

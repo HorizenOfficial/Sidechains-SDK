@@ -1,7 +1,8 @@
-package com.horizen.evm.interop;
+package com.horizen.evm.params;
 
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.Address;
+import com.horizen.evm.Hash;
+import com.horizen.evm.results.EvmLog;
 
 public class AddLogParams extends HandleParams {
     public final Address address;

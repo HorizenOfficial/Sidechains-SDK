@@ -1,6 +1,6 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.LevelDBParams;
+import com.horizen.evm.params.LevelDBParams;
 
 public class LevelDBDatabase extends Database {
     /**

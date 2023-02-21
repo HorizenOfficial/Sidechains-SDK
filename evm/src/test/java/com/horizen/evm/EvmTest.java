@@ -1,9 +1,6 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.EvmResult;
-import com.horizen.evm.interop.TraceOptions;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.results.EvmResult;
 import org.junit.Test;
 
 import java.math.BigInteger;

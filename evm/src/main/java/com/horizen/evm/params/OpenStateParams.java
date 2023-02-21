@@ -1,6 +1,6 @@
-package com.horizen.evm.interop;
+package com.horizen.evm.params;
 
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.Hash;
 
 public class OpenStateParams extends DatabaseParams {
     public final Hash root;

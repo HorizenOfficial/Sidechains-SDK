@@ -1,7 +1,7 @@
-package com.horizen.evm.interop;
+package com.horizen.evm.results;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.horizen.evm.utils.Address;
+import com.horizen.evm.Address;
 
 import java.math.BigInteger;
 

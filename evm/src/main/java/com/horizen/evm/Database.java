@@ -1,6 +1,6 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.DatabaseParams;
+import com.horizen.evm.params.DatabaseParams;
 
 public abstract class Database extends ResourceHandle {
     public Database(int handle) {

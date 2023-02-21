@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.horizen.evm.utils.Address
+import com.horizen.evm.Address
 import org.junit.Assert.{assertFalse, assertNotNull, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}

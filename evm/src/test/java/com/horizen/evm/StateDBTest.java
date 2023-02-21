@@ -1,9 +1,7 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.HandleParams;
-import com.horizen.evm.interop.OpenStateParams;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.params.HandleParams;
+import com.horizen.evm.params.OpenStateParams;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -160,7 +158,7 @@ public class StateDBTest extends LibEvmTestBase {
                 assertTrue("account must not exist in an empty state", statedb.isEmpty(origin));
                 // writing to an "empty" account should fail:
                 // this is a safety precaution, because empty accounts will be pruned, even if the storage is not empty
-                assertThrows(InvokeException.class, () -> statedb.setStorage(origin, key, validValue));
+                assertThrows(LibEvmException.class, () -> statedb.setStorage(origin, key, validValue));
                 // make sure the account is not "empty"
                 statedb.setNonce(origin, BigInteger.ONE);
                 assertEquals(

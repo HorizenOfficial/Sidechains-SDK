@@ -1,7 +1,6 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.HashParams;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.params.HashParams;
 
 public final class TrieHasher {
     private TrieHasher() {}

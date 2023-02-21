@@ -1,7 +1,7 @@
-package com.horizen.evm.interop;
+package com.horizen.evm.results;
 
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.Address;
+import com.horizen.evm.Hash;
 
 public class EvmLog {
     public final Address address;

@@ -9,7 +9,7 @@ import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMA
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.evm.utils.Address
+import com.horizen.evm.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}

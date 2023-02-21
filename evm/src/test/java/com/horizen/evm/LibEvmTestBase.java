@@ -1,8 +1,5 @@
 package com.horizen.evm;
 
-import com.horizen.evm.utils.Converter;
-import com.horizen.evm.utils.Hash;
-
 import java.util.Arrays;
 
 public class LibEvmTestBase {

@@ -1,4 +1,4 @@
-package com.horizen.evm.interop;
+package com.horizen.evm;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;

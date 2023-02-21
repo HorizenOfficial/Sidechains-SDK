@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.account.receipt.EthereumConsensusDataLog
-import com.horizen.evm.utils.Address
+import com.horizen.evm.Address
 
 import java.math.BigInteger
 

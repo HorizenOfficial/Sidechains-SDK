@@ -1,4 +1,4 @@
-package com.horizen.evm.interop;
+package com.horizen.evm.params;
 
 import java.math.BigInteger;
 

@@ -3,7 +3,7 @@ package com.horizen.account
 import com.fasterxml.jackson.databind.node.JsonNodeType
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.horizen.account.serialization.EthJsonMapper
-import com.horizen.evm.utils.Address
+import com.horizen.evm.Address
 import org.junit.Assert.assertEquals
 
 import java.math.BigInteger

@@ -7,7 +7,7 @@ import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.evm.utils.Address
+import com.horizen.evm.Address
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}

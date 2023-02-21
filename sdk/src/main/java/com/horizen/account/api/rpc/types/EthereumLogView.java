@@ -2,8 +2,8 @@ package com.horizen.account.api.rpc.types;
 
 import com.horizen.account.receipt.EthereumConsensusDataLog;
 import com.horizen.account.receipt.EthereumReceipt;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.Address;
+import com.horizen.evm.Hash;
 
 import java.math.BigInteger;
 

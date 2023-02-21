@@ -1,8 +1,8 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.*;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.params.*;
+import com.horizen.evm.results.EvmLog;
+import com.horizen.evm.results.ProofAccountResult;
 
 import java.math.BigInteger;
 

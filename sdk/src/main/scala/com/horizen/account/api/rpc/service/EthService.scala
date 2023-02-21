@@ -23,8 +23,8 @@ import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, Fe
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.{ProofAccountResult, TraceOptions}
-import com.horizen.evm.utils.{Address, Hash}
+import com.horizen.evm.results.ProofAccountResult
+import com.horizen.evm.{Address, Hash, TraceOptions}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException

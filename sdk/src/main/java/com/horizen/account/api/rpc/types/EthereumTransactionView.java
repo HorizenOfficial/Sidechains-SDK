@@ -3,8 +3,8 @@ package com.horizen.account.api.rpc.types;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.Address;
+import com.horizen.evm.Hash;
 import com.horizen.utils.BytesUtils;
 
 import java.math.BigInteger;

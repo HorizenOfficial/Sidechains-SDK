@@ -70,13 +70,7 @@ final class LibEvm {
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
         InteropResult<R> response = json.deserialize(type);
         if (response.isError()) {
-            var message = String.format(
-                "Error: \"%s\" occurred for method %s, with arguments %s",
-                response.error,
-                method,
-                args == null ? null : args.toNative()
-            );
-            throw new InvokeException(message);
+            throw new LibEvmException(response.error, method, args);
         }
         return response.result;
     }

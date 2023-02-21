@@ -1,4 +1,4 @@
-package com.horizen.evm.utils;
+package com.horizen.evm;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -11,39 +11,39 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.io.IOException;
 
-@JsonSerialize(using = Address.Serializer.class)
-@JsonDeserialize(using = Address.Deserializer.class)
-public class Address extends FixedSizeByteArray {
-    public static final int LENGTH = 20;
+@JsonSerialize(using = Hash.Serializer.class)
+@JsonDeserialize(using = Hash.Deserializer.class)
+public class Hash extends FixedSizeByteArray {
+    public static final int LENGTH = 32;
 
     /**
-     * Zero address: 0x0000000000000000000000000000000000000000
+     * Zero hash: 0x0000000000000000000000000000000000000000000000000000000000000000
      */
-    public static final Address ZERO = new Address(new byte[LENGTH]);
+    public static final Hash ZERO = new Hash(new byte[LENGTH]);
 
-    public Address(byte[] bytes) {
+    public Hash(byte[] bytes) {
         super(LENGTH, bytes);
     }
 
-    public Address(String hex) {
+    public Hash(String hex) {
         super(LENGTH, hex);
     }
 
-    public static class Serializer extends JsonSerializer<Address> {
+    public static class Serializer extends JsonSerializer<Hash> {
         @Override
         public void serialize(
-            Address address, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
+            Hash hash, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
         ) throws IOException {
-            jsonGenerator.writeString(address.toString());
+            jsonGenerator.writeString(hash.toString());
         }
     }
 
-    public static class Deserializer extends JsonDeserializer<Address> {
+    public static class Deserializer extends JsonDeserializer<Hash> {
         @Override
-        public Address deserialize(
+        public Hash deserialize(
             JsonParser jsonParser, DeserializationContext deserializationContext
         ) throws IOException {
-            return new Address(jsonParser.getText());
+            return new Hash(jsonParser.getText());
         }
     }
 }

@@ -8,7 +8,7 @@ import com.horizen.account.state.Message;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionEncoder;
 import com.horizen.account.utils.Secp256k1;
-import com.horizen.evm.utils.Address;
+import com.horizen.evm.Address;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;

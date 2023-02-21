@@ -1,6 +1,5 @@
 package com.horizen.evm;
 
-import com.horizen.evm.utils.Hash;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

@@ -11,7 +11,7 @@ import com.horizen.account.state._
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
-import com.horizen.evm.utils.{Address, Hash}
+import com.horizen.evm.{Address, Hash}
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}

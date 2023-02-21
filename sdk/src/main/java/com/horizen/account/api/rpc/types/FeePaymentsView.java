@@ -1,7 +1,7 @@
 package com.horizen.account.api.rpc.types;
 
 import com.horizen.account.chain.AccountFeePaymentsInfo;
-import com.horizen.evm.utils.Address;
+import com.horizen.evm.Address;
 import scala.collection.JavaConverters;
 
 import java.math.BigInteger;

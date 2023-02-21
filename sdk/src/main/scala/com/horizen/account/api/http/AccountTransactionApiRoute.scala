@@ -26,7 +26,7 @@ import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRot
 import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.evm.utils.Address
+import com.horizen.evm.Address
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{SchnorrSignatureSerializer, Signature25519}

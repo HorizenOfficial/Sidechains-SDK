@@ -6,7 +6,7 @@ import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.evm.utils.Address
+import com.horizen.evm.Address
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.ZenCoinsUtils

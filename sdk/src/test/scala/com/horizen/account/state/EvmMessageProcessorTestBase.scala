@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.horizen.evm.utils.Address
+import com.horizen.evm.Address
 
 trait EvmMessageProcessorTestBase extends MessageProcessorFixture {
   val emptyAddress: Address = new Address("0x00000000000000000000000000000000FFFFFF02")

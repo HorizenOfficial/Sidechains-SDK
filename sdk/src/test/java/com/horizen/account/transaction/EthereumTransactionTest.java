@@ -5,7 +5,7 @@ import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
-import com.horizen.evm.utils.Address;
+import com.horizen.evm.Address;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 import org.web3j.utils.Numeric;

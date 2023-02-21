@@ -1,4 +1,4 @@
-package com.horizen.evm.utils;
+package com.horizen.evm;
 
 import java.util.Arrays;
 

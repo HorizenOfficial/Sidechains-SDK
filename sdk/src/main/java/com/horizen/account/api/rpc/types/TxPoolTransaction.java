@@ -1,8 +1,8 @@
 package com.horizen.account.api.rpc.types;
 
 import com.horizen.account.transaction.EthereumTransaction;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.Address;
+import com.horizen.evm.Hash;
 
 import java.math.BigInteger;
 

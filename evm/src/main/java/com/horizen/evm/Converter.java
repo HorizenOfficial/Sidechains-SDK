@@ -1,8 +1,8 @@
-package com.horizen.evm.utils;
+package com.horizen.evm;
 
 import com.google.common.io.BaseEncoding;
 
-public final class Converter {
+final class Converter {
     private Converter() {}
 
     // Get byte array from hex string

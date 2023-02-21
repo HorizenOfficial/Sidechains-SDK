@@ -16,9 +16,8 @@ import com.horizen.block.{
 }
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
-import com.horizen.evm.utils.{Address, Hash}
-import com.horizen.evm.{ResourceHandle, StateDB}
+import com.horizen.evm.results.{EvmLog, ProofAccountResult}
+import com.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils

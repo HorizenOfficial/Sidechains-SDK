@@ -1,7 +1,7 @@
 package com.horizen.account.receipt
 
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.{Address, Hash}
+import com.horizen.evm.results.EvmLog
+import com.horizen.evm.{Address, Hash}
 
 case class EthereumConsensusDataLog(
     address: Address,
