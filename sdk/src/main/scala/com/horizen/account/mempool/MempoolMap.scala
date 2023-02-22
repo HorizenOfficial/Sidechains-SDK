@@ -281,7 +281,7 @@ class MempoolMap(
             }
           }
         }
-        else if (!maxNonceGapExceeded)
+        else
           maxNonceGapExceeded = true
       }
 
