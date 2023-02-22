@@ -143,28 +143,28 @@ class SidechainStateStorageTest
       ArgumentMatchers.anyList[ByteArrayWrapper]()))
       // For Test 1:
       .thenAnswer(answer => {
-      val actualVersion = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
-      val actualToUpdate = answer.getArgument(1).asInstanceOf[java.util.List[Pair[ByteArrayWrapper, ByteArrayWrapper]]]
-      val actualToRemove = answer.getArgument(2).asInstanceOf[java.util.List[ByteArrayWrapper]]
-      assertEquals("StateStorage.update(...) actual Version is wrong.", version, actualVersion)
-      assertEquals("StateStorage.update(...) actual toUpdate list is wrong.", toUpdate, actualToUpdate)
-      assertEquals("StateStorage.update(...) actual toRemove list is wrong.", toRemove, actualToRemove)
-    })
+        val actualVersion = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
+        val actualToUpdate = answer.getArgument(1).asInstanceOf[java.util.List[Pair[ByteArrayWrapper, ByteArrayWrapper]]]
+        val actualToRemove = answer.getArgument(2).asInstanceOf[java.util.List[ByteArrayWrapper]]
+        assertEquals("StateStorage.update(...) actual Version is wrong.", version, actualVersion)
+        assertEquals("StateStorage.update(...) actual toUpdate list is wrong.", toUpdate, actualToUpdate)
+        assertEquals("StateStorage.update(...) actual toRemove list is wrong.", toRemove, actualToRemove)
+      })
       // For Test 2:
       .thenAnswer(answer => throw expectedException)
 
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
-      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), Seq(), Seq(), Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box),
-      Set(new ByteArrayWrapper(boxList(3).id())), Seq(),  Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())),
+      Seq(),  Seq(), Seq(), Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
@@ -216,7 +216,7 @@ class SidechainStateStorageTest
     //store also every  single hash separately with its epoch
     val singleMessageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(ccMessages.get(0))
     toUpdate.add(new Pair(stateStorage.getCrosschainMessageSingleKey(singleMessageHash),
-        new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
+      new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
     toUpdate.add(new Pair(stateStorage.getCrosschainMessagesKey(withdrawalEpochInfo.epoch, 0),
       new ByteArrayWrapper(crossChainMessagesSerializer.toBytes(ccMessages))))
     //mainchain hashes
@@ -255,15 +255,15 @@ class SidechainStateStorageTest
       .thenAnswer(_ => throw expectedException)
 
     // Test 1: test successful update
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
-      Set(new ByteArrayWrapper(boxList(2).id())), Seq(),  crossChainMessages, consensusEpoch, Seq((cert, mainChainHash)),  blockFeeInfo, None, false, new Array[Int](0), 0)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(),
+      crossChainMessages, Seq(), Seq(), consensusEpoch, Seq((cert, mainChainHash)),  blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if (tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box),
-      Set(new ByteArrayWrapper(boxList(3).id())), Seq(), Seq(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())),
+      Seq(), Seq(), Seq(), Seq(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)

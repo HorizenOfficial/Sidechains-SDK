@@ -572,7 +572,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         ccBoxes.foreach(cmBox => {
           val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(SidechainState.buildCrosschainMessageFromUTXO(cmBox.asInstanceOf[CrossChainMessageBox], params))
           if (stateStorage.getCrossChainMessageHashEpoch(messageHash).isDefined){
-              throw new Exception("CrossChainMessage already found in state")
+            throw new Exception("CrossChainMessage already found in state")
           }
         })
       }
@@ -613,7 +613,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           SidechainBlockBase.getTopQualityCertsWithMainChainHash(mod.mainchainBlockReferencesData),
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions),
-          getKeyRotationProofsToAdd(mod.sidechainTransactions)
+          getKeyRotationProofsToAdd(mod.sidechainTransactions),
+          mod.mainchainHeaders.map(mcHeader => mcHeader.hashScTxsCommitment)
         )
       })
     }
@@ -661,13 +662,15 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                    topQualityCerts: Seq[(WithdrawalEpochCertificate, Array[Byte])],
                    blockFeeInfo: BlockFeeInfo,
                    forgerListIndexes: Array[Int],
-                   keyRotationProofsToAdd: Seq[KeyRotationProof]
+                   keyRotationProofsToAdd: Seq[KeyRotationProof],
+                   hashScTxsCommitment: Seq[Array[Byte]]
                   ): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     var boxesToAppend = changes.toAppend.map(_.box)
 
     val withdrawalRequestsToAppend: ListBuffer[WithdrawalRequestBox] = ListBuffer()
     val crossChainMessagesToAppend: ListBuffer[CrossChainMessage] = ListBuffer()
+    val crossChainMessageHashesToAppend: ListBuffer[CrossChainMessageHash] = ListBuffer()
     val forgerBoxesToAppend: ListBuffer[ForgerBox] = ListBuffer()
     val otherBoxesToAppend: ListBuffer[SidechainTypes#SCB] = ListBuffer()
 
@@ -713,14 +716,18 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
 
     boxesToAppend.foreach(box => {
-      if(box.isInstanceOf[ForgerBox])
+      if (box.isInstanceOf[ForgerBox])
         forgerBoxesToAppend.append(box)
-      else if(box.isInstanceOf[WithdrawalRequestBox]) {
+      else if (box.isInstanceOf[WithdrawalRequestBox]) {
         withdrawalRequestsToAppend.append(box)
-      } else if(box.isInstanceOf[CrossChainMessageBox]) {
-        crossChainMessagesToAppend.append(SidechainState.buildCrosschainMessageFromUTXO(box.asInstanceOf[CrossChainMessageBox],params))
-      } else
+      } else if (box.isInstanceOf[CrossChainMessageBox]) {
+        crossChainMessagesToAppend.append(SidechainState.buildCrosschainMessageFromUTXO(box.asInstanceOf[CrossChainMessageBox], params))
+      } else if (box.isInstanceOf[CrossChainRedeemMessageBox]) {
+        val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(box.asInstanceOf[CrossChainRedeemMessageBox].getCrossChainMessage)
+        crossChainMessageHashesToAppend.append(messageHash)
+      } else {
         otherBoxesToAppend.append(box)
+      }
     })
 
     applicationState.onApplyChanges(this,
@@ -737,12 +744,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           None
         }
 
-
-
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, crossChainMessagesToAppend, consensusEpoch, topQualityCerts,
-            blockFeeInfo, utxoMerkleTreeRootOpt,
+            withdrawalRequestsToAppend, crossChainMessagesToAppend, crossChainMessageHashesToAppend, hashScTxsCommitment,
+            consensusEpoch, topQualityCerts, blockFeeInfo, utxoMerkleTreeRootOpt,
             scHasCeased, forgerListIndexes, params.allowedForgersList.size, keyRotationProofsToAdd, actualCertifiersKeys).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           updatedUtxoMerkleTreeProvider,

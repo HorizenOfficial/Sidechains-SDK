@@ -27,10 +27,12 @@ public interface Sc2scCircuit {
                              WithdrawalCertificate cert_epoch_N1,
                              MerklePath merklePath_cert_epochN1,
                              FieldElement sc_tx_commitment_root_cert_epochN1
-                             );
+    );
 
     boolean verifyRedeemProof(CrossChainMessageHash messageHash,
                               FieldElement sc_tx_commitment_root_cert_epochN,
+                              FieldElement sc_tx_commitment_root_cert_epochN1,
+                              MerklePath merklePath_topQuality_cert_epochN,
                               MerklePath merklePath_topQuality_cert_epochN1,
                               byte[] proof
     );
