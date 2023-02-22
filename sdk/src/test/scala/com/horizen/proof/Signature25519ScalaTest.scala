@@ -12,6 +12,7 @@ import sparkz.util.SparkzEncoder
 
 import java.nio.charset.StandardCharsets
 
+
 class Signature25519ScalaTest
   extends JUnitSuite
 {

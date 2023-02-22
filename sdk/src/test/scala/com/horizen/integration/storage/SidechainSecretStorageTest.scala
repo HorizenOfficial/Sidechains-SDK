@@ -18,7 +18,6 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import java.nio.charset.StandardCharsets
 import java.util.{Optional, ArrayList => JArrayList}
-import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 import scala.util.Try
 

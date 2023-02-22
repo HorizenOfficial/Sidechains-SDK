@@ -1226,7 +1226,6 @@ class SidechainStateTest
       mockedParams
     )
 
-
     // NEGATIVE TESTS
 
     // Test key rotation transaction with wrong circuit type

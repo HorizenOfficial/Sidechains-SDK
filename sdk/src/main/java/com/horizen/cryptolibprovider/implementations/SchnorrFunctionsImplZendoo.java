@@ -8,7 +8,6 @@ import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSecretKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import java.util.EnumMap;
-
 import static com.horizen.cryptolibprovider.utils.FieldElementUtils.messageToFieldElement;
 import static com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType.PUBLIC;
 import static com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType.SECRET;
@@ -55,6 +54,18 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
         FieldElement fieldElement = messageToFieldElement(messageBytes);
         SchnorrSignature signature = SchnorrSignature.deserialize(signatureBytes);
 
+        // Schnorr public key, signature and field element could null in case they can not be deserialized.
+        // It may happen when schnorr public key is not valid or when fieldElement or signature is invalid.
+        if(publicKey == null || fieldElement == null || signature == null) {
+            if(publicKey != null)
+                publicKey.freePublicKey();
+            if(fieldElement != null)
+                fieldElement.freeFieldElement();
+            if(signature != null)
+                signature.freeSignature();
+            return false;
+        }
+
         boolean signatureIsValid = publicKey.verifySignature(signature, fieldElement);
 
         signature.freeSignature();
@@ -77,6 +88,19 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
     }
 
     @Override
+    public byte[] getPublicKey(byte[] secretKeyBytes) {
+        SchnorrSecretKey secretKey = SchnorrSecretKey.deserialize(secretKeyBytes);
+        SchnorrPublicKey publicKey = secretKey.getPublicKey();
+
+        byte[] publicKeyBytes = publicKey.serializePublicKey();
+
+        secretKey.freeSecretKey();
+        publicKey.freePublicKey();
+
+        return publicKeyBytes;
+    }
+
+    @Override
     public int schnorrSecretKeyLength() {
         return Constants.SCHNORR_SK_LENGTH();
     }
@@ -91,4 +115,16 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
         return Constants.SCHNORR_SIGNATURE_LENGTH();
     }
 
+    @Override
+    public boolean publicKeyIsValid(byte[] propositionBytes) {
+        SchnorrPublicKey proposition = SchnorrPublicKey.deserialize(propositionBytes);
+        if (proposition == null) {
+            return false;
+        }
+
+        boolean keyIsValid = proposition.verifyKey();
+        proposition.freePublicKey();
+
+        return keyIsValid;
+    }
 }

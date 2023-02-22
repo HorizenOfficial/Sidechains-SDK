@@ -16,6 +16,7 @@ import sparkz.util.SparkzEncoder
 
 import java.nio.charset.StandardCharsets
 
+
 class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
 {
 

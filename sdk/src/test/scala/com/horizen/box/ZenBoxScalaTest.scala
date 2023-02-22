@@ -12,6 +12,7 @@ import sparkz.util.SparkzEncoder
 
 import java.nio.charset.StandardCharsets
 
+
 class ZenBoxScalaTest
   extends JUnitSuite with BoxFixture
 {

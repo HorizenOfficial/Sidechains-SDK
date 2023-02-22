@@ -255,7 +255,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  /**
+   /**
    * Decode the input raw eth transaction bytes into an obj, sign it using the input 'from' address
    * and return the resulting signed raw eth transaction bytes
    */
@@ -750,7 +750,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction, epoch: Int): Option[ErrorResponse] = {
     val index = body.keyIndex
     val keyType = body.keyType
-    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey))
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(body.newKey))
     val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature))
     if (index < 0 || index >= params.signersPublicKeys.length)
       return Some(ErrorInvalidKeyRotationProof(s"Key rotation proof - key index out of range: $index"))
@@ -824,7 +824,7 @@ object AccountTransactionRestScheme {
   def encodeSubmitKeyRotationRequestCmd(request: ReqCreateKeyRotationTransaction): String = {
     val keyType = KeyRotationProofTypes(request.keyType)
     val index = request.keyIndex
-    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newKey))
+    val newKey = SchnorrPropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(request.newKey))
     val signingSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.signingKeySignature))
     val masterSignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.masterKeySignature))
     val newKeySignature = SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(request.newKeySignature))
