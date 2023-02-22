@@ -8,7 +8,6 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
@@ -39,7 +38,6 @@ import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
-import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`

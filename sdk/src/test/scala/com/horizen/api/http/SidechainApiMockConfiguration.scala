@@ -4,6 +4,8 @@ import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.forge.ForgingInfo
 import sparkz.util.ModifierId
 import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
+
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable
 import scala.util.{Failure, Try}
 
@@ -46,7 +48,7 @@ class SidechainApiMockConfiguration {
 
   def setShould_nodeViewHolder_GenerateSecret_reply(value: Boolean): VrfSecretKey = {
     setShould_nodeViewHolder_GenerateSecret_reply = value
-    VrfKeyGenerator.getInstance().generateSecret("some_seed".getBytes)
+    VrfKeyGenerator.getInstance().generateSecret("some_seed".getBytes(StandardCharsets.UTF_8))
   }
 
   def setShould_nodeViewHolder_LocallyGeneratedSecret_reply(value: Boolean): Unit = should_nodeViewHolder_LocallyGeneratedSecret_reply = value

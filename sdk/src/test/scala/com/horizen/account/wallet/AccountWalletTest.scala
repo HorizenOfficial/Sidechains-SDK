@@ -176,12 +176,12 @@ class AccountWalletTest
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
 
     val accountWallet = new AccountWallet(
-      "seed".getBytes(),
+      "seed".getBytes(StandardCharsets.UTF_8),
       mockedSecretStorage)
 
     val storageList = ListBuffer[Secret]()
-    val secret1 = getPrivateKey25519("seed1".getBytes())
-    val secret2 = getPrivateKey25519("seed2".getBytes())
+    val secret1 = getPrivateKey25519("seed1".getBytes(StandardCharsets.UTF_8))
+    val secret2 = getPrivateKey25519("seed2".getBytes(StandardCharsets.UTF_8))
     storageList += secret1
     storageList += secret2
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
@@ -212,11 +212,11 @@ class AccountWalletTest
     Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
     Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
 
-    val key25519_1 = getPrivateKey25519("seed1".getBytes())
-    val schnorrKey_1 = getSchnorrKey("seed2".getBytes())
-    val key25519_2 = getPrivateKey25519("seed3".getBytes())
-    val key25519_3 = getPrivateKey25519("seed4".getBytes())
-    val schnorrKey_2 = getSchnorrKey("seed5".getBytes())
+    val key25519_1 = getPrivateKey25519("seed1".getBytes(StandardCharsets.UTF_8))
+    val schnorrKey_1 = getSchnorrKey("seed2".getBytes(StandardCharsets.UTF_8))
+    val key25519_2 = getPrivateKey25519("seed3".getBytes(StandardCharsets.UTF_8))
+    val key25519_3 = getPrivateKey25519("seed4".getBytes(StandardCharsets.UTF_8))
+    val schnorrKey_2 = getSchnorrKey("seed5".getBytes(StandardCharsets.UTF_8))
     val storageList = ListBuffer[Secret](key25519_1, schnorrKey_1, key25519_2, key25519_3, schnorrKey_2)
 
     val privateKey25519Creator = PrivateKey25519Creator.getInstance()
@@ -237,7 +237,7 @@ class AccountWalletTest
     )
 
     val accountWallet = new AccountWallet(
-      "seed".getBytes(),
+      "seed".getBytes(StandardCharsets.UTF_8),
       mockedSecretStorage)
 
 

@@ -179,7 +179,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           }
         case GenerateSecret(g) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GenerateSecret_reply())
-            sender ! Success(g.generateSecret("some_seed".getBytes))
+            sender ! Success(g.generateSecret("some_seed".getBytes(StandardCharsets.UTF_8)))
           else sender ! Failure(new Exception("Secret not generated."))
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
