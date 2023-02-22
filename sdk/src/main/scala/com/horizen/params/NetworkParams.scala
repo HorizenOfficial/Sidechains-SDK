@@ -47,7 +47,6 @@ trait NetworkParams {
   val cswVerificationKeyFilePath: String
   val sidechainCreationVersion: SidechainCreationVersion
   val isCSWEnabled: Boolean
-  val allowUnprotectedTxs: Boolean
 
   val maxHistoryRewritingLength: Int = 100
 

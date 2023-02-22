@@ -3,6 +3,7 @@ package com.horizen.account
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
+import com.horizen.{MempoolSettings, SidechainSettings}
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -10,6 +11,7 @@ import com.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountFixture, 
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.{AccountState, AccountStateReaderProvider, BaseStateReaderProvider}
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
@@ -17,14 +19,14 @@ import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{Before, Test}
+import org.junit.{Assert, Before, Test}
 import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.{ModifierId, SparkzEncoding}
-import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, ModifiersFromRemote}
+import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, LocallyGeneratedTransaction, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, ModifiersProcessingResult, SemanticallySuccessfulModifier}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{VersionTag, idToVersion}
 
@@ -613,5 +615,26 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
           case _ => false
         }
     }
+  }
+
+  @Test
+  def testForbidLegacyTransaction(): Unit = {
+    val settings = mock[SidechainSettings]
+    val mempoolSetting = mock[MempoolSettings]
+    mockedNodeViewHolderRef = getMockedAccountSidechainNodeViewHolderRef(history, state, wallet, mempool, settings)
+    val tx = mock[EthereumTransaction]
+
+    Mockito.when(settings.mempool).thenReturn(mempoolSetting)
+    Mockito.when(mempoolSetting.allowUnprotectedTxs).thenReturn(false)
+    Mockito.when(tx.isLegacy).thenReturn(true)
+    Mockito.when(tx.isEIP155).thenReturn(false)
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[FailedTransaction])
+    mockedNodeViewHolderRef ! LocallyGeneratedTransaction(tx)
+
+
+    val failure = eventListener.expectMsgType[FailedTransaction]
+    assertEquals(failure.error.getMessage,"Legacy unprotected transactions are not allowed.")
   }
 }

@@ -458,10 +458,6 @@ class AccountState(
 
     ethTx.semanticValidity()
 
-    if (!params.allowUnprotectedTxs && tx.isLegacy && !tx.isEIP155) {
-      throw new IllegalArgumentException("Legacy unprotected transaction are not allowed.")
-    }
-
     if (FeeUtils.GAS_LIMIT.compareTo(ethTx.getGasLimit) < 0)
       throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")
 

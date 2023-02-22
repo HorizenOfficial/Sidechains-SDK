@@ -43,9 +43,9 @@ trait MockedAccountSidechainNodeViewHolderFixture extends MockitoSugar {
                                            history: AccountHistory,
                                            state: AccountState,
                                            wallet: AccountWallet,
-                                           mempool: AccountMemoryPool)
+                                           mempool: AccountMemoryPool,
+                                           sidechainSettings: SidechainSettings = mock[SidechainSettings])
                                                 (implicit actorSystem: ActorSystem): ActorRef = {
-    val sidechainSettings = mock[SidechainSettings]
     val sparkzSettings = mock[SparkzSettings]
     val networkSettings = mock[NetworkSettings]
     val walletSettings = mock[WalletSettings]

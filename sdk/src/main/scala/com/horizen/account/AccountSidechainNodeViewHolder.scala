@@ -8,17 +8,19 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.AccountNodeView
 import com.horizen.account.state._
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
 import com.horizen.evm.Database
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
+import com.horizen.transaction.Transaction
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.RollbackFailed
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, RollbackFailed}
 import sparkz.core.utils.NetworkTimeProvider
 
 import scala.util.{Failure, Success}
@@ -170,6 +172,19 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       else
 
        */
+      if (tx.isInstanceOf[EthereumTransaction]) {
+        val ethTx: EthereumTransaction = tx.asInstanceOf[EthereumTransaction]
+        if (!sidechainSettings.mempool.allowUnprotectedTxs && ethTx.isLegacy && !ethTx.isEIP155) {
+          context.system.eventStream.publish(
+            FailedTransaction(
+              tx.asInstanceOf[Transaction].id,
+              new IllegalArgumentException("Legacy unprotected transactions are not allowed."),
+              immediateFailure = true
+            )
+          )
+        }
+      }
+
       log.info(s"Got locally generated tx ${tx.id} of type ${tx.modifierTypeId}")
 
       txModify(tx)

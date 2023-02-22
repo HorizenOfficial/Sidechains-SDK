@@ -162,7 +162,6 @@ abstract class AbstractSidechainApp
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.regtestId,
       isCSWEnabled = isCSWEnabled,
-      allowUnprotectedTxs = sidechainSettings.mempool.allowUnprotectedTxs,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
 
@@ -191,7 +190,6 @@ abstract class AbstractSidechainApp
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.testnetId,
       isCSWEnabled = isCSWEnabled,
-      allowUnprotectedTxs = sidechainSettings.mempool.allowUnprotectedTxs,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
 
@@ -220,7 +218,6 @@ abstract class AbstractSidechainApp
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.mainnetId,
       isCSWEnabled = isCSWEnabled,
-      allowUnprotectedTxs = sidechainSettings.mempool.allowUnprotectedTxs,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing
     )
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")

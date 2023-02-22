@@ -50,7 +50,6 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
     override val chainId: Long = 11111111
     override val isCSWEnabled: Boolean = true
-    override val allowUnprotectedTxs: Boolean = true
     override val isNonCeasing: Boolean = false
     override val minVirtualWithdrawalEpochLength: Int = 10
   }
