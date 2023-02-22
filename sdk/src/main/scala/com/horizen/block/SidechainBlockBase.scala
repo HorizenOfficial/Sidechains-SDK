@@ -39,7 +39,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
   def feePaymentsHash: Array[Byte] = header.feePaymentsHash
 
   @JsonProperty("size")
-  def size : Long
+  def size : Long = bytes.length
 
   // Check block version
   protected def versionIsValid(): Boolean

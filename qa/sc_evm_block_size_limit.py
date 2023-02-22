@@ -88,7 +88,7 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
 
         mc_return_address = mc_node.getnewaddress()
 
-        logging.info("generating {} addresses".format(outputs_in_ft))
+        logging.info("generating {} addresses, it may take some time...".format(outputs_in_ft))
         addresses = []
         t_0 = time.time()
         for k in range(0, outputs_in_ft):
@@ -133,8 +133,9 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
 
         amount_in_zen = Decimal('0.1')
 
-        # tx intrinsic gas should be (16+4)*64*1024 + 21000 = 1331720
-        big_data = '0001' * 64 * 1024
+        # the mempool limit for a tx size is 128 Kb, therefore we set data to 126 Kb
+        # tx intrinsic gas should be (16+4)*63*1024 + 21000 = 1311240
+        big_data = '0001' * 63 * 1024
 
         # time snapshot
         for n in range(0, numOfLargeTxes):
