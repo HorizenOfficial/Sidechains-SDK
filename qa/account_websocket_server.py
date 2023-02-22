@@ -94,7 +94,6 @@ Test:
 """
 
 websocket_server_port = 8026
-
 class SCWsAccountServerTest(AccountChainSetup):
 
     def __init__(self):
@@ -222,7 +221,6 @@ class SCWsAccountServerTest(AccountChainSetup):
         generate_next_block(sc_node2, "second node")
         node2_best_block = sc_node2.rpc_eth_getBlockByNumber("latest", "true")
         assert_equal("0xa", node2_best_block["result"]["number"]) #height = 10
-
         # SC node 1 generate 1 block
         logging.info("SC node 1 generate 1 block")
 
@@ -575,7 +573,7 @@ class SCWsAccountServerTest(AccountChainSetup):
 
         method = 'transfer(address,uint256)'
         res = contract_function_call(sc_node, erc20_contract, erc20_address, self.evm_address, method, other_address,
-                               transfer_amount)  
+                               transfer_amount)
         # SC node 1 generate 1 block
         logging.info("SC node 1 generate 1 block")
 
@@ -602,7 +600,7 @@ class SCWsAccountServerTest(AccountChainSetup):
 
         response = json.loads(ws_connection.recv())
         self.checkWsResponseStaticField(response, ws.SUBSCRIBE_RESPONSE, logs_subscription)
-        self.checkWsLogResponse(response["params"]["result"], rpc_tx_receipt["result"], erc20_address, True)  
+        self.checkWsLogResponse(response["params"]["result"], rpc_tx_receipt["result"], erc20_address, True)
 
         logging.info("SC node 1 generate 1 block")
         generate_next_block(sc_node, "first node")
@@ -611,7 +609,7 @@ class SCWsAccountServerTest(AccountChainSetup):
         response = json.loads(ws_connection.recv())
         rpc_tx_receipt = sc_node.rpc_eth_getTransactionReceipt(res)
         self.checkWsResponseStaticField(response, ws.SUBSCRIBE_RESPONSE, logs_subscription)
-        self.checkWsLogResponse(response["params"]["result"], rpc_tx_receipt["result"], erc20_address)  
+        self.checkWsLogResponse(response["params"]["result"], rpc_tx_receipt["result"], erc20_address)
         
         ws_connection.close()
 
