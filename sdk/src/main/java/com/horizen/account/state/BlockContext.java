@@ -55,26 +55,28 @@ public class BlockContext {
         long chainID,
         HistoryBlockHashProvider blockHashProvider
     ) {
-        this(
-            blockHeader.forgerAddress().address(),
-            blockHeader.timestamp(),
-            blockHeader.baseFee(),
-            blockHeader.gasLimit(),
-            blockNumber,
-            consensusEpochNumber,
-            withdrawalEpochNumber,
-            chainID,
-            blockHashProvider,
-            new Hash(blockHeader.vrfOutput().bytes())
-        );
+        this.forgerAddress = blockHeader.forgerAddress().address();
+        this.timestamp = blockHeader.timestamp();
+        this.baseFee = blockHeader.baseFee();
+        this.blockGasLimit = blockHeader.gasLimit();
+        this.blockNumber = blockNumber;
+        this.consensusEpochNumber = consensusEpochNumber;
+        this.withdrawalEpochNumber = withdrawalEpochNumber;
+        this.chainID = chainID;
+        this.blockHashProvider = blockHashProvider;
+        this.random = new Hash(blockHeader.vrfOutput().bytes());
     }
 
     public TraceOptions getTraceOptions() {
         return this.traceOptions;
     }
 
-    public void setTraceOptions(TraceOptions traceOptions) {
-        this.traceOptions = traceOptions;
+    public void enableTracer(TraceOptions options) {
+        this.traceOptions = options == null ? new TraceOptions() : options;
+    }
+
+    public void disableTracer() {
+        this.traceOptions = null;
     }
 
     public EvmResult getEvmResult() {

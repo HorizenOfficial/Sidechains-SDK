@@ -774,8 +774,8 @@ class EthService(
 
       // get state at previous block
       getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
-        // use default trace params if none are given
-        blockContext.setTraceOptions(if (config == null) new TraceOptions() else config)
+        // enable tracing
+        blockContext.enableTracer(config)
 
         // apply mainchain references
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
@@ -848,8 +848,8 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
 
-        // use default trace params if none are given
-        blockContext.setTraceOptions(if (config == null) new TraceOptions() else config)
+        // enable tracing
+        blockContext.enableTracer(config)
 
         // apply requested transaction with tracing enabled
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
@@ -871,8 +871,8 @@ class EthService(
       // get state at selected block
       getStateViewAtTag(nodeView, if (tag == "pending") "pending" else blockInfo.height.toString) {
         (tagStateView, blockContext) =>
-          // use default trace params if none are given
-          blockContext.setTraceOptions(if (config == null) new TraceOptions() else config)
+          // enable tracing
+          blockContext.enableTracer(config)
 
           // apply requested message with tracing enabled
           val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)

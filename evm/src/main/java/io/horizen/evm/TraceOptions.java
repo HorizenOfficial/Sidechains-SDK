@@ -1,9 +1,8 @@
 package io.horizen.evm;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class TraceOptions {
     public final boolean enableMemory;
     public final boolean disableStack;
@@ -27,5 +26,21 @@ public class TraceOptions {
         enableReturnData = false;
         tracer = null;
         tracerConfig = null;
+    }
+
+    public TraceOptions(
+        @JsonProperty("enableMemory") boolean enableMemory,
+        @JsonProperty("disableStack") boolean disableStack,
+        @JsonProperty("disableStorage") boolean disableStorage,
+        @JsonProperty("enableReturnData") boolean enableReturnData,
+        @JsonProperty("tracer") String tracer,
+        @JsonProperty("tracerConfig") JsonNode tracerConfig
+    ) {
+        this.enableMemory = enableMemory;
+        this.disableStack = disableStack;
+        this.disableStorage = disableStorage;
+        this.enableReturnData = enableReturnData;
+        this.tracer = tracer;
+        this.tracerConfig = tracerConfig;
     }
 }
