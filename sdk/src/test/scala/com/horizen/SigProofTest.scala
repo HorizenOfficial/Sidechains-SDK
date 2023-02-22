@@ -6,14 +6,12 @@ import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
-import com.horizen.secret.SchnorrKeyGenerator
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
 
 import java.io._
-import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util.Optional
 import java.{lang, util}
 import scala.collection.JavaConverters._

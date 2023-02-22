@@ -1,16 +1,13 @@
 package com.horizen.account.secret;
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
 import com.horizen.account.utils.Secp256k1;
-import com.horizen.node.NodeWalletBase;
-import com.horizen.secret.Secret;
 import com.horizen.secret.SecretCreator;
-import sparkz.crypto.hash.Keccak256;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+
 
 public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKeySecp256k1> {
-    private static PrivateKeySecp256k1Creator instance;
+    private static final PrivateKeySecp256k1Creator instance;
+    private static final byte[] domain = "PrivateKeySecp25519k1".getBytes(StandardCharsets.UTF_8);
 
     static {
         instance = new PrivateKeySecp256k1Creator();
@@ -27,16 +24,18 @@ public final class PrivateKeySecp256k1Creator implements SecretCreator<PrivateKe
     @Override
     public PrivateKeySecp256k1 generateSecret(byte[] seed) {
         var keyPair = Secp256k1.createKeyPair(seed);
-
+        assert keyPair != null;
         return new PrivateKeySecp256k1(keyPair.getKey());
     }
 
+    /**
+     * Method to get salt.
+     * In this case salt serves as a domain separation
+     *
+     * @return salt as byte array in UTF-8 encoding
+     */
     @Override
-    public PrivateKeySecp256k1 generateNextSecret(NodeWalletBase wallet) {
-        List<Secret> prevSecrets = wallet.secretsOfType(PrivateKeySecp256k1.class);
-        byte[] nonce = Ints.toByteArray(prevSecrets.size());
-        byte[] seed = (byte[]) Keccak256.hash(Bytes.concat(wallet.walletSeed(), nonce));
-
-        return generateSecret(seed);
+    public byte[] salt() {
+        return domain;
     }
 }

@@ -20,17 +20,10 @@ import com.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedM
 import com.horizen.params.TestNetParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.PrivateKey25519
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.state.BaseStateReader
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{
-  BytesUtils,
-  DynamicTypedSerializer,
-  MerklePath,
-  Pair,
-  TestSidechainsVersionsManager,
-  WithdrawalEpochInfo
-}
+import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import com.horizen.vrf.VrfOutput
 import io.horizen.evm.{Address, Hash}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
@@ -46,6 +39,7 @@ import sparkz.util.serialization.VLQByteBufferWriter
 import sparkz.util.{ByteArrayBuilder, bytesToId}
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util
 import java.util.Optional
@@ -340,7 +334,7 @@ class AccountForgeMessageBuilderTest
 
     val value = BigInteger.TEN
     val account1Key: PrivateKeySecp256k1 =
-      PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest1".getBytes())
+      PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest1".getBytes(StandardCharsets.UTF_8))
 
     val account1ExecTransaction0 = createEIP1559Transaction(
       value,
@@ -354,10 +348,7 @@ class AccountForgeMessageBuilderTest
     val sidechainTransactions = accountMemoryPool.takeExecutableTxs()
 
     val ommers = Seq()
-    val ownerPrivateKey = new PrivateKey25519(
-      new Array[Byte](PrivateKey25519.PRIVATE_KEY_LENGTH),
-      new Array[Byte](PublicKey25519Proposition.KEY_LENGTH)
-    )
+    val ownerPrivateKey = PrivateKey25519Creator.getInstance().generateSecret("KeySeed".getBytes(StandardCharsets.UTF_8))
 
     val proofAndOutput = VrfGenerator.generateProofAndOutput(123)
     val vrfProof = proofAndOutput.getKey

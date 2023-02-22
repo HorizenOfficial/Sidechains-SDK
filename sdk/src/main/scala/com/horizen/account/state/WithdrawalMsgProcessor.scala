@@ -16,6 +16,7 @@ import org.web3j.abi.datatypes.{StaticStruct, Type}
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
@@ -123,11 +124,11 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
   }
 
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): Array[Byte] = {
-    calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
+    calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch)))
   }
 
   private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int, counter: Int): Array[Byte] = {
-    calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
+    calculateKey(Bytes.concat("withdrawalRequests".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 }
 

@@ -33,10 +33,14 @@ public class DummyVrfFunctionsImpl implements VrfFunctions {
         return Arrays.equals(messageWithCorrectLength, decoded);
     }
 
+
     @Override
     public boolean publicKeyIsValid(byte[] publicKeyBytes) {
         return publicKeyBytes.length == vrfLength;
     }
+
+    @Override
+    public byte[] getPublicKey(byte[] secretKeyBytes) { return secretKeyBytes; }
 
     @Override
     public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {

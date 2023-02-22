@@ -6,6 +6,7 @@ import io.horizen.evm.{Address, Hash}
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ListBuffer
 
 trait ReceiptFixture extends AccountFixture {
@@ -47,7 +48,7 @@ trait ReceiptFixture extends AccountFixture {
       consensusDataReceipt,
       txHashTemp,
       transactionIndex,
-      Keccak256.hash(blockHash.getBytes).asInstanceOf[Array[Byte]],
+      Keccak256.hash(blockHash.getBytes(StandardCharsets.UTF_8)).asInstanceOf[Array[Byte]],
       blockNumber,
       BigInteger.valueOf(1234567),
       contractAddress

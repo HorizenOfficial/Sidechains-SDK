@@ -15,6 +15,7 @@ import org.scalatestplus.mockito._
 import sparkz.util.ModifierId
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import scala.util.Random
 
 class MempoolMapTest
@@ -28,9 +29,9 @@ class MempoolMapTest
   val baseStateViewMock: BaseStateReader = mock[BaseStateReader]
   val baseStateProvider: BaseStateReaderProvider = () => baseStateViewMock
 
-  val account1KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes()))
-  val account2KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
-  val account3KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest3".getBytes()))
+  val account1KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes(StandardCharsets.UTF_8)))
+  val account2KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes(StandardCharsets.UTF_8)))
+  val account3KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest3".getBytes(StandardCharsets.UTF_8)))
   
   @Before
   def setUp(): Unit = {

@@ -15,7 +15,7 @@ import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
-import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
+import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.utils.BytesUtils
@@ -23,7 +23,6 @@ import com.horizen.wallet.ApplicationWallet
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes, SidechainUtxoMerkleTreeProviderCSWEnabled, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
 import sparkz.core.api.http.ApiRejectionHandler
 import sparkz.core.utils.NetworkTimeProvider
-
 import scala.concurrent.ExecutionContext
 
 trait SidechainNodeViewHolderFixture
@@ -53,7 +52,6 @@ trait SidechainNodeViewHolderFixture
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
-
 
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
     BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
@@ -113,7 +111,7 @@ trait SidechainNodeViewHolderFixture
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
     for(secretHex <- sidechainSettings.wallet.genesisSecrets)
-      sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
+      sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretHex)))
   }
 
   val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(

@@ -1,8 +1,9 @@
 package com.horizen.proposition;
 
-import com.horizen.cryptolibprovider.CryptoLibProvider;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
+import sparkz.util.serialization.VLQByteBufferReader;
+import java.nio.ByteBuffer;
 
 public class SchnorrPropositionSerializer implements PropositionSerializer<SchnorrProposition> {
     private static SchnorrPropositionSerializer serializer;
@@ -26,6 +27,15 @@ public class SchnorrPropositionSerializer implements PropositionSerializer<Schno
 
     @Override
     public SchnorrProposition parse(Reader reader) {
-        return new SchnorrProposition(reader.getBytes(SchnorrProposition.KEY_LENGTH));
+        return parse(reader, false);
+    }
+
+    public SchnorrProposition parse(Reader reader, boolean checkPublicKey) {
+        return new SchnorrProposition(reader.getBytes(SchnorrProposition.KEY_LENGTH), checkPublicKey);
+    }
+
+    public SchnorrProposition parseBytesAndCheck(byte[] propositionBytes) {
+        VLQByteBufferReader bufferReader = new VLQByteBufferReader(ByteBuffer.wrap(propositionBytes));
+        return parse(bufferReader, true);
     }
 }

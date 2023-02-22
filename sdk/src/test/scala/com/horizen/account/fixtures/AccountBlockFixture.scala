@@ -20,9 +20,9 @@ import com.horizen.utils._
 import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}
-
 import java.math.BigInteger
 import scala.util.{Failure, Random, Try}
+import java.nio.charset.StandardCharsets
 
 
 class SemanticallyInvalidAccountBlock(block: AccountBlock, companion: SidechainAccountTransactionsCompanion)
@@ -110,7 +110,7 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
                             ): AccountBlock = {
     assert(vrfProofOpt.isDefined == vrfOutputOpt.isDefined, "VRF proof and output must be both defined or not")
     val vrfKey = VrfKeyGenerator.getInstance().generateSecret(Array.fill(32)(basicSeed.toByte))
-    val vrfMessage = "Some non random string as input".getBytes
+    val vrfMessage = "Some non random string as input".getBytes(StandardCharsets.UTF_8)
     val vrfProof = vrfProofOpt.getOrElse(vrfKey.prove(vrfMessage).getKey)
     val vrfOutput = vrfOutputOpt.getOrElse(vrfProof.proofToVrfOutput(vrfKey.publicImage(), vrfMessage).get())
 

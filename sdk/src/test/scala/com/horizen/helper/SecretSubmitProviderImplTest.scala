@@ -10,6 +10,8 @@ import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
+
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -34,7 +36,7 @@ class SecretSubmitProviderImplTest extends JUnitSuite with MockitoSugar with Sec
 
     val secretSubmitProvider: SecretSubmitProviderImpl = new SecretSubmitProviderImpl(mockedSidechainNodeViewHolderRef)
 
-    val secret: PrivateKey25519 = getPrivateKey25519("123".getBytes())
+    val secret: PrivateKey25519 = getPrivateKey25519("123".getBytes(StandardCharsets.UTF_8))
     val tryRes: Try[Unit] = Try {
       secretSubmitProvider.submitSecret(secret)
     }
@@ -60,7 +62,7 @@ class SecretSubmitProviderImplTest extends JUnitSuite with MockitoSugar with Sec
 
     val secretSubmitProvider: SecretSubmitProviderImpl = new SecretSubmitProviderImpl(mockedSidechainNodeViewHolderRef)
 
-    val secret: PrivateKey25519 = getPrivateKey25519("123".getBytes())
+    val secret: PrivateKey25519 = getPrivateKey25519("123".getBytes(StandardCharsets.UTF_8))
     val tryRes: Try[Unit] = Try {
       secretSubmitProvider.submitSecret(secret)
     }
