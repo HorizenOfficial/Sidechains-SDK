@@ -79,7 +79,7 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
     val numberOfLogs = receipt.consensusDataReceipt.logs.size
     writer.putInt(numberOfLogs)
     for (log <- receipt.consensusDataReceipt.logs)
-      EvmLogUtils.serialize(log, writer)
+      EthereumConsensusDataLog.serialize(log, writer)
 
     // non consensus data
     writer.putBytes(receipt.transactionHash)
@@ -107,7 +107,7 @@ object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt] {
     val logs = ListBuffer[EthereumConsensusDataLog]()
     val numberOfLogs = reader.getInt
     for (_ <- 0 until numberOfLogs)
-      logs += EvmLogUtils.parse(reader)
+      logs += EthereumConsensusDataLog.parse(reader)
 
     val receipt: EthereumConsensusDataReceipt =
       new EthereumConsensusDataReceipt(transactionType, status, cumGasUsed, logs)

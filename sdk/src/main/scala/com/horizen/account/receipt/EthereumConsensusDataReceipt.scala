@@ -146,7 +146,7 @@ object EthereumConsensusDataReceipt {
       // loop on list and decode all logs
       for (i <- 0 until logsListSize) {
         val log =
-          EvmLogUtils.rlpDecode(logList.getValues.get(i).asInstanceOf[RlpList])
+          EthereumConsensusDataLog.rlpDecode(logList.getValues.get(i).asInstanceOf[RlpList])
         logs += log
       }
     }
@@ -217,7 +217,7 @@ object EthereumConsensusDataReceipt {
     // logs
     val rlpLogs = new util.ArrayList[RlpType]
     for (log <- r.logs) {
-      rlpLogs.add(new RlpList(EvmLogUtils.asRlpValues(log)))
+      rlpLogs.add(new RlpList(EthereumConsensusDataLog.asRlpValues(log)))
     }
     result.add(new RlpList(rlpLogs))
     result

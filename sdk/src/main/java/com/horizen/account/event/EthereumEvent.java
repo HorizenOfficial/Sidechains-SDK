@@ -71,10 +71,10 @@ public class EthereumEvent {
      * @param contractAddress
      * @param eventFunction
      * @param anonymous
-     * @return EvmLog containing the contract address, the topics and the data
+     * @return EthereumConsensusDataLog containing the contract address, the topics and the data
      * @throws IOException
      */
-    private static EthereumConsensusDataLog createEvmLog(Address contractAddress, Function eventFunction, Boolean anonymous) throws IOException {
+    private static EthereumConsensusDataLog createEthereumConsensusDataLog(Address contractAddress, Function eventFunction, Boolean anonymous) throws IOException {
         List<Hash> topics = new ArrayList<>();
         ByteArrayOutputStream dataOutputStream = new ByteArrayOutputStream();
         var outputParameters = eventFunction.getOutputParameters();
@@ -103,13 +103,13 @@ public class EthereumEvent {
     /**
      * @param contractAddress
      * @param eventInstance   Instance of the custom event class
-     * @return EvmLog containing the contract address, the topics and the data
+     * @return EthereumConsensusDataLog containing the contract address, the topics and the data
      * @throws ClassNotFoundException
      * @throws IOException
      * @throws IllegalAccessException
      * @throws InvocationTargetException
      */
-    public static EthereumConsensusDataLog getEvmLog(Address contractAddress, Object eventInstance) throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException {
+    public static EthereumConsensusDataLog getEthereumConsensusDataLog(Address contractAddress, Object eventInstance) throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException {
         List<TypeReference<?>> parametersTypeRef = new ArrayList<>();
         List<Type> convertedParams = new ArrayList<>();
         var annotatedParameters = getEventParameterData(eventInstance);
@@ -120,7 +120,7 @@ public class EthereumEvent {
         }
 
         var classRef = eventInstance.getClass();
-        return createEvmLog(contractAddress, new Function(classRef.getSimpleName(), convertedParams, parametersTypeRef), classRef.getAnnotation(Anonymous.class) != null);
+        return createEthereumConsensusDataLog(contractAddress, new Function(classRef.getSimpleName(), convertedParams, parametersTypeRef), classRef.getAnnotation(Anonymous.class) != null);
     }
 
     private static class EventParameterData {

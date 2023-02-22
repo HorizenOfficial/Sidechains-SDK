@@ -170,7 +170,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
     //publish event
     val keyRotationEvent = SubmitKeyRotation(keyType, keyIndex, keyRotationProof.newKey, currentEpochNum)
-    val evmLog = getEvmLog(keyRotationEvent)
+    val evmLog = getEthereumConsensusDataLog(keyRotationEvent)
     view.addLog(evmLog)
 
     keyRotationProof.encode()

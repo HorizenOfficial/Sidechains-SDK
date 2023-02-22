@@ -112,9 +112,9 @@ object Bloom {
     new Bloom(filter.clone())
   }
 
-  def fromLogs(evmLogs: Seq[EthereumConsensusDataLog]): Bloom = {
+  def fromLogs(logs: Seq[EthereumConsensusDataLog]): Bloom = {
     val filter = new Bloom()
-    for (log <- evmLogs) {
+    for (log <- logs) {
       filter.add(log.address.toBytes)
       for (topic <- log.topics) {
         filter.add(topic.toBytes)

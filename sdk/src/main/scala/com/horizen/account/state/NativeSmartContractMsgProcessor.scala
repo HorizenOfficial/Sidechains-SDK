@@ -31,8 +31,8 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
     msg.getTo.asScala.exists(contractAddress.equals(_))
   }
 
-  def getEvmLog(event: Any): EthereumConsensusDataLog = {
-    EthereumEvent.getEvmLog(contractAddress, event)
+  def getEthereumConsensusDataLog(event: Any): EthereumConsensusDataLog = {
+    EthereumEvent.getEthereumConsensusDataLog(contractAddress, event)
   }
 }
 

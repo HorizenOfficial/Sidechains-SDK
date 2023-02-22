@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 
 trait ReceiptFixture extends AccountFixture {
 
-  def createTestEvmLog(address: Option[Address]): EthereumConsensusDataLog = {
+  def createTestLog(address: Option[Address]): EthereumConsensusDataLog = {
     val topics = Array[Hash](
       new Hash("0x0000000000000000000000000000000000000000000000000000000000000000"),
       new Hash("0x1111111111111111111111111111111111111111111111111111111111111111"),
@@ -36,7 +36,7 @@ trait ReceiptFixture extends AccountFixture {
 
     val logs = new ListBuffer[EthereumConsensusDataLog]
     for (_ <- 1 to num_logs)
-      logs += createTestEvmLog(Some(address))
+      logs += createTestLog(Some(address))
 
     val contractAddress = if (contractAddressPresence) {
       Option(new Address("0x1122334455667788990011223344556677889900"))
@@ -63,7 +63,7 @@ trait ReceiptFixture extends AccountFixture {
   ): EthereumConsensusDataReceipt = {
     val logs = new ListBuffer[EthereumConsensusDataLog]
     for (_ <- 1 to num_logs)
-      logs += createTestEvmLog(Some(address))
+      logs += createTestLog(Some(address))
     new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs)
   }
 

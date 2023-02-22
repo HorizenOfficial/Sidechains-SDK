@@ -113,7 +113,7 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
     view.subBalance(msg.getFrom, withdrawalAmount)
 
     val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
-    val evmLog = getEvmLog(withdrawalEvent)
+    val evmLog = getEthereumConsensusDataLog(withdrawalEvent)
     view.addLog(evmLog)
 
     request.encode
