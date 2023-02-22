@@ -2,9 +2,9 @@ package com.horizen.account.mempool
 
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.mempool.MempoolMap.MaxTxSize
-import com.horizen.account.mempool.exception.NonceGapTooWideException
+import com.horizen.account.mempool.exception.{NonceGapTooWideException, TxOversizedException}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
+import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import sparkz.util.{ModifierId, SparkzLogging}
@@ -22,7 +22,7 @@ class MempoolMap(
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
   type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
-  val MaxNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap)
+  val maxNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap)
 
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap.empty[ModifierId, SidechainTypes#SCAT]
@@ -48,9 +48,9 @@ class MempoolMap(
       }
 
       val stateNonce = accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
-      if (ethTransaction.getNonce.subtract(stateNonce).compareTo(MaxNonceGap) >= 0) {
+      if (ethTransaction.getNonce.subtract(stateNonce).compareTo(maxNonceGap) >= 0) {
         log.trace(s"Transaction $ethTransaction nonce gap respect state nonce exceeds maximum allowed size: tx nonce ${ethTransaction.getNonce()}, " +
-          s"state nonce: $stateNonce")
+          s"state nonce: $stateNonce, maximum nonce gap $maxNonceGap")
         throw NonceGapTooWideException(ethTransaction.id, ethTransaction.getNonce, stateNonce)
       }
       val expectedNonce = nonces.getOrElseUpdate(
@@ -101,7 +101,7 @@ class MempoolMap(
     this
   }
 
-  def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap) = {
+  def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap): Unit = {
     val existingTxWithSameNonce = all(existingTxId)
     if (canPayHigherFee(newTx, existingTxWithSameNonce)) {
       log.trace(s"Replacing transaction $existingTxWithSameNonce with $newTx")
@@ -257,7 +257,7 @@ class MempoolMap(
     val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
 
     val stateNonce = txsFromRejectedBlocks.head.getNonce
-    val maxAcceptableNonce = stateNonce.add(MaxNonceGap.subtract(BigInteger.ONE))
+    val maxAcceptableNonce = stateNonce.add(maxNonceGap.subtract(BigInteger.ONE))
 
     // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
     // They are by default directly added to the execTxs map, because the nonce is surely not too low. If a tx is found invalid
@@ -379,12 +379,10 @@ class MempoolMap(
       val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
       val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
 
-      // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
-      // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
-      // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, unless
-      // a previous tx was found invalid. They remaining txs are checked for balance.
-      // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
-      // and they will be added to the nonExec map.
+      // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from exec txs.
+      // First all the txs with nonce too low are discarded. The remaining txs are checked for balance.
+      // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not
+      // executable and they will be added to the nonExec map.
       var destMap = newExecTxs
       var haveBecomeNonExecutable = false
 

@@ -2,9 +2,9 @@ package com.horizen.account.mempool
 
 import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.mempool.exception.NonceGapTooWideException
+import com.horizen.account.mempool.exception.{NonceGapTooWideException, TxOversizedException}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
