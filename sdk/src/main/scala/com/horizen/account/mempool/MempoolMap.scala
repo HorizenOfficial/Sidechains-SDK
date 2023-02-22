@@ -235,7 +235,9 @@ class MempoolMap(
     // but it was just reverted to an older state. So there is no need to check for nonce, because the txs were already
     // verified for it. However we still need to check for balance because it is possible that both txs in mem pool and
     // txs from reverted blocks were verified with a different balance respect the one restored. The only exception are
-    // txs from the oldest reverted block but for simplicity they are checked the same.
+    // txs from the oldest reverted block but for simplicity they are checked the same. In addition we need also to check
+    // for transaction size, because it isn't part of consensus and so it is possible that blocks forged by other nodes
+    // can contain bigger transactions.
 
     val fromAddress = account.asInstanceOf[AddressProposition].address()
     val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
@@ -245,7 +247,7 @@ class MempoolMap(
 
     // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
     // They are by default directly added to the execTxs map, because the nonce is surely correct. If a tx is found invalid
-    // for balance, it is discarded. All the subsequent txs, if valid, will become not executable and they will be added
+    // for balance or size, it is discarded. All the subsequent txs, if valid, will become not executable and they will be added
     // to the nonExec map.
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
@@ -323,8 +325,8 @@ class MempoolMap(
     // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
     // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
     // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, because
-    // they come from reverted blocks so it is impossible to have nonce gaps. They still need to be checked for balance.
-    // If a tx is found invalid for balance, it is discarded. All the subsequent txs, if valid, will become not executable
+    // they come from reverted blocks so it is impossible to have nonce gaps. They still need to be checked for balance and for size.
+    // If a tx is found invalid, it is discarded. All the subsequent txs, if valid, will become not executable
     // and they will be added to the nonExec map.
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
@@ -346,7 +348,8 @@ class MempoolMap(
 
     // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
     // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, unless
-    // a previous tx was found invalid. They remaining txs are checked for balance.
+    // a previous tx was found invalid. They remaining txs are checked for balance. There is no need to check for size because
+    // these transactions were already checked for the size when they first arrived in the mempool.
     // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
     // and they will be added to the nonExec map.
     val execTxsOpt = executableTxs.remove(account)
@@ -481,12 +484,12 @@ class MempoolMap(
 
 object MempoolMap {
   val TxSlotSize: Int = 32 * 1024
-  val MaxNumOfSlotsForTx = 4
-  val MaxTxSize = MaxNumOfSlotsForTx * TxSlotSize
+  val MaxNumOfSlotsForTx: Int = 4
+  val MaxTxSize: Int = MaxNumOfSlotsForTx * TxSlotSize
 
-  def txSizeInSlot(tx: SidechainTypes#SCAT): Long = bytesToSlot(tx.size())
+  def txSizeInSlot(tx: SidechainTypes#SCAT): Long = sizeToSlot(tx.size())
 
-  def bytesToSlot(numOfBytes: Long): Long = {
+  def sizeToSlot(numOfBytes: Long): Long = {
     require(numOfBytes >= 0, "Illegal negative size value")
     (numOfBytes + TxSlotSize - 1) / TxSlotSize
   }
