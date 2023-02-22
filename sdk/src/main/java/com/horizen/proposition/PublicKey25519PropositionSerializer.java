@@ -2,6 +2,8 @@ package com.horizen.proposition;
 
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
+import sparkz.util.serialization.VLQByteBufferReader;
+import java.nio.ByteBuffer;
 
 public final class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition> {
     private static PublicKey25519PropositionSerializer serializer;
@@ -25,6 +27,15 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
 
     @Override
     public PublicKey25519Proposition parse(Reader reader) {
-        return new PublicKey25519Proposition(reader.getBytes(PublicKey25519Proposition.KEY_LENGTH));
+        return parse(reader, false);
+    }
+
+    public PublicKey25519Proposition parse(Reader reader, boolean checkPubKey) {
+        return new PublicKey25519Proposition(reader.getBytes(PublicKey25519Proposition.KEY_LENGTH), checkPubKey);
+    }
+
+    public PublicKey25519Proposition parseBytesAndCheck(byte[] propositionBytes) {
+        VLQByteBufferReader bufferReader = new VLQByteBufferReader(ByteBuffer.wrap(propositionBytes));
+        return parse(bufferReader, true);
     }
 }

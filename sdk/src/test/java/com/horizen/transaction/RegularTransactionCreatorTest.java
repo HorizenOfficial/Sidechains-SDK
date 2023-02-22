@@ -14,6 +14,7 @@ import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -151,7 +152,7 @@ class TransactionCreatorNodeWallet implements NodeWallet {
 
     @Override
     public byte[] walletSeed() {
-        return "seed".getBytes();
+        return "seed".getBytes(StandardCharsets.UTF_8);
     }
 }
 
@@ -171,12 +172,12 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
     @Before
     public void beforeEachTest() {
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
-        pk1 = creator.generateSecret("test_seed1".getBytes());
-        pk2 = creator.generateSecret("test_seed2".getBytes());
-        pk3 = creator.generateSecret("test_seed3".getBytes());
-        pk4 = creator.generateSecret("test_seed4".getBytes());
-        pk5 = creator.generateSecret("test_seed5".getBytes());
-        pk6 = creator.generateSecret("test_seed6".getBytes());
+        pk1 = creator.generateSecret("test_seed1".getBytes(StandardCharsets.UTF_8));
+        pk2 = creator.generateSecret("test_seed2".getBytes(StandardCharsets.UTF_8));
+        pk3 = creator.generateSecret("test_seed3".getBytes(StandardCharsets.UTF_8));
+        pk4 = creator.generateSecret("test_seed4".getBytes(StandardCharsets.UTF_8));
+        pk5 = creator.generateSecret("test_seed5".getBytes(StandardCharsets.UTF_8));
+        pk6 = creator.generateSecret("test_seed6".getBytes(StandardCharsets.UTF_8));
 
         SecretFixtureClass secretFixture = new SecretFixtureClass();
         mcPublicKeyHashProposition = secretFixture.getMCPublicKeyHashProposition();

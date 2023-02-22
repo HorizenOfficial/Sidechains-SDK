@@ -7,6 +7,8 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.Assert.*;
 
 public class PrivateKey25519SerializerTest {
@@ -16,7 +18,7 @@ public class PrivateKey25519SerializerTest {
     @Before
     public void beforeEachTest() {
         // Note: current secret bytes are also stored in "src/test/resources/privatekey25519_hex"
-        key = PrivateKey25519Creator.getInstance().generateSecret("12345".getBytes());
+        key = PrivateKey25519Creator.getInstance().generateSecret("12345".getBytes(StandardCharsets.UTF_8));
 
         // Set to true and run if you want to update regression data.
         if (false) {

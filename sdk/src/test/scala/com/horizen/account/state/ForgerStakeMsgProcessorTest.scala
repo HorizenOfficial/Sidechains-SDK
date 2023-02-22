@@ -24,6 +24,7 @@ import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{Optional, Random}
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -46,7 +47,7 @@ class ForgerStakeMsgProcessorTest
   val contractAddress: Address = forgerStakeMessageProcessor.contractAddress
 
   // create private/public key pair
-  val privateKey: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("nativemsgprocessortest".getBytes())
+  val privateKey: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("nativemsgprocessortest".getBytes(StandardCharsets.UTF_8))
   val ownerAddressProposition: AddressProposition = privateKey.publicImage()
 
   val AddNewForgerStakeEventSig: Array[Byte] = getEventSignature("DelegateForgerStake(address,address,bytes32,uint256)")
@@ -366,7 +367,7 @@ class ForgerStakeMsgProcessorTest
   def testAddAndRemoveStake(): Unit = {
 
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
-    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
+    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("d6b775fd4cefc7446236683fdde9d0464bba43cc565fa066b0b3ed1b888b9d1180")) // 33 bytes
 
     usingView(forgerStakeMessageProcessor) { view =>
 
@@ -547,7 +548,7 @@ class ForgerStakeMsgProcessorTest
     // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
     usingView(forgerStakeMessageProcessor) { view =>
       // create private/public key pair
-      val key: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("amounttest".getBytes())
+      val key: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("amounttest".getBytes(StandardCharsets.UTF_8))
 
       val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
       val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
@@ -663,7 +664,7 @@ class ForgerStakeMsgProcessorTest
 
     val expectedBlockSignerProposition = "1122334455667788112233445566778811223344556677881122334455667788" // 32 bytes
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(expectedBlockSignerProposition)) // 32 bytes
-    val expectedVrfKey = "aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
+    val expectedVrfKey = "d6b775fd4cefc7446236683fdde9d0464bba43cc565fa066b0b3ed1b888b9d1180"
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(expectedVrfKey)) // 33 bytes
 
     Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)

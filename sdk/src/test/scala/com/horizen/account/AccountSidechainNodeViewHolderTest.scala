@@ -29,7 +29,7 @@ import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, ModifiersProcessingResult, SemanticallySuccessfulModifier}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{VersionTag, idToVersion}
-
+import java.nio.charset.StandardCharsets
 import java.util
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
@@ -85,7 +85,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
  
     Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
-      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes()))
+      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes(StandardCharsets.UTF_8)))
       (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
     })
 

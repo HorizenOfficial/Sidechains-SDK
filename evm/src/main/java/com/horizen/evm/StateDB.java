@@ -253,12 +253,12 @@ public class StateDB extends ResourceHandle {
     /**
      * Get the Merkle-proof for a given account and optionally some storage keys.
      *
-     * @param address account address
-     * @param keys    storage keys
+     * @param address     account address
+     * @param storageKeys storage keys
      * @return proofs
      */
-    public ProofAccountResult getProof(Address address, Hash[] keys) {
-        return LibEvm.invoke("StateGetProof", new ProofParams(handle, address, keys), ProofAccountResult.class);
+    public ProofAccountResult getProof(Address address, Hash[] storageKeys) {
+        return LibEvm.invoke("StateGetProof", new ProofParams(handle, address, storageKeys), ProofAccountResult.class);
     }
 
     /**

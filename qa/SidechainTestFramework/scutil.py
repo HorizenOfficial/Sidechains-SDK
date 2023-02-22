@@ -52,6 +52,11 @@ EVM_APP_SLOT_TIME = 12  # seconds
 
 DEFAULT_SIMPLE_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * SIMPLE_APP_SLOT_TIME * 5  # 5 epochs
 DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 5  # 5 epochs
+
+# Parallel Testing
+parallel_test = 0
+
+
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -64,12 +69,33 @@ class LogInfo(object):
         self.logConsoleLevel = logConsoleLevel
 
 
+def set_sc_parallel_test(n):
+    global parallel_test
+    parallel_test = n
+
+
+def start_port_modifier():
+    if parallel_test > 0:
+        # Adjust this multiplier if port clashing due to many nodes
+        return (parallel_test - 1) * 20
+
+
 def sc_p2p_port(n):
-    return 8300 + n + os.getpid() % 999
+    start_port = 8300
+    if parallel_test > 0:
+        start_port = 8500 + start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 def sc_rpc_port(n):
-    return 8200 + n + os.getpid() % 999
+    start_port = 8200
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 # To be removed
@@ -481,6 +507,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPTS': websocket_config.reconnectionMaxAttempts,
+        'WEBSOCKET_SERVER_ENABLED': "true" if sc_node_config.websocket_server_enabled else "false",
+        'WEBSOCKET_SERVER_PORT': sc_node_config.websocket_server_port,
         "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
@@ -499,7 +527,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),
         "CIRCUIT_TYPE": bootstrap_info.circuit_type,
-        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false")
+        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false"),
+        "REMOTE_SERVER_ADDRESS": (sc_node_config.remote_keys_server_address if sc_node_config.remote_keys_manager_enabled else "")
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -563,7 +592,8 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "RESTRICT_FORGERS": "false",
         "ALLOWED_FORGERS_LIST": [],
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": DEFAULT_MAX_PACKET_SIZE,
-        "REMOTE_KEY_MANAGER_ENABLED": "false"
+        "REMOTE_KEY_MANAGER_ENABLED": "false",
+        "REMOTE_SERVER_ADDRESS": ""
     }
 
     configsData.append({

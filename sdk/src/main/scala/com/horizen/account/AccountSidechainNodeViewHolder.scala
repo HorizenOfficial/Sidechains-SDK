@@ -22,7 +22,8 @@ import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, RollbackFailed}
 import sparkz.core.utils.NetworkTimeProvider
-
+import sparkz.core.idToVersion
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -125,7 +126,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     val restoredData = for {
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
       state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, blockHashProvider)
-      wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
+      wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
       pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
     } yield (history, state, wallet, pool)
 
@@ -139,7 +140,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
       history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
-      wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
+      wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
       pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
     } yield (history, state, wallet, pool)
 

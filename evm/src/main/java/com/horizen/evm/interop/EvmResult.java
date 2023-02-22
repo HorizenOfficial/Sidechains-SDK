@@ -12,4 +12,8 @@ public class EvmResult {
     public Address contractAddress;
     public Boolean reverted;
     public JsonNode tracerResult;
+
+    public EvmResult() {
+        returnData = new byte[0];
+    }
 }

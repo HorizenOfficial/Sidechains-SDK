@@ -31,6 +31,8 @@ class AccountWalletApiRouteTest extends AccountSidechainApiRouteTest with TableD
         ("getTotalBalance", StatusCodes.OK.intValue)
       )
 
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GenerateSecret_reply(true)
+
       forAll(cases) { (route, expectedCode) =>
         val path = basePath + route
 

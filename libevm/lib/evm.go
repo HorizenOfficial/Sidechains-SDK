@@ -150,7 +150,7 @@ func (t *TraceOptions) getTracer() tracers.Tracer {
 }
 
 type EvmResult struct {
-	UsedGas         uint64          `json:"usedGas"`
+	UsedGas         hexutil.Uint64  `json:"usedGas"`
 	EvmError        string          `json:"evmError"`
 	ReturnData      []byte          `json:"returnData"`
 	ContractAddress *common.Address `json:"contractAddress"`
@@ -235,8 +235,13 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		evmError = vmerr.Error()
 	}
 
+	if returnData == nil {
+		// we want [] rather than null in the response
+		returnData = make([]byte, 0)
+	}
+
 	result := EvmResult{
-		UsedGas:         uint64(params.AvailableGas) - gas,
+		UsedGas:         params.AvailableGas - hexutil.Uint64(gas),
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,

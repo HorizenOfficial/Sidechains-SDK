@@ -6,6 +6,8 @@ import com.horizen.secret.Secret;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import org.junit.Test;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import static org.junit.Assert.*;
@@ -52,7 +54,7 @@ public class CustomMultiKeyPropositionTest {
     }
 
     private PrivateKey25519 generatePrivKey(String seed){
-        Pair<byte[], byte[]> keyPair2= Ed25519.createKeyPair(seed.getBytes());
+        Pair<byte[], byte[]> keyPair2= Ed25519.createKeyPair(seed.getBytes(StandardCharsets.UTF_8));
         return new PrivateKey25519(keyPair2.getKey(), keyPair2.getValue());
     }
 

@@ -1,17 +1,18 @@
 package com.horizen
 
+import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
-import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
+import com.horizen.proposition._
+import com.horizen.secret._
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import sparkz.util.SparkzLogging
-
+import sparkz.crypto.hash.Blake2b256
 import java.util.{List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
   extends sparkz.core.transaction.wallet.Vault[TX, PMOD, W] {
@@ -26,6 +27,8 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.co
   def secrets(): Set[S]
 
   def publicKeys(): Set[P]
+
+  def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)]
 }
 
 
@@ -50,7 +53,7 @@ abstract class AbstractWallet[
 
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion
-  override def addSecret(secret: SidechainTypes#SCS): Try[W] = Try{
+  override def addSecret(secret: SidechainTypes#SCS): Try[W] = Try {
     require(secret != null, "AbstractWallet: Secret must be NOT NULL.")
     secretStorage.add(secret).get
     this
@@ -101,6 +104,32 @@ abstract class AbstractWallet[
 
   def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): W
 
+  override def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)] = Try {
+    require(secretCreator != null, "AbstractWallet: Secret creator must be NOT NULL.")
+    val allSecrets = this.secrets()
+    val salt = secretCreator.salt()
+    val secretsNumber = allSecrets.count(_.isInstanceOf[T])
+    var nonce = secretStorage.getNonce(salt) match {
+      case Some(nonce) => nonce
+      case None => 0
+    }
+    for (_ <- 0 to secretsNumber) {
+      val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
+      val secret: T = secretCreator.generateSecret(seed)
+      if (!secretStorage.contains(secret)) {
+        secretStorage.add(secret) match {
+          case Success(_) =>
+            secretStorage.storeNonce(nonce, salt) match {
+              case Success(_) => return Success(this, secret)
+              case Failure(exception) => throw new RuntimeException("Can't store nonce while generating next secret " + exception)
+            }
+          case Failure(exception) => throw new RuntimeException("Can't store secret while generating next secret " + exception)
+        }
+      }
+      nonce += 1
+    }
+    throw new RuntimeException("Exceeded number of attempts generating secret")
+  }
 
   override def secretByPublicKey25519Proposition(publicKey: PublicKey25519Proposition): JOptional[PrivateKey25519] = {
     secretStorage.get(publicKey) match {
@@ -136,7 +165,5 @@ abstract class AbstractWallet[
       case None => JOptional.empty()
     }
   }
-
-
 }
 

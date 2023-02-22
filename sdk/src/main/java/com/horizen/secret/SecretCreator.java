@@ -1,13 +1,16 @@
 package com.horizen.secret;
 
-import com.horizen.node.NodeWalletBase;
-
 public interface SecretCreator<S extends Secret>
 {
     // Generate secret without context of previously generated secrets stored in wallet.
     // Mostly for tests.
     S generateSecret(byte[] seed);
 
-    // Generate secret taking in consideration context of previously generated secrets stored in wallet.
-    S generateNextSecret(NodeWalletBase wallet);
+    /**
+     * Method to get salt.
+     * In this case salt serves as a domain separation
+     *
+     * @return salt as byte array in UTF-8 encoding
+     */
+    byte[] salt();
 }

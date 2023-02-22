@@ -14,6 +14,7 @@ import sparkz.core.block.Block
 import sparkz.core.block.Block.Timestamp
 import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.nio.charset.StandardCharsets
 import scala.compat.java8.OptionConverters._
 
 trait ConsensusDataProvider {
@@ -180,7 +181,7 @@ trait ConsensusDataProvider {
 
 object ConsensusDataProvider {
   private def blockIdAndNonceToKey(blockId: ModifierId, nonceConsensusEpochInfo: NonceConsensusEpochInfo): ByteArrayWrapper = {
-    new ByteArrayWrapper(Utils.doubleSHA256HashOfConcatenation(blockId.getBytes, nonceConsensusEpochInfo.consensusNonce))
+    new ByteArrayWrapper(Utils.doubleSHA256HashOfConcatenation(blockId.getBytes(StandardCharsets.UTF_8), nonceConsensusEpochInfo.consensusNonce))
   }
 
   private val vrfOutputCache: LruCache[ByteArrayWrapper, VrfOutput] = new LruCache[ByteArrayWrapper, VrfOutput](32) //check cache size

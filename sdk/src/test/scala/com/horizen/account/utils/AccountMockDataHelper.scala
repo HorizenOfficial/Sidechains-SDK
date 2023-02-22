@@ -41,6 +41,7 @@ import sparkz.util.{ModifierId, bytesToId}
 
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util.{Optional, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
@@ -203,6 +204,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex).thenReturn(1)
     Mockito.when(history.bestBlockId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
 
+    Mockito.when(history.feePaymentsInfo(any())).thenReturn(None)
+
     if (parentBlock.nonEmpty) {
       val parentId = parentBlock.get.id
       val blockInfo = new SidechainBlockInfo(
@@ -238,8 +241,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     val block: AccountBlock = mock[AccountBlock]
 
     val scCr1: SidechainCreation = mock[SidechainCreation]
-    val ft1: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId)
-    val ft2: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId)
+    val ft1: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId, 1)
+    val ft2: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId, 2)
 
     val mc2scTransactionsOutputs: Seq[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] =
       Seq(scCr1, ft1, ft2)
@@ -385,7 +388,7 @@ case class AccountMockDataHelper(genesis: Boolean)
   }
 
   def getMockedWallet(secret: PrivateKeySecp256k1): AccountWallet = {
-    val wallet = new AccountWallet("seed".getBytes(), getMockedSecretStorage(secret))
+    val wallet = new AccountWallet("seed".getBytes(StandardCharsets.UTF_8), getMockedSecretStorage(secret))
 
     wallet
   }
