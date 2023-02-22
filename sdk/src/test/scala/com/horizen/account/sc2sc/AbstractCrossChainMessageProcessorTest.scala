@@ -2,6 +2,7 @@ package com.horizen.account.sc2sc
 
 import java.math.BigInteger
 import java.util
+
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.state.{AccountStateView, ExecutionFailedException, MessageProcessorFixture}
 import com.horizen.evm.utils.Address
@@ -9,10 +10,12 @@ import com.horizen.fixtures.StoreFixture
 import com.horizen.params.MainNetParams
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertArrayEquals, assertFalse, assertTrue}
-import org.junit.Test
+import org.junit.{Before, Test}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
+
 import scala.util.Random
 
 class AbstractCrossChainMessageProcessorTest extends JUnitSuite
@@ -21,9 +24,19 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
   with StoreFixture
   with CrossChainMessageProcessorFixture {
 
+  var mockStateView: AccountStateView = _
+
+  @Before
+  def setUp(): Unit = {
+    mockStateView = mock[AccountStateView]
+    Mockito
+      .when(mockStateView.getGasTrackedView(any()))
+      .thenReturn(mockStateView)
+  }
+
+
   @Test
   def testInit(): Unit = {
-    val mockStateView = mock[AccountStateView]
     Mockito
       .when(mockStateView.addAccount(ArgumentMatchers.any[Address], ArgumentMatchers.any[Array[Byte]]))
       .thenAnswer(args => {
@@ -36,12 +49,11 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
   @Test
   def testCanProcess(): Unit = {
     val msg = listOfCrosschainMessages(1)
-    val mockStateView = mock[AccountStateView]
     assertTrue(
       "Message listOfCrosschainMessages cannot be processed",
       getMessageProcessorTestImpl(MainNetParams()).canProcess(msg, mockStateView)
     )
-    val wrongAddress =  new Address("0x35fdd51e73221f467b40946c97791a3e19799bea")
+    val wrongAddress =  new Address("0x25fdd51e73221f467b40946c97791a3e19799beb")
     val msgNotProcessable = getMessage(wrongAddress, BigInteger.ZERO, Array.emptyByteArray)
     assertFalse(
       "Message not for CrosschainMsgProcessor can be processed",
@@ -52,8 +64,6 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
   @Test
   def testProcessWithWrongPArams(): Unit = {
     val value = BigInteger.valueOf(1000000000L) // 1 zenny and 1 wei
-    val mockStateView = mock[AccountStateView]
-
     // msgWithWrongFunctionCall processing should result in ExecutionFailed
     val data = BytesUtils.fromHexString("99")
     val msgWithWrongFunctionCall = getMessage(CrossChainMessageProcessorTestImpl.contractAddress, value, data)
@@ -64,22 +74,18 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
 
   @Test
   def testGetListOfWithdrawalReqs(): Unit = {
-    val mockStateView = mock[AccountStateView]
     val proc : AbstractCrossChainMessageProcessor  = getMessageProcessorTestImpl(MainNetParams())
 
     usingView(proc) { view =>
-
       proc.init(view)
-
       val epochNum = 102
-
       // No messages
       val msg = listOfCrosschainMessages(epochNum)
       val counterKey = getMessageProcessorTestImpl(MainNetParams()).getMessageEpochCounterKey(epochNum)
       val numOfWithdrawalReqs = Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(0))
 
       Mockito
-        .when(mockStateView.getAccountStorage(CrossChainMessageProcessorTestImpl.contractAddress, counterKey))
+        .when(mockStateView.getAccountStorage(ArgumentMatchers.any[Address], ArgumentMatchers.any[Array[Byte]]))
         .thenReturn(numOfWithdrawalReqs)
 
       var returnData = withGas(proc.process(msg, mockStateView, _, defaultBlockContext))
@@ -91,7 +97,7 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
       val numOfMessagesReqsInBytes =
         Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(numOfMessages))
       Mockito
-        .when(mockStateView.getAccountStorage(CrossChainMessageProcessorTestImpl.contractAddress, counterKey))
+        .when(mockStateView.getAccountStorage(ArgumentMatchers.any[Address], ArgumentMatchers.any[Array[Byte]]))
         .thenReturn(numOfMessagesReqsInBytes)
 
 
