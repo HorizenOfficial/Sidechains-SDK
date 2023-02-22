@@ -214,7 +214,6 @@ class SCEvmERC721Contract(AccountChainSetup):
 
         exception_thrown = False
         try:
-            exception_thrown = False
             mint_payable(sc_node, smart_contract, smart_contract_address, self.evm_address, minting_price,
                          minted_ids_user1[1], static_call=True)
         except EvmExecutionError as err:

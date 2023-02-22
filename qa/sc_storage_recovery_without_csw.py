@@ -318,15 +318,17 @@ class StorageRecoveryWithoutCSWTest(SidechainTestFramework):
         storages_list = ["state", "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 13)
 
-
+        exception_thrown = False
         try:
             # restart SC2
             self.forgeBlockAndCheckSync()
-
         except Exception as e:
+            exception_thrown = True
             logging.info("Expected exception caught during negative testing: " + str(e))
             logging.info("Stopping SC2")
             stop_sc_node(sc_node2, 1)
+        finally:
+            assert_true(exception_thrown, "Exception should have been thrown")
 
 
 if __name__ == "__main__":

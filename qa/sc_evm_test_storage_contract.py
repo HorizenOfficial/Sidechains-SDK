@@ -94,7 +94,6 @@ class SCEvmStorageContract(AccountChainSetup):
         was_exception = False
         test_message = 'This is a message'
         try:
-            was_exception = False
             self.__set_storage_value(smart_contract, smart_contract_address, self.evm_address, test_message,
                                      static_call=True, generate_block=False)
         except EvmExecutionError as err:

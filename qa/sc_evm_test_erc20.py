@@ -134,7 +134,6 @@ class SCEvmERC20Contract(AccountChainSetup):
         reverting_transfer_amount = 2
         exception_thrown = False
         try:
-            exception_thrown = False
             method = 'transfer(address,uint256)'
             contract_function_static_call(sc_node, smart_contract, smart_contract_address, evm_address,
                                           method, other_address,

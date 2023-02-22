@@ -183,6 +183,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         except SCAPIException as e:
             logging.info("Expected SCAPIException: " + e.error)
             error_occur = True
+
         assert_true(error_occur, "Try to send an openStake transaction with negative forgerIndex")
         logging.info("Ok!")
 
@@ -194,6 +195,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         except SCAPIException as e:
             logging.info("Expected SCAPIException: " + e.error)
             error_occur = True
+
         assert_true(error_occur, "Try to send an openStake transaction with empty output proposition")
         logging.info("Ok!")
 
@@ -205,7 +207,8 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         except SCAPIException as e:
             logging.info("Expected SCAPIException: " + e.error)
             error_occur = True
-            assert_true(error_occur, "Try to send an openStake transaction with empty output proposition")
+
+        assert_true(error_occur, "Try to send an openStake transaction with empty output proposition")
         logging.info("Ok!")
 
         # Try to send an openStake transaction with forgerIndex out of bounds
