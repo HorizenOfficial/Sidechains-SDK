@@ -385,8 +385,7 @@ class MempoolMap(
             (balance.compareTo(tx.maxCost) >= 0) &&
             (currAccountSlots + txSizeInSlots <= MaxSlotsPerAccount)
           ) {
-            val tmp = (tx, haveBecomeNonExecutable)
-            txsToReinject += tmp
+            txsToReinject += ((tx, haveBecomeNonExecutable))
             destMap.put(tx.getNonce, tx.id)
             currAccountSlots += txSizeInSlots
           } else {
