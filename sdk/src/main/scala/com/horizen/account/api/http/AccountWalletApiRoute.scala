@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages
 import com.horizen.account.api.http.AccountWalletErrorResponse.ErrorCouldNotGetBalance
 import com.horizen.account.api.http.AccountWalletRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -19,15 +20,15 @@ import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.node.NodeWalletBase
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import com.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
+import com.horizen.SidechainTypes
 import sparkz.core.settings.RESTApiSettings
-
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
+
 
 case class AccountWalletApiRoute(override val settings: RESTApiSettings,
                                  sidechainNodeViewHolderRef: ActorRef,
@@ -58,15 +59,13 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     withBasicAuth {
       _ => {
         entity(as[ReqCreateKey]) { _ =>
-          withNodeView { sidechainNodeView =>
-            val wallet = sidechainNodeView.getNodeWallet
-            val secret = PrivateKeySecp256k1Creator.getInstance().generateNextSecret(wallet)
-            val future = sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret)
-            Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-              case Success(_) =>
+          withNodeView { _ =>
+            val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(PrivateKeySecp256k1Creator.getInstance)
+            Await.result(secretFuture, timeout.duration).asInstanceOf[Try[PrivateKeySecp256k1]] match {
+              case Success(secret: PrivateKeySecp256k1) =>
                 ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
               case Failure(e) =>
-                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create secret.", JOptional.of(e)))
             }
           }
         }

@@ -4,6 +4,8 @@ import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import java.security.SecureRandom;
 
+import java.util.Arrays;
+
 public final class Ed25519 {
 
     private Ed25519() {
@@ -38,5 +40,27 @@ public final class Ed25519 {
         byte[] signature = new byte[64];
         org.bouncycastle.math.ec.rfc8032.Ed25519.sign(privateKey, 0, publicKey, 0, null, message, 0, message.length, signature, 0);
         return signature;
+    }
+
+    public static boolean validatePublicKey(byte[] publicKey) {
+        try {
+            return org.bouncycastle.math.ec.rfc8032.Ed25519.validatePublicKeyFull(publicKey, 0);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean validatePublicKey(byte[] privateKey, byte[] publicKey) {
+        try {
+            if (!org.bouncycastle.math.ec.rfc8032.Ed25519.validatePublicKeyFull(publicKey, 0))
+                return false;
+
+            byte[] correctPublicKey = new byte[publicKeyLength()];
+            org.bouncycastle.math.ec.rfc8032.Ed25519.generatePublicKey(privateKey, 0 , correctPublicKey, 0);
+
+            return Arrays.equals(publicKey, correctPublicKey);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

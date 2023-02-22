@@ -8,7 +8,6 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
@@ -38,6 +37,7 @@ import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -220,7 +220,7 @@ class EthService(
   @RpcMethod("eth_sign")
   def sign(sender: Address, message: Array[Byte]): Array[Byte] = {
     val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
-    val messageToSign = prefix.getBytes() ++ message
+    val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ message
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
         .map(secret => secret.sign(messageToSign))

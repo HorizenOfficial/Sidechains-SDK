@@ -1,7 +1,6 @@
 package com.horizen.chain
 
 import java.io._
-
 import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
@@ -11,6 +10,8 @@ import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
+
+import java.nio.charset.StandardCharsets
 
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   setSeed(1000L)
@@ -94,7 +95,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
 
 
     // Test 2: try to deserialize broken bytes.
-    assertTrue("SidechainBlockInfo expected to be not parsed due to broken data.", SidechainBlockInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("SidechainBlockInfo expected to be not parsed due to broken data.", SidechainBlockInfoSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test

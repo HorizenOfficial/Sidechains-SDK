@@ -1,5 +1,6 @@
 package com.horizen.cryptolibprovider.implementations;
 
+import com.google.common.primitives.Ints;
 import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;

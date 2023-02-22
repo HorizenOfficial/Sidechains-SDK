@@ -21,10 +21,18 @@ public class VrfPublicKey
     private final byte[] publicBytes;
 
     public VrfPublicKey(byte[] publicKey) {
+        this(publicKey, false);
+    }
+
+    public VrfPublicKey(byte[] publicKey, boolean checkPublicKey) {
         Objects.requireNonNull(publicKey, "Public key can't be null");
 
-        if(publicKey.length != KEY_LENGTH)
+        if (publicKey.length != KEY_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, publicKey.length));
+
+        if (checkPublicKey && !CryptoLibProvider.vrfFunctions().publicKeyIsValid(publicKey)) {
+            throw  new IllegalArgumentException("Public key is not valid");
+        }
 
         publicBytes = Arrays.copyOf(publicKey, publicKey.length);
     }

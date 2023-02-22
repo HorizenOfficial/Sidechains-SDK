@@ -14,6 +14,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
 
 class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with AccountBlockFixture {
@@ -70,7 +71,7 @@ class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with Acco
     }
 
     // Test 2: try to deserialize broken bytes.
-    assertTrue("AccountBlockHeaderSerializer expected to be not parsed due to broken data.", AccountBlockHeaderSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("AccountBlockHeaderSerializer expected to be not parsed due to broken data.", AccountBlockHeaderSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test
@@ -119,7 +120,7 @@ class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with Acco
 
 
     // Test 2: signed header with invalid signature must be not semantically valid
-    val invalidSignature = forgerMetadata.blockSignSecret.sign("different_message".getBytes())
+    val invalidSignature = forgerMetadata.blockSignSecret.sign("different_message".getBytes(StandardCharsets.UTF_8))
     val invalidSignedHeader = baseUnsignedHeader.copy(signature = invalidSignature)
     invalidSignedHeader.semanticValidity(params) match {
       case Success(_) =>

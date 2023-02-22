@@ -7,13 +7,15 @@ import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.Assert.*;
 
 public class BoxesTest extends BoxFixtureClass {
 
     @Test
     public void differentBoxTypesComparisonTest() {
-        byte[] anotherSeed = "testseed".getBytes();
+        byte[] anotherSeed = "testseed".getBytes(StandardCharsets.UTF_8);
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(keyPair.getValue());
         MCPublicKeyHashProposition mcPublicKeyHashProposition = getMCPublicKeyHashProposition();

@@ -218,7 +218,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         assertTrue(node.isTextual)
       }
       // secret is not added
-      sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GenerateSecret_reply(false)
       Post(basePath + "createVrfSecret").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -229,6 +229,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /createPrivateKey25519" in {
       // secret is added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GenerateSecret_reply(true)
       Post(basePath + "createPrivateKey25519").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -247,6 +248,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GenerateSecret_reply(false)
       Post(basePath + "createPrivateKey25519").addCredentials(credentials) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

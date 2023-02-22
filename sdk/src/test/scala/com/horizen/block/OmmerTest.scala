@@ -15,6 +15,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.ModifierId
 
+import java.nio.charset.StandardCharsets
 import scala.io.Source
 import scala.util.{Failure, Success}
 
@@ -375,7 +376,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
 
 
     // Test 3: try to deserialize broken bytes.
-    assertTrue("OmmerSerializer expected to be not parsed due to broken data.", OmmerSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("OmmerSerializer expected to be not parsed due to broken data.", OmmerSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test
