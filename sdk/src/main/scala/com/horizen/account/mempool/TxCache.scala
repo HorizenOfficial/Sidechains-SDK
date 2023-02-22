@@ -96,8 +96,10 @@ class TxCache {
 
   def getNonExecSizeInSlots: Int = nonExecSizeInSlots
 
+  // Returns the transaction that has been in the mempool for the longest time
   def getOldestTransaction(): Option[SidechainTypes#SCAT] = oldestTx.map(_.tx)
 
+  // Returns the latest transaction added to the mempool
   def getYoungestTransaction(): Option[SidechainTypes#SCAT] = youngestTx.map(_.tx)
 
   def getNonExecIterator(): NonExecTransactionIterator = new NonExecTransactionIterator
@@ -110,7 +112,6 @@ class TxCache {
   class NonExecTransactionIterator {
 
     private var nextElem: Option[TxMetaInfo] = oldestTx
-
 
     @tailrec
     final private[mempool] def findNext(txInfo: Option[TxMetaInfo]): Option[TxMetaInfo] = {
