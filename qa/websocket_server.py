@@ -60,12 +60,14 @@ class SCWsServer(SidechainTestFramework):
     number_of_sidechain_nodes = 1
     blocks = []
     sc_withdrawal_epoch_length = 10
+    websocket_server_port = 8024
 
     def sc_setup_chain(self):
         # Bootstrap new SC, specify SC node connection to MC node
         mc_node_1 = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
+            websocket_server_enabled=True, websocket_server_port=self.websocket_server_port
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 500, self.sc_withdrawal_epoch_length),
                                         sc_node_1_configuration)
@@ -101,7 +103,7 @@ class SCWsServer(SidechainTestFramework):
 
         #Start websocket client
         ws = WebsocketClient()
-        ws_connection = ws.create_connection("ws://localhost:8025/")
+        ws_connection = ws.create_connection(f"ws://localhost:{self.websocket_server_port}/")
 
         ######## Mempool requests test ########
         logging.info("######## Mempool requests test ########")

@@ -30,6 +30,8 @@ public interface VrfFunctions {
 
     boolean publicKeyIsValid(byte[] publicKeyBytes);
 
+    byte[] getPublicKey(byte[] secretKeyBytes);
+
     //Return Vrf proof hash for given proof / key / message; return None if proof is not valid
     Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes);
 }

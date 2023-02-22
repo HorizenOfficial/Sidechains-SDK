@@ -7,7 +7,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GenerateSecret, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
@@ -41,7 +41,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.util.{ModifierId, bytesToId}
-
 import java.net.{InetAddress, InetSocketAddress}
 import java.util
 import sparkz.core.app.Version
@@ -57,6 +56,7 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes
 import org.mindrot.jbcrypt.BCrypt
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
+import java.nio.charset.StandardCharsets
 import java.util.{HashMap => JHashMap}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable.ListBuffer
@@ -173,6 +173,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply())
                 sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration), funParameter)
           }
+        case GenerateSecret(g) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GenerateSecret_reply())
+            sender ! Success(g.generateSecret("some_seed".getBytes(StandardCharsets.UTF_8)))
+          else sender ! Failure(new Exception("Secret not generated."))
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success(Unit)
@@ -285,10 +289,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
         case GenerateSidechainBlocks(count) =>
           if (sidechainApiMockConfiguration.getShould_blockActor_GenerateSidechainBlocks_reply())
             sender ! Future[Try[Seq[ModifierId]]](Try(Seq(
-              bytesToId("block_id_1".getBytes),
-              bytesToId("block_id_2".getBytes),
-              bytesToId("block_id_3".getBytes),
-              bytesToId("block_id_4".getBytes))))
+              bytesToId("block_id_1".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_2".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_3".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_4".getBytes(StandardCharsets.UTF_8)))))
           else sender ! Future[Try[ModifierId]](Failure(new Exception("Block actor not configured for generate blocks.")))
       }
       TestActor.KeepRunning

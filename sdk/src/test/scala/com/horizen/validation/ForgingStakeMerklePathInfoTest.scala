@@ -4,7 +4,6 @@ import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.lang.{Byte => JByte}
 import java.util
 import java.util.{ArrayList => JArrayList}
-
 import com.horizen.box.ForgerBox
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.fixtures.BoxFixture
@@ -13,16 +12,18 @@ import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertNotEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
+import java.nio.charset.StandardCharsets
+
 
 class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
   val vrfGenerationSeed = 907
   val vrfGenerationPrefix = "ForgerBoxMerklePathInfoTest"
 
   val forgerBox: ForgerBox = getForgerBox(
-    getPrivateKey25519("123".getBytes()).publicImage(),
+    getPrivateKey25519("123".getBytes(StandardCharsets.UTF_8)).publicImage(),
     1000L,
     100L,
-    getPrivateKey25519("456".getBytes()).publicImage(),
+    getPrivateKey25519("456".getBytes(StandardCharsets.UTF_8)).publicImage(),
     VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationSeed)
   )
   val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value())
@@ -64,7 +65,7 @@ class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
     }
 
     // Test 3: try to deserialize broken bytes.
-    assertTrue("ForgingStakeMerklePathInfo expected to be not parsed due to broken data.", ForgerBoxMerklePathInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("ForgingStakeMerklePathInfo expected to be not parsed due to broken data.", ForgerBoxMerklePathInfoSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test

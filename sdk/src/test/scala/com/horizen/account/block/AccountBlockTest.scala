@@ -34,6 +34,7 @@ import sparkz.util.{ModifierId, idToBytes}
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util.Random
 import scala.io.Source
 import scala.jdk.CollectionConverters.seqAsJavaListConverter
@@ -161,7 +162,7 @@ class AccountBlockTest
     }
 
     // Test 2: try to deserialize broken bytes.
-    assertTrue("AccountBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("AccountBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test

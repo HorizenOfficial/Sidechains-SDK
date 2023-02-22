@@ -63,9 +63,10 @@ class SecureEnclaveApiServer(object):
             logging.info("SecureEnclaveApiServer /api/v1/listKeys result" + result)
             return result
 
-        multiprocessing.Process(daemon=True, target=lambda: self.app.run(debug=False, use_reloader=False)).start()
+        multiprocessing.Process(daemon=True, target=lambda: self.app.run(host=self.host, port=self.port, debug=False,
+                                                                         use_reloader=False)).start()
 
-    def __init__(self, schnorr_secrets=None, schnorr_public_keys=None):
+    def __init__(self, schnorr_secrets=None, schnorr_public_keys=None, host="127.0.0.1", port=5000):
         if schnorr_public_keys is None:
             schnorr_public_keys = []
         if schnorr_secrets is None:
@@ -73,6 +74,8 @@ class SecureEnclaveApiServer(object):
         self.app = Flask(__name__)
         self.schnorr_secrets = schnorr_secrets
         self.schnorr_public_keys = schnorr_public_keys
+        self.host = host
+        self.port = port
 
 
 def launch_signing_tool(json_parameters):

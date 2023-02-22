@@ -9,6 +9,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 
 class EoaMessageProcessorIntegrationTest
   extends JUnitSuite
@@ -32,7 +33,7 @@ class EoaMessageProcessorIntegrationTest
       assertTrue("Processor expected to BE ABLE to process message", EoaMessageProcessor.canProcess(msg, view))
 
       // Test 3: to account exists and has code hash defined, so considered as Smart contract account
-      val codeHash: Array[Byte] = Keccak256.hash("abcd".getBytes())
+      val codeHash: Array[Byte] = Keccak256.hash("abcd".getBytes(StandardCharsets.UTF_8))
       view.addAccount(toAddress, codeHash)
       assertFalse("Processor expected to UNABLE to process message", EoaMessageProcessor.canProcess(msg, view))
 

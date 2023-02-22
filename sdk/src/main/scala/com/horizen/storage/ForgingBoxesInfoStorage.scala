@@ -11,6 +11,7 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 import java.util.{ArrayList => JArrayList}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
+import java.nio.charset.StandardCharsets
 
 
 class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with SidechainStorageInfo with SparkzLogging
@@ -18,7 +19,7 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Side
   require(storage != null, "Storage must be NOT NULL.")
 
   private[horizen] def epochKey(epoch: ConsensusEpochNumber): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"epoch$epoch"))
-  private[horizen] val forgerBoxesKey: ByteArrayWrapper = new ByteArrayWrapper(Blake2b256.hash("forgerBoxesKey".getBytes()))
+  private[horizen] val forgerBoxesKey: ByteArrayWrapper = new ByteArrayWrapper(Blake2b256.hash("forgerBoxesKey".getBytes(StandardCharsets.UTF_8)))
   private[horizen] val maxNumberOfStoredEpochs: Int = 3
 
   private[horizen] val forgingStakeMerklePathInfoListSerializer = new ListSerializer[ForgingStakeMerklePathInfo](ForgerBoxMerklePathInfoSerializer)

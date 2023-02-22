@@ -30,12 +30,12 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     }
 
     @Override
-    public EnumMap<ProofType, byte[]> createProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] message) {
+    public EnumMap<ProofType, byte[]> createProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] element) {
         VRFSecretKey secretKey = VRFSecretKey.deserialize(secretKeyBytes);
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
 
         VRFKeyPair keyPair = new VRFKeyPair(secretKey, publicKey);
-        FieldElement fieldElement = FieldElementUtils.messageToFieldElement(message);
+        FieldElement fieldElement = FieldElementUtils.elementToFieldElement(element);
         VRFProveResult vrfProofAndVrfOutput = keyPair.prove(fieldElement);
         byte[] vrfProofBytes = vrfProofAndVrfOutput.getVRFProof().serializeProof();
         byte[] vrfOutputBytes = vrfProofAndVrfOutput.getVRFOutput().serializeFieldElement();
@@ -61,6 +61,10 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     @Override
     public boolean publicKeyIsValid(byte[] publicKeyBytes) {
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
+        if (publicKey == null) {
+            return false;
+        }
+
         boolean keyIsValid = publicKey.verifyKey();
         publicKey.freePublicKey();
 
@@ -68,11 +72,13 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     }
 
     @Override
-    public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
+    public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] element, byte[] proofBytes) {
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
         VRFProof vrfProof = VRFProof.deserialize(proofBytes);
-        FieldElement messageAsFieldElement = FieldElementUtils.messageToFieldElement(message);
+        FieldElement messageAsFieldElement = FieldElementUtils.elementToFieldElement(element);
 
+        // VRF public key, proof and field element could null in case they can not be deserialized.
+        // It may happen when vrf public key is not valid or when fieldElement or proof is invalid.
         if(publicKey == null || vrfProof == null || messageAsFieldElement == null) {
             if(publicKey != null)
                 publicKey.freePublicKey();
@@ -99,6 +105,19 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
         messageAsFieldElement.freeFieldElement();
 
         return output;
+    }
+
+    @Override
+    public byte[] getPublicKey(byte[] secretKeyBytes) {
+        VRFSecretKey secretKey = VRFSecretKey.deserialize(secretKeyBytes);
+        VRFPublicKey publicKey = secretKey.getPublicKey();
+
+        byte[] publicKeyBytes = publicKey.serializePublicKey();
+
+        secretKey.freeSecretKey();
+        publicKey.freePublicKey();
+
+        return publicKeyBytes;
     }
 
     @Override

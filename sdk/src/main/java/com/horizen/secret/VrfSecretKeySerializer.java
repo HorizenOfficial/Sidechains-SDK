@@ -29,6 +29,14 @@ public class VrfSecretKeySerializer implements SecretSerializer<VrfSecretKey> {
         byte[] secretKey = reader.getBytes(VrfSecretKey.SECRET_KEY_LENGTH);
         byte[] publicKey = reader.getBytes(VrfSecretKey.PUBLIC_KEY_LENGTH);
 
-        return new VrfSecretKey(secretKey, publicKey);
+        VrfSecretKey vrfSecretKey = new VrfSecretKey(secretKey, publicKey);
+
+        // Considering that isPublicKeyValid() is time-consuming operation and public key may not be valid only when
+        // it was red from somewhere(in all cases it's generated from private key), key validation was put here.
+        if(!vrfSecretKey.isPublicKeyValid()) {
+            throw new IllegalArgumentException("The public key is not corresponds to the secret key.");
+        }
+
+        return vrfSecretKey;
     }
 }
