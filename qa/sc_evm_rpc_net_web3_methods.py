@@ -38,6 +38,7 @@ class SCEvmRpcNetWeb3Methods(AccountChainSetup):
         # Disconnect SC node
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
         assert_true(int(sc_node_1.rpc_net_peerCount()['result'], 16) == 0)
+        assert_true(sc_node_1.rpc_net_listening()['result'] is True)
 
         # Check web3_clientVersion exists
         assert_true(len(sc_node_1.rpc_web3_clientVersion()['result']) > 6)

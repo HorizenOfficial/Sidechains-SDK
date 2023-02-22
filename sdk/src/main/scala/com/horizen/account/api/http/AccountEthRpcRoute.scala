@@ -22,12 +22,10 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import sparkz.util.SparkzLogging
 import sparkz.core.api.http.ApiDirectives
 import sparkz.core.settings.RESTApiSettings
 
-import java.io.{File, FileReader}
 import java.util
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -133,12 +131,8 @@ case class AccountEthRpcRoute(
     val default = "unknown"
     val architecture = Try(System.getProperty("os.arch")).getOrElse(default)
     val javaVersion = Try(System.getProperty("java.specification.version")).getOrElse(default)
-    val pom = Try(new MavenXpp3Reader().read(new FileReader(new File("pom.xml")))).toOption
-    val (artifactId, artifactVersion): (String, String) = pom match {
-      case Some(artifactInfo) => (artifactInfo.getArtifactId, artifactInfo.getVersion)
-      case None => (default, default)
-    }
-    val version = s"$artifactId/$artifactVersion/$architecture/jdk$javaVersion"
+    val impVersion = Try(this.getClass.getPackage.getImplementationVersion).getOrElse(default)
+    val version = s"$impVersion/$architecture/jdk$javaVersion"
     version
   }
 }
