@@ -179,7 +179,7 @@ public class EthereumTransactionDecoder {
         byte[] r = ((RlpString)values.getValues().get(7)).getBytes();
         byte[] s = ((RlpString)values.getValues().get(8)).getBytes();
 
-        Long chainId;
+        long chainId;
         SignatureSecp256k1 realSignature;
         if (Arrays.equals(r, new byte[0]) && Arrays.equals(s, new byte[0])) {
             // if r and s are both 0 we assume that this signature stands for an unsigned tx object
@@ -208,7 +208,7 @@ public class EthereumTransactionDecoder {
     }
 
 
-    private static Long decodeEip155ChainId(byte[] bv) {
+    private static long decodeEip155ChainId(byte[] bv) {
         long v = convertToLong(bv);
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
             return 0L;

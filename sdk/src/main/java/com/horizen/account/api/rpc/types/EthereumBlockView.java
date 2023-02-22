@@ -56,7 +56,7 @@ public class EthereumBlockView {
         stateRoot = new Hash(header.stateRoot());
         receiptsRoot = new Hash(header.receiptsRoot());
         miner = header.forgerAddress().address();
-        size = BigInteger.valueOf(header.bytes().length);
+        size = BigInteger.valueOf(block.bytes().length);
         gasLimit = header.gasLimit();
         gasUsed = header.gasUsed();
         timestamp = BigInteger.valueOf(block.timestamp());

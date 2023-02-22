@@ -21,7 +21,7 @@ import sparkz.core.utils.NetworkTimeProvider
 import java.util.{Timer, TimerTask}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.util.{Failure, Success}
 
 abstract class AbstractForger[
@@ -43,8 +43,14 @@ abstract class AbstractForger[
 
   type View = CurrentView[HIS, MS, VL, MP]
 
-  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
-  implicit val timeout: Timeout = Timeout(timeoutDuration)
+  private val restApiTimeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
+  private val consensusSlotDuration: FiniteDuration = FiniteDuration(params.consensusSecondsInSlot, SECONDS)
+
+  // implicit timeout for akka msg
+  implicit private val timeout: Timeout = Timeout(restApiTimeoutDuration)
+
+  // we should not take more time than a slot duration for forging a block.
+  private val mcRefDataRetrievalTimeout = Timeout((restApiTimeoutDuration.min(consensusSlotDuration))/2)
 
   private val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
   private def forgingInitiatorTimerTask: TimerTask = new TimerTask {override def run(): Unit = tryToCreateBlockNow()}
@@ -53,7 +59,7 @@ abstract class AbstractForger[
   private def startTimer(): Unit = {
     this.timerOpt match {
       case Some(_) => log.info("Automatically forging already had been started")
-      case None => {
+      case None =>
         val newTimer = new Timer()
         val currentTime: Long = timeProvider.time() / 1000
         val delay = TimeToEpochUtils.secondsRemainingInSlot(params, currentTime) * 1000
@@ -61,7 +67,6 @@ abstract class AbstractForger[
         newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, consensusMillisecondsInSlot)
         timerOpt = Some(newTimer)
         log.info("Automatically forging had been started")
-      }
     }
   }
 
@@ -96,7 +101,7 @@ abstract class AbstractForger[
     processStopForgingMessage orElse
     processTryForgeNextBlockForEpochAndSlotMessage orElse
     processGetForgeInfo orElse {
-      case message: Any => log.error(s"Forger received strange message: ${message} from ${sender().path.name}")
+      case message: Any => log.error(s"Forger received strange message: $message from ${sender().path.name}")
     }
   }
 
@@ -126,23 +131,23 @@ abstract class AbstractForger[
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
     case obj: TryForgeNextBlockForEpochAndSlot[TX] =>
-      tryToCreateBlockForEpochAndSlot(obj.consensusEpochNumber, obj.consensusSlotNumber, Some(sender()), timeout, obj.forcedTx)  }
+      tryToCreateBlockForEpochAndSlot(obj.consensusEpochNumber, obj.consensusSlotNumber, Some(sender()), obj.forcedTx)  }
 
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = timeProvider.time() / 1000
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
-    log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot ${epochAndSlot}")
-    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout, Seq())  }
+    log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot $epochAndSlot")
+    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, Seq())  }
 
-  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout, forcedTx: Iterable[TX]) : Future[ForgeResult] = {
-    val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout, forcedTx)
+  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, forcedTx: Iterable[TX]) : Future[ForgeResult] = {
+    val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, mcRefDataRetrievalTimeout, forcedTx)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture
   }
 
-  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout, forcedTx: Iterable[TX]): Unit = {
-    val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, blockCreationTimeout, forcedTx)
+  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], forcedTx: Iterable[TX]): Unit = {
+    val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, forcedTx)
 
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
@@ -190,7 +195,7 @@ abstract class AbstractForger[
         case Success(epochAndSlot: ConsensusEpochAndSlot) =>
           forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot, isForgingEnabled))
 
-        case failure@Failure(ex) =>
+        case failure@Failure(_) =>
           forgerInfoRequester ! failure
 
       }
