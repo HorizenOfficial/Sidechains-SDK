@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.google.common.io.BaseEncoding;
 import io.horizen.evm.utils.BigIntegerDeserializer;
 import io.horizen.evm.utils.BigIntegerSerializer;
@@ -22,7 +21,6 @@ final class Converter {
         module.addDeserializer(BigInteger.class, new BigIntegerDeserializer());
         mapper = new ObjectMapper();
         mapper.registerModule(module);
-        mapper.registerModule(new ParameterNamesModule());
         // do not serialize null or empty values
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);

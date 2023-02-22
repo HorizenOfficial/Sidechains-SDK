@@ -1,5 +1,6 @@
 package io.horizen.evm.results;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
 
@@ -16,21 +17,21 @@ public class ProofAccountResult {
     public final ProofStorageResult[] storageProof;
 
     public ProofAccountResult(
-        Address address,
-        String[] accountProof,
-        BigInteger balance,
-        Hash codeHash,
-        BigInteger nonce,
-        Hash storageHash,
-        ProofStorageResult[] storageProof
+        @JsonProperty("address") Address address,
+        @JsonProperty("accountProof") String[] accountProof,
+        @JsonProperty("balance") BigInteger balance,
+        @JsonProperty("codeHash") Hash codeHash,
+        @JsonProperty("nonce") BigInteger nonce,
+        @JsonProperty("storageHash") Hash storageHash,
+        @JsonProperty("storageProof") ProofStorageResult[] storageProof
     ) {
         this.address = address;
-        this.accountProof = Objects.requireNonNullElseGet(accountProof, () -> new String[0]);
+        this.accountProof = Objects.requireNonNullElse(accountProof, new String[0]);
         this.balance = balance;
         this.codeHash = codeHash;
         this.nonce = nonce;
         this.storageHash = storageHash;
-        this.storageProof = Objects.requireNonNullElseGet(storageProof, () -> new ProofStorageResult[0]);
+        this.storageProof = Objects.requireNonNullElse(storageProof, new ProofStorageResult[0]);
     }
 
     public static class ProofStorageResult {
@@ -38,10 +39,14 @@ public class ProofAccountResult {
         public final BigInteger value;
         public final String[] proof;
 
-        public ProofStorageResult(String key, BigInteger value, String[] proof) {
+        public ProofStorageResult(
+            @JsonProperty("key") String key,
+            @JsonProperty("value") BigInteger value,
+            @JsonProperty("proof") String[] proof
+        ) {
             this.key = key;
             this.value = value;
-            this.proof = proof;
+            this.proof = Objects.requireNonNullElse(proof, new String[0]);
         }
     }
 }
