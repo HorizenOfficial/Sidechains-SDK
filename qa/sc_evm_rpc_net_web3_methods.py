@@ -26,7 +26,7 @@ Test:
 class SCEvmRpcNetWeb3Methods(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(number_of_sidechain_nodes=2, withdrawalEpochLength=10)
+        super().__init__(number_of_sidechain_nodes=2, withdrawalEpochLength=10, max_incoming_connections=1)
 
     def run_test(self):
         sc_node_1 = self.sc_nodes[0]
@@ -35,7 +35,7 @@ class SCEvmRpcNetWeb3Methods(AccountChainSetup):
         connect_sc_nodes(sc_node_1, 1)
 
         assert_true(int(sc_node_1.rpc_net_peerCount()['result'], 16) == 1)
-        assert_true(sc_node_1.rpc_net_listening()['result'] is True)
+        assert_true(sc_node_1.rpc_net_listening()['result'] is False)
 
         # Disconnect SC node
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)

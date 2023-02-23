@@ -20,7 +20,7 @@ class AccountChainSetup(SidechainTestFramework):
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
                  initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
-                 remote_keys_server_address=None):
+                 remote_keys_server_address=None, max_incoming_connections=100):
         super().__init__()
 
         self.evm_address = None
@@ -40,6 +40,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.circuittype_override = circuittype_override
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
         self.remote_keys_server_address = remote_keys_server_address
+        self.max_incoming_connections = max_incoming_connections
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -66,7 +67,8 @@ class AccountChainSetup(SidechainTestFramework):
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
-                    remote_keys_server_address=self.remote_keys_server_address))
+                    remote_keys_server_address=self.remote_keys_server_address,
+                    max_incoming_connections=self.max_incoming_connections))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
@@ -75,7 +77,8 @@ class AccountChainSetup(SidechainTestFramework):
                     api_key=self.API_KEY,
                     initial_private_keys=self.initial_private_keys,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
-                    remote_keys_server_address=self.remote_keys_server_address))
+                    remote_keys_server_address=self.remote_keys_server_address,
+                    max_incoming_connections=self.max_incoming_connections))
 
         if self.circuittype_override is not None:
             circuit_type = self.circuittype_override
