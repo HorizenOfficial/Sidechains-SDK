@@ -18,8 +18,10 @@ from test_framework.util import websocket_port_by_mc_node_index, forward_transfe
 """
 Check the EVM SC allowUnprotectedTxs property behaviour.
 
-Configuration: bootstrap 1 SC node and start it with allowUnprotectedTxs set to false.
-    - Create 1 SC node
+Configuration: bootstrap 2 SC nodes and start first with allowUnprotectedTxs set to false.
+    - Create 2 SC nodes
+    - Node 1 has allowUnprotectedTxs = false
+    - Node 2 has allowUnprotectedTxs = true
 
 Test:
     - Add legacy transaction

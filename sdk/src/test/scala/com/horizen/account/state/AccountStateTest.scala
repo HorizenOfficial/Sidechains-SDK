@@ -156,4 +156,17 @@ class AccountStateTest
 
     assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), true)
   }
+
+  @Test
+  def testTransactionLimitExceedsBlockGasLimit(): Unit = {
+    val tx = mock[EthereumTransaction]
+
+    Mockito.when(tx.semanticValidity()).thenAnswer(_ => true)
+    Mockito.when(tx.getGasLimit).thenReturn(FeeUtils.GAS_LIMIT.add(BigInteger.ONE))
+
+    state.validate(tx) match {
+      case Failure(_) =>
+      case Success(_) => Assert.fail("Transaction with gas limit greater than block is expected to fail")
+    }
+  }
 }

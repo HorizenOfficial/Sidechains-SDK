@@ -178,7 +178,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         if (!sidechainSettings.mempool.allowUnprotectedTxs && ethTx.isLegacy && !ethTx.isEIP155) {
           context.system.eventStream.publish(
             FailedTransaction(
-              tx.asInstanceOf[Transaction].id,
+              tx.id,
               new IllegalArgumentException("Legacy unprotected transactions are not allowed."),
               immediateFailure = true
             )

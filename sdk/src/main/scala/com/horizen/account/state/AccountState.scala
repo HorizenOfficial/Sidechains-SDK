@@ -16,11 +16,9 @@ import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingS
 import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.evm._
 import sparkz.core._
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.FailedTransaction
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
