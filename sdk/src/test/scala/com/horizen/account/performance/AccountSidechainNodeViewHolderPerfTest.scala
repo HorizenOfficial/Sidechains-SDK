@@ -13,12 +13,13 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
 import com.horizen.evm.Database
 import com.horizen.evm.utils.Address
 import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainSecretStorage
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.BytesUtils
 import com.horizen.{SidechainSettings, SidechainTypes, WalletSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
@@ -51,7 +52,7 @@ class AccountSidechainNodeViewHolderPerfTest
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
 
-  val mockStateDbNonces = TrieMap[ByteArrayWrapper, BigInteger]()
+  val mockStateDbNonces = TrieMap[Address, BigInteger]()
 
   @Before
   def setUp(): Unit = {
@@ -66,7 +67,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
     Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Address])).thenAnswer { answer =>
       {
-        mockStateDbNonces.getOrElse(new ByteArrayWrapper(answer.getArgument(0).asInstanceOf[Array[Byte]]), BigInteger.ZERO)
+        mockStateDbNonces.getOrElse(answer.getArgument(0).asInstanceOf[Address], BigInteger.ZERO)
       }
     }
 
@@ -119,7 +120,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       listOfTxs ++= createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = -1)
 
-      listOfTxs ++= createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = -1)
+      listOfTxs ++= createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = -1)
 
       println("Starting test direct order")
       val numOfSnapshots = 10
@@ -136,6 +137,7 @@ class AccountSidechainNodeViewHolderPerfTest
         }
       }
       var totalTime = System.currentTimeMillis() - startTime
+
       assertEquals(numOfTxs, mempool.size)
 
       out.write(s"\n********************* Direct order test results *********************\n")
@@ -237,7 +239,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
-      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
+      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = 75)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
       //Adding txs to the initial mem pool
@@ -255,7 +257,7 @@ class AccountSidechainNodeViewHolderPerfTest
       Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
       // Update the nonces in the mock state
       listOfTxsInBlock.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address().toBytes), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -271,7 +273,7 @@ class AccountSidechainNodeViewHolderPerfTest
       mempool = newMemPool
       val rollBackBlock = appliedBlock
       // restore the mempool so its size is again numOfTxs
-      val additionalTxs = createTransactions(numOfTxsInBlock, 1)
+      val additionalTxs = createTransactions(numOfTxsInBlock, 1, seed = 2 * numOfNormalAccount + numOfSpammerAccount + 1)
       additionalTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
       assertEquals(numOfTxs, mempool.size)
 
@@ -285,7 +287,7 @@ class AccountSidechainNodeViewHolderPerfTest
       // First resetting the nonces (so it will restart from 0), then put the new nonces for txs in appliedBlock2
       mockStateDbNonces.clear()
       listOfTxsInBlock2.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address().toBytes), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       )
       println("Starting test")
       val startTime2 = System.currentTimeMillis()
@@ -351,7 +353,7 @@ class AccountSidechainNodeViewHolderPerfTest
       //This in real life should never happen, but taking some measures could be useful
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
-      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
+      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = 75)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
       listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
@@ -371,7 +373,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       // Update the nonces
       listOfExecTransactionsToApply.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.asInstanceOf[EthereumTransaction].getFrom.address().toBytes), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.asInstanceOf[EthereumTransaction].getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -387,7 +389,7 @@ class AccountSidechainNodeViewHolderPerfTest
       mempool = newMemPool
       val rollBackBlocks = listOfBlocks
       // restore the mempool so its size is again numOfTxs
-      val additionalTxs = createTransactions(numOfBlocks * numOfTxsInBlock, 1)
+      val additionalTxs = createTransactions(numOfBlocks * numOfTxsInBlock, 1, seed = 2 * numOfNormalAccount + numOfSpammerAccount + 1)
       additionalTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
       assertEquals(numOfTxs, mempool.size)
 
@@ -410,7 +412,7 @@ class AccountSidechainNodeViewHolderPerfTest
       // First resetting the nonces in the mock state, then the ones in appliedBlock2
       mockStateDbNonces.clear()
       listOfBlocks2.foreach( block => block.transactions.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.asInstanceOf[EthereumTransaction].getFrom.address().toBytes), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.asInstanceOf[EthereumTransaction].getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       ))
       println("Starting test")
       val startTime2 = System.currentTimeMillis()
@@ -464,7 +466,7 @@ class AccountSidechainNodeViewHolderPerfTest
       Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
       // Update the nonces
       listOfTxsInBlock.foreach(tx =>
-        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address().toBytes), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(tx.getFrom.address(), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -582,6 +584,8 @@ class AccountSidechainNodeViewHolderPerfTest
     Mockito.when(mockWalletSettings.maxTxFee).thenReturn(100L)
     Mockito.when(sidechainSettings.wallet).thenReturn(mockWalletSettings)
     val params: NetworkParams = mock[NetworkParams]
+    Mockito.when(params.chainId).thenReturn(1997)
+    Mockito.when(params.circuitType).thenReturn(NaiveThresholdSignatureCircuit)
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]

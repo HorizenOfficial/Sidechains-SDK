@@ -4,8 +4,9 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
@@ -226,7 +227,6 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
   @Test
   def testWithTxsInvalidForBalance(): Unit = {
     val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
-
     val limitOfGas = BigInteger.valueOf(1000000)
     val maxGasFee = BigInteger.valueOf(1000000)
     val tx0 = createEIP1559Transaction(BigInteger.valueOf(10000), BigInteger.valueOf(0),
@@ -313,32 +313,117 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 1, executableTxs.size)
 
+
+  }
+
+  @Test
+  def testWithTxsInvalidForSize(): Unit = {
+
+    val tx0 = createTransactionWithDataSize(MempoolMap.MaxTxSize, BigInteger.valueOf(0))
+    val tx1 = createTransactionWithDataSize(0, BigInteger.valueOf(1))
+    val tx2 = createTransactionWithDataSize(0, BigInteger.valueOf(2))
+    val tx3 = createTransactionWithDataSize(0, BigInteger.valueOf(3))
+    val tx4 = createTransactionWithDataSize(MempoolMap.MaxTxSize, BigInteger.valueOf(4))
+    val tx5 = createTransactionWithDataSize(0, BigInteger.valueOf(5))
+    val tx6 = createTransactionWithDataSize(0, BigInteger.valueOf(6))
+
+    // Test 1: Try with only txs from reverted blocks
+
+    //Initialize mempool
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+
+    //Update the nonce in the state db
+    val address = tx2.getFrom.address()
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(tx2.getNonce)
+
+    //Add txs to the mem pool
+    mempoolMap.add(tx2)
+    mempoolMap.add(tx3)
+    assertEquals(2, mempoolMap.size)
+
+    //Prepare blocks
+    var listOfTxsToReAdd =  Seq[SidechainTypes#SCAT](tx0, tx1)
+    var listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+    //Update the nonce in the state db
+     Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(tx0.getNonce)
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
+    var executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 0, executableTxs.size)
+
+    // Test 2: Try with txs from reverted and applied blocks
+    //Reset mempool
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    //Update the nonce in the state db
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(tx5.getNonce)
+
+    //Add txs to the mem pool
+    mempoolMap.add(tx5)
+    mempoolMap.add(tx6)
+    assertEquals(2, mempoolMap.size)
+
+    val tx0Norm = createTransactionWithDataSize(0, BigInteger.valueOf(0))
+    //Prepare blocks
+    listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx0, tx1, tx2, tx3, tx4)
+    listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx0Norm, tx1)
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    //Update the nonce in the state db
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(tx2.getNonce)
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 4, mempoolMap.size)
+    executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 2, executableTxs.size)
+    val iter = executableTxs.iterator
+    assertEquals("Wrong executable transaction", tx2, iter.next())
+    assertEquals("Wrong executable transaction", tx3, iter.next())
+
   }
 
 
-
-  private def createTransactionsForAccount(
-      key: PrivateKeySecp256k1,
-      numOfTxsPerAccount: Int,
-      orphanIdx: Int = -1
-  ): scala.collection.mutable.ListBuffer[SidechainTypes#SCAT] = {
-    val toAddr = "0x00112233445566778899AABBCCDDEEFF01020304"
-    val value = BigInteger.valueOf(12)
-    val listOfTxs = new scala.collection.mutable.ListBuffer[SidechainTypes#SCAT]
-
-    (0 until numOfTxsPerAccount).foreach(nonceTx => {
-      val currentNonce = BigInteger.valueOf(nonceTx)
-      if (orphanIdx >= 0 && nonceTx >= orphanIdx) { // Create orphans
-        listOfTxs += createEIP1559Transaction(
-          value,
-          nonce = BigInteger.valueOf(nonceTx + 1),
-          keyOpt = Some(key)
-        )
-      } else
-        listOfTxs += createEIP1559Transaction(value, nonce = currentNonce, keyOpt = Some(key))
-    })
-    listOfTxs
+  def createTransactionWithDataSize(dataSize: Int, nonce: BigInteger): EthereumTransaction = {
+    val randomData = Array.fill(dataSize)((scala.util.Random.nextInt(256) - 128).toByte)
+    createEIP1559Transaction(value = BigInteger.ONE, nonce, keyOpt = accountKeyOpt, data = randomData)
   }
 
 
-}
+    private def createTransactionsForAccount(
+                                              key: PrivateKeySecp256k1,
+                                              numOfTxsPerAccount: Int,
+                                              orphanIdx: Int = -1
+                                            ): scala.collection.mutable.ListBuffer[SidechainTypes#SCAT] = {
+      val toAddr = "0x00112233445566778899AABBCCDDEEFF01020304"
+      val value = BigInteger.valueOf(12)
+      val listOfTxs = new scala.collection.mutable.ListBuffer[SidechainTypes#SCAT]
+
+      (0 until numOfTxsPerAccount).foreach(nonceTx => {
+        val currentNonce = BigInteger.valueOf(nonceTx)
+        if (orphanIdx >= 0 && nonceTx >= orphanIdx) { // Create orphans
+          listOfTxs += createEIP1559Transaction(
+            value,
+            nonce = BigInteger.valueOf(nonceTx + 1),
+            keyOpt = Some(key)
+          )
+        } else
+          listOfTxs += createEIP1559Transaction(value, nonce = currentNonce, keyOpt = Some(key))
+      })
+      listOfTxs
+    }
+
+
+  }

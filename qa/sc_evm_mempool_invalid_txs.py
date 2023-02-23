@@ -2,6 +2,7 @@
 import logging
 import random
 from decimal import Decimal
+from os import urandom
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
@@ -29,6 +30,7 @@ Test:
     - smart contract creation with empty data
     - gas limit < intrinsic gas
     - nonce too low
+    - size too big
     
 """
 
@@ -190,6 +192,24 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         response = allTransactions(sc_node_1, False)
         assert_equal(0, len(response["transactionIds"]),
                      "Transaction with gas limit < intrinsic gas added to node 1 mempool")
+
+        # Test that a transaction with size bigger than 128 KB is rejected by the mem pool
+        big_data = 'FF' * 128 * 1024
+        exception_occurs = False
+        try:
+            createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
+                                     nonce=0, gasLimit=20533001, maxPriorityFeePerGas=900000000,
+                                     maxFeePerGas=900000000, value=1, data=str(big_data))
+        except RuntimeError as e:
+            exception_occurs = True
+            logging.info(
+                "Adding a transaction with size bigger than 128 KB had an exception as expected: {}".format(
+                    str(e)))
+
+        assert_true(exception_occurs, "Adding a transaction with size bigger than 128 KB should fail")
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]),
+                     "Transaction that creates a smart contract with empty data added to node 1 mempool")
 
         # Test that a transaction with nonce too low is rejected by the mem pool
         nonce_addr_1 = 0

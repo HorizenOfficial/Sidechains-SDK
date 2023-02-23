@@ -2,8 +2,9 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.mempool.MempoolMap.MaxTxSize
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
+import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
 import com.horizen.account.transaction.EthereumTransaction
 import sparkz.util.{ModifierId, SparkzLogging}
 
@@ -32,8 +33,15 @@ class MempoolMap(
 
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
+
     val account = ethTransaction.getFrom
     if (!contains(ethTransaction.id)) {
+
+      if (ethTransaction.size() > MaxTxSize) {
+        log.trace(s"Transaction $ethTransaction size exceeds maximum allowed size: current size ${ethTransaction.size()}, " +
+          s"maximum size: $MaxTxSize")
+        throw TxOversizedException(account.asInstanceOf[AddressProposition].address(), ethTransaction.size())
+      }
 
       val expectedNonce = nonces.getOrElseUpdate(
         account,
@@ -227,7 +235,9 @@ class MempoolMap(
     // but it was just reverted to an older state. So there is no need to check for nonce, because the txs were already
     // verified for it. However we still need to check for balance because it is possible that both txs in mem pool and
     // txs from reverted blocks were verified with a different balance respect the one restored. The only exception are
-    // txs from the oldest reverted block but for simplicity they are checked the same.
+    // txs from the oldest reverted block but for simplicity they are checked the same. In addition we need also to check
+    // for transaction size, because it isn't part of consensus and so it is possible that blocks forged by other nodes
+    // can contain bigger transactions.
 
     val fromAddress = account.asInstanceOf[AddressProposition].address()
     val balance = accountStateReaderProvider.getAccountStateReader().getBalance(fromAddress)
@@ -237,14 +247,14 @@ class MempoolMap(
 
     // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
     // They are by default directly added to the execTxs map, because the nonce is surely correct. If a tx is found invalid
-    // for balance, it is discarded. All the subsequent txs, if valid, will become not executable and they will be added
+    // for balance or size, it is discarded. All the subsequent txs, if valid, will become not executable and they will be added
     // to the nonExec map.
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
 
     txsFromRejectedBlocks
       .foreach { tx =>
-        if (balance.compareTo(tx.maxCost) >= 0) {
+        if (balance.compareTo(tx.maxCost) >= 0 && tx.size() <= MaxTxSize) {
           all.put(tx.id, tx)
           destMap.put(tx.getNonce, tx.id)
         } else {
@@ -284,8 +294,12 @@ class MempoolMap(
       }
     }
 
-    nonces.put(account, newExecTxs.lastKey.add(BigInteger.ONE))
-    executableTxs.put(account, newExecTxs)
+    if (newExecTxs.nonEmpty) {
+      nonces.put(account, newExecTxs.lastKey.add(BigInteger.ONE))
+      executableTxs.put(account, newExecTxs)
+    } else
+      nonces.put(account, txsFromRejectedBlocks.head.getNonce)
+
     if (newNonExecTxs.nonEmpty) {
       nonExecutableTxs.put(account, newNonExecTxs)
     }
@@ -311,15 +325,15 @@ class MempoolMap(
     // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
     // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
     // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, because
-    // they come from reverted blocks so it is impossible to have nonce gaps. They still need to be checked for balance.
-    // If a tx is found invalid for balance, it is discarded. All the subsequent txs, if valid, will become not executable
+    // they come from reverted blocks so it is impossible to have nonce gaps. They still need to be checked for balance and for size.
+    // If a tx is found invalid, it is discarded. All the subsequent txs, if valid, will become not executable
     // and they will be added to the nonExec map.
     var destMap = newExecTxs
     var haveBecomeNonExecutable = false
 
     if (existRejectedTxsWithValidNonce(txsFromRejectedBlocks, newExpectedNonce)) {
       txsFromRejectedBlocks.withFilter(tx => tx.getNonce.compareTo(newExpectedNonce) >= 0).foreach { tx =>
-        if (balance.compareTo(tx.maxCost) >= 0) {
+        if (balance.compareTo(tx.maxCost) >= 0 && tx.size() <= MaxTxSize) {
           all.put(tx.id, tx)
           destMap.put(tx.getNonce, tx.id)
         } else {
@@ -334,7 +348,8 @@ class MempoolMap(
 
     // First all the txs with nonce too low are discarded. The subsequent txs don't need to be checked for nonce
     // because they are ordered by increasing nonce. They are candidate to be added by default to the execTxs map, unless
-    // a previous tx was found invalid. They remaining txs are checked for balance.
+    // a previous tx was found invalid. They remaining txs are checked for balance. There is no need to check for size because
+    // these transactions were already checked for the size when they first arrived in the mempool.
     // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
     // and they will be added to the nonExec map.
     val execTxsOpt = executableTxs.remove(account)
@@ -466,6 +481,20 @@ class MempoolMap(
     }
   }
 }
+
+object MempoolMap {
+  val TxSlotSize: Int = 32 * 1024
+  val MaxNumOfSlotsForTx: Int = 4
+  val MaxTxSize: Int = MaxNumOfSlotsForTx * TxSlotSize
+
+  def txSizeInSlot(tx: SidechainTypes#SCAT): Long = sizeToSlot(tx.size())
+
+  def sizeToSlot(numOfBytes: Long): Long = {
+    require(numOfBytes >= 0, "Illegal negative size value")
+    (numOfBytes + TxSlotSize - 1) / TxSlotSize
+  }
+}
+
 
 trait TransactionsByPriceAndNonceIter extends Iterator[SidechainTypes#SCAT] {
   def peek: SidechainTypes#SCAT

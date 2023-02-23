@@ -46,12 +46,13 @@ trait EthereumTransactionFixture {
                                keyOpt: Option[PrivateKeySecp256k1] = None,
                                gasFee: BigInteger = BigInteger.valueOf(10000),
                                priorityGasFee: BigInteger = BigInteger.valueOf(10000),
-                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
+                               gasLimit: BigInteger = GasUtil.TxGas,
+                               data: Array[Byte] = new Array[Byte](0)): EthereumTransaction = {
 
     val unsignedTx = new EthereumTransaction(
       1997L,
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
-      nonce, gasLimit, priorityGasFee, gasFee, value, new Array[Byte](0), null)
+      nonce, gasLimit, priorityGasFee, gasFee, value, data, null)
     createSignedTransaction(unsignedTx, keyOpt)
   }
 
@@ -380,6 +381,7 @@ trait EthereumTransactionFixture {
   def createTransactions(
                           numOfAccount: Int,
                           numOfTxsPerAccount: Int,
+                          seed: Int = 0,
                           orphanIdx: Int = -1
                         ): scala.collection.mutable.ListBuffer[EthereumTransaction] = {
     val value = BigInteger.valueOf(12)
@@ -394,7 +396,7 @@ trait EthereumTransactionFixture {
     val gasBuilder = new CircularPriorityGasBuilder(baseGas, 17)
 
     (1 to numOfAccount).foreach(idx => {
-      listOfAccounts += Some(PrivateKeySecp256k1Creator.getInstance().generateSecret(Ints.toByteArray(idx)))
+      listOfAccounts += Some(PrivateKeySecp256k1Creator.getInstance().generateSecret(Ints.toByteArray(seed + idx)))
     })
 
     (0 until numOfTxsPerAccount).foreach(nonceTx => {

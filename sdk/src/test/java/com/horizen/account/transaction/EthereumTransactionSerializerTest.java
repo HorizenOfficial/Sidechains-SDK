@@ -54,7 +54,7 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
 
         var maxFeePerGas = BigInteger.valueOf(15);
         var maxPriorityFeePerGas = BigInteger.valueOf(15);
-        var tx3 = createEIP1559Transaction(value, nonce.add(BigInteger.ONE), account1Key, maxFeePerGas, maxPriorityFeePerGas, gasLimit);
+        var tx3 = createEIP1559Transaction(value, nonce.add(BigInteger.ONE), account1Key, maxFeePerGas, maxPriorityFeePerGas, gasLimit, new byte[0]);
 
         try {
             tx3.semanticValidity();
