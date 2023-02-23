@@ -31,8 +31,7 @@ class TxCache {
   }
 
   def remove(txId: ModifierId): Option[SidechainTypes#SCAT] = {
-    val txInfoOpt = all.remove(txId)
-    txInfoOpt.map { txInfo =>
+    all.remove(txId).map { txInfo =>
       val prev = txInfo.previous
       val next = txInfo.next
       if (prev.isEmpty && next.isEmpty){
