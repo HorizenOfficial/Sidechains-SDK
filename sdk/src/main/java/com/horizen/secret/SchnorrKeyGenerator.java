@@ -1,17 +1,13 @@
 package com.horizen.secret;
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType;
-import com.horizen.node.NodeWalletBase;
-import sparkz.crypto.hash.Blake2b256;
-
+import com.horizen.cryptolibprovider.utils.SchnorrFunctions;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
-import java.util.List;
 
 public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
     private static final SchnorrKeyGenerator instance;
+    private static final byte[] domain = "SchnorrKey".getBytes(StandardCharsets.UTF_8);
 
     static {
         instance = new SchnorrKeyGenerator();
@@ -28,16 +24,18 @@ public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
 
     @Override
     public SchnorrSecret generateSecret(byte[] seed) {
-        EnumMap<KeyType, byte[]> keys = CryptoLibProvider.schnorrFunctions().generateSchnorrKeys(seed);
-        return new SchnorrSecret(keys.get(KeyType.SECRET), keys.get(KeyType.PUBLIC));
+        EnumMap<SchnorrFunctions.KeyType, byte[]> keys = CryptoLibProvider.schnorrFunctions().generateSchnorrKeys(seed);
+        return new SchnorrSecret(keys.get(SchnorrFunctions.KeyType.SECRET), keys.get(SchnorrFunctions.KeyType.PUBLIC));
     }
 
+    /**
+     * Method to get salt.
+     * In this case salt serves as a domain separation
+     *
+     * @return salt as byte array in UTF-8 encoding
+     */
     @Override
-    public SchnorrSecret generateNextSecret(NodeWalletBase wallet) {
-        List<Secret> prevSecrets = wallet.secretsOfType(SchnorrSecret.class);
-        byte[] nonce = Ints.toByteArray(prevSecrets.size());
-        byte[] seed = (byte[])Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));
-
-        return generateSecret(seed);
+    public byte[] salt() {
+        return domain;
     }
 }

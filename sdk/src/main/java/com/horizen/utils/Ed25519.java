@@ -2,7 +2,9 @@ package com.horizen.utils;
 
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
-import sparkz.crypto.hash.Sha256;
+import java.security.SecureRandom;
+
+import java.util.Arrays;
 
 public final class Ed25519 {
 
@@ -20,9 +22,9 @@ public final class Ed25519 {
     }
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
-        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(Sha256.hash(seed), 0);
+        SecureRandom rnd = ChaChaPrngSecureRandom.getInstance(seed);
+        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(rnd);
         Ed25519PublicKeyParameters publicKey = privateKey.generatePublicKey();
-
         return new Pair<>(privateKey.getEncoded(), publicKey.getEncoded());
     }
 
@@ -36,7 +38,29 @@ public final class Ed25519 {
 
     public static byte[] sign(byte[] privateKey, byte[] message, byte[] publicKey) {
         byte[] signature = new byte[64];
-        org.bouncycastle.math.ec.rfc8032.Ed25519.sign(privateKey, 0, publicKey, 0, (byte[]) null, message, 0, message.length, signature, 0);
+        org.bouncycastle.math.ec.rfc8032.Ed25519.sign(privateKey, 0, publicKey, 0, null, message, 0, message.length, signature, 0);
         return signature;
+    }
+
+    public static boolean validatePublicKey(byte[] publicKey) {
+        try {
+            return org.bouncycastle.math.ec.rfc8032.Ed25519.validatePublicKeyFull(publicKey, 0);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean validatePublicKey(byte[] privateKey, byte[] publicKey) {
+        try {
+            if (!org.bouncycastle.math.ec.rfc8032.Ed25519.validatePublicKeyFull(publicKey, 0))
+                return false;
+
+            byte[] correctPublicKey = new byte[publicKeyLength()];
+            org.bouncycastle.math.ec.rfc8032.Ed25519.generatePublicKey(privateKey, 0 , correctPublicKey, 0);
+
+            return Arrays.equals(publicKey, correctPublicKey);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

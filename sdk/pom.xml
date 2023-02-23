@@ -63,7 +63,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>sparkz-core_2.12</artifactId>
-      <version>2.0.0-RC10-SNAPSHOT</version>
+      <version>2.0.0-RC10</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -82,25 +82,25 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <version>2.17.0</version>
+      <version>2.19.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
-      <version>2.17.1</version>
+      <version>2.19.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
-      <version>2.7</version>
+      <version>2.11.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>31.0.1-jre</version>
+      <version>31.1-jre</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.google.inject/guice -->
@@ -187,7 +187,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.13.3</version>
+      <version>2.13.5</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
     <dependency>
@@ -207,28 +207,28 @@
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-scala_2.12</artifactId>
-      <version>2.13.3</version>
+      <version>2.13.5</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus.bundles/tyrus-standalone-client -->
     <dependency>
       <groupId>org.glassfish.tyrus.bundles</groupId>
       <artifactId>tyrus-standalone-client</artifactId>
-      <version>1.18</version>
+      <version>1.20</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-container-grizzly-server -->
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-container-grizzly-server</artifactId>
-      <version>1.18</version>
+      <version>1.20</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-server -->
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-server</artifactId>
-      <version>1.18</version>
+      <version>1.20</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-project -->
@@ -249,7 +249,7 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.69</version>
+      <version>1.70</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://repo.softmotions.com/repository/softmotions-public/org/ethereum/leveldbjni-all -->
@@ -262,7 +262,7 @@
     <dependency>
       <groupId>org.web3j</groupId>
       <artifactId>core</artifactId>
-      <version>4.9.4</version>
+      <version>4.9.5</version>
     </dependency>
     <dependency>
       <groupId>com.horizen</groupId>
@@ -293,23 +293,11 @@
           <include>publickey25519proposition_hex</include>
           <include>privatekey25519_hex</include>
           <include>regulartransaction_hex</include>
-          <include>RegularTransactionSerializerTestVrfPublicKey111</include>
-          <include>RegularTransactionSerializerTestVrfPublicKey221</include>
-          <include>SidechainBlockInfoTestVrfOutput234</include>
           <include>SidechainBlockTestVrfProof908</include>
-          <include>SidechainBlockTestVrfSecretKey908</include>
           <include>SidechainBlockHeaderTestVrfProof178</include>
-          <include>SidechainBlockHeaderTestVrfSecretKey178</include>
-          <include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
-          <include>ForgerBoxSerializationTestVrfPublicKey901</include>
-          <include>AccountBlockHeaderTestVrfOutput178</include>
           <include>AccountBlockHeaderTestVrfProof178</include>
-          <include>AccountBlockHeaderTestVrfSecretKey178</include>
-          <include>AccountBlockTestVrfOutput908</include>
           <include>AccountBlockTestVrfProof908</include>
-          <include>AccountBlockTestVrfSecretKey908</include>
           <include>OmmerTestVrfProof143</include>
-          <include>OmmerTestVrfSecretKey143</include>
           <include>zenbox_hex</include>
           <include>forgerbox_hex</include>
           <include>certifierrightbox_hex</include>
@@ -339,16 +327,6 @@
           <include>ethereumtransaction_contract_deployment_eip1559_hex</include>
           <include>ethereumtransaction_contract_call_eip155_legacy_hex</include>
           <include>mc_ccout_evm_address_hex</include>
-          <include>schnorr_sk01_hex</include>
-          <include>schnorr_sk02_hex</include>
-          <include>schnorr_sk03_hex</include>
-          <include>schnorr_sk04_hex</include>
-          <include>schnorr_sk05_hex</include>
-          <include>schnorr_sk06_hex</include>
-          <include>schnorr_sk07_hex</include>
-          <include>schnorr_sk08_hex</include>
-          <include>schnorr_sk09_hex</include>
-          <include>schnorr_sk00_hex</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
           <include>mcblock501173</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
@@ -452,13 +430,13 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>3.10.1</version>
         <configuration/>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
-        <version>2.5.2</version>
+        <version>3.0.1</version>
         <executions>
           <execution>
             <id>install-jar-lib</id>
@@ -476,7 +454,7 @@
       <plugin>
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.8</version>
+        <version>1.6.13</version>
         <extensions>true</extensions>
         <configuration>
           <serverId>ossrh</serverId>
@@ -508,7 +486,7 @@
         <plugins>
           <plugin>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.6</version>
+            <version>3.0.1</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>

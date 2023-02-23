@@ -16,6 +16,7 @@ import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,18 +37,18 @@ public class RegularTransactionTest extends BoxFixtureClass {
     public void BeforeEachTest() {
         fee = 10;
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
-        PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
-        PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes());
-        PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes());
+        PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes(StandardCharsets.UTF_8));
 
         from = new ArrayList<>();
         from.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 60), pk1));
         from.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 50), pk2));
         from.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 20), pk3));
 
-        PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes());
-        PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());
-        PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes());
+        PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes(StandardCharsets.UTF_8));
+        PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes(StandardCharsets.UTF_8));
 
         to = new ArrayList<>();
         to.add(new ZenBoxData(pk4.publicImage(), 10L));
@@ -55,9 +56,9 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new ZenBoxData(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
-                -4413338919968165681L,
-                -2557784382151979925L,
-                -36253851566087546L)
+                7516983935722354239L,
+                -2870959594289512209L,
+                -9075355275709095846L)
         );
     }
 

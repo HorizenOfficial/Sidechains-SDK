@@ -42,8 +42,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
-
-import java.util.concurrent.TimeUnit
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.compat.java8.OptionConverters._
@@ -364,7 +363,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val messageToSign = FieldElementFixture.generateFieldElement()
     val knownSigs = ArrayBuffer[CertificateSignatureInfo]()
 
-    val schnorrSecret = SchnorrKeyGenerator.getInstance().generateSecret("seeeeed".getBytes())
+    val schnorrSecret = SchnorrKeyGenerator.getInstance().generateSecret("seeeeed".getBytes(StandardCharsets.UTF_8))
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret.sign(messageToSign)))
 
     submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs))
@@ -384,9 +383,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Set 3 keys for the Certificate signatures
     val keyGenerator = SchnorrKeyGenerator.getInstance()
     val schnorrSecrets: Seq[SchnorrSecret] = Seq(
-      keyGenerator.generateSecret("seed1".getBytes()),
-      keyGenerator.generateSecret("seed2".getBytes()),
-      keyGenerator.generateSecret("seed3".getBytes())
+      keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8)),
+      keyGenerator.generateSecret("seed2".getBytes(StandardCharsets.UTF_8)),
+      keyGenerator.generateSecret("seed3".getBytes(StandardCharsets.UTF_8))
     )
 
     val signersThreshold = 2
@@ -776,9 +775,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Set 3 keys for the Certificate signatures
     val keyGenerator = SchnorrKeyGenerator.getInstance()
     val schnorrSecrets: Seq[SchnorrSecret] = Seq(
-      keyGenerator.generateSecret("seed1".getBytes()),
-      keyGenerator.generateSecret("seed2".getBytes()),
-      keyGenerator.generateSecret("seed3".getBytes())
+      keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8)),
+      keyGenerator.generateSecret("seed2".getBytes(StandardCharsets.UTF_8)),
+      keyGenerator.generateSecret("seed3".getBytes(StandardCharsets.UTF_8))
     )
 
     val signersThreshold = 2
@@ -905,9 +904,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Set 3 keys for the Certificate signatures
     val keyGenerator = SchnorrKeyGenerator.getInstance()
     val schnorrSecrets: Seq[SchnorrSecret] = Seq(
-      keyGenerator.generateSecret("seed1".getBytes()),
-      keyGenerator.generateSecret("seed2".getBytes()),
-      keyGenerator.generateSecret("seed3".getBytes())
+      keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8)),
+      keyGenerator.generateSecret("seed2".getBytes(StandardCharsets.UTF_8)),
+      keyGenerator.generateSecret("seed3".getBytes(StandardCharsets.UTF_8))
     )
 
     val signersThreshold = 2

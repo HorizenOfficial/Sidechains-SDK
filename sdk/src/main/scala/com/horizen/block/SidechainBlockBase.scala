@@ -1,6 +1,7 @@
 package com.horizen.block
 
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
@@ -36,6 +37,9 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
   override def toString: String = s"${getClass.getSimpleName}(id = $id)"
 
   def feePaymentsHash: Array[Byte] = header.feePaymentsHash
+
+  @JsonProperty("size")
+  def size : Long = bytes.length
 
   // Check block version
   protected def versionIsValid(): Boolean

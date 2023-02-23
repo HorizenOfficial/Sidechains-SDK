@@ -76,4 +76,9 @@ public class CustomPrivateKey implements Secret
         // Show only the first 4 bytes to protect the key
         return String.format("CustomPrivateKey{privateKey=%s}", BytesUtils.toHexString(privateKeyBytes).substring(0, 8));
     }
+
+    @Override
+    public Boolean isPublicKeyValid() {
+        return true;
+    }
 }

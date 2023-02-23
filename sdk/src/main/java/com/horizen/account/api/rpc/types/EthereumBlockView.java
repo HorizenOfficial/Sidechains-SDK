@@ -1,39 +1,38 @@
 package com.horizen.account.api.rpc.types;
 
-import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.utils.AccountBlockUtil;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
-import com.horizen.serialization.Views;
+import io.horizen.evm.Address;
+import io.horizen.evm.Hash;
 import org.web3j.utils.Numeric;
+
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@JsonView(Views.Default.class)
 public class EthereumBlockView {
-    public final String number;
+    public final BigInteger number;
     public final Hash hash;
     public final Hash parentHash;
-    public final String logsBloom;
+    public final byte[] logsBloom;
     public final Hash transactionsRoot;
     public final Hash stateRoot;
     public final Hash receiptsRoot;
     public final Address miner;
-    public final String size;
-    public final String gasLimit;
-    public final String gasUsed;
-    public final String timestamp;
+    public final BigInteger size;
+    public final BigInteger gasLimit;
+    public final BigInteger gasUsed;
+    public final BigInteger timestamp;
     public final List<?> transactions;
     public final Address author;
-    public final String baseFeePerGas;
-    public final List<String> uncles = new ArrayList<>();
-    public final List<String> sealFields = new ArrayList<>();
+    public final BigInteger baseFeePerGas;
+    // mixHash is set to a VRF output to support the PREVRANDAO EVM-opcode, just like Ethereum does since The Merge
+    public final Hash mixHash;
 
+    // we do not have uncles
+    public final Hash[] uncles = new Hash[0];
     // we use PoS and do not have difficulty, Ethereum mainnet also set this to zero since the switch to PoS
     public final String difficulty = "0x0";
     // total difficulty should be the sum of the difficulty of all previous blocks, since we never had PoW this is zero
@@ -45,25 +44,23 @@ public class EthereumBlockView {
     public final String sha3Uncles = "0x";
     // we do not have extraData in the block
     public final String extraData = "0x";
-    // mixHash is set to a VRF output to support the PREVRANDAO EVM-opcode, just like Ethereum does since The Merge
-    public final Hash mixHash;
 
     private EthereumBlockView(Long blockNumber, Hash blockHash, AccountBlock block, List<?> txs) {
         var header = block.header();
         author = header.forgerAddress().address();
-        number = Numeric.encodeQuantity(BigInteger.valueOf(blockNumber));
+        number = BigInteger.valueOf(blockNumber);
         hash = blockHash;
         parentHash = new Hash(Numeric.prependHexPrefix((String) header.parentId()));
-        logsBloom = Numeric.toHexString(header.logsBloom().getBytes());
+        logsBloom = header.logsBloom().getBytes();
         transactionsRoot = new Hash(header.sidechainTransactionsMerkleRootHash());
         stateRoot = new Hash(header.stateRoot());
         receiptsRoot = new Hash(header.receiptsRoot());
         miner = header.forgerAddress().address();
-        size = Numeric.encodeQuantity(BigInteger.valueOf(header.bytes().length));
-        gasLimit = Numeric.encodeQuantity(header.gasLimit());
-        gasUsed = Numeric.encodeQuantity(header.gasUsed());
-        timestamp = Numeric.encodeQuantity(BigInteger.valueOf(block.timestamp()));
-        baseFeePerGas = Numeric.encodeQuantity(header.baseFee());
+        size = BigInteger.valueOf(block.bytes().length);
+        gasLimit = header.gasLimit();
+        gasUsed = header.gasUsed();
+        timestamp = BigInteger.valueOf(block.timestamp());
+        baseFeePerGas = header.baseFee();
         transactions = txs;
         mixHash = new Hash(header.vrfOutput().bytes());
     }

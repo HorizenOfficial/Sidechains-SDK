@@ -1,10 +1,12 @@
 package com.horizen.account.state
 
-import com.horizen.evm.utils.Address
+import io.horizen.evm.Address
 import org.junit.Assert.{assertFalse, assertNotNull, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
+import java.nio.charset.StandardCharsets
+
 
 class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSugar {
   @Test
@@ -40,6 +42,6 @@ class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSu
       processor.canProcess(getMessage(eoaAddress), mockStateView))
     assertFalse(
       "should ignore data on EOA to EOA transfer",
-      processor.canProcess(getMessage(eoaAddress, data = "the same thing we do every night, pinky".getBytes()), mockStateView))
+      processor.canProcess(getMessage(eoaAddress, data = "the same thing we do every night, pinky".getBytes(StandardCharsets.UTF_8)), mockStateView))
   }
 }

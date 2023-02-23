@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-import json
 import logging
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.ac_utils import deploy_smart_contract, contract_function_call, \
-    generate_block_and_get_tx_receipt
+from SidechainTestFramework.account.ac_utils import (
+    contract_function_call, deploy_smart_contract,
+    generate_block_and_get_tx_receipt,
+)
 from test_framework.util import assert_equal, assert_true
 
 """
@@ -48,9 +49,9 @@ class SCEvmDebugMethods(AccountChainSetup):
         transfer_amount = 99
 
         method = 'transfer(address,uint256)'
-        tx_hash = contract_function_call(sc_node, smart_contract, smart_contract_address, self.evm_address, method,
-                                         other_address, transfer_amount)
-
+        tx_hash = contract_function_call(
+            sc_node, smart_contract, smart_contract_address, self.evm_address, method, other_address, transfer_amount
+        )
         tx_status = generate_block_and_get_tx_receipt(sc_node, tx_hash, True)
         assert_equal(1, tx_status, "Error in tx - unrelated to debug methods")
 
@@ -64,37 +65,38 @@ class SCEvmDebugMethods(AccountChainSetup):
         assert_true(trace_logs_length > 130, "unexpected number of trace logs, less than 130")
 
         # struct/opcode default tracer with verbosity boolean parameters
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceTransaction","id": 6,
-            "params": [tx_hash,
-                {
-                    "enableMemory": False,
-                    "disableStack": True,
-                    "disableStorage": True,
-                    "enableReturnData": False
-                }]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceTransaction(
+            tx_hash,
+            {
+                "enableMemory": False,
+                "disableStack": True,
+                "disableStorage": True,
+                "enableReturnData": False
+            }
+        )['result']
         assert_true("error" not in res, "debug_traceTransaction failed for successful smart contract transaction")
         trace_logs_length = len(res['structLogs'])
         assert_true(trace_logs_length > 130, "unexpected number of trace logs, less than 130")
 
         # call tracer - native tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceTransaction", "id": 12, "params": [tx_hash, {"tracer": "callTracer"}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceTransaction(tx_hash, {"tracer": "callTracer"})['result']
         assert_true(res['type'] == "CALL", "callTracer type not CALL")
 
         # call tracer with tracer config parameters
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceTransaction", "id": 18,
-            "params": [tx_hash, {"tracer": "callTracer",
-                    "tracerConfig": {
-                        "onlyTopCall": True,
-                        "withLog": True
-                    }}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceTransaction(
+            tx_hash,
+            {
+                "tracer": "callTracer",
+                "tracerConfig": {
+                    "onlyTopCall": True,
+                    "withLog": True
+                }
+            }
+        )['result']
         assert_true(res['type'] == "CALL", "callTracer type not CALL")
 
         # 4byte tracer - native tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceTransaction","id": 24, "params": [tx_hash, {"tracer": "4byteTracer"}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceTransaction(tx_hash, {"tracer": "4byteTracer"})['result']
         assert_true(res is not None, "4byteTracer response empty")
 
         # -------------------------------------------------------------------------------------
@@ -109,15 +111,15 @@ class SCEvmDebugMethods(AccountChainSetup):
         assert_true(trace_logs_length > 130, "unexpected number of trace logs, less than 130")
 
         # struct/opcode default tracer with verbosity boolean parameters
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceBlockByNumber","id": 8,
-                              "params": [block_number,
-                                         {
-                                             "enableMemory": False,
-                                             "disableStack": True,
-                                             "disableStorage": True,
-                                             "enableReturnData": False
-                                         }]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceBlockByNumber(
+            block_number,
+            {
+                "enableMemory": False,
+                "disableStack": True,
+                "disableStorage": True,
+                "enableReturnData": False
+            }
+        )['result']
         assert_true("error" not in res, "debug_traceBlockByNumber failed for successful smart contract transaction")
         assert_true(len(res) == 1, "debug results have more than one element")
         res_item = res[0]
@@ -126,41 +128,42 @@ class SCEvmDebugMethods(AccountChainSetup):
         assert_true(trace_logs_length > 130, "unexpected number of trace logs, less than 130")
 
         # call tracer - native tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceBlockByNumber", "id": 16, "params": [block_number, {"tracer": "callTracer"}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceBlockByNumber(block_number, {"tracer": "callTracer"})['result']
         assert_true(len(res) == 1, "debug results have more than one element")
         res_item = res[0]
         assert_true(res_item['type'] == "CALL", "callTracer type not CALL")
 
         # call tracer with tracer config parameters
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceBlockByNumber", "id": 24,
-                              "params": [block_number, {"tracer": "callTracer",
-                                                   "tracerConfig": {
-                                                       "onlyTopCall": True,
-                                                       "withLog": True
-                                                   }}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceBlockByNumber(
+            block_number,
+            {
+                "tracer": "callTracer",
+                "tracerConfig": {
+                    "onlyTopCall": True,
+                    "withLog": True
+                }
+            }
+        )['result']
         assert_true(len(res) == 1, "debug results have more than one element")
         res_item = res[0]
         assert_true(res_item['type'] == "CALL", "callTracer type not CALL")
 
         # 4byte tracer - native tracer
-        request = json.dumps({"jsonrpc": "2.0", "method": "debug_traceBlockByNumber","id": 32, "params": [block_number, {"tracer": "4byteTracer"}]})
-        res = sc_node.ethv1(request)['result']
+        res = sc_node.rpc_debug_traceBlockByNumber(block_number, {"tracer": "4byteTracer"})['result']
         assert_true(len(res) == 1, "debug results have more than one element")
         res_item = res[0]
         assert_true(res_item is not None, "4byteTracer response empty")
 
         # trace block by number with struct default logger
         # the rpc_debug_traceBlockByHash use the same implementation of the rpc_debug_traceBlockByNumber method
-        block_hash = sc_node.rpc_eth_getBlockByNumber(block_number,False)['result']['hash']
+        block_hash = sc_node.rpc_eth_getBlockByNumber(block_number, False)['result']['hash']
         res = sc_node.rpc_debug_traceBlockByHash(block_hash)
         assert_true("error" not in res["result"], 'debug_traceBlockByHash failed')
 
         # ------------------------------------------------------------------------
         # debug_traceCall
-        # transaction common to all debug_traceCall requests
-        trace_call_transaction = {
+        # arguments common to all debug_traceCall calls
+        trace_call_args = {
             "from": self.evm_address,
             "gas": "0x989680",
             "gasPrice": "0x35a4e900",
@@ -170,39 +173,47 @@ class SCEvmDebugMethods(AccountChainSetup):
         }
 
         # struct/opcode default tracer with verbosity boolean parameters
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_number, {
-            "enableMemory": False,
-            "disableStack": True,
-            "disableStorage": True,
-            "enableReturnData": False
-        })['result']
+        res = sc_node.rpc_debug_traceCall(
+            trace_call_args, block_number,
+            {
+                "enableMemory": False,
+                "disableStack": True,
+                "disableStorage": True,
+                "enableReturnData": False
+            }
+        )['result']
         assert_true("error" not in res, "debug_traceCall failed for successful smart contract transaction")
         trace_logs_length = len(res['structLogs'])
         assert_true(trace_logs_length > 130, "unexpected number of trace logs, less than 130")
 
         # call tracer - native tracer
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_number, {"tracer": "callTracer"})['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_args, block_number, {"tracer": "callTracer"})['result']
         assert_true(res['type'] == "CREATE", "callTracer type not CREATE")
 
         # call tracer with tracer config parameters
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_number, {"tracer": "callTracer",
-                                                                                 "tracerConfig": {
-                                                                                     "onlyTopCall": True,
-                                                                                     "withLog": True
-                                                                                 }})['result']
+        res = sc_node.rpc_debug_traceCall(
+            trace_call_args, block_number,
+            {
+                "tracer": "callTracer",
+                "tracerConfig": {
+                    "onlyTopCall": True,
+                    "withLog": True
+                }
+            }
+        )['result']
         assert_true(res['type'] == "CREATE", "callTracer type not CREATE")
 
         # 4byte tracer - native tracer
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_number, {"tracer": "4byteTracer"})['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_args, block_number, {"tracer": "4byteTracer"})['result']
         assert_true(res is not None, "4byteTracer response empty")
 
         # traceCall method call using block hash - call tracer
-        block_hash = sc_node.rpc_eth_getBlockByNumber(block_number,False)['result']['hash']
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, block_hash, {"tracer": "callTracer"})['result']
+        block_hash = sc_node.rpc_eth_getBlockByNumber(block_number, False)['result']['hash']
+        res = sc_node.rpc_debug_traceCall(trace_call_args, block_hash, {"tracer": "callTracer"})['result']
         assert_true(res['type'] == "CREATE", "callTracer type not CALL")
 
         # traceCall method call using block tag latest (current block) - call tracer
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, "latest", {"tracer": "callTracer"})['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "latest", {"tracer": "callTracer"})['result']
         assert_true(res['type'] == "CREATE", "callTracer type not CREATE")
 
         # -------------------------------------------------------------------------------------
@@ -214,25 +225,30 @@ class SCEvmDebugMethods(AccountChainSetup):
         res = sc_node.rpc_debug_traceBlockByNumber(block_number)["result"]
         assert_true(len(res) == 0, "debug results have more than zero element")
 
-        block_hash = sc_node.rpc_eth_getBlockByNumber(block_number,False)['result']['hash']
+        block_hash = sc_node.rpc_eth_getBlockByNumber(block_number, False)['result']['hash']
         res = sc_node.rpc_debug_traceBlockByHash(block_hash)["result"]
         assert_true(len(res) == 0, "debug results have more than zero element")
 
         # ------------------------------------------------------------------------
         # debug_traceCall on pending block
         # struct/opcode default tracer
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, "pending")['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "pending")['result']
         assert_true("error" not in res, "debug_traceCall failed for successful smart contract transaction")
         trace_logs_length = len(res['structLogs'])
         assert_true(trace_logs_length > 130, "unexpected number of trace logs, less than 130")
 
         # call tracer - native tracer
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, "pending", {"tracer": "callTracer"})['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "pending", {"tracer": "callTracer"})['result']
         assert_true(res['type'] == "CREATE", "callTracer type not CREATE")
 
         # 4byte tracer - native tracer
-        res = sc_node.rpc_debug_traceCall(trace_call_transaction, "pending", {"tracer": "4byteTracer"})['result']
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "pending", {"tracer": "4byteTracer"})['result']
         assert_true(res is not None, "4byteTracer response empty")
+
+        # invalid tracer should return an error
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "pending", {"tracer": "theBestTracer"})
+        assert_true(res['error'] is not None, "invalid tracer should fail")
+
 
 if __name__ == "__main__":
     SCEvmDebugMethods().main()

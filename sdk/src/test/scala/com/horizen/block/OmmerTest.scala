@@ -15,6 +15,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.ModifierId
 
+import java.nio.charset.StandardCharsets
 import scala.io.Source
 import scala.util.{Failure, Success}
 
@@ -34,7 +35,6 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
 
   //set to true if you want to update vrf related data
   if (false) {
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
     VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationSeed)
   }
 
@@ -72,7 +72,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     // Test 3: ommer with valid SidechainBlockHeader, MainchainBlockReferencesData and MainchainHeaders must be valid
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
-    val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
+    val (_, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
     val vrfProof = VrfGenerator.generateProof(seed)
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     block = SidechainBlock.create(
@@ -256,8 +256,8 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
   @Test
   def compare(): Unit = {
     val vrfKeyPairOpt: Option[(VrfSecretKey, VrfPublicKey)] = {
-      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
-      val publicKey: VrfPublicKey = secret.publicImage();
+      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationSeed)
+      val publicKey: VrfPublicKey = secret.publicImage()
       Option((secret, publicKey))
     }
     val vrfProofOpt = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationSeed))
@@ -280,7 +280,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
 
 
     // Test 3: Compare equal ommers with MC data:
-    val block4: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 666L, timestampOpt = Some(100000L), includeReference = true)
+    val block4: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 666L, timestampOpt = Some(100000L))
     val ommer4: Ommer[SidechainBlockHeader] = Ommer.toOmmer(block4)
     val ommer5: Ommer[SidechainBlockHeader] = ommer4.copy()
     assertEquals("Ommers expected to be equal", ommer4.hashCode(), ommer5.hashCode())
@@ -328,13 +328,13 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val parentId: ModifierId = getRandomBlockId(seed)
 
     val vrfKeyPairOpt: Option[(VrfSecretKey, VrfPublicKey)] = {
-      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
-      val publicKey: VrfPublicKey = secret.publicImage();
+      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationSeed)
+      val publicKey: VrfPublicKey = secret.publicImage()
       Option((secret, publicKey))
     }
     val vrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationSeed)
 
-    val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed, vrfKeyPairOpt)
+    val (_, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed, vrfKeyPairOpt)
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     block = SidechainBlock.create(
       parentId,
@@ -376,7 +376,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
 
 
     // Test 3: try to deserialize broken bytes.
-    assertTrue("OmmerSerializer expected to be not parsed due to broken data.", OmmerSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("OmmerSerializer expected to be not parsed due to broken data.", OmmerSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test
@@ -396,8 +396,8 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
     val vrfKeyPairOpt: Option[(VrfSecretKey, VrfPublicKey)] = {
-      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
-      val publicKey: VrfPublicKey = secret.publicImage();
+      val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationSeed)
+      val publicKey: VrfPublicKey = secret.publicImage()
       Option((secret, publicKey))
     }
     val vrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationSeed)

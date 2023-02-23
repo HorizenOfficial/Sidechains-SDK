@@ -3,9 +3,9 @@ package com.horizen.account.event;
 import com.horizen.account.event.annotation.Anonymous;
 import com.horizen.account.event.annotation.Indexed;
 import com.horizen.account.event.annotation.Parameter;
-import com.horizen.evm.interop.EvmLog;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import com.horizen.account.receipt.EthereumConsensusDataLog;
+import io.horizen.evm.Address;
+import io.horizen.evm.Hash;
 import org.web3j.abi.EventEncoder;
 import org.web3j.abi.TypeEncoder;
 import org.web3j.abi.TypeReference;
@@ -71,10 +71,10 @@ public class EthereumEvent {
      * @param contractAddress
      * @param eventFunction
      * @param anonymous
-     * @return EvmLog containing the contract address, the topics and the data
+     * @return EthereumConsensusDataLog containing the contract address, the topics and the data
      * @throws IOException
      */
-    private static EvmLog createEvmLog(Address contractAddress, Function eventFunction, Boolean anonymous) throws IOException {
+    private static EthereumConsensusDataLog createEthereumConsensusDataLog(Address contractAddress, Function eventFunction, Boolean anonymous) throws IOException {
         List<Hash> topics = new ArrayList<>();
         ByteArrayOutputStream dataOutputStream = new ByteArrayOutputStream();
         var outputParameters = eventFunction.getOutputParameters();
@@ -97,19 +97,19 @@ public class EthereumEvent {
             }
         }
 
-        return new EvmLog(contractAddress, topics.toArray(new Hash[0]), dataOutputStream.toByteArray());
+        return new EthereumConsensusDataLog(contractAddress, topics.toArray(new Hash[0]), dataOutputStream.toByteArray());
     }
 
     /**
      * @param contractAddress
      * @param eventInstance   Instance of the custom event class
-     * @return EvmLog containing the contract address, the topics and the data
+     * @return EthereumConsensusDataLog containing the contract address, the topics and the data
      * @throws ClassNotFoundException
      * @throws IOException
      * @throws IllegalAccessException
      * @throws InvocationTargetException
      */
-    public static EvmLog getEvmLog(Address contractAddress, Object eventInstance) throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException {
+    public static EthereumConsensusDataLog getEthereumConsensusDataLog(Address contractAddress, Object eventInstance) throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException {
         List<TypeReference<?>> parametersTypeRef = new ArrayList<>();
         List<Type> convertedParams = new ArrayList<>();
         var annotatedParameters = getEventParameterData(eventInstance);
@@ -120,7 +120,7 @@ public class EthereumEvent {
         }
 
         var classRef = eventInstance.getClass();
-        return createEvmLog(contractAddress, new Function(classRef.getSimpleName(), convertedParams, parametersTypeRef), classRef.getAnnotation(Anonymous.class) != null);
+        return createEthereumConsensusDataLog(contractAddress, new Function(classRef.getSimpleName(), convertedParams, parametersTypeRef), classRef.getAnnotation(Anonymous.class) != null);
     }
 
     private static class EventParameterData {

@@ -1,27 +1,31 @@
 package com.horizen.account.block
 
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import com.horizen.SidechainTypes
+import com.horizen.account.api.rpc.request.RpcId
+import com.horizen.account.api.rpc.response.RpcResponseSuccess
+import com.horizen.account.api.rpc.types.EthereumBlockView
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture, ForgerAccountFixture}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt, ReceiptFixture}
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer, SidechainBlock}
-import com.horizen.evm.interop.EvmLog
+import com.horizen.block._
 import com.horizen.fixtures._
 import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.txGen.getRandomBoxId
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
-import com.horizen.serialization.ApplicationJsonSerializer
+import com.horizen.serialization.{ApplicationJsonSerializer, SerializationUtil}
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation._
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
+import io.horizen.evm.Hash
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
@@ -29,8 +33,10 @@ import sparkz.util.{ModifierId, idToBytes}
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util.Random
 import scala.io.Source
+import scala.jdk.CollectionConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success, Try}
 
 class AccountBlockTest
@@ -38,6 +44,7 @@ class AccountBlockTest
   with CompanionsFixture
   with EthereumTransactionFixture
   with AccountBlockFixture
+  with ReceiptFixture
 {
 
   val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
@@ -56,21 +63,20 @@ class AccountBlockTest
 
   val generatedDataSeed = 908
   val vrfGenerationPrefix = "AccountBlockTest"
-
+  //set to true for update vrf proof
   if (false) {
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
-    VrfGeneratedDataProvider.updateVrfProofAndOutput(vrfGenerationPrefix, generatedDataSeed)
+    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, generatedDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
-    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(generatedDataSeed)
     val publicKey: VrfPublicKey = secret.publicImage()
     Option((secret, publicKey))
   }
 
   val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(seed, vrfKeyPair)
   val vrfProof: VrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, generatedDataSeed)
-  val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(vrfGenerationPrefix, generatedDataSeed)
+  val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(generatedDataSeed)
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test
@@ -80,8 +86,8 @@ class AccountBlockTest
       getUnsignedEoa2EoaLegacyTransaction
     ),
     receipts = Seq(
-      new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, BigInteger.valueOf(112233), Array.empty[EvmLog]),
-      new EthereumConsensusDataReceipt(2, ReceiptStatus.FAILED.id, BigInteger.valueOf(22334455), Array.empty[EvmLog])
+      new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, BigInteger.valueOf(112233), Seq.empty),
+      new EthereumConsensusDataReceipt(2, ReceiptStatus.FAILED.id, BigInteger.valueOf(22334455), Seq.empty)
     ),
     mainchainBlockReferencesData = Seq(mcBlockRef1.data, mcBlockRef2.data),
     mainchainHeaders = Seq(mcBlockRef2.header, mcBlockRef3.header, mcBlockRef4.header),
@@ -155,7 +161,7 @@ class AccountBlockTest
     }
 
     // Test 2: try to deserialize broken bytes.
-    assertTrue("AccountBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("AccountBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test
@@ -940,5 +946,49 @@ class AccountBlockTest
     }
 
     blockSeq.map(block => Ommer.toOmmer(block))
+  }
+
+
+  @Test
+  def jsonBlockRespSerializations1() : Unit = {
+
+    val mapper: ObjectMapper = ApplicationJsonSerializer.getInstance().getObjectMapper
+    mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+
+    val tx1 = getBigDataTransaction(dataSize=128*1024, gasLimit = BigInteger.valueOf(3000000))
+    val block : AccountBlock = createBlock(sidechainTransactions = Seq(tx1, tx1, tx1, tx1, tx1, tx1))
+
+    val receipt1 = createTestEthereumReceipt(EthereumTransactionType.DynamicFeeTxType.ordinal(), txHash = Some(BytesUtils.fromHexString(tx1.id())))
+    val receipts : Seq[EthereumReceipt] = Seq(receipt1, receipt1, receipt1, receipt1, receipt1, receipt1)
+    val ev : EthereumBlockView = EthereumBlockView.hydrated(1, Hash.ZERO, block, receipts.asJava)
+
+    val rpcId = new RpcId(mapper.readTree("\"xyz\""))
+    val response1 = new RpcResponseSuccess(rpcId, ev)
+
+    val startTime1 = System.currentTimeMillis()
+    val serializedResponse1 = SerializationUtil.serialize(response1)
+    val stopTime1 = System.currentTimeMillis()
+
+    println("Serialized json string 1 --> " + serializedResponse1.length)
+    printf("Processing 1      : %6s ms\n", stopTime1 - startTime1)
+  }
+
+  @Test
+  def jsonBlockRespSerializations2() : Unit = {
+
+    val mapper: ObjectMapper = ApplicationJsonSerializer.getInstance().getObjectMapper
+    mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+
+    val tx1 = getBigDataTransaction(dataSize=128*1024, gasLimit = BigInteger.valueOf(3000000))
+    val block : AccountBlock = createBlock(sidechainTransactions = Seq(tx1, tx1, tx1, tx1, tx1, tx1))
+
+    val rpcId = new RpcId(mapper.readTree("\"xyz\""))
+    val response2 = new RpcResponseSuccess(rpcId, block)
+    val startTime2 = System.currentTimeMillis()
+    val serializedResponse2 = SerializationUtil.serialize(response2)
+    val stopTime2 = System.currentTimeMillis()
+
+    println("Serialized json string 2 --> " + serializedResponse2.length)
+    printf("Processing 2      : %6s ms\n", stopTime2 - startTime2)
   }
 }

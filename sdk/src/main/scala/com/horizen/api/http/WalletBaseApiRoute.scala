@@ -19,8 +19,8 @@ import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import com.horizen.{SidechainNodeViewBase, SidechainTypes}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
 import sparkz.core.settings.RESTApiSettings
-
 import java.io.{File, PrintWriter}
 import java.util
 import java.util.{Scanner, Optional => JOptional}
@@ -54,17 +54,14 @@ abstract class WalletBaseApiRoute[
     withBasicAuth {
       _ => {
         entity(as[ReqCreateKey]) { _ =>
-          withNodeView { sidechainNodeView =>
-            //replace to VRFKeyGenerator.generateNextSecret(wallet)
-            val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
-            val public = secret.publicImage()
-
-            val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
-            Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-              case Success(_) =>
+          withNodeView { _ =>
+            val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(VrfKeyGenerator.getInstance)
+            Await.result(secretFuture, timeout.duration).asInstanceOf[Try[VrfSecretKey]] match {
+              case Success(secret: VrfSecretKey) =>
+                val public = secret.publicImage()
                 ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
               case Failure(e) =>
-                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create secret.", JOptional.of(e)))
             }
           }
         }
@@ -79,15 +76,13 @@ abstract class WalletBaseApiRoute[
     withBasicAuth {
       _ => {
         entity(as[ReqCreateKey]) { _ =>
-          withNodeView { sidechainNodeView =>
-            val wallet = sidechainNodeView.getNodeWallet
-            val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
-            val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
-            Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-              case Success(_) =>
+          withNodeView { _ =>
+            val secretFuture = sidechainNodeViewHolderRef ? ReceivableMessages.GenerateSecret(PrivateKey25519Creator.getInstance)
+            Await.result(secretFuture, timeout.duration).asInstanceOf[Try[PrivateKey25519]] match {
+              case Success(secret: PrivateKey25519) =>
                 ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
               case Failure(e) =>
-                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+                ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create secret.", JOptional.of(e)))
             }
           }
         }

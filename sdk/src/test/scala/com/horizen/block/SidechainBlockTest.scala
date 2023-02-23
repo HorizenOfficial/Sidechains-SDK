@@ -3,24 +3,24 @@ package com.horizen.block
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.account.block.{AccountBlock, AccountBlockSerializer}
 import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, PrivateKey25519Serializer, VrfSecretKey}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
-import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
+import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.{ModifierId, idToBytes}
 
+import java.nio.charset.StandardCharsets
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
@@ -49,13 +49,12 @@ class SidechainBlockTest
   val vrfGenerationPrefix = "SidechainBlockTest"
 
   if (false) {
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
     VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, generatedDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
-    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
-    val publicKey: VrfPublicKey = secret.publicImage();
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(generatedDataSeed)
+    val publicKey: VrfPublicKey = secret.publicImage()
     Option((secret, publicKey))
   }
 
@@ -141,7 +140,7 @@ class SidechainBlockTest
     }
 
     // Test 2: try to deserialize broken bytes.
-    assertTrue("SidechainBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("SidechainBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure)
   }
 
   @Test
@@ -384,10 +383,10 @@ class SidechainBlockTest
   // Generate Seq of Transaction which total size exceeds the limit specified.
   private def generateExceedingTransactions(sizeToExceed: Int): Seq[RegularTransaction] = {
     val inputTransactionsList: Seq[PrivateKey25519] = (1 to 10)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes))
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes(StandardCharsets.UTF_8)))
 
     val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to BoxTransaction.MAX_TRANSACTION_NEW_BOXES)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes).publicImage())
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes(StandardCharsets.UTF_8)).publicImage())
 
     var txsSize: Int = 0
     var txs: Seq[RegularTransaction] = Seq()

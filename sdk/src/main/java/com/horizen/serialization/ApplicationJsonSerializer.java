@@ -56,7 +56,7 @@ public class ApplicationJsonSerializer {
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_ABSENT);
         SimpleModule module = new SimpleModule();
-        module.addSerializer(byte[].class, new ByteUtilsSerializer());
+        module.addSerializer(byte[].class, new BytesSerializer());
         module.addSerializer(ByteArrayWrapper.class, new ByteArrayWrapperSerializer());
         objectMapper.registerModule(module);
     }

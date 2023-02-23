@@ -1,17 +1,17 @@
 package com.horizen.account.receipt
 
 import com.horizen.account.AccountFixture
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.{Address, Hash}
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ListBuffer
 
 trait ReceiptFixture extends AccountFixture {
 
-  def createTestEvmLog(address: Option[Address]): EvmLog = {
+  def createTestLog(address: Option[Address]): EthereumConsensusDataLog = {
     val topics = Array[Hash](
       new Hash("0x0000000000000000000000000000000000000000000000000000000000000000"),
       new Hash("0x1111111111111111111111111111111111111111111111111111111111111111"),
@@ -19,7 +19,7 @@ trait ReceiptFixture extends AccountFixture {
       new Hash("0x3333333333333333333333333333333333333333333333333333333333333333"),
     )
     val data = BytesUtils.fromHexString("aabbccddeeff")
-    new EvmLog(address.getOrElse(randomAddress), topics, data)
+    EthereumConsensusDataLog(address.getOrElse(randomAddress), topics, data)
   }
 
   def createTestEthereumReceipt(
@@ -34,9 +34,9 @@ trait ReceiptFixture extends AccountFixture {
   ): EthereumReceipt = {
     val txHashTemp: Array[Byte] = txHash.getOrElse(randomHash)
 
-    val logs = new ListBuffer[EvmLog]
+    val logs = new ListBuffer[EthereumConsensusDataLog]
     for (_ <- 1 to num_logs)
-      logs += createTestEvmLog(Some(address))
+      logs += createTestLog(Some(address))
 
     val contractAddress = if (contractAddressPresence) {
       Option(new Address("0x1122334455667788990011223344556677889900"))
@@ -48,7 +48,7 @@ trait ReceiptFixture extends AccountFixture {
       consensusDataReceipt,
       txHashTemp,
       transactionIndex,
-      Keccak256.hash(blockHash.getBytes).asInstanceOf[Array[Byte]],
+      Keccak256.hash(blockHash.getBytes(StandardCharsets.UTF_8)).asInstanceOf[Array[Byte]],
       blockNumber,
       BigInteger.valueOf(1234567),
       contractAddress
@@ -61,9 +61,9 @@ trait ReceiptFixture extends AccountFixture {
       num_logs: Integer,
       address: Address = null
   ): EthereumConsensusDataReceipt = {
-    val logs = new ListBuffer[EvmLog]
+    val logs = new ListBuffer[EthereumConsensusDataLog]
     for (_ <- 1 to num_logs)
-      logs += createTestEvmLog(Some(address))
+      logs += createTestLog(Some(address))
     new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs)
   }
 

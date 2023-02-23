@@ -1,14 +1,15 @@
 package com.horizen.secret;
 
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.proof.Signature25519;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import java.util.Arrays;
+import java.util.Objects;
 
 import static com.horizen.secret.SecretsIdsEnum.PrivateKey25519SecretId;
-
 
 public final class PrivateKey25519 implements Secret
 {
@@ -21,11 +22,14 @@ public final class PrivateKey25519 implements Secret
 
     public PrivateKey25519(byte[] privateKeyBytes, byte[] publicKeyBytes)
     {
+        Objects.requireNonNull(privateKeyBytes, "Private key can't be null");
+        Objects.requireNonNull(publicKeyBytes, "Public key can't be null");
+
         if(privateKeyBytes.length != PRIVATE_KEY_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect private key length, %d expected, %d found", PRIVATE_KEY_LENGTH,
                     privateKeyBytes.length));
         if(publicKeyBytes.length != PUBLIC_KEY_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", PUBLIC_KEY_LENGTH,
+            throw new IllegalArgumentException(String.format("Incorrect public key length, %d expected, %d found", PUBLIC_KEY_LENGTH,
                     publicKeyBytes.length));
 
         this.privateKeyBytes = Arrays.copyOf(privateKeyBytes, PRIVATE_KEY_LENGTH);
@@ -81,6 +85,11 @@ public final class PrivateKey25519 implements Secret
     public String toString() {
         // Show only the first 4 bytes to protect the key
         return String.format("PrivateKey25519{privateKey=%s}", BytesUtils.toHexString(privateKeyBytes).substring(0, 8));
+    }
+
+    @Override
+    public Boolean isPublicKeyValid() {
+        return Ed25519.validatePublicKey(privateKeyBytes, publicKeyBytes);
     }
 
     @Override

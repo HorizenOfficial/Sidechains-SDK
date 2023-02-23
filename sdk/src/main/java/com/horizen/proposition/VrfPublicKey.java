@@ -7,7 +7,7 @@ import com.horizen.proof.VrfProof;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
+import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -21,10 +21,18 @@ public class VrfPublicKey
     private final byte[] publicBytes;
 
     public VrfPublicKey(byte[] publicKey) {
+        this(publicKey, false);
+    }
+
+    public VrfPublicKey(byte[] publicKey, boolean checkPublicKey) {
         Objects.requireNonNull(publicKey, "Public key can't be null");
 
-        if(publicKey.length != KEY_LENGTH)
+        if (publicKey.length != KEY_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, publicKey.length));
+
+        if (checkPublicKey && !CryptoLibProvider.vrfFunctions().publicKeyIsValid(publicKey)) {
+            throw  new IllegalArgumentException("Public key is not valid");
+        }
 
         publicBytes = Arrays.copyOf(publicKey, publicKey.length);
     }
@@ -64,7 +72,7 @@ public class VrfPublicKey
     @Override
     public String toString() {
         return "VrfPublicKey{" +
-                "publicBytes=" + ByteUtils.toHexString(publicBytes) +
+                "publicBytes=" + BytesUtils.toHexString(publicBytes) +
                 '}';
     }
 }

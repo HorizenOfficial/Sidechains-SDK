@@ -4,19 +4,20 @@ import com.google.common.io.Files
 import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.fixtures.FieldElementFixture
+import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
+
 import java.io._
+import java.nio.charset.StandardCharsets
 import java.util.Optional
 import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class SigProofTest {
+class SigProofTest extends SecretFixture {
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val sigCircuit: ThresholdSignatureCircuitImplZendoo = new ThresholdSignatureCircuitImplZendoo()
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
@@ -30,21 +31,6 @@ class SigProofTest {
     new File(provingKeyPath).delete()
     new File(verificationKeyPath).delete()
     tmpDir.delete()
-  }
-
-  private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
-    var bytes: Array[Byte] = null
-    try {
-      val resourceName = "schnorr_sk0"+ index + "_hex"
-      val file = new FileReader(classLoader.getResource(resourceName).getFile)
-      bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
-    }
-    catch {
-      case e: Exception =>
-        assertEquals(e.toString(), true, false)
-    }
-
-    SchnorrSecretKey.deserialize(bytes)
   }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuit

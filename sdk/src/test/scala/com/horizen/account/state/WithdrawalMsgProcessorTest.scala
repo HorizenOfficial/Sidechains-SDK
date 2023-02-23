@@ -2,10 +2,10 @@ package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.horizen.evm.{Address, Hash}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.ArgumentMatchers.any

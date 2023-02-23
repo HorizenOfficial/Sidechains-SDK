@@ -7,8 +7,8 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
+import io.horizen.evm.Address
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -16,6 +16,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 
 class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture with SidechainTypes with MockitoSugar {
 
@@ -31,7 +32,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
   val listOfRejectedBlocks = Seq(rejectedBlock)
   val listOfAppliedBlocks = Seq(appliedBlock)
 
-  val accountKeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes()))
+  val accountKeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes(StandardCharsets.UTF_8)))
 
   @Before
   def setUp(): Unit = {

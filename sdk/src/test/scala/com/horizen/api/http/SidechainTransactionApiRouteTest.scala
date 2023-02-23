@@ -10,6 +10,7 @@ import com.horizen.transaction.RegularTransactionSerializer
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters._
 import java.util.{Optional => JOptional}
 
@@ -156,7 +157,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 
     "reply at /findById" in {
       val transactionFound = memoryPool.get(0)
-      val transactionIdNotValid = BytesUtils.toHexString("transactionId".getBytes)
+      val transactionIdNotValid = BytesUtils.toHexString("transactionId".getBytes(StandardCharsets.UTF_8))
       val transactionIdValid = transactionFound.id
       // Case --> blockHash not set -> Search in memory pool
       // searchTransactionInMemoryPool not found

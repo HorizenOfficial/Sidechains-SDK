@@ -42,6 +42,10 @@ for i in "$@"; do
       SPLIT="${i#*=}"
       shift
       ;;
+    -parallel=*)
+      PARALLEL="${i#*=}"
+      shift
+      ;;
     *)
       # unknown option/passOn
       passOn+="${i} "
@@ -78,6 +82,7 @@ testScriptsEvm=(
     'sc_evm_closed_forger.py'
     'sc_evm_forging_fee_payments.py'
     'sc_evm_fee_payments_rpc.py'
+    'sc_evm_gasPrice.py'
     'sc_evm_mempool.py'
     'sc_evm_mempool_invalid_txs.py'
     'sc_evm_orphan_txs.py'
@@ -98,6 +103,7 @@ testScriptsEvm=(
     'sc_evm_delegatecall_contract.py'
     'sc_evm_mc_fork.py'
     'sc_evm_context_blockhash.py'
+    'sc_evm_block_size_limit.py'
 );
 
 testScriptsUtxo=(
@@ -236,10 +242,84 @@ if [ ! -z "$SPLIT" ]; then
   fi
 fi
 
+testCount=${#testScripts[@]}
 successCount=0
+successCountFile="/tmp/successCounter.txt"
 notFoundCount=0
+notFoundCountFile="/tmp/notFoundCounter.txt"
 failureCount=0
+failureCountFile="/tmp/failureCounter.txt"
 declare -a failures
+failuresFile="/tmp/failuresList.txt"
+flock_file="/tmp/flock_file.lock"
+testsFile="/tmp/tests.txt"
+
+function deleteTempFiles
+{
+  rm -f $flock_file $testsFile $successCountFile $notFoundCountFile $failureCountFile $failuresFile
+}
+
+function updateCountFile
+{
+  (
+    flock -x 200
+    # Check if the counter file exists
+    if [ ! -f "$1" ]; then
+      # If the counter file does not exist, initialize it with a starting value
+      echo "0" > "$1"
+    fi
+
+    # Read the current value of the counter
+    count=$(cat "$1")
+
+    # Increment the counter
+    count=$((count + 1))
+
+    # Write the new value of the counter
+    echo "$count" > "$1"
+  ) 200>"$flock_file"
+}
+
+function updateFailList
+{
+  if [ "$PARALLEL" ]; then
+    (
+      flock -x 200
+
+      # Write the passed argument to the file
+      echo "$1" >> $failuresFile
+    ) 200>$flock_file
+  else
+    failures[${#failures[@]}]="$1"
+  fi
+}
+
+function updateNotFoundCount
+{
+  if [ "$PARALLEL" ]; then
+    updateCountFile "$notFoundCountFile"
+  else
+    notFoundCount=$((notFoundCount + 1))
+  fi
+}
+
+function updateFailureCount
+{
+  if [ "$PARALLEL" ]; then
+    updateCountFile "$failureCountFile"
+  else
+    failureCount=$((failureCount + 1))
+  fi
+}
+
+function updateSuccessCount
+{
+  if [ "$PARALLEL" ]; then
+    updateCountFile "$successCountFile"
+  else
+    successCount=$(expr $successCount + 1)
+  fi
+}
 
 function checkFileExists
 {
@@ -250,59 +330,179 @@ function checkFileExists
 
     if [ ! -f "${TestScriptFileAndPath}" ]; then
       echo -e "\nWARNING: file not found [ ${TestScriptFileAndPath} ]" | tee /dev/fd/3
-      failures[${#failures[@]}]="(#-NotFound-$1-#)"
-      notFoundCount=$((notFoundCount + 1))
+      updateFailList "(#-NotFound-$1-#)"
+      updateNotFoundCount
+
       return 1;
     else
       return 0
     fi
 }
 
+function checkScriptArgsValid
+{
+  local scriptArg=$1
+  local testToRun=$2
+
+  if [ -z "$scriptArg" ] || [ "${scriptArg:0:1}" = "-" ] || [ "$scriptArg" = "$testToRun" ] || [ "$scriptArg.py" = "$testToRun" ]; then
+    return 0;
+  else
+    echo "Unable to run $testToRun, invalid arg passed to shell script" | tee /dev/fd/3
+    return 1
+  fi
+}
+
 function runTestScript
 {
     local testName="$1"
-    #Remove from $1 array
+    #Remove first arg $1 from args passed to function, shifting the full file location to arg $1.
     shift
 
-    echo -e "=== Running testscript ${testName} ===" | tee /dev/fd/3
+    if [ -z "$PARALLEL" ]; then
+      echo -e "=== Running testscript ${testName} ===" | tee /dev/fd/3
+    fi;
 
+    #Log test start time
+    testStart=$(date +%s)
+    runTimeMessage="Run Time: $testRuntime"
     if eval "$@"; then
-    successCount=$(expr $successCount + 1)
-    echo "--- Success: ${testName} ---" | tee /dev/fd/3
+      testEnd=$(date +%s)
+      testRuntime=$((testEnd-testStart))
+      updateSuccessCount
+      echo "--- Success: ${testName} --- ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
     else
-    failures[${#failures[@]}]="$testName"
-    failureCount=$((failureCount + 1))
-    echo "!!! FAIL: ${testName} !!!" | tee /dev/fd/3
+      testEnd=$(date +%s)
+      testRuntime=$((testEnd-testStart))
+      updateFailList="$testName"
+      updateFailureCount
+      echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
     fi
 
     echo | tee /dev/fd/3
 }
 
-for (( i = 0; i < ${#testScripts[@]}; i++ )); do
-  if checkFileExists "${testScripts[$i]}"; then
-        if [ -z "$1" ] || [ "${1:0:1}" = "-" ] || [ "$1" = "${testScripts[$i]}" ] || [ "$1.py" = "${testScripts[$i]}" ]; then
-        echo "Running $((i +1)) Of ${#testScripts[@]} Tests" | tee /dev/fd/3
-        runTestScript \
-              "${testScripts[$i]}" \
-              "${BASH_SOURCE%/*}/${testScripts[$i]}"
-        fi
-  fi
-done
+function runTests
+{
+  # Assign any parameter given to the shell script, then remove from this functions args
+  scriptArg=$1; shift
+  # Assign remaining args (which should be the test scripts array)
+  testsToRun=("$@")
+  runningInfoMessage="Of ${#testsToRun[@]} Tests"
 
+  for (( i = 0; i < ${#testsToRun[@]}; i++ )); do
+    if checkFileExists "${testsToRun[$i]}"; then
+          if checkScriptArgsValid "$scriptArg"  \
+                                  "${testsToRun[$i]}"; then
+            echo "Running $((i +1)) $runningInfoMessage" | tee /dev/fd/3
+            testFileWithArgs="${BASH_SOURCE%/*}/${testsToRun[$i]}"
+
+            runTestScript \
+                  "${testsToRun[$i]}" \
+                  "$testFileWithArgs"
+          fi
+    fi
+  done
+}
+
+function runParallelTests
+{
+  # Assign any parameter given to the shell script, then remove from this functions args
+  scriptArg=$1; shift
+
+  # Assign parallelGroup then remove from this functions args
+  parallelGroup=$1; shift
+
+  while true; do
+    # Acquire the lock for the array and retrieve the first test and a count of remaining tests
+    result=$(flock -w 1 $testsFile -c "head -n 1 $testsFile; sed -i '1d' $testsFile; num_lines=\$(wc -l $testsFile | awk '{print \$1}'); echo -n \"\$num_lines\"")
+    test=$(echo "$result" | awk 'NR==1{print}')
+    num_lines=$(echo "$result" | awk 'NR==2{print}')
+
+    if [ -z "$test" ] || [ "$test" = " " ] || [ "$test" = "0" ] ; then
+      break
+    fi
+
+    testNumber=$((${#testScripts[@]}-$num_lines))
+
+    if checkFileExists "$test"; then
+          if checkScriptArgsValid "$scriptArg"  \
+                                  "$test"; then
+            echo "== Running $testNumber Of $testCount Tests: \"$test\"  == Parallel: $parallelGroup" | tee /dev/fd/3
+            testFileWithArgs="${BASH_SOURCE%/*}/$test --parallel=$parallelGroup"
+
+            runTestScript \
+                  "$test" \
+                  "$testFileWithArgs"
+          fi
+    fi
+  done
+}
+
+startTime=$(date +%s)
+
+if [ ! -z "$PARALLEL" ]; then
+  deleteTempFiles
+  printf "%s\n" "${testScripts[@]}" > $testsFile
+
+  for (( i=1; i<=$PARALLEL; i++ )); do
+    runParallelTests  \
+        "$1"  \
+        "$i"  &
+  done
+  # Wait for all processes to finish
+  wait < <(jobs -p)
+
+else
+  # Pass main script arg to function first followed by array.
+
+  runTests  \
+      "$1"  \
+      "${testScripts[@]}"
+fi
+
+if [ "$PARALLEL" ]; then
+  if [ -f "$successCountFile" ]; then
+    successCount=$(cat "$successCountFile")
+  fi
+  if [ -f "$failureCountFile" ]; then
+    failureCount=$(cat "$failureCountFile")
+  fi
+  if [ -f "$notFoundCountFile" ]; then
+    notFoundCount=$(cat "$notFoundCountFile")
+  fi
+  if [ -f "$failuresFile" ]; then
+    # Read the contents of the failures file into an array
+    IFS=$'\n' read -r -a contents < $failuresFile
+
+    # Add the contents array to the existing failures array
+    failures=("${failures[@]}" "${contents[@]}")
+  fi
+fi
+
+endTime=$(date +%s)
+runtime=$((endTime-startTime))
 total=$((successCount + failureCount))
-echo -e "\n\nTests Run: $total" | tee /dev/fd/3
-echo "Passed: $successCount; Failed: $failureCount; Not Found: $notFoundCount" | tee /dev/fd/3
+testRunTimeMessage="\n===  TOTAL TEST RUN TIME: ${runtime}(s)  ==="
+testsRunMessage="\nTests Run: $total"
+summaryMessage="\nPassed: $successCount; Failed: $failureCount; Not Found: $notFoundCount"
+fileNotFoundMessage="\nCould not exec any test: File name [$1]"
+failingTestsMessage="\nFailing tests: ${failures[*]}"
+
+echo -e "$testsRunMessage" | tee /dev/fd/3
+echo -e "$summaryMessage" | tee /dev/fd/3
+echo -e "$testRunTimeMessage" | tee /dev/fd/3
+
+deleteTempFiles
 
 if [ $total -eq 0 ]; then
-  echo -e "\nCould not exec any test: File name [$1]" | tee /dev/fd/3
-  checkFileExists $1
+  echo -e "\n!! WARNING: No test files were found. !!" | tee /dev/fd/3
+  echo -e "$failingTestsMessage" | tee /dev/fd/3
   exit 1
 fi
 
 if [ ${#failures[@]} -gt 0 ]; then
-    echo -e "\nFailing tests: ${failures[*]}" | tee /dev/fd/3
+    echo -e "$failingTestsMessage" | tee /dev/fd/3
     exit 1
   else
     exit 0
 fi
-

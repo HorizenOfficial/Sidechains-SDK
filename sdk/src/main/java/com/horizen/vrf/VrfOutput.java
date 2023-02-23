@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.serialization.Views;
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
+import com.horizen.utils.BytesUtils;
 import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
 
@@ -51,7 +51,7 @@ public class VrfOutput implements BytesSerializable {
     @Override
     public String toString() {
         return "VrfOutput{" +
-                "vrfOutputBytes=" + ByteUtils.toHexString(vrfOutputBytes) +
+                "vrfOutputBytes=" + BytesUtils.toHexString(vrfOutputBytes) +
                 '}';
     }
 }

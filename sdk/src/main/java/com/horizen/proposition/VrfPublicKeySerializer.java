@@ -2,6 +2,8 @@ package com.horizen.proposition;
 
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
+import sparkz.util.serialization.VLQByteBufferReader;
+import java.nio.ByteBuffer;
 
 public class VrfPublicKeySerializer implements PropositionSerializer<VrfPublicKey> {
     private static VrfPublicKeySerializer serializer;
@@ -25,6 +27,17 @@ public class VrfPublicKeySerializer implements PropositionSerializer<VrfPublicKe
 
     @Override
     public VrfPublicKey parse(Reader reader) {
-        return new VrfPublicKey(reader.getBytes(VrfPublicKey.KEY_LENGTH));
+        return parse(reader, false);
+    }
+
+    public VrfPublicKey parse(Reader reader, boolean checkPublicKey) {
+        VrfPublicKey publicKey = new VrfPublicKey(reader.getBytes(VrfPublicKey.KEY_LENGTH), checkPublicKey);
+
+        return publicKey;
+    }
+
+    public VrfPublicKey parseBytesAndCheck(byte[] propositionBytes) {
+        VLQByteBufferReader bufferReader = new VLQByteBufferReader(ByteBuffer.wrap(propositionBytes));
+        return parse(bufferReader, true);
     }
 }

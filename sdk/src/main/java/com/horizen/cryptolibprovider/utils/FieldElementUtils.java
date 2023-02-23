@@ -2,7 +2,6 @@ package com.horizen.cryptolibprovider.utils;
 
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.librustsidechains.Constants;
-import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
@@ -12,20 +11,19 @@ public class FieldElementUtils {
     }
 
     public static FieldElement messageToFieldElement(byte[] message) {
-        if (message.length > fieldElementLength()) {
+        if (message.length != fieldElementLength()) {
             throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
-                    message.length + " but it shall be less than " + fieldElementLength());
+                    message.length + " but it shall be equal to " + fieldElementLength());
         }
-        return FieldElement.deserialize(Arrays.copyOf(message, fieldElementLength()));
+        return FieldElement.deserialize(message);
     }
 
-    public static FieldElement hashToFieldElement(String hexByte) {
-        byte[] hashBytes = BytesUtils.fromHexString(hexByte);
-        if (hashBytes.length > fieldElementLength()) {
-            throw new IllegalArgumentException("Hash length is exceed Poseidon hash len. Hash len " +
-                    hashBytes.length + " but it shall be " + fieldElementLength());
+    public static FieldElement elementToFieldElement(byte[] element) {
+        if (element.length > fieldElementLength()) {
+            throw new IllegalArgumentException("Element length is exceed allowed element len. Field len " +
+                    element.length + " but it shall be less than " + fieldElementLength());
         }
-        return FieldElement.deserialize(Arrays.copyOf(hashBytes, fieldElementLength()));
+        return FieldElement.deserialize(Arrays.copyOf(element, fieldElementLength()));
     }
 
     public static byte[] randomFieldElementBytes() {

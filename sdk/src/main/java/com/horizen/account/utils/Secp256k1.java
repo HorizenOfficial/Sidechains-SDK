@@ -1,7 +1,8 @@
 package com.horizen.account.utils;
 
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.evm.utils.Address;
+import io.horizen.evm.Address;
+import com.horizen.utils.ChaChaPrngSecureRandom;
 import com.horizen.utils.Pair;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
@@ -46,7 +47,9 @@ public final class Secp256k1 {
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
         try {
-            ECKeyPair keyPair = Keys.createEcKeyPair(new SecureRandom(seed));
+            SecureRandom rnd = ChaChaPrngSecureRandom.getInstance(seed);
+            ECKeyPair keyPair = Keys.createEcKeyPair(rnd);
+
             byte[] privateKey = Numeric.toBytesPadded(keyPair.getPrivateKey(), PRIVATE_KEY_SIZE);
             byte[] publicKey = Numeric.toBytesPadded(keyPair.getPublicKey(), PUBLIC_KEY_SIZE);
             return new Pair<>(privateKey, publicKey);

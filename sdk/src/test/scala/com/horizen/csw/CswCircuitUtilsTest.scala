@@ -8,13 +8,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 import java.lang.reflect.Method
+import java.nio.charset.StandardCharsets
 
 class CswCircuitUtilsTest {
   val cswCircuit = new CswCircuitImplZendoo()
 
   @Test
   def transformPrivateKey25519(): Unit = {
-    val pk: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("seed".getBytes)
+    val pk: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("seed".getBytes(StandardCharsets.UTF_8))
 
     val scalar = cswCircuit.privateKey25519ToScalar(pk)
 
@@ -29,8 +30,8 @@ class CswCircuitUtilsTest {
       BytesUtils.toHexString(pk.publicImage().pubKeyBytes()), BytesUtils.toHexString(pubKey))
 
     // Regression
-    assertEquals("Different pub key", "f165e1e5f7c290e52f2edef3fbab60cbae74bfd3274f8e5ee1de3345c954a166", BytesUtils.toHexString(pk.publicImage().pubKeyBytes()))
-    assertEquals("Different private key", "19b25856e1c150ca834cffc8b59b23adbd0ec0389e58eb22b3b64768098d002b", BytesUtils.toHexString(pk.privateKey()))
-    assertEquals("Different transformation result", "50d5e4c0b15402013941a3c525c6af85e7ab8a2da39a59707211ddd53def965e", BytesUtils.toHexString(scalar))
+    assertEquals("Different pub key", "415bf2bf63fc5b566a94e6f2d18e15c6d2b819bad38f93b1fb277b34fbe68504", BytesUtils.toHexString(pk.publicImage().pubKeyBytes()))
+    assertEquals("Different private key", "e5a75e0836c59813dd775e888b9c5fda325565b4ca159d1bc8c81923e5ffffff", BytesUtils.toHexString(pk.privateKey()))
+    assertEquals("Different transformation result", "80fb501f4849d8b83c035930cce66c9ba1c79c2e7c9004ba22015baa16da7656", BytesUtils.toHexString(scalar))
   }
 }

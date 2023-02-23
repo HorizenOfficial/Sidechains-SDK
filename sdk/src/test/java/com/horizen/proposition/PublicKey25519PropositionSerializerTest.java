@@ -8,6 +8,7 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
@@ -18,17 +19,19 @@ public class PublicKey25519PropositionSerializerTest {
 
     @Before
     public void beforeEachTest() {
-        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes(StandardCharsets.UTF_8));
         // Note: current proposition bytes are also stored in "src/test/resources/publickey25519proposition_hex"
         proposition = new PublicKey25519Proposition(keyPair.getValue());
 
-//     Uncomment and run if you want to update regression data.
-//        try {
-//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/publickey25519proposition_hex"));
-//            out.write(BytesUtils.toHexString(proposition.bytes()));
-//            out.close();
-//        } catch (Throwable e) {
-//        }
+        // Set to true and run if you want to update regression data.
+        if (false) {
+            try {
+                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/publickey25519proposition_hex"));
+                out.write(BytesUtils.toHexString(proposition.bytes()));
+                out.close();
+            } catch (Throwable e) {
+            }
+        }
     }
 
     @Test
@@ -39,7 +42,7 @@ public class PublicKey25519PropositionSerializerTest {
         Try<PublicKey25519Proposition> t = serializer.parseBytesTry(bytes);
         assertEquals("Propositions expected to be equal", proposition, ((Try) t).get());
 
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure();
         assertEquals("Failure during parsing expected", true, failureExpected);
 
     }

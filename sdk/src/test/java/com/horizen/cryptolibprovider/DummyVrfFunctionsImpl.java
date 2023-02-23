@@ -28,15 +28,19 @@ public class DummyVrfFunctionsImpl implements VrfFunctions {
         for (int i = 0; i < decoded.length; i++) {
             decoded[i] = (byte) (decoded[i] ^ publicKeyBytes[0]);
         }
-        //System.out.println("check message: " + ByteUtils.toHexString(messageBytes) + " by proof:" + ByteUtils.toHexString(proofBytes) + " by public key: " +ByteUtils.toHexString(publicKey));
+        //System.out.println("check message: " + BytesUtils.toHexString(messageBytes) + " by proof:" + BytesUtils.toHexString(proofBytes) + " by public key: " +BytesUtils.toHexString(publicKey));
 
         return Arrays.equals(messageWithCorrectLength, decoded);
     }
+
 
     @Override
     public boolean publicKeyIsValid(byte[] publicKeyBytes) {
         return publicKeyBytes.length == vrfLength;
     }
+
+    @Override
+    public byte[] getPublicKey(byte[] secretKeyBytes) { return secretKeyBytes; }
 
     @Override
     public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
@@ -69,7 +73,7 @@ public class DummyVrfFunctionsImpl implements VrfFunctions {
         EnumMap<ProofType, byte[]> proofsMap = new EnumMap<>(ProofType.class);
         proofsMap.put(ProofType.VRF_PROOF, proofBytes);
         proofsMap.put(ProofType.VRF_OUTPUT, vrfOutputBytes);
-        //System.out.println("For message:" + ByteUtils.toHexString(message) + "create proof: " + ByteUtils.toHexString(proofBytes) + " by public key: " + ByteUtils.toHexString(publicKey));
+        //System.out.println("For message:" + BytesUtils.toHexString(message) + "create proof: " + BytesUtils.toHexString(proofBytes) + " by public key: " + BytesUtils.toHexString(publicKey));
         return proofsMap;
     }
 

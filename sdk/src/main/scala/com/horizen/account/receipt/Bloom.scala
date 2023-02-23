@@ -1,11 +1,10 @@
 package com.horizen.account.receipt
 
 import com.horizen.account.receipt.Bloom.BLOOM_BYTE_LENGTH
-import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.serialization.{Reader, Writer}
-import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import java.util
 
@@ -113,9 +112,9 @@ object Bloom {
     new Bloom(filter.clone())
   }
 
-  def fromLogs(evmLogs: Seq[EvmLog]): Bloom = {
+  def fromLogs(logs: Seq[EthereumConsensusDataLog]): Bloom = {
     val filter = new Bloom()
-    for (log <- evmLogs) {
+    for (log <- logs) {
       filter.add(log.address.toBytes)
       for (topic <- log.topics) {
         filter.add(topic.toBytes)

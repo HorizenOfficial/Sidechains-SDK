@@ -5,16 +5,15 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.receipt.{Bloom, BloomSerializer}
-import com.horizen.account.utils.FeeUtils
+import com.horizen.account.utils.{BigIntegerUInt256, FeeUtils}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
-import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
+import com.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import sparkz.util.ModifierId
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
@@ -134,10 +133,10 @@ case class AccountBlockHeader(
 
   override def toString: String =
     s"AccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
-      s"${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, " +
-      s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, $forgerAddress" +
+      s"${BytesUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${BytesUtils.toHexString(mainchainMerkleRootHash)}, " +
+      s"${BytesUtils.toHexString(stateRoot)}, ${BytesUtils.toHexString(receiptsRoot)}, $forgerAddress" +
       s"$baseFee, $gasUsed, $gasLimit, " +
-      s"${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
+      s"${BytesUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
 }
 
 
@@ -219,13 +218,13 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
     val baseFeeSize = r.getInt()
-    val baseFee = new BigInteger(r.getBytes(baseFeeSize))
+    val baseFee = new BigIntegerUInt256(r.getBytes(baseFeeSize)).getBigInt
 
     val gasUsedSize = r.getInt()
-    val gasUsed = new BigInteger(r.getBytes(gasUsedSize))
+    val gasUsed = new BigIntegerUInt256(r.getBytes(gasUsedSize)).getBigInt
 
     val gasLimitSize = r.getInt()
-    val gasLimit = new BigInteger(r.getBytes(gasLimitSize))
+    val gasLimit = new BigIntegerUInt256(r.getBytes(gasLimitSize)).getBigInt
 
     val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 

@@ -11,9 +11,8 @@ import com.horizen.account.state._
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.WithdrawalEpochInfo
+import io.horizen.evm.{Address, Hash}
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -34,8 +33,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
         ArgumentMatchers.any[SidechainTypes#SCAT],
         ArgumentMatchers.any[Int],
         ArgumentMatchers.any[GasPool],
-        ArgumentMatchers.any[BlockContext],
-        ArgumentMatchers.any[Boolean]
+        ArgumentMatchers.any[BlockContext]
       )
     )
     .thenAnswer(asw => {
@@ -45,7 +43,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
           throw GasLimitReached()
         }
         gasPool.subGas(GasUtil.TxGas)
-        new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, gasPool.getUsedGas, Array.empty[EvmLog])
+        new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, gasPool.getUsedGas, Seq.empty)
       }
     })
 
@@ -56,7 +54,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
   Mockito.when(state.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
   Mockito.when(state.getNonce(ArgumentMatchers.any[Address])).thenReturn(BigInteger.ZERO)
-  val mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
+  val mempool: AccountMemoryPool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
 
   val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool] =
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]

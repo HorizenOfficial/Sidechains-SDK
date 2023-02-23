@@ -15,11 +15,11 @@ import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http._
-import com.horizen.evm.LevelDBDatabase
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.params.{MainNetParams, TestNetParams}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.{SidechainSettings, SidechainTypes}
+import io.horizen.evm.LevelDBDatabase
 import org.junit.runner.RunWith
 import org.mindrot.jbcrypt.BCrypt
 import org.mockito.Mockito

@@ -5,7 +5,6 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.request.RpcRequest
-import com.horizen.account.api.rpc.types.Quantity
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
@@ -19,23 +18,22 @@ import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionTy
 import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
 import com.horizen.{EthServiceSettings, SidechainTypes}
-import org.junit.Assert.{assertEquals, assertTrue}
+import io.horizen.evm.Address
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
-import sparkz.crypto.hash.Keccak256
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
 import sparkz.core.bytesToId
 import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
+import sparkz.crypto.hash.Keccak256
 import sparkz.util.ByteArrayBuilder
 import sparkz.util.serialization.VLQByteBufferWriter
 
@@ -48,6 +46,7 @@ import scala.util.Failure
 
 class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture with TableDrivenPropertyChecks {
   private val mapper = new ObjectMapper()
+
   private val invalidCasesTxHash =
     Table(
       "Test false length and missing 0x prefix",
@@ -55,33 +54,142 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       "0x1234",
       "0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba1"
     )
-  private val blockViewOutput =
-    """{"number":"0x1","hash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000123","nonce":"0x0000000000000000","sha3Uncles":"0x","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","transactionsRoot":"0x1234567891011121314112345678910111213141010203040506070809111222","stateRoot":"0x1234567891011121314112345678910111213141010203040506070809111333","receiptsRoot":"0x1234567891011121314112345678910111213141010203040506070809111444","miner":"0x1234567891011121314112345678910111213141","mixHash":"0xa9d6c4e78efce5051dedf51d9be422ef8af247a8414368d256e4ab7b8029951e","extraData":"0x","size":"0x100","gasLimit":"0x1c9c380","gasUsed":"0x3b9aca01","timestamp":"0x3b9aca00","transactions":[{"blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","hash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","type":"0x2","nonce":"0x0","to":null,"gas":"0x1","value":"0x1","input":"0x","maxPriorityFeePerGas":"0x1","maxFeePerGas":"0x3b9aca64","gasPrice":"0x342770c1","accessList":null,"chainId":"0x10f447","v":"0x1c","r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023","s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"}],"author":"0x1234567891011121314112345678910111213141","difficulty":"0x0","totalDifficulty":"0x0","uncles":[],"sealFields":[],"baseFeePerGas":"0x342770c0"}"""
-  private val blockViewOutputTxHashes =
-    """{"number":"0x1","hash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000123","nonce":"0x0000000000000000","sha3Uncles":"0x","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","transactionsRoot":"0x1234567891011121314112345678910111213141010203040506070809111222","stateRoot":"0x1234567891011121314112345678910111213141010203040506070809111333","receiptsRoot":"0x1234567891011121314112345678910111213141010203040506070809111444","miner":"0x1234567891011121314112345678910111213141","mixHash":"0xa9d6c4e78efce5051dedf51d9be422ef8af247a8414368d256e4ab7b8029951e","extraData":"0x","size":"0x100","gasLimit":"0x1c9c380","gasUsed":"0x3b9aca01","timestamp":"0x3b9aca00","transactions":["0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"],"author":"0x1234567891011121314112345678910111213141","difficulty":"0x0","totalDifficulty":"0x0","uncles":[],"sealFields":[],"baseFeePerGas":"0x342770c0"}"""
-  private val txViewOutput =
-    """{"blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","hash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","type":"0x2","nonce":"0x0","to":null,"gas":"0x1","value":"0x1","input":"0x","maxPriorityFeePerGas":"0x1","maxFeePerGas":"0x3b9aca64","gasPrice":"0x342770c1","accessList":null,"chainId":"0x10f447","v":"0x1c","r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023","s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"}"""
+
+  private val expectedTxView =
+    """{
+      "blockHash": "0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc",
+      "blockNumber": "0x2",
+      "from": "0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1",
+      "hash": "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253",
+      "transactionIndex": "0x0",
+      "type": "0x2",
+      "nonce": "0x0",
+      "to": null,
+      "gas": "0x1",
+      "value": "0x1",
+      "input": "0x",
+      "maxPriorityFeePerGas": "0x1",
+      "maxFeePerGas": "0x3b9aca64",
+      "gasPrice": "0x342770c1",
+      "chainId": "0x10f447",
+      "accessList": [],
+      "v": "0x1c",
+      "r": "0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+      "s": "0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"
+    }"""
+
+  private def blockViewOutput(transactions: String) =
+    s"""{
+        "author": "0x1234567891011121314112345678910111213141",
+        "baseFeePerGas": "0x342770c0",
+        "difficulty": "0x0",
+        "extraData": "0x",
+        "gasLimit": "0x1c9c380",
+        "gasUsed": "0x3b9aca01",
+        "hash": "0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc",
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "miner": "0x1234567891011121314112345678910111213141",
+        "mixHash": "0xbd76bfc4a33248e02d5c5690c345c05e7a0b51ddbba89c1b3621c87358c9cb18",
+        "nonce": "0x0000000000000000",
+        "number": "0x1",
+        "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000123",
+        "receiptsRoot": "0x1234567891011121314112345678910111213141010203040506070809111444",
+        "sha3Uncles": "0x",
+        "size": "0x100",
+        "stateRoot": "0x1234567891011121314112345678910111213141010203040506070809111333",
+        "timestamp": "0x3b9aca00",
+        "totalDifficulty": "0x0",
+        "transactions": [
+          $transactions
+        ],
+        "transactionsRoot": "0x1234567891011121314112345678910111213141010203040506070809111222",
+        "uncles": []
+      }"""
+
+  private val expectedBlockViewTxHydrated = blockViewOutput(expectedTxView)
+
+  private val expectedBlockViewTxHashes =
+    blockViewOutput("\"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253\"")
+
   private val txJsonNoSecret =
-    s"""{"from": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4", "gas": "0x76c0", "gasPrice": "0x9184e72a000", "value": "0x9184e72a", "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"}"""
+    s"""{
+      "from": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4",
+      "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4",
+      "gas": "0x76c0",
+      "gasPrice": "0x9184e72a000",
+      "value": "0x9184e72a",
+      "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"
+    }"""
 
   val txPoolStatusOutput = """{"pending":3,"queued":1}"""
-  val txPoolContentOutput = """{"pending":{"0x15532e34426cd5c37371ff455a5ba07501c0f522":{"16":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044","input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4","nonce":"0x10","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0xe4e1c0"},"24":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0x081d8a5b696ec5dfce641568e6665b6be2410ce2","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37","input":"0x8c64fe48688ab096dfb6ac2eeefcf213","nonce":"0x18","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x493e00"}},"0xb039865dbea73df08e23f185847bab8e6a44108d":{"32":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0xb3151940f923813eca1d70ad405a852bcd2d7609","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd","input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4","nonce":"0x20","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x112a880"}}},"queued":{"0x15532e34426cd5c37371ff455a5ba07501c0f522":{"40":{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":null,"from":"0xc803d7146a4df6937b609f7951bc7eda3def09fb","gas":"0xec0564","gasPrice":"0x3b9aca64","hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165","input":"0x4aa64a075647e3621bbc14b03e4087903f2c9503","nonce":"0x28","to":"0x15532e34426cd5c37371ff455a5ba07501c0f522","transactionIndex":null,"value":"0x3c14dc0"}}}}"""
+  val txPoolContentOutput =
+    """{
+      "pending": {
+        "0x15532e34426cd5c37371ff455a5ba07501c0f522": {
+          "16": {
+            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "blockNumber": null,
+            "from": "0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
+            "gas": "0xec0564",
+            "gasPrice": "0x3b9aca64",
+            "hash": "0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
+            "input": "0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+            "nonce": "0x10",
+            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
+            "transactionIndex": null,
+            "value": "0xe4e1c0"
+          },
+          "24": {
+            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "blockNumber": null,
+            "from": "0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
+            "gas": "0xec0564",
+            "gasPrice": "0x3b9aca64",
+            "hash": "0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
+            "input": "0x8c64fe48688ab096dfb6ac2eeefcf213",
+            "nonce": "0x18",
+            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
+            "transactionIndex": null,
+            "value": "0x493e00"
+          }
+        },
+        "0xb039865dbea73df08e23f185847bab8e6a44108d": {
+          "32": {
+            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "blockNumber": null,
+            "from": "0xb3151940f923813eca1d70ad405a852bcd2d7609",
+            "gas": "0xec0564",
+            "gasPrice": "0x3b9aca64",
+            "hash": "0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd",
+            "input": "0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+            "nonce": "0x20",
+            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
+            "transactionIndex": null,
+            "value": "0x112a880"
+          }
+        }
+      },
+      "queued": {
+        "0x15532e34426cd5c37371ff455a5ba07501c0f522": {
+          "40": {
+            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "blockNumber": null,
+            "from": "0xc803d7146a4df6937b609f7951bc7eda3def09fb",
+            "gas": "0xec0564",
+            "gasPrice": "0x3b9aca64",
+            "hash": "0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
+            "input": "0x4aa64a075647e3621bbc14b03e4087903f2c9503",
+            "nonce": "0x28",
+            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
+            "transactionIndex": null,
+            "value": "0x3c14dc0"
+          }
+        }
+      }
+    }"""
   var ethService: EthService = _
   var txJson: String = _
   var senderWithSecret: String = _
-
-  private def assertJsonLength(expected: String, actual: Object): Unit = {
-    // TODO: mapper must be configured exactly like the one used in the actual RPC response
-    // TODO: don't just compare the string length, do a deep compare of the results,
-    //  e.g. the order of properties does not matter, but all properties and values need to match
-    // TODO: currently, some of the results can be random which prevents exact matches, remove this restriction
-    val actualJson = mapper.writeValueAsString(actual)
-    assertEquals(
-      s"json should match:\nexpected (${expected.length}): $expected\nactual (${actualJson.length}): $actualJson",
-      expected.length,
-      actualJson.length
-    )
-  }
 
   @Before
   def setUp(): Unit = {
@@ -132,12 +240,16 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       0,
       FeeUtils.GAS_LIMIT,
       genesisBlockId,
-      bytesToId(new Array[Byte](32)))
+      bytesToId(new Array[Byte](32))
+    )
     val mockedBlock: AccountBlock = mockHelper.getMockedBlock(
       BigInteger.valueOf(875000000),
       txEip1559.getEffectiveGasPrice(FeeUtils.INITIAL_BASE_FEE).longValueExact(),
       FeeUtils.GAS_LIMIT,
-      bytesToId(Numeric.hexStringToByteArray("dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")), genesisBlockId, txs)
+      bytesToId(Numeric.hexStringToByteArray("dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")),
+      genesisBlockId,
+      txs
+    )
     val mockedHistory: AccountHistory = mockHelper.getMockedAccountHistory(
       Some(mockedBlock),
       Some(genesisBlock),
@@ -160,12 +272,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
         case m: GetDataFromCurrentView[
-          AccountHistory,
-          AccountState,
-          AccountWallet,
-          AccountMemoryPool,
-          _
-        ]@unchecked =>
+              AccountHistory,
+              AccountState,
+              AccountWallet,
+              AccountMemoryPool,
+              _
+            ] @unchecked =>
           m match {
             case GetDataFromCurrentView(f) =>
               sender ! f(CurrentView(mockedHistory, mockedState, mockedWallet, mockedMemoryPool))
@@ -192,53 +304,56 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
     val ethServiceSettings = EthServiceSettings()
-    ethService = new EthService(nodeViewHolderRef, mockedNetworkControllerRef, new FiniteDuration(10, SECONDS), networkParams, ethServiceSettings, 10, "testVersion", transactionActorRef)
-  }
-
-  @Test
-  def eth_chainId(): Unit = {
-    assertEquals(
-      Numeric.toHexStringWithPrefix(BigInteger.valueOf(1111111)),
-      ethService.execute(getRpcRequest()).asInstanceOf[Quantity].getValue
+    ethService = new EthService(
+      nodeViewHolderRef,
+      mockedNetworkControllerRef,
+      new FiniteDuration(10, SECONDS),
+      networkParams,
+      ethServiceSettings,
+      10,
+      "testVersion",
+      transactionActorRef
     )
-  }
-
-  @Test
-  def eth_blockNumber(): Unit = {
-    assertEquals("0x2", ethService.execute(getRpcRequest()).asInstanceOf[Quantity].getValue)
   }
 
   @Test
   def net_version(): Unit = {
-    assertEquals(String.valueOf(1111111), ethService.execute(getRpcRequest()))
+    assertJsonEquals("\"1111111\"", ethService.execute(getRpcRequest()))
+  }
+
+  @Test
+  def eth_chainId(): Unit = {
+    assertJsonEquals("\"0x10f447\"", ethService.execute(getRpcRequest()))
+  }
+
+  @Test
+  def eth_blockNumber(): Unit = {
+    assertJsonEquals("\"0x2\"", ethService.execute(getRpcRequest()))
   }
 
   @Test
   def net_listening(): Unit = {
-    assertEquals(true, ethService.execute(getRpcRequest()))
+    assertJsonEquals("true", ethService.execute(getRpcRequest()))
   }
 
   @Test
   def net_peerCount(): Unit = {
-    assertEquals("0x0", ethService.execute(getRpcRequest()).asInstanceOf[Quantity].getValue)
+    assertJsonEquals("\"0x0\"", ethService.execute(getRpcRequest()))
   }
 
   @Test
   def web3_clientVersion(): Unit = {
-    assertEquals("testVersion", ethService.execute(getRpcRequest()))
+    assertJsonEquals("\"testVersion\"", ethService.execute(getRpcRequest()))
   }
 
   @Test
   def eth_gasPrice(): Unit = {
-    assertEquals(
-      Numeric.toHexStringWithPrefix(BigInteger.valueOf(875000000)),
-      ethService.execute(getRpcRequest()).asInstanceOf[Quantity].getValue
-    )
+    assertJsonEquals("\"0x342770c0\"", ethService.execute(getRpcRequest()))
   }
 
   @Test
   def eth_syncing(): Unit = {
-    assertEquals(false, ethService.execute(getRpcRequest()).asInstanceOf[Boolean])
+    assertJsonEquals("false", ethService.execute(getRpcRequest()))
   }
 
   @Test
@@ -247,14 +362,14 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("Parameter value", "Expected output"),
-      ("0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253", txViewOutput),
+      ("0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253", expectedTxView),
       ("0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba", "null")
     )
 
     forAll(validCases) { (input, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(input), method = method)))
+        ethService.execute(getRpcRequest(paramValues = Array(input), method = method))
       )
     }
 
@@ -274,15 +389,15 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Parameter value", "Expected output"),
       (
         "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253",
-        s"""{"type":"0x02","transactionHash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","to":null,"cumulativeGasUsed":"0x3e8","gasUsed":"0x12d687","contractAddress":"0x1122334455667788990011223344556677889900","logs":[{"address":"0xd2a538a476aad6ecd245099df9297df6a129c2c5","topics":["0x0000000000000000000000000000000000000000000000000000000000000000","0x1111111111111111111111111111111111111111111111111111111111111111","0x2222222222222222222222222222222222222222222222222222222222222222","0x3333333333333333333333333333333333333333333333333333333333333333"],"data":"0xaabbccddeeff","blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","transactionHash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","logIndex":"0x0","removed":false},{"address":"0xd2a538a476aad6ecd245099df9297df6a129c2c5","topics":["0x0000000000000000000000000000000000000000000000000000000000000000","0x1111111111111111111111111111111111111111111111111111111111111111","0x2222222222222222222222222222222222222222222222222222222222222222","0x3333333333333333333333333333333333333333333333333333333333333333"],"data":"0xaabbccddeeff","blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","transactionHash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","logIndex":"0x1","removed":false}],"logsBloom":"0x00000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000020000000010000080000000000000000000020000002000000000000800000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000002000000000000002000000000800000000000000000000000000008000000000000020000000000000000000000000000000000000000000000000000000000000000000","status":"0x1","effectiveGasPrice":"0x342770c1"}"""
+        s"""{"type":"0x2","transactionHash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","from":"0xd123b689dad8ed6b99f8bd55eed64ab357e6a8d1","to":null,"cumulativeGasUsed":"0x3e8","gasUsed":"0x12d687","contractAddress":"0x1122334455667788990011223344556677889900","logs":[{"address":"0xd2a538a476aad6ecd245099df9297df6a129c2c5","topics":["0x0000000000000000000000000000000000000000000000000000000000000000","0x1111111111111111111111111111111111111111111111111111111111111111","0x2222222222222222222222222222222222222222222222222222222222222222","0x3333333333333333333333333333333333333333333333333333333333333333"],"data":"0xaabbccddeeff","blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","transactionHash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","logIndex":"0x0","removed":false},{"address":"0xd2a538a476aad6ecd245099df9297df6a129c2c5","topics":["0x0000000000000000000000000000000000000000000000000000000000000000","0x1111111111111111111111111111111111111111111111111111111111111111","0x2222222222222222222222222222222222222222222222222222222222222222","0x3333333333333333333333333333333333333333333333333333333333333333"],"data":"0xaabbccddeeff","blockHash":"0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc","blockNumber":"0x2","transactionHash":"0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253","transactionIndex":"0x0","logIndex":"0x1","removed":false}],"logsBloom":"0x00000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000020000000010000080000000000000000000020000002000000000000800000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000002000000000000002000000000800000000000000000000000000008000000000000020000000000000000000000000000000000000000000000000000000000000000000","status":"0x1","effectiveGasPrice":"0x342770c1"}"""
       ),
       ("0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba", "null")
     )
 
     forAll(validCases) { (input, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(input), method = method)))
+        ethService.execute(getRpcRequest(paramValues = Array(input), method = method))
       )
     }
 
@@ -298,22 +413,22 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getTransactionByBlockNumberAndIndex"
     val validCases = Table(
       ("Block tag", "Transaction index", "Expected output"),
-      ("latest", "0", txViewOutput),
-      (null, "0", txViewOutput),
-      ("0x2", "0", txViewOutput),
-      ("2", "0", txViewOutput),
-      ("1", "0", "null"),
-      ("earliest", "0", "null"),
-      ("earliest", "1", "null")
+      ("latest", "0x0", expectedTxView),
+      (null, "0x0", expectedTxView),
+      ("0x2", "0x0", expectedTxView),
+      ("2", "0x0", expectedTxView),
+      ("1", "0x0", "null"),
+      ("earliest", "0x0", "null"),
+      ("earliest", "0x1", "null")
     )
 
     val invalidCases =
       Table(("Block tag", "Transaction index"), ("safe", "0"), ("finalized", "0"), ("aaaa", "0"), ("0x1337", "0"))
 
     forAll(validCases) { (tag, index, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(tag, index), method = method)))
+        ethService.execute(getRpcRequest(paramValues = Array(tag, index), method = method))
       )
     }
 
@@ -330,19 +445,19 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("Block hash", "Transaction index", "Expected output"),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0", txViewOutput),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "1", "null"),
-      ("0x0000000000000000000000000000000000000000000000000000000000000123", "0", "null"),
-      ("0x0000000000000000000000000000000000000000000000000000000000000456", "0", "null")
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0x0", expectedTxView),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0x1", "null"),
+      ("0x0000000000000000000000000000000000000000000000000000000000000123", "0x0", "null"),
+      ("0x0000000000000000000000000000000000000000000000000000000000000456", "0x0", "null")
     )
 
     val invalidCases =
       Table(("Block hash", "Transaction index"), ("null", "0"), ("aaaa", "0"), ("0x1337", "0"))
 
     forAll(validCases) { (tag, index, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(tag, index), method = method)))
+        ethService.execute(getRpcRequest(paramValues = Array(tag, index), method = method))
       )
     }
 
@@ -375,7 +490,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       if (params.length != paramValues.length)
         throw new IllegalArgumentException("Number of parameters given must be equal to number of values given")
       (params zip paramValues)
-        .map(param => s""""${param._1}":"${param._2}"""")
+        .map { case (key, value) => s""""$key":"$value"""" }
         .mkString("[{", ", ", "}]")
     } else if (paramValues != null) {
       paramValues
@@ -388,7 +503,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     } else {
       "[]"
     }
-    val json = s"""{"id":"1","jsonrpc":"2.0","method":"$method", "params":$jsonParams}"""
+    val json = s"""{"jsonrpc":"2.0","id":"1","method":"$method", "params":$jsonParams}"""
     new RpcRequest((new ObjectMapper).readTree(json))
   }
 
@@ -399,7 +514,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Transaction", "Expected output"),
       (
         "0xf86f82674685031b1de8ce83019a289452cceccf519c4575a3cbf3bff5effa5e9181cec4880b9f5bd224727a808025a0cdf8d5eb0f83dff14c87aee3ff7cb373780520117fe735de78bc5eb25e700beba00b7120958d87d26425fd70d1e4c2bfb4022392417bc567887eafd5d7da09ccdf",
-        "0xe0499a7e779f0b82a292accd57ad4015635b2d43897c5ea7989c55049ed5b824"
+        "\"0xe0499a7e779f0b82a292accd57ad4015635b2d43897c5ea7989c55049ed5b824\""
       )
     )
 
@@ -410,7 +525,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     )
 
     forAll(validCases) { (input, expectedOutput) =>
-      assertEquals(expectedOutput, ethService.execute(getRpcRequest(paramValues = Array(input), method = method)))
+      assertJsonEquals(expectedOutput, ethService.execute(getRpcRequest(paramValues = Array(input), method = method)))
     }
 
     forAll(invalidCases) { input =>
@@ -425,9 +540,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getBlockByNumber"
     val validCases = Table(
       ("Block tag", "Full transaction objects", "Expected output"),
-      ("latest", true, blockViewOutput),
-      ("latest", false, blockViewOutputTxHashes),
-      ("0x2", true, blockViewOutput)
+      ("latest", true, expectedBlockViewTxHydrated),
+      ("latest", false, expectedBlockViewTxHashes),
+      ("0x2", true, expectedBlockViewTxHydrated)
     )
 
     val invalidCases =
@@ -440,7 +555,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       )
 
     forAll(validCases) { (tag, fullTx, expectedOutput) =>
-      assertJsonLength(
+      assertJsonEquals(
         expectedOutput,
         ethService.execute(getRpcRequest(paramValues = Array(tag, fullTx), method = method))
       )
@@ -458,8 +573,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getBlockByHash"
     val validCases = Table(
       ("Block hash", "Full transaction objects", "Expected output"),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, blockViewOutput),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, blockViewOutputTxHashes),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, expectedBlockViewTxHydrated),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, expectedBlockViewTxHashes),
       ("0x12345677de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, "null")
     )
 
@@ -467,7 +582,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       Table(("Block hash", "Full transaction objects"), ("0x1337", true), ("1337abcd", true))
 
     forAll(validCases) { (hash, fullTx, expectedOutput) =>
-      assertJsonLength(
+      assertJsonEquals(
         expectedOutput,
         ethService.execute(getRpcRequest(paramValues = Array(hash, fullTx), method = method))
       )
@@ -485,18 +600,18 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getBlockTransactionCountByNumber"
     val validCases = Table(
       ("Block tag / index", "Expected output"),
-      ("latest", "0x1"),
-      ("0x2", "0x1"),
-      ("0x1", "0x0")
+      ("latest", "\"0x1\""),
+      ("0x2", "\"0x1\""),
+      ("0x1", "\"0x0\"")
     )
 
     val invalidCases =
       Table("Block tag / index", "0x1337", "1337abcd")
 
     forAll(validCases) { (tag, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        ethService.execute(getRpcRequest(paramValues = Array(tag), method = method)).asInstanceOf[Quantity].getValue
+        ethService.execute(getRpcRequest(paramValues = Array(tag), method = method))
       )
     }
 
@@ -512,18 +627,18 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getBlockTransactionCountByHash"
     val validCases = Table(
       ("Block hash", "Expected output"),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0x1"),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "0x1"),
-      ("0x0000000000000000000000000000000000000000000000000000000000000123", "0x0")
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "\"0x1\""),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "\"0x1\""),
+      ("0x0000000000000000000000000000000000000000000000000000000000000123", "\"0x0\"")
     )
 
     val invalidCases =
       Table("Block hash", "0x1337", "1337abcd")
 
     forAll(validCases) { (hash, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        ethService.execute(getRpcRequest(paramValues = Array(hash), method = method)).asInstanceOf[Quantity].getValue
+        ethService.execute(getRpcRequest(paramValues = Array(hash), method = method))
       )
     }
 
@@ -541,15 +656,15 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Transaction parameters", "Expected output"),
       // tx hash length = 68
-      (Array[Any](txJson), 68)
+      (Array[Any](txJson), "\"0x2fe27cbdd1034b4077f3b37b531de7ee751f2d36068d3793ac5a9b23713c61e1\"")
     )
 
     val invalidCases = Table("Transaction", Array[Any](txJsonNoSecret), "aaaa")
 
     forAll(validCases) { (params, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = params, method = method))).length
+        ethService.execute(getRpcRequest(paramValues = params, method = method))
       )
     }
 
@@ -566,16 +681,18 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("Transaction parameters", "Expected output"),
-      // signed tx length = 300
-      (Array[Any](txJson), 300)
+      (
+        Array[Any](txJson),
+        "\"0xf892018609184e72a0008276c09452cceccf519c4575a3cbf3bff5effa5e9181cec4849184e72aa9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f0724456751ca016a663f0c1372024737b6498df67128b64ad77fa4e29cce26195efc3d47b36eda02bb2a98dd10ae161d98adb4d127ede506ab155dc4730e5978167a27b965916c8\""
+      )
     )
 
     val invalidCases = Table("Transaction", Array[Any](txJsonNoSecret), "aaaa")
 
     forAll(validCases) { (params, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = params, method = method))).length
+        ethService.execute(getRpcRequest(paramValues = params, method = method))
       )
     }
 
@@ -592,18 +709,19 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("Sender", "message", "Expected output"),
-      // signed msg length = 134
-      (senderWithSecret, "message", 134)
+      (
+        senderWithSecret,
+        "message",
+        "\"0xe134cb1e4e8337c5071cb1355f58e7644686f27bf1160d7406eaf9f40854af903e18111c09301af31d599bf87abaeafaf176848623aff62e05c1a687178da6691c\""
+      )
     )
 
     val invalidCases = Table(("sender", "message"), ("asd", "message"), ("aaaa", "message"))
 
     forAll(validCases) { (sender, message, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper
-          .writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(sender, message), method = method)))
-          .length
+        ethService.execute(getRpcRequest(paramValues = Array(sender, message), method = method))
       )
     }
 
@@ -620,19 +738,16 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("Address", "tag", "Expected output"),
-      ("0x1234567891011121314151617181920212223242", "latest", "0x7b"),
-      ("0x1234567891011121314151617181920212223241", "latest", "0x16345785d89ffff")
+      ("0x1234567891011121314151617181920212223242", "latest", "\"0x7b\""),
+      ("0x1234567891011121314151617181920212223241", "latest", "\"0x16345785d89ffff\"")
     )
 
     val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
 
     forAll(validCases) { (address, tag, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        ethService
-          .execute(getRpcRequest(paramValues = Array(address, tag), method = method))
-          .asInstanceOf[Quantity]
-          .getValue
+        ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
       )
     }
 
@@ -648,14 +763,14 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getCode"
     val validCases = Table(
       ("Address", "Tag", "Expected output"),
-      ("0x1234567891011121314151617181920212223242", "latest", "0x1234"),
-      ("0x1234567890123456789012345678901234567890", "latest", "0x")
+      ("0x1234567891011121314151617181920212223242", "latest", "\"0x1234\""),
+      ("0x1234567890123456789012345678901234567890", "latest", "\"0x\"")
     )
 
     val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
 
     forAll(validCases) { (address, tag, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
         ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
       )
@@ -673,19 +788,16 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val method = "eth_getTransactionCount"
     val validCases = Table(
       ("Address", "Tag", "Expected output"),
-      ("0x1234567891011121314151617181920212223242", "latest", "0x1"),
-      ("0x1234567890123456789012345678901234567890", "latest", "0x0")
+      ("0x1234567891011121314151617181920212223242", "latest", "\"0x1\""),
+      ("0x1234567890123456789012345678901234567890", "latest", "\"0x0\"")
     )
 
     val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
 
     forAll(validCases) { (address, tag, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        ethService
-          .execute(getRpcRequest(paramValues = Array(address, tag), method = method))
-          .asInstanceOf[Quantity]
-          .getValue
+        ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
       )
     }
 
@@ -705,13 +817,13 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "0x1234567891011121314151617181920212223242",
         "0x0",
         "latest",
-        "0x1511111111111111111111111111111111111111111111111111111111111111"
+        "\"0x1511111111111111111111111111111111111111111111111111111111111111\""
       ),
       (
         "0x1234567890123456789012345678901234567890",
         "0x0",
         "latest",
-        "0x1411111111111111111111111111111111111111111111111111111111111111"
+        "\"0x1411111111111111111111111111111111111111111111111111111111111111\""
       )
     )
 
@@ -722,12 +834,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     )
 
     forAll(validCases) { (address, key, tag, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        ethService
-          .execute(getRpcRequest(paramValues = Array(address, key, tag), method = method))
-          .asInstanceOf[Hash]
-          .toString
+        ethService.execute(getRpcRequest(paramValues = Array(address, key, tag), method = method))
       )
     }
 
@@ -746,26 +855,24 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         "0x1234567891011121314151617181920212223242",
         "latest",
-        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":[]}"""
       ),
       (
         "0x1234567890123456789012345678901234567890",
         "latest",
-        """{"address":"0x1234567890123456789012345678901234567890","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+        """{"address":"0x1234567890123456789012345678901234567890","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":[]}"""
       )
     )
 
     val invalidCases = Table(("Address", "Tag"), ("0x12", "latest"), ("0x1234567890123456789012345678901234567890", ""))
 
     forAll(validCases) { (address, tag, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(
-          ethService.execute(
-            new RpcRequest(
-              mapper.readTree(
-                s"""{"jsonrpc":"2.0","method":"$method", "params":["$address", ["0x1", "0x2"], "$tag"],"id":1}"""
-              )
+        ethService.execute(
+          new RpcRequest(
+            mapper.readTree(
+              s"""{"jsonrpc":"2.0","id":1,"method":"$method","params":["$address", ["0x1", "0x2"],"$tag"]}"""
             )
           )
         )
@@ -777,7 +884,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         ethService.execute(
           new RpcRequest(
             mapper.readTree(
-              s"""{"jsonrpc":"2.0","method":"$method", "params":["$address", ["0x1", "0x2"], "$tag"],"id":1}"""
+              s"""{"jsonrpc":"2.0","id":1,"method":"$method","params":["$address", ["0x1", "0x2"],"$tag"]}"""
             )
           )
         )
@@ -787,10 +894,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def eth_accounts(): Unit = {
-    assertEquals(
-      s"""["$senderWithSecret"]""",
-      mapper.writeValueAsString(ethService.execute(getRpcRequest())).toLowerCase()
-    )
+    assertJsonEquals(s"""["$senderWithSecret"]""", ethService.execute(getRpcRequest()))
   }
 
   @Test
@@ -800,30 +904,45 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block id", "Expected output"),
       ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
       ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
-      ("null", "null")
     )
 
+    val invalidCases = Table("Block id", "null", "dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")
+
     forAll(validCases) { (id, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(id), method = method)))
+        ethService.execute(getRpcRequest(paramValues = Array(id), method = method))
       )
+    }
+
+    forAll(invalidCases) { id =>
+      assertThrows[RpcException] {
+        ethService.execute(getRpcRequest(paramValues = Array(id), method = method))
+      }
     }
   }
 
   @Test
   def zen_getForwardTransfers(): Unit = {
     val method = "zen_getForwardTransfers"
-    val validCases = Table(("Block id", "Size"), ("latest", 150), ("earliest", 150))
+    val validCases =
+      Table(
+        ("Block id", "Expected output"),
+        (
+          "0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc",
+          """{"forwardTransfers":[
+            {"to":"0x5d3eff12e7c2f48e1bd660694101049f8fb678c9","value":"0x51b7d5554400"},
+            {"to":"0xaea09d1e14cbf1604dc36c76cc9d5cb1e7e493a7","value":"0x378d4bb3f000"}
+          ]}"""
+        )
+      )
 
-    val invalidCases =
-      Table("Block id", "0x1337", "1337abcd")
+    val invalidCases = Table("Block id", "0x1337", "1337abcd", "latest")
 
-    forAll(validCases) { (id, size) =>
-      assertTrue(
-        mapper
-          .writeValueAsString(ethService.execute(getRpcRequest(paramValues = Array(id), method = method)))
-          .length > size
+    forAll(validCases) { (id, expectedOutput) =>
+      assertJsonEquals(
+        expectedOutput,
+        ethService.execute(getRpcRequest(paramValues = Array(id), method = method))
       )
     }
 
@@ -847,7 +966,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "0xE8D4A51000",
         "0x4B9ACA00",
         "0x1",
-        "0x5208"
+        "\"0x5208\""
       ),
       (
         senderWithSecret,
@@ -856,12 +975,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "0xE8D4A51000",
         "0x4B9ACA00",
         "0x1",
-        "0x53b8"
+        "\"0x53b8\""
       )
     )
 
     forAll(validCases) { (from, to, data, value, gasPrice, nonce, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
         ethService
           .execute(
@@ -871,8 +990,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
               method = method
             )
           )
-          .asInstanceOf[Quantity]
-          .getValue
       )
     }
 
@@ -907,7 +1024,15 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     val validCases = Table(
       ("from", "to", "data", "value", "gasPrice", "nonce", "Expected output"),
-      (senderWithSecret, "0x0000000000000000000022222222222222222222", "0x", "0xE8D4A51000", "0x4B9ACA00", "0x1", "0x"),
+      (
+        senderWithSecret,
+        "0x0000000000000000000022222222222222222222",
+        "0x",
+        "0xE8D4A51000",
+        "0x4B9ACA00",
+        "0x1",
+        "\"0x\""
+      ),
       (
         senderWithSecret,
         "0x0000000000000000000011111111111111111111",
@@ -915,12 +1040,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "0xE8D4A51000",
         "0x4B9ACA00",
         "0x1",
-        "0x"
+        "\"0x\""
       )
     )
 
     forAll(validCases) { (from, to, data, value, gasPrice, nonce, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
         ethService
           .execute(
@@ -992,11 +1117,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     )
 
     forAll(validCases) { (nrOfBlocks, tag, rewardPercentiles, expectedOutput) =>
-      assertEquals(
+      assertJsonEquals(
         expectedOutput,
-        mapper.writeValueAsString(
-          ethService.execute(getRpcRequest(paramValues = Array(nrOfBlocks, tag, rewardPercentiles), method = method))
-        )
+        ethService.execute(getRpcRequest(paramValues = Array(nrOfBlocks, tag, rewardPercentiles), method = method))
       )
     }
 
@@ -1013,7 +1136,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   @Test
   def invalidJsonRpcData(): Unit = {
     // Test 1: Try to read json request with missing data
-    val json = """{"id":"1", "jsonrpc":"2.0", "params":[]}}"""
+    val json = """{"jsonrpc":"2.0","id":"1","params":[]}}"""
     val request = (new ObjectMapper).readTree(json)
     assertThrows[RpcException] {
       new RpcRequest(request)
@@ -1034,18 +1157,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def txpool_status(): Unit = {
-    assertEquals(
-      txPoolStatusOutput,
-      mapper.writeValueAsString(ethService.execute(getRpcRequest()))
-    )
+    assertJsonEquals(txPoolStatusOutput, ethService.execute(getRpcRequest()))
   }
 
   @Test
   def txpool_content(): Unit = {
-    assertEquals(
-      txPoolContentOutput,
-      mapper.writeValueAsString(ethService.execute(getRpcRequest()))
-    )
+    assertJsonEquals(txPoolContentOutput, ethService.execute(getRpcRequest()))
   }
 
 }

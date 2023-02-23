@@ -50,7 +50,10 @@ public class EthereumTransactionDecoder {
     }
 
     public static EthereumTransaction decode(String hexTransaction) {
-        byte[] transaction = Numeric.hexStringToByteArray(hexTransaction);
+        return decode(Numeric.hexStringToByteArray(hexTransaction));
+    }
+
+    public static EthereumTransaction decode(byte[] transaction) {
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(transaction));
         EthereumTransaction tx = EthereumTransactionDecoder.decode(reader);
         int size = reader.remaining();
@@ -149,7 +152,7 @@ public class EthereumTransactionDecoder {
                     BytesUtils.toHexString(rawValueBytes)
             );
         }
-        return rawValueString.asPositiveBigInteger();
+        return new BigIntegerUInt256(rawValueBytes).getBigInt();
     }
 
     private static EthereumTransaction RlpList2LegacyTransaction(RlpList rlpList) {
@@ -176,7 +179,7 @@ public class EthereumTransactionDecoder {
         byte[] r = ((RlpString)values.getValues().get(7)).getBytes();
         byte[] s = ((RlpString)values.getValues().get(8)).getBytes();
 
-        Long chainId;
+        long chainId;
         SignatureSecp256k1 realSignature;
         if (Arrays.equals(r, new byte[0]) && Arrays.equals(s, new byte[0])) {
             // if r and s are both 0 we assume that this signature stands for an unsigned tx object
@@ -205,7 +208,7 @@ public class EthereumTransactionDecoder {
     }
 
 
-    private static Long decodeEip155ChainId(byte[] bv) {
+    private static long decodeEip155ChainId(byte[] bv) {
         long v = convertToLong(bv);
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
             return 0L;

@@ -3,21 +3,24 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
+import com.horizen.block.{
+  MainchainBlockReferenceData,
+  MainchainTxForwardTransferCrosschainOutput,
+  MainchainTxSidechainCreationCrosschainOutput
+}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
-import com.horizen.evm.utils.{Address, Hash}
-import com.horizen.evm.{ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
+import io.horizen.evm.results.{EvmLog, ProofAccountResult}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 
@@ -26,8 +29,10 @@ import java.util.Optional
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 
-class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessageProcessor])
-    extends BaseAccountStateView
+class StateDbAccountStateView(
+    stateDb: StateDB,
+    messageProcessors: Seq[MessageProcessor]
+) extends BaseAccountStateView
       with AutoCloseable
       with SparkzLogging {
 
@@ -105,8 +110,9 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
           // we trust the MC that this is a valid amount
           val value = ZenWeiConverter.convertZenniesToWei(ftOut.amount)
 
-          val recipientProposition =
-            new AddressProposition(MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOut.propositionBytes))
+          val recipientProposition = new AddressProposition(
+            MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOut.propositionBytes)
+          )
 
           if (isEoaAccount(recipientProposition.address())) {
             // stateDb will implicitly create account if not existing yet
@@ -140,7 +146,9 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
         ForgingStakeInfo(
           blockSignKey,
           vrfKey,
-          stakes.map(stake => ZenWeiConverter.convertWeiToZennies(stake.forgerStakeData.stakedAmount)).sum
+          stakes.map(stake =>
+            ZenWeiConverter.convertWeiToZennies(stake.forgerStakeData.stakedAmount)
+          ).sum
         )
       }
       .toSeq
@@ -171,8 +179,7 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
       tx: SidechainTypes#SCAT,
       txIndex: Int,
       blockGasPool: GasPool,
-      blockContext: BlockContext,
-      finalizeChanges: Boolean = true
+      blockContext: BlockContext
   ): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
@@ -205,11 +212,14 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
           ReceiptStatus.FAILED
       } finally {
         // finalize pending changes, clear the journal and reset refund counter
-        if (finalizeChanges)
-          stateDb.finalizeChanges()
+        stateDb.finalizeChanges()
       }
-    val consensusDataReceipt =
-      new EthereumConsensusDataReceipt(ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
+    val consensusDataReceipt = new EthereumConsensusDataReceipt(
+      ethTx.version(),
+      status.id,
+      blockGasPool.getUsedGas,
+      getLogs(txHash)
+    )
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
     log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}")
 
@@ -321,9 +331,11 @@ class StateDbAccountStateView(stateDb: StateDB, messageProcessors: Seq[MessagePr
 
   override def getCode(address: Address): Array[Byte] = stateDb.getCode(address)
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(new Hash(txHash))
+  override def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog] =
+    stateDb.getLogs(new Hash(txHash)).map(log => EthereumConsensusDataLog.apply(log.address, log.topics, log.data))
 
-  override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
+  override def addLog(log: EthereumConsensusDataLog): Unit =
+    stateDb.addLog(new EvmLog(log.address, log.topics, log.data))
 
   // when a method is called on a closed handle, LibEvm throws an exception
   override def close(): Unit = stateDb.close()

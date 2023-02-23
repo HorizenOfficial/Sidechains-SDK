@@ -19,18 +19,29 @@ import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
-import com.horizen.evm.utils.Hash
 import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{
+  ByteArrayWrapper,
+  ClosableResourceHandler,
+  DynamicTypedSerializer,
+  ForgingStakeMerklePathInfo,
+  ListSerializer,
+  MerklePath,
+  MerkleTree,
+  TimeToEpochUtils,
+  WithdrawalEpochInfo,
+  WithdrawalEpochUtils
+}
 import com.horizen.vrf.VrfOutput
-import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
+import io.horizen.evm.Hash
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.math.BigInteger
 import java.util.{ArrayList => JArrayList}
@@ -50,8 +61,7 @@ class AccountForgeMessageBuilder(
       params,
       allowNoWebsocketConnectionInRegtest
     )
-      with ClosableResourceHandler
-      with SparkzLogging {
+      with ClosableResourceHandler {
   type FPI = AccountFeePaymentsInfo
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
@@ -78,13 +88,12 @@ class AccountForgeMessageBuilder(
   }
 
   private def tryApplyAndGetBlockInfo(
-     stateView: AccountStateView,
-     mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-     sidechainTransactions: Iterable[SidechainTypes#SCAT],
-     blockContext: BlockContext,
-     blockSizeIn: Long
+      stateView: AccountStateView,
+      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+      sidechainTransactions: Iterable[SidechainTypes#SCAT],
+      blockContext: BlockContext,
+      blockSizeIn: Long
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
-
 
     for (mcBlockRefData <- mainchainBlockReferencesData) {
       // Since forger still doesn't know the candidate block id we may pass random one.
@@ -95,7 +104,6 @@ class AccountForgeMessageBuilder(
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val listOfTxsInBlock = new ListBuffer[SidechainTypes#SCAT]()
-
 
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
@@ -110,65 +118,61 @@ class AccountForgeMessageBuilder(
         log.trace(s"Finishing forging because block cannot contain any additional tx")
         return Success(receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
       }
-      val revisionId = stateView.snapshot
-      val initialBlockGas = blockGasPool.getGas
+
       val priceAndNonceIter = iter.asInstanceOf[TransactionsByPriceAndNonceIter]
       val tx = priceAndNonceIter.peek
-      val txSize = tx.size() + 1 // 1 byte more to account for companion encoding, which will be used when deserializing the block
+      // 1 byte more to account for companion encoding, which will be used when deserializing the block
+      val txSize = tx.size() + 1
       if (blockSize + txSize > getMaxBlockSize()) {
         // block size limit exceeded
         // keep trying to fit transactions into the block: this TX did not fit, but another one might
-        log.trace(s"Could not apply tx, reason: block size limit exceeded (block size: $blockSize, tx size: $txSize, limit: ${getMaxBlockSize()}")
+        log.trace(
+          s"Could not apply tx, reason: block size limit exceeded (block size: $blockSize, tx size: $txSize, limit: ${getMaxBlockSize()}"
+        )
         // skip all txs from the same account
         priceAndNonceIter.removeAndSkipAccount()
       } else {
 
-        try {
-          stateView.applyTransaction(tx, listOfTxsInBlock.size, blockGasPool, blockContext, finalizeChanges = false) match {
-            case Success(consensusDataReceipt) =>
-              val ethTx = tx.asInstanceOf[EthereumTransaction]
+        stateView.applyTransaction(tx, listOfTxsInBlock.size, blockGasPool, blockContext) match {
+          case Success(consensusDataReceipt) =>
+            val ethTx = tx.asInstanceOf[EthereumTransaction]
 
-              receiptList += consensusDataReceipt
-              listOfTxsInBlock += tx
+            receiptList += consensusDataReceipt
+            listOfTxsInBlock += tx
 
-              val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
-              // update cumulative gas used so far
-              cumGasUsed = consensusDataReceipt.cumulativeGasUsed
+            val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
+            // update cumulative gas used so far
+            cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-              val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, blockContext.baseFee)
-              cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
-              cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
-              blockSize = blockSize + txSize
-              priceAndNonceIter.next()
-            case Failure(e: GasLimitReached) =>
-              // block gas limit reached
-              // keep trying to fit transactions into the block: this TX did not fit, but another one might
-              log.trace(s"Could not apply tx, reason: ${e.getMessage}")
-              // skip all txs from the same account
-              priceAndNonceIter.removeAndSkipAccount()
-            case Failure(e: FeeCapTooLowException) =>
-              // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
-              // if they are from other accounts, they will have a lower fee cap
-              log.trace(s"Could not apply tx, reason: ${e.getMessage}")
-              return Success(receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
-            case Failure(e: NonceTooLowException) =>
-              // SHOULD NEVER HAPPEN, but in case just skip this tx
-              log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
-              priceAndNonceIter.next()
-            case Failure(e) =>
-              // skip all txs from the same account but remove any changes caused by the rejected tx
-              log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
-              priceAndNonceIter.removeAndSkipAccount()
-              stateView.revertToSnapshot(revisionId)
-              // Restore gas
-              val usedGas = initialBlockGas.subtract(blockGasPool.getGas)
-              blockGasPool.addGas(usedGas)
-          }
-        } finally {
-          stateView.finalizeChanges()
+            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, blockContext.baseFee)
+            cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
+            cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
+            blockSize = blockSize + txSize
+            priceAndNonceIter.next()
+
+          case Failure(err) =>
+            log.trace(s"Could not apply tx, reason: ${err.getMessage}")
+            err match {
+              case _: GasLimitReached =>
+                // block gas limit reached
+                // keep trying to fit transactions into the block: this TX did not fit, but another one might
+                // skip all txs from the same account
+                priceAndNonceIter.removeAndSkipAccount()
+              case _: FeeCapTooLowException =>
+                // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the
+                // same account, or, if they are from other accounts, they will have a lower fee cap
+                return Success(receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
+              case e: NonceTooLowException =>
+                // SHOULD NEVER HAPPEN, but in case just skip this tx
+                log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
+                priceAndNonceIter.next()
+              case e =>
+                // skip all txs from the same account
+                log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
+                priceAndNonceIter.removeAndSkipAccount()
+            }
         }
       }
-
     }
     (receiptList, listOfTxsInBlock, cumBaseFee, cumForgerTips)
   }
@@ -195,15 +199,14 @@ class AccountForgeMessageBuilder(
 
     // 1. As forger address take first address from the wallet
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
-    if (addressList.size() == 0)
-      throw new IllegalArgumentException("No addresses in wallet!")
+    if (addressList.isEmpty) throw new IllegalArgumentException("No addresses in wallet!")
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
     // 2. calculate baseFee
     val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 3. Set gasLimit
-    val gasLimit : BigInteger = FeeUtils.GAS_LIMIT
+    val gasLimit: BigInteger = FeeUtils.GAS_LIMIT
 
     // 4. create a context for the new block
     // this will throw if parent block was not found
@@ -226,24 +229,34 @@ class AccountForgeMessageBuilder(
     // 5. create a disposable view and try to apply all transactions in the list and apply fee payments if needed, collecting all data needed for
     //    going on with the forging of the block
     val (stateRoot, receiptList, appliedTxList, feePayments)
-    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountPayment]) =
-    if (nodeView.history.bestBlockId == branchPointInfo.branchPointId) {
+        : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountPayment]) =
+      if (nodeView.history.bestBlockId == branchPointInfo.branchPointId) {
         using(nodeView.state.getView) {
           dummyView =>
             // the outputs of the next call will be:
             // - the list of receipt of the transactions successfully applied ---> for getting the receiptsRoot
             // - the list of transactions successfully applied to the state ---> to be included in the forged block
             // - the fee payments related to this block
-            val resultTuple : (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) =
-              computeBlockInfo(dummyView, sidechainTransactions, mainchainBlockReferencesData, blockContext, forgerAddress, inputBlockSize)
+            val resultTuple: (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) =
+              computeBlockInfo(
+                dummyView,
+                sidechainTransactions,
+                mainchainBlockReferencesData,
+                blockContext,
+                forgerAddress,
+                inputBlockSize
+              )
 
             val receiptList = resultTuple._1
             val appliedTxList = resultTuple._2
             val currentBlockPayments = resultTuple._3
 
-            val feePayments = if(isWithdrawalEpochLastBlock) {
+            val feePayments = if (isWithdrawalEpochLastBlock) {
               // Current block is expected to be the continuation of the current tip, so there are no ommers.
-              require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
+              require(
+                nodeView.history.bestBlockId == branchPointInfo.branchPointId,
+                "Last block of the withdrawal epoch expect to be a continuation of the tip."
+              )
               require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
 
               val withdrawalEpochNumber: Int = dummyView.getWithdrawalEpochInfo.epoch
@@ -261,19 +274,20 @@ class AccountForgeMessageBuilder(
 
             (dummyView.getIntermediateRoot, receiptList, appliedTxList, feePayments)
         }
-    }
-    else {
-      // This happens when there is a fork in Mainchain. The SC blocks referencing the old MC chain will be reverted
-      // and the new SC blocks will be created on top the SC block referencing the MC branching point.
-      // The first new SC block must not contain FT or transactions.
-      require(ommers.nonEmpty, "Expected ommers when branching point is not the blockchain tip")
-      require(sidechainTransactions.isEmpty, "No txs expected in a block with ommers")
-      require(mainchainBlockReferencesData.isEmpty, "No Mainchain reference data expected in a block with ommers")
-      (nodeView.history.getBlockById(parentId).get().header.stateRoot,
-        Seq.empty[EthereumConsensusDataReceipt],
-        Seq.empty[SidechainTypes#SCAT],
-        Seq.empty[AccountPayment])
-    }
+      } else {
+        // This happens when there is a fork in Mainchain. The SC blocks referencing the old MC chain will be reverted
+        // and the new SC blocks will be created on top the SC block referencing the MC branching point.
+        // The first new SC block must not contain FT or transactions.
+        require(ommers.nonEmpty, "Expected ommers when branching point is not the blockchain tip")
+        require(sidechainTransactions.isEmpty, "No txs expected in a block with ommers")
+        require(mainchainBlockReferencesData.isEmpty, "No Mainchain reference data expected in a block with ommers")
+        (
+          nodeView.history.getBlockById(parentId).get().header.stateRoot,
+          Seq.empty[EthereumConsensusDataReceipt],
+          Seq.empty[SidechainTypes#SCAT],
+          Seq.empty[AccountPayment]
+        )
+      }
 
     // 6. Compute the receipt root
     val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
@@ -452,9 +466,11 @@ class AccountForgeMessageBuilder(
     // it is used as a source of BlockContext.random
     val bestBlockInfo = nodeView.history.blockInfoById(bestBlockId)
     val vrfOutput: VrfOutput = bestBlockInfo.vrfOutputOpt.getOrElse(
-      new VrfOutput(new Array[Byte](VrfOutput.OUTPUT_LENGTH)))
+      new VrfOutput(new Array[Byte](VrfOutput.OUTPUT_LENGTH))
+    )
 
-    implicit val timeout: Timeout = new Timeout(5, SECONDS)
+    // we have not the constraint of consensusSlot duration since we are not really forging
+    implicit val mcRefDataRetrievalTimeout: Timeout = new Timeout(5, SECONDS)
 
     forgeBlock(
       nodeView,
@@ -464,7 +480,7 @@ class AccountForgeMessageBuilder(
       blockSignPrivateKey,
       vrfProof,
       vrfOutput,
-      timeout,
+      mcRefDataRetrievalTimeout,
       Seq()
     ) match {
       case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
