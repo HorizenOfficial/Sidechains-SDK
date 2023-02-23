@@ -454,9 +454,9 @@ class SidechainStateStorageTest
       sidechainStateStorage.update(getVersion, withdrawalEpochInfo, Set(), Set(), Seq(), Seq(), crossChainMsgHashes,
         Seq(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
 
-    assertTrue(String.format("Storage expected to have scTxCommitmentHash %s", ccMsgHash1),
-      sidechainStateStorage.getCrossChainMessageHashEpoch(ccMsgHash1).nonEmpty)
-    assertTrue(String.format("Storage expected to have scTxCommitmentHash %s", ccMsgHash2),
-      sidechainStateStorage.getCrossChainMessageHashEpoch(ccMsgHash2).nonEmpty)
+    assertTrue(String.format("Storage expected to have message hash %s", ccMsgHash1),
+      sidechainStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(ccMsgHash1))
+    assertTrue(String.format("Storage expected to have message hash %s", ccMsgHash2),
+      sidechainStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(ccMsgHash2))
   }
 }

@@ -64,8 +64,8 @@ public class AbstractCrossChainRedeemTransactionValidator implements Transaction
 
     private void validateMsgDoubleRedeem(CrossChainMessage ccMsg) {
         CrossChainMessageHash currentMsgHash = sc2scCircuit.getCrossChainMessageHash(ccMsg);
-        Option<Object> storedMsgHash = scStateStorage.getCrossChainMessageHashEpoch(currentMsgHash);
-        if (storedMsgHash.isEmpty()) {
+        boolean ccMsgFromRedeemAlreadyExists = scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(currentMsgHash);
+        if (ccMsgFromRedeemAlreadyExists) {
             throw new IllegalArgumentException(String.format("The message `%s` has already been redeemed", ccMsg));
         }
     }

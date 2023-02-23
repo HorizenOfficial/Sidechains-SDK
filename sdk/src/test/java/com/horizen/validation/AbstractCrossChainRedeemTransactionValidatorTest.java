@@ -119,7 +119,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         when(genesisDataSettings.scId()).thenReturn(scId);
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
-        when(scStateStorage.getCrossChainMessageHashEpoch(crossChainMsgHash)).thenReturn(Option.empty());
+        when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(true);
 
         // Act
         IllegalArgumentException thrown = assertThrows(
@@ -150,7 +150,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         when(genesisDataSettings.scId()).thenReturn(scId);
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
-        when(scStateStorage.getCrossChainMessageHashEpoch(crossChainMsgHash)).thenReturn(Option.apply(crossChainMsgHash));
+        when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
         when(scStateStorage.doesScTxCommitmentTreeRootExist(scTxCommitmentTreeHash)).thenReturn(false);
@@ -182,7 +182,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         when(genesisDataSettings.scId()).thenReturn(scId);
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
-        when(scStateStorage.getCrossChainMessageHashEpoch(crossChainMsgHash)).thenReturn(Option.apply(crossChainMsgHash));
+        when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
         when(scStateStorage.doesScTxCommitmentTreeRootExist(scTxCommitmentTreeHash)).thenReturn(true);
@@ -216,7 +216,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         when(genesisDataSettings.scId()).thenReturn(scId);
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
-        when(scStateStorage.getCrossChainMessageHashEpoch(crossChainMsgHash)).thenReturn(Option.apply(crossChainMsgHash));
+        when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
         when(scStateStorage.doesScTxCommitmentTreeRootExist(scTxCommitmentTreeHash)).thenReturn(true);
@@ -263,7 +263,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         when(genesisDataSettings.scId()).thenReturn(scId);
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
-        when(scStateStorage.getCrossChainMessageHashEpoch(crossChainMsgHash)).thenReturn(Option.apply(crossChainMsgHash));
+        when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
         when(scStateStorage.doesScTxCommitmentTreeRootExist(scTxCommitmentTreeHash)).thenReturn(true);

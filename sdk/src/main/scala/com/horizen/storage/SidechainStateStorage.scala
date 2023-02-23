@@ -67,6 +67,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     Utils.calculateKey(Bytes.concat("ccMessage".getBytes, hash.bytes))
   }
 
+  private[horizen] def getCrossChainMessageHashFromRedeemMessage(hash: CrossChainMessageHash): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("ccMessageHashFromRedeemMessage".getBytes, hash.bytes))
+  }
+
   private[horizen] def getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeHash: Array[Byte]): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("scTxCommitmentTreeKey".getBytes, scTxCommitmentTreeHash))
   }
@@ -223,6 +227,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       case Some(baw) => Option( Ints.fromByteArray(baw.data()))
       case _ => Option.empty
     }
+  }
+
+  def doesCrossChainMessageHashFromRedeemMessageExist(msgHash: CrossChainMessageHash): Boolean = {
+    storage.get(getCrossChainMessageHashFromRedeemMessage(msgHash)).isPresent
   }
 
   def doesScTxCommitmentTreeRootExist(scTxCommitmentTreeRoot: Array[Byte]): Boolean = {
@@ -521,7 +529,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
       // Save all the cross-chain message hashes received in a redeem tx
       crossChainMessageHashesToAppend.foreach(msgHash =>
-        updateList.add(new JPair(getCrosschainMessageSingleKey(msgHash), msgHash.getValue))
+        updateList.add(new JPair(getCrossChainMessageHashFromRedeemMessage(msgHash), msgHash.getValue))
       )
 
       // Save all the hash sidechain transaction commitment in mainchain header
