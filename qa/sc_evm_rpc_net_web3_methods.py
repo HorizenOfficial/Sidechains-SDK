@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.scutil import connect_sc_nodes, disconnect_sc_nodes_bi, assert_true
@@ -16,7 +17,8 @@ Test:
     - Check that SC node 1 is listening for new connections
     - Disconnect SC node 2 from SC node 1
     - Check that peer count is 0
-    - Check that web3_clientVersion responds
+    - Check that SC node 1 is listening for new connections
+    - Check web3_clientVersion
     
 """
 
@@ -40,8 +42,16 @@ class SCEvmRpcNetWeb3Methods(AccountChainSetup):
         assert_true(int(sc_node_1.rpc_net_peerCount()['result'], 16) == 0)
         assert_true(sc_node_1.rpc_net_listening()['result'] is True)
 
-        # Check web3_clientVersion exists
-        assert_true(len(sc_node_1.rpc_web3_clientVersion()['result']) > 6)
+        # Check web3_clientVersion
+        clientVersion = str(sc_node_1.rpc_web3_clientVersion()['result'])
+        assert_true(clientVersion.startswith('sidechains-sdk/'))
+        clientVersion = clientVersion.split("/")
+        # Check that sdk version has at least three digits
+        assert_true(re.search(r'\d.*\d.*\d', clientVersion[1]))
+        # Check that architecture is present and is not default value
+        assert_true(len(clientVersion[2]) > 0 and clientVersion[2] != 'dev')
+        # Check that jdk version has at least 2 digits
+        assert_true(re.search(r'jdk\d{2,}', clientVersion[3]))
 
 
 if __name__ == "__main__":

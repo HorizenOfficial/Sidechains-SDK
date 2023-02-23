@@ -128,11 +128,15 @@ case class AccountEthRpcRoute(
   }
 
   private def getClientVersion: String = {
-    val default = "unknown"
+    val default = "dev"
     val architecture = Try(System.getProperty("os.arch")).getOrElse(default)
     val javaVersion = Try(System.getProperty("java.specification.version")).getOrElse(default)
-    val impVersion = Try(this.getClass.getPackage.getImplementationVersion).getOrElse(default)
-    val version = s"$impVersion/$architecture/jdk$javaVersion"
-    version
+    val sdkPackage = this.getClass.getPackage
+    val sdkTitle = sdkPackage.getImplementationTitle match {
+      case null => default
+      case title => Try(title.split(":")(1)).getOrElse(title)
+    }
+    val sdkVersion = sdkPackage.getImplementationVersion
+    s"$sdkTitle/$sdkVersion/$architecture/jdk$javaVersion"
   }
 }
