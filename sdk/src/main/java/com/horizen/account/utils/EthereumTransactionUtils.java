@@ -4,7 +4,6 @@ import com.horizen.account.proposition.AddressProposition;
 import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.Optional;
 import static com.horizen.account.utils.Secp256k1.LOWER_REAL_V;
 

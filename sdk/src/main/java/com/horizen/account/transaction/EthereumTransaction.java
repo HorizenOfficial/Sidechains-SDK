@@ -8,11 +8,11 @@ import com.horizen.account.state.Message;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionEncoder;
 import com.horizen.account.utils.Secp256k1;
-import io.horizen.evm.Address;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
+import io.horizen.evm.Address;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
@@ -20,6 +20,7 @@ import sparkz.crypto.hash.Keccak256;
 import sparkz.util.ByteArrayBuilder;
 import sparkz.util.serialization.VLQByteBufferWriter;
 import sparkz.util.serialization.Writer;
+
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.Optional;
@@ -282,6 +283,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
+    @JsonProperty("size")
     public long size() {
         return serializer().toBytes(this).length;
     }

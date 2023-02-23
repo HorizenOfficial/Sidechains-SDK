@@ -30,6 +30,7 @@ import sparkz.core.{VersionTag, idToVersion}
 import java.nio.charset.StandardCharsets
 import java.util
 import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 class AccountSidechainNodeViewHolderTest extends JUnitSuite

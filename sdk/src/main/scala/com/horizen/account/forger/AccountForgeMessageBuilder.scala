@@ -469,7 +469,8 @@ class AccountForgeMessageBuilder(
       new VrfOutput(new Array[Byte](VrfOutput.OUTPUT_LENGTH))
     )
 
-    implicit val timeout: Timeout = new Timeout(5, SECONDS)
+    // we have not the constraint of consensusSlot duration since we are not really forging
+    implicit val mcRefDataRetrievalTimeout: Timeout = new Timeout(5, SECONDS)
 
     forgeBlock(
       nodeView,
@@ -479,7 +480,7 @@ class AccountForgeMessageBuilder(
       blockSignPrivateKey,
       vrfProof,
       vrfOutput,
-      timeout,
+      mcRefDataRetrievalTimeout,
       Seq()
     ) match {
       case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
