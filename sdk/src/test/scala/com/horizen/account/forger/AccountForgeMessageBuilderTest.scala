@@ -16,7 +16,6 @@ import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEnco
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import com.horizen.params.TestNetParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -26,6 +25,7 @@ import com.horizen.state.BaseStateReader
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import com.horizen.vrf.VrfOutput
+import io.horizen.evm.{Address, Hash}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any

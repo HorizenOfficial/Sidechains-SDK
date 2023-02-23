@@ -5,12 +5,12 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.utils.Secp256k1
 import com.horizen.customtypes._
-import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
 import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
-import java.math.BigInteger
 import com.horizen.secret._
+
+import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{ArrayList => JArrayList, List => JList}
@@ -73,7 +73,7 @@ trait SecretFixture {
 
   def getPrivateKey25519List(count: Int): JList[PrivateKey25519] = {
     val seed = new Array[Byte](32)
-    val keysList : JList[PrivateKey25519] = new JArrayList()
+    val keysList: JList[PrivateKey25519] = new JArrayList()
     for (_ <- 1 to count) {
       Random.nextBytes(seed)
       keysList.add(pkc.generateSecret(seed))

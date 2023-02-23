@@ -19,9 +19,6 @@ import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, Sidechai
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
-import com.horizen.evm.StateDB
-import com.horizen.evm.interop.ProofAccountResult
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
@@ -31,6 +28,8 @@ import com.horizen.storage.{SidechainSecretStorage, Storage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
+import io.horizen.evm.results.ProofAccountResult
+import io.horizen.evm.{Address, Hash, StateDB}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
@@ -310,15 +309,15 @@ case class AccountMockDataHelper(genesis: Boolean)
         msgProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
       override def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult = {
-        val proofRes = new ProofAccountResult()
-        proofRes.address = address
-        proofRes.accountProof = Array("123")
-        proofRes.nonce = BigInteger.ONE
-        proofRes.balance = BigInteger.valueOf(123L)
-        proofRes.codeHash = null
-        proofRes.storageHash = null
-        proofRes.storageProof = null
-        proofRes
+        new ProofAccountResult(
+          address,
+          Array("123"),
+          BigInteger.valueOf(123L),
+          null,
+          BigInteger.ONE,
+          null,
+          null
+        )
       }
 
       override def getIntermediateRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)

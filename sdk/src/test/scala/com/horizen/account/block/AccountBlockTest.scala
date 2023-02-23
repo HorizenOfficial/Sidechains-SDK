@@ -14,9 +14,7 @@ import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, Ethereu
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer, SidechainBlock}
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Hash
+import com.horizen.block._
 import com.horizen.fixtures._
 import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.txGen.getRandomBoxId
 import com.horizen.params.{MainNetParams, NetworkParams}
@@ -27,6 +25,7 @@ import com.horizen.serialization.{ApplicationJsonSerializer, SerializationUtil}
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation._
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
+import io.horizen.evm.Hash
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
@@ -87,8 +86,8 @@ class AccountBlockTest
       getUnsignedEoa2EoaLegacyTransaction
     ),
     receipts = Seq(
-      new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, BigInteger.valueOf(112233), Array.empty[EvmLog]),
-      new EthereumConsensusDataReceipt(2, ReceiptStatus.FAILED.id, BigInteger.valueOf(22334455), Array.empty[EvmLog])
+      new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, BigInteger.valueOf(112233), Seq.empty),
+      new EthereumConsensusDataReceipt(2, ReceiptStatus.FAILED.id, BigInteger.valueOf(22334455), Seq.empty)
     ),
     mainchainBlockReferencesData = Seq(mcBlockRef1.data, mcBlockRef2.data),
     mainchainHeaders = Seq(mcBlockRef2.header, mcBlockRef3.header, mcBlockRef4.header),

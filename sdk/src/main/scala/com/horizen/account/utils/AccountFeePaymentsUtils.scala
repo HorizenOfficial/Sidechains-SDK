@@ -1,6 +1,6 @@
 package com.horizen.account.utils
 
-import com.horizen.evm.{StateDB, TrieHasher}
+import io.horizen.evm.{StateDB, TrieHasher}
 
 import java.math.BigInteger
 

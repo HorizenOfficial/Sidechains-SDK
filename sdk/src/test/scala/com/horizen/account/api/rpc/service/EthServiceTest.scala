@@ -18,11 +18,11 @@ import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionTy
 import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActorRef
-import com.horizen.evm.utils.Address
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
 import com.horizen.{EthServiceSettings, SidechainTypes}
+import io.horizen.evm.Address
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
@@ -822,12 +822,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         "0x1234567891011121314151617181920212223242",
         "latest",
-        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+        """{"address":"0x1234567891011121314151617181920212223242","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":[]}"""
       ),
       (
         "0x1234567890123456789012345678901234567890",
         "latest",
-        """{"address":"0x1234567890123456789012345678901234567890","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":null}"""
+        """{"address":"0x1234567890123456789012345678901234567890","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":[]}"""
       )
     )
 

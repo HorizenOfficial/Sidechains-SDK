@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"math"
 	"math/big"
@@ -128,16 +127,16 @@ func (c *EvmContext) getChainConfig() *params.ChainConfig {
 	}
 }
 
-func (t *TraceOptions) getTracer() tracers.Tracer {
+func (t *TraceOptions) getTracer() (tracers.Tracer, error) {
 	if t == nil {
-		return nil
+		return nil, nil
 	}
 	if t.Tracer != "" {
 		tracer, err := tracers.New(t.Tracer, nil, t.TracerConfig)
 		if err != nil {
-			log.Warn("failed to create tracer: %v", err)
+			return nil, err
 		}
-		return tracer
+		return tracer, nil
 	} else {
 		traceConfig := logger.Config{
 			EnableMemory:     t.EnableMemory,
@@ -145,7 +144,7 @@ func (t *TraceOptions) getTracer() tracers.Tracer {
 			DisableStorage:   t.DisableStorage,
 			EnableReturnData: t.EnableReturnData,
 		}
-		return logger.NewStructLogger(&traceConfig)
+		return logger.NewStructLogger(&traceConfig), nil
 	}
 }
 
@@ -167,6 +166,12 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	// apply defaults to missing parameters
 	params.setDefaults()
 
+	// create tracer if requested
+	tracer, err := params.TraceOptions.getTracer()
+	if err != nil {
+		return err, nil
+	}
+
 	var (
 		txContext = vm.TxContext{
 			Origin:   params.From,
@@ -174,7 +179,6 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		blockContext = params.Context.getBlockContext()
 		chainConfig  = params.Context.getChainConfig()
-		tracer       = params.TraceOptions.getTracer()
 		evmConfig    = vm.Config{
 			Debug:                   tracer != nil,
 			Tracer:                  tracer,
