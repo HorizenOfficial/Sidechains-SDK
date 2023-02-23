@@ -20,7 +20,7 @@ class AccountChainSetup(SidechainTestFramework):
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
                  initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
-                 remote_keys_server_address=None):
+                 allow_unprotected_txs=True, remote_keys_server_address=None):
         super().__init__()
 
         self.evm_address = None
@@ -40,6 +40,8 @@ class AccountChainSetup(SidechainTestFramework):
         self.circuittype_override = circuittype_override
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
         self.remote_keys_server_address = remote_keys_server_address
+        self.allow_unprotected_txs = allow_unprotected_txs
+
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -66,7 +68,8 @@ class AccountChainSetup(SidechainTestFramework):
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
-                    remote_keys_server_address=self.remote_keys_server_address))
+                    remote_keys_server_address=self.remote_keys_server_address,
+                    allow_unprotected_txs=self.allow_unprotected_txs))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
@@ -75,6 +78,7 @@ class AccountChainSetup(SidechainTestFramework):
                     api_key=self.API_KEY,
                     initial_private_keys=self.initial_private_keys,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
+                    allow_unprotected_txs=self.allow_unprotected_txs,
                     remote_keys_server_address=self.remote_keys_server_address))
 
         if self.circuittype_override is not None:

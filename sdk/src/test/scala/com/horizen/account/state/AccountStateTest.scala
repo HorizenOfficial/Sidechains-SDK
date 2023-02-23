@@ -27,7 +27,7 @@ class AccountStateTest
       with MockitoSugar
       with SidechainTypesTestsExtension {
 
-  val params: MainNetParams = MainNetParams()
+  var params: MainNetParams = MainNetParams()
   var state: AccountState = _
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
 

@@ -138,7 +138,8 @@ class SCNodeConfiguration(object):
                  storage_backup_interval='15m',
                  storage_backup_delay='5m',
                  websocket_server_enabled=False,
-                 websocket_server_port=0):
+                 websocket_server_port=0,
+                 allow_unprotected_txs=True):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -167,6 +168,7 @@ class SCNodeConfiguration(object):
         self.storage_backup_delay = storage_backup_delay
         self.websocket_server_enabled = websocket_server_enabled
         self.websocket_server_port = websocket_server_port
+        self.allow_unprotected_txs = allow_unprotected_txs
 
 
 """

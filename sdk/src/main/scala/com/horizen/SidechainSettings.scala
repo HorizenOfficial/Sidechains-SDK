@@ -62,6 +62,7 @@ case class ForgerSettings(
 case class MempoolSettings(
     maxSize: Int = 300,
     minFeeRate: Long = 0,
+    allowUnprotectedTxs: Boolean = false
 )
 
 case class WalletSettings(
