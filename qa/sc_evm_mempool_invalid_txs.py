@@ -55,7 +55,6 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
                                       mc_return_address=mc_node.getnewaddress(),
                                       generate_block=True)
 
-
         self.sync_all()
 
         generate_next_block(sc_node_1, "first node")
@@ -183,8 +182,8 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         exception_occurs = False
         try:
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
-                                          nonce=0, gasLimit=10, maxPriorityFeePerGas=900000000,
-                                            maxFeePerGas=900000000, value=1, data='012344')
+                                     nonce=0, gasLimit=10, maxPriorityFeePerGas=900000000,
+                                     maxFeePerGas=900000000, value=1, data='012344')
         except RuntimeError as e:
             exception_occurs = True
             logging.info(
@@ -214,12 +213,12 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
                      "Transaction that creates a smart contract with empty data added to node 1 mempool")
 
         # Test that a transaction with nonce gap too big is rejected by the mem pool
-        tooBigNonce = self.max_nonce_gap + 10
+        too_big_nonce = self.max_nonce_gap + 10
         exception_occurs = False
         try:
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
-                                          nonce=tooBigNonce, gasLimit=10, maxPriorityFeePerGas=900000000,
-                                            maxFeePerGas=900000000, value=1, data='012344')
+                                     nonce=too_big_nonce, gasLimit=10, maxPriorityFeePerGas=900000000,
+                                     maxFeePerGas=900000000, value=1, data='012344')
         except RuntimeError as e:
             exception_occurs = True
             logging.info(
@@ -229,7 +228,6 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         response = allTransactions(sc_node_1, False)
         assert_equal(0, len(response["transactionIds"]),
                      "Transaction with nonce gap too big added to node 1 mempool")
-
 
         # Test that a transaction with nonce too low is rejected by the mem pool
         nonce_addr_1 = 0
@@ -254,20 +252,20 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         response = allTransactions(sc_node_1, False)
         assert_equal(0, len(response["transactionIds"]), "Transaction with nonce too low added to node 1 mempool")
 
-        # Test that a transaction exceeding the account size is rejected by the mem pool
-        #Create as many txs of 1 slot as to almost fill the mempool
-        for i in range(9, 9 + (self.max_account_slots - 1)):
+        # Test that a transaction exceeding the account size is rejected by the mem pool.
+        # Create as many txs of 1 slot as to almost fill the mempool
+        for _ in range(self.max_account_slots - 1):
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc1,
                                      nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
                                      maxFeePerGas=900000000, value=1)
             nonce_addr_1 += 1
 
-        big_data = 'FF' * 100 * 1024 #Should corresponds to a tx of 4 slots
+        big_data = 'FF' * 100 * 1024  # Should correspond to a tx of 4 slots
         exception_occurs = False
         try:
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
-                                          nonce=nonce_addr_1, gasLimit=1691401, maxPriorityFeePerGas=900000000,
-                                            maxFeePerGas=900000000, value=1, data=str(big_data))
+                                     nonce=nonce_addr_1, gasLimit=1691401, maxPriorityFeePerGas=900000000,
+                                     maxFeePerGas=900000000, value=1, data=str(big_data))
         except RuntimeError as e:
             exception_occurs = True
             logging.info(
@@ -275,11 +273,8 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
 
         assert_true(exception_occurs, "Adding a transaction exceeding the account size should fail")
         response = allTransactions(sc_node_1, False)
-        assert_equal(15, len(response["transactionIds"]),
+        assert_equal(self.max_account_slots - 1, len(response["transactionIds"]),
                      "Transaction exceeding the account size added to node 1 mempool")
-
-
-
 
 
 if __name__ == "__main__":

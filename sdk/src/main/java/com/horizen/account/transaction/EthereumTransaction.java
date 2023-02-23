@@ -67,6 +67,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private String hashString;
     private BigInteger txCost;
 
+    private long size = -1;
+
     private synchronized String getTxHash() {
         if (this.hashString == null) {
             byte[] encodedMessage = encode(isSigned());
@@ -283,7 +285,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public long size() {
-        return serializer().toBytes(this).length;
+        if (this.size == -1){
+            this.size = serializer().toBytes(this).length;
+        }
+        return size;
     }
 
     @Override
