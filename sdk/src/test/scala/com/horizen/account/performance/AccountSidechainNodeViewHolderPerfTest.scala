@@ -19,7 +19,7 @@ import com.horizen.evm.utils.Address
 import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainSecretStorage
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.BytesUtils
 import com.horizen.{SidechainSettings, SidechainTypes, WalletSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
@@ -83,7 +83,7 @@ class AccountSidechainNodeViewHolderPerfTest
   ordered by decreasing nonce, to see the impact on the mem pool of reordering the txs.
    */
   @Test
-  //@Ignore
+  @Ignore
   def txModifyTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/txModifyTest.txt", true))
 
@@ -201,7 +201,7 @@ class AccountSidechainNodeViewHolderPerfTest
    In the second part of the test, the same block will be "reverted" and a new one will be applied.
    */
   @Test
- // @Ignore
+  @Ignore
   def updateMemPoolTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolTest.txt", true))
 
@@ -308,7 +308,7 @@ class AccountSidechainNodeViewHolderPerfTest
   In this case the chain reorg causes a switch of the active chain composed by several blocks.
    */
   @Test
- // @Ignore
+  @Ignore
   def updateMemPoolMultipleBlocksTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolMultiBlocksTest.txt", true))
 
@@ -430,7 +430,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
 
   @Test
- // @Ignore
+  @Ignore
   def updateMemPoolSingleAccountTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolSingleAccountTest.txt", true))
 

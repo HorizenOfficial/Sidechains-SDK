@@ -254,7 +254,7 @@ class MempoolMap(
 
     txsFromRejectedBlocks
       .foreach { tx =>
-        if (tx.size() <= MaxTxSize && balance.compareTo(tx.maxCost) >= 0) {
+        if (balance.compareTo(tx.maxCost) >= 0 && tx.size() <= MaxTxSize) {
           all.put(tx.id, tx)
           destMap.put(tx.getNonce, tx.id)
         } else {
@@ -333,7 +333,7 @@ class MempoolMap(
 
     if (existRejectedTxsWithValidNonce(txsFromRejectedBlocks, newExpectedNonce)) {
       txsFromRejectedBlocks.withFilter(tx => tx.getNonce.compareTo(newExpectedNonce) >= 0).foreach { tx =>
-        if (tx.size() <= MaxTxSize && balance.compareTo(tx.maxCost) >= 0) {
+        if (balance.compareTo(tx.maxCost) >= 0 && tx.size() <= MaxTxSize) {
           all.put(tx.id, tx)
           destMap.put(tx.getNonce, tx.id)
         } else {
