@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.receipt.{EthereumConsensusDataLog, EthereumReceipt}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Secp256k1.generateContractAddress
@@ -14,13 +14,11 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
-import com.horizen.evm._
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import io.horizen.evm._
 import sparkz.core._
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.FailedTransaction
 import sparkz.core.transaction.state.TransactionValidation
@@ -417,7 +415,7 @@ class AccountState(
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = using(getView)(_.getLogs(txHash))
+  override def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog] = using(getView)(_.getLogs(txHash))
 
   override def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
 

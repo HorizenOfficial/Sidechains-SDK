@@ -1,8 +1,8 @@
 package com.horizen.account.state
 
+import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.BigIntegerUtil
-import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
 
@@ -57,9 +57,9 @@ object GasUtil {
     gas
   }
 
-  def logGas(evmLog: EvmLog): BigInteger = LogGas
-    .add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
-    .add(LogDataGas.multiply(BigInteger.valueOf(evmLog.data.length)))
+  def logGas(log: EthereumConsensusDataLog): BigInteger = LogGas
+    .add(LogTopicGas.multiply(BigInteger.valueOf(log.topics.length)))
+    .add(LogDataGas.multiply(BigInteger.valueOf(log.data.length)))
 
   def codeCopy(size: Int): BigInteger = {
     // code size in number of 256-bit words (round up division)

@@ -103,6 +103,7 @@ testScriptsEvm=(
     'sc_evm_mc_fork.py'
     'sc_evm_context_blockhash.py'
     'sc_evm_forbid_unprotected_txs.py'
+    'sc_evm_block_size_limit.py'
 );
 
 testScriptsUtxo=(

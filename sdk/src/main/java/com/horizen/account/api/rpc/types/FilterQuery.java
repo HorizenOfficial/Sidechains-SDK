@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.horizen.account.api.rpc.handler.RpcException;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import io.horizen.evm.Address;
+import io.horizen.evm.Hash;
 
 import java.io.IOException;
 import java.util.Arrays;

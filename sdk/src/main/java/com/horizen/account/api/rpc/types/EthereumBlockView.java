@@ -3,8 +3,8 @@ package com.horizen.account.api.rpc.types;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.utils.AccountBlockUtil;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import io.horizen.evm.Address;
+import io.horizen.evm.Hash;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
@@ -56,7 +56,7 @@ public class EthereumBlockView {
         stateRoot = new Hash(header.stateRoot());
         receiptsRoot = new Hash(header.receiptsRoot());
         miner = header.forgerAddress().address();
-        size = BigInteger.valueOf(header.bytes().length);
+        size = BigInteger.valueOf(block.bytes().length);
         gasLimit = header.gasLimit();
         gasUsed = header.gasUsed();
         timestamp = BigInteger.valueOf(block.timestamp());

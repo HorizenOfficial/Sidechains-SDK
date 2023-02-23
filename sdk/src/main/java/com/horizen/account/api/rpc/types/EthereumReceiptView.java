@@ -2,8 +2,8 @@ package com.horizen.account.api.rpc.types;
 
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.Hash;
+import io.horizen.evm.Address;
+import io.horizen.evm.Hash;
 import scala.collection.JavaConverters;
 
 import java.math.BigInteger;

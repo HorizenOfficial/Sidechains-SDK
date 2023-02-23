@@ -9,12 +9,12 @@ import com.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, For
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.api.http.SidechainApiMockConfiguration
-import com.horizen.evm.utils.Address
 import com.horizen.fixtures._
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.Address
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 

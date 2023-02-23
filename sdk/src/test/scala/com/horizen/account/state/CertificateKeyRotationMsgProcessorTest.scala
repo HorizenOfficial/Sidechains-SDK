@@ -6,11 +6,11 @@ import com.horizen.account.utils.FeeUtils
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.evm.{Address, Hash}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito.when

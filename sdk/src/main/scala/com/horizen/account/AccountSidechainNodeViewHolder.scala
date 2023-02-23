@@ -12,12 +12,12 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
-import com.horizen.evm.Database
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
+import io.horizen.evm.Database
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, RollbackFailed}

@@ -46,7 +46,9 @@ case class AccountBlockApiRoute(
     ](settings, sidechainBlockActorRef, companion, forgerRef, params) {
 
   override val route: Route = pathPrefix("block") {
-    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ getFeePayments ~ getForwardTransfers ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
+    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ getFeePayments ~
+      getForwardTransfers ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo ~
+      getCurrentHeight
   }
 
   private def parseForwardTransfer(tx: ForwardTransfer): ForwardTransferData = {

@@ -6,9 +6,9 @@ import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.evm.StateDB
 import com.horizen.state.StateView
 import com.horizen.utils.WithdrawalEpochInfo
+import io.horizen.evm.StateDB
 import sparkz.core.VersionTag
 import sparkz.util.{ModifierId, SparkzLogging}
 

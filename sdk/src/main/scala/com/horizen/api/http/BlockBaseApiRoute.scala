@@ -119,6 +119,24 @@ abstract class BlockBaseApiRoute[
     }
   }
 
+
+  /**
+   * Return here best sidechain block height in active chain
+   */
+  def getCurrentHeight: Route = (post & path("currentHeight")) {
+
+    applyOnNodeView {
+      sidechainNodeView =>
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val height = sidechainHistory.getCurrentHeight
+
+        if (height > 0)
+          ApiResponseUtil.toResponse(RespCurrentHeight(height))
+        else
+          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: $height", JOptional.empty()))
+    }
+  }
+
   /**
    * Returns SidechainBlockInfo by its id and if the block is in the active chain or not.
    */
@@ -248,6 +266,9 @@ object BlockBaseRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespFindIdByHeight(blockId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespCurrentHeight(height: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespBest[
