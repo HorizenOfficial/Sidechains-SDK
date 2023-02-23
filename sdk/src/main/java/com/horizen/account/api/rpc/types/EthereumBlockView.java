@@ -26,7 +26,6 @@ public class EthereumBlockView {
     public final BigInteger gasUsed;
     public final BigInteger timestamp;
     public final List<?> transactions;
-    public final Address author;
     public final BigInteger baseFeePerGas;
     // mixHash is set to a VRF output to support the PREVRANDAO EVM-opcode, just like Ethereum does since The Merge
     public final Hash mixHash;
@@ -47,7 +46,6 @@ public class EthereumBlockView {
 
     private EthereumBlockView(Long blockNumber, Hash blockHash, AccountBlock block, List<?> txs) {
         var header = block.header();
-        author = header.forgerAddress().address();
         number = BigInteger.valueOf(blockNumber);
         hash = blockHash;
         parentHash = new Hash(Numeric.prependHexPrefix((String) header.parentId()));

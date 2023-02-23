@@ -26,8 +26,11 @@ public class EthereumTransactionView {
     public final byte[] input;
     public final BigInteger gas;
     public final BigInteger gasPrice;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public final BigInteger maxPriorityFeePerGas;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public final BigInteger maxFeePerGas;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public final BigInteger chainId;
     public final byte[] v;
     public final byte[] r;
