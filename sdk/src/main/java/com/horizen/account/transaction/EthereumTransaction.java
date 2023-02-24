@@ -240,7 +240,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     "non-positive gas limit", id()));
         if (!BigIntegerUtil.isUint64(getGasLimit()))
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "gas limit uint64 owerflow", id()));
+                    "gas limit uint64 overflow", id()));
 
         if (isEIP1559()) {
             if (getMaxFeePerGas().signum() < 0)

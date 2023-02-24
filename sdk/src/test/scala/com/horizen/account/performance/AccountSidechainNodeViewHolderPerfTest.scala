@@ -53,7 +53,7 @@ class AccountSidechainNodeViewHolderPerfTest
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
 
-  val mockStateDbNonces = TrieMap[Address, BigInteger]()
+  val mockStateDbNonces: TrieMap[Address, BigInteger] = TrieMap[Address, BigInteger]()
 
   @Before
   def setUp(): Unit = {

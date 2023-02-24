@@ -2,9 +2,9 @@ package com.horizen.account.mempool
 
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.mempool.MempoolMap._
-import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException, TransactionReplaceUnderpricedException}
+import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException, TxOversizedException, TransactionReplaceUnderpricedException}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
+import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import sparkz.util.{ModifierId, SparkzLogging}
@@ -22,7 +22,8 @@ class MempoolMap(
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
   type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
-  val MaxNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap)
+  // This constant added to the state nonce gives the maximum nonce that a tx can have to be accepted in the mempool
+  val maxAllowedNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap).subtract(BigInteger.ONE)
   val MaxSlotsPerAccount: Int = mempoolSettings.maxAccountSlots
 
   // All transactions currently in the mempool
@@ -35,6 +36,8 @@ class MempoolMap(
     TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
   // Next expected nonce for each account. It is the max nonce of the executable txs plus 1, if any, otherwise it has the same value of the statedb nonce.
   private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap.empty[SidechainTypes#SCP, BigInteger]
+
+  def getMaxAcceptableNonce(stateNonce: BigInteger): BigInteger = stateNonce.add(maxAllowedNonceGap)
 
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
@@ -49,9 +52,10 @@ class MempoolMap(
       }
 
       val stateNonce = accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
-      if (ethTransaction.getNonce.subtract(stateNonce).compareTo(MaxNonceGap) >= 0) {
+      val maxAcceptableNonce = getMaxAcceptableNonce(stateNonce)
+      if (ethTransaction.getNonce.compareTo(maxAcceptableNonce) > 0) {
         log.trace(s"Transaction $ethTransaction nonce gap respect state nonce exceeds maximum allowed size: tx nonce ${ethTransaction.getNonce}, " +
-          s"state nonce: $stateNonce")
+          s"state nonce: $stateNonce, maximum nonce gap $maxAllowedNonceGap")
         throw NonceGapTooWideException(ethTransaction.id, ethTransaction.getNonce, stateNonce)
       }
 
@@ -118,7 +122,7 @@ class MempoolMap(
     accountSlots
   }
 
-  private[mempool] def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap) = {
+  private[mempool] def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap): Unit = {
     val existingTxWithSameNonce = all(existingTxId)
     val diffSize = txSizeInSlot(newTx) - txSizeInSlot(existingTxWithSameNonce)
     if (diffSize > 0){
@@ -292,7 +296,7 @@ class MempoolMap(
     val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
 
     val stateNonce = txsFromRejectedBlocks.head.getNonce
-    val maxAcceptableNonce = stateNonce.add(MaxNonceGap.subtract(BigInteger.ONE))
+    val maxAcceptableNonce = getMaxAcceptableNonce(stateNonce)
 
     // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
     // They are by default directly added to the execTxs map, because the nonce is surely not too low. If a tx is found invalid
@@ -323,7 +327,7 @@ class MempoolMap(
             }
           }
         }
-        else if (!maxNonceGapExceeded)
+        else
           maxNonceGapExceeded = true
       }
 
@@ -431,12 +435,10 @@ class MempoolMap(
       val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
       val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
 
-      // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from executable txs.
-      // First, all the txs with nonce lower than the new expected nonce are discarded. The subsequent txs don't need to
-      // be checked for nonce because they are ordered by increasing nonce. They are candidate to be added by default to
-      // the execTxs map, unless a previous tx was found invalid. The remaining txs are checked for balance.
-      // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not executable
-      // and they will be added to the nonExec map.
+      // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from exec txs.
+      // First all the txs with nonce too low are discarded. The remaining txs are checked for balance.
+      // If a tx is found invalid, it is removed from the mem pool. All the subsequent txs, if valid, will become not
+      // executable and they will be added to the nonExec map.
       var destMap = newExecTxs
       var haveBecomeNonExecutable = false
 

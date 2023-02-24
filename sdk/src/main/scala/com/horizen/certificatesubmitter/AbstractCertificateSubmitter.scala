@@ -82,7 +82,6 @@ abstract class AbstractCertificateSubmitter[
   protected val certificateFee: Option[String] = if (settings.withdrawalEpochCertificateSettings.certificateAutomaticFeeComputation) None else Some(settings.withdrawalEpochCertificateSettings.certificateFee)
 
   override def preStart(): Unit = {
-    log.error("******************** AbstractCertificateSubmitter preStart")
     super.preStart()
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[PM]])
 
