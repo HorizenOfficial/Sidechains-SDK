@@ -104,6 +104,7 @@ testScriptsEvm=(
     'sc_evm_delegatecall_contract.py'
     'sc_evm_mc_fork.py'
     'sc_evm_context_blockhash.py'
+    'sc_evm_forbid_unprotected_txs.py'
     'sc_evm_block_size_limit.py'
 );
 
