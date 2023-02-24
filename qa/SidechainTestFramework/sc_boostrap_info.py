@@ -127,13 +127,14 @@ class SCNodeConfiguration(object):
                  forger_options=SCForgerConfiguration(),
                  mempool_max_size=300,
                  mempool_min_fee_rate=0,
+                 max_nonce_gap=16,
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  initial_private_keys=[],
-                 remote_keys_manager_enabled=False,
                  known_peers=[],
                  declared_address=None,
                  initial_signing_private_keys=[],
+                 remote_keys_manager_enabled=False,
                  storage_backup_interval='15m',
                  storage_backup_delay='5m'):
         if submitter_private_keys_indexes is None:
@@ -150,6 +151,7 @@ class SCNodeConfiguration(object):
         self.forger_options = forger_options
         self.api_key = api_key
         self.max_fee = max_fee
+        self.max_nonce_gap = max_nonce_gap
         self.mempool_max_size = mempool_max_size
         self.mempool_min_fee_rate = mempool_min_fee_rate
         self.initial_private_keys = initial_private_keys
@@ -160,7 +162,6 @@ class SCNodeConfiguration(object):
             self.declared_address = declared_address
         self.storage_backup_interval = storage_backup_interval
         self.storage_backup_delay = storage_backup_delay
-
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

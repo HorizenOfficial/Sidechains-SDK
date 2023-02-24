@@ -124,7 +124,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
       state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, blockHashProvider)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
+      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState(), sidechainSettings.accountMempool))
     } yield (history, state, wallet, pool)
 
     val result = checkAndRecoverStorages(restoredData)
@@ -138,7 +138,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState()))
+      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState(), sidechainSettings.accountMempool))
     } yield (history, state, wallet, pool)
 
     result.get

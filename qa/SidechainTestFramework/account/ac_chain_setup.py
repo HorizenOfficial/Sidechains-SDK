@@ -19,7 +19,8 @@ class AccountChainSetup(SidechainTestFramework):
     def __init__(self, API_KEY='Horizen', number_of_mc_nodes=1, number_of_sidechain_nodes=1,
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
-                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False):
+                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
+                 max_nonce_gap=16):
 
         self.evm_address = None
         self.sc_nodes = None
@@ -37,6 +38,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.initial_private_keys = initial_private_keys
         self.circuittype_override = circuittype_override
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
+        self.max_nonce_gap = max_nonce_gap
 
 
     def setup_nodes(self):
@@ -62,7 +64,8 @@ class AccountChainSetup(SidechainTestFramework):
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
-                    remote_keys_manager_enabled=self.remote_keys_manager_enabled))
+                    remote_keys_manager_enabled=self.remote_keys_manager_enabled,
+                    max_nonce_gap=self.max_nonce_gap))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
@@ -70,7 +73,8 @@ class AccountChainSetup(SidechainTestFramework):
                     forger_options=self.forger_options,
                     api_key=self.API_KEY,
                     initial_private_keys=self.initial_private_keys,
-                    remote_keys_manager_enabled=self.remote_keys_manager_enabled))
+                    remote_keys_manager_enabled=self.remote_keys_manager_enabled,
+                    max_nonce_gap=self.max_nonce_gap))
 
         if self.circuittype_override is not None:
             circuit_type = self.circuittype_override

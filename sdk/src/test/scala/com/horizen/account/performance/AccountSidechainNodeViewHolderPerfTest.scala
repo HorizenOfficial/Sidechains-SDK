@@ -20,7 +20,7 @@ import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.utils.BytesUtils
-import com.horizen.{SidechainSettings, SidechainTypes, WalletSettings}
+import com.horizen.{AccountMempoolSettings, SidechainSettings, SidechainTypes, WalletSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -34,6 +34,7 @@ import java.io.{BufferedWriter, FileWriter}
 import java.math.BigInteger
 import java.util.Calendar
 import scala.collection.concurrent.TrieMap
+import scala.util.Random
 
 /*
   This class is used for testing performance related to modifications to the memory pool.
@@ -52,7 +53,7 @@ class AccountSidechainNodeViewHolderPerfTest
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
 
-  val mockStateDbNonces = TrieMap[Address, BigInteger]()
+  val mockStateDbNonces: TrieMap[Address, BigInteger] = TrieMap[Address, BigInteger]()
 
   @Before
   def setUp(): Unit = {
@@ -95,7 +96,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
 
       val numOfTxs = 10000
       val numOfTxsPerSpammerAccounts = 100
@@ -112,6 +112,9 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Number of transactions for each spammer account: $numOfTxsPerSpammerAccounts\n")
       out.write(s"Number of normal accounts:                       $numOfNormalAccount\n")
       out.write(s"Number of transactions for each normal account:  $numOfTxsPerNormalAccounts\n")
+
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts)
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = scala.collection.mutable.ListBuffer[EthereumTransaction]()
 
@@ -158,7 +161,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("Starting test reverse order")
       // Resetting MemPool
-      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
 
       val reverseList = listOfTxs.reverse
       listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
@@ -187,9 +190,199 @@ class AccountSidechainNodeViewHolderPerfTest
       listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot).zipWithIndex.foreach { case (res, idx) =>
         out.write(s"Snapshot $idx: $res ms\n")
       }
-      out.write(s"Number of transactions per snapshot: $numOfTxsPerSnapshot\n\n\n")
+      out.write(s"Number of transactions per snapshot: $numOfTxsPerSnapshot\n")
+
+      println("Starting test random order")
+      // Resetting MemPool
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
+      val randomOrderList = Random.shuffle(listOfTxs)
+      listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
+      startTime = System.currentTimeMillis()
+      intermediate = startTime
+      randomOrderList.zipWithIndex.foreach { case (tx, idx) =>
+        nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT])
+        if ((idx + 1) % numOfTxsPerSnapshot == 0) {
+          val updateTime = System.currentTimeMillis()
+          listOfSnapshots += (updateTime - intermediate)
+          intermediate = updateTime
+        }
+      }
+      totalTime = System.currentTimeMillis() - startTime
+      assertEquals(numOfTxs, mempool.size)
+
+      out.write(s"\n********************* Random order test results *********************\n")
+
+      println(s"Total time $totalTime ms")
+      timePerTx = totalTime.toFloat / numOfTxs
+      println(s"Average time per transaction ${timePerTx} ms")
+      println(
+        s"Average time per transactions in Snapshots ${listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot).mkString(",")} "
+      )
+      out.write(s"Duration of the test:                      $totalTime ms\n")
+      out.write(s"Average time per transaction:             ${timePerTx} ms\n")
+      out.write(s"Average time per transaction in snapshots:\n")
+      listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot).zipWithIndex.foreach { case (res, idx) =>
+        out.write(s"Snapshot $idx: $res ms\n")
+      }
+      out.write(s"Number of transactions per snapshot: $numOfTxsPerSnapshot\n")
+
 
     } finally {
+      out.write("\n\n")
+      out.close()
+    }
+  }
+
+  /*
+    Same as txModifyTest but it takes into account the nonce gap. So the maximum number of txs for each account can be
+    only 16. The other test is temporarily kept just for comparing the performances with the previous implementations
+    of the mempool.
+   */
+  @Test
+  @Ignore
+  def txModifyTestDefaultNonceGap(): Unit = {
+    val out = new BufferedWriter(new FileWriter("log/txModifyTestNonceGap.txt", true))
+
+    val cal = Calendar.getInstance()
+    try {
+      out.write("*********************************************************************\n\n")
+      out.write("*                Adding transaction performance test                 \n\n")
+      out.write("*********************************************************************\n\n")
+
+      out.write(s"Date and time of the test: ${cal.getTime}\n\n")
+
+
+      val numOfTxs = 10016 //this weird number is just to have an integer number of accounts
+      val numOfTxsPerSpammerAccounts = 16
+      val numOfTxsPerNormalAccounts = 1
+      val normalSpammerRatio = numOfTxsPerSpammerAccounts / numOfTxsPerNormalAccounts
+      assertTrue(
+        "Invalid test parameters",
+        numOfTxs % (numOfTxsPerSpammerAccounts + normalSpammerRatio * numOfTxsPerNormalAccounts) == 0
+      )
+      val numOfSpammerAccount = numOfTxs / (numOfTxsPerSpammerAccounts + normalSpammerRatio * numOfTxsPerNormalAccounts)
+      val numOfNormalAccount = normalSpammerRatio * numOfSpammerAccount
+      out.write(s"Total number of transactions:                    $numOfTxs\n")
+      out.write(s"Number of spammer accounts:                      $numOfSpammerAccount\n")
+      out.write(s"Number of transactions for each spammer account: $numOfTxsPerSpammerAccounts\n")
+      out.write(s"Number of normal accounts:                       $numOfNormalAccount\n")
+      out.write(s"Number of transactions for each normal account:  $numOfTxsPerNormalAccounts\n")
+
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts)
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
+
+      val listOfTxs = scala.collection.mutable.ListBuffer[EthereumTransaction]()
+
+      println(s"*************** Adding transaction performance test ***************")
+      println(s"Total number of transaction: $numOfTxs")
+
+      listOfTxs ++= createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = -1)
+
+      listOfTxs ++= createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = -1)
+
+      println("Starting test direct order")
+      val numOfSnapshots = 10
+      val numOfTxsPerSnapshot = numOfTxs / numOfSnapshots
+      var listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
+      var startTime = System.currentTimeMillis()
+      var intermediate = startTime
+      listOfTxs.zipWithIndex.foreach { case (tx, idx) =>
+        nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT])
+        if ((idx + 1) % numOfTxsPerSnapshot == 0) {
+          val updateTime = System.currentTimeMillis()
+          listOfSnapshots += (updateTime - intermediate)
+          intermediate = updateTime
+        }
+      }
+      var totalTime = System.currentTimeMillis() - startTime
+      assertEquals(numOfTxs, mempool.size)
+
+      out.write(s"\n********************* Direct order test results *********************\n")
+
+      println(s"Total time $totalTime ms")
+      var timePerTx: Float = totalTime.toFloat / numOfTxs
+      println(s"Average time per transaction ${timePerTx} ms")
+      println(
+        s"Average time per transactions in Snapshots ${listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot).mkString(",")} "
+      )
+      out.write(s"Duration of the test:                      $totalTime ms\n")
+      out.write(s"Average time per transaction:             ${timePerTx} ms\n")
+      out.write(s"Average time per transaction in snapshots:\n")
+      listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot).zipWithIndex.foreach { case (res, idx) =>
+        out.write(s"Snapshot $idx: $res ms\n")
+      }
+      out.write(s"Number of transactions per snapshot: $numOfTxsPerSnapshot\n")
+
+      println("Starting test reverse order")
+      // Resetting MemPool
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
+
+      val reverseList = listOfTxs.reverse
+      listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
+      startTime = System.currentTimeMillis()
+      intermediate = startTime
+      reverseList.zipWithIndex.foreach { case (tx, idx) =>
+        nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT])
+        if ((idx + 1) % numOfTxsPerSnapshot == 0) {
+          val updateTime = System.currentTimeMillis()
+          listOfSnapshots += (updateTime - intermediate)
+          intermediate = updateTime
+        }
+      }
+      totalTime = System.currentTimeMillis() - startTime
+      assertEquals(numOfTxs, mempool.size)
+      println(s"Total time $totalTime ms")
+      timePerTx = totalTime.toFloat / numOfTxs
+      println(s"Time per transactions ${timePerTx} ms")
+      println(
+        s"Average time per transactions in Snapshots ${listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot)} "
+      )
+      out.write(s"\n********************* Reverse order test results *********************\n")
+      out.write(s"Duration of the test:                      $totalTime ms\n")
+      out.write(s"Average time per transaction:             ${timePerTx} ms\n")
+      out.write(s"Average time per transaction in snapshots:\n")
+      listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot).zipWithIndex.foreach { case (res, idx) =>
+        out.write(s"Snapshot $idx: $res ms\n")
+      }
+      out.write(s"Number of transactions per snapshot: $numOfTxsPerSnapshot\n")
+
+      println("Starting test random order")
+      // Resetting MemPool
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
+      val randomOrderList = Random.shuffle(listOfTxs)
+      listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
+      startTime = System.currentTimeMillis()
+      intermediate = startTime
+      randomOrderList.zipWithIndex.foreach { case (tx, idx) =>
+        nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT])
+        if ((idx + 1) % numOfTxsPerSnapshot == 0) {
+          val updateTime = System.currentTimeMillis()
+          listOfSnapshots += (updateTime - intermediate)
+          intermediate = updateTime
+        }
+      }
+      totalTime = System.currentTimeMillis() - startTime
+      assertEquals(numOfTxs, mempool.size)
+
+      out.write(s"\n********************* Random order test results *********************\n")
+
+      println(s"Total time $totalTime ms")
+      timePerTx = totalTime.toFloat / numOfTxs
+      println(s"Average time per transaction ${timePerTx} ms")
+      println(
+        s"Average time per transactions in Snapshots ${listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot).mkString(",")} "
+      )
+      out.write(s"Duration of the test:                      $totalTime ms\n")
+      out.write(s"Average time per transaction:             ${timePerTx} ms\n")
+      out.write(s"Average time per transaction in snapshots:\n")
+      listOfSnapshots.map(res => res.toFloat / numOfTxsPerSnapshot).zipWithIndex.foreach { case (res, idx) =>
+        out.write(s"Snapshot $idx: $res ms\n")
+      }
+      out.write(s"Number of transactions per snapshot: $numOfTxsPerSnapshot\n")
+
+
+    } finally {
+      out.write("\n\n")
       out.close()
     }
   }
@@ -214,7 +407,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
 
       val numOfTxs = 10000
       val numOfTxsPerSpammerAccounts = 100
@@ -231,6 +423,7 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Number of transactions for each normal account:  $numOfTxsPerNormalAccounts\n")
       out.write(s"Number of transactions for each block:           $numOfTxsInBlock\n")
 
+
       assertTrue(
         "Invalid test parameters",
         numOfTxs % (numOfTxsPerSpammerAccounts + normalSpammerRatio * numOfTxsPerNormalAccounts) == 0
@@ -240,6 +433,9 @@ class AccountSidechainNodeViewHolderPerfTest
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
       val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = 75)
+
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts + 1)//+1 because there are orphans, so max nonce > num of txs
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
       //Adding txs to the initial mem pool
@@ -299,6 +495,7 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Duration of the test:                      $updateTime2 ms\n")
 
     } finally {
+      out.write("\n\n")
       out.close()
     }
   }
@@ -319,8 +516,6 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write("*********************************************************************\n\n")
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
-
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
 
       val numOfTxs = 10000
       val numOfTxsPerSpammerAccounts = 100
@@ -354,6 +549,9 @@ class AccountSidechainNodeViewHolderPerfTest
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
       val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, seed = numOfNormalAccount + 1, orphanIdx = 75)
+
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxsPerSpammerAccounts + 1) //+1 because there are orphans, so max nonce > num of txs
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
       listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
@@ -424,6 +622,7 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Duration of the test:                      $updateTime2 ms\n")
 
     } finally {
+      out.write("\n\n")
       out.close()
     }
   }
@@ -443,8 +642,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
-
       val numOfTxs = 12000
       val numOfNormalAccount = 1
       val numOfTxsInBlock = 1400
@@ -455,6 +652,8 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("************** Testing with one block to apply **************")
 
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = numOfTxs)
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
       val listOfTxs = createTransactions(numOfNormalAccount, numOfTxs)
 
       listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
@@ -479,6 +678,7 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Duration of the test:                      $updateTime ms\n")
 
     } finally {
+      out.write("\n\n")
       out.close()
     }
   }
@@ -497,7 +697,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(AccountMempoolSettings())
 
       val numOfTxs = 10000
       val numOfTxsPerAccount = 5
@@ -526,6 +726,7 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"\n********************* Test results *********************\n")
       out.write(s"Duration of the test:                      $totalTime ms\n")
     } finally {
+      out.write("\n\n")
       out.close()
     }
 
@@ -576,7 +777,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
   }
 
-  def getMockedAccountSidechainNodeViewHolder()(implicit
+  def getMockedAccountSidechainNodeViewHolder(mempoolSettings: AccountMempoolSettings)(implicit
       actorSystem: ActorSystem
   ): MockedAccountSidechainNodeViewHolder = {
     val sidechainSettings = mock[SidechainSettings]
@@ -611,7 +812,7 @@ class AccountSidechainNodeViewHolderPerfTest
       override def getView: AccountStateView = stateViewMock
     }
 
-    mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
+    mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
 
     val nodeViewHolderRef: TestActorRef[MockedAccountSidechainNodeViewHolder] = TestActorRef(
       Props(

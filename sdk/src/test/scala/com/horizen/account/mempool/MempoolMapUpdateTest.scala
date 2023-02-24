@@ -1,6 +1,6 @@
 package com.horizen.account.mempool
 
-import com.horizen.SidechainTypes
+import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.proposition.AddressProposition
@@ -50,7 +50,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testEmptyMemPool(): Unit = {
-    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
 
     val expectedNumOfTxs = 7
     val listOfTxs = createTransactionsForAccount(accountKeyOpt.get, expectedNumOfTxs).toSeq
@@ -69,7 +69,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     // Try with only txs from applied blocks
     // Reset mempool
-    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
@@ -85,7 +85,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     // Try with txs from applied and reverted blocks
     // Reset mempool
-    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     listOfTxsToReAdd = listOfTxs.take(3)
     listOfTxsToRemove = listOfTxs
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
@@ -95,7 +95,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of txs in the mempool", 0, mempoolMap.size)
 
     // Reset mempool
-    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     listOfTxsToReAdd = listOfTxs
     listOfTxsToRemove = listOfTxs.take(4)
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
@@ -111,7 +111,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of executable transactions", listOfTxsToReAdd.size - listOfTxsToRemove.size, executableTxs.size)
 
     //With orphans for balance
-    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     val invalidTx = createEIP1559Transaction(BigInteger.valueOf(20000), nonce = BigInteger.valueOf(expectedNumOfTxs),
       accountKeyOpt, gasLimit = BigInteger.valueOf(1000000), gasFee = BigInteger.valueOf(1000000))
     val validTx = createEIP1559Transaction(BigInteger.valueOf(12), nonce = BigInteger.valueOf(expectedNumOfTxs + 1),
@@ -133,7 +133,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testWithTxsInMemPool(): Unit = {
-    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
 
     val expectedNumOfTxs = 5
     val expectedNumOfExecutableTxs = 3
@@ -226,7 +226,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testWithTxsInvalidForBalance(): Unit = {
-    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     val limitOfGas = BigInteger.valueOf(1000000)
     val maxGasFee = BigInteger.valueOf(1000000)
     val tx0 = createEIP1559Transaction(BigInteger.valueOf(10000), BigInteger.valueOf(0),
@@ -249,7 +249,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     val listOfTxs = scala.collection.mutable.ListBuffer[SidechainTypes#SCAT](tx0, tx1, tx2, tx3, tx5, tx6).toSeq
 
     //initialize mem pool
-    listOfTxs.foreach(tx => mempoolMap.add(tx))
+    listOfTxs.foreach(tx => assertTrue(s"Error while adding tx $tx", mempoolMap.add(tx).isSuccess))
     assertEquals(expectedNumOfTxs, mempoolMap.size)
     var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs, executableTxs.size)
@@ -330,7 +330,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Test 1: Try with only txs from reverted blocks
 
     //Initialize mempool
-    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
 
     //Update the nonce in the state db
     val address = tx2.getFrom.address()
@@ -362,7 +362,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     // Test 2: Try with txs from reverted and applied blocks
     //Reset mempool
-    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(address))
@@ -393,6 +393,202 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong executable transaction", tx2, iter.next())
     assertEquals("Wrong executable transaction", tx3, iter.next())
 
+  }
+
+  @Test
+  def testWithTxsInvalidForNonceGap(): Unit = {
+
+    val tx5 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(5), keyOpt = accountKeyOpt)
+    val tx6 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(6), keyOpt = accountKeyOpt)
+    val tx7 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(7), keyOpt = accountKeyOpt)
+    val tx8 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(8), keyOpt = accountKeyOpt)
+    val tx9 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(9), keyOpt = accountKeyOpt)
+    val tx10 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(10), keyOpt = accountKeyOpt)
+    val tx11 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(11), keyOpt = accountKeyOpt)
+    val tx12 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(12), keyOpt = accountKeyOpt)
+    val tx13 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(13), keyOpt = accountKeyOpt)
+    val tx14 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(14), keyOpt = accountKeyOpt)
+    val tx15 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(15), keyOpt = accountKeyOpt)
+    val tx16 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(16), keyOpt = accountKeyOpt)
+    val tx18 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(18), keyOpt = accountKeyOpt)
+    val tx19 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(19), keyOpt = accountKeyOpt)
+    val tx20 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(20), keyOpt = accountKeyOpt)
+
+    // Test 1: Try with only txs from reverted blocks
+
+    //Initialize mempool
+    val mempoolSettings = AccountMempoolSettings(maxNonceGap = 7)
+    val address = tx14.getFrom.address()
+
+    def initMempool(): MempoolMap = {
+      val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
+
+      //Update the nonce in the state db
+       Mockito
+        .when(accountStateViewMock.getNonce(address))
+        .thenReturn(tx14.getNonce)
+
+      //Add txs to the mem pool
+      assertTrue(mempoolMap.add(tx14).isSuccess) //exec
+      assertTrue(mempoolMap.add(tx15).isSuccess) //exec
+      assertTrue(mempoolMap.add(tx16).isSuccess) //exec
+      assertTrue(mempoolMap.add(tx18).isSuccess) //non exec
+      assertTrue(mempoolMap.add(tx19).isSuccess) //non exec
+      assertTrue(mempoolMap.add(tx20).isSuccess) //non exec
+      assertEquals(6, mempoolMap.size)
+      mempoolMap
+    }
+
+    var mempoolMap = initMempool()
+
+    //Test 1.1 non-exec txs exceed max nonce gap after update
+    //Prepare blocks
+    var listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx12, tx13)
+    var listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+    //Update the nonce in the state db
+    var stateNonce = listOfTxsToReAdd.head.getNonce
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(stateNonce)
+
+    //With maxNonceGap = 7 and stateNonce = 12, after the update txs from tx12 to tx16 are exec, tx18 is
+    // non exec and tx19 and tx20 are dropped from the mempool
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 6, mempoolMap.size)
+    var executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 5, executableTxs.size)
+
+    //Test 1.2 exec txs exceed max nonce gap after update
+    //Prepare blocks
+
+    //Reset mempool
+    mempoolMap = initMempool()
+
+    listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx9, tx10, tx11, tx12, tx13)
+    listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+    //Update the nonce in the state db
+    stateNonce = listOfTxsToReAdd.head.getNonce
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(stateNonce)
+
+    //With maxNonceGap = 7 and stateNonce = 9, after the update txs from tx9 to tx15 are exec, tx16 to tx18
+    // are dropped from the mempool
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 7, mempoolMap.size)
+    executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
+
+
+    //Test 1.3 re-injected txs exceed max nonce gap after update
+    //Reset mempool
+    mempoolMap = initMempool()
+
+    //Prepare blocks
+    listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx6, tx7, tx8, tx9, tx10, tx11, tx12, tx13)
+    listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+    //Update the nonce in the state db
+    stateNonce = listOfTxsToReAdd.head.getNonce
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(stateNonce)
+
+    //With maxNonceGap = 7 and stateNonce = 6, after the update txs from tx6 to t12 are exec, tx13 onwards
+    // are dropped from the mempool
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 7, mempoolMap.size)
+    executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
+
+    // Test 2: Try with txs from reverted and applied blocks
+    //Reset mempool
+    mempoolMap = initMempool()
+
+    //Test 2.1 non-exec txs exceed max nonce gap after update
+    //Prepare blocks
+    listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx11, tx12, tx13)
+    listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx11)
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+    //Update the nonce in the state db
+    stateNonce = tx12.getNonce
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(stateNonce)
+
+    //With maxNonceGap = 7 and stateNonce = 12, after the update txs from tx12 to tx16 are exec, tx18 is
+    // non exec and tx19 and tx20 are dropped from the mempool
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 6, mempoolMap.size)
+    executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 5, executableTxs.size)
+
+    //Test 2.2 exec txs exceed max nonce gap after update
+    mempoolMap = initMempool()
+
+    //Prepare blocks
+    listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx8, tx9, tx10, tx11, tx12, tx13)
+    listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx8)
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+    //Update the nonce in the state db
+    stateNonce = tx9.getNonce
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(stateNonce)
+
+    //With maxNonceGap = 7 and stateNonce = 9, after the update txs from tx9 to tx15 are exec, tx16 and tx18
+    // are dropped from the mempool
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 7, mempoolMap.size)
+    executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
+
+    //Test 2.3 re-injected txs exceed max nonce gap after update
+    //Reset mempool
+    mempoolMap = initMempool()
+
+    //Prepare blocks
+    listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx5, tx6, tx7, tx8, tx9, tx10, tx11, tx12, tx13)
+    listOfTxsToRemove = Seq[SidechainTypes#SCAT](tx5)
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+    //Update the nonce in the state db
+    stateNonce = tx6.getNonce
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(stateNonce)
+
+    //With maxNonceGap = 7 and stateNonce = 6, after the update txs from tx6 to t12 are exec, tx13 onwards
+    // are dropped from the mempool
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 7, mempoolMap.size)
+    executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
   }
 
 

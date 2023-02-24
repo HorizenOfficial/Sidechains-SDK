@@ -1,14 +1,16 @@
 package com.horizen.account.mempool
 
-import com.horizen.SidechainTypes
+import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import com.horizen.account.fixtures.EthereumTransactionFixture
+import com.horizen.account.mempool.exception.{NonceGapTooWideException, TxOversizedException}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider, TxOversizedException}
+import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
 import org.junit.Assert._
 import org.junit._
+import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
@@ -43,7 +45,7 @@ class MempoolMapTest
 
   @Test
   def testCanPayHigherFee(): Unit = {
-    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
 
     val nonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -84,7 +86,7 @@ class MempoolMapTest
 
   @Test
   def testAddExecutableTx(): Unit = {
-    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
 
     var expectedNumOfTxs = 0
     assertEquals(
@@ -235,7 +237,7 @@ class MempoolMapTest
   @Test
   def testAddNonExecutableTx(): Unit = {
 
-    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     var expectedNumOfTxs = 0
     var expectedNumOfExecutableTxs = 0
     assertEquals(
@@ -441,7 +443,7 @@ class MempoolMapTest
   @Test
   def testAddSameNonce(): Unit = {
 
-    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings(maxNonceGap = 20000))//For this test I don't care about maxNonceGap
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -606,7 +608,7 @@ class MempoolMapTest
 
   @Test
   def testRemove(): Unit = {
-    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
 
     val account1InitialStateNonce = BigInteger.ZERO
     val value = BigInteger.TEN
@@ -718,7 +720,7 @@ class MempoolMapTest
 
     val initialStateNonce = BigInteger.ZERO
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.TEN)
-    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings(maxNonceGap = 2000))//For this test I don't care about nonce gap
 
     var listOfExecTxs = mempoolMap.takeExecutableTxs()
     assertTrue(
@@ -1066,7 +1068,7 @@ class MempoolMapTest
   @Test
   def testAddTooBigTx(): Unit = {
 
-    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider)
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
     val normalTx = createMockTxWithSize(MempoolMap.MaxTxSize)
 
     val res = mempoolMap.add(normalTx)
@@ -1081,6 +1083,27 @@ class MempoolMapTest
     }
 
   }
+
+  @Test
+  def testAddTxWithNonceGapTooBig(): Unit = {
+    val MaxNonceGap = 11
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings(maxNonceGap = MaxNonceGap))
+
+    val stateNonce = BigInteger.valueOf(153)
+    val validTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = stateNonce.add(BigInteger.valueOf(MaxNonceGap - 1)))
+    when(accountStateViewMock.getNonce(validTx.getFrom.address())).thenReturn(stateNonce)
+
+    val res = mempoolMap.add(validTx)
+    assertTrue(s"Adding transaction failed $res", res.isSuccess)
+
+    mempoolMap = res.get
+
+    val nonceGapTooBigTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = stateNonce.add(BigInteger.valueOf(MaxNonceGap)))
+    when(accountStateViewMock.getNonce(nonceGapTooBigTx.getFrom.address())).thenReturn(stateNonce)
+
+    assertThrows[NonceGapTooWideException]("Adding transaction with nonce gap too big should have thrown an NonceGapTooWideException", mempoolMap.add(nonceGapTooBigTx).get)
+  }
+
 
   private def createMockTxWithSize(size: Long): EthereumTransaction = {
     val dummyTx = createEIP1559Transaction(BigInteger.ONE)

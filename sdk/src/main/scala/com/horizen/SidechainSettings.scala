@@ -89,6 +89,9 @@ case class EthServiceSettings(
     globalRpcGasCap: BigInteger = BigInteger.valueOf(50000000),
 )
 
+
+case class AccountMempoolSettings(maxNonceGap: Int = 16)
+
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
     genesisData: GenesisDataSettings,
@@ -101,4 +104,5 @@ case class SidechainSettings(
     csw: CeasedSidechainWithdrawalSettings,
     logInfo: LogInfoSettings,
     ethService: EthServiceSettings,
+    accountMempool: AccountMempoolSettings,
 )
