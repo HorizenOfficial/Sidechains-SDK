@@ -307,8 +307,8 @@ class MempoolMap(
         if (tx.getNonce.compareTo(maxAcceptableNonce) <= 0) {
           val txSizeInSlots = txSizeInSlot(tx)
           if (
-            (txSizeInSlots <= MaxNumOfSlotsForTx) &&
             (balance.compareTo(tx.maxCost) >= 0) &&
+            (txSizeInSlots <= MaxNumOfSlotsForTx) &&
             (currAccountSlots + txSizeInSlots <= MaxSlotsPerAccount)
           ) {
             all.put(tx.id, tx)
@@ -580,9 +580,9 @@ object MempoolMap {
   val MaxNumOfSlotsForTx: Int = 4
   val MaxTxSize: Int = MaxNumOfSlotsForTx * TxSlotSize
 
-  def txSizeInSlot(tx: SidechainTypes#SCAT): Long = bytesToSlot(tx.size())
+  def txSizeInSlot(tx: SidechainTypes#SCAT): Long = sizeToSlot(tx.size())
 
-  def bytesToSlot(numOfBytes: Long): Long = {
+  def sizeToSlot(numOfBytes: Long): Long = {
     require(numOfBytes >= 0, "Illegal negative size value")
     (numOfBytes + TxSlotSize - 1) / TxSlotSize
   }
