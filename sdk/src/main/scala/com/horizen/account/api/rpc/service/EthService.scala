@@ -480,16 +480,19 @@ class EthService(
   @RpcMethod("net_version")
   def version: String = String.valueOf(networkParams.chainId)
 
-  private def getPeerCount: Int = {
+  private def getPeers: Seq[ConnectedPeer] = {
     val peerReq = (networkControllerRef ? GetConnectedPeers).asInstanceOf[Future[Seq[ConnectedPeer]]]
-    Await.result(peerReq, nvtimeout).size
+    Await.result(peerReq, nvtimeout)
   }
 
   @RpcMethod("net_peerCount")
-  def peerCount: BigInteger = BigInteger.valueOf(getPeerCount)
+  def peerCount: BigInteger = BigInteger.valueOf(getPeers.size)
 
   @RpcMethod("net_listening")
-  def listening: Boolean = getPeerCount < maxIncomingConnections
+  def listening: Boolean = {
+    val incomingConnections = getPeers.flatMap(_.peerInfo).count(_.connectionType.exists(_.isIncoming))
+    incomingConnections < maxIncomingConnections
+  }
 
   @RpcMethod("web3_clientVersion")
   def clientVersion: String = rpcClientVersion

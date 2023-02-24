@@ -20,7 +20,7 @@ class AccountChainSetup(SidechainTestFramework):
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
                  initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
-                 remote_keys_server_address=None, max_incoming_connections=100):
+                 remote_keys_server_address=None, max_incoming_connections=100, connect_nodes=True):
         super().__init__()
 
         self.evm_address = None
@@ -41,20 +41,22 @@ class AccountChainSetup(SidechainTestFramework):
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
         self.remote_keys_server_address = remote_keys_server_address
         self.max_incoming_connections = max_incoming_connections
+        self.connect_nodes = connect_nodes
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
 
     def sc_setup_network(self):
         self.sc_nodes = self.sc_setup_nodes()
-        if self.number_of_sidechain_nodes > 2:
-            for i in range(self.number_of_sidechain_nodes - 1):
-                connect_sc_nodes(self.sc_nodes[i], i + 1)
-            connect_sc_nodes(self.sc_nodes[self.number_of_sidechain_nodes - 1], 0)
-            self.sync_all()
-        elif self.number_of_sidechain_nodes == 2:
-            connect_sc_nodes(self.sc_nodes[0], 1)
-            self.sync_all()
+        if self.connect_nodes:
+            if self.number_of_sidechain_nodes > 2:
+                for i in range(self.number_of_sidechain_nodes - 1):
+                    connect_sc_nodes(self.sc_nodes[i], i + 1)
+                connect_sc_nodes(self.sc_nodes[self.number_of_sidechain_nodes - 1], 0)
+                self.sync_all()
+            elif self.number_of_sidechain_nodes == 2:
+                connect_sc_nodes(self.sc_nodes[0], 1)
+                self.sync_all()
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
