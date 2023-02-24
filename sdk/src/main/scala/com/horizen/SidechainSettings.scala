@@ -90,7 +90,11 @@ case class EthServiceSettings(
 )
 
 
-case class AccountMempoolSettings(maxNonceGap: Int = 16)
+case class AccountMempoolSettings(maxNonceGap: Int = 16,
+                                  maxAccountSlots: Int = 16){
+  require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
+  require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
+}
 
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,

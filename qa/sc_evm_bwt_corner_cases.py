@@ -53,7 +53,7 @@ Test:
 
 class SCEvmBWTCornerCases(AccountChainSetup):
     def __init__(self):
-        super().__init__(withdrawalEpochLength=10, max_nonce_gap=1500)
+        super().__init__(withdrawalEpochLength=10, max_nonce_gap=1500, max_account_slots=1500)
 
     def run_test(self):
         time.sleep(0.1)

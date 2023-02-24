@@ -417,10 +417,10 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Test 1: Try with only txs from reverted blocks
 
     //Initialize mempool
-    val mempoolSettings = AccountMempoolSettings(maxNonceGap = 7)
     val address = tx14.getFrom.address()
 
     def initMempool(): MempoolMap = {
+      val mempoolSettings = AccountMempoolSettings(maxNonceGap = 7)
       val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
 
       //Update the nonce in the state db
@@ -591,6 +591,72 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
   }
 
+  @Test
+  def testWithTxsInvalidForAccountSize(): Unit = {
+
+    def createMockTxWithSize(txToMock: EthereumTransaction, size: Long): EthereumTransaction = {
+      val tx = Mockito.spy[EthereumTransaction](txToMock)
+      Mockito.when(tx.size()).thenReturn(size)
+      tx
+    }
+    val tx11 = createMockTxWithSize(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(11), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
+    val tx12 = createMockTxWithSize(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(12), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
+    val tx13 = createMockTxWithSize(createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(13), keyOpt = accountKeyOpt), MempoolMap.MaxTxSize)
+    val tx14 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(14), keyOpt = accountKeyOpt)
+    val tx15 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(15), keyOpt = accountKeyOpt)
+    val tx16 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(16), keyOpt = accountKeyOpt)
+    val tx18 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(18), keyOpt = accountKeyOpt)
+    val tx19 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(19), keyOpt = accountKeyOpt)
+    val tx20 = createEIP1559Transaction(value = BigInteger.TEN, nonce = BigInteger.valueOf(20), keyOpt = accountKeyOpt)
+
+    // Test 1: Txs from reverted blocks exceed account size
+
+    //Initialize mempool
+    val mempoolSettings = AccountMempoolSettings(maxAccountSlots = 9)
+    val address = tx14.getFrom.address()
+
+    def initMempool(): MempoolMap = {
+      val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
+
+      //Update the nonce in the state db
+      Mockito
+        .when(accountStateViewMock.getNonce(address))
+        .thenReturn(tx14.getNonce)
+
+      //Add txs to the mem pool
+      assertTrue(mempoolMap.add(tx14).isSuccess) //exec
+      assertTrue(mempoolMap.add(tx15).isSuccess) //exec
+      assertTrue(mempoolMap.add(tx16).isSuccess) //exec
+      assertTrue(mempoolMap.add(tx18).isSuccess) //non exec
+      assertTrue(mempoolMap.add(tx19).isSuccess) //non exec
+      assertTrue(mempoolMap.add(tx20).isSuccess) //non exec
+      assertEquals(6, mempoolMap.size)
+      mempoolMap
+    }
+
+    val mempoolMap = initMempool()
+
+     //Prepare blocks
+    val listOfTxsToReAdd = Seq[SidechainTypes#SCAT](tx11, tx12, tx13)
+    val listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
+    Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd.asInstanceOf[Seq[SidechainTypes#SCAT]])
+    Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove.asInstanceOf[Seq[SidechainTypes#SCAT]])
+
+    //Update the nonce in the state db
+    val stateNonce = listOfTxsToReAdd.head.getNonce
+    Mockito
+      .when(accountStateViewMock.getNonce(address))
+      .thenReturn(stateNonce)
+
+    //After the update tx11 and tx12 are exec, tx14 is non-exec and the others are dropped from the mempool
+
+    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+
+    assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
+    val executableTxs = mempoolMap.takeExecutableTxs()
+    assertEquals("Wrong number of executable transactions", 2, executableTxs.size)
+    assertEquals("Wrong account size in slots", mempoolSettings.maxAccountSlots, mempoolMap.getAccountSlots(tx14.getFrom))
+  }
 
   def createTransactionWithDataSize(dataSize: Int, nonce: BigInteger): EthereumTransaction = {
     val randomData = Array.fill(dataSize)((scala.util.Random.nextInt(256) - 128).toByte)
@@ -603,7 +669,6 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
                                               numOfTxsPerAccount: Int,
                                               orphanIdx: Int = -1
                                             ): scala.collection.mutable.ListBuffer[SidechainTypes#SCAT] = {
-      val toAddr = "0x00112233445566778899AABBCCDDEEFF01020304"
       val value = BigInteger.valueOf(12)
       val listOfTxs = new scala.collection.mutable.ListBuffer[SidechainTypes#SCAT]
 

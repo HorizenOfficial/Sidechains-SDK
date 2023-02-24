@@ -14,3 +14,9 @@ case class TxOversizedException(address: Address, txSize: Long)
 /** NonceGapTooWideException is thrown if the transaction nonce is too bog respect the state nonce (maxNonceGap). */
 case class NonceGapTooWideException(txId: ModifierId, txNonce: BigInteger, stateNonce: BigInteger)
   extends MempoolException(s"nonce gap too wide: txId $txId, tx $txNonce, state $stateNonce")
+
+case class AccountMemPoolOutOfBoundException(txId: ModifierId)
+  extends MempoolException(s"adding transaction with txId $txId exceeds account available space")
+
+case class TransactionReplaceUnderpricedException(txId: ModifierId)
+  extends MempoolException(s"transaction with txId $txId cannot replace existing transaction because underpriced")
