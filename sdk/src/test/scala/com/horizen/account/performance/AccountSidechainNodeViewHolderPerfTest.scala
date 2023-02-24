@@ -85,7 +85,7 @@ class AccountSidechainNodeViewHolderPerfTest
   ordered by decreasing nonce, to see the impact on the mem pool of reordering the txs.
    */
   @Test
-  //@Ignore
+  @Ignore
   def txModifyTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/txModifyTest.txt", true))
 
@@ -244,7 +244,7 @@ class AccountSidechainNodeViewHolderPerfTest
     of the mempool.
    */
   @Test
-  //@Ignore
+  @Ignore
   def txModifyTestDefaultNonceGap(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/txModifyTestNonceGap.txt", true))
 
@@ -403,7 +403,7 @@ class AccountSidechainNodeViewHolderPerfTest
    In the second part of the test, the same block will be "reverted" and a new one will be applied.
    */
   @Test
- // @Ignore
+  @Ignore
   def updateMemPoolTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolTest.txt", true))
 
@@ -518,7 +518,7 @@ class AccountSidechainNodeViewHolderPerfTest
   In this case the chain reorg causes a switch of the active chain composed by several blocks.
    */
   @Test
- // @Ignore
+  @Ignore
   def updateMemPoolMultipleBlocksTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolMultiBlocksTest.txt", true))
 

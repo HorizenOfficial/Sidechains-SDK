@@ -33,10 +33,11 @@ class AccountMemoryPoolTest
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
     Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address])).thenReturn(initialStateNonce)
 
+    val mempoolSettings = AccountMempoolSettings()
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(
       () => accountStateViewMock,
       () => baseStateViewMock,
-      AccountMempoolSettings())
+      mempoolSettings)
 
     assertTrue("Wrong tx list size ", accountMemoryPool.takeExecutableTxs().isEmpty)
 
@@ -59,7 +60,12 @@ class AccountMemoryPoolTest
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs.head.id)
 
-    val account1NonExecTransaction0 = createEIP1559Transaction(value, BigInteger.valueOf(15), Option(account1Key))
+    val account1NonExecTransaction0 = {
+      val validButNonExecNonce = initialStateNonce.add(BigInteger.valueOf(mempoolSettings.maxNonceGap - 1))
+      createEIP1559Transaction(value,
+        nonce=validButNonExecNonce,
+        Option(account1Key))
+    }
     assertTrue(accountMemoryPool.put(account1NonExecTransaction0).isSuccess)
     listOfExecTxs = accountMemoryPool.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
