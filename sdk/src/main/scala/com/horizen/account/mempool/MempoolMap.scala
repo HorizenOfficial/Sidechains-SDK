@@ -26,8 +26,6 @@ class MempoolMap(
   val MaxSlotsPerAccount: Int = mempoolSettings.maxAccountSlots
   val MaxMemPoolSlots: Int = mempoolSettings.maxMemPoolSlots
 
-//  // All transactions currently in the mempool
-//  private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap.empty[ModifierId, SidechainTypes#SCAT]
   // Cache of all transactions currently in the mempool
   private val txCache = new TxCache()
 
@@ -41,8 +39,8 @@ class MempoolMap(
   private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap.empty[SidechainTypes#SCP, BigInteger]
 
   private def findTxWithSameNonce(account: SidechainTypes#SCP, nonce: BigInteger): Option[SidechainTypes#SCAT] = {
-    val txOpt: Option[SidechainTypes#SCAT] = executableTxs.get(account).flatMap(map => map.get(nonce).map(txCache(_)))
-    txOpt.orElse(nonExecutableTxs.get(account).flatMap(map => map.get(nonce).map(txCache(_))))
+    val txOpt: Option[SidechainTypes#SCAT] = executableTxs.get(account).flatMap(txIdByNonceMap => txIdByNonceMap.get(nonce).map(txCache(_)))
+    txOpt.orElse(nonExecutableTxs.get(account).flatMap(txIdByNonceMap => txIdByNonceMap.get(nonce).map(txCache(_))))
   }
 
 
@@ -70,17 +68,16 @@ class MempoolMap(
 
       // Reject transactions in case their account doesn't have enough space for it. If the new tx is replacing an
       // existing one, the space used by the old one must be taken into account.
-
-      val txToReplace = findTxWithSameNonce(account, ethTransaction.getNonce)
-      val numOfSlotsOfTxToReplace = if (txToReplace.isDefined){
-        if (!canPayHigherFee(ethTransaction, txToReplace.get)) {
-          log.trace(s"Transaction $ethTransaction cannot replace ${txToReplace.get} because it is underpriced")
-          throw TransactionReplaceUnderpricedException(ethTransaction.id)
-        }
-        txSizeInSlot(txToReplace.get)
-      }
-      else
-         0
+      val txToReplaceOpt = findTxWithSameNonce(account, ethTransaction.getNonce)
+      val numOfSlotsOfTxToReplace = txToReplaceOpt match {
+        case Some(txToReplace) =>
+          if (!canPayHigherFee(ethTransaction, txToReplace)) {
+            log.trace(s"Transaction $ethTransaction cannot replace $txToReplace because it is underpriced")
+            throw TransactionReplaceUnderpricedException(ethTransaction.id)
+          }
+          txSizeInSlot(txToReplace)
+        case None => 0
+       }
 
       val newTxSizeInSlot = bytesToSlot(txSize)
       val additionalSlots = math.max(newTxSizeInSlot - numOfSlotsOfTxToReplace, 0)
@@ -119,18 +116,15 @@ class MempoolMap(
         case AddOrReplaceNonExecTransaction =>
           val nonExecTxsPerAccount =
             nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
-          val existingTxWithSameNonceIdOpt = nonExecTxsPerAccount.get(ethTransaction.getNonce)
-          if (existingTxWithSameNonceIdOpt.isDefined) {
-            val existingTxWithSameNonceId = existingTxWithSameNonceIdOpt.get
-            replaceTransaction(existingTxWithSameNonceId, ethTransaction, nonExecTxsPerAccount)
+          if (txToReplaceOpt.isDefined) {
+            replaceTransaction(txToReplaceOpt.get.id, ethTransaction, nonExecTxsPerAccount)
           } else {
             addNewTransaction(nonExecTxsPerAccount, ethTransaction)
           }
         case ReplaceExecTransaction =>
           // This case means there is already an executable tx with the same nonce in the mem pool
           val executableTxsPerAccount = executableTxs(account)
-          val existingTxWithSameNonceId = executableTxsPerAccount(ethTransaction.getNonce)
-          replaceTransaction(existingTxWithSameNonceId, ethTransaction, executableTxsPerAccount)
+          replaceTransaction(txToReplaceOpt.get.id, ethTransaction, executableTxsPerAccount)
       }
 
       //After having added the new tx, check the resulting size of the mempool. If it exceeds the maximum, free some space.
@@ -346,7 +340,6 @@ class MempoolMap(
             (balance.compareTo(tx.maxCost) >= 0) &&
             (currAccountSlots + txSizeInSlots <= MaxSlotsPerAccount)
           ) {
-            //txCache.add(tx)
             txsToReinject += tx
             destMap.put(tx.getNonce, tx.id)
             currAccountSlots += txSizeInSlots

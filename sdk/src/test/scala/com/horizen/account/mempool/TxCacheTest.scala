@@ -23,6 +23,7 @@ class TxCacheTest
     assertTrue("Oldest is already initialized", txCache.getOldestTransaction().isEmpty)
     assertTrue("Youngest is already initialized", txCache.getYoungestTransaction().isEmpty)
     assertEquals("wrong size", 0, txCache.size)
+    assertEquals("wrong size in slots", 0, txCache.getSizeInSlots)
 
     val firstTx = createEIP1559Transaction(value = BigInteger.ONE)
     assertFalse( txCache.contains(ModifierId @@ firstTx.id))
@@ -30,15 +31,17 @@ class TxCacheTest
 
     txCache.add(firstTx)
     assertEquals("wrong size", 1, txCache.size)
+    assertEquals("wrong size in slots", 1, txCache.getSizeInSlots)
     assertTrue("Oldest is not initialized", txCache.getOldestTransaction().isDefined)
     assertTrue("Youngest is not initialized", txCache.getYoungestTransaction().isDefined)
     assertEquals(txCache.getOldestTransaction().get, txCache.getYoungestTransaction().get)
     assertEquals(firstTx, txCache(ModifierId @@ firstTx.id))
     assertTrue( txCache.contains(ModifierId @@ firstTx.id))
 
-    val secondTx = createEIP1559Transaction(value = BigInteger.TWO)
+    val secondTx = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TWO), MempoolMap.MaxTxSize)
     txCache.add(secondTx)
     assertEquals("wrong size", 2, txCache.size)
+    assertEquals("wrong size in slots", 5, txCache.getSizeInSlots)
     assertTrue("Oldest is not initialized", txCache.getOldestTransaction().isDefined)
     assertEquals(firstTx, txCache.getOldestTransaction().get)
     assertTrue("Youngest is not initialized", txCache.getYoungestTransaction().isDefined)
@@ -49,7 +52,7 @@ class TxCacheTest
   @Test
   def testRemove(): Unit = {
     val firstTx = createEIP1559Transaction(value = BigInteger.ONE)
-    val secondTx = createEIP1559Transaction(value = BigInteger.TWO)
+    val secondTx = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.TWO), MempoolMap.MaxTxSize)
     val thirdTx = createEIP1559Transaction(value = BigInteger.valueOf(3))
 
     var txCache = new TxCache
@@ -57,17 +60,22 @@ class TxCacheTest
     txCache.add(secondTx)
     txCache.add(thirdTx)
 
+    assertEquals("wrong size", 3, txCache.size)
+    assertEquals("wrong size in slots", 6, txCache.getSizeInSlots)
+
     assertEquals(firstTx, txCache.getOldestTransaction().get)
     assertEquals(thirdTx, txCache.getYoungestTransaction().get)
 
     txCache.remove(ModifierId @@ firstTx.id)
     assertEquals("wrong size", 2, txCache.size)
+    assertEquals("wrong size in slots", 5, txCache.getSizeInSlots)
     assertEquals(secondTx, txCache.getOldestTransaction().get)
     assertEquals(thirdTx, txCache.getYoungestTransaction().get)
     assertFalse( txCache.contains(ModifierId @@ firstTx.id))
 
     txCache.add(firstTx)
     assertEquals("wrong size", 3, txCache.size)
+    assertEquals("wrong size in slots", 6, txCache.getSizeInSlots)
     assertEquals(secondTx, txCache.getOldestTransaction().get)
     assertEquals(firstTx, txCache.getYoungestTransaction().get)
 
@@ -79,6 +87,7 @@ class TxCacheTest
 
     txCache.remove(ModifierId @@ secondTx.id)
     assertEquals("wrong size", 2, txCache.size)
+    assertEquals("wrong size in slots", 2, txCache.getSizeInSlots)
     assertEquals(firstTx, txCache.getOldestTransaction().get)
     assertEquals(thirdTx, txCache.getYoungestTransaction().get)
     assertFalse(txCache.contains(ModifierId @@ secondTx.id))
@@ -90,18 +99,24 @@ class TxCacheTest
 
     txCache.remove(ModifierId @@ thirdTx.id)
     assertEquals("wrong size", 2, txCache.size)
+    assertEquals("wrong size in slots", 5, txCache.getSizeInSlots)
+
     assertEquals(firstTx, txCache.getOldestTransaction().get)
     assertEquals(secondTx, txCache.getYoungestTransaction().get)
     assertFalse(txCache.contains(ModifierId @@ thirdTx.id))
 
     txCache.remove(ModifierId @@ firstTx.id)
     assertEquals("wrong size", 1, txCache.size)
+    assertEquals("wrong size in slots", 4, txCache.getSizeInSlots)
+
     assertEquals(secondTx, txCache.getOldestTransaction().get)
     assertEquals(secondTx, txCache.getYoungestTransaction().get)
     assertFalse(txCache.contains(ModifierId @@ firstTx.id))
 
     txCache.remove(ModifierId @@ secondTx.id)
     assertEquals("wrong size", 0, txCache.size)
+    assertEquals("wrong size in slots", 0, txCache.getSizeInSlots)
+
     assertTrue("Oldest is initialized", txCache.getOldestTransaction().isEmpty)
     assertTrue("Youngest is initialized", txCache.getYoungestTransaction().isEmpty)
     assertFalse(txCache.contains(ModifierId @@ secondTx.id))

@@ -89,10 +89,11 @@ case class EthServiceSettings(
     globalRpcGasCap: BigInteger = BigInteger.valueOf(50000000),
 )
 
-
+// Default values are the same as in Geth/Erigon
 case class AccountMempoolSettings(maxNonceGap: Int = 16,
                                   maxAccountSlots: Int = 16,
-                                  maxMemPoolSlots: Int = 6144){
+                                  maxMemPoolSlots: Int = 6144 // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
+                                 ){
   require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
   require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
   require(maxMemPoolSlots > 0, s"Maximum Memory Pool Slots not positive: $maxMemPoolSlots")

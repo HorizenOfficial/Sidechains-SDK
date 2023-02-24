@@ -6,6 +6,10 @@ import sparkz.util.ModifierId
 
 import scala.collection.concurrent.TrieMap
 
+/*
+Thsi class contains all the transactions accepted in the mempool.
+Transactions can be retrieved from the cache or by transaction id or by arrival order.
+ */
 class TxCache {
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, TxMetaInfo] = TrieMap.empty[ModifierId, TxMetaInfo]
@@ -15,41 +19,38 @@ class TxCache {
   private var youngestTx: Option[TxMetaInfo] = None
 
   def add(tx: SidechainTypes#SCAT): Unit = {
-    val txInf0 = TxMetaInfo(tx)
-    all.put(tx.id, txInf0)
+    val txInfo = new TxMetaInfo(tx)
+    all.put(tx.id, txInfo)
     sizeInSlots += txSizeInSlot(tx)
     if (oldestTx.isEmpty) {
-      oldestTx = Some(txInf0)
+      oldestTx = Some(txInfo)
       youngestTx = oldestTx
     }
     else {
       val tmp = youngestTx
-      youngestTx = Some(txInf0)
-      youngestTx.get.previous = tmp
-      tmp.get.next = youngestTx
+      youngestTx = Some(txInfo)
+      youngestTx.get.older = tmp
+      tmp.get.younger = youngestTx
     }
   }
 
   def remove(txId: ModifierId): Option[SidechainTypes#SCAT] = {
     val txInfoOpt = all.remove(txId)
     txInfoOpt.map { txInfo =>
-      val prev = txInfo.previous
-      val next = txInfo.next
-      if (prev.isEmpty && next.isEmpty){
-        oldestTx = None
-        youngestTx = None
-      }
-      else if (prev.isEmpty) {
-        oldestTx = next
-        next.get.previous = None
-      }
-      else if (next.isEmpty) {
-        youngestTx = prev
-        prev.get.next = None
-      }
-      else {
-        prev.get.next = next
-        next.get.previous = prev
+      (txInfo.older, txInfo.younger) match {
+        case (None, None) =>
+          oldestTx = None
+          youngestTx = None
+        case (None, younger) =>
+          oldestTx = younger
+          younger.get.older = None
+        case (older, None) =>
+          youngestTx = older
+          older.get.younger = None
+        case (older, younger) =>
+          older.get.younger = younger
+          younger.get.older = older
+
       }
       sizeInSlots -= txSizeInSlot(txInfo.tx)
       txInfo.tx
@@ -74,9 +75,5 @@ class TxCache {
   def getYoungestTransaction(): Option[SidechainTypes#SCAT] = youngestTx.map(_.tx)
 
 
-  case class TxMetaInfo(tx: SidechainTypes#SCAT) {
-    var next: Option[TxMetaInfo] = None
-    var previous: Option[TxMetaInfo] = None
-  }
 
 }

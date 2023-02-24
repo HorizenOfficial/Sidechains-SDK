@@ -257,10 +257,8 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
 
-      //val numOfTxs = 10016 //this weird number is just to have an integer number of accounts
-      val numOfTxs = 100000 //this weird number is just to have an integer number of accounts
- //     val numOfTxsPerSpammerAccounts = 16
-      val numOfTxsPerSpammerAccounts = 1
+      val numOfTxs = 10016 //this weird number is just to have an integer number of accounts
+      val numOfTxsPerSpammerAccounts = 16
       val numOfTxsPerNormalAccounts = 1
       val normalSpammerRatio = numOfTxsPerSpammerAccounts / numOfTxsPerNormalAccounts
       assertTrue(
