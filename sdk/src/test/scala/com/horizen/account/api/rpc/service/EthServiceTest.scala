@@ -80,7 +80,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   private def blockViewOutput(transactions: String) =
     s"""{
-        "author": "0x1234567891011121314112345678910111213141",
         "baseFeePerGas": "0x342770c0",
         "difficulty": "0x0",
         "extraData": "0x",
