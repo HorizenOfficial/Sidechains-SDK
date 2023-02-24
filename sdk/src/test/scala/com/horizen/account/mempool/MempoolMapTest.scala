@@ -1129,7 +1129,7 @@ class MempoolMapTest
     assertEquals("Wrong number of txs in mempool", MaxSlotsPerAccount, mempoolMap.size)
 
     var exceedingTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(MaxSlotsPerAccount), keyOpt = account1KeyOpt)
-    assertEquals("Wrong account size in slots", MaxSlotsPerAccount, mempoolMap.getAccountSize(exceedingTx.getFrom))
+    assertEquals("Wrong account size in slots", MaxSlotsPerAccount, mempoolMap.getAccountSlots(exceedingTx.getFrom))
 
     mempoolMap.add(exceedingTx) match {
       case Success(_) => fail("Adding exec transaction to a full account should have failed")
@@ -1161,7 +1161,7 @@ class MempoolMapTest
       )
     )
     assertEquals("Wrong number of txs in mempool", 2, mempoolMap.size)
-    assertEquals("Wrong account size in slots", 8, mempoolMap.getAccountSize(exceedingTx.getFrom))
+    assertEquals("Wrong account size in slots", 8, mempoolMap.getAccountSlots(exceedingTx.getFrom))
 
     exceedingTx = createMockTxWithSize(
       Some(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account1KeyOpt)),
@@ -1192,7 +1192,7 @@ class MempoolMapTest
     (5 to MaxSlotsPerAccount).foreach(nonce => assertTrue("Adding non exec transaction failed",
       mempoolMap.add(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt)).isSuccess))
     assertEquals("Wrong number of txs in mempool", MaxSlotsPerAccount, mempoolMap.size)
-    assertEquals("Wrong account size in slots", MaxSlotsPerAccount, mempoolMap.getAccountSize(exceedingTx.getFrom))
+    assertEquals("Wrong account size in slots", MaxSlotsPerAccount, mempoolMap.getAccountSlots(exceedingTx.getFrom))
 
 
     //First create a tx with the same nonce of an existing one but with greater gas fee, tip (for allowing replacing) and

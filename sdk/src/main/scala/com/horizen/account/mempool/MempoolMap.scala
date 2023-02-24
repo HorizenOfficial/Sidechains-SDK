@@ -102,19 +102,20 @@ class MempoolMap(
 
   private[mempool] def addNewTransaction(txByNonceMap: TxIdByNonceMap, ethTransaction: SidechainTypes#SCAT) = {
     val account = ethTransaction.getFrom
-    val accountSize = getAccountSize(account)
-    if (accountSize + txSizeInSlot(ethTransaction) > MaxSlotsPerAccount) {
-      log.trace(s"Adding transaction $ethTransaction exceeds maximum allowed size per account")
+    val accountSlots = getAccountSlots(account)
+    if (accountSlots + txSizeInSlot(ethTransaction) > MaxSlotsPerAccount) {
+      log.trace(s"Adding transaction $ethTransaction exceeds maximum allowed number of slots per account: " +
+        s"tx slots: ${txSizeInSlot(ethTransaction)}, MaxSlotsPerAccount: $MaxSlotsPerAccount")
       throw AccountMemPoolOutOfBoundException(ethTransaction.id)
     }
     all.put(ethTransaction.id, ethTransaction)
     txByNonceMap.put(ethTransaction.getNonce, ethTransaction.id)
   }
 
-  def getAccountSize(account: SidechainTypes#SCP): Long = {
-    val execSize: Long = executableTxs.get(account).map(executableTxsPerAccount => executableTxsPerAccount.values.foldLeft(0L) { (sum, txId) => sum + txSizeInSlot(all(txId)) }).getOrElse(0L)
-    val accountSize: Long = nonExecutableTxs.get(account).map(nonExecTxsPerAccount => nonExecTxsPerAccount.values.foldLeft(execSize) { (sum, txId) => sum + txSizeInSlot(all(txId)) }).getOrElse(execSize)
-    accountSize
+  def getAccountSlots(account: SidechainTypes#SCP): Long = {
+    val execTxsSlots: Long = executableTxs.get(account).map(executableTxsPerAccount => executableTxsPerAccount.values.foldLeft(0L) { (sum, txId) => sum + txSizeInSlot(all(txId)) }).getOrElse(0L)
+    val accountSlots: Long = nonExecutableTxs.get(account).map(nonExecTxsPerAccount => nonExecTxsPerAccount.values.foldLeft(execTxsSlots) { (sum, txId) => sum + txSizeInSlot(all(txId)) }).getOrElse(execTxsSlots)
+    accountSlots
   }
 
   private[mempool] def replaceIfCanPayHigherFee(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap) = {
@@ -122,9 +123,10 @@ class MempoolMap(
     val diffSize = txSizeInSlot(newTx) - txSizeInSlot(existingTxWithSameNonce)
     if (diffSize > 0){
       val account = newTx.getFrom
-      val accountSize = getAccountSize(account)
-      if (accountSize + diffSize > MaxSlotsPerAccount) {
-        log.trace(s"Transaction $newTx cannot replace $existingTxId because it exceeds maximum allowed size per account")
+      val accountSlots = getAccountSlots(account)
+      if (accountSlots + diffSize > MaxSlotsPerAccount) {
+        log.trace(s"Transaction $newTx cannot replace $existingTxId because it exceeds maximum allowed number of slots" +
+          s" per account: additional tx slots: $diffSize, MaxSlotsPerAccount: $MaxSlotsPerAccount")
         throw AccountMemPoolOutOfBoundException(newTx.id)
       }
     }

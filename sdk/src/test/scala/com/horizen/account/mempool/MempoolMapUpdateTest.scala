@@ -655,7 +655,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
     val executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 2, executableTxs.size)
-    assertEquals("Wrong account size in slots", mempoolSettings.maxAccountSlots, mempoolMap.getAccountSize(tx14.getFrom))
+    assertEquals("Wrong account size in slots", mempoolSettings.maxAccountSlots, mempoolMap.getAccountSlots(tx14.getFrom))
   }
 
   def createTransactionWithDataSize(dataSize: Int, nonce: BigInteger): EthereumTransaction = {

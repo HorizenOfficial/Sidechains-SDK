@@ -10,7 +10,7 @@ from SidechainTestFramework.scutil import generate_next_block, \
     assert_equal, \
     assert_true
 from httpCalls.transaction.allTransactions import allTransactions
-from test_framework.util import forward_transfer_to_sidechain
+from test_framework.util import forward_transfer_to_sidechain, fail
 
 """
 Check that invalid transactions are not added to the mem pool.
@@ -261,17 +261,17 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
             nonce_addr_1 += 1
 
         big_data = 'FF' * 100 * 1024  # Should correspond to a tx of 4 slots
-        exception_occurs = False
         try:
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
                                      nonce=nonce_addr_1, gasLimit=1691401, maxPriorityFeePerGas=900000000,
                                      maxFeePerGas=900000000, value=1, data=str(big_data))
+            fail("Adding a transaction exceeding the account size should have failed")
         except RuntimeError as e:
             exception_occurs = True
             logging.info(
                 "Adding a transaction exceeding the account size had an exception as expected: {}".format(str(e)))
+            assert_true("exceeds account available space" in str(e), "Wrong exception type")
 
-        assert_true(exception_occurs, "Adding a transaction exceeding the account size should fail")
         response = allTransactions(sc_node_1, False)
         assert_equal(self.max_account_slots - 1, len(response["transactionIds"]),
                      "Transaction exceeding the account size added to node 1 mempool")

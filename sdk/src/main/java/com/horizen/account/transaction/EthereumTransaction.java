@@ -284,7 +284,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    public long size() {
+    public synchronized long size() {
         if (this.size == -1){
             this.size = serializer().toBytes(this).length;
         }
