@@ -18,8 +18,8 @@ import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.{BytesUtils, CountDownLatchController}
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
-import org.junit.{After, Assert, Test}
-import org.scalatest.BeforeAndAfterAll
+import org.junit.{After, Assert, Before, Test}
+import org.scalatest.{BeforeAndAfterAll, Ignore}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
@@ -402,8 +402,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Client 1 subscribe to logs method with one address filter
     val clientId1 = 1
     val logFilters = mapper.createObjectNode()
-    val logAddress = "0x90dc4f6c07c2ecb76768a70276206436e77a6645"
-    logFilters.put("address", logAddress)
+    logFilters.put("address", utilMocks.transactionAddress.toString)
     sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
@@ -415,7 +414,8 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
-    publishNewBlockEvent(utilMocks.blockWithTransaction)
+    var lastBlock = utilMocks.getNextBlockWithTransaction()
+    publishNewBlockEvent(lastBlock)
     assertTrue("No event message received.", countDownController.await(5000))
 
     countDownController.reset(1)
@@ -423,11 +423,11 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals(2, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
     endpoint.receivedMessage.remove(0)
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -436,11 +436,12 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     //Client 1 subscribe to logs method with two address filter (one contained and one not)
+    //We also verify that we check that the block received is not coming from a chain reorg (parentId is inside the Websocket cache)
     countDownController.reset(1)
     session = startSession(client, cec, endpoint)
     val logAddressNotIncluded = "0x1234567890123456789012345678901234567890"
     logFilters.removeAll()
-    logFilters.set("address", mapper.readTree(SerializationUtil.serialize(Array(logAddress, logAddressNotIncluded))))
+    logFilters.set("address", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionAddress.toString, logAddressNotIncluded))))
     sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
@@ -452,7 +453,8 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
-    publishNewBlockEvent(utilMocks.blockWithTransaction)
+    lastBlock = utilMocks.getNextBlockWithTransaction(Some(lastBlock.id))
+    publishNewBlockEvent(lastBlock)
     assertTrue("No event message received.", countDownController.await(5000))
 
     countDownController.reset(1)
@@ -460,11 +462,11 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals(2, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
     endpoint.receivedMessage.remove(0)
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -489,7 +491,8 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Publish a new block containing a transaction
     countDownController.reset(1)
 
-    publishNewBlockEvent(utilMocks.blockWithTransaction)
+    lastBlock = utilMocks.getNextBlockWithTransaction(Some(lastBlock.id))
+    publishNewBlockEvent(lastBlock)
     assertFalse("No event message received.", countDownController.await(5000))
     assertEquals(0, endpoint.receivedMessage.size())
 
@@ -514,7 +517,9 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
-    publishNewBlockEvent(utilMocks.blockWithTransaction)
+
+    lastBlock = utilMocks.getNextBlockWithTransaction(Some(lastBlock.id))
+    publishNewBlockEvent(lastBlock)
     assertTrue("No event message received.", countDownController.await(5000))
 
     countDownController.reset(1)
@@ -522,11 +527,11 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals(2, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
     endpoint.receivedMessage.remove(0)
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -539,7 +544,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     session = startSession(client, cec, endpoint)
     logFilters.removeAll()
     logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionTopic0))))
-    logFilters.put("address", logAddress)
+    logFilters.put("address", utilMocks.transactionAddress.toString)
     sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
@@ -551,7 +556,9 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
-    publishNewBlockEvent(utilMocks.blockWithTransaction)
+
+    lastBlock = utilMocks.getNextBlockWithTransaction(Some(lastBlock.id))
+    publishNewBlockEvent(lastBlock)
     assertTrue("No event message received.", countDownController.await(5000))
 
     countDownController.reset(1)
@@ -559,11 +566,11 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals(2, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
     endpoint.receivedMessage.remove(0)
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog2, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -576,7 +583,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     session = startSession(client, cec, endpoint)
     logFilters.removeAll()
     logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionTopic1))))
-    logFilters.put("address", logAddress)
+    logFilters.put("address", utilMocks.transactionAddress.toString)
     sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
@@ -588,12 +595,14 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Publish a new block containing a transaction
     countDownController.reset(1)
-    publishNewBlockEvent(utilMocks.blockWithTransaction)
+
+    lastBlock = utilMocks.getNextBlockWithTransaction(Some(lastBlock.id))
+    publishNewBlockEvent(lastBlock)
     assertTrue("No event message received.", countDownController.await(5000))
     assertEquals(1, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{logAddress}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -607,11 +616,94 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
-    //Verify that we receive a positive response
+    //Verify that we receive a negative response
     assertEquals(1, endpoint.receivedMessage.size())
     response = mapper.readTree(endpoint.receivedMessage.get(0))
     checkErrorResponse(response, clientId1, RpcCode.InvalidParams.code, "Missing filters (address, topcis).")
     endpoint.receivedMessage.remove(0)
+
+    // Disconnect client 1
+    session.close()
+
+    ///////////////// Chain reorganization ///////////////////////////////
+    countDownController.reset(1)
+
+    //Client 1 subscribe to logs method with one address filter
+    session = startSession(client, cec, endpoint)
+    logFilters.removeAll()
+    logFilters.put("address", utilMocks.transactionAddress.toString)
+    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, LOGS_SUBSCRIPTION.method, Option.apply(logFilters), session)
+    assertTrue("No event messages received.", countDownController.await(10000))
+
+    //Verify that we receive a positive response
+    assertEquals(1, endpoint.receivedMessage.size())
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkResponseMessage(response, clientId1)
+    endpoint.receivedMessage.remove(0)
+
+    countDownController.reset(1)
+    lastBlock = utilMocks.getNextBlockWithTransaction(Some(lastBlock.id))
+    publishNewBlockEvent(lastBlock)
+    assertTrue("No event message received.", countDownController.await(5000))
+
+    countDownController.reset(1)
+    assertTrue("No event message received.", countDownController.await(5000))
+
+    assertEquals(2, endpoint.receivedMessage.size())
+    endpoint.receivedMessage.remove(0)
+    endpoint.receivedMessage.remove(0)
+    assertEquals(0, endpoint.receivedMessage.size())
+
+    // Generate the one other block
+    countDownController.reset(1)
+    val secondLastBlockId = lastBlock.id
+    lastBlock = utilMocks.getNextBlockWithTransaction(Some(secondLastBlockId))
+    publishNewBlockEvent(lastBlock)
+    assertTrue("No event message received.", countDownController.await(5000))
+
+    countDownController.reset(1)
+    assertTrue("No event message received.", countDownController.await(5000))
+
+    assertEquals(2, endpoint.receivedMessage.size())
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+    endpoint.receivedMessage.remove(0)
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
+    endpoint.receivedMessage.remove(0)
+    assertEquals(0, endpoint.receivedMessage.size())
+
+    countDownController.reset(1)
+    assertFalse("Event message received.", countDownController.await(5000))
+    assertEquals(0, endpoint.receivedMessage.size())
+
+
+    // Create another blocks, the first 1 block generated should be removed and these one should be added
+    lastBlock = utilMocks.getNextBlockWithTransaction(Some(secondLastBlockId))
+    publishNewBlockEvent(lastBlock)
+
+    Thread.sleep(10000)
+    assertEquals(4, endpoint.receivedMessage.size())
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ZERO), removed = true)
+
+    response = mapper.readTree(endpoint.receivedMessage.get(1))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ONE), removed = true)
+
+    response = mapper.readTree(endpoint.receivedMessage.get(2))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ZERO))
+
+    response = mapper.readTree(endpoint.receivedMessage.get(3))
+    checkLogs(response, utilMocks.transactionReceipt, utilMocks.transactionLog, Option.apply(Array[String]{utilMocks.transactionAddress.toString}), Numeric.toHexStringWithPrefix(BigInteger.ONE))
+
+    assertEquals(4, endpoint.receivedMessage.size())
+
+    countDownController.reset(1)
+    assertFalse("Event message received.", countDownController.await(5000))
+    assertEquals(4, endpoint.receivedMessage.size())
+    endpoint.receivedMessage.clear()
 
     // Disconnect client 1
     session.close()
@@ -683,8 +775,9 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals("Wrong transaction hash", txHashJson, Numeric.prependHexPrefix(tx.id()))
   }
 
-  private def checkLogs(wsResponse: JsonNode, transactionReceipt: EthereumReceipt, transactionLog: EvmLog, addressFilter: Option[Array[String]], logIndex: String): Unit = {
+  private def checkLogs(wsResponse: JsonNode, transactionReceipt: EthereumReceipt, transactionLog: EvmLog, addressFilter: Option[Array[String]], logIndex: String, removed: Boolean = false): Unit = {
     checkWsEventStaticFields(wsResponse)
+    assertEquals("Wrong log removed property", wsResponse.get("params").get("removed").asBoolean(), removed)
 
     val logJson = wsResponse.get("params").get("result")
     if (addressFilter.isDefined && addressFilter.get.length > 0)

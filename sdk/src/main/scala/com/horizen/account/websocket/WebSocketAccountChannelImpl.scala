@@ -15,6 +15,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import com.horizen.account.websocket.WebSocketAccountServerRef.sidechainNodeViewHolderRef
 import akka.pattern.ask
 import com.horizen.account.api.rpc.types.EthereumBlockView
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.websocket.data.SubscriptionWithFilter
 import com.horizen.evm.utils.Hash
 import com.horizen.serialization.SerializationUtil
@@ -59,33 +60,33 @@ class WebSocketAccountChannelImpl extends WebSocketAccountChannel with SparkzLog
     }
   }
 
-  def getTransactionLogData(txHash: String, subscriptionWithFilter: SubscriptionWithFilter): Array[ObjectNode] = {
-    val txLogs: java.util.ArrayList[ObjectNode] = new util.ArrayList[ObjectNode]()
+  override def getTransactionReceipt(txHash: String): Option[EthereumReceipt] = {
     applyOnAccountView { nodeView =>
-      if (nodeView.state.getTransactionReceipt(BytesUtils.fromHexString(txHash)).isDefined) {
-        val txReceipt = nodeView.state.getTransactionReceipt(BytesUtils.fromHexString(txHash)).get
+      nodeView.state.getTransactionReceipt(BytesUtils.fromHexString(txHash))
+    }
+  }
 
-        if (subscriptionWithFilter.checkSubscriptionInBloom(txReceipt.consensusDataReceipt.logsBloom)) {
-          txReceipt.consensusDataReceipt.logs.zipWithIndex.foreach {
-            case (log, index) =>
-              if (subscriptionWithFilter.filterTransactionLogs(log)) {
-                val logJson = mapper.createObjectNode()
+  override def createWsLogEventFromEthereumReceipt(txReceipt: EthereumReceipt, subscriptionWithFilter: SubscriptionWithFilter): Array[ObjectNode] = {
+    val txLogs: java.util.ArrayList[ObjectNode] = new util.ArrayList[ObjectNode]()
+    if (subscriptionWithFilter.checkSubscriptionInBloom(txReceipt.consensusDataReceipt.logsBloom)) {
+      txReceipt.consensusDataReceipt.logs.zipWithIndex.foreach {
+        case (log, index) =>
+          if (subscriptionWithFilter.filterTransactionLogs(log)) {
+            val logJson = mapper.createObjectNode()
 
-                logJson.put("blockHash", Numeric.prependHexPrefix(BytesUtils.toHexString(txReceipt.blockHash)))
-                logJson.put("blockNumber", Numeric.toHexStringWithPrefix(BigInteger.valueOf(txReceipt.blockNumber)))
-                logJson.put("transactionHash", Numeric.prependHexPrefix(txHash))
-                logJson.put("transactionIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(txReceipt.transactionIndex)))
-                logJson.put("address", log.address.toString)
-                logJson.put("data", Numeric.prependHexPrefix(BytesUtils.toHexString(log.data)))
-                logJson.put("logIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(index)))
-                logJson.set("topics", mapper.readTree(SerializationUtil.serialize(log.topics.map(topic => Numeric.prependHexPrefix(BytesUtils.toHexString(topic.toBytes))))))
-                txLogs.add(logJson)
-              }
+            logJson.put("blockHash", Numeric.prependHexPrefix(BytesUtils.toHexString(txReceipt.blockHash)))
+            logJson.put("blockNumber", Numeric.toHexStringWithPrefix(BigInteger.valueOf(txReceipt.blockNumber)))
+            logJson.put("transactionHash", Numeric.prependHexPrefix(BytesUtils.toHexString(txReceipt.transactionHash)))
+            logJson.put("transactionIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(txReceipt.transactionIndex)))
+            logJson.put("address", log.address.toString)
+            logJson.put("data", Numeric.prependHexPrefix(BytesUtils.toHexString(log.data)))
+            logJson.put("logIndex", Numeric.toHexStringWithPrefix(BigInteger.valueOf(index)))
+            logJson.set("topics", mapper.readTree(SerializationUtil.serialize(log.topics.map(topic => Numeric.prependHexPrefix(BytesUtils.toHexString(topic.toBytes))))))
+            txLogs.add(logJson)
           }
-        }
       }
     }
-  txLogs.toArray(new Array[ObjectNode](0))
+    txLogs.toArray(new Array[ObjectNode](0))
   }
 
 

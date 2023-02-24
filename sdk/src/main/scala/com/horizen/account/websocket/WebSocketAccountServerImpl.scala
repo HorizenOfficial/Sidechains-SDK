@@ -2,9 +2,9 @@ package com.horizen.account.websocket
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.websocket.server.WebSocketServerBaseImpl
-
 import jakarta.websocket._
 
 @ClientEndpoint
@@ -24,10 +24,6 @@ class WebSocketAccountServerImpl(bindPort: Int, configuration: Class[_]) extends
 
   def onMempoolReaddedTransaction(readdedTxs: Seq[EthereumTransaction]): Unit = {
     WebSocketAccountServerEndpoint.notifyMempoolReaddedTransactions(readdedTxs)
-  }
-
-  def onRemovedMempoolTransactions(removedTxs: Seq[SidechainTypes#SCAT]): Unit = {
-    WebSocketAccountServerEndpoint.notifyRemovedTransactions(removedTxs)
   }
 
 }
