@@ -13,6 +13,16 @@ KEY_ROTATION_CIRCUIT = 'NaiveThresholdSignatureCircuitWithKeyRotation'
 
 DEFAULT_API_KEY = "TopSecret"
 
+# Default value of max difference between tx nonce and state nonce allowed by mempool.
+DEFAULT_MAX_NONCE_GAP = 16
+# Default value of max number of slots a single account transactions can occupy
+DEFAULT_MAX_ACCOUNT_SLOTS = 16
+# Default value of max number of mempool slots transactions can occupy
+DEFAULT_MAX_MEMPOOL_SLOTS = 6144
+# Default value of max number of non exec sub slots transactions can occupy
+DEFAULT_MAX_NONEXEC_POOL_SLOTS = 1024
+# Default value of max time a tx can stay in the mempool waiting to be included in a block, in seconds
+DEFAULT_TX_LIFETIME = 10800
 """
 All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
@@ -136,11 +146,11 @@ class SCNodeConfiguration(object):
                  remote_keys_manager_enabled=False,
                  storage_backup_interval='15m',
                  storage_backup_delay='5m',
-                 max_nonce_gap=16,
-                 max_account_slots=16,
-                 max_mempool_slots=6144,
-                 max_nonexec_pool_slots=1024,
-                 tx_lifetime=10800
+                 max_nonce_gap=DEFAULT_MAX_NONCE_GAP,
+                 max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
+                 max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
+                 tx_lifetime=DEFAULT_TX_LIFETIME
                  ):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))

@@ -11,7 +11,8 @@ from test_framework.util import start_nodes, websocket_port_by_mc_node_index, as
     forward_transfer_to_sidechain
 
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
-    SC_CREATION_VERSION_1
+    SC_CREATION_VERSION_1, DEFAULT_MAX_NONCE_GAP, DEFAULT_MAX_ACCOUNT_SLOTS, \
+    DEFAULT_MAX_MEMPOOL_SLOTS, DEFAULT_MAX_NONEXEC_POOL_SLOTS, DEFAULT_TX_LIFETIME
 
 
 class AccountChainSetup(SidechainTestFramework):
@@ -20,8 +21,9 @@ class AccountChainSetup(SidechainTestFramework):
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
                  initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
-                 max_nonce_gap=16, max_account_slots=16, max_mempool_slots=6144, max_nonexec_pool_slots=1024,
-                 tx_lifetime=10800):
+                 max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
+                 tx_lifetime=DEFAULT_TX_LIFETIME):
 
         self.evm_address = None
         self.sc_nodes = None
