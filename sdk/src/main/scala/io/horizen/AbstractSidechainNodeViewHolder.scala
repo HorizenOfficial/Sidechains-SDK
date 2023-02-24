@@ -462,8 +462,6 @@ object AbstractSidechainNodeViewHolder {
 
     case class MempoolReAddedTransactions[T <: SidechainTypes#SCAT](readdedTxs: Seq[T])
 
-    case class RemovedMempoolTransactions[T <: SidechainTypes#SCAT](removedTxs: Seq[T])
-
     case object GetStorageVersions
 
   }
