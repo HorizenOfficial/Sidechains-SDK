@@ -20,6 +20,7 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView
 import com.horizen.evm.utils.{Address, Hash}
+import sparkz.core.block.Block
 
 import java.math.BigInteger
 import java.util.Optional
@@ -48,13 +49,14 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
   val transactionTopic1 = new Hash("0x00000000000000000000000053e53e5d0bedbd9d13a0a0e0441597db24f255c3")
   val transactionTopic2 = new Hash("0x000000000000000000000000b3eb3c0bf99677d0c9ff18030c66e1bb78967994")
 
+  val transactionAddress = new Address("0x90dc4f6c07c2ecb76768a70276206436e77a6645")
   val transactionLog = new EvmLog(
-    new Address("0x90dc4f6c07c2ecb76768a70276206436e77a6645"),
+    transactionAddress,
     Array(transactionTopic0, transactionTopic1, transactionTopic2),
     BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001")
   )
   val transactionLog2 = new EvmLog(
-    new Address("0x90dc4f6c07c2ecb76768a70276206436e77a6645"),
+    transactionAddress,
     Array(transactionTopic0),
     BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001")
   )
@@ -84,10 +86,15 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
     null
   )
 
-  val blockWithTransaction = AccountBlockFixture.generateAccountBlock(sidechainAccountTransactionsCompanion,
-    transactions = Some(Seq(transactionWithLogs.asInstanceOf[SidechainTypes#SCAT])),
-    bloom = Some(new Bloom(BytesUtils.fromHexString("00000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000001000000040000008000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000010000100000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000001000000000000000000000004000000000000000000000000000000040000000000")))
-  )
+  def getNextBlockWithTransaction(prevBlockId: Option[Block.BlockId] = None): AccountBlock = {
+    AccountBlockFixture.generateAccountBlock(
+      sidechainAccountTransactionsCompanion,
+      parentOpt = prevBlockId,
+      transactions = Some(Seq(transactionWithLogs.asInstanceOf[SidechainTypes#SCAT])),
+      bloom = Some(new Bloom(BytesUtils.fromHexString("00000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000001000000040000008000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000010000100000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000001000000000000000000000004000000000000000000000000000000040000000000")))
+    )
+  }
+
 
   def getNodeHistoryMock: AccountHistory = {
     val history: AccountHistory = mock[AccountHistory]

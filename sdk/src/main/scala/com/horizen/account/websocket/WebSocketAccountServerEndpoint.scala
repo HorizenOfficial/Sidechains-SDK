@@ -1,5 +1,7 @@
 package com.horizen.account.websocket
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+
 import java.util
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -8,10 +10,10 @@ import com.horizen.account.api.rpc.request.{RpcId, RpcRequest}
 import com.horizen.account.api.rpc.response.{RpcResponseError, RpcResponseSuccess}
 import com.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebsocketAccountResponse}
 import com.horizen.serialization.SerializationUtil
-
 import jakarta.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
 import jakarta.websocket.server.ServerEndpoint
 import sparkz.util.SparkzLogging
@@ -21,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.web3j.utils.Numeric
 
 import java.math.BigInteger
+import scala.collection.mutable
 
 abstract class WebSocketAccountRequest(val request: String)
 case object SUBSCRIBE_REQUEST extends WebSocketAccountRequest("eth_subscribe")
@@ -169,6 +172,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
 
   val webSocketAccountChannelImpl = new WebSocketAccountChannelImpl()
   private var walletKeys: Set[String] = webSocketAccountChannelImpl.getWalletKeys()
+  private var cachedBlocksReceipts: mutable.Queue[(String, Seq[EthereumReceipt])] = new mutable.Queue[(String, Seq[EthereumReceipt])]()
 
   def notifySemanticallySuccessfulModifier(block: AccountBlock): Unit = {
     log.info("Websocket received new block: "+block.toString)
@@ -183,11 +187,17 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
       send(new WebsocketAccountResponse("eth_subscription", responsePayload), subscription.session)
     })
 
-    logsSubscriptions.forEach(subscription => {
-      if (subscription.checkSubscriptionInBloom(block.header.logsBloom)) {
-        block.transactions.foreach(tx => getTransactionsLogData(tx, subscription))
-      }
-    })
+    //We have a chain reorganization
+    while (cachedBlocksReceipts.nonEmpty && !cachedBlocksReceipts.last._1.equals(block.parentId)) {
+      val oldTip = cachedBlocksReceipts.last
+      logsSubscriptions.forEach(subscription => {
+        oldTip._2.foreach(receipt => {
+          sendTransactionLog(webSocketAccountChannelImpl.createWsLogEventFromEthereumReceipt(receipt, subscription), subscription, removed = true)
+        })
+      })
+      cachedBlocksReceipts = cachedBlocksReceipts.dropRight(cachedBlocksReceipts.size)
+    }
+    processBlockReceipt(block)
   }
 
   def notifyNewPendingTransaction(tx: EthereumTransaction): Unit = {
@@ -210,21 +220,35 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     )
   }
 
-  def notifyRemovedTransactions(removedTxs: Seq[SidechainTypes#SCAT]): Unit = {
+  private def processBlockReceipt(block: AccountBlock): Unit = {
+    val relevantBlockReceipt: util.ArrayList[EthereumReceipt] = new util.ArrayList[EthereumReceipt]()
     logsSubscriptions.forEach(subscription => {
-      removedTxs.foreach(tx => getTransactionsLogData(tx, subscription, removed = true))
+      if (subscription.checkSubscriptionInBloom(block.header.logsBloom)) {
+        block.transactions.foreach(tx => getTransactionsLogData(tx, subscription, relevantBlockReceipt))
+      }
     })
+    cachedBlocksReceipts.enqueue((block.id, relevantBlockReceipt.toArray(Array[EthereumReceipt]()).toSeq))
+    if (cachedBlocksReceipts.size > 10) {
+      cachedBlocksReceipts.dequeue()
+    }
   }
 
-  private def getTransactionsLogData(tx: SidechainTypes#SCAT, subscription: SubscriptionWithFilter, removed: Boolean = false): Unit = {
+  private def getTransactionsLogData(tx: SidechainTypes#SCAT, subscription: SubscriptionWithFilter, relevantBlockReceipt: util.ArrayList[EthereumReceipt]): Unit = {
+    webSocketAccountChannelImpl.getTransactionReceipt(tx.id) match {
+      case Some(txReceipt) =>
+        relevantBlockReceipt.add(txReceipt)
+        sendTransactionLog(webSocketAccountChannelImpl.createWsLogEventFromEthereumReceipt(txReceipt, subscription), subscription)
+      case None =>
+    }
 
-    val txLogs = webSocketAccountChannelImpl.getTransactionLogData(tx.id, subscription)
+  }
+
+  private def sendTransactionLog(txLogs: Array[ObjectNode], subscription: SubscriptionWithFilter, removed: Boolean = false): Unit = {
     txLogs.foreach(txLog => {
       val responsePayload = mapper.createObjectNode()
       responsePayload.set("result", txLog)
       responsePayload.put("subscription", subscription.subscriptionId)
-      if (removed)
-        responsePayload.put("removed", true)
+      responsePayload.put("removed", removed)
       send(new WebsocketAccountResponse("eth_subscription", responsePayload), subscription.session)
     })
   }

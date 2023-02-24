@@ -1,9 +1,9 @@
 package com.horizen.account.websocket
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{MempoolReAddedTransactions, RemovedMempoolTransactions}
-import com.horizen.SidechainTypes
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.transaction.EthereumTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedVault, SemanticallySuccessfulModifier, SuccessfulTransaction}
 import sparkz.util.SparkzLogging
@@ -27,7 +27,6 @@ class WebSocketAccountServer(wsPort: Int)
     context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[_]])
     context.system.eventStream.subscribe(self, classOf[ChangedVault[_]])
     context.system.eventStream.subscribe(self, classOf[MempoolReAddedTransactions[_]])
-    context.system.eventStream.subscribe(self, classOf[RemovedMempoolTransactions[_]])
   }
 
   override def postStop(): Unit = {
@@ -51,8 +50,6 @@ class WebSocketAccountServer(wsPort: Int)
       websocket.onChangedVault()
     case MempoolReAddedTransactions(readdedTxs: Seq[EthereumTransaction]) =>
       websocket.onMempoolReaddedTransaction(readdedTxs)
-    case RemovedMempoolTransactions(removedTxs: Seq[SidechainTypes#SCAT]) =>
-      websocket.onRemovedMempoolTransactions(removedTxs)
   }
 }
 
