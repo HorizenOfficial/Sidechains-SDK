@@ -22,7 +22,8 @@ class MempoolMap(
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
   type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
-  val maxNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap)
+  // This constant added to the state nonce gives the maximum nonce that a tx can have to be accepted in the mempool
+  val maxAllowedNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap).subtract(BigInteger.ONE)
 
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap.empty[ModifierId, SidechainTypes#SCAT]
@@ -34,6 +35,8 @@ class MempoolMap(
     TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
   // Next expected nonce for each account. It is the max nonce of the executable txs plus 1, if any, otherwise it has the same value of the statedb nonce.
   private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap.empty[SidechainTypes#SCP, BigInteger]
+
+  def getMaxAcceptableNonce(stateNonce: BigInteger): BigInteger = stateNonce.add(maxAllowedNonceGap)
 
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
@@ -48,9 +51,10 @@ class MempoolMap(
       }
 
       val stateNonce = accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
-      if (ethTransaction.getNonce.subtract(stateNonce).compareTo(maxNonceGap) >= 0) {
+      val maxAcceptableNonce = getMaxAcceptableNonce(stateNonce)
+      if (ethTransaction.getNonce.compareTo(maxAcceptableNonce) > 0) {
         log.trace(s"Transaction $ethTransaction nonce gap respect state nonce exceeds maximum allowed size: tx nonce ${ethTransaction.getNonce()}, " +
-          s"state nonce: $stateNonce, maximum nonce gap $maxNonceGap")
+          s"state nonce: $stateNonce, maximum nonce gap $maxAllowedNonceGap")
         throw NonceGapTooWideException(ethTransaction.id, ethTransaction.getNonce, stateNonce)
       }
       val expectedNonce = nonces.getOrElseUpdate(
@@ -257,7 +261,7 @@ class MempoolMap(
     val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
 
     val stateNonce = txsFromRejectedBlocks.head.getNonce
-    val maxAcceptableNonce = stateNonce.add(maxNonceGap.subtract(BigInteger.ONE))
+    val maxAcceptableNonce = getMaxAcceptableNonce(stateNonce)
 
     // Recreates from scratch the account's nonExecTxs and execTxs maps, starting from txs from rejected blocks.
     // They are by default directly added to the execTxs map, because the nonce is surely not too low. If a tx is found invalid
