@@ -270,8 +270,8 @@ class MempoolMap(
 
     txsFromRejectedBlocks.withFilter(_ => !maxNonceGapExceeded)
       .foreach { tx =>
-        if (tx.getNonce.compareTo(maxAcceptableNonce) <= 0) {
-          if (tx.size() <= MaxTxSize && balance.compareTo(tx.maxCost) >= 0) {
+       if (tx.getNonce.compareTo(maxAcceptableNonce) <= 0) {
+          if (balance.compareTo(tx.maxCost) >= 0 && tx.size() <= MaxTxSize) {
             all.put(tx.id, tx)
             destMap.put(tx.getNonce, tx.id)
           } else {
@@ -520,12 +520,12 @@ class MempoolMap(
 
 object MempoolMap {
   val TxSlotSize: Int = 32 * 1024
-  val MaxNumOfSlotsForTx = 4
-  val MaxTxSize = MaxNumOfSlotsForTx * TxSlotSize
+  val MaxNumOfSlotsForTx: Int = 4
+  val MaxTxSize: Int = MaxNumOfSlotsForTx * TxSlotSize
 
-  def txSizeInSlot(tx: SidechainTypes#SCAT): Long = bytesToSlot(tx.size())
+  def txSizeInSlot(tx: SidechainTypes#SCAT): Long = sizeToSlot(tx.size())
 
-  def bytesToSlot(numOfBytes: Long): Long = {
+  def sizeToSlot(numOfBytes: Long): Long = {
     require(numOfBytes >= 0, "Illegal negative size value")
     (numOfBytes + TxSlotSize - 1) / TxSlotSize
   }

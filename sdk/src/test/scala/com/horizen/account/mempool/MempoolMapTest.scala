@@ -1037,22 +1037,22 @@ class MempoolMapTest
   def txSizeInSlotTest(): Unit = {
 
     val invalidNegativeSize = -1L
-    assertThrows[IllegalArgumentException]("Negative size values are not allowed", MempoolMap.bytesToSlot(invalidNegativeSize))
+    assertThrows[IllegalArgumentException]("Negative size values are not allowed", MempoolMap.sizeToSlot(invalidNegativeSize))
 
     var size: Long = 0
-    assertEquals("Wrong number of slots", 0,  MempoolMap.bytesToSlot(size))
+    assertEquals("Wrong number of slots", 0,  MempoolMap.sizeToSlot(size))
 
     size = 1
-    assertEquals("Wrong number of slots", 1,  MempoolMap.bytesToSlot(size))
+    assertEquals("Wrong number of slots", 1,  MempoolMap.sizeToSlot(size))
 
     size = MempoolMap.TxSlotSize
-    assertEquals("Wrong number of slots", 1,  MempoolMap.bytesToSlot(size))
+    assertEquals("Wrong number of slots", 1,  MempoolMap.sizeToSlot(size))
 
     size = MempoolMap.TxSlotSize + 1
-    assertEquals("Wrong number of slots", 2,  MempoolMap.bytesToSlot(size))
+    assertEquals("Wrong number of slots", 2,  MempoolMap.sizeToSlot(size))
 
     size = 2 * MempoolMap.TxSlotSize + 1
-    assertEquals("Wrong number of slots", 3, MempoolMap.bytesToSlot(size))
+    assertEquals("Wrong number of slots", 3, MempoolMap.sizeToSlot(size))
 
 
     val tx = mock[EthereumTransaction]
