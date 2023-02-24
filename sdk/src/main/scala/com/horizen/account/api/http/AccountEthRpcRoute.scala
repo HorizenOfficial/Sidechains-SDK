@@ -33,6 +33,7 @@ import scala.util.{Failure, Success, Try}
 case class AccountEthRpcRoute(
     override val settings: RESTApiSettings,
     sidechainNodeViewHolderRef: ActorRef,
+    networkControllerRef: ActorRef,
     sidechainSettings: SidechainSettings,
     params: NetworkParams,
     sidechainTransactionActorRef: ActorRef,
@@ -63,9 +64,12 @@ case class AccountEthRpcRoute(
   private val rpcHandler = new RpcHandler(
     new EthService(
       sidechainNodeViewHolderRef,
+      networkControllerRef,
       settings.timeout,
       params,
       sidechainSettings.ethService,
+      sidechainSettings.sparkzSettings.network.maxIncomingConnections,
+      getClientVersion,
       sidechainTransactionActorRef
     )
   )
@@ -107,5 +111,18 @@ case class AccountEthRpcRoute(
           }
         }
     }
+  }
+
+  private def getClientVersion: String = {
+    val default = "dev"
+    val architecture = Try(System.getProperty("os.arch")).getOrElse(default)
+    val javaVersion = Try(System.getProperty("java.specification.version")).getOrElse(default)
+    val sdkPackage = this.getClass.getPackage
+    val sdkTitle = sdkPackage.getImplementationTitle match {
+      case null => default
+      case title => Try(title.split(":")(1)).getOrElse(title)
+    }
+    val sdkVersion = sdkPackage.getImplementationVersion
+    s"$sdkTitle/$sdkVersion/$architecture/jdk$javaVersion"
   }
 }
