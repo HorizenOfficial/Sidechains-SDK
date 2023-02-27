@@ -760,7 +760,7 @@ class AccountSidechainNodeViewHolderPerfTest
   sidechain forging than the mainchain. In this case the idea is to have 20 sidechain blocks for each mainchain block.
    */
   @Test
-  // @Ignore
+  @Ignore
   def updateMemPoolMainchainForkTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolMainchainForkTest.txt", true))
 
