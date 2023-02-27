@@ -7,7 +7,7 @@ import sparkz.util.ModifierId
 import scala.collection.concurrent.TrieMap
 
 /*
-Thsi class contains all the transactions accepted in the mempool.
+This class contains all the transactions accepted in the mempool.
 Transactions can be retrieved from the cache or by transaction id or by arrival order.
  */
 class TxCache {

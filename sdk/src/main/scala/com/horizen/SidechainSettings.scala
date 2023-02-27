@@ -97,6 +97,8 @@ case class AccountMempoolSettings(maxNonceGap: Int = 16,
   require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
   require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
   require(maxMemPoolSlots > 0, s"Maximum Memory Pool Slots not positive: $maxMemPoolSlots")
+  require(maxMemPoolSlots >= maxAccountSlots, s"Maximum number of account slots cannot be bigger than maximum number of " +
+    s"Memory Pool slots: account slots $maxAccountSlots - Memory Pool slots $maxMemPoolSlots")
 }
 
 case class SidechainSettings(

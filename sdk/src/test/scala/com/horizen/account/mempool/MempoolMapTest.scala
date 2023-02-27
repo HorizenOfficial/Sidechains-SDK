@@ -1247,7 +1247,8 @@ class MempoolMapTest
   def testAddMempoolSizeCheck(): Unit = {
 
     val MaxMempoolSlots = 10
-    val mempoolSettings: AccountMempoolSettings = AccountMempoolSettings(maxMemPoolSlots = MaxMempoolSlots)
+    val mempoolSettings: AccountMempoolSettings = AccountMempoolSettings(maxAccountSlots = MaxMempoolSlots,
+                                                                        maxMemPoolSlots = MaxMempoolSlots)
     var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
     assertEquals("Wrong mempool size in slots", 0, mempoolMap.getMempoolSizeInSlots)
 
@@ -1260,7 +1261,7 @@ class MempoolMapTest
     assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
 
     var oldestTx = listOfTxs.head
-    var exceedingTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(MaxMempoolSlots), keyOpt = account1KeyOpt)
+    var exceedingTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account2KeyOpt)
 
     mempoolMap = mempoolMap.add(exceedingTx) match {
       case Success(m) => m
@@ -1270,11 +1271,11 @@ class MempoolMapTest
     assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
     assertTrue("Rejected tx wasn't added to the mempool", mempoolMap.contains(ModifierId @@ exceedingTx.id))
     assertFalse("Oldest tx wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ oldestTx.id))
-    //Check that after having evicted the oldest tx, all the remaining ones have become non executable
-    assertTrue(mempoolMap.mempoolTransactions(true).isEmpty)
-    assertEquals(listOfTxs.size, mempoolMap.mempoolTransactions(false).size)
+    //Check that after having evicted the oldest tx, all the remaining txs for  account1 have become non executable
+    assertEquals(1, mempoolMap.mempoolTransactions(true).size)
+    assertEquals(MaxMempoolSlots - 1, mempoolMap.mempoolTransactions(false).size)
 
-    //Test 2: same as test 1 but with exceeding tx from a different account and with a size corresponding to 4 slots =>
+    //Test 2: same as test 1 but with exceeding tx with a size corresponding to 4 slots =>
     // 4 txs will be evicted
     exceedingTx = addMockSizeToTx(
       createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.TWO, keyOpt = account2KeyOpt),
@@ -1342,7 +1343,8 @@ class MempoolMapTest
     // a bigger one will evict oldest txs.
     // Reset mempool
     val MaxMempoolSlots = 10
-    val mempoolSettings: AccountMempoolSettings = AccountMempoolSettings(maxMemPoolSlots = MaxMempoolSlots)
+    val mempoolSettings: AccountMempoolSettings = AccountMempoolSettings(maxAccountSlots = MaxMempoolSlots,
+                                                                          maxMemPoolSlots = MaxMempoolSlots)
     var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
     val txToReplace1 = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.ONE,
       nonce = BigInteger.ZERO,
@@ -1440,11 +1442,16 @@ class MempoolMapTest
     mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
 
     //Fill the mempool with exec txs from the same account
-    val listOfTxs = (0 until MaxMempoolSlots).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt))
+    val listOfTxs = (0 until MaxMempoolSlots - 1).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt))
     listOfTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
-    assertEquals("Wrong number of txs in mempool", listOfTxs.size, mempoolMap.size)
-    assertEquals("Wrong account size in slots", MaxMempoolSlots, mempoolMap.getAccountSlots(account1KeyOpt.get.publicImage()))
+    assertTrue("Adding transaction failed", mempoolMap.add(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = account2KeyOpt)).isSuccess)
+
+    assertEquals("Wrong number of txs in mempool", MaxMempoolSlots, mempoolMap.size)
+    assertEquals("Wrong account size in slots", MaxMempoolSlots - 1, mempoolMap.getAccountSlots(account1KeyOpt.get.publicImage()))
     assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
+    assertEquals("Wrong number of executable txs", MaxMempoolSlots, mempoolMap.mempoolTransactions(true).size)
+    assertEquals("Wrong number of non executable txs", 0, mempoolMap.mempoolTransactions(false).size)
+
 
     val txToReplace = listOfTxs.head
     val replacingTx = addMockSizeToTx(createEIP1559Transaction(value = BigInteger.ONE,
@@ -1459,15 +1466,15 @@ class MempoolMapTest
       case Success(m) => m
       case Failure(e) => fail(s"Adding exec transaction to a full mempool failed with exception $e", e)
     }
-    assertEquals("Wrong number of txs in mempool", listOfTxs.size - 1, mempoolMap.size)
+    assertEquals("Wrong number of txs in mempool", MaxMempoolSlots - 1, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", MaxMempoolSlots, mempoolMap.getMempoolSizeInSlots)
     assertTrue("Replacing tx wasn't added to the mempool", mempoolMap.contains(ModifierId @@ replacingTx.id))
     assertFalse("Tx to be replaced wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ txToReplace.id))
     assertFalse("Second oldest tx wasn't removed from the mempool", mempoolMap.contains(ModifierId @@ listOfTxs(1).id))
 
     //Check that after having evicted the oldest 2 txs, all the remaining ones have become non executable
-    assertEquals("Replacing tx should be executable", 1, mempoolMap.mempoolTransactions(true).size)
-    assertEquals("Remaining txs should be non executable", listOfTxs.size - 2, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Replacing tx should be executable", 2, mempoolMap.mempoolTransactions(true).size)
+    assertEquals("Remaining txs should be non executable", MaxMempoolSlots - 3, mempoolMap.mempoolTransactions(false).size)
 
   }
 

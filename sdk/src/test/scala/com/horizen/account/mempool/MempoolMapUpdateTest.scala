@@ -679,7 +679,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // Test 1: Txs from reverted blocks exceed mempool size. Verify that oldest txs are evicted
 
     //Initialize mempool
-    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings(maxMemPoolSlots = 8))
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider,
+                                  AccountMempoolSettings(maxAccountSlots = 8,maxMemPoolSlots = 8))
     //Update the nonce in the state db
     Mockito
       .when(accountStateViewMock.getNonce(addressA))
