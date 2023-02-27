@@ -40,7 +40,7 @@ import scala.util.Random
 /*
   This class is used for testing performance related to modifications to the memory pool.
  */
-@Ignore
+
 class AccountSidechainNodeViewHolderPerfTest
     extends JUnitSuite
       with EthereumTransactionFixture
@@ -259,10 +259,8 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
 
-      //val numOfTxs = 10016 //this weird number is just to have an integer number of accounts
-      val numOfTxs = 100000 //this weird number is just to have an integer number of accounts
- //     val numOfTxsPerSpammerAccounts = 16
-      val numOfTxsPerSpammerAccounts = 1
+      val numOfTxs = 10016 //this weird number is just to have an integer number of accounts
+      val numOfTxsPerSpammerAccounts = 16
       val numOfTxsPerNormalAccounts = 1
       val normalSpammerRatio = numOfTxsPerSpammerAccounts / numOfTxsPerNormalAccounts
       assertTrue(
@@ -723,8 +721,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(AccountMempoolSettings())
-
       val numOfTxs = 10000
       val numOfTxsPerAccount = 5
       val numOfAccounts = numOfTxs / numOfTxsPerAccount
@@ -732,6 +728,11 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Total number of transactions:            $numOfTxs\n")
       out.write(s"Number of accounts:                      $numOfAccounts\n")
       out.write(s"Number of transactions for each account: $numOfTxsPerAccount\n")
+
+      val mempoolSettings = AccountMempoolSettings(
+        maxMemPoolSlots = numOfTxs
+      )
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       println(s"************** Test ordering executable transactions with $numOfTxs in mem pool **************")
 

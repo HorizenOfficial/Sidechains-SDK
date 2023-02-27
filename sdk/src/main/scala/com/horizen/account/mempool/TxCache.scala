@@ -2,13 +2,18 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.mempool.MempoolMap.txSizeInSlot
+import com.horizen.account.mempool.TxExecutableStatus.TxExecutableStatus
 import sparkz.util.ModifierId
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.duration.{Deadline, DurationInt, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 
-class TxCache(txLifetime: FiniteDuration = 3.hours) {
+/*
+This class contains all the transactions accepted in the mempool.
+Transactions can be retrieved from the cache or by transaction id or by arrival order.
+ */
+class TxCache(txLifetime: FiniteDuration) {
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, TxMetaInfo] = TrieMap.empty[ModifierId, TxMetaInfo]
   private var sizeInSlots: Int = 0
@@ -17,50 +22,46 @@ class TxCache(txLifetime: FiniteDuration = 3.hours) {
   private var oldestTx: Option[TxMetaInfo] = None
   private var youngestTx: Option[TxMetaInfo] = None
 
-  def add(tx: SidechainTypes#SCAT, isNonExec: Boolean): Unit = {
-    val txInf0 = TxMetaInfo(tx, isNonExec)
-    all.put(tx.id, txInf0)
+  def add(tx: SidechainTypes#SCAT, execStatus: TxExecutableStatus): Unit = {
+    val txInfo = new TxMetaInfo(tx, execStatus, txLifetime)
+    all.put(tx.id, txInfo)
     val txSize = txSizeInSlot(tx)
     sizeInSlots += txSize
-    if (isNonExec){
+    if (execStatus == TxExecutableStatus.NON_EXEC){
       nonExecSizeInSlots += txSize
     }
     if (oldestTx.isEmpty) {
-      oldestTx = Some(txInf0)
+      oldestTx = Some(txInfo)
       youngestTx = oldestTx
     }
     else {
       val tmp = youngestTx
-      youngestTx = Some(txInf0)
-      youngestTx.get.previous = tmp
-      tmp.get.next = youngestTx
+      youngestTx = Some(txInfo)
+      youngestTx.get.older = tmp
+      tmp.get.younger = youngestTx
     }
   }
 
   def remove(txId: ModifierId): Option[SidechainTypes#SCAT] = {
-    val txInfoOpt = all.remove(txId)
-    txInfoOpt.map { txInfo =>
-      val prev = txInfo.previous
-      val next = txInfo.next
-      if (prev.isEmpty && next.isEmpty){
-        oldestTx = None
-        youngestTx = None
-      }
-      else if (prev.isEmpty) {
-        oldestTx = next
-        next.get.previous = None
-      }
-      else if (next.isEmpty) {
-        youngestTx = prev
-        prev.get.next = None
-      }
-      else {
-        prev.get.next = next
-        next.get.previous = prev
+    all.remove(txId).map { txInfo =>
+      (txInfo.older, txInfo.younger) match {
+        case (None, None) =>
+          oldestTx = None
+          youngestTx = None
+        case (None, younger) =>
+          oldestTx = younger
+          younger.get.older = None
+        case (older, None) =>
+          youngestTx = older
+          older.get.younger = None
+        case (older, younger) =>
+          older.get.younger = younger
+          younger.get.older = older
+
       }
       val txSize = txSizeInSlot(txInfo.tx)
       sizeInSlots -= txSize
-      if (txInfo.isNotExecutable){
+      if (txInfo.executableStatus == TxExecutableStatus.NON_EXEC){
         nonExecSizeInSlots -= txSize
       }
       txInfo.tx
@@ -71,14 +72,14 @@ class TxCache(txLifetime: FiniteDuration = 3.hours) {
 
   def promoteTransaction(txId: ModifierId): Unit = {
     all.get(txId).foreach { txInfo =>
-      txInfo.isNotExecutable = false
+      txInfo.executableStatus = TxExecutableStatus.EXEC
       nonExecSizeInSlots -= txSizeInSlot(txInfo.tx)
     }
   }
 
   def demoteTransaction(txId: ModifierId): Unit = {
     all.get(txId).foreach { txInfo =>
-      txInfo.isNotExecutable = true
+      txInfo.executableStatus = TxExecutableStatus.NON_EXEC
       nonExecSizeInSlots += txSizeInSlot(txInfo.tx)
     }
   }
@@ -107,24 +108,16 @@ class TxCache(txLifetime: FiniteDuration = 3.hours) {
 
   def getNonExecIterator(): NonExecTransactionIterator = new NonExecTransactionIterator
 
-  case class TxMetaInfo(tx: SidechainTypes#SCAT, var isNotExecutable: Boolean) {
-    val deadline: Deadline = txLifetime.fromNow
-    var next: Option[TxMetaInfo] = None
-    var previous: Option[TxMetaInfo] = None
-
-    def hasTimedOut: Boolean = deadline.isOverdue()
-  }
-
   class NonExecTransactionIterator {
 
     private var nextElem: Option[TxMetaInfo] = oldestTx
 
     @tailrec
     final private[mempool] def findNext(txInfo: Option[TxMetaInfo]): Option[TxMetaInfo] = {
-      if (txInfo.isEmpty || txInfo.get.isNotExecutable)
+      if (txInfo.isEmpty || txInfo.get.executableStatus == TxExecutableStatus.NON_EXEC)
         txInfo
       else {
-        findNext(txInfo.get.next)
+        findNext(txInfo.get.younger)
       }
     }
 
@@ -133,15 +126,15 @@ class TxCache(txLifetime: FiniteDuration = 3.hours) {
     }
 
     def next: SidechainTypes#SCAT = {
-      val tmp = findNext(nextElem)
-      if (tmp.isEmpty) {
-        nextElem = tmp
-        throw new NoSuchElementException()
-      } else {
-        val txInfo = tmp.get
-        nextElem = txInfo.next
-        txInfo.tx
+      findNext(nextElem) match {
+        case None =>
+          nextElem = None
+          throw new NoSuchElementException()
+        case Some(txInfo) =>
+          nextElem = txInfo.younger
+          txInfo.tx
       }
+
     }
 
   }
