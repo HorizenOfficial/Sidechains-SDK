@@ -2,7 +2,8 @@ package com.horizen.account.mempool
 
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.mempool.MempoolMap._
-import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException, TxOversizedException, TransactionReplaceUnderpricedException}
+import com.horizen.account.mempool.TxExecutableStatus.TxExecutableStatus
+import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException, TransactionReplaceUnderpricedException, TxOversizedException}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
@@ -102,7 +103,7 @@ class MempoolMap(
         case AddNewExecTransaction =>
           val executableTxsPerAccount =
             executableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
-          addNewTransaction(executableTxsPerAccount, ethTransaction, isNotExec = false)
+          addNewTransaction(executableTxsPerAccount, ethTransaction, TxExecutableStatus.EXEC)
           var nextNonce = expectedNonce.add(BigInteger.ONE)
           nonExecutableTxs
             .get(account)
@@ -124,14 +125,14 @@ class MempoolMap(
           val nonExecTxsPerAccount =
             nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
           if (txToReplaceOpt.isDefined) {
-            replaceTransaction(txToReplaceOpt.get.id, ethTransaction, nonExecTxsPerAccount, isNotExec = true)
+            replaceTransaction(txToReplaceOpt.get.id, ethTransaction, nonExecTxsPerAccount, TxExecutableStatus.NON_EXEC)
           } else {
-            addNewTransaction(nonExecTxsPerAccount, ethTransaction, isNotExec = true)
+            addNewTransaction(nonExecTxsPerAccount, ethTransaction, TxExecutableStatus.NON_EXEC)
           }
         case ReplaceExecTransaction =>
           // This case means there is already an executable tx with the same nonce in the mem pool
           val executableTxsPerAccount = executableTxs(account)
-          replaceTransaction(txToReplaceOpt.get.id, ethTransaction, executableTxsPerAccount, isNotExec = false)
+          replaceTransaction(txToReplaceOpt.get.id, ethTransaction, executableTxsPerAccount, TxExecutableStatus.EXEC)
       }
 
       //After having added the new tx, check the resulting size of the non exec sub pool and of the mempool. If one or
@@ -141,14 +142,15 @@ class MempoolMap(
     this
   }
 
-  private[mempool] def addNewTransaction(txByNonceMap: TxIdByNonceMap, ethTransaction: SidechainTypes#SCAT, isNotExec: Boolean) = {
-    txCache.add(ethTransaction, isNotExec)
+  private[mempool] def addNewTransaction(txByNonceMap: TxIdByNonceMap, ethTransaction: SidechainTypes#SCAT, execStatus: TxExecutableStatus) = {
+    txCache.add(ethTransaction, execStatus)
     txByNonceMap.put(ethTransaction.getNonce, ethTransaction.id)
   }
 
-  private[mempool] def replaceTransaction(existingTxId: ModifierId, newTx: SidechainTypes#SCAT, mapOfTxsByNonce: TxIdByNonceMap, isNotExec: Boolean) = {
+  private[mempool] def replaceTransaction(existingTxId: ModifierId, newTx: SidechainTypes#SCAT,
+                                          mapOfTxsByNonce: TxIdByNonceMap, execStatus: TxExecutableStatus) = {
     txCache.remove(existingTxId)
-    txCache.add(newTx, isNotExec)
+    txCache.add(newTx, execStatus)
     mapOfTxsByNonce.put(newTx.getNonce, newTx.id)
   }
 
@@ -362,7 +364,7 @@ class MempoolMap(
     var maxNonceGapExceeded = false
     var currAccountSlots = 0L
 
-    val txsToReinject = new scala.collection.mutable.ListBuffer[(SidechainTypes#SCAT, Boolean)]
+    val txsToReinject = new scala.collection.mutable.ListBuffer[(SidechainTypes#SCAT, TxExecutableStatus)]
     txsFromRejectedBlocks.withFilter(_ => !maxNonceGapExceeded)
       .foreach { tx =>
         if (tx.getNonce.compareTo(maxAcceptableNonce) <= 0) {
@@ -372,7 +374,8 @@ class MempoolMap(
             (txSizeInSlots <= MaxNumOfSlotsForTx) &&
             (currAccountSlots + txSizeInSlots <= MaxSlotsPerAccount)
           ) {
-            txsToReinject += ((tx, haveBecomeNonExecutable))
+            val txStatus = if (haveBecomeNonExecutable) TxExecutableStatus.NON_EXEC else TxExecutableStatus.EXEC
+            txsToReinject += ((tx, txStatus))
             destMap.put(tx.getNonce, tx.id)
             currAccountSlots += txSizeInSlots
           } else {
@@ -388,7 +391,7 @@ class MempoolMap(
 
     // reinjected txs are added in the txCache in reverse order, so in case of eviction the ones with greatest nonce gap will be
     // evicted first
-    txsToReinject.reverseIterator.foreach{case (tx, isNonExec) => txCache.add(tx, isNonExec)}
+    txsToReinject.reverseIterator.foreach{case (tx, execStatus) => txCache.add(tx, execStatus)}
 
     val execTxsOpt = executableTxs.remove(account)
 

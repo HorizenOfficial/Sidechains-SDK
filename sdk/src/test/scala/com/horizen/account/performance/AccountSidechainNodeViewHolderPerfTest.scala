@@ -39,7 +39,7 @@ import scala.util.Random
 /*
   This class is used for testing performance related to modifications to the memory pool.
  */
-@Ignore
+
 class AccountSidechainNodeViewHolderPerfTest
     extends JUnitSuite
       with EthereumTransactionFixture

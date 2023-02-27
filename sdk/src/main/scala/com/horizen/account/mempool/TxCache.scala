@@ -2,6 +2,7 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.mempool.MempoolMap.txSizeInSlot
+import com.horizen.account.mempool.TxExecutableStatus.TxExecutableStatus
 import sparkz.util.ModifierId
 
 import scala.annotation.tailrec
@@ -20,12 +21,12 @@ class TxCache {
   private var oldestTx: Option[TxMetaInfo] = None
   private var youngestTx: Option[TxMetaInfo] = None
 
-  def add(tx: SidechainTypes#SCAT, isNonExec: Boolean): Unit = {
-    val txInfo = new TxMetaInfo(tx, isNonExec)
+  def add(tx: SidechainTypes#SCAT, execStatus: TxExecutableStatus): Unit = {
+    val txInfo = new TxMetaInfo(tx, execStatus)
     all.put(tx.id, txInfo)
     val txSize = txSizeInSlot(tx)
     sizeInSlots += txSize
-    if (isNonExec){
+    if (execStatus == TxExecutableStatus.NON_EXEC){
       nonExecSizeInSlots += txSize
     }
     if (oldestTx.isEmpty) {
@@ -59,7 +60,7 @@ class TxCache {
       }
       val txSize = txSizeInSlot(txInfo.tx)
       sizeInSlots -= txSize
-      if (txInfo.isNotExecutable){
+      if (txInfo.executableStatus == TxExecutableStatus.NON_EXEC){
         nonExecSizeInSlots -= txSize
       }
       txInfo.tx
@@ -70,14 +71,14 @@ class TxCache {
 
   def promoteTransaction(txId: ModifierId): Unit = {
     all.get(txId).foreach { txInfo =>
-      txInfo.isNotExecutable = false
+      txInfo.executableStatus = TxExecutableStatus.EXEC
       nonExecSizeInSlots -= txSizeInSlot(txInfo.tx)
     }
   }
 
   def demoteTransaction(txId: ModifierId): Unit = {
     all.get(txId).foreach { txInfo =>
-      txInfo.isNotExecutable = true
+      txInfo.executableStatus = TxExecutableStatus.NON_EXEC
       nonExecSizeInSlots += txSizeInSlot(txInfo.tx)
     }
   }
@@ -110,7 +111,7 @@ class TxCache {
 
     @tailrec
     final private[mempool] def findNext(txInfo: Option[TxMetaInfo]): Option[TxMetaInfo] = {
-      if (txInfo.isEmpty || txInfo.get.isNotExecutable)
+      if (txInfo.isEmpty || txInfo.get.executableStatus == TxExecutableStatus.NON_EXEC)
         txInfo
       else {
         findNext(txInfo.get.younger)
