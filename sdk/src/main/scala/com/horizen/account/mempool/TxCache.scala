@@ -104,11 +104,6 @@ class TxCache {
 
   def getNonExecIterator(): NonExecTransactionIterator = new NonExecTransactionIterator
 
-  case class TxMetaInfo(tx: SidechainTypes#SCAT, var isNotExecutable: Boolean) {
-    var next: Option[TxMetaInfo] = None
-    var previous: Option[TxMetaInfo] = None
-  }
-
   class NonExecTransactionIterator {
 
     private var nextElem: Option[TxMetaInfo] = oldestTx
@@ -118,7 +113,7 @@ class TxCache {
       if (txInfo.isEmpty || txInfo.get.isNotExecutable)
         txInfo
       else {
-        findNext(txInfo.get.next)
+        findNext(txInfo.get.younger)
       }
     }
 
@@ -127,15 +122,15 @@ class TxCache {
     }
 
     def next: SidechainTypes#SCAT = {
-      val tmp = findNext(nextElem)
-      if (tmp.isEmpty) {
-        nextElem = tmp
-        throw new NoSuchElementException()
-      } else {
-        val txInfo = tmp.get
-        nextElem = txInfo.next
-        txInfo.tx
+      findNext(nextElem) match {
+        case None =>
+          nextElem = None
+          throw new NoSuchElementException()
+        case Some(txInfo) =>
+          nextElem = txInfo.younger
+          txInfo.tx
       }
+
     }
 
   }

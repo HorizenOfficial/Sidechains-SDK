@@ -720,8 +720,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(AccountMempoolSettings())
-
       val numOfTxs = 10000
       val numOfTxsPerAccount = 5
       val numOfAccounts = numOfTxs / numOfTxsPerAccount
@@ -729,6 +727,11 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"Total number of transactions:            $numOfTxs\n")
       out.write(s"Number of accounts:                      $numOfAccounts\n")
       out.write(s"Number of transactions for each account: $numOfTxsPerAccount\n")
+
+      val mempoolSettings = AccountMempoolSettings(
+        maxMemPoolSlots = numOfTxs
+      )
+      val nodeViewHolder = getMockedAccountSidechainNodeViewHolder(mempoolSettings)
 
       println(s"************** Test ordering executable transactions with $numOfTxs in mem pool **************")
 
@@ -762,7 +765,7 @@ class AccountSidechainNodeViewHolderPerfTest
   sidechain forging than the mainchain. In this case the idea is to have 20 sidechain blocks for each mainchain block.
    */
   @Test
-  // @Ignore
+  @Ignore
   def updateMemPoolMainchainForkTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolMainchainForkTest.txt", true))
 
