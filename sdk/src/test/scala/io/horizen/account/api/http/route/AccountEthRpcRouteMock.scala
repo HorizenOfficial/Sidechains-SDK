@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
+import at.favre.lib.crypto.bcrypt.BCrypt
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import io.horizen.account.api.http.AccountNodeViewUtilMocks
@@ -22,7 +23,6 @@ import io.horizen.params.MainNetParams
 import io.horizen.{SidechainSettings, SidechainTypes}
 import io.horizen.evm.LevelDBDatabase
 import org.junit.runner.RunWith
-import org.mindrot.jbcrypt.BCrypt
 import org.mockito.Mockito
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -53,7 +53,7 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
 
   val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
   val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
-  val apiKeyHash = BCrypt.hashpw(credentials.password(), BCrypt.gensalt())
+  val apiKeyHash = BCrypt.`with`(BCrypt.Version.VERSION_2Y).hashToString(12, credentials.password().toCharArray)
 
   val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]

@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
+import at.favre.lib.crypto.bcrypt.BCrypt
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
 import io.horizen.SidechainTypes
@@ -27,7 +28,6 @@ import io.horizen.params.MainNetParams
 import io.horizen.secret.SecretSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
-import org.mindrot.jbcrypt.BCrypt
 import org.mockito.Mockito
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -68,7 +68,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
   val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
-  val apiKeyHash = BCrypt.hashpw(credentials.password(), BCrypt.gensalt())
+  val apiKeyHash = BCrypt.`with`(BCrypt.Version.VERSION_2Y).hashToString(12, credentials.password().toCharArray)
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
