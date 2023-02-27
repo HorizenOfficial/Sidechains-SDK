@@ -5,8 +5,8 @@ import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificat
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.cryptolibprovider.utils.{CircuitTypes, FieldElementUtils}
+import com.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.fixtures._
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams}

@@ -1,7 +1,7 @@
 package com.horizen
 
-import com.horizen.cryptolibprovider.utils.CircuitTypes
-import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
+import com.horizen.cryptolibprovider.CircuitTypes
+import CircuitTypes.CircuitTypes
 import sparkz.core.settings.SparkzSettings
 
 import java.math.BigInteger

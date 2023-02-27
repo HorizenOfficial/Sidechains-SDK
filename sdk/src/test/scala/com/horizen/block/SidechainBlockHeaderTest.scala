@@ -7,6 +7,7 @@ import com.horizen.proof.VrfProof
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.BytesUtils
+import com.horizen.utxo.block.{SidechainBlockHeader, SidechainBlockHeaderSerializer}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}

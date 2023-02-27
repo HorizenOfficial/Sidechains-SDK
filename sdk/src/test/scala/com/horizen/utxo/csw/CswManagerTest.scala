@@ -13,12 +13,13 @@ import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.utxo.csw.CswManager.ReceivableMessages._
 import com.horizen.utxo.csw.CswManager.Responses._
 import com.horizen.utxo.csw.CswManager.{ProofInProcess, ProofInQueue}
-import com.horizen.fixtures.{CswDataFixture, MainchainBlockReferenceFixture, SidechainBlockFixture}
+import com.horizen.fixtures.{MainchainBlockReferenceFixture, SidechainBlockFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.{PrivateKey25519Creator, Secret}
 import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochInfo}
 import com.horizen._
+import com.horizen.utxo.fixtures.CswDataFixture
 import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import org.junit.Assert._
 import org.junit.{Assert, Test}

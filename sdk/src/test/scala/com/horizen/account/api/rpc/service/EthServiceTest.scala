@@ -10,9 +10,10 @@ import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumReceipt, ReceiptFixture}
+import com.horizen.account.receipt.ReceiptFixture
 import com.horizen.account.secret.PrivateKeySecp256k1Creator
 import com.horizen.account.state.AccountState
+import com.horizen.account.state.receipt.EthereumReceipt
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}

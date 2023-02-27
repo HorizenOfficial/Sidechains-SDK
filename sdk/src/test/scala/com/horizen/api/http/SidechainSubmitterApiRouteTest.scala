@@ -2,9 +2,9 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.server.MalformedRequestContentRejection
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
-import com.horizen.api.http.SidechainDebugErrorResponse.ErrorBadCircuit
-import com.horizen.api.http.SidechainDebugRestScheme.{ReqGetKeyRotationMessageToSign, ReqKeyRotationProof}
-import com.horizen.serialization.SerializationUtil
+import com.horizen.api.http.route.SidechainDebugErrorResponse.ErrorBadCircuit
+import com.horizen.api.http.route.SidechainDebugRestScheme.{ReqGetKeyRotationMessageToSign, ReqKeyRotationProof}
+import com.horizen.json.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 

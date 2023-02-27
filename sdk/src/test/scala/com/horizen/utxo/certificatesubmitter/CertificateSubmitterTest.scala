@@ -14,18 +14,17 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
 import com.horizen.certificatesubmitter.keys.CertifiersKeys
 import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, CertificateSubmissionStrategy, CircuitStrategy, WithoutKeyRotationCircuitStrategy}
-import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.{CommonParams, NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, ZenCoinsUtils}
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.storage.SidechainHistoryStorage
 import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}

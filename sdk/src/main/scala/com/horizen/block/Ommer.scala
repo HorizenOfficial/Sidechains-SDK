@@ -3,8 +3,9 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.{AccountBlockHeader, AccountBlockHeaderSerializer}
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
+import com.horizen.utxo.block.{SidechainBlockHeader, SidechainBlockHeaderSerializer}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import sparkz.util.idToBytes
 import sparkz.util.serialization.{Reader, Writer}

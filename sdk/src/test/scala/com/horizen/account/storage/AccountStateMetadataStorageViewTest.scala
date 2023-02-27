@@ -2,7 +2,8 @@ package com.horizen.account.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
-import com.horizen.account.receipt.{EthereumReceipt, ReceiptFixture}
+import com.horizen.account.receipt.ReceiptFixture
+import com.horizen.account.state.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.account.utils.AccountBlockFeeInfo
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}

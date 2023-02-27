@@ -1,14 +1,12 @@
 package com.horizen.utxo.box;
 
 import com.horizen.fixtures.ForgerBoxFixture;
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.proposition.VrfPublicKey;
-import com.horizen.utxo.box.ForgerBox;
-import com.horizen.utxo.box.ForgerBoxSerializer;
 import org.junit.Test;
 import java.util.Random;
 import static org.junit.Assert.*;

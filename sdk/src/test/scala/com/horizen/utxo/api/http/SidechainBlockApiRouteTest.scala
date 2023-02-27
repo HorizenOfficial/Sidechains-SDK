@@ -2,12 +2,12 @@ package com.horizen.utxo.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.api.http.BlockBaseErrorResponse._
-import com.horizen.api.http.BlockBaseRestSchema._
+import com.horizen.api.http.route.BlockBaseErrorResponse._
+import com.horizen.api.http.route.BlockBaseRestSchema._
 import com.horizen.api.http.SidechainApiRouteTest
 import com.horizen.consensus.{ConsensusEpochAndSlot, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.ForgingInfo
-import com.horizen.serialization.SerializationUtil
+import com.horizen.json.SerializationUtil
 import org.junit.Assert._
 import sparkz.util.bytesToId
 

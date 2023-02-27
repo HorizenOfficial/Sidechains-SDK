@@ -5,9 +5,9 @@ import java.lang.{Byte => JByte}
 import java.util
 import java.util.{ArrayList => JArrayList}
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.fixtures.BoxFixture
 import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, MerklePath, Pair}
 import com.horizen.utxo.box.ForgerBox
+import com.horizen.utxo.fixtures.BoxFixture
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertNotEquals, assertTrue}
 import org.junit.Test

@@ -3,7 +3,7 @@ package com.horizen.chain
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.transaction.Transaction
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}

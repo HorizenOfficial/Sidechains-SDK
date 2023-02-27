@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.horizen.account.receipt.EthereumConsensusDataLog
+import com.horizen.account.state.receipt.EthereumConsensusDataLog
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.evm.{Address, ResourceHandle}
 

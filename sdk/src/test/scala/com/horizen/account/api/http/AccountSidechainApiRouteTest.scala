@@ -9,6 +9,7 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GenerateSecret, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.SidechainTypes
+import com.horizen.account.api.http.route.{AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.AccountNodeView
@@ -18,12 +19,12 @@ import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.Broadca
 import com.horizen.api.http._
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
-import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.CircuitTypes
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.forge.AbstractForger
+import com.horizen.json.serializer.ApplicationJsonSerializer
 import com.horizen.params.MainNetParams
 import com.horizen.secret.SecretSerializer
-import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mindrot.jbcrypt.BCrypt

@@ -8,6 +8,8 @@ import com.horizen.storage.Storage
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, Pair}
 import com.horizen.utxo.box.{BoxSerializer, ZenBox}
+import com.horizen.utxo.customtypes.{CustomBox, CustomBoxChild, CustomBoxSerializer}
+import com.horizen.utxo.fixtures.BoxFixture
 import com.horizen.utxo.{WalletBox, WalletBoxSerializer}
 import org.junit.Assert._
 import org.junit._

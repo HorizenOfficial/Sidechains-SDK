@@ -3,8 +3,9 @@ package com.horizen.api.http
 import akka.http.javadsl.model.RequestEntity
 import akka.http.scaladsl.model.{ContentTypes, RequestEntity, StatusCodes}
 import akka.http.scaladsl.server.Route
-import com.horizen.api.http.SimpleCustomApi.GetSecretRequest
-import com.horizen.serialization.SerializationUtil
+import com.horizen.utxo.api.http.SimpleCustomApi.GetSecretRequest
+import com.horizen.json.SerializationUtil
+import com.horizen.utxo.api.http.SimpleCustomApi
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Ignore
 

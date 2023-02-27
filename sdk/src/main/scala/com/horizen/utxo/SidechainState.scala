@@ -1,14 +1,13 @@
 package com.horizen.utxo
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.block.{SidechainBlockHeader, WithdrawalEpochCertificate}
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.utils.CircuitTypes
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.cryptolibprovider.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
@@ -16,7 +15,7 @@ import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.utxo.backup.BoxIterator
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.data.ZenBoxData
 import com.horizen.utxo.box._
 import com.horizen.utxo.forge.ForgerList

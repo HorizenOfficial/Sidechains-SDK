@@ -7,7 +7,7 @@ import com.horizen.account.proposition.{AddressProposition, AddressPropositionSe
 import com.horizen.account.utils.BigIntegerUInt256
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.{BytesUtils, Ed25519}
 import io.horizen.evm.Address
 import org.web3j.abi.TypeReference

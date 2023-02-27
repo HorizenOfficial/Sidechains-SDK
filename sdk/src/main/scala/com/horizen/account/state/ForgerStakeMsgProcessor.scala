@@ -2,12 +2,12 @@ package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, _}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
 import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import com.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams

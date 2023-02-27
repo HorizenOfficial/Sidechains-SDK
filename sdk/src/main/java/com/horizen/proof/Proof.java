@@ -1,9 +1,8 @@
 package com.horizen.proof;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 
 /*
 trait Proof[P <: Proposition] extends BytesSerializable {

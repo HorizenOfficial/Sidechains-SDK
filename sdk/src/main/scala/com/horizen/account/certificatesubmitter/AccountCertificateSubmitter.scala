@@ -13,8 +13,7 @@ import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies._
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import com.horizen.mainchain.api.MainchainNodeCertificateApi
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.client.MainchainNodeChannel

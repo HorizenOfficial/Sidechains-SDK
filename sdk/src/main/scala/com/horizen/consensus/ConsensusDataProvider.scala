@@ -2,7 +2,7 @@ package com.horizen.consensus
 
 import java.security.MessageDigest
 import com.google.common.primitives.{Ints, Longs}
-import com.horizen.block.{SidechainBlockHeader, SidechainBlockHeaderBase}
+import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
@@ -10,6 +10,7 @@ import com.horizen.storage.SidechainBlockInfoProvider
 import com.horizen.utils.{LruCache, TimeToEpochUtils, Utils}
 import com.horizen.vrf.VrfOutput
 import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utxo.block.SidechainBlockHeader
 import sparkz.core.block.Block
 import sparkz.core.block.Block.Timestamp
 import sparkz.util.{ModifierId, SparkzLogging}

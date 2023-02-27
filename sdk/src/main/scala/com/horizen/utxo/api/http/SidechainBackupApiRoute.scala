@@ -5,16 +5,16 @@ import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
-import com.horizen.block.SidechainBlockHeader
+import com.horizen.api.http.route.SidechainApiRoute
+import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.utxo.api.http.SidechainBackupErrorResponse.{ErrorRetrievingSidechainBlockIdForBackup, GenericBackupApiError}
 import com.horizen.utxo.api.http.SidechainBackupRestScheme.{ReqGetInitialBoxes, RespGetInitialBoxes, RespSidechainBlockIdForBackup}
 import com.horizen.utxo.backup.BoxIterator
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.node._
@@ -102,16 +102,16 @@ object SidechainBackupRestScheme {
   final val MAX_NUMBER_OF_BOX_REQUEST = 100
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespSidechainBlockIdForBackup(blockId: String) extends SuccessResponse
+   private[horizen] case class RespSidechainBlockIdForBackup(blockId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGetInitialBoxes(numberOfElements: Int, lastBoxId: Option[String]) {
+   private[horizen] case class ReqGetInitialBoxes(numberOfElements: Int, lastBoxId: Option[String]) {
     require(numberOfElements > 0, s"Invalid numberOfElements $numberOfElements. It should be > 0")
     require(numberOfElements <= MAX_NUMBER_OF_BOX_REQUEST, s"Invalid numberOfElements $numberOfElements. It should be <= $MAX_NUMBER_OF_BOX_REQUEST")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGetInitialBoxes(boxes: List[Box[Proposition]]) extends SuccessResponse
+   private[horizen] case class RespGetInitialBoxes(boxes: List[Box[Proposition]]) extends SuccessResponse
 }
 
 object SidechainBackupErrorResponse {

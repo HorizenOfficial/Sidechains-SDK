@@ -1,6 +1,7 @@
 package com.horizen.account.receipt
 
 
+import com.horizen.account.state.receipt.{EthereumConsensusDataReceipt, EthereumReceipt, EthereumReceiptSerializer}
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
 import com.horizen.utils.BytesUtils
 import io.horizen.evm.TrieHasher

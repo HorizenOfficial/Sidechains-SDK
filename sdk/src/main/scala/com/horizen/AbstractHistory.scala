@@ -5,7 +5,6 @@ import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlo
 import com.horizen.chain._
 import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.node.NodeHistoryBase
-import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.storage.leveldb.Algos.encoder

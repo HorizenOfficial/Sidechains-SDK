@@ -1,14 +1,12 @@
 package com.horizen.utxo.backup;
 
-import com.horizen.utxo.backup.BackupBox;
-import com.horizen.utxo.backup.BoxIterator;
 import com.horizen.utxo.box.Box;
 import com.horizen.utxo.box.BoxSerializer;
 import com.horizen.utxo.box.ZenBox;
-import com.horizen.companion.SidechainBoxesCompanion;
-import com.horizen.customtypes.CustomBox;
-import com.horizen.customtypes.CustomBoxSerializer;
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.companion.SidechainBoxesCompanion;
+import com.horizen.utxo.customtypes.CustomBox;
+import com.horizen.utxo.customtypes.CustomBoxSerializer;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proposition.Proposition;
 import com.horizen.utxo.storage.BackupStorage;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;

@@ -1,8 +1,7 @@
 package com.horizen.utxo.box;
 
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
-import com.horizen.utxo.box.WithdrawalRequestBox;
 import org.junit.Before;
 import org.junit.Test;
 

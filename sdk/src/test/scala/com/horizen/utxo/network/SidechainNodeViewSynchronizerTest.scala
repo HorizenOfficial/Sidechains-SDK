@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import com.horizen._
 import com.horizen.block.SidechainBlockBase
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.SidechainBlockFixture.{getDefaultTransactionsCompanion, sidechainTransactionsCompanion}
 import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.utils.BytesUtils

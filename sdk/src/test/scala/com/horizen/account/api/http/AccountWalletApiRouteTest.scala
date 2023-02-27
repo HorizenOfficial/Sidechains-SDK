@@ -2,8 +2,8 @@ package com.horizen.account.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.account.api.http.AccountWalletRestScheme.ReqGetBalance
-import com.horizen.serialization.SerializationUtil
+import com.horizen.account.api.http.route.AccountWalletRestScheme.ReqGetBalance
+import com.horizen.json.SerializationUtil
 import org.junit.Assert.assertTrue
 import org.scalatest.prop.TableDrivenPropertyChecks
 

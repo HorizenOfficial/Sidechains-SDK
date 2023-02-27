@@ -2,14 +2,14 @@ package com.horizen.validation
 
 import java.util.{Optional => JOptional}
 import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockHeader}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
 import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
 import com.horizen.fixtures.{FieldElementFixture, MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.utils.WithdrawalEpochInfo
 import com.horizen.utxo.SidechainHistory
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.storage.SidechainHistoryStorage
 import org.junit.Assert.{assertEquals, fail => jFail}

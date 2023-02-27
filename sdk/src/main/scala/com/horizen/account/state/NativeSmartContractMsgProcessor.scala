@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
-import com.horizen.account.event.EthereumEvent
-import com.horizen.account.receipt.EthereumConsensusDataLog
+import com.horizen.account.state.events.EthereumEvent
+import com.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.evm.Address
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging

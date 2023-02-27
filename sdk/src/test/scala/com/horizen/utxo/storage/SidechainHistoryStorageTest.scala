@@ -2,7 +2,7 @@ package com.horizen.utxo.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}

@@ -1,5 +1,6 @@
 package com.horizen.account.receipt
 
+import com.horizen.account.state.receipt.Bloom
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._

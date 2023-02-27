@@ -2,13 +2,13 @@ package com.horizen.utxo.transaction
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.json.serializer.ApplicationJsonSerializer
 import com.horizen.utils.{Pair => JPair}
-import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utxo.box.{Box, ZenBox}
 import com.horizen.utxo.box.data.{BoxData, ZenBoxData}
+import com.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

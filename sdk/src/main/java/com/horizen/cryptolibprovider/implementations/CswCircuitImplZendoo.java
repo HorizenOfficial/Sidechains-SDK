@@ -43,7 +43,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
     @Override
     public FieldElement getUtxoMerkleTreeLeaf(Box<Proposition> box) {
         ScUtxoOutput utxo = new ScUtxoOutput(box.proposition().bytes(), box.value(), box.nonce(), box.customFieldsHash());
-        return utxo.getHash();
+        return getHash();
     }
 
     @Override
@@ -112,12 +112,12 @@ public class CswCircuitImplZendoo implements CswCircuit {
                     Optional.of(FieldElement.deserialize(constant)),
                     Optional.of(we.getHash()),
                     Optional.of(FieldElement.deserialize(mcbScTxsCumComEnd)),
-                    utxo.amount(),
+                    amount(),
                     FieldElement.deserialize(utxo.getNullifier()),
                     receiverPubKeyHash);
                 FieldElement scIdFe = FieldElement.deserialize(sidechainId);
                 CswUtxoProverData utxoProverData = new CswUtxoProverData(
-                    new ScUtxoOutput(utxo.spendingPubKey(), utxo.amount(), utxo.nonce(), utxo.customHash()),
+                    new ScUtxoOutput(utxo.spendingPubKey(), amount(), nonce(), customHash()),
                     privateKey25519ToScalar(pk),
                     MerklePath.deserialize(utxo.utxoMerklePath()));
         ) {

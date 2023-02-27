@@ -3,12 +3,12 @@ package com.horizen.utxo.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.SidechainTypes
 import com.horizen.block._
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.{ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.transaction.SidechainTransaction

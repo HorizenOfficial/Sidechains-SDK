@@ -4,7 +4,8 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen.api.http._
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeader}
+import com.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
+import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
@@ -18,7 +19,7 @@ import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.utxo.api.http._
 import com.horizen.utxo.backup.BoxIterator
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
 import com.horizen.utxo.box.BoxSerializer
 import com.horizen.utxo.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -28,7 +29,7 @@ import com.horizen.utxo.node._
 import com.horizen.utxo.state.ApplicationState
 import com.horizen.utxo.storage._
 import com.horizen.utxo.wallet.ApplicationWallet
-import com.horizen.websocket.server.WebSocketServerRef
+import com.horizen.utxo.websocket.server.WebSocketServerRef
 import com.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer

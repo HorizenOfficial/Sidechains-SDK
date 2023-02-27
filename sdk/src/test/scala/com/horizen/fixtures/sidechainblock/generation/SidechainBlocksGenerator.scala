@@ -4,9 +4,9 @@ import com.google.common.primitives.{Ints, Longs}
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.block._
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
+import com.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
@@ -16,7 +16,7 @@ import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenera
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.utils
 import com.horizen.utils._
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.box.data.ForgerBoxData
 import com.horizen.utxo.transaction.SidechainTransaction

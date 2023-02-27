@@ -1,9 +1,9 @@
 package com.horizen.utxo
 
-import com.horizen.utils.MempoolMap
 import com.horizen.utxo.box.{Box, WithdrawalRequestBox}
 import com.horizen.utxo.node.NodeMemoryPool
 import com.horizen.utxo.transaction.BoxTransaction
+import com.horizen.utxo.utils.MempoolMap
 import com.horizen.{MempoolSettings, SidechainTypes, utxo}
 import sparkz.core.transaction.MempoolReader
 import sparkz.util.{ModifierId, SparkzLogging}
@@ -98,7 +98,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
   override def put(tx: SidechainTypes#SCBT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    val entry = utxo.SidechainMemoryPoolEntry(tx)
+    val entry = SidechainMemoryPoolEntry(tx)
     if (entry.feeRate.getFeeRate() < minFeeRate) {
        Failure(new IllegalArgumentException("Transaction fee is less than mempool.minFeeRate - " + tx))
     } else if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
@@ -130,7 +130,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
     }
 
     for (t <- txs) {
-      val entry = utxo.SidechainMemoryPoolEntry(t)
+      val entry = SidechainMemoryPoolEntry(t)
       if (entry.feeRate.getFeeRate() >= minFeeRate) {
         addWithSizeCheck(entry)
       }
@@ -172,7 +172,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
     }
 
     for (t <- txs) {
-      val entry = utxo.SidechainMemoryPoolEntry(t)
+      val entry = SidechainMemoryPoolEntry(t)
       if (entry.feeRate.getFeeRate() >= minFeeRate) {
         addWithSizeCheck(entry)
       }

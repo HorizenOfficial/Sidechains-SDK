@@ -7,7 +7,7 @@ import com.horizen.utxo.box.data.BoxData;
 import com.horizen.utxo.box.data.ForgerBoxData;
 import com.horizen.utxo.box.data.ZenBoxData;
 import com.horizen.utxo.box.data.WithdrawalRequestBoxData;
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;

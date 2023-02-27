@@ -4,7 +4,7 @@ import com.horizen.utxo.box.Box;
 import com.horizen.utxo.box.ZenBox;
 import com.horizen.utxo.box.data.BoxData;
 import com.horizen.utxo.box.data.ZenBoxData;
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;

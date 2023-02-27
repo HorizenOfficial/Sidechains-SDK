@@ -2,12 +2,13 @@ package com.horizen.utxo.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.fixtures.{BoxFixture, StoreFixture}
+import com.horizen.fixtures.StoreFixture
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.proposition.Proposition
 import com.horizen.storage.Storage
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, UtxoMerkleTreeLeafInfo, Pair => JPair}
 import com.horizen.utxo.box.{Box, ZenBox}
+import com.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert._
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}

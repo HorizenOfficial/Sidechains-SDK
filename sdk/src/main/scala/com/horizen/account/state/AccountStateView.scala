@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.state.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}

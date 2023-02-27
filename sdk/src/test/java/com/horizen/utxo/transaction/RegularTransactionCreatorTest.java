@@ -5,7 +5,7 @@ import com.horizen.utxo.box.ZenBox;
 import com.horizen.utxo.box.data.BoxData;
 import com.horizen.utxo.box.data.ZenBoxData;
 import com.horizen.utxo.box.data.WithdrawalRequestBoxData;
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.utxo.node.NodeWallet;
 import com.horizen.proposition.*;

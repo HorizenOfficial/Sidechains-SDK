@@ -2,7 +2,7 @@ package com.horizen.account.fixtures
 
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.Bloom
+import com.horizen.account.state.receipt.Bloom
 import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.fixtures.VrfGenerator

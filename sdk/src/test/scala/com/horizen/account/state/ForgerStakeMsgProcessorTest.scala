@@ -1,11 +1,11 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
+import com.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
+import com.horizen.account.state.receipt.EthereumConsensusDataLog
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams

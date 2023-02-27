@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.SchnorrProposition;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.secret.SchnorrSecret;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 
 import java.util.Arrays;
 

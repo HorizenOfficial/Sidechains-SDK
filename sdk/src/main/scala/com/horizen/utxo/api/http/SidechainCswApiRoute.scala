@@ -6,14 +6,14 @@ import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
-import com.horizen.block.SidechainBlockHeader
+import com.horizen.api.http.route.SidechainApiRoute
+import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.utxo.api.http.SidechainCswErrorResponse._
 import com.horizen.utxo.api.http.SidechainCswRestScheme._
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCswBoxIds, GetCswInfo}
 import com.horizen.utxo.csw.CswManager.Responses.{CswInfo, GenerateCswProofStatus, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
@@ -214,37 +214,37 @@ object SidechainCswApiRoute {
 
   object SidechainCswRestScheme {
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCswHasCeasedState(state: Boolean) extends SuccessResponse
+   private[horizen] case class RespCswHasCeasedState(state: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCswIsEnabled(cswEnabled: Boolean) extends SuccessResponse
+   private[horizen] case class RespCswIsEnabled(cswEnabled: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGenerationCswState(boxId: String, receiverAddress: String) {
+   private[horizen] case class ReqGenerationCswState(boxId: String, receiverAddress: String) {
     require(boxId.length == 64, s"Invalid id $boxId. Id length must be 64")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGenerationCswState(state: String, description: String) extends SuccessResponse
+   private[horizen] case class RespGenerationCswState(state: String, description: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCswInfo(boxId: String) {
+   private[horizen] case class ReqCswInfo(boxId: String) {
     require(boxId.length == 64, s"Invalid id $boxId. Id length must be 64")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCswInfo(cswInfo: CswInfo) extends SuccessResponse
+   private[horizen] case class RespCswInfo(cswInfo: CswInfo) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCswBoxIds(cswBoxIds: Seq[String]) extends SuccessResponse
+   private[horizen] case class RespCswBoxIds(cswBoxIds: Seq[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqNullifier(boxId: String) {
+   private[horizen] case class ReqNullifier(boxId: String) {
     require(boxId.length == 64, s"Invalid id $boxId. Id length must be 64")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespNullifier(nullifier: String) extends SuccessResponse
+   private[horizen] case class RespNullifier(nullifier: String) extends SuccessResponse
 }
 
 object SidechainCswErrorResponse {

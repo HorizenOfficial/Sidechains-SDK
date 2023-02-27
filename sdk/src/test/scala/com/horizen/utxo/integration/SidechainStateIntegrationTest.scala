@@ -2,9 +2,8 @@ package com.horizen.utxo.integration
 
 import com.horizen._
 import com.horizen.block.MainchainBlockReferenceData
-import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.utxo.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
-import com.horizen.customtypes.DefaultApplicationState
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
@@ -14,6 +13,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, FeePaymentsUtils, Withdr
 import com.horizen.utxo.block.SidechainBlock
 import com.horizen.utxo.box.data.{BoxData, ForgerBoxData, ZenBoxData}
 import com.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
+import com.horizen.utxo.customtypes.DefaultApplicationState
 import com.horizen.utxo.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.utxo.transaction.RegularTransaction
 import com.horizen.utxo.utils.BlockFeeInfo

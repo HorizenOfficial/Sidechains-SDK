@@ -2,7 +2,7 @@ package com.horizen.utxo.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.forge.AbstractForger.ReceivableMessages.StartForging
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams

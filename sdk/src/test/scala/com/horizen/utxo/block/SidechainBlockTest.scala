@@ -2,13 +2,13 @@ package com.horizen.utxo.block
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.block._
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
+import com.horizen.json.serializer.ApplicationJsonSerializer
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
-import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proof.VrfProof;
 import com.horizen.secret.VrfSecretKey;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.utils.BytesUtils;
 

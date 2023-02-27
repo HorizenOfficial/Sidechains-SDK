@@ -8,7 +8,7 @@ import com.horizen.account.utils.Secp256k1;
 import io.horizen.evm.Address;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 import com.horizen.utils.BytesUtils;
 
 @JsonView(Views.Default.class)

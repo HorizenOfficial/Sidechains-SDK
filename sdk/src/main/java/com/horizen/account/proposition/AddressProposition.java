@@ -7,7 +7,7 @@ import com.horizen.account.utils.Secp256k1;
 import io.horizen.evm.Address;
 import com.horizen.proposition.PropositionSerializer;
 import com.horizen.proposition.SingleSecretProofOfKnowledgeProposition;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;

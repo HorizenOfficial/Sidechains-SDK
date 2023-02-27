@@ -5,7 +5,7 @@ import akka.http.javadsl.server
 import akka.http.javadsl.server.Directives
 import akka.http.scaladsl.server.Route
 import com.google.common.base.Throwables
-import com.horizen.serialization.SerializationUtil
+import com.horizen.json.SerializationUtil
 
 import scala.compat.java8.OptionConverters._
 

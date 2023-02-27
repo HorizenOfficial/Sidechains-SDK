@@ -2,7 +2,7 @@ package com.horizen.proposition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.secret.PrivateKey25519;

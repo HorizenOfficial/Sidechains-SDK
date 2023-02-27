@@ -2,10 +2,9 @@ package com.horizen.utxo.network
 
 import akka.actor.{ActorRef, ActorRefFactory, Props}
 import com.horizen._
-import com.horizen.block.SidechainBlockHeader
 import com.horizen.network.AbstractSidechainNodeViewSynchronizer
 import com.horizen.utxo.SidechainHistory
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.storage.SidechainHistoryStorage
 import sparkz.core.serialization.SparkzSerializer

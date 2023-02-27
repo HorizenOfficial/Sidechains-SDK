@@ -2,10 +2,10 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.api.http.MainchainErrorResponse.{ErrorMainchainBlockNotFound, ErrorMainchainBlockReferenceNotFound, ErrorMainchainInvalidParameter}
-import com.horizen.api.http.MainchainRestSchema.{ReqBlockBy, ReqBlockInfoBy}
-import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.serialization.SerializationUtil
+import com.horizen.api.http.route.MainchainErrorResponse.{ErrorMainchainBlockNotFound, ErrorMainchainBlockReferenceNotFound, ErrorMainchainInvalidParameter}
+import com.horizen.api.http.route.MainchainRestSchema.{ReqBlockBy, ReqBlockInfoBy}
+import com.horizen.chain.MainchainBlockReferenceInfo
+import com.horizen.json.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 

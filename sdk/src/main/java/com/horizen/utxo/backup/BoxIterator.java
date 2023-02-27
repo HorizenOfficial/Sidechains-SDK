@@ -2,7 +2,7 @@ package com.horizen.utxo.backup;
 
 import com.horizen.utxo.box.Box;
 import com.horizen.utxo.box.CoinsBox;
-import com.horizen.companion.SidechainBoxesCompanion;
+import com.horizen.utxo.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.storage.StorageIterator;
 import com.horizen.utils.Utils;

@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.horizen.account.api.rpc.request.RpcId;
 import com.horizen.api.http.ApiResponse;
-import com.horizen.serialization.RpcIdSerializer;
-import com.horizen.serialization.Views;
+import com.horizen.json.serializer.RpcIdSerializer;
+import com.horizen.json.Views;
 
 @JsonView(Views.Default.class)
 public abstract class RpcResponse implements ApiResponse {

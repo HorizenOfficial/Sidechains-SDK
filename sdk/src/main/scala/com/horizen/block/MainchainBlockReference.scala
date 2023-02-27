@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import sparkz.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException

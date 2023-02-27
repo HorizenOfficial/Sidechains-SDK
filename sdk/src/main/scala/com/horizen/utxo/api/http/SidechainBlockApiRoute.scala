@@ -4,14 +4,14 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainTypes
-import com.horizen.api.http.BlockBaseRestSchema.ReqFeePayments
+import com.horizen.api.http.route.BlockBaseRestSchema.ReqFeePayments
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.{ApiResponseUtil, BlockBaseApiRoute, SuccessResponse}
-import com.horizen.block.SidechainBlockHeader
+import com.horizen.api.http.route.BlockBaseApiRoute
+import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utxo.api.http.SidechainBlockRestSchema._
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.ZenBox
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.node._
@@ -64,5 +64,5 @@ case class SidechainBlockApiRoute(
 
 object SidechainBlockRestSchema {
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespFeePayments(feePayments: Seq[ZenBox]) extends SuccessResponse
+   private[horizen] case class RespFeePayments(feePayments: Seq[ZenBox]) extends SuccessResponse
 }

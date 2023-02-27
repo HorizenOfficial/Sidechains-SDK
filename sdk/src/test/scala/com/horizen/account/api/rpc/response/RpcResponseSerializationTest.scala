@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.account.AccountFixture
 import com.horizen.account.api.rpc.request.RpcId
 import com.horizen.account.api.rpc.utils.RpcError
-import com.horizen.serialization.ApplicationJsonSerializer
+import com.horizen.json.serializer.ApplicationJsonSerializer
 import org.junit.Test
 
 import java.math.BigInteger

@@ -7,7 +7,7 @@ import com.horizen.{SidechainTypes, utils}
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.Bloom
+import com.horizen.account.state.receipt.Bloom
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, MerkleTreeFixture}

@@ -2,7 +2,8 @@ package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.serialization.{JsonHorizenPublicKeyHashSerializer, Views}
+import com.horizen.json.Views
+import com.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import com.horizen.utils.{BytesUtils, Utils}
 
 

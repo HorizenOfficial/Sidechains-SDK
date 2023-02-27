@@ -4,9 +4,8 @@ import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.params.NetworkParams
 import com.horizen.AbstractHistory
 import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.cryptolibprovider.CommonCircuit
-import com.horizen.cryptolibprovider.utils.CircuitTypes
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit}
+import CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation

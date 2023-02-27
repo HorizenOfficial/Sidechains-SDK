@@ -2,7 +2,7 @@ package com.horizen.block
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.TimeToEpochUtils
 import com.horizen.validation.InvalidOmmerDataException
 

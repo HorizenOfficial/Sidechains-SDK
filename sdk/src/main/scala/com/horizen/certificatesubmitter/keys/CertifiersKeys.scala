@@ -2,7 +2,7 @@ package com.horizen.certificatesubmitter.keys
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.ListSerializer
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}

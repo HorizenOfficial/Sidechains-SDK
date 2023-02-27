@@ -2,24 +2,23 @@ package com.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
 import com.horizen._
-import com.horizen.block.{SidechainBlockHeader, SidechainCreationVersions}
+import com.horizen.block.SidechainCreationVersions
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
 import com.horizen.certnative.BackwardTransfer
-import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import com.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.RegTestParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.WithdrawalRequestBox
 import com.horizen.utxo.storage.SidechainHistoryStorage
 import org.junit.{Before, Test}

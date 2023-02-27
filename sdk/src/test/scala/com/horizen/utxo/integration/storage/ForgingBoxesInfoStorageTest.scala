@@ -2,9 +2,10 @@ package com.horizen.utxo.integration.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.fixtures.{BoxFixture, StoreFixture}
+import com.horizen.fixtures.StoreFixture
 import com.horizen.utils.{ForgingStakeMerklePathInfo, MerklePath}
 import com.horizen.utxo.box.ForgerBox
+import com.horizen.utxo.fixtures.BoxFixture
 import com.horizen.utxo.storage.ForgingBoxesInfoStorage
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test

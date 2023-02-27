@@ -1,9 +1,10 @@
 package com.horizen.account.event;
 
-import com.horizen.account.event.annotation.Anonymous;
-import com.horizen.account.event.annotation.Indexed;
-import com.horizen.account.event.annotation.Parameter;
-import com.horizen.account.receipt.EthereumConsensusDataLog;
+import com.horizen.account.state.events.annotation.Anonymous;
+import com.horizen.account.state.events.annotation.Indexed;
+import com.horizen.account.state.events.annotation.Parameter;
+import com.horizen.account.state.receipt.EthereumConsensusDataLog;
+import com.horizen.account.state.events.EthereumEvent;
 import org.junit.Test;
 import org.web3j.abi.TypeEncoder;
 import org.web3j.abi.datatypes.Address;

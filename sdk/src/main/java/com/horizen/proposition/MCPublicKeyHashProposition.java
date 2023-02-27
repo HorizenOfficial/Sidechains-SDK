@@ -3,8 +3,8 @@ package com.horizen.proposition;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer;
-import com.horizen.serialization.Views;
+import com.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer;
+import com.horizen.json.Views;
 import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;

@@ -1,9 +1,8 @@
 package com.horizen.utxo
 
-import com.horizen.block.SidechainBlockHeader
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.node.NodeHistory
 import com.horizen.utxo.storage.SidechainHistoryStorage

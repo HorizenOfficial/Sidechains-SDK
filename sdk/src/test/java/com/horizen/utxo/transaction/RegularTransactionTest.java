@@ -5,7 +5,7 @@ import com.horizen.utxo.box.data.BoxData;
 import com.horizen.utxo.box.data.ForgerBoxData;
 import com.horizen.utxo.box.data.ZenBoxData;
 import com.horizen.utxo.box.data.WithdrawalRequestBoxData;
-import com.horizen.customtypes.CustomBoxData;
+import com.horizen.utxo.customtypes.CustomBoxData;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -13,6 +13,7 @@ import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.Pair;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,8 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
-
-import com.horizen.fixtures.*;
 
 public class RegularTransactionTest extends BoxFixtureClass {
 

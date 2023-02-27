@@ -9,7 +9,7 @@ import com.horizen.transaction.Transaction;
 import com.horizen.utxo.box.Box;
 import com.horizen.utxo.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.WithdrawalEpochUtils;

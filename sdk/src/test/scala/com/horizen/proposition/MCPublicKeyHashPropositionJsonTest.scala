@@ -2,7 +2,7 @@ package com.horizen.proposition
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
-import com.horizen.serialization.{ApplicationJsonSerializer, JsonHorizenPublicKeyHashSerializer}
+import com.horizen.json.serializer.{ApplicationJsonSerializer, JsonHorizenPublicKeyHashSerializer}
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.{Assert, Test}

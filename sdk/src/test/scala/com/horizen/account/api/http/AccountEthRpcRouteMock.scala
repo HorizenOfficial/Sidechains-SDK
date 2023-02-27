@@ -8,6 +8,7 @@ import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
+import com.horizen.account.api.http.route.AccountEthRpcRoute
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.AccountNodeView
 import com.horizen.account.state.MessageProcessor
@@ -16,8 +17,8 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http._
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
+import com.horizen.json.serializer.ApplicationJsonSerializer
 import com.horizen.params.{MainNetParams, TestNetParams}
-import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.{SidechainSettings, SidechainTypes}
 import io.horizen.evm.LevelDBDatabase
 import org.junit.runner.RunWith

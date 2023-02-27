@@ -1,6 +1,6 @@
 package com.horizen.account.storage
 
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.state.receipt.EthereumReceipt
 import com.horizen.account.utils.AccountBlockFeeInfo
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber

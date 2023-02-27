@@ -9,7 +9,7 @@ import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixt
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.consensus._
 import com.horizen.secret.VrfKeyGenerator
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.ForgerBox
 import org.junit.Test
 import sparkz.core.block.Block

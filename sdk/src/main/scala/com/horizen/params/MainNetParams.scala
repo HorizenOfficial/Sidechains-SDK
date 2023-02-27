@@ -4,7 +4,7 @@ import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, Si
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit}
+import com.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit}
 import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block

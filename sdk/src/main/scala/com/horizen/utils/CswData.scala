@@ -26,7 +26,7 @@ case class UtxoCswData(boxId: Array[Byte],
 
   override lazy val getNullifier: Array[Byte] = {
     val utxo: ScUtxoOutput = new ScUtxoOutput(spendingPubKey, amount, nonce, customHash)
-    val nullifierFe = utxo.getNullifier
+    val nullifierFe = getNullifier
     val nullifier = nullifierFe.serializeFieldElement()
     nullifierFe.freeFieldElement()
     nullifier

@@ -1,7 +1,7 @@
 package com.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptSerializer}
+import com.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
 import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID

@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.utxo.box.Box;
 import com.horizen.utxo.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;

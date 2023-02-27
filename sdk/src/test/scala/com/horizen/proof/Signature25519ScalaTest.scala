@@ -2,8 +2,8 @@ package com.horizen.proof
 
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.json.serializer.ApplicationJsonSerializer
 import com.horizen.secret.PrivateKey25519Creator
-import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertFalse}
 import org.junit.Test

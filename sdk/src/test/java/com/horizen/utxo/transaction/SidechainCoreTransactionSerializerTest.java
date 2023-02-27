@@ -2,7 +2,7 @@ package com.horizen.utxo.transaction;
 
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utxo.box.Box;
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proof.Proof;
 import com.horizen.proof.Signature25519;
 import com.horizen.proposition.MCPublicKeyHashProposition;
@@ -11,7 +11,6 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utxo.box.data.BoxData;
 import com.horizen.utxo.box.data.WithdrawalRequestBoxData;
 import com.horizen.utxo.box.data.ZenBoxData;
-import com.horizen.utxo.transaction.SidechainCoreTransaction;
 import org.junit.Test;
 import scala.util.Try;
 

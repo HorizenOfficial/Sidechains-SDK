@@ -3,9 +3,9 @@ package com.horizen.utxo.api.http
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.api.http.SidechainApiRouteTest
-import com.horizen.api.http.WalletBaseErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
-import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpSecrets, ReqExportSecret, ReqImportSecret}
-import com.horizen.serialization.SerializationUtil
+import com.horizen.api.http.route.WalletBaseErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
+import com.horizen.api.http.route.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpSecrets, ReqExportSecret, ReqImportSecret}
+import com.horizen.json.SerializationUtil
 import com.horizen.utils.BytesUtils
 import com.horizen.utxo.api.http.SidechainWalletRestScheme._
 import org.junit.Assert._

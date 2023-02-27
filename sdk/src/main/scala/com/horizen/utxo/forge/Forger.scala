@@ -2,12 +2,11 @@ package com.horizen.utxo.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
-import com.horizen.block.SidechainBlockHeader
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.storage.SidechainHistoryStorage
 import sparkz.core.utils.NetworkTimeProvider

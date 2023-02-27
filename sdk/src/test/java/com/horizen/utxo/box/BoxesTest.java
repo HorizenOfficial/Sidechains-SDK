@@ -1,12 +1,10 @@
 package com.horizen.utxo.box;
 
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
-import com.horizen.utxo.box.WithdrawalRequestBox;
-import com.horizen.utxo.box.ZenBox;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;

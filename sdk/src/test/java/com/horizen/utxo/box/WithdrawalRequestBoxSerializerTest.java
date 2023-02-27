@@ -1,10 +1,8 @@
 package com.horizen.utxo.box;
 
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.utils.BytesUtils;
-import com.horizen.utxo.box.BoxSerializer;
-import com.horizen.utxo.box.WithdrawalRequestBox;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;

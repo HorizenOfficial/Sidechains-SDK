@@ -3,9 +3,8 @@ package com.horizen.utxo.storage
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture, WithdrawalEpochCertificateSerializer}
-import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.utxo.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.PublicKey25519Proposition
@@ -14,6 +13,7 @@ import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import com.horizen.utxo.backup.{BackupBox, BoxIterator}
 import com.horizen.utxo.box.{BoxSerializer, CoinsBox}
+import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.utxo.utils.{BlockFeeInfo, BlockFeeInfoSerializer}
 import org.junit.Assert._
 import org.junit._

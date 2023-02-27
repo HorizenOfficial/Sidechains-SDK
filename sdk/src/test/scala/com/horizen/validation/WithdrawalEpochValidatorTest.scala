@@ -2,16 +2,16 @@ package com.horizen.validation
 
 import java.time.Instant
 import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReference, SidechainBlockHeader}
+import com.horizen.block.MainchainBlockReference
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.CircuitTypes
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import com.horizen.utxo.SidechainHistory
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.storage.SidechainHistoryStorage

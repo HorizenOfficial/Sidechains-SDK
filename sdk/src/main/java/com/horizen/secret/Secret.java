@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties({"secretTypeId", "serializer", "sign", "owns", "publicKeyValid"})

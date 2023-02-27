@@ -4,12 +4,12 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.AccountBlock.{MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE, calculateReceiptRoot}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.state.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.{BytesUtils, ListSerializer, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.vrf.VrfOutput

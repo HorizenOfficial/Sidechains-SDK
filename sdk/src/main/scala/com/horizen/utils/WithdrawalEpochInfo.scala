@@ -1,7 +1,7 @@
 package com.horizen.utils
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

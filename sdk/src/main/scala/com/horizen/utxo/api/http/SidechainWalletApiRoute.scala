@@ -5,14 +5,14 @@ import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.{ApiResponseUtil, SidechainApiError, SuccessResponse, WalletBaseApiRoute}
-import com.horizen.block.SidechainBlockHeader
+import com.horizen.api.http.route.WalletBaseApiRoute
+import com.horizen.api.http.{ApiResponseUtil, SidechainApiError, SuccessResponse}
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.proposition.Proposition
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.utxo.api.http.SidechainWalletRestScheme._
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.node._
@@ -122,16 +122,16 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 object SidechainWalletRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqAllBoxes(boxTypeClass: Option[String], excludeBoxIds: Option[Seq[String]])
+   private[horizen] case class ReqAllBoxes(boxTypeClass: Option[String], excludeBoxIds: Option[Seq[String]])
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllBoxes(boxes: List[Box[Proposition]]) extends SuccessResponse
+   private[horizen] case class RespAllBoxes(boxes: List[Box[Proposition]]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqBalance(boxType: String)
+   private[horizen] case class ReqBalance(boxType: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespBalance(balance: Long) extends SuccessResponse
+   private[horizen] case class RespBalance(balance: Long) extends SuccessResponse
 
 }
 

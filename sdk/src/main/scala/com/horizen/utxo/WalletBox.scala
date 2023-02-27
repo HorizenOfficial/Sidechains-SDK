@@ -1,7 +1,7 @@
 package com.horizen.utxo
 
 import com.horizen.SidechainTypes
-import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.utxo.companion.SidechainBoxesCompanion
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
 import sparkz.util.serialization.{Reader, Writer}

@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.serialization.{ReverseBytesSerializer, Views}
+import com.horizen.json.Views
+import com.horizen.json.serializer.ReverseBytesSerializer
 import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}

@@ -2,11 +2,10 @@ package com.horizen.utxo.transaction;
 
 import com.horizen.utxo.box.Box;
 import com.horizen.utxo.box.data.BoxData;
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
-import com.horizen.utxo.transaction.SidechainCoreTransaction;
 import org.junit.Test;
 
 import java.util.ArrayList;

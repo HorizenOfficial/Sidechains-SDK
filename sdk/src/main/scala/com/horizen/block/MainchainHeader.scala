@@ -4,7 +4,7 @@ import java.time.Instant
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.{BytesUtils, Utils}
 import com.horizen.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}

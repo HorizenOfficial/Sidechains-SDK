@@ -4,23 +4,24 @@ package com.horizen
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import com.horizen.api.http
 import com.horizen.api.http._
 import com.horizen.api.http.client.SecureEnclaveApiClient
+import com.horizen.api.http.route.ApplicationApiRoute
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
-import com.horizen.cryptolibprovider.utils.CircuitTypes
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.fork.{ForkConfigurator, ForkManager}
 import com.horizen.helper.TransactionSubmitProvider
 import com.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl}
+import com.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
-import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
@@ -302,7 +303,7 @@ abstract class AbstractSidechainApp
 //  val applicationApiRoutes: Seq[ApplicationApiRoute]
 
   // Init API
-  lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
+  lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => route.SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.

@@ -2,7 +2,7 @@ package com.horizen.account.utils
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 

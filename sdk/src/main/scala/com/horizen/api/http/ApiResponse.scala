@@ -1,7 +1,7 @@
 package com.horizen.api.http
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 
 import java.util.{Optional => JOptional}
 

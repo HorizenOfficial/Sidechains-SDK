@@ -1,9 +1,10 @@
 package com.horizen.utxo.integration.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.fixtures.{BoxFixture, StoreFixture}
+import com.horizen.fixtures.StoreFixture
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.utxo.box.ForgerBox
+import com.horizen.utxo.fixtures.BoxFixture
 import com.horizen.utxo.storage.SidechainStateForgerBoxStorage
 import org.junit.Assert._
 import org.junit.Test

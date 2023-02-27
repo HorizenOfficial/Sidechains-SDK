@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.{EthereumConsensusDataLog, EthereumReceipt}
+import com.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Secp256k1.generateContractAddress
@@ -13,7 +13,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
-import com.horizen.cryptolibprovider.utils.CircuitTypes.NaiveThresholdSignatureCircuit
+import com.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -173,7 +173,7 @@ class AccountState(
 
             // get a receipt obj with non consensus data (logs updated too)
             val fullReceipt =
-              EthereumReceipt(consensusDataReceipt, txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+              receipt.EthereumReceipt(consensusDataReceipt, txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
 
             log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 

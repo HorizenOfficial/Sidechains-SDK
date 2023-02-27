@@ -6,21 +6,21 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.TransactionBaseErrorResponse.ErrorBadCircuit
-import com.horizen.api.http.TransactionBaseRestScheme.{TransactionBytesDTO, TransactionDTO}
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, TransactionBaseApiRoute}
-import com.horizen.block.SidechainBlockHeader
-import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.cryptolibprovider.utils.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import com.horizen.api.http.route.TransactionBaseApiRoute
+import com.horizen.api.http.route.TransactionBaseErrorResponse.ErrorBadCircuit
+import com.horizen.api.http.route.TransactionBaseRestScheme.{TransactionBytesDTO, TransactionDTO}
+import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
+import com.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Proof, SchnorrSignatureSerializer}
 import com.horizen.proposition._
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.Views
+import com.horizen.json.Views
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
 import com.horizen.utxo.api.http.SidechainTransactionErrorResponse._
 import com.horizen.utxo.api.http.SidechainTransactionRestScheme._
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.utxo.box.{Box, ForgerBox, ZenBox}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -679,37 +679,37 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
+   private[horizen] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllTransactions(transactions: List[SidechainTypes#SCBT]) extends SuccessResponse
+   private[horizen] case class RespAllTransactions(transactions: List[SidechainTypes#SCBT]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
+   private[horizen] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], format: Option[Boolean])
+   private[horizen] case class ReqFindById(transactionId: String, blockHash: Option[String], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)
+   private[horizen] case class ReqDecodeTransactionBytes(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespDecodeTransactionBytes(transaction: SidechainTypes#SCBT) extends SuccessResponse
+   private[horizen] case class RespDecodeTransactionBytes(transaction: SidechainTypes#SCBT) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionInput(boxId: String)
+   private[horizen] case class TransactionInput(boxId: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+   private[horizen] case class TransactionOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionWithdrawalRequestOutput(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+   private[horizen] case class TransactionWithdrawalRequestOutput(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionForgerOutput(publicKey: String, blockSignPublicKey: Option[String], vrfPubKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+   private[horizen] case class TransactionForgerOutput(publicKey: String, blockSignPublicKey: Option[String], vrfPubKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateCoreTransaction(transactionInputs: List[TransactionInput],
+   private[horizen] case class ReqCreateCoreTransaction(transactionInputs: List[TransactionInput],
                                                       regularOutputs: List[TransactionOutput],
                                                       withdrawalRequests: List[TransactionWithdrawalRequestOutput],
                                                       forgerOutputs: List[TransactionForgerOutput],
@@ -719,7 +719,7 @@ object SidechainTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateCoreTransactionSimplified(regularOutputs: List[TransactionOutput],
+   private[horizen] case class ReqCreateCoreTransactionSimplified(regularOutputs: List[TransactionOutput],
                                                              withdrawalRequests: List[TransactionWithdrawalRequestOutput],
                                                              forgerOutputs: List[TransactionForgerOutput],
                                                              @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Long,
@@ -729,7 +729,7 @@ object SidechainTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
+   private[horizen] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
                                                 automaticSend: Option[Boolean],
                                                 format: Option[Boolean],
                                                 @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
@@ -738,24 +738,24 @@ object SidechainTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqWithdrawCoins(outputs: List[TransactionWithdrawalRequestOutput],
+   private[horizen] case class ReqWithdrawCoins(outputs: List[TransactionWithdrawalRequestOutput],
                                            @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateForgerStake(outputs: List[TransactionForgerOutput],
+   private[horizen] case class ReqCreateForgerStake(outputs: List[TransactionForgerOutput],
                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendTransactionPost(transactionBytes: String)
+   private[horizen] case class ReqSendTransactionPost(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSpendForgingStake(transactionInputs: List[TransactionInput],
+   private[horizen] case class ReqSpendForgingStake(transactionInputs: List[TransactionInput],
                                                       regularOutputs: List[TransactionOutput],
                                                       forgerOutputs: List[TransactionForgerOutput],
                                                       format: Option[Boolean]) {
@@ -764,7 +764,7 @@ object SidechainTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqOpenStake(transactionInput: TransactionInput,
+   private[horizen] case class ReqOpenStake(transactionInput: TransactionInput,
                                        regularOutputProposition: String,
                                        forgerIndex: Int,
                                        format: Option[Boolean],
@@ -776,7 +776,7 @@ object SidechainTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqOpenStakeSimplified(forgerProposition: String,
+   private[horizen] case class ReqOpenStakeSimplified(forgerProposition: String,
                                        forgerIndex: Int,
                                        format: Option[Boolean],
                                        automaticSend: Option[Boolean],
@@ -786,7 +786,7 @@ object SidechainTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateKeyRotationTransaction(keyType: Int,
+   private[horizen] case class ReqCreateKeyRotationTransaction(keyType: Int,
                                                           keyIndex: Int,
                                                           newKey: String,
                                                           signingKeySignature: String,

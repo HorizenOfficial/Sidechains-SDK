@@ -2,7 +2,7 @@ package com.horizen.validation
 
 import java.util.Random
 import com.horizen.SidechainTypes
-import com.horizen.block.{Ommer, SidechainBlockHeader, SidechainBlockHeaderBase}
+import com.horizen.block.{Ommer, SidechainBlockHeaderBase}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus._
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
@@ -10,7 +10,7 @@ import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.utils.TimeToEpochUtils
 import com.horizen.utxo.SidechainHistory
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.storage.SidechainHistoryStorage
 import com.horizen.vrf.VrfOutput

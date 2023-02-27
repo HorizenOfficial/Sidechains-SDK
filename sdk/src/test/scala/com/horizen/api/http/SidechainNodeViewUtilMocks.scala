@@ -5,10 +5,9 @@ import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
 import com.horizen.block.MainchainBlockReference
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
-import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
-import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{BoxFixture, CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
-import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
+import com.horizen.fixtures.{CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, SchnorrKeyGenerator}
@@ -20,6 +19,7 @@ import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, 
 import com.horizen.utxo.block.SidechainBlock
 import com.horizen.utxo.box.{Box, ZenBox}
 import com.horizen.utxo.box.data.{BoxData, ZenBoxData}
+import com.horizen.utxo.fixtures.BoxFixture
 import com.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.utxo.state.ApplicationState
 import com.horizen.utxo.transaction.RegularTransaction

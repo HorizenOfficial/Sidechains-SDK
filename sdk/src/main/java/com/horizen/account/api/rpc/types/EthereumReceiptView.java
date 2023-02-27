@@ -1,6 +1,6 @@
 package com.horizen.account.api.rpc.types;
 
-import com.horizen.account.receipt.EthereumReceipt;
+import com.horizen.account.state.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;

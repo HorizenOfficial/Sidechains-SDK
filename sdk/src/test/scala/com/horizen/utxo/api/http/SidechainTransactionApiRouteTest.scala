@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.api.http.SidechainApiRouteTest
 import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.serialization.SerializationUtil
+import com.horizen.json.SerializationUtil
 import com.horizen.utils.BytesUtils
 import com.horizen.utxo.api.http.SidechainTransactionErrorResponse.{ErrorByteTransactionParsing, ErrorNotFoundTransactionId, ErrorNotFoundTransactionInput, GenericTransactionError}
 import com.horizen.utxo.api.http.SidechainTransactionRestScheme._

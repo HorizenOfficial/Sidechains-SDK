@@ -6,6 +6,8 @@ import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.utxo.WalletBox
 import com.horizen.utxo.box.{BoxSerializer, ZenBox}
+import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.utxo.fixtures.BoxFixture
 import com.horizen.utxo.storage.SidechainWalletBoxStorage
 import org.junit.Assert._
 import org.junit.Test

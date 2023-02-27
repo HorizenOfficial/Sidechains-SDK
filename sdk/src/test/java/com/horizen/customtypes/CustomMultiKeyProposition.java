@@ -6,7 +6,7 @@ import com.google.common.primitives.Bytes;
 import com.horizen.proposition.*;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.Secret;
-import com.horizen.serialization.Views;
+import com.horizen.json.Views;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 

@@ -1,8 +1,7 @@
 package com.horizen.storage
 
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
-import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, MainchainBlockReferenceDataInfo, MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.ByteArrayWrapper
 import sparkz.core.consensus.ModifierSemanticValidity

@@ -9,9 +9,9 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
+import com.horizen.account.state.receipt.{Bloom, EthereumConsensusDataReceipt}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.FeeUtils.calculateBaseFee

@@ -5,7 +5,7 @@ import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.commitmenttreenative.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
 import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
-import com.horizen.serialization.{ReverseBytesOptSerializer, ReverseBytesSerializer}
+import com.horizen.json.serializer.{ReverseBytesOptSerializer, ReverseBytesSerializer}
 
 import scala.util.Try
 

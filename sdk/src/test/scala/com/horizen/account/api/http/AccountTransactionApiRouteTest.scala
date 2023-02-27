@@ -2,11 +2,11 @@ package com.horizen.account.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.account.api.http.AccountTransactionRestScheme._
+import com.horizen.account.api.http.route.AccountTransactionRestScheme._
 import com.horizen.account.utils.FeeUtils
-import com.horizen.api.http.TransactionBaseRestScheme.ReqSendTransaction
+import com.horizen.api.http.route.TransactionBaseRestScheme.ReqSendTransaction
 import com.horizen.proposition.VrfPublicKey
-import com.horizen.serialization.SerializationUtil
+import com.horizen.json.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.mockito.Mockito

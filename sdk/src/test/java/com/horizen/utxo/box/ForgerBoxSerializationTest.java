@@ -1,12 +1,10 @@
 package com.horizen.utxo.box;
 
-import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.utxo.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
-import com.horizen.utxo.box.BoxSerializer;
-import com.horizen.utxo.box.ForgerBox;
 import com.horizen.vrf.VrfGeneratedDataProvider;
 import org.junit.Before;
 import org.junit.Test;

@@ -3,7 +3,7 @@ package com.horizen.utxo
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen.SidechainTypes
-import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.utxo.companion.SidechainBoxesCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter

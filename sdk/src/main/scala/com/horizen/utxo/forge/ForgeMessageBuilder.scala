@@ -1,7 +1,7 @@
 package com.horizen.utxo.forge
 
 import com.horizen.block._
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
@@ -9,7 +9,7 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.transaction.SidechainTransaction

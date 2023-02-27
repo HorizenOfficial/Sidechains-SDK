@@ -5,6 +5,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import com.horizen.{SidechainTypes, utxo}
 import com.horizen.utxo.SidechainMemoryPoolEntry
+import com.horizen.utxo.utils.MempoolMap
 import org.junit.Assert._
 
 class MempoolMapTest extends JUnitSuite

@@ -12,9 +12,10 @@ import CswManager.{ProofInProcess, ProofInQueue}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.{CswProofStatusSerializer, Views}
+import com.horizen.json.Views
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochUtils}
 import com.horizen._
+import com.horizen.json.serializer.CswProofStatusSerializer
 import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -441,7 +442,7 @@ class CswManager(settings: SidechainSettings,
   private def getCswOwner(cswData: CswData): Option[PrivateKey25519] = {
     val pubKeyBytes: Array[Byte] = cswData match {
       case ft: ForwardTransferCswData => BytesUtils.reverseBytes(ft.receiverPubKeyReversed)
-      case utxo: UtxoCswData => utxo.spendingPubKey
+      case utxo: UtxoCswData => spendingPubKey
     }
 
     val publicKey25519Proposition: PublicKey25519Proposition = Try {

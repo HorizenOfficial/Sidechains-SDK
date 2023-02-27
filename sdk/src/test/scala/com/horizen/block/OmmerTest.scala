@@ -1,14 +1,14 @@
 package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}

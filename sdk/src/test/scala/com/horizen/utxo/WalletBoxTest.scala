@@ -1,6 +1,6 @@
 package com.horizen.utxo
 
-import com.horizen.fixtures.BoxFixture
+import com.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite

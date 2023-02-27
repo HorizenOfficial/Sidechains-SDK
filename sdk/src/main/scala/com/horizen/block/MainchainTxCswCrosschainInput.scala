@@ -2,8 +2,8 @@ package com.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
+import com.horizen.json.serializer.ReverseBytesSerializer
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.serialization.ReverseBytesSerializer
 import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 
 import scala.util.Try

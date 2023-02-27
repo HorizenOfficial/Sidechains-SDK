@@ -12,9 +12,9 @@ import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
+import com.horizen.account.state.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
@@ -679,7 +679,7 @@ class EthService(
 
           // get a receipt obj with non consensus data (logs updated too)
           val fullReceipt =
-            EthereumReceipt(
+            receipt.EthereumReceipt(
               consensusDataReceipt,
               txHash,
               i,

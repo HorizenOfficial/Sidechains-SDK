@@ -5,7 +5,7 @@ import com.horizen.fixtures.{MainchainHeaderFixture, MainchainHeaderForPoWTest}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.{BytesUtils, Utils}
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.storage.SidechainHistoryStorage
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}

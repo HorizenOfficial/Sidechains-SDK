@@ -3,8 +3,8 @@ package com.horizen.api.http
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.api.http.SidechainNodeRestSchema._
-import com.horizen.serialization.SerializationUtil
+import com.horizen.api.http.route.SidechainNodeRestSchema._
+import com.horizen.json.SerializationUtil
 import org.junit.Assert.{assertEquals, assertTrue}
 
 import scala.collection.JavaConverters._

@@ -2,7 +2,7 @@ package com.horizen.utxo.node;
 
 import com.horizen.SidechainNodeViewBase;
 import com.horizen.utxo.block.SidechainBlock;
-import com.horizen.block.SidechainBlockHeader;
+import com.horizen.utxo.block.SidechainBlockHeader;
 import com.horizen.utxo.box.Box;
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo;
 import com.horizen.proposition.Proposition;

@@ -9,6 +9,8 @@ import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import com.horizen.utxo.box.{BoxSerializer, WithdrawalRequestBox}
+import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.utxo.fixtures.BoxFixture
 import com.horizen.utxo.storage.SidechainStateStorage
 import com.horizen.utxo.utils.BlockFeeInfo
 import org.junit.Assert._

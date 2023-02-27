@@ -14,6 +14,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathIn
 import com.horizen.utxo.block.SidechainBlock
 import com.horizen.utxo.box.data.{BoxData, ZenBoxData}
 import com.horizen.utxo.box.{Box, BoxSerializer, ForgerBox, ZenBox}
+import com.horizen.utxo.customtypes.{CustomApplicationWallet, CustomBox, CustomBoxSerializer}
 import com.horizen.utxo.storage._
 import com.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
 import com.horizen.utxo.wallet.ApplicationWallet

@@ -3,15 +3,13 @@ package com.horizen.utxo.certificatesubmitter
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
 import com.horizen.api.http.client.SecureEnclaveApiClient
-import com.horizen.block.SidechainBlockHeader
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies._
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import com.horizen.params.NetworkParams
 import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.storage.SidechainHistoryStorage
 import com.horizen.websocket.client.MainchainNodeChannel

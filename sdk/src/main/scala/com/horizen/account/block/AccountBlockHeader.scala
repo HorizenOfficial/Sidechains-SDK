@@ -4,13 +4,14 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.receipt.{Bloom, BloomSerializer}
+import com.horizen.account.state.receipt.{Bloom, BloomSerializer}
 import com.horizen.account.utils.{BigIntegerUInt256, FeeUtils}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
+import com.horizen.json.serializer.{MerklePathJsonSerializer, SparkzModifierIdSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
-import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
+import com.horizen.json.Views
 import com.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}

@@ -3,7 +3,7 @@ package com.horizen.account.transaction
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.utils.EthereumTransactionDecoder
-import com.horizen.serialization.ApplicationJsonSerializer
+import com.horizen.json.serializer.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertNull, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

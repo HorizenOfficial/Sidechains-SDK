@@ -2,12 +2,11 @@ package com.horizen.utxo
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
-import com.horizen.block.SidechainBlockHeader
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.node.SidechainNodeView
 import com.horizen.utxo.state.ApplicationState

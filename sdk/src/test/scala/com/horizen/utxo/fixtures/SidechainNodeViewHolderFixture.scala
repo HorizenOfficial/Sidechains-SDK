@@ -9,9 +9,8 @@ import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActor
 import com.horizen.block.ProofOfWorkVerifier
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.cryptolibprovider.CircuitTypes
 import com.horizen.customconfig.CustomAkkaConfiguration
-import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.fixtures.{CompanionsFixture, StoreFixture}
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
@@ -21,6 +20,7 @@ import com.horizen.utils.BytesUtils
 import com.horizen.utxo.api.http.SidechainTransactionApiRoute
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.utxo.box.BoxSerializer
+import com.horizen.utxo.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.utxo.state.ApplicationState
 import com.horizen.utxo.storage._
 import com.horizen.utxo.wallet.ApplicationWallet
@@ -120,7 +120,7 @@ trait SidechainNodeViewHolderFixture
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretHex)))
   }
 
-  val nodeViewHolderRef: ActorRef = utxo.SidechainNodeViewHolderRef(
+  val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
     consensusDataStorage,

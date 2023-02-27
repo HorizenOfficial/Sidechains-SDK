@@ -7,7 +7,7 @@ import com.horizen.block.SidechainBlockHeaderBase;
 import com.horizen.chain.AbstractFeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
 import com.horizen.chain.SidechainBlockInfo;
-import com.horizen.node.util.MainchainBlockReferenceInfo;
+import com.horizen.chain.MainchainBlockReferenceInfo;
 import com.horizen.transaction.Transaction;
 
 import java.util.List;

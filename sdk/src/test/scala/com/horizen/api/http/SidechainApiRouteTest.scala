@@ -10,18 +10,17 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeat
 import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GenerateSecret, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.block.SidechainBlockHeader
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.api.http.route.{ApplicationApiRoute, MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.utxo.csw.CswManager.ReceivableMessages._
 import com.horizen.utxo.csw.CswManager.Responses._
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion}
-import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.cryptolibprovider.CircuitTypes
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.SecretSerializer
-import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.storage.StorageIterator
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -45,14 +44,15 @@ import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.crypto.hash.Blake2b256
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.forge.AbstractForger
+import com.horizen.json.serializer.ApplicationJsonSerializer
 import com.horizen.utxo.SidechainApp
-import com.horizen.utxo.api.http.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
+import com.horizen.utxo.api.http.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute, SimpleCustomApi}
 import com.horizen.utxo.backup.BoxIterator
-import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.{Box, BoxSerializer}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
 import org.mindrot.jbcrypt.BCrypt
@@ -395,7 +395,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainCswApiRoute: Route = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef, params).route
   val sidechainBackupApiRoute: Route = SidechainBackupApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedBoxIterator, params).route
   val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val walletApiRejected: Route = SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val walletApiRejected: Route = route.SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainSubmitterApiRoute: Route = SidechainSubmitterApiRoute(mockedRESTSettings, params, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuit).route
   val sidechainSubmitterApiRouteWithKeyRotation: Route = SidechainSubmitterApiRoute(mockedRESTSettings, params, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation).route
 

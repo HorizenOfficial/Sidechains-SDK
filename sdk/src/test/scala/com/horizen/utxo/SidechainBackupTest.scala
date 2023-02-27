@@ -1,8 +1,7 @@
 package com.horizen.utxo
 
 import com.horizen.SidechainTypes
-import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.utxo.companion.SidechainBoxesCompanion
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.PublicKey25519Proposition
@@ -10,6 +9,7 @@ import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}
 import com.horizen.utxo.backup.{BackupBox, BoxIterator}
 import com.horizen.utxo.box.{BoxSerializer, CoinsBox}
+import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.utxo.storage.{BackupStorage, BoxBackupInterface}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.rules.TemporaryFolder
