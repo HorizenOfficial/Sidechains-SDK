@@ -73,12 +73,12 @@ abstract class AbstractCertificateSubmitter[
 
   protected var provingFileAbsolutePath: String = _
 
-  protected[certificatesubmitter] var submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled
-  protected[certificatesubmitter] var certificateSigningEnabled: Boolean = settings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
+  protected[horizen] var submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled
+  protected[horizen] var certificateSigningEnabled: Boolean = settings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
 
-  protected[certificatesubmitter] var signaturesStatus: Option[SignaturesStatus] = None
+  protected[horizen] var signaturesStatus: Option[SignaturesStatus] = None
 
-  protected[certificatesubmitter] var certGenerationState: Boolean = false
+  protected[horizen] var certGenerationState: Boolean = false
   protected val certificateFee: Option[String] = if (settings.withdrawalEpochCertificateSettings.certificateAutomaticFeeComputation) None else Some(settings.withdrawalEpochCertificateSettings.certificateFee)
 
   override def preStart(): Unit = {
@@ -118,7 +118,7 @@ abstract class AbstractCertificateSubmitter[
     checkSubmitter orElse reportStrangeInput
   }
 
-  private[certificatesubmitter] def workingCycle: Receive = {
+  private[horizen] def workingCycle: Receive = {
     onCertificateSubmissionEvent orElse
     newBlockArrived orElse
     locallyGeneratedSignature orElse
@@ -261,7 +261,7 @@ abstract class AbstractCertificateSubmitter[
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => submissionStrategy.getStatus(view.history, view.state, block.id)), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
 
-  private[certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
+  private[horizen] def getFtMinAmount(consensusEpochNumber: Int): Long = {
     ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
   }
 
@@ -499,7 +499,7 @@ object AbstractCertificateSubmitter {
     extends RuntimeException(message, cause.orNull)
 
   // Internal interface
-  protected[certificatesubmitter] object Timers {
+  protected[horizen] object Timers {
     object CertificateGenerationTimer
   }
 

@@ -1,6 +1,6 @@
 package com.horizen.fixtures
 
-import com.horizen.SidechainState
+import com.horizen.utxo.SidechainState
 
 trait SidechainStateFixture {
 

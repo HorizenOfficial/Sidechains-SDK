@@ -3,17 +3,20 @@ package com.horizen.transaction;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.box.Box;
-import com.horizen.box.BoxUnlocker;
+import com.horizen.utxo.box.Box;
+import com.horizen.utxo.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
+import com.horizen.utxo.transaction.BoxTransaction;
+import com.horizen.utxo.transaction.MempoolIncompatibleTransactionIncompatibilityChecker;
+import com.horizen.utxo.transaction.TransactionIncompatibilityChecker;
 import scala.Array;
 import sparkz.util.encode.Base16;
 import java.util.*;
-import static com.horizen.transaction.CoreTransactionsIdsEnum.MC2SCAggregatedTransactionId;
+import static com.horizen.utxo.transaction.CoreTransactionsIdsEnum.MC2SCAggregatedTransactionId;
 
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties({"mc2scTransactionsOutputs", "encoder"})

@@ -5,11 +5,12 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 
 import java.time.Instant
-import com.horizen.box.ForgerBox
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.consensus._
 import com.horizen.secret.VrfKeyGenerator
+import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.box.ForgerBox
 import org.junit.Test
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}

@@ -1,13 +1,13 @@
 package com.horizen.certificatesubmitter.dataproof
 
 import com.horizen.block.WithdrawalEpochCertificate
-import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.BytesUtils
+import com.horizen.utxo.box.WithdrawalRequestBox
 
 import scala.collection.JavaConverters._
 

@@ -20,7 +20,9 @@ import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import com.horizen.{SidechainNodeViewBase, SidechainTypes}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
+import com.horizen.utxo.api.http.ImportSecretsDetail
 import sparkz.core.settings.RESTApiSettings
+
 import java.io.{File, PrintWriter}
 import java.util
 import java.util.{Scanner, Optional => JOptional}
@@ -256,13 +258,13 @@ object WalletBaseRestScheme {
   case class RespCreatePrivateKey(proposition: Proposition) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreateVrfSecret(proposition: VrfPublicKey) extends SuccessResponse
+  private[horizen] case class RespCreateVrfSecret(proposition: VrfPublicKey) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqAllPropositions(proptype: Option[String])
+  private[horizen] case class ReqAllPropositions(proptype: Option[String])
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse
+  private[horizen] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   case class ReqCreateKey() {

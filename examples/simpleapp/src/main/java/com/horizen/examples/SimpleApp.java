@@ -1,6 +1,6 @@
 package com.horizen.examples;
 
-import com.horizen.SidechainApp;
+import com.horizen.utxo.SidechainApp;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;

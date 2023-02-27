@@ -7,22 +7,23 @@ import java.util.List;
 import java.util.Optional;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import com.horizen.SidechainAppModule;
+import com.horizen.utxo.SidechainAppModule;
 import com.horizen.SidechainAppStopper;
 import com.horizen.SidechainSettings;
 import com.horizen.api.http.ApplicationApiGroup;
-import com.horizen.box.*;
 import com.horizen.fork.ForkConfigurator;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
 import com.horizen.storage.Storage;
-import com.horizen.state.*;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
-import com.horizen.transaction.BoxTransaction;
+import com.horizen.utxo.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
-import com.horizen.wallet.*;
+import com.horizen.utxo.box.Box;
+import com.horizen.utxo.box.BoxSerializer;
+import com.horizen.utxo.state.ApplicationState;
+import com.horizen.utxo.wallet.ApplicationWallet;
 import com.horizen.utils.Pair;
 
 public class SimpleAppModule extends SidechainAppModule

@@ -1,7 +1,7 @@
 package com.horizen.cryptolibprovider.implementations;
 
 import com.horizen.block.WithdrawalEpochCertificate;
-import com.horizen.box.Box;
+import com.horizen.utxo.box.Box;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.cryptolibprovider.CommonCircuit;
 import com.horizen.cryptolibprovider.CswCircuit;

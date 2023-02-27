@@ -20,6 +20,7 @@ import com.horizen.utils._
 import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}
+
 import java.math.BigInteger
 import scala.util.{Failure, Random, Try}
 import java.nio.charset.StandardCharsets

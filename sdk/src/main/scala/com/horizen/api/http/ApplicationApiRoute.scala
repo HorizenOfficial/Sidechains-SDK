@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.pattern.ask
 import com.horizen.AbstractSidechainNodeViewHolder
-import com.horizen.node.SidechainNodeView
+import com.horizen.utxo.node.SidechainNodeView
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding

@@ -8,6 +8,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
 import com.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree}
+import com.horizen.utxo.block.SidechainBlock
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import sparkz.util.ModifierId
 import sparkz.util.serialization.{Reader, Writer}

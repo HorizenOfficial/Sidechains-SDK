@@ -5,19 +5,22 @@ import com.horizen.api.http.SidechainApiMockConfiguration
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainWallet}
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.data.{BoxData, ZenBoxData}
-import com.horizen.box.{Box, ForgerBox, ZenBox}
-import com.horizen.chain.{SidechainBlockInfo, SidechainFeePaymentsInfo}
+import com.horizen.SidechainSyncInfo
+import com.horizen.block.MainchainBlockReference
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
+import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.box.{Box, ForgerBox, ZenBox}
+import com.horizen.utxo.box.data.{BoxData, ZenBoxData}
+import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.transaction.RegularTransaction
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView

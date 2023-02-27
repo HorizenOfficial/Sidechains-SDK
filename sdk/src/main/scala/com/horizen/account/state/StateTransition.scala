@@ -74,7 +74,7 @@ class StateTransition(
       // execution failed was already handled
       case err: ExecutionFailedException => throw err
       // any other exception will bubble up and invalidate the block
-      case err =>
+      case err: Throwable =>
         // revert all changes, even buying gas and increasing the nonce
         view.revertToSnapshot(initialRevision)
         // revert any changes to the block gas pool

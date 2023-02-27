@@ -1,6 +1,6 @@
 package com.horizen.fixtures
 
-import com.horizen.SidechainHistory
+import com.horizen.utxo.SidechainHistory
 
 trait SidechainHistoryFixture {
 

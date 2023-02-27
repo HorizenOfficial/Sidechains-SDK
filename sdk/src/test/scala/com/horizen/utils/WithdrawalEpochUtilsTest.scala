@@ -1,10 +1,10 @@
 package com.horizen.utils
 
 import java.time.Instant
-import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MainchainBlockReferenceFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.utxo.block.SidechainBlock
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.Mockito

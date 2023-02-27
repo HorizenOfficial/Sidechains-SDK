@@ -10,29 +10,21 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeat
 import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GenerateSecret, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.box.Box
-import com.horizen.chain.SidechainFeePaymentsInfo
+import com.horizen.block.SidechainBlockHeader
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
-import com.horizen.csw.CswManager.ReceivableMessages._
-import com.horizen.csw.CswManager.Responses._
-import com.horizen.backup.BoxIterator
-import com.horizen.box.BoxSerializer
+import com.horizen.utxo.csw.CswManager.ReceivableMessages._
+import com.horizen.utxo.csw.CswManager.Responses._
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.forge.AbstractForger
-import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.SecretSerializer
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.storage.StorageIterator
-import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.SidechainApp
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -41,6 +33,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.util.{ModifierId, bytesToId}
+
 import java.net.{InetAddress, InetSocketAddress}
 import java.util
 import sparkz.core.app.Version
@@ -53,7 +46,17 @@ import sparkz.core.utils.NetworkTimeProvider
 import sparkz.crypto.hash.Blake2b256
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import com.horizen.cryptolibprovider.utils.CircuitTypes
+import com.horizen.forge.AbstractForger
+import com.horizen.utxo.SidechainApp
+import com.horizen.utxo.api.http.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
+import com.horizen.utxo.backup.BoxIterator
+import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.box.{Box, BoxSerializer}
+import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import com.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
 import org.mindrot.jbcrypt.BCrypt
+
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets

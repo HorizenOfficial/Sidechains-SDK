@@ -2,7 +2,7 @@ package com.horizen.api.http;
 
 import akka.http.javadsl.server.Route;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.node.SidechainNodeView;
+import com.horizen.utxo.node.SidechainNodeView;
 import com.horizen.secret.Secret;
 import com.horizen.serialization.Views;
 

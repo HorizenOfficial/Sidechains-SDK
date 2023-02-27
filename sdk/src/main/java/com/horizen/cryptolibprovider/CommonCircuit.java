@@ -2,7 +2,7 @@ package com.horizen.cryptolibprovider;
 
 import com.horizen.block.MainchainBackwardTransferCertificateOutput;
 import com.horizen.block.WithdrawalEpochCertificate;
-import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.utxo.box.WithdrawalRequestBox;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.librustsidechains.FieldElement;

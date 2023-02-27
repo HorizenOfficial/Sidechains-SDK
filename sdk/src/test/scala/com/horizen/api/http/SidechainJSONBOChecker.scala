@@ -3,12 +3,14 @@ package com.horizen.api.http
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.account.state.{AccountForgingStakeInfo, WithdrawalRequest}
 import com.horizen.account.transaction.AccountTransaction
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.box.{Box, BoxUnlocker}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction}
+import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import org.junit.Assert.{assertEquals, _}
+import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.box.{Box, BoxUnlocker}
+import com.horizen.utxo.transaction.BoxTransaction
+import org.junit.Assert._
 import sparkz.util.ModifierId
 
 import scala.Console.println

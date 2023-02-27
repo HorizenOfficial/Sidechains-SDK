@@ -3,12 +3,13 @@ package com.horizen.account.utils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.block.MainchainBlockReferenceData
-import com.horizen.box._
+import com.horizen.utxo.box._
 import com.horizen.fixtures._
 import com.horizen.proposition._
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.BytesUtils
+import com.horizen.utxo.box.Box
 import org.junit.Assert._
 import org.junit._
 import org.mockito._

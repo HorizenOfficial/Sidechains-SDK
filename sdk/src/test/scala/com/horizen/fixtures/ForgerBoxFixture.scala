@@ -1,14 +1,13 @@
 package com.horizen.fixtures
 
 import java.util.Random
-
-import com.horizen.box.ForgerBox
-import com.horizen.box.data.ForgerBoxData
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.utils
 import com.horizen.utils.Ed25519
+import com.horizen.utxo.box.ForgerBox
+import com.horizen.utxo.box.data.ForgerBoxData
 
 case class ForgerBoxGenerationMetadata(propositionSecret: PrivateKey25519, blockSignSecret: PrivateKey25519, vrfSecret: VrfSecretKey,
                                        forgingStakeInfo: ForgingStakeInfo)

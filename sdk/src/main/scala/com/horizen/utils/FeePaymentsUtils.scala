@@ -1,7 +1,7 @@
 package com.horizen.utils
 
-import com.horizen.box.ZenBox
-import com.horizen.transaction.FeePaymentsTransaction
+import com.horizen.utxo.box.ZenBox
+import com.horizen.utxo.transaction.FeePaymentsTransaction
 import scala.collection.JavaConverters._
 
 object FeePaymentsUtils {

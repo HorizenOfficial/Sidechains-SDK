@@ -1,6 +1,6 @@
 package com.horizen.fixtures
 
-import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.block.SidechainBlockHeader
 import com.horizen.utils.{MerklePath, Utils}
 
 import scala.util.Random
@@ -10,6 +10,7 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
+import com.horizen.utxo.block.SidechainBlock
 
 trait SidechainBlockHeaderFixture extends BoxFixture {
 

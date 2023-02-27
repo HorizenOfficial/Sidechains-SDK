@@ -1,6 +1,6 @@
 package com.horizen.customtypes;
 
-import com.horizen.box.BoxSerializer;
+import com.horizen.utxo.box.BoxSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

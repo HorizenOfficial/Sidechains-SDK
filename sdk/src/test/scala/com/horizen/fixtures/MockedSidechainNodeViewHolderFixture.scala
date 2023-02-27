@@ -2,6 +2,7 @@ package com.horizen.fixtures
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
+import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainNodeViewHolder, SidechainState, SidechainWallet}
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.settings.{NetworkSettings, SparkzSettings}

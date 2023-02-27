@@ -2,8 +2,6 @@ package com.horizen
 
 import com.google.common.io.Files
 import com.horizen.block.{FieldElementCertificateField, SidechainCreationVersions, WithdrawalEpochCertificate}
-import com.horizen.box.WithdrawalRequestBox
-import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
@@ -12,6 +10,8 @@ import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{MCPublicKeyHashProposition, SchnorrProposition}
 import com.horizen.secret.SchnorrSecret
+import com.horizen.utxo.box.WithdrawalRequestBox
+import com.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
 import java.io._

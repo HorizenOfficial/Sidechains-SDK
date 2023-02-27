@@ -1,12 +1,12 @@
 package com.horizen.validation
 
-import com.horizen.SidechainHistory
-import com.horizen.block.SidechainBlock
 import com.horizen.consensus.{FullConsensusEpochInfo, HistoryConsensusChecker}
 import com.horizen.fixtures.VrfGenerator
 import com.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.TestNetParams
+import com.horizen.utxo.SidechainHistory
+import com.horizen.utxo.block.SidechainBlock
 import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 

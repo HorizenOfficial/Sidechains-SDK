@@ -130,13 +130,13 @@ object TransactionBaseRestScheme {
   private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionDTO[TX](transaction: TX) extends SuccessResponse
+  private[horizen] case class TransactionDTO[TX](transaction: TX) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
+  private[horizen] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)

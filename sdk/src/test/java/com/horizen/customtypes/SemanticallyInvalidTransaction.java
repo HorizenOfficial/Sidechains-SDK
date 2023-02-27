@@ -1,9 +1,9 @@
 package com.horizen.customtypes;
 
-import com.horizen.box.BoxUnlocker;
-import com.horizen.box.ZenBox;
+import com.horizen.utxo.box.BoxUnlocker;
+import com.horizen.utxo.box.ZenBox;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.transaction.SidechainTransaction;
+import com.horizen.utxo.transaction.SidechainTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 

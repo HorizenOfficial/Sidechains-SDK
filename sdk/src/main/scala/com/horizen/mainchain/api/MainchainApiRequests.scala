@@ -1,12 +1,12 @@
 package com.horizen.mainchain.api
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.box.WithdrawalRequestBox
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
+import com.horizen.utxo.box.WithdrawalRequestBox
 
 import java.math.BigDecimal
 import java.util.Optional

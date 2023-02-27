@@ -1,13 +1,13 @@
 package com.horizen.examples;
 
-import com.horizen.backup.BoxIterator;
-import com.horizen.block.SidechainBlock;
-import com.horizen.box.Box;
+import com.horizen.utxo.backup.BoxIterator;
+import com.horizen.utxo.block.SidechainBlock;
+import com.horizen.utxo.box.Box;
 import com.horizen.proposition.Proposition;
-import com.horizen.state.ApplicationState;
-import com.horizen.state.SidechainStateReader;
+import com.horizen.utxo.state.ApplicationState;
+import com.horizen.utxo.state.SidechainStateReader;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
-import com.horizen.transaction.BoxTransaction;
+import com.horizen.utxo.transaction.BoxTransaction;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;

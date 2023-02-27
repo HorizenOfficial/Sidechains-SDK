@@ -7,8 +7,6 @@ import akka.actor.{Actor, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.common.io.Files
-import com.horizen.box.WithdrawalRequestBox
-import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
@@ -18,6 +16,8 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
 import com.horizen.utils.BytesUtils
+import com.horizen.utxo.box.WithdrawalRequestBox
+import com.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{Before, Ignore, Test}
 

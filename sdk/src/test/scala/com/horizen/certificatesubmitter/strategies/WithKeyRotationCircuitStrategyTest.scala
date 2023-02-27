@@ -2,8 +2,7 @@ package com.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
 import com.horizen._
-import com.horizen.block.{SidechainBlock, SidechainBlockHeader, SidechainCreationVersions, WithdrawalEpochCertificate}
-import com.horizen.box.WithdrawalRequestBox
+import com.horizen.block.{SidechainBlockHeader, SidechainCreationVersions, WithdrawalEpochCertificate}
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignatures}
@@ -19,6 +18,9 @@ import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.box.WithdrawalRequestBox
 import org.junit.{Before, Test}
 import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}

@@ -1,13 +1,13 @@
 package com.horizen.fixtures.sidechainblock.generation
 
 import java.util.Random
-import com.horizen.box.ForgerBox
-import com.horizen.box.data.ForgerBoxData
 import com.horizen.consensus._
 import com.horizen.fork.ForkManager
 import com.horizen.proof.VrfProof
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
+import com.horizen.utxo.box.ForgerBox
+import com.horizen.utxo.box.data.ForgerBoxData
 import com.horizen.vrf.VrfOutput
 
 import java.nio.charset.StandardCharsets

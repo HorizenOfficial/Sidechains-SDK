@@ -4,7 +4,6 @@ import com.horizen.AbstractHistory
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, byteArrayToMainchainHeaderHash}
 import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import com.horizen.utils._
 import com.horizen.websocket.client.MainchainNodeChannel

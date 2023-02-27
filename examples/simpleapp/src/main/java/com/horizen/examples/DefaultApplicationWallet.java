@@ -1,14 +1,14 @@
 package com.horizen.examples;
 
-import com.horizen.backup.BoxIterator;
-import com.horizen.box.Box;
+import com.horizen.utxo.backup.BoxIterator;
+import com.horizen.utxo.box.Box;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
-import com.horizen.wallet.ApplicationWallet;
+import com.horizen.utxo.wallet.ApplicationWallet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

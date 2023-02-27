@@ -7,14 +7,15 @@ import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainWallet}
-import com.horizen.block.SidechainBlock
-import com.horizen.chain.SidechainFeePaymentsInfo
+import com.horizen.SidechainSyncInfo
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import com.horizen.serialization.SerializationUtil
+import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView

@@ -4,8 +4,6 @@ import java.io.File
 import java.util
 import java.util.Optional
 import com.google.common.io.Files
-import com.horizen.box.WithdrawalRequestBox
-import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.certnative.BackwardTransfer
@@ -13,6 +11,8 @@ import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.MCPublicKeyHashProposition
+import com.horizen.utxo.box.WithdrawalRequestBox
+import com.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.fail
 import org.junit.{Ignore, Test}
 import scala.collection.JavaConverters._

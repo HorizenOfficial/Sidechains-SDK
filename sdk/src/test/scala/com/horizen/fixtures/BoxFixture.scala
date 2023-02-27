@@ -2,16 +2,19 @@ package com.horizen.fixtures
 
 import com.google.common.primitives.Longs
 import sparkz.core.bytesToId
-import com.horizen.box._
+import com.horizen.utxo.box._
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
+
 import java.util.{ArrayList => JArrayList, List => JList}
-import com.horizen.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
-import com.horizen.{SidechainTypes, WalletBox}
+import com.horizen.SidechainTypes
 
 import scala.util.Random
 import com.horizen.customtypes._
 import com.horizen.utils.ZenCoinsUtils
+import com.horizen.utxo.WalletBox
+import com.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
+import com.horizen.utxo.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 
 import scala.collection.JavaConverters._
 

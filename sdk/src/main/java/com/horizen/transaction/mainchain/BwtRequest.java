@@ -3,7 +3,7 @@ package com.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxBwtRequestCrosschainOutput;
-import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.utxo.box.WithdrawalRequestBox;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
 

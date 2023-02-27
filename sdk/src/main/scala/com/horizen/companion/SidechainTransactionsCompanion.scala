@@ -1,14 +1,14 @@
 package com.horizen.companion
 
-import com.horizen.transaction._
-import com.horizen.transaction.CoreTransactionsIdsEnum._
+import com.horizen.utxo.transaction._
+import com.horizen.utxo.transaction.CoreTransactionsIdsEnum._
 
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
 import com.horizen.SidechainTypes
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
-import com.horizen.transaction.{CertificateKeyRotationTransactionSerializer, MC2SCAggregatedTransactionSerializer, OpenStakeTransactionSerializer, SidechainCoreTransactionSerializer}
+import com.horizen.transaction.{MC2SCAggregatedTransactionSerializer, TransactionSerializer}
 import com.horizen.utils.DynamicTypedSerializer
 
 

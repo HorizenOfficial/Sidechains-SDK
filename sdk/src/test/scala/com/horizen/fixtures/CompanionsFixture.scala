@@ -7,7 +7,8 @@ import com.horizen.account.companion
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.companion.{SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.secret.SecretSerializer
-import com.horizen.transaction.{RegularTransactionSerializer, TransactionSerializer}
+import com.horizen.transaction.TransactionSerializer
+import com.horizen.utxo.transaction.RegularTransactionSerializer
 
 trait CompanionsFixture
 {

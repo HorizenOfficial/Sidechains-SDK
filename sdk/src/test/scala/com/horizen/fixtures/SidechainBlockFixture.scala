@@ -4,8 +4,7 @@ import java.lang.{Byte => JByte}
 import java.time.Instant
 import java.util.{HashMap => JHashMap}
 import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.box.{Box, ForgerBox}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
@@ -13,8 +12,11 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
-import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
+import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
+import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.box.{Box, ForgerBox}
+import com.horizen.utxo.transaction.SidechainTransaction
 import com.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity

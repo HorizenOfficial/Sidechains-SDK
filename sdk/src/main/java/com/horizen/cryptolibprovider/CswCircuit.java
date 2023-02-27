@@ -1,9 +1,8 @@
 package com.horizen.cryptolibprovider;
 
 import com.horizen.block.WithdrawalEpochCertificate;
-import com.horizen.box.Box;
+import com.horizen.utxo.box.Box;
 import com.horizen.librustsidechains.FieldElement;
-import com.horizen.params.NetworkParams;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.ForwardTransferCswData;

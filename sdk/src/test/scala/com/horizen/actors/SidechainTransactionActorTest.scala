@@ -8,7 +8,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionActorRef
 import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
-import com.horizen.transaction.RegularTransaction
+import com.horizen.utxo.transaction.RegularTransaction
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar

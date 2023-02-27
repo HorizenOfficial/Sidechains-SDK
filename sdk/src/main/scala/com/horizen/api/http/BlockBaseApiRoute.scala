@@ -237,7 +237,7 @@ abstract class BlockBaseApiRoute[
 object BlockBaseRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFindById(blockId: String) {
+  private[horizen] case class ReqFindById(blockId: String) {
     require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlockBase.BlockIdHexStringLength}")
   }
 
@@ -249,7 +249,7 @@ object BlockBaseRestSchema {
 
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqLastIds(number: Int) {
+  private[horizen] case class ReqLastIds(number: Int) {
     require(number > 0, s"Invalid number $number. Number must be > 0")
   }
 
@@ -257,7 +257,7 @@ object BlockBaseRestSchema {
   private[api] case class RespLastIds(lastBlockIds: Seq[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFindIdByHeight(height: Int) {
+  private[horizen] case class ReqFindIdByHeight(height: Int) {
     require(height > 0, s"Invalid height $height. Height must be > 0")
   }
 
@@ -278,7 +278,7 @@ object BlockBaseRestSchema {
   ](block: PM, height: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFindBlockInfoById(blockId: String) {
+  private[horizen] case class ReqFindBlockInfoById(blockId: String) {
     require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlockBase.BlockIdHexStringLength}")
   }
 

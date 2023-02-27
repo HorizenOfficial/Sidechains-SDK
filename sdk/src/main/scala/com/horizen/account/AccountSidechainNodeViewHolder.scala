@@ -14,7 +14,6 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
-import com.horizen.transaction.Transaction
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import io.horizen.evm.Database

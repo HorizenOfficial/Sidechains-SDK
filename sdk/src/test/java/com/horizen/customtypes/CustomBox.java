@@ -1,7 +1,7 @@
 package com.horizen.customtypes;
 
-import com.horizen.box.AbstractBox;
-import com.horizen.box.BoxSerializer;
+import com.horizen.utxo.box.AbstractBox;
+import com.horizen.utxo.box.BoxSerializer;
 
 
 public class CustomBox extends AbstractBox<CustomPublicKeyProposition, CustomBoxData, CustomBox>

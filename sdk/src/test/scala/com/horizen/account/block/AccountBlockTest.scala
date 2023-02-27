@@ -23,6 +23,7 @@ import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
 import com.horizen.serialization.{ApplicationJsonSerializer, SerializationUtil}
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
+import com.horizen.utxo.block.SidechainBlock
 import com.horizen.validation._
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import io.horizen.evm.Hash

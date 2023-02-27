@@ -14,7 +14,6 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData}
-import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
@@ -28,6 +27,7 @@ import com.horizen.storage.{SidechainSecretStorage, Storage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
+import com.horizen.utxo.box.Box
 import io.horizen.evm.results.ProofAccountResult
 import io.horizen.evm.{Address, Hash, StateDB}
 import org.mockito.ArgumentMatchers.any

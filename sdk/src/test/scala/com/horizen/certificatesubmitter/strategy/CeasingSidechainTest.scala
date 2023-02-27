@@ -1,8 +1,7 @@
 package com.horizen.certificatesubmitter.strategy
 
 import akka.actor.{ActorRef, ActorSystem}
-import com.horizen.{MempoolSettings, SidechainHistory, SidechainMemoryPool, SidechainSettings, SidechainState, SidechainWallet}
-import com.horizen.block.SidechainBlock
+import com.horizen.{MempoolSettings, SidechainSettings}
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, NonCeasingSidechain, SubmissionWindowStatus}
 import com.horizen.chain.SidechainBlockInfo
@@ -19,6 +18,8 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.util.ModifierId
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.BytesUtils
+import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.block.SidechainBlock
 import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
 import sparkz.core.NodeViewHolder.CurrentView
 

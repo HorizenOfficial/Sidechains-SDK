@@ -2,10 +2,11 @@ package com.horizen.chain
 
 import com.fasterxml.jackson.annotation._
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.serialization.{ModifierSemanticValiditySerializer, Views}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.utxo.block.SidechainBlock
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.util.{ModifierId, bytesToId, idToBytes}

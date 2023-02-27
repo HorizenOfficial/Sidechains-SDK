@@ -2,8 +2,8 @@ package com.horizen.storage.performance
 import com.horizen.fixtures.TransactionFixture
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{ByteArrayWrapper, byteArrayToWrapper, Pair => JPair, _}
+import com.horizen.utxo.transaction.RegularTransaction
 import sparkz.util.{ModifierId, idToBytes}
 
 import java.nio.charset.StandardCharsets

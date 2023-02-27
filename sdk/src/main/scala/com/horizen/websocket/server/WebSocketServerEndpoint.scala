@@ -4,7 +4,7 @@ import java.util
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.block.SidechainBlock
+import com.horizen.utxo.block.SidechainBlock
 
 import javax.websocket.{OnClose, OnError, OnMessage, OnOpen, SendHandler, SendResult, Session}
 import javax.websocket.server.ServerEndpoint

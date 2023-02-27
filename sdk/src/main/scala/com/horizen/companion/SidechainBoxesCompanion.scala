@@ -2,10 +2,9 @@ package com.horizen.companion
 
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
-
-import com.horizen.box.CoreBoxesIdsEnum._
+import com.horizen.utxo.box.CoreBoxesIdsEnum._
 import com.horizen.SidechainTypes
-import com.horizen.box._
+import com.horizen.utxo.box._
 import com.horizen.utils.DynamicTypedSerializer
 
 
