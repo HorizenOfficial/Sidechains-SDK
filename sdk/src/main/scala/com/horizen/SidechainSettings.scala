@@ -90,11 +90,12 @@ case class EthServiceSettings(
     globalRpcGasCap: BigInteger = BigInteger.valueOf(50000000),
 )
 
-
+// Default values are the same as in Geth/Erigon
 case class AccountMempoolSettings(maxNonceGap: Int = 16,
                                   maxAccountSlots: Int = 16,
-                                  maxMemPoolSlots: Int = 6144,
+                                  maxMemPoolSlots: Int = 6144, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
                                   maxNonExecMemPoolSlots: Int = 1024){
+                                 ){
   require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
   require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
   require(maxMemPoolSlots >= MempoolMap.MaxNumOfSlotsForTx, s"Maximum Memory Pool Slots number should be at least " +
@@ -103,6 +104,8 @@ case class AccountMempoolSettings(maxNonceGap: Int = 16,
     s"should be at least ${MempoolMap.MaxNumOfSlotsForTx} but it is $maxNonExecMemPoolSlots")
   require(maxNonExecMemPoolSlots < maxMemPoolSlots, s"Maximum Non Executable Memory Sub Pool Slots " +
     s"($maxNonExecMemPoolSlots) are greater than Maximum Memory Pool Slots ($maxMemPoolSlots)")
+  require(maxMemPoolSlots >= maxAccountSlots, s"Maximum number of account slots cannot be bigger than maximum number of " +
+    s"Memory Pool slots: account slots $maxAccountSlots - Memory Pool slots $maxMemPoolSlots")
 }
 
 case class SidechainSettings(

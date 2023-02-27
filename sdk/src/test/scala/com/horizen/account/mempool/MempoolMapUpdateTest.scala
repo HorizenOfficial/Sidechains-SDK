@@ -753,7 +753,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of non exec txs", 1, mempoolMap.mempoolTransactions(false).size)
     val executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 2, executableTxs.size)
-    assertEquals("Wrong account size in slots", mempoolSettings.maxAccountSlots, mempoolMap.getAccountSizeInSlots(tx14.getFrom))
+    assertEquals("Wrong account size in slots", mempoolSettings.maxAccountSlots, mempoolMap.getAccountSlots(tx14.getFrom))
   }
 
 
@@ -783,7 +783,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Initialize mempool
     val mempoolMap = new MempoolMap(accountStateProvider,
       baseStateProvider,
-      AccountMempoolSettings(maxMemPoolSlots = 8,
+      AccountMempoolSettings(maxAccountSlots = 8,
+        maxMemPoolSlots = 8,
         maxNonExecMemPoolSlots = 7))
     //Update the nonce in the state db
     Mockito
