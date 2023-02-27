@@ -78,7 +78,6 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
                 "Adding a transaction with with negative nonce had an exception as expected: {}".format(str(e)))
             assert_true("negative nonce" in str(e), "Wrong exception type")
 
-
         response = allTransactions(sc_node_1, False)
         assert_equal(0, len(response["transactionIds"]), "Transaction with negative nonce added to node 1 mempool")
 
@@ -108,7 +107,8 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
             logging.info(
                 "Adding a transaction with max fee lower than priority fee had an exception as expected: {}".format(
                     str(e)))
-            err = "eip1559 transaction maxPriorityFeePerGas [{}] higher than maxFeePerGas [{}]".format(max_priority_fee,max_fee)
+            err = "eip1559 transaction maxPriorityFeePerGas [{}] higher than maxFeePerGas [{}]".format(max_priority_fee,
+                                                                                                       max_fee)
             assert_true(err in str(e), "Wrong exception type")
 
         response = allTransactions(sc_node_1, False)
@@ -267,7 +267,6 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
                                      maxFeePerGas=900000000, value=1, data=str(big_data))
             fail("Adding a transaction exceeding the account size should have failed")
         except RuntimeError as e:
-            exception_occurs = True
             logging.info(
                 "Adding a transaction exceeding the account size had an exception as expected: {}".format(str(e)))
             assert_true("exceeds account available space" in str(e), "Wrong exception type")
@@ -275,7 +274,6 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         response = allTransactions(sc_node_1, False)
         assert_equal(self.max_account_slots - 1, len(response["transactionIds"]),
                      "Transaction exceeding the account size added to node 1 mempool")
-
 
 
 if __name__ == "__main__":
