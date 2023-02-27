@@ -137,7 +137,8 @@ class SCNodeConfiguration(object):
                  storage_backup_interval='15m',
                  storage_backup_delay='5m',
                  max_nonce_gap=16,
-                 max_account_slots=16,):
+                 max_account_slots=16,
+                 max_mempool_slots=6144,):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -164,6 +165,7 @@ class SCNodeConfiguration(object):
         self.storage_backup_delay = storage_backup_delay
         self.max_nonce_gap = max_nonce_gap
         self.max_account_slots = max_account_slots
+        self.max_mempool_slots = max_mempool_slots
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

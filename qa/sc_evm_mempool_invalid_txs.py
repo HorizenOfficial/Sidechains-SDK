@@ -13,7 +13,7 @@ from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import forward_transfer_to_sidechain, fail
 
 """
-Check that invalid transactions are not added to the mem pool.
+Check all reasons why a transaction cannot be added to the mem pool.
 
 Configuration:
     - 1 SC node
@@ -37,7 +37,7 @@ Test:
 
 class SCEvmMempoolInvalidTxs(AccountChainSetup):
     def __init__(self):
-        super().__init__()
+        super().__init__(max_mempool_slots=20)
 
     def run_test(self):
         mc_node = self.nodes[0]
@@ -52,6 +52,13 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
                                       mc_node,
                                       evm_address_sc1,
                                       ft_amount_in_zen,
+                                      mc_return_address=mc_node.getnewaddress(),
+                                      generate_block=True)
+
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      mc_node,
+                                      evm_address_sc2,
+                                      1.0,
                                       mc_return_address=mc_node.getnewaddress(),
                                       generate_block=True)
 
@@ -246,7 +253,7 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         assert_equal(0, len(response["transactionIds"]), "Transaction with nonce too low added to node 1 mempool")
 
         # Test that a transaction exceeding the account size is rejected by the mem pool.
-        # Create as many txs of 1 slot as to almost fill the mempool
+        # Create as many txs of 1 slot as to almost fill the account mempool
         for _ in range(self.max_account_slots - 1):
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc1,
                                      nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
@@ -268,6 +275,7 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         response = allTransactions(sc_node_1, False)
         assert_equal(self.max_account_slots - 1, len(response["transactionIds"]),
                      "Transaction exceeding the account size added to node 1 mempool")
+
 
 
 if __name__ == "__main__":

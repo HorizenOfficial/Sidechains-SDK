@@ -20,3 +20,6 @@ case class AccountMemPoolOutOfBoundException(txId: ModifierId)
 
 case class TransactionReplaceUnderpricedException(txId: ModifierId)
   extends MempoolException(s"transaction with txId $txId cannot replace existing transaction because underpriced")
+
+case class MemPoolOutOfBoundException(txId: ModifierId)
+  extends MempoolException(s"adding transaction with txId $txId exceeds memory pool available space")

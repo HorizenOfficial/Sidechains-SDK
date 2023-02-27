@@ -335,8 +335,7 @@ class AccountForgeMessageBuilderTest
     Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address])).thenReturn(initialStateNonce)
 
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock,
-      () => baseStateViewMock,
-      AccountMempoolSettings())
+      () => baseStateViewMock, AccountMempoolSettings())
 
     // Adding some txs in the mempool
 

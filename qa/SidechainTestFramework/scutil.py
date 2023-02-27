@@ -501,6 +501,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false"),
         'MAX_NONCE_GAP': sc_node_config.max_nonce_gap,
         'MAX_ACCOUNT_SLOTS': sc_node_config.max_account_slots,
+        'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
