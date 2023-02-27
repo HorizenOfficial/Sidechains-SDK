@@ -12,8 +12,8 @@ import com.horizen.sc2sc.CrossChainMessage;
 import com.horizen.sc2sc.CrossChainMessageHash;
 import com.horizen.storage.SidechainStateStorage;
 import com.horizen.transaction.AbstractCrossChainRedeemTransaction;
+import com.horizen.utils.BytesUtils;
 import org.junit.Test;
-import scala.Option;
 import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
 
@@ -70,7 +70,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
     private final CrossChainRedeemMessageBoxData redeemMessageBox = mock(CrossChainRedeemMessageBoxData.class);
     private final CrossChainMessage crossChainMessage = mock(CrossChainMessage.class);
     private final GenesisDataSettings genesisDataSettings = mock(GenesisDataSettings.class);
-    private final String scId = "scId";
+    private final String scId = BytesUtils.toHexString("scId".getBytes());
     private final CrossChainMessageHash crossChainMsgHash = mock(CrossChainMessageHash.class);
     private final byte[] scTxCommitmentTreeHash = "scTxCommitmentTreeHash".getBytes(StandardCharsets.UTF_8);
     private final byte[] nextScTxCommitmentTreeHash = "nextScTxCommitmentTreeHash".getBytes(StandardCharsets.UTF_8);
@@ -81,7 +81,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
     @Test
     public void whenReceivingScIdIsDifferentThenTheScIdInSettings_throwsAnIllegalArgumentException() {
         // Arrange
-        String badScId = "badScId";
+        String badScIdHex = BytesUtils.toHexString("badScIdHex".getBytes());
         AbstractCrossChainRedeemTransactionValidator validator = new CrossChainRedeemTransactionValidatorMock(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
@@ -89,9 +89,9 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId.getBytes());
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
-        when(genesisDataSettings.scId()).thenReturn(badScId);
+        when(genesisDataSettings.scId()).thenReturn(badScIdHex);
 
         // Act
         IllegalArgumentException thrown = assertThrows(
@@ -100,7 +100,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         );
 
         // Assert
-        String expectedMsg = String.format("Receiver sidechain id `%s` does not match with this sidechain id `%s`", scId, badScId);
+        String expectedMsg = String.format("Receiver sidechain id `%s` does not match with this sidechain id `%s`", scId, badScIdHex);
         assertEquals(expectedMsg, thrown.getMessage());
     }
 
@@ -114,7 +114,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId.getBytes());
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
@@ -145,7 +145,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId.getBytes());
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
@@ -177,7 +177,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId.getBytes());
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
@@ -211,7 +211,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId.getBytes());
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
@@ -258,7 +258,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId.getBytes());
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 

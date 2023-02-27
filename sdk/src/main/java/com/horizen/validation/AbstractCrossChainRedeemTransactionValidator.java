@@ -9,9 +9,8 @@ import com.horizen.sc2sc.CrossChainMessage;
 import com.horizen.sc2sc.CrossChainMessageHash;
 import com.horizen.storage.SidechainStateStorage;
 import com.horizen.transaction.AbstractCrossChainRedeemTransaction;
-import scala.Option;
+import com.horizen.utils.BytesUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class AbstractCrossChainRedeemTransactionValidator implements TransactionValidator<AbstractCrossChainRedeemTransaction> {
@@ -52,7 +51,7 @@ public class AbstractCrossChainRedeemTransactionValidator implements Transaction
 
     private void validateCorrectSidechain(CrossChainMessage msg) {
         byte[] receivingSidechain = msg.getReceiverSidechain();
-        String receivingSidechainAsString = new String(receivingSidechain, StandardCharsets.UTF_8);
+        String receivingSidechainAsString = BytesUtils.toHexString(receivingSidechain);
         String sidechainId = sidechainSettings.genesisData().scId();
 
         if (!receivingSidechainAsString.equals(sidechainId)) {
