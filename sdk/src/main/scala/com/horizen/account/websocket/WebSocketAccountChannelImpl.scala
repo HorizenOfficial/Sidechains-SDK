@@ -18,9 +18,9 @@ import com.horizen.account.api.rpc.types.EthereumBlockView
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.websocket.data.SubscriptionWithFilter
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.{Address, Hash}
 import org.web3j.utils.Numeric
 
 import java.math.BigInteger
@@ -100,17 +100,17 @@ class WebSocketAccountChannelImpl extends SparkzLogging{
       val blockJson = mapper.createObjectNode()
       blockJson.put("difficulty", "0x0")
       blockJson.put("extraData", ethereumBlockView.extraData)
-      blockJson.put("gasLimit", ethereumBlockView.gasLimit)
-      blockJson.put("gasUsed", ethereumBlockView.gasUsed)
-      blockJson.put("logsBloom", ethereumBlockView.logsBloom)
+      blockJson.put("gasLimit", Numeric.toHexStringWithPrefix(ethereumBlockView.gasLimit))
+      blockJson.put("gasUsed", Numeric.toHexStringWithPrefix(ethereumBlockView.gasUsed))
+      blockJson.put("logsBloom", Numeric.prependHexPrefix(BytesUtils.toHexString(ethereumBlockView.logsBloom)))
       blockJson.put("miner", ethereumBlockView.miner.toString)
       blockJson.put("nonce", ethereumBlockView.nonce)
-      blockJson.put("number", ethereumBlockView.number)
+      blockJson.put("number", Numeric.toHexStringWithPrefix(ethereumBlockView.number))
       blockJson.put("parentHash", ethereumBlockView.parentHash.toString)
       blockJson.put("receiptRoot", ethereumBlockView.receiptsRoot.toString)
       blockJson.put("sha3Uncles", ethereumBlockView.sha3Uncles)
       blockJson.put("stateRoot", ethereumBlockView.stateRoot.toString)
-      blockJson.put("timestamp", ethereumBlockView.timestamp)
+      blockJson.put("timestamp", Numeric.toHexStringWithPrefix(ethereumBlockView.timestamp))
       blockJson.put("transactionsRoot", ethereumBlockView.transactionsRoot.toString)
 
       blockJson

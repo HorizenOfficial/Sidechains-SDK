@@ -7,19 +7,18 @@ import com.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFix
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataLog, EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.{AccountState, GasUtil}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.EthereumTransactionUtils
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.evm.interop.EvmLog
 import com.horizen.fixtures.CompanionsFixture
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.{Address, Hash}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView
-import com.horizen.evm.utils.{Address, Hash}
 import sparkz.core.block.Block
 
 import java.math.BigInteger
@@ -50,12 +49,12 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
   val transactionTopic2 = new Hash("0x000000000000000000000000b3eb3c0bf99677d0c9ff18030c66e1bb78967994")
 
   val transactionAddress = new Address("0x90dc4f6c07c2ecb76768a70276206436e77a6645")
-  val transactionLog = new EvmLog(
+  val transactionLog = new EthereumConsensusDataLog(
     transactionAddress,
     Array(transactionTopic0, transactionTopic1, transactionTopic2),
     BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001")
   )
-  val transactionLog2 = new EvmLog(
+  val transactionLog2 = new EthereumConsensusDataLog(
     transactionAddress,
     Array(transactionTopic0),
     BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001")
