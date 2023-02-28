@@ -142,13 +142,7 @@ class EthService(
       blockId: ModifierId,
       hydratedTx: Boolean
   ): EthereumBlockView = {
-    val (block, blockInfo): (AccountBlock, SidechainBlockInfo) =
-      try {
-        getBlockById(nodeView, blockId)
-      } catch {
-        case _: Throwable => return null
-      }
-
+    val (block, blockInfo): (AccountBlock, SidechainBlockInfo) = getBlockById(nodeView, blockId)
     val history = nodeView.history
     val (blockNumber, blockHash, view): (Long, Hash, AccountStateView) =
       if (blockId == null) {
@@ -451,23 +445,23 @@ class EthService(
     tag match {
       case "earliest" => 1
       case "finalized" | "safe" => nodeView.history.getCurrentHeight match {
-          case height if height <= 100 => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
-          case height if height > 100 => height - 100
-        }
+        case height if height <= 100 => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
+        case height if height > 100 => height - 100
+      }
       case "latest" | null => nodeView.history.getCurrentHeight
       case "pending" => nodeView.history.getCurrentHeight + 1
       case height =>
         Try
           .apply(Numeric.decodeQuantity(height).intValueExact())
           .filter(_ <= nodeView.history.getCurrentHeight)
-          .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null)))
+          .getOrElse(throw new RpcException(new RpcError(RpcCode.UnknownBlock, "Invalid block tag parameter", null)))
     }
   }
 
   private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
     val blockId = parseBlockTag(nodeView, tag) match {
       case height if height == nodeView.history.getCurrentHeight + 1 => null
-      case height => ModifierId(nodeView.history.blockIdByHeight(height).get)
+      case height => ModifierId(nodeView.history.blockIdByHeight(height).getOrElse(throw new RpcException(new RpcError(RpcCode.UnknownBlock, "Invalid block tag parameter", null))))
     }
     blockId
   }

@@ -23,6 +23,7 @@ public class RpcHandler {
             }
             return new RpcResponseError(request.id, RpcError.fromCode(RpcCode.MethodNotFound));
         } catch (RpcException e) {
+            if (e.error.code == RpcCode.UnknownBlock.code) return new RpcResponseSuccess(request.id, null);
             return new RpcResponseError(request.id, e.error);
         } catch (Throwable e) {
             return new RpcResponseError(request.id, RpcError.fromCode(RpcCode.InternalError, e.getMessage()));
