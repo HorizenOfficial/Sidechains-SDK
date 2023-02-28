@@ -7,12 +7,13 @@ import sparkz.util.ModifierId
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.duration.FiniteDuration
 
 /*
 This class contains all the transactions accepted in the mempool.
 Transactions can be retrieved from the cache or by transaction id or by arrival order.
  */
-class TxCache {
+class TxCache(txLifetime: FiniteDuration) {
   // All transactions currently in the mempool
   private val all: TrieMap[ModifierId, TxMetaInfo] = TrieMap.empty[ModifierId, TxMetaInfo]
   private var sizeInSlots: Int = 0
@@ -22,7 +23,7 @@ class TxCache {
   private var youngestTx: Option[TxMetaInfo] = None
 
   def add(tx: SidechainTypes#SCAT, execStatus: TxExecutableStatus): Unit = {
-    val txInfo = new TxMetaInfo(tx, execStatus)
+    val txInfo = new TxMetaInfo(tx, execStatus, txLifetime)
     all.put(tx.id, txInfo)
     val txSize = txSizeInSlot(tx)
     sizeInSlots += txSize
@@ -102,6 +103,8 @@ class TxCache {
 
   // Returns the latest transaction added to the mempool
   def getYoungestTransaction(): Option[SidechainTypes#SCAT] = youngestTx.map(_.tx)
+
+  def getOldestTransactionInfo(): Option[TxMetaInfo] = oldestTx
 
   def getNonExecIterator(): NonExecTransactionIterator = new NonExecTransactionIterator
 

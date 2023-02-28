@@ -6,7 +6,7 @@ import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
 import sparkz.core.settings.SparkzSettings
 
 import java.math.BigInteger
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class ForgerKeysData(
     blockSignProposition: String,
@@ -94,8 +94,8 @@ case class EthServiceSettings(
 case class AccountMempoolSettings(maxNonceGap: Int = 16,
                                   maxAccountSlots: Int = 16,
                                   maxMemPoolSlots: Int = 6144, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
-                                  maxNonExecMemPoolSlots: Int = 1024
-                                 ){
+                                  maxNonExecMemPoolSlots: Int = 1024,
+                                  txLifetime: FiniteDuration = 3.hours){
   require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
   require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
   require(maxMemPoolSlots >= MempoolMap.MaxNumOfSlotsForTx, s"Maximum Memory Pool Slots number should be at least " +
@@ -106,6 +106,8 @@ case class AccountMempoolSettings(maxNonceGap: Int = 16,
     s"($maxNonExecMemPoolSlots) are greater than Maximum Memory Pool Slots ($maxMemPoolSlots)")
   require(maxMemPoolSlots >= maxAccountSlots, s"Maximum number of account slots cannot be bigger than maximum number of " +
     s"Memory Pool slots: account slots $maxAccountSlots - Memory Pool slots $maxMemPoolSlots")
+  require(txLifetime.toSeconds > 0, s"Transaction lifetime cannot be 0 or less seconds: $txLifetime")
+
 }
 
 case class SidechainSettings(

@@ -10,6 +10,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.util.ModifierId
 
 import java.math.BigInteger
+import scala.concurrent.duration.DurationInt
 
 class TxCacheTest
   extends JUnitSuite
@@ -20,7 +21,7 @@ class TxCacheTest
   @Test
   def testAdd(): Unit = {
 
-    val txCache = new TxCache
+    val txCache = new TxCache(3.hours)
     assertTrue("Oldest is already initialized", txCache.getOldestTransaction().isEmpty)
     assertTrue("Youngest is already initialized", txCache.getYoungestTransaction().isEmpty)
     assertEquals("wrong size", 0, txCache.size)
@@ -53,7 +54,7 @@ class TxCacheTest
 
     // Let's do the same but in different order. Nothing should change except for youngest/oldest
 
-    val txCache2 = new TxCache
+    val txCache2 = new TxCache(3.hours)
     txCache2.add(secondTx, NON_EXEC)
     assertEquals("wrong size", 1, txCache2.size)
     assertEquals("wrong size in slot", 2, txCache2.getSizeInSlots)
@@ -82,7 +83,7 @@ class TxCacheTest
     val secondTx = setupMockSizeInSlotsToTx(createEIP1559Transaction(value = BigInteger.TWO), 3 )//3 slots
     val thirdTx = createEIP1559Transaction(value = BigInteger.valueOf(3))
 
-    var txCache = new TxCache
+    var txCache = new TxCache(3.hours)
     txCache.add(firstTx, EXEC)
     txCache.add(secondTx, NON_EXEC)
     txCache.add(thirdTx, NON_EXEC)
@@ -109,7 +110,7 @@ class TxCacheTest
     assertEquals(firstTx, txCache.getYoungestTransaction().get)
 
 
-    txCache = new TxCache
+    txCache = new TxCache(3.hours)
     txCache.add(firstTx, EXEC)
     txCache.add(secondTx, NON_EXEC)
     txCache.add(thirdTx, NON_EXEC)
@@ -122,7 +123,7 @@ class TxCacheTest
     assertEquals(thirdTx, txCache.getYoungestTransaction().get)
     assertFalse(txCache.contains(ModifierId @@ secondTx.id))
 
-    txCache = new TxCache
+    txCache = new TxCache(3.hours)
     txCache.add(firstTx, EXEC)
     txCache.add(secondTx, NON_EXEC)
     txCache.add(thirdTx, NON_EXEC)
@@ -156,7 +157,7 @@ class TxCacheTest
   @Test
   def testNonExecIterator(): Unit = {
     // Test 1: empty cache
-    var txCache = new TxCache
+    var txCache = new TxCache(3.hours)
     var iter = txCache.getNonExecIterator()
 
     assertFalse(iter.hasNext)
@@ -176,7 +177,7 @@ class TxCacheTest
     assertThrows[NoSuchElementException](iter.next)
 
     //Test 3: Some non exec txs in cache in cache
-    txCache = new TxCache
+    txCache = new TxCache(3.hours)
     txCache.add(firstTx, NON_EXEC)
     txCache.add(secondTx, EXEC)
     txCache.add(thirdTx, NON_EXEC)
@@ -198,7 +199,7 @@ class TxCacheTest
     assertFalse(iter.hasNext)
     assertThrows[NoSuchElementException](iter.next)
 
-    txCache = new TxCache
+    txCache = new TxCache(3.hours)
     (1 to 10000).foreach(_ =>txCache.add(createEIP1559Transaction(value = BigInteger.ONE), EXEC))
     txCache.add(nonExecTx, NON_EXEC)
     iter = txCache.getNonExecIterator()
