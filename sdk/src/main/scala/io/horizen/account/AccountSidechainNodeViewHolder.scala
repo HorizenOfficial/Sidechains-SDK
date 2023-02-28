@@ -1,7 +1,7 @@
 package io.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
+import io.horizen.account.AccountSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.history.AccountHistory
@@ -244,4 +244,12 @@ object AccountNodeViewHolderRef {
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
       customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
 
+}
+
+object AccountSidechainNodeViewHolder {
+  object ReceivableMessages {
+
+    case class MempoolReAddedTransactions[T <: SidechainTypes#SCAT](readdedTxs: Seq[T])
+
+  }
 }

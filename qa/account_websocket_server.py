@@ -356,7 +356,7 @@ class SCWsAccountServerTest(AccountChainSetup):
                             toAddress=sc_node2_address,
                             value=convertZenToWei(1),
                             )
-        
+
         response = json.loads(ws_connection.recv())
         self.checkWsResponseStaticField(response, ws.SUBSCRIBE_RESPONSE, new_pending_transactions_subscription)
         assert_equal(response["params"]["result"], add_0x_prefix(tx_hash_3))
@@ -425,8 +425,9 @@ class SCWsAccountServerTest(AccountChainSetup):
         method = 'transfer(address,uint256)'
         res = contract_function_call(sc_node, erc20_contract, erc20_address, self.evm_address, method, other_address,
                                transfer_amount)
-
+        self.sc_sync_all()
         generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
 
         # Verify that we received the transaction logs
         logging.info("Verify that we received the transaction logs")
@@ -453,8 +454,10 @@ class SCWsAccountServerTest(AccountChainSetup):
         method = 'transfer(address,uint256)'
         res = contract_function_call(sc_node, erc20_contract, erc20_address, self.evm_address, method, other_address,
                                transfer_amount)
+        self.sc_sync_all()
 
         generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
 
         # Verify that we received the transaction logs
         logging.info("Verify that we received the transaction logs")
@@ -482,8 +485,9 @@ class SCWsAccountServerTest(AccountChainSetup):
         method = 'transfer(address,uint256)'
         res = contract_function_call(sc_node, erc20_contract, erc20_address, self.evm_address, method, other_address,
                                transfer_amount)
-
+        self.sc_sync_all()
         generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
 
         # Verify that we received the transaction logs with all the topics inside the transaction log
         logging.info("Verify that we received the transaction logs with all the topics inside the transaction log")
@@ -508,8 +512,9 @@ class SCWsAccountServerTest(AccountChainSetup):
         method = 'transfer(address,uint256)'
         res = contract_function_call(sc_node, erc20_contract, erc20_address, self.evm_address, method, other_address,
                                transfer_amount)
-
+        self.sc_sync_all()
         generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
 
         # Verify that we received the transaction logs without the not used topic
         logging.info("Verify that we received the transaction logs")
@@ -535,8 +540,9 @@ class SCWsAccountServerTest(AccountChainSetup):
         method = 'transfer(address,uint256)'
         res = contract_function_call(sc_node, erc20_contract, erc20_address, self.evm_address, method, other_address,
                                transfer_amount)
-
+        self.sc_sync_all()
         generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
 
         # SC node 1 unsubscribe to the log filter
         logging.info("SC node 1 unsubscribe to the log filter")
@@ -563,7 +569,6 @@ class SCWsAccountServerTest(AccountChainSetup):
         method = 'transfer(address,uint256)'
         res = contract_function_call(sc_node, erc20_contract, erc20_address, self.evm_address, method, other_address,
                                transfer_amount)  
-
         # SC node 1 generate 1 block
         logging.info("SC node 1 generate 1 block")
 
