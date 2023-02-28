@@ -37,7 +37,7 @@ Test:
 
 class SCEvmMempoolInvalidTxs(AccountChainSetup):
     def __init__(self):
-        super().__init__(max_mempool_slots=20)
+        super().__init__(max_mempool_slots=20, max_nonexec_pool_slots=19)
 
     def run_test(self):
         mc_node = self.nodes[0]

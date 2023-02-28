@@ -1,6 +1,7 @@
 package com.horizen.account.fixtures
 
 import com.google.common.primitives.Ints
+import com.horizen.account.mempool.MempoolMap
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.GasUtil
@@ -241,6 +242,12 @@ trait EthereumTransactionFixture {
   def addMockSizeToTx(txToMock: EthereumTransaction, size: Long): EthereumTransaction = {
     val tx = Mockito.spy[EthereumTransaction](txToMock)
     Mockito.when(tx.size()).thenReturn(size)
+    tx
+  }
+
+  def setupMockSizeInSlotsToTx(txToMock: EthereumTransaction, numOfSlots: Int): EthereumTransaction = {
+    val tx = Mockito.spy[EthereumTransaction](txToMock)
+    Mockito.when(tx.size()).thenReturn((numOfSlots - 1) * MempoolMap.TxSlotSize + 1)
     tx
   }
 

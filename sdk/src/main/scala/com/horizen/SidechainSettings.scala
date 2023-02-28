@@ -1,5 +1,6 @@
 package com.horizen
 
+import com.horizen.account.mempool.MempoolMap
 import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
 import sparkz.core.settings.SparkzSettings
@@ -92,11 +93,17 @@ case class EthServiceSettings(
 // Default values are the same as in Geth/Erigon
 case class AccountMempoolSettings(maxNonceGap: Int = 16,
                                   maxAccountSlots: Int = 16,
-                                  maxMemPoolSlots: Int = 6144 // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
+                                  maxMemPoolSlots: Int = 6144, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
+                                  maxNonExecMemPoolSlots: Int = 1024
                                  ){
   require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
   require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
-  require(maxMemPoolSlots > 0, s"Maximum Memory Pool Slots not positive: $maxMemPoolSlots")
+  require(maxMemPoolSlots >= MempoolMap.MaxNumOfSlotsForTx, s"Maximum Memory Pool Slots number should be at least " +
+    s"${MempoolMap.MaxNumOfSlotsForTx} but it is $maxMemPoolSlots")
+  require(maxNonExecMemPoolSlots >= MempoolMap.MaxNumOfSlotsForTx, s"Maximum Non Executable Memory Sub Pool Slots number " +
+    s"should be at least ${MempoolMap.MaxNumOfSlotsForTx} but it is $maxNonExecMemPoolSlots")
+  require(maxNonExecMemPoolSlots < maxMemPoolSlots, s"Maximum Non Executable Memory Sub Pool Slots " +
+    s"($maxNonExecMemPoolSlots) are greater than Maximum Memory Pool Slots ($maxMemPoolSlots)")
   require(maxMemPoolSlots >= maxAccountSlots, s"Maximum number of account slots cannot be bigger than maximum number of " +
     s"Memory Pool slots: account slots $maxAccountSlots - Memory Pool slots $maxMemPoolSlots")
 }
