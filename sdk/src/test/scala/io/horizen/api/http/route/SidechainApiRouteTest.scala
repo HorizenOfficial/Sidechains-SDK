@@ -1,12 +1,10 @@
 package io.horizen.api.http.route
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.javadsl.model.headers.HttpCredentials
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
-import at.favre.lib.crypto.bcrypt.BCrypt
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
 import io.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
@@ -39,7 +37,6 @@ import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
 import io.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
-import org.mindrot.jbcrypt.BCrypt
 import org.mockito.Mockito
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -70,7 +67,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 @RunWith(classOf[JUnitRunner])
-abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
+abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes with BasicAuthenticationFixture{
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
@@ -127,9 +124,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
   val keyRotationProof = utilMocks.keyRotationProof
   val certifiersKeys = utilMocks.certifiersKeys
-  val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
-  val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
-  val apiKeyHash = BCrypt.`with`(BCrypt.Version.VERSION_2Y).hashToString(12, credentials.password().toCharArray)
+  val credentials = getBasicAuthCredentials()
+  val badCredentials = getBasicAuthCredentials(password = "wrong_password")
+  val apiKeyHash = getBasicAuthApiKeyHash(credentials.password())
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)

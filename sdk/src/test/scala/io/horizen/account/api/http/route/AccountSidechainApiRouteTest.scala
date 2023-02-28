@@ -1,12 +1,10 @@
 package io.horizen.account.api.http.route
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.javadsl.model.headers.HttpCredentials
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
-import at.favre.lib.crypto.bcrypt.BCrypt
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
 import io.horizen.SidechainTypes
@@ -46,7 +44,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 @RunWith(classOf[JUnitRunner])
-abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
+abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes with BasicAuthenticationFixture{
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
@@ -66,9 +64,9 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
 
-  val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
-  val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
-  val apiKeyHash = BCrypt.`with`(BCrypt.Version.VERSION_2Y).hashToString(12, credentials.password().toCharArray)
+  val credentials = getBasicAuthCredentials()
+  val badCredentials = getBasicAuthCredentials(password = "wrong_password")
+  val apiKeyHash = getBasicAuthApiKeyHash(credentials.password())
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
