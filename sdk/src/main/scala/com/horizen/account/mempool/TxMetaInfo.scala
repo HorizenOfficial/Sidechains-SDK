@@ -9,7 +9,7 @@ import scala.concurrent.duration.{Deadline, FiniteDuration}
 class TxMetaInfo(val tx: SidechainTypes#SCAT,
                  var executableStatus: TxExecutableStatus,
                  txLifetime: FiniteDuration) {
-  val deadline: Deadline = txLifetime.fromNow
+  private val deadline: Deadline = txLifetime.fromNow
   var younger: Option[TxMetaInfo] = None
   var older: Option[TxMetaInfo] = None
 
