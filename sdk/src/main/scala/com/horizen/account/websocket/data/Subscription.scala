@@ -13,7 +13,7 @@ trait BaseSubscription {
   def subscriptionId: String
 }
 
-case class Subscription(session: Session, subscriptionId: String) extends BaseSubscription {}
+case class Subscription(session: Session, subscriptionId: String) extends BaseSubscription
 case class SubscriptionWithFilter(session: Session, subscriptionId: String,
                                   address: Option[Array[String]],
                                   topics: Option[Array[String]]) extends BaseSubscription {
