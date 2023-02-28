@@ -1,15 +1,15 @@
-package com.horizen.consensus
+package io.horizen.consensus
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import com.horizen.chain.SidechainBlockInfo
-import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.params.{NetworkParams, NetworkParamsUtils, TestNetParams}
-import com.horizen.proof.VrfProof
-import com.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}
-import com.horizen.utils
-import com.horizen.utils.{BytesUtils, TimeToEpochUtils, Utils}
-import com.horizen.vrf.VrfOutput
+import io.horizen.chain.SidechainBlockInfo
+import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.params.{NetworkParams, NetworkParamsUtils, TestNetParams}
+import io.horizen.proof.VrfProof
+import io.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}
+import io.horizen.utils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils, Utils}
+import io.horizen.vrf.VrfOutput
 import org.junit.Assert._
 import sparkz.core.consensus.ModifierSemanticValidity
 import org.junit.{Before, Test}

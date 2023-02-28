@@ -1,26 +1,26 @@
-package com.horizen.utxo.state
+package io.horizen.utxo.state
 
-import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
-import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
-import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
-import com.horizen.fixtures._
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
-import com.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
-import com.horizen.utxo.forge.ForgerList
-import com.horizen.utxo.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
-import com.horizen.utxo.transaction.{BoxTransaction, CertificateKeyRotationTransaction, OpenStakeTransaction, RegularTransaction}
-import com.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
+import io.horizen.SidechainTypes
+import io.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
+import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import io.horizen.cryptolibprovider.utils.FieldElementUtils
+import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
+import io.horizen.fixtures._
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proposition.{Proposition, VrfPublicKey}
+import io.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.transaction.exception.TransactionSemanticValidityException
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
+import io.horizen.utxo.forge.ForgerList
+import io.horizen.utxo.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
+import io.horizen.utxo.transaction.{BoxTransaction, CertificateKeyRotationTransaction, OpenStakeTransaction, RegularTransaction}
+import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.ArgumentMatchers.any

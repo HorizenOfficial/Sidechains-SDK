@@ -1,9 +1,9 @@
-package com.horizen.account.utils
+package io.horizen.account.utils
 
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.utils.AccountFeePaymentsUtils.getForgersRewards
-import com.horizen.fixtures._
-import com.horizen.utils.BytesUtils
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.utils.AccountFeePaymentsUtils.getForgersRewards
+import io.horizen.fixtures._
+import io.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite

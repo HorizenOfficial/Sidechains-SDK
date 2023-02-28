@@ -1,17 +1,17 @@
-package com.horizen
+package io.horizen
 
 import com.google.common.io.Files
-import com.horizen.block.{FieldElementCertificateField, SidechainCreationVersions, WithdrawalEpochCertificate}
-import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import com.horizen.certnative.BackwardTransfer
-import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
-import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.{MCPublicKeyHashProposition, SchnorrProposition}
-import com.horizen.secret.SchnorrSecret
-import com.horizen.utxo.box.WithdrawalRequestBox
-import com.horizen.utxo.box.data.WithdrawalRequestBoxData
+import io.horizen.block.{FieldElementCertificateField, SidechainCreationVersions, WithdrawalEpochCertificate}
+import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
+import io.horizen.certnative.BackwardTransfer
+import io.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
+import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
+import io.horizen.proof.SchnorrProof
+import io.horizen.proposition.{MCPublicKeyHashProposition, SchnorrProposition}
+import io.horizen.secret.SchnorrSecret
+import io.horizen.utxo.box.WithdrawalRequestBox
+import io.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
 import java.io._

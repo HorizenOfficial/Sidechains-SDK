@@ -1,17 +1,17 @@
-package com.horizen.utxo
+package io.horizen.utxo
 
-import com.horizen.SidechainTypes
-import com.horizen.utxo.companion.SidechainBoxesCompanion
-import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}
-import com.horizen.utxo.backup.{BackupBox, BoxIterator}
-import com.horizen.utxo.box.{BoxSerializer, CoinsBox}
-import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
-import com.horizen.utxo.state.SidechainBackup
-import com.horizen.utxo.storage.{BackupStorage, BoxBackupInterface}
+import io.horizen.SidechainTypes
+import io.horizen.utxo.companion.SidechainBoxesCompanion
+import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}
+import io.horizen.utxo.backup.{BackupBox, BoxIterator}
+import io.horizen.utxo.box.{BoxSerializer, CoinsBox}
+import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
+import io.horizen.utxo.state.SidechainBackup
+import io.horizen.utxo.storage.{BackupStorage, BoxBackupInterface}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.rules.TemporaryFolder
 import org.junit.{Before, Rule, Test}

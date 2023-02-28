@@ -1,8 +1,8 @@
-package com.horizen
+package io.horizen
 
 import java.io._
-import com.horizen.fixtures.SidechainBlockInfoFixture
-import com.horizen.utils.BytesUtils
+import io.horizen.fixtures.SidechainBlockInfoFixture
+import io.horizen.utils.BytesUtils
 import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test

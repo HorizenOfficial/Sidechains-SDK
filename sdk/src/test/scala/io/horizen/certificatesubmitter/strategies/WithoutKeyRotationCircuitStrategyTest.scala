@@ -1,29 +1,29 @@
-package com.horizen.certificatesubmitter.strategies
+package io.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
-import com.horizen._
-import com.horizen.block.SidechainCreationVersions
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
-import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
-import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import com.horizen.certnative.BackwardTransfer
-import com.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
-import com.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.librustsidechains.FieldElement
-import com.horizen.params.RegTestParams
-import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.SchnorrProposition
-import com.horizen.schnorrnative.SchnorrKeyPair
-import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.box.WithdrawalRequestBox
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.storage.SidechainHistoryStorage
-import com.horizen.utxo.wallet.SidechainWallet
+import io.horizen._
+import io.horizen.block.SidechainCreationVersions
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
+import io.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
+import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
+import io.horizen.certnative.BackwardTransfer
+import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
+import io.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.librustsidechains.FieldElement
+import io.horizen.params.RegTestParams
+import io.horizen.proof.SchnorrProof
+import io.horizen.proposition.SchnorrProposition
+import io.horizen.schnorrnative.SchnorrKeyPair
+import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.box.WithdrawalRequestBox
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.utxo.wallet.SidechainWallet
 import org.junit.{Before, Test}
 import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}

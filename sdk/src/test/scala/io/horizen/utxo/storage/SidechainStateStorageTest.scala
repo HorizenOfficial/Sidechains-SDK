@@ -1,20 +1,20 @@
-package com.horizen.utxo.storage
+package io.horizen.utxo.storage
 
 import com.google.common.primitives.Ints
-import com.horizen.SidechainTypes
-import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture, WithdrawalEpochCertificateSerializer}
-import com.horizen.utxo.companion.SidechainBoxesCompanion
-import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.storage.Storage
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
-import com.horizen.utxo.backup.{BackupBox, BoxIterator}
-import com.horizen.utxo.box.{BoxSerializer, CoinsBox}
-import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
-import com.horizen.utxo.utils.{BlockFeeInfo, BlockFeeInfoSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture, WithdrawalEpochCertificateSerializer}
+import io.horizen.utxo.companion.SidechainBoxesCompanion
+import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.storage.Storage
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.utils.{ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import io.horizen.utxo.backup.{BackupBox, BoxIterator}
+import io.horizen.utxo.box.{BoxSerializer, CoinsBox}
+import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
+import io.horizen.utxo.utils.{BlockFeeInfo, BlockFeeInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.junit.rules.TemporaryFolder

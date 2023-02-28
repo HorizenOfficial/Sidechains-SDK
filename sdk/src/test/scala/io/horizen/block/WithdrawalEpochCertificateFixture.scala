@@ -1,4 +1,4 @@
-package com.horizen.block
+package io.horizen.block
 
 import java.util.Random
 

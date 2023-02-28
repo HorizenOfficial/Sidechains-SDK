@@ -1,8 +1,8 @@
-package com.horizen.account.helper
+package io.horizen.account.helper
 
-import com.horizen.SidechainTypes
-import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.helper.TransactionSubmitProviderImplTest
+import io.horizen.SidechainTypes
+import io.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.helper.TransactionSubmitProviderImplTest
 
 import scala.language.postfixOps
 

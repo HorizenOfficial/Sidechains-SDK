@@ -1,32 +1,32 @@
-package com.horizen.utxo.fixtures
+package io.horizen.utxo.fixtures
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
-import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef}
-import com.horizen.block.ProofOfWorkVerifier
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.cryptolibprovider.CircuitTypes
-import com.horizen.customconfig.CustomAkkaConfiguration
-import com.horizen.fixtures.{CompanionsFixture, StoreFixture}
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
-import com.horizen.secret.SecretSerializer
-import com.horizen.storage.SidechainSecretStorage
-import com.horizen.utils.BytesUtils
-import com.horizen.utxo.SidechainNodeViewHolderRef
-import com.horizen.utxo.api.http.route.SidechainTransactionApiRoute
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
-import com.horizen.utxo.box.BoxSerializer
-import com.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
-import com.horizen.utxo.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
-import com.horizen.utxo.state.{ApplicationState, SidechainUtxoMerkleTreeProviderCSWEnabled}
-import com.horizen.utxo.storage._
-import com.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
-import com.horizen.{SidechainSettings, SidechainSettingsReader, SidechainTypes, utxo}
+import io.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef}
+import io.horizen.block.ProofOfWorkVerifier
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.consensus.ConsensusDataStorage
+import io.horizen.cryptolibprovider.CircuitTypes
+import io.horizen.customconfig.CustomAkkaConfiguration
+import io.horizen.fixtures.{CompanionsFixture, StoreFixture}
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
+import io.horizen.secret.SecretSerializer
+import io.horizen.storage.SidechainSecretStorage
+import io.horizen.utils.BytesUtils
+import io.horizen.utxo.SidechainNodeViewHolderRef
+import io.horizen.utxo.api.http.route.SidechainTransactionApiRoute
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
+import io.horizen.utxo.box.BoxSerializer
+import io.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
+import io.horizen.utxo.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
+import io.horizen.utxo.state.{ApplicationState, SidechainUtxoMerkleTreeProviderCSWEnabled}
+import io.horizen.utxo.storage._
+import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
+import io.horizen.{SidechainSettings, SidechainSettingsReader, SidechainTypes, utxo}
 import sparkz.core.api.http.ApiRejectionHandler
 import sparkz.core.utils.NetworkTimeProvider
 

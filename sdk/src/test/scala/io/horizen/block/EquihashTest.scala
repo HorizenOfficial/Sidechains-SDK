@@ -1,8 +1,8 @@
-package com.horizen.block
+package io.horizen.block
 
 import java.util
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.utils.BytesUtils
+import io.horizen.utils.BytesUtils
 import org.bouncycastle.crypto.digests.Blake2bDigest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertArrayEquals

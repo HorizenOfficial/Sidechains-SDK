@@ -1,8 +1,8 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.block.MainchainHeader
-import com.horizen.utils.{BytesUtils, CompactSize}
+import io.horizen.block.MainchainHeader
+import io.horizen.utils.{BytesUtils, CompactSize}
 
 // Just for PoW verification testing
 case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: Array[Byte], override val hashPrevBlock: Array[Byte] = null, override val time: Int = 0

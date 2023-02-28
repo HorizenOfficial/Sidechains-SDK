@@ -1,14 +1,14 @@
-package com.horizen.account.validation
+package io.horizen.account.validation
 
-import com.horizen.SidechainTypes
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.history.validation.{ChainIdBlockSemanticValidator, InvalidTransactionChainIdException, MissingTransactionSignatureException}
-import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.AccountMockDataHelper
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.utils.BytesUtils
+import io.horizen.SidechainTypes
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.history.validation.{ChainIdBlockSemanticValidator, InvalidTransactionChainIdException, MissingTransactionSignatureException}
+import io.horizen.account.proof.SignatureSecp256k1
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.AccountMockDataHelper
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertNotEquals, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

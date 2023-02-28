@@ -1,8 +1,8 @@
-package com.horizen.consensus
+package io.horizen.consensus
 
-import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.storage.InMemoryStorageAdapter
-import com.horizen.utils._
+import io.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.storage.InMemoryStorageAdapter
+import io.horizen.utils._
 import org.junit.{Before, Test}
 import sparkz.util._
 import org.junit.Assert._

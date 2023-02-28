@@ -1,9 +1,9 @@
-package com.horizen.fixtures.sidechainblock.generation
+package io.horizen.fixtures.sidechainblock.generation
 
-import com.horizen.consensus.{ConsensusEpochNumber, VrfMessage}
-import com.horizen.proof.VrfProof
-import com.horizen.utils.MerklePath
-import com.horizen.vrf.VrfOutput
+import io.horizen.consensus.{ConsensusEpochNumber, VrfMessage}
+import io.horizen.proof.VrfProof
+import io.horizen.utils.MerklePath
+import io.horizen.vrf.VrfOutput
 
 
 case class PossibleForger(forgingData: SidechainForgingData,

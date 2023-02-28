@@ -1,37 +1,37 @@
-package com.horizen.utxo.certificatesubmitter
+package io.horizen.utxo.certificatesubmitter
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
-import com.horizen._
-import com.horizen.api.http.client.SecureEnclaveApiClient
-import com.horizen.block._
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
-import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
-import com.horizen.certificatesubmitter.keys.CertifiersKeys
-import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, CertificateSubmissionStrategy, CircuitStrategy, WithoutKeyRotationCircuitStrategy}
-import com.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.fixtures.FieldElementFixture
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.params.{CommonParams, NetworkParams, RegTestParams}
-import com.horizen.proposition.{Proposition, SchnorrProposition}
-import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, ZenCoinsUtils}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.box.Box
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.storage.SidechainHistoryStorage
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.wallet.SidechainWallet
-import com.horizen.websocket.client._
+import io.horizen._
+import io.horizen.api.http.client.SecureEnclaveApiClient
+import io.horizen.block._
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter._
+import io.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
+import io.horizen.certificatesubmitter.keys.CertifiersKeys
+import io.horizen.certificatesubmitter.strategies.{CeasingSidechain, CertificateSubmissionStrategy, CircuitStrategy, WithoutKeyRotationCircuitStrategy}
+import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.fixtures.FieldElementFixture
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.params.{CommonParams, NetworkParams, RegTestParams}
+import io.horizen.proposition.{Proposition, SchnorrProposition}
+import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.transaction.MC2SCAggregatedTransaction
+import io.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo, ZenCoinsUtils}
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.box.Box
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.wallet.SidechainWallet
+import io.horizen.websocket.client._
 import org.junit.Assert._
 import org.junit.{Assert, Before, Test}
 import org.mockito.ArgumentMatchers

@@ -1,11 +1,11 @@
-package com.horizen.storage.performance
+package io.horizen.storage.performance
 
 import java.io.{PrintWriter, StringWriter}
 
-import com.horizen.storage.Storage
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.storage.performance.Measure._
-import com.horizen.utils.{Pair => JPair, _}
+import io.horizen.storage.Storage
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.storage.performance.Measure._
+import io.horizen.utils.{Pair => JPair, _}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

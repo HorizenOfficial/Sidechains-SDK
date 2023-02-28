@@ -1,10 +1,10 @@
-package com.horizen.account.mempool
+package io.horizen.account.mempool
 
-import com.horizen.SidechainTypes
-import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.state.AccountStateReader
-import com.horizen.state.BaseStateReader
+import io.horizen.SidechainTypes
+import io.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import io.horizen.account.state.AccountStateReader
+import io.horizen.state.BaseStateReader
 import io.horizen.evm.Address
 import org.junit.Assert._
 import org.junit._

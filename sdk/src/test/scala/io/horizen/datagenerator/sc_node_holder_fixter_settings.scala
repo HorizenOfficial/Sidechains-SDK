@@ -1,16 +1,16 @@
-package com.horizen.datagenerator
+package io.horizen.datagenerator
 
-import com.horizen.block._
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
+import io.horizen.block._
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 
 import java.time.Instant
-import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.consensus._
-import com.horizen.secret.VrfKeyGenerator
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.box.ForgerBox
+import io.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.consensus._
+import io.horizen.secret.VrfKeyGenerator
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.box.ForgerBox
 import org.junit.Test
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}

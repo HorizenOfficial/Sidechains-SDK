@@ -1,8 +1,8 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
-import com.horizen.storage.Storage
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, Pair}
+import io.horizen.storage.Storage
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.utils.{ByteArrayWrapper, Pair}
 
 import java.io.File
 import java.util.{ArrayList => JArrayList, List => JList}

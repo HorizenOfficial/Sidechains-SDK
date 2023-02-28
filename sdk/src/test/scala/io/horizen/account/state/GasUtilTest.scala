@@ -1,6 +1,6 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
-import com.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.account.fixtures.EthereumTransactionFixture
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

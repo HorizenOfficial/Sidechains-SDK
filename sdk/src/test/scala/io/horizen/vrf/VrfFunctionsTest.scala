@@ -1,8 +1,8 @@
-package com.horizen.vrf
+package io.horizen.vrf
 
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.cryptolibprovider.VrfFunctions.{KeyType, ProofType}
-import com.horizen.cryptolibprovider.utils.FieldElementUtils
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.cryptolibprovider.VrfFunctions.{KeyType, ProofType}
+import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
 

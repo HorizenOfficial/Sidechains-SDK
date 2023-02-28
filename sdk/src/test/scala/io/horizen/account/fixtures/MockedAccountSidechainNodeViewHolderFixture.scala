@@ -1,12 +1,12 @@
-package com.horizen.account.fixtures
+package io.horizen.account.fixtures
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen._
-import com.horizen.account.AccountSidechainNodeViewHolder
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.AccountState
-import com.horizen.account.wallet.AccountWallet
+import io.horizen._
+import io.horizen.account.AccountSidechainNodeViewHolder
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.state.AccountState
+import io.horizen.account.wallet.AccountWallet
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.settings.{NetworkSettings, SparkzSettings}

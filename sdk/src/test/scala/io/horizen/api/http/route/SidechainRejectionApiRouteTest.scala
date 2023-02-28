@@ -1,4 +1,4 @@
-package com.horizen.api.http.route
+package io.horizen.api.http.route
 
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
 import akka.http.scaladsl.server.Directives._

@@ -1,7 +1,7 @@
-package com.horizen.account.utils
+package io.horizen.account.utils
 
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.fixtures.SecretFixture
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.fixtures.SecretFixture
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

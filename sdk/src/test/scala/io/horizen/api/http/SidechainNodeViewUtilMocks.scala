@@ -1,31 +1,31 @@
-package com.horizen.api.http
+package io.horizen.api.http
 
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-import com.horizen.block.MainchainBlockReference
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
-import com.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
-import com.horizen.params.MainNetParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, SchnorrKeyGenerator}
-import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
+import io.horizen.block.MainchainBlockReference
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
+import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.fixtures.{CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
+import io.horizen.params.MainNetParams
+import io.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
+import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, SchnorrKeyGenerator}
+import io.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
-import com.horizen.utils.WithdrawalEpochInfo
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.{Box, ZenBox}
-import com.horizen.utxo.box.data.{BoxData, ZenBoxData}
-import com.horizen.utxo.fixtures.BoxFixture
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
-import com.horizen.utxo.state.{ApplicationState, SidechainState}
-import com.horizen.utxo.transaction.RegularTransaction
-import com.horizen.utxo.wallet.{ApplicationWallet, SidechainWallet}
-import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
+import io.horizen.utils.WithdrawalEpochInfo
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.{Box, ZenBox}
+import io.horizen.utxo.box.data.{BoxData, ZenBoxData}
+import io.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import io.horizen.utxo.state.{ApplicationState, SidechainState}
+import io.horizen.utxo.transaction.RegularTransaction
+import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWallet}
+import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
 import sparkz.core.NodeViewHolder.CurrentView

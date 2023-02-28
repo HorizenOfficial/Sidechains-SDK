@@ -1,15 +1,15 @@
-package com.horizen.certificatesubmitter.network
+package io.horizen.certificatesubmitter.network
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
-import com.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
-import com.horizen.fixtures.FieldElementFixture
-import com.horizen.SidechainAppEvents
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.secret.SchnorrKeyGenerator
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import io.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
+import io.horizen.fixtures.FieldElementFixture
+import io.horizen.SidechainAppEvents
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.secret.SchnorrKeyGenerator
 import org.junit.{Assert, Test}
 import org.junit.Assert._
 import org.mockito.Mockito

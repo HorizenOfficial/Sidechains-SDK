@@ -1,15 +1,15 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-import com.horizen.SidechainTypes
-import com.horizen.account.companion
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.secret.SecretSerializer
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.utxo.transaction.RegularTransactionSerializer
+import io.horizen.SidechainTypes
+import io.horizen.account.companion
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.secret.SecretSerializer
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.utxo.transaction.RegularTransactionSerializer
 
 trait CompanionsFixture
 {

@@ -1,4 +1,4 @@
-package com.horizen.account.api.http.route
+package io.horizen.account.api.http.route
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.javadsl.model.headers.HttpCredentials
@@ -7,24 +7,24 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
-import com.horizen.SidechainTypes
-import com.horizen.account.api.http.AccountNodeViewUtilMocks
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.node.AccountNodeView
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.http._
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.consensus.ConsensusEpochAndSlot
-import com.horizen.cryptolibprovider.CircuitTypes
-import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.forge.AbstractForger
-import com.horizen.json.serializer.ApplicationJsonSerializer
-import com.horizen.params.MainNetParams
-import com.horizen.secret.SecretSerializer
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
+import io.horizen.SidechainTypes
+import io.horizen.account.api.http.AccountNodeViewUtilMocks
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.node.AccountNodeView
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
+import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import io.horizen.api.http._
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.consensus.ConsensusEpochAndSlot
+import io.horizen.cryptolibprovider.CircuitTypes
+import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
+import io.horizen.forge.AbstractForger
+import io.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.params.MainNetParams
+import io.horizen.secret.SecretSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mindrot.jbcrypt.BCrypt

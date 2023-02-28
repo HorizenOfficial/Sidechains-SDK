@@ -1,8 +1,8 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.utils.BytesUtils
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.utils.BytesUtils
 
 trait MainchainTxCrosschainOutputFixture {
   def generateMainchainTxForwardTransferCrosschainOutputBytes(amount: Long,

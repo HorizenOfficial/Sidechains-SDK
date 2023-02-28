@@ -1,9 +1,9 @@
-package com.horizen.api.http
+package io.horizen.api.http
 
-import com.horizen.consensus.ConsensusEpochAndSlot
-import com.horizen.forge.ForgingInfo
+import io.horizen.consensus.ConsensusEpochAndSlot
+import io.horizen.forge.ForgingInfo
 import sparkz.util.ModifierId
-import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
+import io.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
 
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable

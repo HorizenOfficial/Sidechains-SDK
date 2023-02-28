@@ -1,9 +1,9 @@
-package com.horizen.secret
+package io.horizen.secret
 
-import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.utils.Secp256k1
-import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctions, VrfFunctions}
-import com.horizen.utils.Ed25519
+import io.horizen.account.secret.PrivateKeySecp256k1
+import io.horizen.account.utils.Secp256k1
+import io.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctions, VrfFunctions}
+import io.horizen.utils.Ed25519
 import org.junit.Assert.{assertEquals, assertNotEquals}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

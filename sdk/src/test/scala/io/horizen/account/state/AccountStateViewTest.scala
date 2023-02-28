@@ -1,13 +1,13 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
-import com.horizen.account.AccountFixture
-import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.fixtures.StoreFixture
-import com.horizen.params.NetworkParams
-import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.ByteArrayWrapper
-import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
+import io.horizen.account.AccountFixture
+import io.horizen.account.storage.AccountStateMetadataStorageView
+import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.fixtures.StoreFixture
+import io.horizen.params.NetworkParams
+import io.horizen.proposition.MCPublicKeyHashProposition
+import io.horizen.utils.ByteArrayWrapper
+import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import io.horizen.evm.{Address, StateDB}
 import org.junit.Assert._
 import org.junit._

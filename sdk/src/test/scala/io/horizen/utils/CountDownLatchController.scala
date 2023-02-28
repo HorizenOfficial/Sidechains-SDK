@@ -1,4 +1,4 @@
-package com.horizen.utils
+package io.horizen.utils
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 

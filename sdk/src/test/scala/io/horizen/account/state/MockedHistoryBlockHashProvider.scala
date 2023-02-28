@@ -1,4 +1,4 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
 import sparkz.core.bytesToId
 import sparkz.crypto.hash.Keccak256

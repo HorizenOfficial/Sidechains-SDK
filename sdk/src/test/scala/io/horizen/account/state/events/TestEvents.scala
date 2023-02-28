@@ -1,6 +1,6 @@
-package com.horizen.account.state.events
+package io.horizen.account.state.events
 
-import com.horizen.account.state.events.annotation.{Anonymous, Indexed, Parameter}
+import io.horizen.account.state.events.annotation.{Anonymous, Indexed, Parameter}
 import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.abi.datatypes.{Utf8String, Address => AbiAddress}
 

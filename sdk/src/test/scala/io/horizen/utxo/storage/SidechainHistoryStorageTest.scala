@@ -1,16 +1,16 @@
-package com.horizen.utxo.storage
+package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
-import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.storage.Storage
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{Pair, _}
-import com.horizen.utxo.block.SidechainBlock
+import io.horizen.SidechainTypes
+import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
+import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.storage.Storage
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils.{Pair, _}
+import io.horizen.utxo.block.SidechainBlock
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit._
 import org.mockito._

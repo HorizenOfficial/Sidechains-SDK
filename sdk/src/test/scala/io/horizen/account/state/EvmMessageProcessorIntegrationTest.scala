@@ -1,6 +1,6 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
-import com.horizen.utils.BytesUtils
+import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertFalse, assertNotNull, assertTrue}
 import org.junit.Test
 import sparkz.crypto.hash.Keccak256

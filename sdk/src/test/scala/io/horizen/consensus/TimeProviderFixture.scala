@@ -1,4 +1,4 @@
-package com.horizen.consensus
+package io.horizen.consensus
 
 import sparkz.core.utils.TimeProvider
 import sparkz.core.utils.TimeProvider.Time

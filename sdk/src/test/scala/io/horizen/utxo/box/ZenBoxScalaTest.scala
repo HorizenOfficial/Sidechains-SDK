@@ -1,10 +1,10 @@
-package com.horizen.utxo.box
+package io.horizen.utxo.box
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.json.serializer.ApplicationJsonSerializer
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.utils.{BytesUtils, Ed25519}
-import com.horizen.utxo.fixtures.BoxFixture
+import io.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.utils.{BytesUtils, Ed25519}
+import io.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

@@ -1,16 +1,16 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
-import com.horizen.utils.{MerklePath, Utils}
+import io.horizen.utils.{MerklePath, Utils}
 
 import scala.util.Random
 import sparkz.util.bytesToId
 
 import java.util.{ArrayList => JArrayList}
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.VrfPublicKey
-import com.horizen.secret.VrfSecretKey
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.fixtures.BoxFixture
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.VrfPublicKey
+import io.horizen.secret.VrfSecretKey
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.fixtures.BoxFixture
 
 trait SidechainBlockHeaderFixture extends BoxFixture {
 

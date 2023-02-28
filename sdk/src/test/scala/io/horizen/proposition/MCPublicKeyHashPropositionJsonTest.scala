@@ -1,9 +1,9 @@
-package com.horizen.proposition
+package io.horizen.proposition
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
-import com.horizen.json.serializer.{ApplicationJsonSerializer, JsonHorizenPublicKeyHashSerializer}
-import com.horizen.utils.BytesUtils
+import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
+import io.horizen.json.serializer.{ApplicationJsonSerializer, JsonHorizenPublicKeyHashSerializer}
+import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.{Assert, Test}
 import org.scalatestplus.junit.JUnitSuite

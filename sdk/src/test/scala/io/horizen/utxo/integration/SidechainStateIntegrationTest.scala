@@ -1,24 +1,24 @@
-package com.horizen.utxo.integration
+package io.horizen.utxo.integration
 
-import com.horizen._
-import com.horizen.block.MainchainBlockReferenceData
-import com.horizen.utxo.companion.SidechainBoxesCompanion
-import com.horizen.consensus._
-import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.params.MainNetParams
-import com.horizen.proposition.Proposition
-import com.horizen.secret.PrivateKey25519
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.data.{BoxData, ForgerBoxData, ZenBoxData}
-import com.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
-import com.horizen.utxo.customtypes.DefaultApplicationState
-import com.horizen.utxo.state.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
-import com.horizen.utxo.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
-import com.horizen.utxo.transaction.RegularTransaction
-import com.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
-import com.horizen.utxo.state.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
+import io.horizen._
+import io.horizen.block.MainchainBlockReferenceData
+import io.horizen.utxo.companion.SidechainBoxesCompanion
+import io.horizen.consensus._
+import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.params.MainNetParams
+import io.horizen.proposition.Proposition
+import io.horizen.secret.PrivateKey25519
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, ZenBoxData}
+import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
+import io.horizen.utxo.customtypes.DefaultApplicationState
+import io.horizen.utxo.state.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
+import io.horizen.utxo.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
+import io.horizen.utxo.transaction.RegularTransaction
+import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
+import io.horizen.utxo.state.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito

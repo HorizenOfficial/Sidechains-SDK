@@ -1,4 +1,4 @@
-package com.horizen.fork
+package io.horizen.fork
 
 import org.junit.Assert.{assertEquals, assertNotEquals}
 import org.junit.{Before, Test}

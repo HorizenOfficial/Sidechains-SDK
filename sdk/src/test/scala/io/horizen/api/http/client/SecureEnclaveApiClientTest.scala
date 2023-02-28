@@ -1,16 +1,16 @@
-package com.horizen.api.http.client
+package io.horizen.api.http.client
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.HttpExt
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.horizen.fixtures.{CompanionsFixture, FieldElementFixture, SidechainBlockFixture}
-import com.horizen.proof.SchnorrSignatureSerializer
-import com.horizen.proposition.SchnorrPropositionSerializer
-import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.utils.BytesUtils
-import com.horizen.{RemoteKeysManagerSettings, SidechainTypes}
+import io.horizen.fixtures.{CompanionsFixture, FieldElementFixture, SidechainBlockFixture}
+import io.horizen.proof.SchnorrSignatureSerializer
+import io.horizen.proposition.SchnorrPropositionSerializer
+import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.utils.BytesUtils
+import io.horizen.{RemoteKeysManagerSettings, SidechainTypes}
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{verify, verifyNoInteractions, when}

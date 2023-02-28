@@ -1,16 +1,16 @@
-package com.horizen.utxo.network
+package io.horizen.utxo.network
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
-import com.horizen._
-import com.horizen.block.SidechainBlockBase
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.SidechainBlockFixture.{getDefaultTransactionsCompanion, sidechainTransactionsCompanion}
-import com.horizen.fixtures.SidechainBlockInfoFixture
-import com.horizen.utils.BytesUtils
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
-import com.horizen.utxo.transaction.{RegularTransaction, RegularTransactionSerializer}
-import com.horizen.history.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
+import io.horizen._
+import io.horizen.block.SidechainBlockBase
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.fixtures.SidechainBlockFixture.{getDefaultTransactionsCompanion, sidechainTransactionsCompanion}
+import io.horizen.fixtures.SidechainBlockInfoFixture
+import io.horizen.utils.BytesUtils
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
+import io.horizen.utxo.transaction.{RegularTransaction, RegularTransactionSerializer}
+import io.horizen.history.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{After, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

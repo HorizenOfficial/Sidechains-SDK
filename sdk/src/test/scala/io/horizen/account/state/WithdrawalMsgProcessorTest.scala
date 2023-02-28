@@ -1,10 +1,10 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
-import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.horizen.account.utils.{FeeUtils, ZenWeiConverter}
+import io.horizen.proposition.MCPublicKeyHashProposition
+import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.horizen.evm.{Address, Hash}
 import org.junit.Assert._
 import org.junit._

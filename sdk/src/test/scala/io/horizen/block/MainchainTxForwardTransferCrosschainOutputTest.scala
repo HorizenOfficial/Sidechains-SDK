@@ -1,9 +1,9 @@
-package com.horizen.block
+package io.horizen.block
 
-import com.horizen.fixtures.MainchainTxCrosschainOutputFixture
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.secret.PrivateKey25519Creator
-import com.horizen.utils.{BytesUtils, Utils}
+import io.horizen.fixtures.MainchainTxCrosschainOutputFixture
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.secret.PrivateKey25519Creator
+import io.horizen.utils.{BytesUtils, Utils}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

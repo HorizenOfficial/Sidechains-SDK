@@ -1,21 +1,21 @@
-package com.horizen.utxo.integration
+package io.horizen.utxo.integration
 
-import com.horizen.chain.SidechainBlockInfo
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
-import com.horizen.fixtures._
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.history.AbstractHistory
-import com.horizen.history.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.storage.{InMemoryStorageAdapter, Storage}
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils._
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.customtypes.SemanticallyInvalidTransactionSerializer
-import com.horizen.utxo.storage.SidechainHistoryStorage
-import com.horizen.{SidechainSettings, SidechainSyncInfo, SidechainTypes}
+import io.horizen.chain.SidechainBlockInfo
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
+import io.horizen.fixtures._
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.history.AbstractHistory
+import io.horizen.history.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.storage.{InMemoryStorageAdapter, Storage}
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils._
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.customtypes.SemanticallyInvalidTransactionSerializer
+import io.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.{SidechainSettings, SidechainSyncInfo, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

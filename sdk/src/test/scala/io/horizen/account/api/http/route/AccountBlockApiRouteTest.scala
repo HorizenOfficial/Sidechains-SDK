@@ -1,4 +1,4 @@
-package com.horizen.account.api.http.route
+package io.horizen.account.api.http.route
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}

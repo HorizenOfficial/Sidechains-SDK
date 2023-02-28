@@ -1,12 +1,12 @@
-package com.horizen.account.wallet
+package io.horizen.account.wallet
 
-import com.horizen.SidechainTypes
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.customtypes._
-import com.horizen.fixtures._
-import com.horizen.secret._
-import com.horizen.storage._
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair}
+import io.horizen.SidechainTypes
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.customtypes._
+import io.horizen.fixtures._
+import io.horizen.secret._
+import io.horizen.storage._
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._

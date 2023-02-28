@@ -1,9 +1,9 @@
-package com.horizen.chain
+package io.horizen.chain
 
 import java.io.{PrintWriter, StringWriter}
 
-import com.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator, FieldElementFixture}
-import com.horizen.utils.WithdrawalEpochInfo
+import io.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator, FieldElementFixture}
+import io.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

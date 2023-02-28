@@ -1,12 +1,12 @@
-package com.horizen.utxo.integration.storage
+package io.horizen.utxo.integration.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.fixtures.StoreFixture
-import com.horizen.librustsidechains.FieldElement
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.utxo.fixtures.BoxFixture
-import com.horizen.utxo.storage.SidechainStateUtxoMerkleTreeStorage
-import com.horizen.utxo.utils.UtxoMerkleTreeLeafInfo
+import io.horizen.SidechainTypes
+import io.horizen.fixtures.StoreFixture
+import io.horizen.librustsidechains.FieldElement
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.storage.SidechainStateUtxoMerkleTreeStorage
+import io.horizen.utxo.utils.UtxoMerkleTreeLeafInfo
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

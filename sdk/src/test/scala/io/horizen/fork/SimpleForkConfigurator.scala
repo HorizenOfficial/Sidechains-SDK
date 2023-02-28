@@ -1,4 +1,4 @@
-package com.horizen.fork
+package io.horizen.fork
 
 class SimpleForkConfigurator extends ForkConfigurator {
   override def getSidechainFork1(): ForkConsensusEpochNumber = {

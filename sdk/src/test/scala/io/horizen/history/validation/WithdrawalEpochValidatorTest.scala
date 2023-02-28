@@ -1,21 +1,21 @@
-package com.horizen.history.validation
+package io.horizen.history.validation
 
 import java.time.Instant
-import com.horizen.SidechainTypes
-import com.horizen.block.MainchainBlockReference
-import com.horizen.chain.SidechainBlockInfo
-import com.horizen.cryptolibprovider.CircuitTypes
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures._
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.proposition.Proposition
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, TestSidechainsVersionsManager, WithdrawalEpochInfo}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.box.Box
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.storage.SidechainHistoryStorage
-import com.horizen.utxo.transaction.SidechainTransaction
+import io.horizen.SidechainTypes
+import io.horizen.block.MainchainBlockReference
+import io.horizen.chain.SidechainBlockInfo
+import io.horizen.cryptolibprovider.CircuitTypes
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.fixtures._
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.proposition.Proposition
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, TestSidechainsVersionsManager, WithdrawalEpochInfo}
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.box.Box
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.utxo.transaction.SidechainTransaction
 import org.junit.Assert.assertTrue
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

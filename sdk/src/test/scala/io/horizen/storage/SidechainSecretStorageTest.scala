@@ -1,16 +1,16 @@
-package com.horizen.storage
+package io.horizen.storage
 
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
-import com.horizen.fixtures._
-import com.horizen.secret._
-import com.horizen.utils.ByteArrayWrapper
-import com.horizen.utils.Pair
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
+import io.horizen.fixtures._
+import io.horizen.secret._
+import io.horizen.utils.ByteArrayWrapper
+import io.horizen.utils.Pair
 
 import java.util.{HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
-import com.horizen.SidechainTypes
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.SidechainTypes
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite

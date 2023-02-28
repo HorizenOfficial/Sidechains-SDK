@@ -1,13 +1,13 @@
-package com.horizen.utxo.storage
+package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.fixtures.StoreFixture
-import com.horizen.storage.Storage
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, MerklePath, Pair}
-import com.horizen.utxo.box.ForgerBox
-import com.horizen.utxo.fixtures.BoxFixture
+import io.horizen.SidechainTypes
+import io.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
+import io.horizen.fixtures.StoreFixture
+import io.horizen.storage.Storage
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, MerklePath, Pair}
+import io.horizen.utxo.box.ForgerBox
+import io.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}

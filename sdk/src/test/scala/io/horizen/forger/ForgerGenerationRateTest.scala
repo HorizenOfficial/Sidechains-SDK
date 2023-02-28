@@ -1,9 +1,9 @@
-package com.horizen.forger
+package io.horizen.forger
 
 import java.util.Random
 import com.google.common.primitives.Longs
-import com.horizen.consensus.{ConsensusNonce, NonceConsensusEpochInfo, buildVrfMessage, intToConsensusSlotNumber, vrfProofCheckAgainstStake}
-import com.horizen.secret.VrfKeyGenerator
+import io.horizen.consensus.{ConsensusNonce, NonceConsensusEpochInfo, buildVrfMessage, intToConsensusSlotNumber, vrfProofCheckAgainstStake}
+import io.horizen.secret.VrfKeyGenerator
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
 import org.scalatestplus.junit.JUnitSuite

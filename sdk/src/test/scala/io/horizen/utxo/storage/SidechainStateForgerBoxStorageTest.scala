@@ -1,11 +1,11 @@
-package com.horizen.utxo.storage
+package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import com.horizen.storage.Storage
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, Pair}
-import com.horizen.utxo.box.{ForgerBox, ForgerBoxSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import io.horizen.storage.Storage
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.utils.{ByteArrayWrapper, Pair}
+import io.horizen.utxo.box.{ForgerBox, ForgerBoxSerializer}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

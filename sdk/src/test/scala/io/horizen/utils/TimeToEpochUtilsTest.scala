@@ -1,12 +1,12 @@
-package com.horizen.utils
+package io.horizen.utils
 
-import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
-import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
-import com.horizen.cryptolibprovider.CircuitTypes
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
+import io.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
+import io.horizen.cryptolibprovider.CircuitTypes
 import CircuitTypes.CircuitTypes
-import com.horizen.params.NetworkParams
-import com.horizen.proposition.SchnorrProposition
+import io.horizen.params.NetworkParams
+import io.horizen.proposition.SchnorrProposition
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

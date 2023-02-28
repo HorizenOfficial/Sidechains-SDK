@@ -1,12 +1,12 @@
-package com.horizen
+package io.horizen
 
 import com.google.common.io.Files
-import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import com.horizen.certnative.BackwardTransfer
-import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
-import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.BytesUtils
+import io.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
+import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import io.horizen.certnative.BackwardTransfer
+import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
+import io.horizen.proposition.MCPublicKeyHashProposition
+import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
 

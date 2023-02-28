@@ -1,13 +1,13 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
 import java.time.Instant
 import java.util.Random
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
-import com.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
-import com.horizen.params.NetworkParams
-import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils._
-import com.horizen.utxo.block.SidechainBlock
+import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
+import io.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
+import io.horizen.params.NetworkParams
+import io.horizen.transaction.MC2SCAggregatedTransaction
+import io.horizen.utils._
+import io.horizen.utxo.block.SidechainBlock
 import org.scalatestplus.mockito.MockitoSugar.mock
 
 import scala.annotation.tailrec

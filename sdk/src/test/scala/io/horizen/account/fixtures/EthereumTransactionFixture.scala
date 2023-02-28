@@ -1,12 +1,12 @@
-package com.horizen.account.fixtures
+package io.horizen.account.fixtures
 
 import com.google.common.primitives.Ints
-import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.state.GasUtil
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
-import com.horizen.utils.BytesUtils
+import io.horizen.account.proof.SignatureSecp256k1
+import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import io.horizen.account.state.GasUtil
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
+import io.horizen.utils.BytesUtils
 
 import java.{lang, util}
 import java.math.BigInteger

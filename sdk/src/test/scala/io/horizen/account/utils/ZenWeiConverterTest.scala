@@ -1,4 +1,4 @@
-package com.horizen.account.utils
+package io.horizen.account.utils
 
 import org.junit.Assert._
 import org.junit._

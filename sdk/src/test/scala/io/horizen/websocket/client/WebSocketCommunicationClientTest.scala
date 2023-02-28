@@ -1,4 +1,4 @@
-package com.horizen.websocket.client
+package io.horizen.websocket.client
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule

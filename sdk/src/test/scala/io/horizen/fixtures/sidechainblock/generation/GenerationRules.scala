@@ -1,4 +1,4 @@
-package com.horizen.fixtures.sidechainblock.generation
+package io.horizen.fixtures.sidechainblock.generation
 
 import java.util.Random
 

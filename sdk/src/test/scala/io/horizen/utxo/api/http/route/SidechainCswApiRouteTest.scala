@@ -1,11 +1,11 @@
-package com.horizen.utxo.api.http.route
+package io.horizen.utxo.api.http.route
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.api.http.route.SidechainApiRouteTest
-import com.horizen.params.MainNetParams
-import com.horizen.utils.BytesUtils
-import com.horizen.utxo.fixtures.BoxFixture
+import io.horizen.api.http.route.SidechainApiRouteTest
+import io.horizen.params.MainNetParams
+import io.horizen.utils.BytesUtils
+import io.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert._
 
 import scala.collection.JavaConverters._

@@ -1,28 +1,28 @@
-package com.horizen.certificatesubmitter.strategies
+package io.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
-import com.horizen._
-import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
-import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignatures}
-import com.horizen.certificatesubmitter.strategies.WithoutKeyRotationCircuitStrategyTest.{master, signing}
-import com.horizen.certnative.BackwardTransfer
-import com.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo}
-import com.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
-import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.librustsidechains.FieldElement
-import com.horizen.params.RegTestParams
-import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.SchnorrProposition
-import com.horizen.schnorrnative.SchnorrKeyPair
-import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.box.WithdrawalRequestBox
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.wallet.SidechainWallet
+import io.horizen._
+import io.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
+import io.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignatures}
+import io.horizen.certificatesubmitter.strategies.WithoutKeyRotationCircuitStrategyTest.{master, signing}
+import io.horizen.certnative.BackwardTransfer
+import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo}
+import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.librustsidechains.FieldElement
+import io.horizen.params.RegTestParams
+import io.horizen.proof.SchnorrProof
+import io.horizen.proposition.SchnorrProposition
+import io.horizen.schnorrnative.SchnorrKeyPair
+import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.box.WithdrawalRequestBox
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.wallet.SidechainWallet
 import org.junit.{Before, Test}
 import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}

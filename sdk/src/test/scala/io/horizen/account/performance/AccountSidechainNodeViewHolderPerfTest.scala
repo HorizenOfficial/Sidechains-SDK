@@ -1,23 +1,23 @@
-package com.horizen.account.performance
+package io.horizen.account.performance
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestActorRef
-import com.horizen.account.AccountSidechainNodeViewHolder
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.{AccountState, AccountStateView, MessageProcessor, MockedHistoryBlockHashProvider}
-import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.fixtures._
-import com.horizen.params.NetworkParams
-import com.horizen.storage.SidechainSecretStorage
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.{SidechainSettings, SidechainTypes, WalletSettings}
+import io.horizen.account.AccountSidechainNodeViewHolder
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.state.{AccountState, AccountStateView, MessageProcessor, MockedHistoryBlockHashProvider}
+import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.consensus.ConsensusDataStorage
+import io.horizen.fixtures._
+import io.horizen.params.NetworkParams
+import io.horizen.storage.SidechainSecretStorage
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.horizen.{SidechainSettings, SidechainTypes, WalletSettings}
 import io.horizen.evm.{Address, Database}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Ignore, Test}

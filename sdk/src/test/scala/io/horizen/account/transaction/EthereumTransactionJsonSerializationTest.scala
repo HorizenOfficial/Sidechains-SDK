@@ -1,9 +1,9 @@
-package com.horizen.account.transaction
+package io.horizen.account.transaction
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.utils.EthereumTransactionDecoder
-import com.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.account.utils.EthereumTransactionDecoder
+import io.horizen.json.serializer.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertNull, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

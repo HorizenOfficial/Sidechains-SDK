@@ -1,9 +1,9 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
-import com.horizen.block.{MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.BytesUtils
+import io.horizen.block.{MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
+import io.horizen.utils.BytesUtils
 import org.scalatestplus.mockito.MockitoSugar.mock
 
 import scala.util.Random

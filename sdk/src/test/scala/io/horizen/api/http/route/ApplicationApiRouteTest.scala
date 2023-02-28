@@ -1,9 +1,9 @@
-package com.horizen.api.http.route
+package io.horizen.api.http.route
 
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
 import akka.http.scaladsl.server.Route
-import com.horizen.json.SerializationUtil
-import com.horizen.utxo.api.http.SimpleCustomApi
+import io.horizen.json.SerializationUtil
+import io.horizen.utxo.api.http.SimpleCustomApi
 import org.junit.Assert.{assertEquals, assertTrue}
 
 import scala.collection.JavaConverters._

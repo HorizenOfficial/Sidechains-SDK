@@ -1,7 +1,7 @@
-package com.horizen.account.state.receipt
+package io.horizen.account.state.receipt
 
-import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import com.horizen.utils.BytesUtils
+import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
+import io.horizen.utils.BytesUtils
 import io.horizen.evm.TrieHasher
 import org.junit.Assert._
 import org.junit._

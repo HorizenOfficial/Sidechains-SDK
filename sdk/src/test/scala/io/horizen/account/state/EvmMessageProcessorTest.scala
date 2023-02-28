@@ -1,4 +1,4 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
 import io.horizen.evm.Address
 import org.junit.Assert.{assertFalse, assertNotNull, assertTrue}

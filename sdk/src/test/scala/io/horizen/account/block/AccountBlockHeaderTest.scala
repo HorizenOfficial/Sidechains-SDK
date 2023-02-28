@@ -1,14 +1,14 @@
-package com.horizen.account.block
+package io.horizen.account.block
 
-import com.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountGenerationMetadata}
-import com.horizen.fixtures.CompanionsFixture
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proof.VrfProof
-import com.horizen.proposition.VrfPublicKey
-import com.horizen.secret.VrfSecretKey
-import com.horizen.utils.BytesUtils
-import com.horizen.history.validation.InvalidSidechainBlockHeaderException
-import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
+import io.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountGenerationMetadata}
+import io.horizen.fixtures.CompanionsFixture
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proof.VrfProof
+import io.horizen.proposition.VrfPublicKey
+import io.horizen.secret.VrfSecretKey
+import io.horizen.utils.BytesUtils
+import io.horizen.history.validation.InvalidSidechainBlockHeaderException
+import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

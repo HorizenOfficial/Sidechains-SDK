@@ -1,19 +1,19 @@
-package com.horizen.account.api.http
+package io.horizen.account.api.http
 
-import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Serializer}
-import com.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, ForgerStakeData, WithdrawalRequest}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.api.http.SidechainApiMockConfiguration
-import com.horizen.fixtures._
-import com.horizen.node.NodeWalletBase
-import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret
-import com.horizen.utils.BytesUtils
+import io.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Serializer}
+import io.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, ForgerStakeData, WithdrawalRequest}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.api.http.SidechainApiMockConfiguration
+import io.horizen.fixtures._
+import io.horizen.node.NodeWalletBase
+import io.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.secret
+import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar

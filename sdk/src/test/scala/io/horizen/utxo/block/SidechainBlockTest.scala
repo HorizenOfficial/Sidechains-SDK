@@ -1,19 +1,19 @@
-package com.horizen.utxo.block
+package io.horizen.utxo.block
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.block._
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures._
-import com.horizen.history.validation.{InconsistentOmmerDataException, InconsistentSidechainBlockDataException, InvalidMainchainHeaderException, InvalidOmmerDataException, InvalidSidechainBlockDataException, InvalidSidechainBlockHeaderException}
-import com.horizen.json.serializer.ApplicationJsonSerializer
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
-import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
-import com.horizen.utxo.box.Box
-import com.horizen.utxo.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
-import com.horizen.vrf.VrfGeneratedDataProvider
+import io.horizen.block._
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.fixtures._
+import io.horizen.history.validation.{InconsistentOmmerDataException, InconsistentSidechainBlockDataException, InvalidMainchainHeaderException, InvalidOmmerDataException, InvalidSidechainBlockDataException, InvalidSidechainBlockHeaderException}
+import io.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
+import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
+import io.horizen.utxo.box.Box
+import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
+import io.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

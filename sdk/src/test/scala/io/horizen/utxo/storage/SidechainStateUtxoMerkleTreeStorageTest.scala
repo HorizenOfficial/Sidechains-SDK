@@ -1,15 +1,15 @@
-package com.horizen.utxo.storage
+package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.fixtures.StoreFixture
-import com.horizen.librustsidechains.FieldElement
-import com.horizen.proposition.Proposition
-import com.horizen.storage.Storage
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}
-import com.horizen.utxo.box.{Box, ZenBox}
-import com.horizen.utxo.fixtures.BoxFixture
-import com.horizen.utxo.utils.UtxoMerkleTreeLeafInfo
+import io.horizen.SidechainTypes
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.fixtures.StoreFixture
+import io.horizen.librustsidechains.FieldElement
+import io.horizen.proposition.Proposition
+import io.horizen.storage.Storage
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}
+import io.horizen.utxo.box.{Box, ZenBox}
+import io.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.utils.UtxoMerkleTreeLeafInfo
 import org.junit.Assert._
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}

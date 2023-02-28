@@ -1,13 +1,13 @@
-package com.horizen.utxo.forge
+package io.horizen.utxo.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.forge.AbstractForger.ReceivableMessages.StartForging
-import com.horizen.forge.MainchainSynchronizer
-import com.horizen.params.NetworkParams
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.{SidechainSettings, WebSocketSettings}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.forge.AbstractForger.ReceivableMessages.StartForging
+import io.horizen.forge.MainchainSynchronizer
+import io.horizen.params.NetworkParams
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.{SidechainSettings, WebSocketSettings}
 import org.junit.Test
 import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers

@@ -1,4 +1,4 @@
-package com.horizen.chain
+package io.horizen.chain
 
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test

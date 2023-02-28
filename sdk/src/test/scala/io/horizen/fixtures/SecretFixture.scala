@@ -1,14 +1,14 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
 import com.google.common.primitives.Longs
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.utils.Secp256k1
-import com.horizen.customtypes._
-import com.horizen.proof.Signature25519
-import com.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
-import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
-import com.horizen.secret._
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import io.horizen.account.utils.Secp256k1
+import io.horizen.customtypes._
+import io.horizen.proof.Signature25519
+import io.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
+import io.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
+import io.horizen.secret._
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets

@@ -1,9 +1,9 @@
-package com.horizen.utxo.mempool
+package io.horizen.utxo.mempool
 
-import com.horizen.MempoolSettings
-import com.horizen.fixtures._
-import com.horizen.utils.FeeRate
-import com.horizen.utxo.transaction.RegularTransaction
+import io.horizen.MempoolSettings
+import io.horizen.fixtures._
+import io.horizen.utils.FeeRate
+import io.horizen.utxo.transaction.RegularTransaction
 import org.junit.Assert._
 import org.junit.Test
 import org.mockito.Mockito

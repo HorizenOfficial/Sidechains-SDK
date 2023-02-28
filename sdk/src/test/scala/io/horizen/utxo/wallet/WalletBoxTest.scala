@@ -1,6 +1,6 @@
-package com.horizen.utxo.wallet
+package io.horizen.utxo.wallet
 
-import com.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite

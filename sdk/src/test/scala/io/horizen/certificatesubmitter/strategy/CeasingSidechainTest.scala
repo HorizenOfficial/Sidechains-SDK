@@ -1,14 +1,14 @@
-package com.horizen.certificatesubmitter.strategy
+package io.horizen.certificatesubmitter.strategy
 
 import akka.actor.{ActorRef, ActorSystem}
-import com.horizen.{MempoolSettings, SidechainSettings}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
-import com.horizen.certificatesubmitter.strategies.{CeasingSidechain, NonCeasingSidechain, SubmissionWindowStatus}
-import com.horizen.chain.SidechainBlockInfo
-import com.horizen.fixtures.SidechainBlockFixture.sidechainTransactionsCompanion
-import com.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolder, MockedSidechainNodeViewHolderFixture, SidechainBlockFixture}
-import com.horizen.params.MainNetParams
-import com.horizen.utils.WithdrawalEpochInfo
+import io.horizen.{MempoolSettings, SidechainSettings}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
+import io.horizen.certificatesubmitter.strategies.{CeasingSidechain, NonCeasingSidechain, SubmissionWindowStatus}
+import io.horizen.chain.SidechainBlockInfo
+import io.horizen.fixtures.SidechainBlockFixture.sidechainTransactionsCompanion
+import io.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolder, MockedSidechainNodeViewHolderFixture, SidechainBlockFixture}
+import io.horizen.params.MainNetParams
+import io.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -16,14 +16,14 @@ import org.mockito.Mockito.when
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.util.ModifierId
-import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.utils.BytesUtils
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.wallet.SidechainWallet
-import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
+import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.utils.BytesUtils
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.wallet.SidechainWallet
+import io.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
 import sparkz.core.NodeViewHolder.CurrentView
 
 import java.nio.charset.StandardCharsets

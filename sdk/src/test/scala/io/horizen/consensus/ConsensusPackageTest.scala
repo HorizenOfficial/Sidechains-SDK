@@ -1,6 +1,6 @@
-package com.horizen.consensus
+package io.horizen.consensus
 
-import com.horizen.vrf.VrfOutput
+import io.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertEquals, fail}
 import org.junit.Test
 

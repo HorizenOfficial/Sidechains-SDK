@@ -1,7 +1,7 @@
-package com.horizen.storage
+package io.horizen.storage
 import java.util
 import java.util.{Optional, List => JList}
-import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import io.horizen.utils.{ByteArrayWrapper, Pair => JPair}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

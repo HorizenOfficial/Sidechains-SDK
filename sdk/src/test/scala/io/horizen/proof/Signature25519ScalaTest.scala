@@ -1,10 +1,10 @@
-package com.horizen.proof
+package io.horizen.proof
 
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.json.serializer.ApplicationJsonSerializer
-import com.horizen.secret.PrivateKey25519Creator
-import com.horizen.utils.BytesUtils
+import io.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.secret.PrivateKey25519Creator
+import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertFalse}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

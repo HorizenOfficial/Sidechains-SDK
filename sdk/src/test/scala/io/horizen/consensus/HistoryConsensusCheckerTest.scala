@@ -1,9 +1,9 @@
-package com.horizen.consensus
+package io.horizen.consensus
 
 import java.util.Random
-import com.horizen.fixtures.sidechainblock.generation._
-import com.horizen.params.{NetworkParams, TestNetParams}
-import com.horizen.utxo.history.SidechainHistory
+import io.horizen.fixtures.sidechainblock.generation._
+import io.horizen.params.{NetworkParams, TestNetParams}
+import io.horizen.utxo.history.SidechainHistory
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 

@@ -1,13 +1,13 @@
-package com.horizen.block
+package io.horizen.block
 
 import com.google.common.primitives.UnsignedInts
-import com.horizen.fixtures.{MainchainHeaderFixture, MainchainHeaderForPoWTest}
-import com.horizen.params.MainNetParams
-import com.horizen.proposition.SchnorrProposition
-import com.horizen.utils.{BytesUtils, Utils}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.fixtures.{MainchainHeaderFixture, MainchainHeaderForPoWTest}
+import io.horizen.params.MainNetParams
+import io.horizen.proposition.SchnorrProposition
+import io.horizen.utils.{BytesUtils, Utils}
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.storage.SidechainHistoryStorage
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}

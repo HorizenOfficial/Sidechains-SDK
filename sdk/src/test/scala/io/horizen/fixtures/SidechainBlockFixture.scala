@@ -1,23 +1,23 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
 import java.lang.{Byte => JByte}
 import java.time.Instant
 import java.util.{HashMap => JHashMap}
-import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
-import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils._
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.{Box, ForgerBox}
-import com.horizen.utxo.customtypes.SemanticallyInvalidTransaction
-import com.horizen.utxo.transaction.SidechainTransaction
-import com.horizen.vrf.VrfOutput
+import io.horizen.SidechainTypes
+import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
+import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.params.NetworkParams
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.{Proposition, VrfPublicKey}
+import io.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils._
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.{Box, ForgerBox}
+import io.horizen.utxo.customtypes.SemanticallyInvalidTransaction
+import io.horizen.utxo.transaction.SidechainTransaction
+import io.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId}

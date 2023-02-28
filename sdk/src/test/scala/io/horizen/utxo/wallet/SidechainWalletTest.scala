@@ -1,24 +1,24 @@
-package com.horizen.utxo.wallet
+package io.horizen.utxo.wallet
 
-import com.horizen.SidechainTypes
-import com.horizen.companion._
-import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.customtypes._
-import com.horizen.fixtures._
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proposition._
-import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
-import com.horizen.storage._
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo, MerklePath, MerkleTree, Pair}
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.data.{BoxData, ZenBoxData}
-import com.horizen.utxo.box.{Box, BoxSerializer, ForgerBox, ZenBox}
-import com.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
-import com.horizen.utxo.customtypes.{CustomApplicationWallet, CustomBox, CustomBoxSerializer}
-import com.horizen.utxo.state.UtxoMerkleTreeView
-import com.horizen.utxo.storage._
-import com.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
+import io.horizen.SidechainTypes
+import io.horizen.companion._
+import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
+import io.horizen.customtypes._
+import io.horizen.fixtures._
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proposition._
+import io.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
+import io.horizen.storage._
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo, MerklePath, MerkleTree, Pair}
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.data.{BoxData, ZenBoxData}
+import io.horizen.utxo.box.{Box, BoxSerializer, ForgerBox, ZenBox}
+import io.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
+import io.horizen.utxo.customtypes.{CustomApplicationWallet, CustomBox, CustomBoxSerializer}
+import io.horizen.utxo.state.UtxoMerkleTreeView
+import io.horizen.utxo.storage._
+import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
 import org.junit.Assert._
 import org.junit._
 import org.junit.rules.TemporaryFolder

@@ -1,4 +1,4 @@
-package com.horizen.websocket.client
+package io.horizen.websocket.client
 
 import javax.websocket.{OnMessage, Session}
 import javax.websocket.server.ServerEndpoint

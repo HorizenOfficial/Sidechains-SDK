@@ -1,19 +1,19 @@
-package com.horizen.utxo.wallet
+package io.horizen.utxo.wallet
 
-import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReferenceData, SidechainCommitmentTree}
-import com.horizen.fixtures._
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proposition._
-import com.horizen.storage._
-import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.{Box, CoinsBox}
-import com.horizen.utxo.state.UtxoMerkleTreeView
-import com.horizen.utxo.storage.SidechainWalletCswDataStorage
-import com.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
+import io.horizen.SidechainTypes
+import io.horizen.block.{MainchainBlockReferenceData, SidechainCommitmentTree}
+import io.horizen.fixtures._
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proposition._
+import io.horizen.storage._
+import io.horizen.transaction.MC2SCAggregatedTransaction
+import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.{Box, CoinsBox}
+import io.horizen.utxo.state.UtxoMerkleTreeView
+import io.horizen.utxo.storage.SidechainWalletCswDataStorage
+import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._

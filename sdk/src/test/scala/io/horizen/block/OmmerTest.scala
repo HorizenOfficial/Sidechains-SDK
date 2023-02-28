@@ -1,16 +1,16 @@
-package com.horizen.block
+package io.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures._
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proof.Signature25519
-import com.horizen.proposition.VrfPublicKey
-import com.horizen.secret.VrfSecretKey
-import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
-import com.horizen.history.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
-import com.horizen.vrf.VrfGeneratedDataProvider
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.fixtures._
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proof.Signature25519
+import io.horizen.proposition.VrfPublicKey
+import io.horizen.secret.VrfSecretKey
+import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
+import io.horizen.history.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
+import io.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

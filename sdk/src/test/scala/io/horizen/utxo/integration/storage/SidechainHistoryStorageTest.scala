@@ -1,12 +1,12 @@
-package com.horizen.utxo.integration.storage
+package io.horizen.utxo.integration.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.chain.SidechainBlockInfo
-import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, StoreFixture}
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.SidechainTypes
+import io.horizen.chain.SidechainBlockInfo
+import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, StoreFixture}
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.storage.SidechainHistoryStorage
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

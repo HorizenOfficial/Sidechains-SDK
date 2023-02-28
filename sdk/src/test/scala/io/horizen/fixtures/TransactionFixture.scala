@@ -1,13 +1,13 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
 import java.util.{ArrayList => JArrayList, List => JList}
-import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.utils.{Pair => JPair}
-import com.horizen.utxo.box.{Box, ZenBox}
-import com.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
-import com.horizen.utxo.fixtures.BoxFixture
-import com.horizen.utxo.transaction.RegularTransaction
+import io.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
+import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import io.horizen.utils.{Pair => JPair}
+import io.horizen.utxo.box.{Box, ZenBox}
+import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+import io.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.transaction.RegularTransaction
 
 import java.nio.charset.StandardCharsets
 import scala.util.Random

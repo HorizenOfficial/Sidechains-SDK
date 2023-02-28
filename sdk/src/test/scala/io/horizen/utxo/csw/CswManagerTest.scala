@@ -1,30 +1,30 @@
-package com.horizen.utxo.csw
+package io.horizen.utxo.csw
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.google.common.primitives.Longs
-import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion1
-import com.horizen.block.{MainchainHeader, WithdrawalEpochCertificate}
-import com.horizen.chain.MainchainHeaderInfo
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.utxo.csw.CswManager.ReceivableMessages._
-import com.horizen.utxo.csw.CswManager.Responses._
-import com.horizen.utxo.csw.CswManager.{ProofInProcess, ProofInQueue}
-import com.horizen.fixtures.{MainchainBlockReferenceFixture, SidechainBlockFixture}
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.secret.{PrivateKey25519Creator, Secret}
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
-import com.horizen._
-import com.horizen.utxo.fixtures.CswDataFixture
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.wallet.SidechainWallet
+import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion1
+import io.horizen.block.{MainchainHeader, WithdrawalEpochCertificate}
+import io.horizen.chain.MainchainHeaderInfo
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.cryptolibprovider.utils.FieldElementUtils
+import io.horizen.utxo.csw.CswManager.ReceivableMessages._
+import io.horizen.utxo.csw.CswManager.Responses._
+import io.horizen.utxo.csw.CswManager.{ProofInProcess, ProofInQueue}
+import io.horizen.fixtures.{MainchainBlockReferenceFixture, SidechainBlockFixture}
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.secret.{PrivateKey25519Creator, Secret}
+import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
+import io.horizen._
+import io.horizen.utxo.fixtures.CswDataFixture
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.wallet.SidechainWallet
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

@@ -1,17 +1,17 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
-import com.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
-import com.horizen.account.state.receipt.EthereumConsensusDataLog
-import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.fixtures.StoreFixture
-import com.horizen.params.NetworkParams
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.PrivateKey25519
-import com.horizen.utils.{BytesUtils, Ed25519}
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import io.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
+import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
+import io.horizen.account.state.receipt.EthereumConsensusDataLog
+import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.fixtures.StoreFixture
+import io.horizen.params.NetworkParams
+import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.secret.PrivateKey25519
+import io.horizen.utils.{BytesUtils, Ed25519}
 import io.horizen.evm.Address
 import org.junit.Assert._
 import org.junit._

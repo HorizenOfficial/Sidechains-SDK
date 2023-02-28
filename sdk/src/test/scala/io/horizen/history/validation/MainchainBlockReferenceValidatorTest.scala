@@ -1,17 +1,17 @@
-package com.horizen.history.validation
+package io.horizen.history.validation
 
 import java.util.{Optional => JOptional}
-import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
-import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
-import com.horizen.fixtures.{FieldElementFixture, MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.poseidonnative.PoseidonHash
-import com.horizen.utils.WithdrawalEpochInfo
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.SidechainTypes
+import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
+import io.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
+import io.horizen.fixtures.{FieldElementFixture, MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.poseidonnative.PoseidonHash
+import io.horizen.utils.WithdrawalEpochInfo
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.storage.SidechainHistoryStorage
 import org.junit.Assert.{assertEquals, fail => jFail}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}

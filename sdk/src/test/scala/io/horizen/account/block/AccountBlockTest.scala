@@ -1,33 +1,33 @@
-package com.horizen.account.block
+package io.horizen.account.block
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.SidechainTypes
-import com.horizen.account.api.rpc.request.RpcId
-import com.horizen.account.api.rpc.response.RpcResponseSuccess
-import com.horizen.account.api.rpc.types.EthereumBlockView
-import com.horizen.account.block.AccountBlock.calculateReceiptRoot
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture, ForgerAccountFixture}
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import com.horizen.account.state.receipt.{EthereumConsensusDataReceipt, EthereumReceipt, ReceiptFixture}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import com.horizen.account.utils.Bloom
-import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
-import com.horizen.block._
-import com.horizen.fixtures._
-import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.txGen.getRandomBoxId
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.VrfPublicKey
-import com.horizen.secret.VrfSecretKey
-import com.horizen.json.SerializationUtil
-import com.horizen.json.serializer.ApplicationJsonSerializer
-import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
-import com.horizen.history.validation._
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
+import io.horizen.SidechainTypes
+import io.horizen.account.api.rpc.request.RpcId
+import io.horizen.account.api.rpc.response.RpcResponseSuccess
+import io.horizen.account.api.rpc.types.EthereumBlockView
+import io.horizen.account.block.AccountBlock.calculateReceiptRoot
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture, ForgerAccountFixture}
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import io.horizen.account.state.receipt.{EthereumConsensusDataReceipt, EthereumReceipt, ReceiptFixture}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
+import io.horizen.account.utils.Bloom
+import io.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
+import io.horizen.block._
+import io.horizen.fixtures._
+import io.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.txGen.getRandomBoxId
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.VrfPublicKey
+import io.horizen.secret.VrfSecretKey
+import io.horizen.json.SerializationUtil
+import io.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
+import io.horizen.history.validation._
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import io.horizen.evm.Hash
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test

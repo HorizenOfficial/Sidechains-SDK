@@ -1,9 +1,9 @@
-package com.horizen.chain
+package io.horizen.chain
 
 import java.io._
-import com.horizen.fixtures.SidechainBlockInfoFixture
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
-import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
+import io.horizen.fixtures.SidechainBlockInfoFixture
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
+import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

@@ -1,7 +1,7 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
-import com.horizen.SidechainTypes
-import com.horizen.utxo.transaction.RegularTransaction
+import io.horizen.SidechainTypes
+import io.horizen.utxo.transaction.RegularTransaction
 import scala.language.implicitConversions
 
 trait SidechainTypesTestsExtension extends SidechainTypes {

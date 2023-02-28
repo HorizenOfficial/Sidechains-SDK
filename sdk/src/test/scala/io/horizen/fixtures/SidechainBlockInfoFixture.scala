@@ -1,11 +1,11 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
-import com.horizen.block.MainchainBlockReference
-import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
-import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.block.MainchainBlockReference
+import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.consensus.ModifierSemanticValidity
 

@@ -1,11 +1,11 @@
-package com.horizen.block
+package io.horizen.block
 
 import com.google.common.primitives.Ints
-import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
-import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CustomSidechainsVersions, SidechainVersionZero, TestSidechainsVersionsManager}
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
+import io.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
+import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, CustomSidechainsVersions, SidechainVersionZero, TestSidechainsVersionsManager}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

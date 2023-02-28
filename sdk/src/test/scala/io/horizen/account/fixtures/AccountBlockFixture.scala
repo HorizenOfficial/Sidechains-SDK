@@ -1,23 +1,23 @@
-package com.horizen.account.fixtures
+package io.horizen.account.fixtures
 
 import java.lang.{Byte => JByte}
 import java.time.Instant
 import java.util.{HashMap => JHashMap}
-import com.horizen.{SidechainTypes, utils}
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.utils.Bloom
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
-import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, MerkleTreeFixture}
-import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.VrfPublicKey
-import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils._
-import com.horizen.vrf.VrfOutput
+import io.horizen.{SidechainTypes, utils}
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.utils.Bloom
+import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
+import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, MerkleTreeFixture}
+import io.horizen.params.NetworkParams
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.VrfPublicKey
+import io.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils._
+import io.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}
 

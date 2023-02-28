@@ -1,11 +1,11 @@
-package com.horizen.api.http.route
+package io.horizen.api.http.route
 
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
 import akka.http.scaladsl.server.MalformedRequestContentRejection
-import com.horizen.api.http.route.SidechainDebugErrorResponse.ErrorBadCircuit
-import com.horizen.api.http.route.SidechainDebugRestScheme.{ReqGetKeyRotationMessageToSign, ReqKeyRotationProof}
-import com.horizen.json.SerializationUtil
-import com.horizen.utils.BytesUtils
+import io.horizen.api.http.route.SidechainDebugErrorResponse.ErrorBadCircuit
+import io.horizen.api.http.route.SidechainDebugRestScheme.{ReqGetKeyRotationMessageToSign, ReqKeyRotationProof}
+import io.horizen.json.SerializationUtil
+import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 
 import java.util.{Optional => JOptional}

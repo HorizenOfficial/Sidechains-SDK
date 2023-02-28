@@ -1,8 +1,8 @@
-package com.horizen.utils
+package io.horizen.utils
 
-import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
-import com.horizen.block.SidechainsVersionsManager
-import com.horizen.params.NetworkParams
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
+import io.horizen.block.SidechainsVersionsManager
+import io.horizen.params.NetworkParams
 
 sealed trait TestSidechainsVersionsStrategy {
   def getVersion(sidechainId: Array[Byte]): SidechainCreationVersion

@@ -1,9 +1,9 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
-import com.horizen.account.AccountFixture
-import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.account.utils.FeeUtils
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.account.AccountFixture
+import io.horizen.account.storage.AccountStateMetadataStorageView
+import io.horizen.account.utils.FeeUtils
+import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import io.horizen.evm.{Address, Hash, MemoryDatabase, StateDB}
 import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock

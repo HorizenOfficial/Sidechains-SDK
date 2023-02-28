@@ -1,25 +1,25 @@
-package com.horizen.utxo.websocket.server
+package io.horizen.utxo.websocket.server
 
-import com.horizen.SidechainSyncInfo
-import com.horizen.api.http.SidechainApiMockConfiguration
-import com.horizen.block.MainchainBlockReference
-import com.horizen.chain.{MainchainBlockReferenceInfo, SidechainBlockInfo}
-import com.horizen.fixtures._
-import com.horizen.params.MainNetParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.data.{BoxData, ZenBoxData}
-import com.horizen.utxo.box.{Box, ForgerBox, ZenBox}
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.utxo.fixtures.BoxFixture
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.transaction.RegularTransaction
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.wallet.SidechainWallet
+import io.horizen.SidechainSyncInfo
+import io.horizen.api.http.SidechainApiMockConfiguration
+import io.horizen.block.MainchainBlockReference
+import io.horizen.chain.{MainchainBlockReferenceInfo, SidechainBlockInfo}
+import io.horizen.fixtures._
+import io.horizen.params.MainNetParams
+import io.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import io.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.data.{BoxData, ZenBoxData}
+import io.horizen.utxo.box.{Box, ForgerBox, ZenBox}
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.transaction.RegularTransaction
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.wallet.SidechainWallet
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView

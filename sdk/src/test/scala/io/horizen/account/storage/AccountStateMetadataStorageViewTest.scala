@@ -1,14 +1,14 @@
-package com.horizen.account.storage
+package io.horizen.account.storage
 
 import com.google.common.primitives.Ints
-import com.horizen.SidechainTypes
-import com.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
-import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
-import com.horizen.account.utils.AccountBlockFeeInfo
-import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
-import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
+import io.horizen.SidechainTypes
+import io.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
+import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
+import io.horizen.account.utils.AccountBlockFeeInfo
+import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
+import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite

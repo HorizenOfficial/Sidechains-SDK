@@ -1,14 +1,14 @@
-package com.horizen.utxo.websocket.server
+package io.horizen.utxo.websocket.server
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.api.http.SidechainApiMockConfiguration
-import com.horizen.utils.CountDownLatchController
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.transaction.RegularTransaction
+import io.horizen.api.http.SidechainApiMockConfiguration
+import io.horizen.utils.CountDownLatchController
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.transaction.RegularTransaction
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{After, Assert, Test}

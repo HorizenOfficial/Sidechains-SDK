@@ -1,15 +1,15 @@
-package com.horizen.api.http
+package io.horizen.api.http
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.account.state.{AccountForgingStakeInfo, WithdrawalRequest}
-import com.horizen.account.transaction.AccountTransaction
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
-import com.horizen.chain.SidechainBlockInfo
-import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.{Box, BoxUnlocker}
-import com.horizen.utxo.transaction.BoxTransaction
+import io.horizen.account.state.{AccountForgingStakeInfo, WithdrawalRequest}
+import io.horizen.account.transaction.AccountTransaction
+import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
+import io.horizen.chain.SidechainBlockInfo
+import io.horizen.transaction.MC2SCAggregatedTransaction
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.{Box, BoxUnlocker}
+import io.horizen.utxo.transaction.BoxTransaction
 import org.junit.Assert._
 import sparkz.util.ModifierId
 

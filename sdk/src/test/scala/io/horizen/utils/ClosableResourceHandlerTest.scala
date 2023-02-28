@@ -1,9 +1,9 @@
-package com.horizen.utils
+package io.horizen.utils
 
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures._
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.fixtures._
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.utxo.block.SidechainBlock
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.Mockito

@@ -1,10 +1,10 @@
-package com.horizen.utxo.integration.storage
+package io.horizen.utxo.integration.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.fixtures.StoreFixture
-import com.horizen.utxo.fixtures.CswDataFixture
-import com.horizen.utxo.storage.SidechainWalletCswDataStorage
-import com.horizen.utxo.utils.CswData
+import io.horizen.SidechainTypes
+import io.horizen.fixtures.StoreFixture
+import io.horizen.utxo.fixtures.CswDataFixture
+import io.horizen.utxo.storage.SidechainWalletCswDataStorage
+import io.horizen.utxo.utils.CswData
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

@@ -1,10 +1,10 @@
-package com.horizen.account.validation
+package io.horizen.account.validation
 
-import com.horizen.account.utils.FeeUtils
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.history.validation.{BaseFeeBlockValidator, InvalidBaseFeeException}
-import com.horizen.account.utils.AccountMockDataHelper
+import io.horizen.account.utils.FeeUtils
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.history.validation.{BaseFeeBlockValidator, InvalidBaseFeeException}
+import io.horizen.account.utils.AccountMockDataHelper
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

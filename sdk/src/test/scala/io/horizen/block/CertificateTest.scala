@@ -1,6 +1,6 @@
-package com.horizen.block
+package io.horizen.block
 
-import com.horizen.utils.BytesUtils
+import io.horizen.utils.BytesUtils
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert._

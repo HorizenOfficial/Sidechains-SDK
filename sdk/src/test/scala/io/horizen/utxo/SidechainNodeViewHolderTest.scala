@@ -1,22 +1,22 @@
-package com.horizen.utxo
+package io.horizen.utxo
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import com.horizen.MempoolSettings
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
-import com.horizen.fixtures._
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.ZenBox
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.state.{SidechainState, UtxoMerkleTreeView}
-import com.horizen.utxo.utils.BlockFeeInfo
-import com.horizen.utxo.wallet.SidechainWallet
+import io.horizen.MempoolSettings
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
+import io.horizen.fixtures._
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.ZenBox
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.state.{SidechainState, UtxoMerkleTreeView}
+import io.horizen.utxo.utils.BlockFeeInfo
+import io.horizen.utxo.wallet.SidechainWallet
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.Mockito.times

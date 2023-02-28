@@ -1,8 +1,8 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
-import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
-import com.horizen.fixtures.SidechainBlockFixture.generateBytes
-import com.horizen.utils.BytesUtils
+import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
+import io.horizen.fixtures.SidechainBlockFixture.generateBytes
+import io.horizen.utils.BytesUtils
 
 object FieldElementFixture {
   def generateFieldElement(): Array[Byte] = {

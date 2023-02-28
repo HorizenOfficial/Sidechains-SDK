@@ -1,13 +1,13 @@
-package com.horizen.account.fixtures
+package io.horizen.account.fixtures
 
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.utils.AccountPayment
-import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.fixtures.SecretFixture
-import com.horizen.proposition.VrfPublicKey
-import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
-import com.horizen.utils
-import com.horizen.utils.Ed25519
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.utils.AccountPayment
+import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.fixtures.SecretFixture
+import io.horizen.proposition.VrfPublicKey
+import io.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
+import io.horizen.utils
+import io.horizen.utils.Ed25519
 import java.math.BigInteger
 import java.util
 import java.util.Random

@@ -1,6 +1,6 @@
-package com.horizen.fixtures
+package io.horizen.fixtures
 
-import com.horizen.utils.MerkleTree
+import io.horizen.utils.MerkleTree
 import scala.collection.JavaConverters._
 
 object MerkleTreeUtils {

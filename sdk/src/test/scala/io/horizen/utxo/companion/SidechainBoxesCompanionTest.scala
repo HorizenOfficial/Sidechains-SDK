@@ -1,10 +1,10 @@
-package com.horizen.utxo.companion
+package io.horizen.utxo.companion
 
-import com.horizen.SidechainTypes
-import com.horizen.customtypes._
-import com.horizen.utxo.box.BoxSerializer
-import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
-import com.horizen.utxo.fixtures.BoxFixture
+import io.horizen.SidechainTypes
+import io.horizen.customtypes._
+import io.horizen.utxo.box.BoxSerializer
+import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
+import io.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

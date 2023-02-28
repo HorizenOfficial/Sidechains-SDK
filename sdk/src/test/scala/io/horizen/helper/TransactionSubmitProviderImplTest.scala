@@ -1,12 +1,12 @@
-package com.horizen.helper
+package io.horizen.helper
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import akka.util.Timeout
-import com.horizen.SidechainTypes
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
-import com.horizen.transaction.Transaction
+import io.horizen.SidechainTypes
+import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import io.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
+import io.horizen.transaction.Transaction
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

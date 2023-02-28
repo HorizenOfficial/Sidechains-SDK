@@ -1,11 +1,11 @@
-package com.horizen.utxo.integration.storage
+package io.horizen.utxo.integration.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.fixtures.StoreFixture
-import com.horizen.utils.ByteArrayWrapper
-import com.horizen.utxo.box.ForgerBox
-import com.horizen.utxo.fixtures.BoxFixture
-import com.horizen.utxo.storage.SidechainStateForgerBoxStorage
+import io.horizen.SidechainTypes
+import io.horizen.fixtures.StoreFixture
+import io.horizen.utils.ByteArrayWrapper
+import io.horizen.utxo.box.ForgerBox
+import io.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.storage.SidechainStateForgerBoxStorage
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

@@ -1,15 +1,15 @@
-package com.horizen.utxo.storage
+package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.utxo.companion._
-import com.horizen.fixtures._
-import com.horizen.storage.Storage
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{ByteArrayWrapper, Pair}
-import com.horizen.utxo.box.{BoxSerializer, ZenBox}
-import com.horizen.utxo.customtypes.{CustomBox, CustomBoxChild, CustomBoxSerializer}
-import com.horizen.utxo.fixtures.BoxFixture
-import com.horizen.utxo.wallet.{WalletBox, WalletBoxSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.utxo.companion._
+import io.horizen.fixtures._
+import io.horizen.storage.Storage
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.utils.{ByteArrayWrapper, Pair}
+import io.horizen.utxo.box.{BoxSerializer, ZenBox}
+import io.horizen.utxo.customtypes.{CustomBox, CustomBoxChild, CustomBoxSerializer}
+import io.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.wallet.{WalletBox, WalletBoxSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._

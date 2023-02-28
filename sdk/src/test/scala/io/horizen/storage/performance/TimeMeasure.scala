@@ -1,6 +1,6 @@
-package com.horizen.storage.performance
+package io.horizen.storage.performance
 
-import com.horizen.storage.performance.Measure.OperationType
+import io.horizen.storage.performance.Measure.OperationType
 
 
 object Measure {

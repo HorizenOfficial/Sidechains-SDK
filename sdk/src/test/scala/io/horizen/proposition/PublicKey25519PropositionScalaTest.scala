@@ -1,9 +1,9 @@
-package com.horizen.proposition
+package io.horizen.proposition
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.json.serializer.ApplicationJsonSerializer
-import com.horizen.secret.{PrivateKey25519Creator, Secret}
-import com.horizen.utils.Ed25519
+import io.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.secret.{PrivateKey25519Creator, Secret}
+import io.horizen.utils.Ed25519
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

@@ -1,6 +1,6 @@
-package com.horizen.account.utils
+package io.horizen.account.utils
 
-import com.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
+import io.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

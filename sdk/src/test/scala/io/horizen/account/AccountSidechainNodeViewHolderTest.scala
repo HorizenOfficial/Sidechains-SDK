@@ -1,23 +1,23 @@
-package com.horizen.account
+package io.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import com.horizen.{MempoolSettings, SidechainSettings}
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountFixture, MockedAccountSidechainNodeViewHolderFixture}
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.{AccountState, AccountStateReaderProvider, BaseStateReaderProvider}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
-import com.horizen.fixtures._
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
+import io.horizen.{MempoolSettings, SidechainSettings}
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountFixture, MockedAccountSidechainNodeViewHolderFixture}
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.state.{AccountState, AccountStateReaderProvider, BaseStateReaderProvider}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
+import io.horizen.fixtures._
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Assert, Before, Test}
 import org.mockito.Mockito.times

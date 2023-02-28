@@ -1,15 +1,15 @@
-package com.horizen.companion
+package io.horizen.companion
 
 import org.scalatestplus.junit.JUnitSuite
 import org.junit.Test
 import org.junit.Assert._
-import com.horizen.fixtures._
-import com.horizen.customtypes._
-import com.horizen.secret._
+import io.horizen.fixtures._
+import io.horizen.customtypes._
+import io.horizen.secret._
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
 
-import com.horizen.SidechainTypes
+import io.horizen.SidechainTypes
 
 class SidechainSecretsCompanionTest
   extends JUnitSuite

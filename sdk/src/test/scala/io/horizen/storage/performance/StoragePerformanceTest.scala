@@ -1,4 +1,4 @@
-package com.horizen.storage.performance
+package io.horizen.storage.performance
 
 import org.junit.Ignore
 import org.scalatestplus.junit.JUnitSuite

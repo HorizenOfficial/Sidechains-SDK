@@ -1,4 +1,4 @@
-package com.horizen.api.http.route
+package io.horizen.api.http.route
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.javadsl.model.headers.HttpCredentials
@@ -7,35 +7,35 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
-import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.http._
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.consensus.ConsensusEpochAndSlot
-import com.horizen.cryptolibprovider.CircuitTypes
-import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.forge.AbstractForger
-import com.horizen.json.serializer.ApplicationJsonSerializer
-import com.horizen.params.MainNetParams
-import com.horizen.proposition.Proposition
-import com.horizen.secret.SecretSerializer
-import com.horizen.storage.StorageIterator
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.utxo.SidechainApp
-import com.horizen.utxo.api.http.SimpleCustomApi
-import com.horizen.utxo.api.http.route._
-import com.horizen.utxo.backup.BoxIterator
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.box.{Box, BoxSerializer}
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
-import com.horizen.utxo.csw.CswManager.ReceivableMessages._
-import com.horizen.utxo.csw.CswManager.Responses._
-import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
-import com.horizen.utxo.node._
-import com.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
-import com.horizen.{SidechainSettings, SidechainTypes}
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
+import io.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
+import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import io.horizen.api.http._
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.consensus.ConsensusEpochAndSlot
+import io.horizen.cryptolibprovider.CircuitTypes
+import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
+import io.horizen.forge.AbstractForger
+import io.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.params.MainNetParams
+import io.horizen.proposition.Proposition
+import io.horizen.secret.SecretSerializer
+import io.horizen.storage.StorageIterator
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.horizen.utxo.SidechainApp
+import io.horizen.utxo.api.http.SimpleCustomApi
+import io.horizen.utxo.api.http.route._
+import io.horizen.utxo.backup.BoxIterator
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.box.{Box, BoxSerializer}
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
+import io.horizen.utxo.csw.CswManager.ReceivableMessages._
+import io.horizen.utxo.csw.CswManager.Responses._
+import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
+import io.horizen.utxo.node._
+import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
+import io.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mindrot.jbcrypt.BCrypt

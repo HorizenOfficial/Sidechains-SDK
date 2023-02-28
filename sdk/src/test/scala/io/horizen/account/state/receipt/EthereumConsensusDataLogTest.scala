@@ -1,6 +1,6 @@
-package com.horizen.account.state.receipt
+package io.horizen.account.state.receipt
 
-import com.horizen.utils.BytesUtils
+import io.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite

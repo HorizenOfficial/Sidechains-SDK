@@ -1,12 +1,12 @@
-package com.horizen.block
+package io.horizen.block
 
 import java.time.Instant
 
 import com.google.common.primitives.Ints
-import com.horizen.fixtures.MainchainHeaderFixture
-import com.horizen.params.MainNetParams
-import com.horizen.utils.BytesUtils
-import com.horizen.history.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
+import io.horizen.fixtures.MainchainHeaderFixture
+import io.horizen.params.MainNetParams
+import io.horizen.utils.BytesUtils
+import io.horizen.history.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

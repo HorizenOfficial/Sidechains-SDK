@@ -1,14 +1,14 @@
-package com.horizen.actors
+package io.horizen.actors
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.{TestActor, TestProbe}
 import akka.util.Timeout
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.http.SidechainTransactionActorRef
-import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
-import com.horizen.utxo.transaction.RegularTransaction
+import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import io.horizen.api.http.SidechainTransactionActorRef
+import io.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
+import io.horizen.utxo.transaction.RegularTransaction
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar

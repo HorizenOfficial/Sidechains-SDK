@@ -1,9 +1,9 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
-import com.horizen.account.state.events.AddWithdrawalRequest
-import com.horizen.account.state.receipt.EthereumConsensusDataLog
-import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.account.state.events.AddWithdrawalRequest
+import io.horizen.account.state.receipt.EthereumConsensusDataLog
+import io.horizen.account.utils.{FeeUtils, ZenWeiConverter}
+import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import io.horizen.evm.{Address, Hash}
 import org.junit.Assert._
 import org.junit._

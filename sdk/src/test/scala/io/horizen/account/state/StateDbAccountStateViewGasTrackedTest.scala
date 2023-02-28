@@ -1,7 +1,7 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
-import com.horizen.account.state.receipt.EthereumConsensusDataLog
-import com.horizen.account.utils.BigIntegerUtil
+import io.horizen.account.state.receipt.EthereumConsensusDataLog
+import io.horizen.account.utils.BigIntegerUtil
 import io.horizen.evm.Hash
 import org.junit.Assert.assertEquals
 import org.junit._

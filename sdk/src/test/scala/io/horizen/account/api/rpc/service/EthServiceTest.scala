@@ -1,27 +1,27 @@
-package com.horizen.account.api.rpc.service
+package io.horizen.account.api.rpc.service
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.horizen.account.api.rpc.handler.RpcException
-import com.horizen.account.api.rpc.request.RpcRequest
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.PrivateKeySecp256k1Creator
-import com.horizen.account.state.AccountState
-import com.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
-import com.horizen.fixtures.FieldElementFixture
-import com.horizen.params.RegTestParams
-import com.horizen.utils.BytesUtils
-import com.horizen.{EthServiceSettings, SidechainTypes}
+import io.horizen.account.api.rpc.handler.RpcException
+import io.horizen.account.api.rpc.request.RpcRequest
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.proof.SignatureSecp256k1
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.PrivateKeySecp256k1Creator
+import io.horizen.account.state.AccountState
+import io.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
+import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
+import io.horizen.fixtures.FieldElementFixture
+import io.horizen.params.RegTestParams
+import io.horizen.utils.BytesUtils
+import io.horizen.{EthServiceSettings, SidechainTypes}
 import io.horizen.evm.Address
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks

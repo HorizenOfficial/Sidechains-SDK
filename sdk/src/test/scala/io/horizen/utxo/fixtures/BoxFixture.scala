@@ -1,16 +1,16 @@
-package com.horizen.utxo.fixtures
+package io.horizen.utxo.fixtures
 
 import com.google.common.primitives.Longs
-import com.horizen.SidechainTypes
-import com.horizen.customtypes._
-import com.horizen.fixtures.SecretFixture
-import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.PrivateKey25519
-import com.horizen.utils.ZenCoinsUtils
-import com.horizen.utxo.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
-import com.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
-import com.horizen.utxo.customtypes.{CustomBox, CustomBoxData}
-import com.horizen.utxo.wallet.WalletBox
+import io.horizen.SidechainTypes
+import io.horizen.customtypes._
+import io.horizen.fixtures.SecretFixture
+import io.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.secret.PrivateKey25519
+import io.horizen.utils.ZenCoinsUtils
+import io.horizen.utxo.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
+import io.horizen.utxo.customtypes.{CustomBox, CustomBoxData}
+import io.horizen.utxo.wallet.WalletBox
 import sparkz.core.bytesToId
 
 import java.util.{ArrayList => JArrayList, List => JList}

@@ -1,15 +1,15 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.state.CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig
-import com.horizen.account.utils.FeeUtils
-import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.fixtures.StoreFixture
-import com.horizen.params.NetworkParams
-import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.account.state.CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig
+import io.horizen.account.utils.FeeUtils
+import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.fixtures.StoreFixture
+import io.horizen.params.NetworkParams
+import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import io.horizen.evm.{Address, Hash}
 import org.junit.Assert._
 import org.junit._

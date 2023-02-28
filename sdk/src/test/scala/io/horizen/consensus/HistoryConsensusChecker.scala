@@ -1,16 +1,16 @@
-package com.horizen.consensus
+package io.horizen.consensus
 
 import java.util.Random
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.CompanionsFixture
-import com.horizen.fixtures.sidechainblock.generation.{FinishedEpochInfo, GenerationRules, SidechainBlocksGenerator}
-import com.horizen.history.validation.ConsensusValidator
-import com.horizen.params.NetworkParams
-import com.horizen.storage.InMemoryStorageAdapter
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.fixtures.CompanionsFixture
+import io.horizen.fixtures.sidechainblock.generation.{FinishedEpochInfo, GenerationRules, SidechainBlocksGenerator}
+import io.horizen.history.validation.ConsensusValidator
+import io.horizen.params.NetworkParams
+import io.horizen.storage.InMemoryStorageAdapter
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.storage.SidechainHistoryStorage
 import sparkz.core.utils.TimeProvider
 import sparkz.core.utils.TimeProvider.Time
 import sparkz.util.ModifierId

@@ -1,8 +1,8 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.BytesUtils
+import io.horizen.proposition.MCPublicKeyHashProposition
+import io.horizen.utils.BytesUtils
 
 import java.math.BigInteger
 

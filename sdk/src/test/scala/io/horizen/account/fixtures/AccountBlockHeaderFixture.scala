@@ -1,16 +1,16 @@
-package com.horizen.account.fixtures
+package io.horizen.account.fixtures
 
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.utils.Bloom
-import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
-import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.fixtures.VrfGenerator
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.VrfPublicKey
-import com.horizen.secret.VrfSecretKey
-import com.horizen.utils.{MerklePath, Utils}
-import com.horizen.vrf.VrfOutput
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.utils.Bloom
+import io.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
+import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.fixtures.VrfGenerator
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.VrfPublicKey
+import io.horizen.secret.VrfSecretKey
+import io.horizen.utils.{MerklePath, Utils}
+import io.horizen.vrf.VrfOutput
 import sparkz.util.bytesToId
 
 import java.math.BigInteger

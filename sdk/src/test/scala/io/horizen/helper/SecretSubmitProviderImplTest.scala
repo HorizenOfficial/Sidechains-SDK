@@ -1,11 +1,11 @@
-package com.horizen.helper
+package io.horizen.helper
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import akka.util.Timeout
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
-import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension}
-import com.horizen.secret.PrivateKey25519
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
+import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension}
+import io.horizen.secret.PrivateKey25519
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

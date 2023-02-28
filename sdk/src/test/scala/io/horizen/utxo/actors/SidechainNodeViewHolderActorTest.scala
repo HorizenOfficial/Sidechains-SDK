@@ -1,12 +1,12 @@
-package com.horizen.utxo.actors
+package io.horizen.utxo.actors
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.TestKit
 import akka.util.Timeout
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
-import com.horizen.utxo.fixtures.SidechainNodeViewHolderFixture
-import com.horizen.utxo.node.SidechainNodeView
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
+import io.horizen.utxo.fixtures.SidechainNodeViewHolderFixture
+import io.horizen.utxo.node.SidechainNodeView
 import org.junit.runner.RunWith
 import org.scalatest._
 import org.scalatest.featurespec.AnyFeatureSpecLike

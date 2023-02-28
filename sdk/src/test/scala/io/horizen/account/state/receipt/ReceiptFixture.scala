@@ -1,7 +1,7 @@
-package com.horizen.account.state.receipt
+package io.horizen.account.state.receipt
 
-import com.horizen.account.AccountFixture
-import com.horizen.utils.BytesUtils
+import io.horizen.account.AccountFixture
+import io.horizen.utils.BytesUtils
 import io.horizen.evm.{Address, Hash}
 import sparkz.crypto.hash.Keccak256
 

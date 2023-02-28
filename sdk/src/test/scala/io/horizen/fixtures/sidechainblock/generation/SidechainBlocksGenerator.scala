@@ -1,26 +1,26 @@
-package com.horizen.fixtures.sidechainblock.generation
+package io.horizen.fixtures.sidechainblock.generation
 
 import com.google.common.primitives.{Ints, Longs}
-import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.block._
-import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
-import com.horizen.consensus._
-import com.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
-import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
-import com.horizen.fixtures._
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator}
-import com.horizen.storage.InMemoryStorageAdapter
-import com.horizen.utils
-import com.horizen.utils._
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.box.Box
-import com.horizen.utxo.box.data.ForgerBoxData
-import com.horizen.utxo.transaction.SidechainTransaction
-import com.horizen.vrf._
+import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import io.horizen.block._
+import io.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.consensus._
+import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
+import io.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
+import io.horizen.fixtures._
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
+import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator}
+import io.horizen.storage.InMemoryStorageAdapter
+import io.horizen.utils
+import io.horizen.utils._
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.box.Box
+import io.horizen.utxo.box.data.ForgerBoxData
+import io.horizen.utxo.transaction.SidechainTransaction
+import io.horizen.vrf._
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
 

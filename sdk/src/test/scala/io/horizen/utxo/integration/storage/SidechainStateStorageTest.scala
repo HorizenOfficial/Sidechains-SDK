@@ -1,17 +1,17 @@
-package com.horizen.utxo.integration.storage
+package io.horizen.utxo.integration.storage
 
-import com.horizen._
-import com.horizen.block.WithdrawalEpochCertificateFixture
-import com.horizen.utxo.companion._
-import com.horizen.consensus._
-import com.horizen.fixtures._
-import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
-import com.horizen.utxo.box.{BoxSerializer, WithdrawalRequestBox}
-import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
-import com.horizen.utxo.fixtures.BoxFixture
-import com.horizen.utxo.storage.SidechainStateStorage
-import com.horizen.utxo.utils.BlockFeeInfo
+import io.horizen._
+import io.horizen.block.WithdrawalEpochCertificateFixture
+import io.horizen.utxo.companion._
+import io.horizen.consensus._
+import io.horizen.fixtures._
+import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
+import io.horizen.utxo.box.{BoxSerializer, WithdrawalRequestBox}
+import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
+import io.horizen.utxo.fixtures.BoxFixture
+import io.horizen.utxo.storage.SidechainStateStorage
+import io.horizen.utxo.utils.BlockFeeInfo
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

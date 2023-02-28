@@ -1,30 +1,30 @@
-package com.horizen.account.forger
+package io.horizen.account.forger
 
-import com.horizen.SidechainTypes
-import com.horizen.account.block.AccountBlockHeader
-import com.horizen.account.fixtures.EthereumTransactionFixture
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.{AccountMemoryPool, TransactionsByPriceAndNonceIter}
-import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.account.state._
-import com.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
-import com.horizen.chain.SidechainBlockInfo
-import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
-import com.horizen.params.TestNetParams
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.state.BaseStateReader
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
-import com.horizen.vrf.VrfOutput
+import io.horizen.SidechainTypes
+import io.horizen.account.block.AccountBlockHeader
+import io.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.{AccountMemoryPool, TransactionsByPriceAndNonceIter}
+import io.horizen.account.proof.SignatureSecp256k1
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import io.horizen.account.state._
+import io.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
+import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
+import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
+import io.horizen.chain.SidechainBlockInfo
+import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
+import io.horizen.params.TestNetParams
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import io.horizen.state.BaseStateReader
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
+import io.horizen.vrf.VrfOutput
 import io.horizen.evm.{Address, Hash}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test

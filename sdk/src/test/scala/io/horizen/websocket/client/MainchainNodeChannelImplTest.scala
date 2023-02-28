@@ -1,11 +1,11 @@
-package com.horizen.websocket.client
+package io.horizen.websocket.client
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.block.MainchainHeader
-import com.horizen.mainchain.api.{BackwardTransferEntry, SendCertificateRequest}
-import com.horizen.params.MainNetParams
-import com.horizen.utils.BytesUtils
+import io.horizen.block.MainchainHeader
+import io.horizen.mainchain.api.{BackwardTransferEntry, SendCertificateRequest}
+import io.horizen.params.MainNetParams
+import io.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}

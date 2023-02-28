@@ -1,33 +1,33 @@
-package com.horizen.account.utils
+package io.horizen.account.utils
 
-import com.horizen.SidechainTypes
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
-import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state._
-import com.horizen.account.state.receipt.EthereumReceipt
-import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData}
-import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
-import com.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
-import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
-import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
-import com.horizen.proposition.Proposition
-import com.horizen.secret.{Secret, SecretSerializer}
-import com.horizen.storage.{SidechainSecretStorage, Storage}
-import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
-import com.horizen.utxo.box.Box
+import io.horizen.SidechainTypes
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
+import io.horizen.account.proof.SignatureSecp256k1
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.PrivateKeySecp256k1
+import io.horizen.account.state._
+import io.horizen.account.state.receipt.EthereumReceipt
+import io.horizen.account.storage.AccountStateMetadataStorageView
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
+import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData}
+import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.cryptolibprovider.utils.FieldElementUtils
+import io.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
+import io.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
+import io.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
+import io.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
+import io.horizen.proposition.Proposition
+import io.horizen.secret.{Secret, SecretSerializer}
+import io.horizen.storage.{SidechainSecretStorage, Storage}
+import io.horizen.transaction.MC2SCAggregatedTransaction
+import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
+import io.horizen.utxo.box.Box
 import io.horizen.evm.results.ProofAccountResult
 import io.horizen.evm.{Address, Hash, StateDB}
 import org.mockito.ArgumentMatchers.any

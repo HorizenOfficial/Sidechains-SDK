@@ -1,4 +1,4 @@
-package com.horizen.proof
+package io.horizen.proof
 
 import java.io.{BufferedReader, File, FileReader}
 import java.util
@@ -7,17 +7,17 @@ import akka.actor.{Actor, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.common.io.Files
-import com.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import com.horizen.certnative.BackwardTransfer
-import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
-import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
-import com.horizen.utils.BytesUtils
-import com.horizen.utxo.box.WithdrawalRequestBox
-import com.horizen.utxo.box.data.WithdrawalRequestBoxData
+import io.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
+import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import io.horizen.certnative.BackwardTransfer
+import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
+import io.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.proposition.MCPublicKeyHashProposition
+import io.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
+import io.horizen.utils.BytesUtils
+import io.horizen.utxo.box.WithdrawalRequestBox
+import io.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{Before, Ignore, Test}
 

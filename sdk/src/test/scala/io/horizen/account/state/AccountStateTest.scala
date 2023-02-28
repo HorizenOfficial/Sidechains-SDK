@@ -1,12 +1,12 @@
-package com.horizen.account.state
+package io.horizen.account.state
 
-import com.horizen.account.storage.AccountStateMetadataStorage
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment, FeeUtils}
-import com.horizen.consensus.intToConsensusEpochNumber
-import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
-import com.horizen.params.MainNetParams
-import com.horizen.utils.BytesUtils
+import io.horizen.account.storage.AccountStateMetadataStorage
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment, FeeUtils}
+import io.horizen.consensus.intToConsensusEpochNumber
+import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import io.horizen.params.MainNetParams
+import io.horizen.utils.BytesUtils
 import io.horizen.evm.Database
 import org.junit.Assert._
 import org.junit._

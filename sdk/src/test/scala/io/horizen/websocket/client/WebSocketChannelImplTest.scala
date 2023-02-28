@@ -1,6 +1,6 @@
-package com.horizen.websocket.client
+package io.horizen.websocket.client
 
-import com.horizen.WebSocketSettings
+import io.horizen.WebSocketSettings
 import org.glassfish.tyrus.server.Server
 import org.junit.{After, Before, Test}
 import org.junit.Assert.{assertEquals, assertFalse, _}

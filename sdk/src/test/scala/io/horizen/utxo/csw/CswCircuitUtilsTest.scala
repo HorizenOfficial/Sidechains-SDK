@@ -1,8 +1,8 @@
-package com.horizen.utxo.csw
+package io.horizen.utxo.csw
 
-import com.horizen.cryptolibprovider.implementations.CswCircuitImplZendoo
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.utils.BytesUtils
+import io.horizen.cryptolibprovider.implementations.CswCircuitImplZendoo
+import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import io.horizen.utils.BytesUtils
 import org.bouncycastle.math.ec.rfc8032.Ed25519
 import org.junit.Assert.assertEquals
 import org.junit.Test
