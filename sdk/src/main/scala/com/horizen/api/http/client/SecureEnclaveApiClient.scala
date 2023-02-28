@@ -92,7 +92,7 @@ class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit syste
     BytesUtils.toHexString(keySerializer.toBytes(publicKey))
 
   private def deserializePublicKey(publicKey: String) =
-    keySerializer.parseBytes(BytesUtils.fromHexString(publicKey))
+    keySerializer.parseBytesAndCheck(BytesUtils.fromHexString(publicKey))
 }
 
 object SecureEnclaveApiClient {

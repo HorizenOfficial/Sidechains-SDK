@@ -10,11 +10,11 @@ import com.horizen.account.state.ForgerStakeMsgProcessor._
 import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
-import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.Address
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
 
 import java.math.BigInteger
@@ -179,7 +179,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     log.debug(s"Added stake to stateDb: newStakeId=${BytesUtils.toHexString(newStakeId)}, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
 
     val addNewStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddress, newStakeId, stakedAmount)
-    val evmLog = getEvmLog(addNewStakeEvt)
+    val evmLog = getEthereumConsensusDataLog(addNewStakeEvt)
     view.addLog(evmLog)
 
 
@@ -260,7 +260,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     removeForgerStake(view, stakeId)
 
     val removeStakeEvt = WithdrawForgerStake(stakeData.ownerPublicKey.address(), stakeId)
-    val evmLog = getEvmLog(removeStakeEvt)
+    val evmLog = getEthereumConsensusDataLog(removeStakeEvt)
     view.addLog(evmLog)
 
     // decrease the balance of the "stake smart contract” account
@@ -340,7 +340,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     view.updateAccountStorageBytes(contractAddress, RestrictedForgerFlagsList, restrictForgerList)
 
     val addOpenStakeForgerListEvt = OpenForgerList(forgerIndex, msg.getFrom, blockSignerProposition)
-    val evmLog = getEvmLog(addOpenStakeForgerListEvt)
+    val evmLog = getEthereumConsensusDataLog(addOpenStakeForgerListEvt)
     view.addLog(evmLog)
 
     restrictForgerList

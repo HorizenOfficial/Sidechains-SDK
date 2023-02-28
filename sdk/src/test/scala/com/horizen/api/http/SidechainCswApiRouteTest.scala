@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodReject
 import com.horizen.fixtures.BoxFixture
 import com.horizen.params.MainNetParams
 import com.typesafe.scalalogging.Logger
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
+import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.mockito.Mockito
 import org.slf4j.LoggerFactory
@@ -142,7 +142,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
 
     "reply at /cswInfo" in {
       Post(basePath + "cswInfo")
-        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRoute ~> check {
+        .withEntity("{\"boxId\":\"" + BytesUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -179,7 +179,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
 
     "reply at /nullifier" in {
       Post(basePath + "nullifier")
-        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRoute ~> check {
+        .withEntity("{\"boxId\":\"" + BytesUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -194,7 +194,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
 
     "reply at /generateCswProof" in {
       Post(basePath + "generateCswProof")
-        .addCredentials(credentials).withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRoute ~> check {
+        .addCredentials(credentials).withEntity("{\"boxId\":\"" + BytesUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -262,14 +262,14 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
 
     "reply that it is not implemented at /cswInfo" in {
       Post(basePath + "cswInfo")
-        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        .withEntity("{\"boxId\":\"" + BytesUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
         checkIsNotImplemented()
       }
     }
 
     "reply that it is not implemented at /nullifier" in {
       Post(basePath + "nullifier")
-        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        .withEntity("{\"boxId\":\"" + BytesUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
         checkIsNotImplemented()
       }
     }
@@ -277,7 +277,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
 
     "reply that it is not implemented at /generateCswProof" in {
       Post(basePath + "generateCswProof")
-        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        .withEntity("{\"boxId\":\"" + BytesUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
         checkIsNotImplemented()
       }
     }

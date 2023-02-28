@@ -4,10 +4,10 @@ import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment, FeeUtils}
 import com.horizen.consensus.intToConsensusEpochNumber
-import com.horizen.evm.Database
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.Database
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -27,7 +27,7 @@ class AccountStateTest
       with MockitoSugar
       with SidechainTypesTestsExtension {
 
-  val params: MainNetParams = MainNetParams()
+  var params: MainNetParams = MainNetParams()
   var state: AccountState = _
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
 

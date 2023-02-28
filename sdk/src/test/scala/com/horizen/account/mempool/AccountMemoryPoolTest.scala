@@ -4,8 +4,8 @@ import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.AccountStateReader
-import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
+import io.horizen.evm.Address
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -14,6 +14,7 @@ import org.scalatestplus.mockito._
 import sparkz.util.ModifierId
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 
 class AccountMemoryPoolTest
     extends JUnitSuite
@@ -45,7 +46,7 @@ class AccountMemoryPoolTest
 
     val value = BigInteger.TEN
     val account1Key: PrivateKeySecp256k1 =
-      PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest1".getBytes())
+      PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest1".getBytes(StandardCharsets.UTF_8))
 
     val account1ExecTransaction0 = createEIP1559Transaction(
       value,
@@ -103,7 +104,7 @@ class AccountMemoryPoolTest
 
     // Create txs for other accounts and verify that the list is ordered by nonce and gas price
     // The expected order is: tx3_0, tx3_1, tx3_2, tx2_0, tx1_0, tx2_1, tx2_2, tx1_1, tx1_2
-    val account2Key = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest2".getBytes())
+    val account2Key = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest2".getBytes(StandardCharsets.UTF_8))
     val account2ExecTransaction0 = createEIP1559Transaction(
       value,
       initialStateNonce,
@@ -125,11 +126,12 @@ class AccountMemoryPoolTest
       gasFee = BigInteger.valueOf(990),
       priorityGasFee = BigInteger.valueOf(2)
     )
+
     assertTrue(accountMemoryPool.put(account2ExecTransaction1).isSuccess)
     assertTrue(accountMemoryPool.put(account2ExecTransaction2).isSuccess)
     assertTrue(accountMemoryPool.put(account2ExecTransaction0).isSuccess)
 
-    val account3Key = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest3".getBytes())
+    val account3Key = PrivateKeySecp256k1Creator.getInstance().generateSecret("mempooltest3".getBytes(StandardCharsets.UTF_8))
     val account3ExecTransaction0 = createEIP1559Transaction(
       value,
       initialStateNonce,
@@ -151,6 +153,7 @@ class AccountMemoryPoolTest
       gasFee = BigInteger.valueOf(60),
       priorityGasFee = BigInteger.valueOf(6)
     )
+
     assertTrue(accountMemoryPool.put(account3ExecTransaction0).isSuccess)
     assertTrue(accountMemoryPool.put(account3ExecTransaction2).isSuccess)
     assertTrue(accountMemoryPool.put(account3ExecTransaction1).isSuccess)

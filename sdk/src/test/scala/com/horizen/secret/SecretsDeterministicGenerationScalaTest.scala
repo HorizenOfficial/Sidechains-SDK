@@ -25,9 +25,8 @@ class SecretsDeterministicGenerationScalaTest
   }
 
   def localGetPrivateKeySecp256k1(seed: Array[Byte]): PrivateKeySecp256k1 = {
-    val pair: com.horizen.utils.Pair[Array[Byte], Array[Byte]] = Secp256k1.createKeyPair(seed)
-    val privateKey = util.Arrays.copyOf(pair.getKey, Secp256k1.PRIVATE_KEY_SIZE)
-    new PrivateKeySecp256k1(privateKey)
+    val pair = Secp256k1.createKeyPair(seed)
+    new PrivateKeySecp256k1(pair.getKey)
   }
 
   def localGetSchnorrSecretKey(seed: Array[Byte]): SchnorrSecret = {

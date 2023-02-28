@@ -10,12 +10,12 @@ import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.mockito.Mockito
-
+import org.scalatestplus.mockito.MockitoSugar
 import java.math.BigInteger
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.util.Random
 
-class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
+class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with MockitoSugar {
 
   override val basePath = "/transaction/"
 
@@ -278,10 +278,11 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
     "reply at /createEIP1559Transaction" in {
       Post(basePath + "createEIP1559Transaction").addCredentials(credentials)
-        .withEntity(SerializationUtil.serialize(ReqEIP1559Transaction(Option.apply("1234567890123456789012345678901234567890"),
-          Option.apply("2234567890123456789012345678901234567890"), Option.apply(BigInteger.ONE),
-          BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, BigInteger.ONE,
-          Option.apply(BigInteger.ONE), "")))~> sidechainTransactionApiRoute ~> check {
+        .withEntity(
+          SerializationUtil.serialize(ReqEIP1559Transaction(None, Some("9835f7746494fcb0f81638480d46d03cb95922ff"),
+            None, BigInteger.valueOf(230000), BigInteger.valueOf(900000000),
+            BigInteger.valueOf(900000000), Some(BigInteger.valueOf(5000)), "", None, None, None))
+        ) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")

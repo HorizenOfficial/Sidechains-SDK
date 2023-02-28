@@ -22,6 +22,13 @@ public class SchnorrSecret implements Secret {
         Objects.requireNonNull(secretKey, "Secret key can't be null");
         Objects.requireNonNull(publicKey, "Public key can't be null");
 
+        if(secretKey.length != SECRET_KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect secret key length, %d expected, %d found", SECRET_KEY_LENGTH,
+                    secretKey.length));
+        if(publicKey.length != PUBLIC_KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect public key length, %d expected, %d found", PUBLIC_KEY_LENGTH,
+                    publicKey.length));
+
         secretBytes =  Arrays.copyOf(secretKey, secretKey.length);
         publicBytes = Arrays.copyOf(publicKey, publicKey.length);
     }
@@ -83,5 +90,11 @@ public class SchnorrSecret implements Secret {
     public String toString() {
         // Show only the first 4 bytes to protect the key
         return String.format("SchnorrSecret{privateKey=%s}", BytesUtils.toHexString(secretBytes).substring(0, 8));
+    }
+
+    @Override
+    public Boolean isPublicKeyValid() {
+        byte[] correctPublicKey = CryptoLibProvider.schnorrFunctions().getPublicKey(secretBytes);
+        return Arrays.equals(publicBytes, correctPublicKey);
     }
 }

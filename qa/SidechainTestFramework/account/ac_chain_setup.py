@@ -1,6 +1,8 @@
 import logging
 from decimal import Decimal
 
+from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
+    SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, \
     SCNetworkConfiguration, SCCreationInfo, SCNodeConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -21,9 +23,12 @@ class AccountChainSetup(SidechainTestFramework):
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
                  initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
-                 max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 allow_unprotected_txs=True, remote_keys_server_address=None, max_incoming_connections=100,
+                 connect_nodes=True, max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
                  max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
                  tx_lifetime=DEFAULT_TX_LIFETIME):
+        super().__init__()
+
 
         self.evm_address = None
         self.sc_nodes = None
@@ -41,6 +46,10 @@ class AccountChainSetup(SidechainTestFramework):
         self.initial_private_keys = initial_private_keys
         self.circuittype_override = circuittype_override
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
+        self.remote_keys_server_address = remote_keys_server_address
+        self.allow_unprotected_txs = allow_unprotected_txs
+        self.max_incoming_connections = max_incoming_connections
+        self.connect_nodes = connect_nodes
         self.max_nonce_gap = max_nonce_gap
         self.max_account_slots = max_account_slots
         self.max_mempool_slots = max_mempool_slots
@@ -53,18 +62,20 @@ class AccountChainSetup(SidechainTestFramework):
 
     def sc_setup_network(self):
         self.sc_nodes = self.sc_setup_nodes()
-        if self.number_of_sidechain_nodes > 2:
-            for i in range(self.number_of_sidechain_nodes - 1):
-                connect_sc_nodes(self.sc_nodes[i], i + 1)
-            connect_sc_nodes(self.sc_nodes[self.number_of_sidechain_nodes - 1], 0)
-            self.sync_all()
-        elif self.number_of_sidechain_nodes == 2:
-            connect_sc_nodes(self.sc_nodes[0], 1)
-            self.sync_all()
+        if self.connect_nodes:
+            if self.number_of_sidechain_nodes > 2:
+                for i in range(self.number_of_sidechain_nodes - 1):
+                    connect_sc_nodes(self.sc_nodes[i], i + 1)
+                connect_sc_nodes(self.sc_nodes[self.number_of_sidechain_nodes - 1], 0)
+                self.sync_all()
+            elif self.number_of_sidechain_nodes == 2:
+                connect_sc_nodes(self.sc_nodes[0], 1)
+                self.sync_all()
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = []
+
         for x in range(self.number_of_sidechain_nodes):
             if self.forger_options is None:
                 sc_node_configuration.append(SCNodeConfiguration(
@@ -72,6 +83,9 @@ class AccountChainSetup(SidechainTestFramework):
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
+                    remote_keys_server_address=self.remote_keys_server_address,
+                    allow_unprotected_txs=self.allow_unprotected_txs,
+                    max_incoming_connections=self.max_incoming_connections,
                     max_nonce_gap=self.max_nonce_gap,
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
@@ -86,6 +100,9 @@ class AccountChainSetup(SidechainTestFramework):
                     api_key=self.API_KEY,
                     initial_private_keys=self.initial_private_keys,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
+                    allow_unprotected_txs=self.allow_unprotected_txs,
+                    remote_keys_server_address=self.remote_keys_server_address,
+                    max_incoming_connections=self.max_incoming_connections,
                     max_nonce_gap=self.max_nonce_gap,
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,

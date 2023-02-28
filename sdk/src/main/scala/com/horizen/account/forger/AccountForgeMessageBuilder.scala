@@ -19,7 +19,6 @@ import com.horizen.account.utils._
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
-import com.horizen.evm.utils.Hash
 import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -39,6 +38,7 @@ import com.horizen.utils.{
   WithdrawalEpochUtils
 }
 import com.horizen.vrf.VrfOutput
+import io.horizen.evm.Hash
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 import sparkz.util.{ModifierId, bytesToId}
@@ -469,7 +469,8 @@ class AccountForgeMessageBuilder(
       new VrfOutput(new Array[Byte](VrfOutput.OUTPUT_LENGTH))
     )
 
-    implicit val timeout: Timeout = new Timeout(5, SECONDS)
+    // we have not the constraint of consensusSlot duration since we are not really forging
+    implicit val mcRefDataRetrievalTimeout: Timeout = new Timeout(5, SECONDS)
 
     forgeBlock(
       nodeView,
@@ -479,7 +480,7 @@ class AccountForgeMessageBuilder(
       blockSignPrivateKey,
       vrfProof,
       vrfOutput,
-      timeout,
+      mcRefDataRetrievalTimeout,
       Seq()
     ) match {
       case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])

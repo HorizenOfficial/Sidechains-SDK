@@ -3,8 +3,8 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
@@ -16,12 +16,11 @@ import com.horizen.block.{
 }
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
-import com.horizen.evm.utils.{Address, Hash}
-import com.horizen.evm.{ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
+import io.horizen.evm.results.{EvmLog, ProofAccountResult}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 
@@ -332,9 +331,11 @@ class StateDbAccountStateView(
 
   override def getCode(address: Address): Array[Byte] = stateDb.getCode(address)
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(new Hash(txHash))
+  override def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog] =
+    stateDb.getLogs(new Hash(txHash)).map(log => EthereumConsensusDataLog.apply(log.address, log.topics, log.data))
 
-  override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
+  override def addLog(log: EthereumConsensusDataLog): Unit =
+    stateDb.addLog(new EvmLog(log.address, log.topics, log.data))
 
   // when a method is called on a closed handle, LibEvm throws an exception
   override def close(): Unit = stateDb.close()

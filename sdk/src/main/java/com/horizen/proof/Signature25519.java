@@ -2,8 +2,8 @@ package com.horizen.proof;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 
 public final class Signature25519 extends AbstractSignature25519<PrivateKey25519, PublicKey25519Proposition>
@@ -25,7 +25,7 @@ public final class Signature25519 extends AbstractSignature25519<PrivateKey25519
     @Override
     public String toString() {
         return "Signature25519{" +
-                "signatureBytes=" + ByteUtils.toHexString(signatureBytes) +
+                "signatureBytes=" + BytesUtils.toHexString(signatureBytes) +
                 '}';
     }
 }

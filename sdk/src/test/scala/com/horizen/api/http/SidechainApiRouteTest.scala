@@ -7,7 +7,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GenerateSecret, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
@@ -33,7 +33,6 @@ import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import com.horizen.SidechainApp
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -42,7 +41,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.util.{ModifierId, bytesToId}
-
 import java.net.{InetAddress, InetSocketAddress}
 import java.util
 import sparkz.core.app.Version
@@ -55,11 +53,10 @@ import sparkz.core.utils.NetworkTimeProvider
 import sparkz.crypto.hash.Blake2b256
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import com.horizen.cryptolibprovider.utils.CircuitTypes
-import org.mindrot.jbcrypt
 import org.mindrot.jbcrypt.BCrypt
-
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
+import java.nio.charset.StandardCharsets
 import java.util.{HashMap => JHashMap}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable.ListBuffer
@@ -176,6 +173,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply())
                 sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration), funParameter)
           }
+        case GenerateSecret(g) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GenerateSecret_reply())
+            sender ! Success(g.generateSecret("some_seed".getBytes(StandardCharsets.UTF_8)))
+          else sender ! Failure(new Exception("Secret not generated."))
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success(Unit)
@@ -288,10 +289,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
         case GenerateSidechainBlocks(count) =>
           if (sidechainApiMockConfiguration.getShould_blockActor_GenerateSidechainBlocks_reply())
             sender ! Future[Try[Seq[ModifierId]]](Try(Seq(
-              bytesToId("block_id_1".getBytes),
-              bytesToId("block_id_2".getBytes),
-              bytesToId("block_id_3".getBytes),
-              bytesToId("block_id_4".getBytes))))
+              bytesToId("block_id_1".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_2".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_3".getBytes(StandardCharsets.UTF_8)),
+              bytesToId("block_id_4".getBytes(StandardCharsets.UTF_8)))))
           else sender ! Future[Try[ModifierId]](Failure(new Exception("Block actor not configured for generate blocks.")))
       }
       TestActor.KeepRunning
@@ -307,7 +308,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           sender ! true
         }
         case GetCswBoxIds => {
-          sender ! Seq(ByteUtils.fromHexString("1111"), ByteUtils.fromHexString("2222"), ByteUtils.fromHexString("3333"))
+          sender ! Seq(BytesUtils.fromHexString("1111"), BytesUtils.fromHexString("2222"), BytesUtils.fromHexString("3333"))
         }
         case GetCswInfo(boxId) => {
           val expectedBoxId: Array[Byte] = getRandomBoxId(0)
@@ -316,11 +317,11 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           } else {
             sender ! Success(CswInfo("UtxoCswData", // pure class name
               42,
-              ByteUtils.fromHexString("ABCD"),
-              ByteUtils.fromHexString("FFFF"),
-              CswProofInfo(Absent, Some(ByteUtils.fromHexString("FBFB")), Some("SomeDestination")),
-              Some(ByteUtils.fromHexString("BBBB")),
-              ByteUtils.fromHexString("CCCC")))
+              BytesUtils.fromHexString("ABCD"),
+              BytesUtils.fromHexString("FFFF"),
+              CswProofInfo(Absent, Some(BytesUtils.fromHexString("FBFB")), Some("SomeDestination")),
+              Some(BytesUtils.fromHexString("BBBB")),
+              BytesUtils.fromHexString("CCCC")))
           }
         }
         case GetBoxNullifier(boxId) => {
@@ -328,7 +329,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           if (boxId.deep != expectedBoxId.deep) {
             sender ! Failure(new IllegalArgumentException("Box was not found for given box id."))
           } else {
-            sender ! Success(ByteUtils.fromHexString("FAFA"))
+            sender ! Success(BytesUtils.fromHexString("FAFA"))
           }
         }
         case GenerateCswProof(boxId, receiverAddress) => {

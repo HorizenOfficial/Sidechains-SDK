@@ -11,10 +11,9 @@ import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, SparkzModifierIdSerializer, Views}
-import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
+import com.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import sparkz.util.ModifierId
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
@@ -134,10 +133,10 @@ case class AccountBlockHeader(
 
   override def toString: String =
     s"AccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
-      s"${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, " +
-      s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, $forgerAddress" +
+      s"${BytesUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${BytesUtils.toHexString(mainchainMerkleRootHash)}, " +
+      s"${BytesUtils.toHexString(stateRoot)}, ${BytesUtils.toHexString(receiptsRoot)}, $forgerAddress" +
       s"$baseFee, $gasUsed, $gasLimit, " +
-      s"${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
+      s"${BytesUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
 }
 
 

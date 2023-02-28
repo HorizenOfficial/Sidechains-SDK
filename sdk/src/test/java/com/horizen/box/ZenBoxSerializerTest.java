@@ -10,6 +10,7 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
@@ -20,7 +21,7 @@ public class ZenBoxSerializerTest extends BoxFixtureClass
 
     @Before
     public void setUp() {
-        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes(StandardCharsets.UTF_8));
         // Note: current box bytes are also stored in "src/test/resources/zenbox_hex"
         box = getZenBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 10);
 
@@ -45,7 +46,7 @@ public class ZenBoxSerializerTest extends BoxFixtureClass
         assertEquals("Boxes expected to be equal", box, box2);
 
 
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
 
     }

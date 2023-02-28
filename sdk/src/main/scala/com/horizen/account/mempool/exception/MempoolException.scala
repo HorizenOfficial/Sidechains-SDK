@@ -1,6 +1,6 @@
 package com.horizen.account.mempool.exception
 import com.horizen.account.state.InvalidMessageException
-import com.horizen.evm.utils.Address
+import io.horizen.evm.Address
 import sparkz.util.ModifierId
 
 import java.math.BigInteger
@@ -21,5 +21,3 @@ case class AccountMemPoolOutOfBoundException(txId: ModifierId)
 case class TransactionReplaceUnderpricedException(txId: ModifierId)
   extends MempoolException(s"transaction with txId $txId cannot replace existing transaction because underpriced")
 
-case class MemPoolOutOfBoundException(txId: ModifierId)
-  extends MempoolException(s"adding transaction with txId $txId exceeds memory pool available space")

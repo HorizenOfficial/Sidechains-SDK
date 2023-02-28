@@ -19,9 +19,6 @@ import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, Sidechai
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
-import com.horizen.evm.StateDB
-import com.horizen.evm.interop.ProofAccountResult
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import com.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
@@ -31,6 +28,8 @@ import com.horizen.storage.{SidechainSecretStorage, Storage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
+import io.horizen.evm.results.ProofAccountResult
+import io.horizen.evm.{Address, Hash, StateDB}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
@@ -41,6 +40,7 @@ import sparkz.util.{ModifierId, bytesToId}
 
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import java.util.{Optional, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
@@ -181,6 +181,7 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     Mockito.when(history.blockIdByHeight(any())).thenReturn(None)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))
+    Mockito.when(history.bestBlock).thenReturn(block.orNull)
 
     if (genesis) {
       Mockito.when(history.params.sidechainGenesisBlockParentId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
@@ -201,6 +202,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(history.bestBlockInfo.withdrawalEpochInfo).thenReturn(mock[WithdrawalEpochInfo])
     Mockito.when(history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex).thenReturn(1)
     Mockito.when(history.bestBlockId).thenReturn(bytesToId(GENESIS_BLOCK_PARENT_ID))
+
+    Mockito.when(history.feePaymentsInfo(any())).thenReturn(None)
 
     if (parentBlock.nonEmpty) {
       val parentId = parentBlock.get.id
@@ -237,8 +240,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     val block: AccountBlock = mock[AccountBlock]
 
     val scCr1: SidechainCreation = mock[SidechainCreation]
-    val ft1: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId)
-    val ft2: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId)
+    val ft1: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId, 1)
+    val ft2: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), MainNetParams().sidechainId, 2)
 
     val mc2scTransactionsOutputs: Seq[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] =
       Seq(scCr1, ft1, ft2)
@@ -267,6 +270,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito
       .when(block.header.forgerAddress)
       .thenReturn(forgerAddress)
+    Mockito.when(block.forgerPublicKey).thenReturn(new AddressProposition(BytesUtils.fromHexString("1111111111213141010203040506070809111222")))
     Mockito.when(block.sidechainTransactions).thenReturn(txs)
     Mockito.when(block.transactions).thenReturn(txs)
     Mockito.when(block.mainchainHeaders).thenReturn(Seq(mcBlockRef.header))
@@ -283,6 +287,7 @@ case class AccountMockDataHelper(genesis: Boolean)
       .when(block.header.receiptsRoot)
       .thenReturn(BytesUtils.fromHexString("1234567891011121314112345678910111213141010203040506070809111444"))
     Mockito.when(block.header.bytes).thenReturn(new Array[Byte](256))
+    Mockito.when(block.bytes).thenReturn(new Array[Byte](256))
     Mockito.when(block.header.vrfOutput).thenReturn(VrfGenerator.generateVrfOutput(1111))
     Mockito.when(block.timestamp).thenReturn(1000000000L)
     block
@@ -304,15 +309,15 @@ case class AccountMockDataHelper(genesis: Boolean)
         msgProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
       override def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult = {
-        val proofRes = new ProofAccountResult()
-        proofRes.address = address
-        proofRes.accountProof = Array("123")
-        proofRes.nonce = BigInteger.ONE
-        proofRes.balance = BigInteger.valueOf(123L)
-        proofRes.codeHash = null
-        proofRes.storageHash = null
-        proofRes.storageProof = null
-        proofRes
+        new ProofAccountResult(
+          address,
+          Array("123"),
+          BigInteger.valueOf(123L),
+          null,
+          BigInteger.ONE,
+          null,
+          null
+        )
       }
 
       override def getIntermediateRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
@@ -383,7 +388,7 @@ case class AccountMockDataHelper(genesis: Boolean)
   }
 
   def getMockedWallet(secret: PrivateKeySecp256k1): AccountWallet = {
-    val wallet = new AccountWallet("seed".getBytes(), getMockedSecretStorage(secret))
+    val wallet = new AccountWallet("seed".getBytes(StandardCharsets.UTF_8), getMockedSecretStorage(secret))
 
     wallet
   }

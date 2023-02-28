@@ -66,6 +66,9 @@ class SCKeyRotationTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
     cert_max_keys = 7
+    remote_keys_host = "127.0.0.1"
+    remote_keys_port = 5002
+    remote_address = f"http://{remote_keys_host}:{remote_keys_port}"
 
     def setup_nodes(self):
         num_nodes = 1
@@ -76,9 +79,10 @@ class SCKeyRotationTest(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
 
+
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            remote_keys_manager_enabled=True
+            remote_keys_manager_enabled=True, remote_keys_server_address=self.remote_address
         )
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length,
@@ -104,7 +108,7 @@ class SCKeyRotationTest(SidechainTestFramework):
         else:
             raise Exception("Either public key or private key should be provided to call createSignature")
 
-        response = requests.post("http://127.0.0.1:5000/api/v1/createSignature", json=post_data)
+        response = requests.post(f"{self.remote_address}/api/v1/createSignature", json=post_data)
         jsonResponse = json.loads(response.text)
         return jsonResponse
 
@@ -161,6 +165,8 @@ class SCKeyRotationTest(SidechainTestFramework):
         api_server = SecureEnclaveApiServer(
             private_master_keys,
             public_master_keys,
+            self.remote_keys_host,
+            self.remote_keys_port
         )
         api_server.start()
 

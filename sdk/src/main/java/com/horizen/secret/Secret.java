@@ -8,7 +8,7 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.serialization.Views;
 
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties({"secretTypeId", "serializer", "sign", "owns"})
+@JsonIgnoreProperties({"secretTypeId", "serializer", "sign", "owns", "publicKeyValid"})
 public interface Secret
     extends sparkz.core.serialization.BytesSerializable
 {
@@ -37,4 +37,7 @@ public interface Secret
 
     @JsonProperty("isCustom")
     default Boolean isCustom() { return true; } // All secrets presume customs until it not defined otherwise
+
+    @JsonProperty("publicKeyValid")
+    Boolean isPublicKeyValid();
 }

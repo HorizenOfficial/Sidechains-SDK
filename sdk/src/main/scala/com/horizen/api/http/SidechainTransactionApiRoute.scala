@@ -153,7 +153,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               val outputs: JList[BoxData[Proposition, Box[Proposition]]] = new JArrayList()
               body.regularOutputs.foreach(element =>
                 outputs.add(new ZenBoxData(
-                  PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+                  PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
                   element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
               )
 
@@ -165,10 +165,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
               body.forgerOutputs.foreach{element =>
                 val forgerBoxToAdd = new ForgerBoxData(
-                  PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+                  PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
                   new lang.Long(element.value),
-                  PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
-                  VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+                  PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
+                  VrfPublicKeySerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.vrfPubKey))
                 )
 
                 outputs.add(forgerBoxToAdd.asInstanceOf[BoxData[Proposition, Box[Proposition]]])
@@ -365,16 +365,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               val outputs: JList[BoxData[Proposition, Box[Proposition]]] = new JArrayList()
               body.regularOutputs.foreach(element =>
                 outputs.add(new ZenBoxData(
-                  PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+                  PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
                   element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]]
                 )
               )
               body.forgerOutputs.foreach{element =>
                 val forgerBoxToAdd = new ForgerBoxData(
-                  PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+                  PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
                   element.value,
-                  PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
-                  VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+                  PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
+                  VrfPublicKeySerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.vrfPubKey))
                 )
 
                 outputs.add(forgerBoxToAdd.asInstanceOf[BoxData[Proposition, Box[Proposition]]])
@@ -494,7 +494,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                       fee,
                       body.keyType,
                       body.keyIndex,
-                      SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKey)),
+                      SchnorrPropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(body.newKey)),
                       SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.signingKeySignature)),
                       SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.masterKeySignature)),
                       SchnorrSignatureSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.newKeySignature)),
@@ -528,7 +528,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
       //Collect input box
       wallet.allBoxes().asScala
-        .find(box => box.proposition().equals(PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.forgerProposition)))
+        .find(box => box.proposition().equals(PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(body.forgerProposition)))
           && box.value() >= body.fee.getOrElse(0L)) match {
         case Some(inputBox) =>
           //Collect input private key
@@ -578,7 +578,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     Try {
       //Create the openStakeTransaction
       OpenStakeTransaction.create(new JPair[ZenBox,PrivateKey25519](inputBox.asInstanceOf[ZenBox],inputPrivateKey),
-        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(outputProposition)),
+        PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(outputProposition)),
         forgerIndex,
         fee
       )
@@ -611,7 +611,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     val outputs: JList[BoxData[Proposition, Box[Proposition]]] = new JArrayList()
     zenBoxDataList.foreach(element =>
       outputs.add(new ZenBoxData(
-        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
         element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
     )
 
@@ -628,10 +628,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     forgerBoxDataList.foreach{element =>
       val forgingBoxToAdd = new ForgerBoxData(
-        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
         element.value,
-        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
-        VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+        PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
+        VrfPublicKeySerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.vrfPubKey))
       )
 
       outputs.add(forgingBoxToAdd.asInstanceOf[BoxData[Proposition, Box[Proposition]]])

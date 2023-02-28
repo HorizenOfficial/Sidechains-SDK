@@ -140,12 +140,16 @@ class SCNodeConfiguration(object):
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  initial_private_keys=[],
+                 remote_keys_manager_enabled=False,
+                 remote_keys_server_address=None,
                  known_peers=[],
                  declared_address=None,
                  initial_signing_private_keys=[],
-                 remote_keys_manager_enabled=False,
                  storage_backup_interval='15m',
                  storage_backup_delay='5m',
+                 websocket_server_enabled=False,
+                 websocket_server_port=0,
+                 allow_unprotected_txs=True,
                  max_nonce_gap=DEFAULT_MAX_NONCE_GAP,
                  max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
                  max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
@@ -171,11 +175,16 @@ class SCNodeConfiguration(object):
         self.initial_private_keys = initial_private_keys
         self.initial_signing_private_keys = initial_signing_private_keys
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
+        if remote_keys_manager_enabled:
+            self.remote_keys_server_address = remote_keys_server_address
         self.known_peers = known_peers
         if declared_address is not None:
             self.declared_address = declared_address
         self.storage_backup_interval = storage_backup_interval
         self.storage_backup_delay = storage_backup_delay
+        self.websocket_server_enabled = websocket_server_enabled
+        self.websocket_server_port = websocket_server_port
+        self.allow_unprotected_txs = allow_unprotected_txs
         self.max_nonce_gap = max_nonce_gap
         self.max_account_slots = max_account_slots
         self.max_mempool_slots = max_mempool_slots

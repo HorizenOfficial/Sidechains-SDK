@@ -7,6 +7,7 @@ import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -53,7 +54,7 @@ class ListSerializerTestObjectASerializer implements SparkzSerializer<ListSerial
     @Override
     public void serialize(ListSerializerTestObjectA obj, Writer writer) {
         writer.putInt(obj._testData.length());
-        writer.putBytes(obj._testData.getBytes());
+        writer.putBytes(obj._testData.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override

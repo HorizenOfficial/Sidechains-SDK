@@ -5,8 +5,8 @@ import com.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException,
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
+import io.horizen.evm.Address
 import com.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert._
 import org.junit._
@@ -17,6 +17,7 @@ import org.scalatestplus.mockito._
 import sparkz.util.ModifierId
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Random, Success}
 
 class MempoolMapTest
@@ -30,10 +31,9 @@ class MempoolMapTest
   val baseStateViewMock: BaseStateReader = mock[BaseStateReader]
   val baseStateProvider: BaseStateReaderProvider = () => baseStateViewMock
 
-  val account1KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes()))
-  val account2KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
-  val account3KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest3".getBytes()))
-
+  val account1KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest1".getBytes(StandardCharsets.UTF_8)))
+  val account2KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes(StandardCharsets.UTF_8)))
+  val account3KeyOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest3".getBytes(StandardCharsets.UTF_8)))
   @Before
   def setUp(): Unit = {
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)

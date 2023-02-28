@@ -15,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -56,7 +57,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(123L));
 
         List<BoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((BoxData)new ZenBoxData(getPrivateKey25519("1".getBytes()).publicImage(), 100L));
+        outputsData.add((BoxData)new ZenBoxData(getPrivateKey25519("1".getBytes(StandardCharsets.UTF_8)).publicImage(), 100L));
         outputsData.add((BoxData)new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
 
         List<Proof<Proposition>> proofs = new ArrayList<>();

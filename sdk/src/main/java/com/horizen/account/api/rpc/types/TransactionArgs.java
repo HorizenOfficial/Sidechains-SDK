@@ -9,13 +9,12 @@ import com.horizen.account.state.Message;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionUtils;
-import com.horizen.evm.utils.Address;
+import io.horizen.evm.Address;
 import com.horizen.params.NetworkParams;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.util.Optional;
-
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
@@ -118,6 +117,12 @@ public class TransactionArgs {
      * Reimplementation of the same logic in GETH.
      */
     public Message toMessage(BigInteger baseFee, BigInteger rpcGasCap) throws RpcException {
+        if (baseFee == null) {
+            // Practically it's not possible. Because baseFee is always arrived from block header and every block header
+            // has EIP-1559 support, so baseFee is never null.
+            throw new IllegalArgumentException("baseFee must be not null.");
+        }
+
         if (gasPrice != null && (maxFeePerGas != null || maxPriorityFeePerGas != null)) {
             throw new RpcException(RpcError.fromCode(
                 RpcCode.InvalidParams,

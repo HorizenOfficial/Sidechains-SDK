@@ -3,9 +3,8 @@ package com.horizen.account.secret;
 import com.horizen.secret.SecretSerializer;
 import org.junit.Before;
 import org.junit.Test;
-
 import scala.util.Try;
-
+import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -14,7 +13,7 @@ public class PrivateKeySecp256k1SerializerTest {
 
     @Before
     public void BeforeEachTest() {
-        privateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("secpprivatekeytest".getBytes());
+        privateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("secpprivatekeytest".getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -29,7 +28,7 @@ public class PrivateKeySecp256k1SerializerTest {
         assertEquals("Deserialized secret expected to be equal", privateKeySecp256k1.toString(), t.get().toString());
 
         // Test 2: try to parse broken bytes
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes(StandardCharsets.UTF_8)).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
     }
 }

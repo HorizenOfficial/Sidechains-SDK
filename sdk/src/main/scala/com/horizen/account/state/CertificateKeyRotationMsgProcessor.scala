@@ -9,10 +9,10 @@ import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMA
 import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import io.horizen.evm.Address
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
@@ -20,6 +20,7 @@ import sparkz.crypto.hash.{Digest32, Keccak256}
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
+import java.nio.charset.StandardCharsets
 import java.util
 import scala.collection.mutable
 
@@ -169,7 +170,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
     //publish event
     val keyRotationEvent = SubmitKeyRotation(keyType, keyIndex, keyRotationProof.newKey, currentEpochNum)
-    val evmLog = getEvmLog(keyRotationEvent)
+    val evmLog = getEthereumConsensusDataLog(keyRotationEvent)
     view.addLog(evmLog)
 
     keyRotationProof.encode()
@@ -191,7 +192,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
   private def getKeyRotationProofKey(keyType: KeyRotationProofType, withdrawalEpoch: Int, index: Int): Array[Byte] = {
     calculateKey(Bytes.concat(
-      "keyRotationProof".getBytes,
+      "keyRotationProof".getBytes(StandardCharsets.UTF_8),
       Ints.toByteArray(keyType.id),
       Ints.toByteArray(withdrawalEpoch),
       Ints.toByteArray(index)
@@ -199,15 +200,15 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
   }
 
   private def getSigningKeyKey(epoch: Int, index: Int): Array[Byte] = {
-    calculateKey(Bytes.concat("signingKey".getBytes, Ints.toByteArray(epoch), Ints.toByteArray(index)))
+    calculateKey(Bytes.concat("signingKey".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(epoch), Ints.toByteArray(index)))
   }
 
   private def getMasterKeyKey(epoch: Int, index: Int): Array[Byte] = {
-    calculateKey(Bytes.concat("masterKey".getBytes, Ints.toByteArray(epoch), Ints.toByteArray(index)))
+    calculateKey(Bytes.concat("masterKey".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(epoch), Ints.toByteArray(index)))
   }
 
   private def getKeysRotationHistoryKey(keyType: KeyRotationProofType, index: Int): Array[Byte] = {
-    calculateKey(Bytes.concat("keyHistory".getBytes, Ints.toByteArray(keyType.id), Ints.toByteArray(index)))
+    calculateKey(Bytes.concat("keyHistory".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(keyType.id), Ints.toByteArray(index)))
   }
 }
 
