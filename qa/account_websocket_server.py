@@ -95,9 +95,10 @@ Test:
 
 
 class SCWsAccountServerTest(AccountChainSetup):
+    websocket_server_port = 8026
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2)
+        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2, websocket_server_port=self.websocket_server_port)
     
     def checkWsResponseStaticField(self, response, method, subscription):
         assert_equal(response["jsonrpc"], "2.0")
@@ -139,7 +140,7 @@ class SCWsAccountServerTest(AccountChainSetup):
         logging.info("Start websocket client")
 
         ws = AccountWebsocketClient()
-        ws_connection = ws.create_connection("ws://localhost:8025/")
+        ws_connection = ws.create_connection(f"ws://localhost:{self.websocket_server_port}/")
 
         sc_node = self.sc_nodes[0]
         sc_node2 = self.sc_nodes[1]

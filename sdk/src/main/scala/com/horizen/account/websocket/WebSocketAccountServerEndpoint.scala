@@ -13,8 +13,9 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebsocketAccountResponse}
-import com.horizen.evm.utils.Address
 import com.horizen.serialization.SerializationUtil
+import com.horizen.utils.BytesUtils
+import io.horizen.evm.Address
 import jakarta.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
 import jakarta.websocket.server.ServerEndpoint
 import sparkz.util.SparkzLogging

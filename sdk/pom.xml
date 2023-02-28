@@ -260,6 +260,13 @@
       <version>1.18.3</version>
       <scope>compile</scope>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/jakarta.websocket/jakarta.websocket-api -->
+    <dependency>
+      <groupId>jakarta.websocket</groupId>
+      <artifactId>jakarta.websocket-api</artifactId>
+      <version>2.1.0</version>
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.web3j</groupId>
       <artifactId>core</artifactId>
