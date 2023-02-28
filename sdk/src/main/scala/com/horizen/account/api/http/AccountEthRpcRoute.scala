@@ -10,6 +10,7 @@ import com.horizen.account.api.rpc.service.EthService
 import com.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.serialization.EthJsonMapper
 import com.horizen.account.state.MessageProcessor
@@ -39,7 +40,8 @@ case class AccountEthRpcRoute(
     sidechainTransactionActorRef: ActorRef,
     metadataStorage: AccountStateMetadataStorage,
     stateDb: LevelDBDatabase,
-    messageProcessors: Seq[MessageProcessor]
+    messageProcessors: Seq[MessageProcessor],
+    companion: SidechainAccountTransactionsCompanion
 )(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
     extends SidechainApiRoute[
       SidechainTypes#SCAT,
@@ -70,7 +72,8 @@ case class AccountEthRpcRoute(
       sidechainSettings.ethService,
       sidechainSettings.sparkzSettings.network.maxIncomingConnections,
       getClientVersion,
-      sidechainTransactionActorRef
+      sidechainTransactionActorRef,
+      companion
     )
   )
 

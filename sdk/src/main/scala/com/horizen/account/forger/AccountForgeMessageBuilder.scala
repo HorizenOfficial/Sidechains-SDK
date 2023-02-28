@@ -25,20 +25,9 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{
-  ByteArrayWrapper,
-  ClosableResourceHandler,
-  DynamicTypedSerializer,
-  ForgingStakeMerklePathInfo,
-  ListSerializer,
-  MerklePath,
-  MerkleTree,
-  TimeToEpochUtils,
-  WithdrawalEpochInfo,
-  WithdrawalEpochUtils
-}
+import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.vrf.VrfOutput
-import io.horizen.evm.Hash
+import io.horizen.evm.{Address, Hash}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 import sparkz.util.{ModifierId, bytesToId}
@@ -194,13 +183,18 @@ class AccountForgeMessageBuilder(
       forgingStakeInfoMerklePath: MerklePath,
       companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
       inputBlockSize: Int,
-      signatureOption: Option[Signature25519]
+      signatureOption: Option[Signature25519],
+      isPending: Boolean = false
   ): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
 
     // 1. As forger address take first address from the wallet
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
-    if (addressList.isEmpty) throw new IllegalArgumentException("No addresses in wallet!")
-    val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
+    val forgerAddress = (
+      if (addressList.isEmpty) {
+        if (isPending) new AddressProposition(Address.ZERO)
+        else throw new IllegalArgumentException("No addresses in wallet!")
+      } else addressList.get(0).publicImage().asInstanceOf[AddressProposition]
+      )
 
     // 2. calculate baseFee
     val baseFee = calculateBaseFee(nodeView.history, parentId)
@@ -481,7 +475,8 @@ class AccountForgeMessageBuilder(
       vrfProof,
       vrfOutput,
       mcRefDataRetrievalTimeout,
-      Seq()
+      Seq(),
+      true
     ) match {
       case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
       case _: ForgeFailure => Option.empty

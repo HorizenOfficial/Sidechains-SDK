@@ -19,6 +19,7 @@ import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEnco
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
 import com.horizen.fixtures.FieldElementFixture
+import com.horizen.fixtures.SidechainBlockFixture.{getDefaultAccountTransactionsCompanion}
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
 import com.horizen.{EthServiceSettings, SidechainTypes}
@@ -303,6 +304,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
     val ethServiceSettings = EthServiceSettings()
+    val transactionsCompanion = getDefaultAccountTransactionsCompanion
     ethService = new EthService(
       nodeViewHolderRef,
       mockedNetworkControllerRef,
@@ -311,7 +313,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ethServiceSettings,
       10,
       "testVersion",
-      transactionActorRef
+      transactionActorRef,
+      transactionsCompanion
     )
   }
 

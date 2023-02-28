@@ -8,6 +8,7 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
@@ -23,6 +24,7 @@ import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, Fe
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
+import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -44,7 +46,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.{FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future}
 import scala.jdk.CollectionConverters
 import scala.language.postfixOps
@@ -58,7 +60,8 @@ class EthService(
     settings: EthServiceSettings,
     maxIncomingConnections: Int,
     rpcClientVersion: String,
-    sidechainTransactionActorRef: ActorRef
+    sidechainTransactionActorRef: ActorRef,
+    transactionsCompanion: SidechainAccountTransactionsCompanion
 ) extends RpcService
       with ClosableResourceHandler
       with SparkzLogging {
@@ -615,7 +618,7 @@ class EthService(
   }
 
   private def getPendingBlock(nodeView: NV): Option[AccountBlock] = {
-    new AccountForgeMessageBuilder(new MainchainSynchronizer(null), null, networkParams, false)
+    new AccountForgeMessageBuilder(new MainchainSynchronizer(null), transactionsCompanion, networkParams, false)
       .getPendingBlock(
         nodeView
       )

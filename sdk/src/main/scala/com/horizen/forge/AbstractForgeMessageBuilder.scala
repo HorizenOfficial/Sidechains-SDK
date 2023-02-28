@@ -242,7 +242,8 @@ abstract class AbstractForgeMessageBuilder[
                            vrfProof: VrfProof,
                            vrfOutput: VrfOutput,
                            mcRefDataRetrievalTimeout: Timeout,
-                           forcedTx: Iterable[TX]): ForgeResult = {
+                           forcedTx: Iterable[TX],
+                           isPending: Boolean = false): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
@@ -337,7 +338,8 @@ abstract class AbstractForgeMessageBuilder[
       vrfOutput,
       forgingStakeMerklePathInfo.merklePath,
       companion,
-      blockSize
+      blockSize,
+      isPending = isPending
     )
 
     tryBlock match {
@@ -363,7 +365,8 @@ abstract class AbstractForgeMessageBuilder[
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
                      inputBlockSize: Int,
-                     signatureOption: Option[Signature25519] = None
+                     signatureOption: Option[Signature25519] = None,
+                     isPending: Boolean = false
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
 
 
