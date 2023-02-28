@@ -75,7 +75,7 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
         WebSocketAccountServerEndpoint.send(new RpcResponseError(new RpcId("1"),
           new RpcError(RpcCode.ExecutionError, "Websocket On receive message processing exception occurred", sw.toString)),
           session)
-        log.debug("Websocket On receive message processing exception occurred = " + ex.getMessage)
+        log.error("Websocket On receive message processing exception occurred = " + ex.getMessage)
     }
   }
 
@@ -99,7 +99,7 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
       case LOGS_SUBSCRIPTION.method =>
         if (rpcParams.size() < 2)
           WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
-            new RpcError(RpcCode.InvalidParams, "Missing filters (address, topcis).", "")),
+            new RpcError(RpcCode.InvalidParams, "Missing filters (address, topics).", "")),
             session)
         val logs = rpcParams.get(1)
         val addressFilter = getLogAddresses(logs)
@@ -111,11 +111,11 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
         log.debug("New Subscription on logs "+session.getId)
         WebSocketAccountServerEndpoint.send(new RpcResponseSuccess(rpcRequest.id, subscriptionId), session)
 
-      case uknownMethod =>
+      case unkownMethod =>
         WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
-          new RpcError(RpcCode.InvalidParams, "unsupported subscription type " + uknownMethod, "")),
+          new RpcError(RpcCode.InvalidParams, "unsupported subscription type " + unkownMethod, "")),
           session)
-        log.debug("unsupported subscription type " + uknownMethod)
+        log.debug("unsupported subscription type " + unkownMethod)
     }
 
   }
