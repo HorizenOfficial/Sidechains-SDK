@@ -1,6 +1,6 @@
 package io.horizen.block
 
-import com.horizen.utils._
+import io.horizen.utils._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try

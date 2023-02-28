@@ -1,7 +1,7 @@
 package io.horizen.account.state.events
 
-import com.horizen.account.state.events.annotation.{Indexed, Parameter}
-import com.horizen.proposition.PublicKey25519Proposition
+import io.horizen.account.state.events.annotation.{Indexed, Parameter}
+import io.horizen.proposition.PublicKey25519Proposition
 import io.horizen.evm.Address
 import org.web3j.abi.datatypes.generated.{Bytes32, Uint32}
 import org.web3j.abi.datatypes.{Address => AbiAddress}

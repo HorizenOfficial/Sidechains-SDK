@@ -1,12 +1,12 @@
 package io.horizen.account.history.validation
 
-import com.horizen.SidechainTypes
-import com.horizen.account.utils.FeeUtils
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.history.validation.HistoryBlockValidator
+import io.horizen.SidechainTypes
+import io.horizen.account.utils.FeeUtils
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.storage.AccountHistoryStorage
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.history.validation.HistoryBlockValidator
 import java.math.BigInteger
 import scala.util.Try
 

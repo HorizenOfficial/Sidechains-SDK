@@ -1,8 +1,8 @@
 package io.horizen.account.state.events
 
-import com.horizen.account.state.events.annotation.{Indexed, Parameter}
-import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.KeyRotationProofType
-import com.horizen.proposition.SchnorrProposition
+import io.horizen.account.state.events.annotation.{Indexed, Parameter}
+import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.KeyRotationProofType
+import io.horizen.proposition.SchnorrProposition
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 
 import scala.annotation.meta.getter

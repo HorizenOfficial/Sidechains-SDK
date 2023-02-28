@@ -1,6 +1,6 @@
 package io.horizen.block
 
-import com.horizen.utils.{BytesUtils, CompactSize}
+import io.horizen.utils.{BytesUtils, CompactSize}
 
 case class MainchainTransactionInput(inputBytes: Array[Byte],
                                      prevTxHash: Array[Byte],

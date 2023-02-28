@@ -1,12 +1,12 @@
 package io.horizen.cryptolibprovider;
 
-import com.horizen.block.WithdrawalEpochCertificate;
-import com.horizen.utxo.box.Box;
-import com.horizen.librustsidechains.FieldElement;
-import com.horizen.proposition.Proposition;
-import com.horizen.secret.PrivateKey25519;
-import com.horizen.utxo.utils.ForwardTransferCswData;
-import com.horizen.utxo.utils.UtxoCswData;
+import io.horizen.block.WithdrawalEpochCertificate;
+import io.horizen.utxo.box.Box;
+import io.horizen.librustsidechains.FieldElement;
+import io.horizen.proposition.Proposition;
+import io.horizen.secret.PrivateKey25519;
+import io.horizen.utxo.utils.ForwardTransferCswData;
+import io.horizen.utxo.utils.UtxoCswData;
 import scala.Enumeration;
 
 import java.util.List;

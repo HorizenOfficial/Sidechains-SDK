@@ -1,10 +1,10 @@
 package io.horizen.account.companion
 
-import com.horizen.SidechainTypes
-import com.horizen.account.transaction.AccountTransactionsIdsEnum.EthereumTransactionId
-import com.horizen.account.transaction.EthereumTransactionSerializer
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{BytesUtils, DynamicTypedSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.account.transaction.AccountTransactionsIdsEnum.EthereumTransactionId
+import io.horizen.account.transaction.EthereumTransactionSerializer
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils.{BytesUtils, DynamicTypedSerializer}
 import sparkz.util.serialization.VLQByteBufferReader
 
 import java.util.{HashMap => JHashMap}

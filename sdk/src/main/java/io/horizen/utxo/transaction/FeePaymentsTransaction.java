@@ -1,9 +1,9 @@
 package io.horizen.utxo.transaction;
 
-import com.horizen.utxo.box.BoxUnlocker;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.utxo.box.ZenBox;
-import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import io.horizen.utxo.box.BoxUnlocker;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import scala.Array;
 import sparkz.core.serialization.SparkzSerializer;
 

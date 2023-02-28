@@ -1,9 +1,9 @@
 package io.horizen.account.helper;
 
-import com.horizen.account.transaction.AccountTransaction;
-import com.horizen.helper.BaseTransactionSubmitHelper;
-import com.horizen.proof.Proof;
-import com.horizen.proposition.Proposition;
+import io.horizen.account.transaction.AccountTransaction;
+import io.horizen.helper.BaseTransactionSubmitHelper;
+import io.horizen.proof.Proof;
+import io.horizen.proposition.Proposition;
 
 import java.util.Optional;
 import java.util.function.BiConsumer;

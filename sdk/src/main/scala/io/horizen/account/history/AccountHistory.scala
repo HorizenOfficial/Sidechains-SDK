@@ -1,14 +1,14 @@
 package io.horizen.account.history
 
-import com.horizen.SidechainTypes
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.node.NodeAccountHistory
-import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.consensus._
-import com.horizen.history.AbstractHistory
-import com.horizen.params.NetworkParams
-import com.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import io.horizen.SidechainTypes
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.node.NodeAccountHistory
+import io.horizen.account.storage.AccountHistoryStorage
+import io.horizen.consensus._
+import io.horizen.history.AbstractHistory
+import io.horizen.params.NetworkParams
+import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import sparkz.util.{SparkzEncoding, SparkzLogging}
 
 import scala.util.Try

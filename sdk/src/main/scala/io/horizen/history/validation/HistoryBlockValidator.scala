@@ -1,10 +1,10 @@
 package io.horizen.history.validation
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.history.AbstractHistory
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.history.AbstractHistory
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.Transaction
 
 import scala.util.Try
 

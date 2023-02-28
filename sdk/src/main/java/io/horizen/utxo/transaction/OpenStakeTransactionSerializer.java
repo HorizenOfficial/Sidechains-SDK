@@ -1,10 +1,10 @@
 package io.horizen.utxo.transaction;
 
-import com.horizen.transaction.TransactionSerializer;
-import com.horizen.utxo.box.data.ZenBoxData;
-import com.horizen.utxo.box.data.ZenBoxDataSerializer;
-import com.horizen.proof.Signature25519;
-import com.horizen.proof.Signature25519Serializer;
+import io.horizen.transaction.TransactionSerializer;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.box.data.ZenBoxDataSerializer;
+import io.horizen.proof.Signature25519;
+import io.horizen.proof.Signature25519Serializer;
 import sparkz.core.NodeViewModifier$;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;

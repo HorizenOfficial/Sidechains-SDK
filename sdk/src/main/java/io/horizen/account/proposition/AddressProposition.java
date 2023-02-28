@@ -2,13 +2,13 @@ package io.horizen.account.proposition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.account.secret.PrivateKeySecp256k1;
-import com.horizen.account.utils.Secp256k1;
+import io.horizen.account.secret.PrivateKeySecp256k1;
+import io.horizen.account.utils.Secp256k1;
 import io.horizen.evm.Address;
-import com.horizen.proposition.PropositionSerializer;
-import com.horizen.proposition.SingleSecretProofOfKnowledgeProposition;
-import com.horizen.json.Views;
-import com.horizen.utils.BytesUtils;
+import io.horizen.proposition.PropositionSerializer;
+import io.horizen.proposition.SingleSecretProofOfKnowledgeProposition;
+import io.horizen.json.Views;
+import io.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 

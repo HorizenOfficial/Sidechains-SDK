@@ -5,22 +5,22 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.cryptolibprovider.CryptoLibProvider
 import CswManager.ReceivableMessages._
 import CswManager.Responses._
 import CswManager.{ProofInProcess, ProofInQueue}
-import com.horizen.params.NetworkParams
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.secret.PrivateKey25519
-import com.horizen.json.Views
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochUtils}
-import com.horizen._
-import com.horizen.json.serializer.CswProofStatusSerializer
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.wallet.SidechainWallet
+import io.horizen.params.NetworkParams
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.secret.PrivateKey25519
+import io.horizen.json.Views
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochUtils}
+import io.horizen._
+import io.horizen.json.serializer.CswProofStatusSerializer
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.wallet.SidechainWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState

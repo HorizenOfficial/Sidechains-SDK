@@ -2,10 +2,10 @@ package io.horizen.proposition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.json.Views;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Ed25519;
-import com.horizen.secret.PrivateKey25519;
+import io.horizen.json.Views;
+import io.horizen.utils.BytesUtils;
+import io.horizen.utils.Ed25519;
+import io.horizen.secret.PrivateKey25519;
 import sparkz.crypto.hash.Blake2b256;
 import com.google.common.primitives.Bytes;
 import java.util.Arrays;

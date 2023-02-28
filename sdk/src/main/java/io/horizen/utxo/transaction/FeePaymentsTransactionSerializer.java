@@ -1,9 +1,9 @@
 package io.horizen.utxo.transaction;
 
-import com.horizen.transaction.TransactionSerializer;
-import com.horizen.utxo.box.ZenBox;
-import com.horizen.utxo.box.ZenBoxSerializer;
-import com.horizen.utils.ListSerializer;
+import io.horizen.transaction.TransactionSerializer;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.box.ZenBoxSerializer;
+import io.horizen.utils.ListSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

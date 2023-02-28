@@ -1,7 +1,7 @@
 package io.horizen.account.transaction;
 
-import com.horizen.account.utils.EthereumTransactionDecoder;
-import com.horizen.transaction.TransactionSerializer;
+import io.horizen.account.utils.EthereumTransactionDecoder;
+import io.horizen.transaction.TransactionSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

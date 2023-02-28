@@ -1,6 +1,6 @@
 package io.horizen.api.http
 
-import com.horizen.utxo.node.SidechainNodeView
+import io.horizen.utxo.node.SidechainNodeView
 
 trait FunctionsApplierOnSidechainNodeView {
   def applyFunctionOnSidechainNodeView[R](f: java.util.function.Function[SidechainNodeView, R]): R

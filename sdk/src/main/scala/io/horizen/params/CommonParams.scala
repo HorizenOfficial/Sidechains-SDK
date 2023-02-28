@@ -1,6 +1,6 @@
 package io.horizen.params
 
-import com.horizen.utils.Utils
+import io.horizen.utils.Utils
 import sparkz.core.NodeViewModifier
 
 object CommonParams {

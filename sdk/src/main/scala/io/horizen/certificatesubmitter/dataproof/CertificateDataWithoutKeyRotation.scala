@@ -1,10 +1,10 @@
 package io.horizen.certificatesubmitter.dataproof
 
-import com.horizen.certnative.BackwardTransfer
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.SchnorrProposition
-import com.horizen.utils.BytesUtils
+import io.horizen.certnative.BackwardTransfer
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.proof.SchnorrProof
+import io.horizen.proposition.SchnorrProposition
+import io.horizen.utils.BytesUtils
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.compat.java8.OptionConverters._

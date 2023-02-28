@@ -1,15 +1,15 @@
 package io.horizen.history.validation
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.params.NetworkParams
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit}
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.params.NetworkParams
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit}
 import CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.history.AbstractHistory
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
-import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, WithdrawalEpochUtils}
+import io.horizen.history.AbstractHistory
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.Transaction
+import io.horizen.transaction.mainchain.SidechainCreation
+import io.horizen.utils.{BlockUtils, BytesUtils, WithdrawalEpochUtils}
 import sparkz.util.idToBytes
 
 import scala.util.Try

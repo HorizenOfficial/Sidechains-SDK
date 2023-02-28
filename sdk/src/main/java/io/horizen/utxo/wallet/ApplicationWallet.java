@@ -2,10 +2,10 @@ package io.horizen.utxo.wallet;
 
 import java.util.List;
 
-import com.horizen.utxo.backup.BoxIterator;
-import com.horizen.proposition.Proposition;
-import com.horizen.secret.Secret;
-import com.horizen.utxo.box.Box;
+import io.horizen.utxo.backup.BoxIterator;
+import io.horizen.proposition.Proposition;
+import io.horizen.secret.Secret;
+import io.horizen.utxo.box.Box;
 
 public interface ApplicationWallet {
 

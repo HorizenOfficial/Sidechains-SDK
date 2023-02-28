@@ -1,8 +1,8 @@
 package io.horizen.utxo.node;
 
-import com.horizen.node.NodeStateBase;
-import com.horizen.utxo.state.SidechainStateReader;
-import com.horizen.utils.WithdrawalEpochInfo;
+import io.horizen.node.NodeStateBase;
+import io.horizen.utxo.state.SidechainStateReader;
+import io.horizen.utils.WithdrawalEpochInfo;
 
 public interface NodeState extends NodeStateBase, SidechainStateReader {
 

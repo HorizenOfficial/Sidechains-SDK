@@ -5,15 +5,15 @@ import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.SidechainSyncInfo
-import com.horizen.json.SerializationUtil
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.wallet.SidechainWallet
+import io.horizen.SidechainSyncInfo
+import io.horizen.json.SerializationUtil
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.wallet.SidechainWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.util.{ModifierId, SparkzLogging}

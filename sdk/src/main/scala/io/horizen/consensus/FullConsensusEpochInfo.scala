@@ -1,7 +1,7 @@
 package io.horizen.consensus
 
 
-import com.horizen.utils._
+import io.horizen.utils._
 
 
 //@TODO move classes to consensus package object

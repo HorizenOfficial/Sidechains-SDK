@@ -1,9 +1,9 @@
 package io.horizen.utxo.storage
 
-import com.horizen.storage.Storage
-import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
-import com.horizen.utxo.backup.BoxIterator
-import com.horizen.utxo.companion.SidechainBoxesCompanion
+import io.horizen.storage.Storage
+import io.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import io.horizen.utxo.backup.BoxIterator
+import io.horizen.utxo.companion.SidechainBoxesCompanion
 
 import java.util.{ArrayList => JArrayList}
 import scala.util.Try

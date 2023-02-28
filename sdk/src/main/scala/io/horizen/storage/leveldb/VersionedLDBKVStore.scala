@@ -1,7 +1,7 @@
 package io.horizen.storage.leveldb
 
-import com.horizen.storage.StorageIterator
-import com.horizen.utils.ByteArrayWrapper
+import io.horizen.storage.StorageIterator
+import io.horizen.utils.ByteArrayWrapper
 import org.fusesource.leveldbjni.internal.JniDBIterator
 import org.iq80.leveldb.{DB, ReadOptions}
 
@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   */
 final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends KVStore {
 
-  import com.horizen.storage.leveldb.VersionedLDBKVStore.VersionId
+  import io.horizen.storage.leveldb.VersionedLDBKVStore.VersionId
 
   val VersionsKey: Array[Byte] = Algos.hash("versions")
 

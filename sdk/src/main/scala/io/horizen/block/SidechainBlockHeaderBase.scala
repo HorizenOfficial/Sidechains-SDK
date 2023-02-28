@@ -2,12 +2,12 @@ package io.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
-import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.history.validation.InvalidSidechainBlockHeaderException
-import com.horizen.json.serializer.SparkzModifierIdSerializer
-import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.utils.{MerklePath, MerkleTree}
+import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.history.validation.InvalidSidechainBlockHeaderException
+import io.horizen.json.serializer.SparkzModifierIdSerializer
+import io.horizen.params.NetworkParams
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.utils.{MerklePath, MerkleTree}
 import sparkz.core.block.Block
 import sparkz.core.{NodeViewModifier, bytesToId}
 import sparkz.crypto.hash.Blake2b256

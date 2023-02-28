@@ -1,5 +1,5 @@
 package io.horizen.proposition;
-import com.horizen.secret.Secret;
+import io.horizen.secret.Secret;
 
 import java.util.List;
 

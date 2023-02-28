@@ -1,7 +1,7 @@
 package io.horizen.utxo.websocket.server
 
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.websocket.client.WebSocketConnector
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.websocket.client.WebSocketConnector
 import org.glassfish.tyrus.server.Server
 import sparkz.util.SparkzLogging
 

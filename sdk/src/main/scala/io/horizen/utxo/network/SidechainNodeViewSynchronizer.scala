@@ -1,12 +1,12 @@
 package io.horizen.utxo.network
 
 import akka.actor.{ActorRef, ActorRefFactory, Props}
-import com.horizen._
-import com.horizen.network.AbstractSidechainNodeViewSynchronizer
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen._
+import io.horizen.network.AbstractSidechainNodeViewSynchronizer
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.storage.SidechainHistoryStorage
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.transaction.MempoolReader

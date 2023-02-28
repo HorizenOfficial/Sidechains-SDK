@@ -3,17 +3,17 @@ package io.horizen.forge
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen._
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
-import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
-import com.horizen.history.AbstractHistory
-import com.horizen.params.NetworkParams
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
-import com.horizen.utils.TimeToEpochUtils
-import com.horizen.wallet.Wallet
+import io.horizen._
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
+import io.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import io.horizen.history.AbstractHistory
+import io.horizen.params.NetworkParams
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.Transaction
+import io.horizen.utils.TimeToEpochUtils
+import io.horizen.wallet.Wallet
 import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import sparkz.core.NodeViewHolder.{CurrentView, ReceivableMessages}

@@ -2,7 +2,7 @@ package io.horizen.block
 
 import java.math.BigInteger
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.utils.BytesUtils
+import io.horizen.utils.BytesUtils
 import org.bouncycastle.crypto.digests.Blake2bDigest
 
 import java.nio.charset.StandardCharsets

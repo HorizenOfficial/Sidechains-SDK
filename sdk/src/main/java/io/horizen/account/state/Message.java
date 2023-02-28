@@ -1,7 +1,7 @@
 package io.horizen.account.state;
 
 import io.horizen.evm.Address;
-import com.horizen.utils.BytesUtils;
+import io.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;

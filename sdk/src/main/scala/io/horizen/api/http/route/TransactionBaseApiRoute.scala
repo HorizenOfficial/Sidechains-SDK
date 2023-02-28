@@ -4,19 +4,19 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewBase
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.http.route.TransactionBaseErrorResponse._
-import com.horizen.api.http.route.TransactionBaseRestScheme._
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.json.Views
-import com.horizen.node._
-import com.horizen.transaction._
-import com.horizen.utils.BytesUtils
+import io.horizen.SidechainNodeViewBase
+import io.horizen.api.http.JacksonSupport._
+import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import io.horizen.api.http.route.TransactionBaseErrorResponse._
+import io.horizen.api.http.route.TransactionBaseRestScheme._
+import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.json.Views
+import io.horizen.node._
+import io.horizen.transaction._
+import io.horizen.utils.BytesUtils
 import sparkz.core.serialization.SparkzSerializer
 
 import java.util.{Optional => JOptional}

@@ -1,7 +1,7 @@
 package io.horizen.block
 
-import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.utils.ByteArrayWrapper
+import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import io.horizen.utils.ByteArrayWrapper
 
 trait SidechainsVersionsManager {
   def getVersion(sidechainId: ByteArrayWrapper): SidechainCreationVersion

@@ -1,19 +1,19 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, _}
-import com.horizen.account.state.ForgerStakeMsgProcessor._
-import com.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
-import com.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
-import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
-import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
-import com.horizen.params.NetworkParams
-import com.horizen.proof.Signature25519
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.utils.BytesUtils
+import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import io.horizen.account.proof.SignatureSecp256k1
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, _}
+import io.horizen.account.state.ForgerStakeMsgProcessor._
+import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
+import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
+import io.horizen.account.utils.ZenWeiConverter.isValidZenAmount
+import io.horizen.params.NetworkParams
+import io.horizen.proof.Signature25519
+import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
 

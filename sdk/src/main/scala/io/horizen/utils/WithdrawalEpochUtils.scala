@@ -1,8 +1,8 @@
 package io.horizen.utils
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.params.NetworkParams
-import com.horizen.transaction.Transaction
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.params.NetworkParams
+import io.horizen.transaction.Transaction
 
 object WithdrawalEpochUtils {
 

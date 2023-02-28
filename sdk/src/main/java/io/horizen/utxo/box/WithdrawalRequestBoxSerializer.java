@@ -1,7 +1,7 @@
 package io.horizen.utxo.box;
 
-import com.horizen.utxo.box.data.WithdrawalRequestBoxData;
-import com.horizen.utxo.box.data.WithdrawalRequestBoxDataSerializer;
+import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
+import io.horizen.utxo.box.data.WithdrawalRequestBoxDataSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

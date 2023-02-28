@@ -3,7 +3,7 @@ package io.horizen.api.http.route
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import com.horizen.api.http.SidechainApiError
+import io.horizen.api.http.SidechainApiError
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
 

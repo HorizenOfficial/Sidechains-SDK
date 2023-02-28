@@ -1,22 +1,22 @@
 package io.horizen.account.certificatesubmitter
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen._
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.AccountState
-import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.api.http.client.SecureEnclaveApiClient
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
-import com.horizen.certificatesubmitter.dataproof.CertificateData
-import com.horizen.certificatesubmitter.strategies._
-import com.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
-import com.horizen.mainchain.api.MainchainNodeCertificateApi
-import com.horizen.params.NetworkParams
-import com.horizen.websocket.client.MainchainNodeChannel
+import io.horizen._
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.state.AccountState
+import io.horizen.account.storage.AccountHistoryStorage
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.api.http.client.SecureEnclaveApiClient
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter
+import io.horizen.certificatesubmitter.dataproof.CertificateData
+import io.horizen.certificatesubmitter.strategies._
+import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
+import io.horizen.mainchain.api.MainchainNodeCertificateApi
+import io.horizen.params.NetworkParams
+import io.horizen.websocket.client.MainchainNodeChannel
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 

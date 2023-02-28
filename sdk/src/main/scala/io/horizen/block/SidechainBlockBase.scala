@@ -2,10 +2,10 @@ package io.horizen.block
 
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.horizen.history.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
-import com.horizen.params.NetworkParams
-import com.horizen.utils.{MerkleTree, Utils}
-import com.horizen.transaction.Transaction
+import io.horizen.history.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
+import io.horizen.params.NetworkParams
+import io.horizen.utils.{MerkleTree, Utils}
+import io.horizen.transaction.Transaction
 import sparkz.util.ModifierId
 import sparkz.core.ModifierTypeId
 import sparkz.core.block.Block

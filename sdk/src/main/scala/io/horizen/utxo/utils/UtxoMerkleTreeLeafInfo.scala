@@ -1,6 +1,6 @@
 package io.horizen.utxo.utils
 
-import com.horizen.cryptolibprovider.utils.FieldElementUtils
+import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

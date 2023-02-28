@@ -2,12 +2,12 @@ package io.horizen.proof;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.proposition.VrfPublicKey;
-import com.horizen.secret.VrfSecretKey;
-import com.horizen.json.Views;
-import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.utils.BytesUtils;
-import com.horizen.vrf.VrfOutput;
+import io.horizen.proposition.VrfPublicKey;
+import io.horizen.secret.VrfSecretKey;
+import io.horizen.json.Views;
+import io.horizen.cryptolibprovider.CryptoLibProvider;
+import io.horizen.utils.BytesUtils;
+import io.horizen.vrf.VrfOutput;
 
 import java.util.Arrays;
 import java.util.Optional;

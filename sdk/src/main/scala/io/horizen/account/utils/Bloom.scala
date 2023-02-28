@@ -1,8 +1,8 @@
 package io.horizen.account.utils
 
-import com.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
-import com.horizen.account.utils.Bloom.BLOOM_BYTE_LENGTH
-import com.horizen.utils.BytesUtils
+import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
+import io.horizen.account.utils.Bloom.BLOOM_BYTE_LENGTH
+import io.horizen.utils.BytesUtils
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.serialization.{Reader, Writer}

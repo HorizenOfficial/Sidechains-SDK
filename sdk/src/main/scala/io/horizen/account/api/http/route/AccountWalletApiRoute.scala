@@ -4,24 +4,24 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages
-import com.horizen.SidechainTypes
-import com.horizen.account.api.http.route.AccountWalletErrorResponse.ErrorCouldNotGetBalance
-import com.horizen.account.api.http.route.AccountWalletRestScheme._
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.route.WalletBaseApiRoute
-import com.horizen.api.http.route.WalletBaseErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.route.WalletBaseRestScheme.{ReqCreateKey, RespCreatePrivateKey}
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.json.Views
-import com.horizen.node.NodeWalletBase
-import com.horizen.utils.BytesUtils
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages
+import io.horizen.SidechainTypes
+import io.horizen.account.api.http.route.AccountWalletErrorResponse.ErrorCouldNotGetBalance
+import io.horizen.account.api.http.route.AccountWalletRestScheme._
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import io.horizen.api.http.JacksonSupport._
+import io.horizen.api.http.route.WalletBaseApiRoute
+import io.horizen.api.http.route.WalletBaseErrorResponse.ErrorSecretNotAdded
+import io.horizen.api.http.route.WalletBaseRestScheme.{ReqCreateKey, RespCreatePrivateKey}
+import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.json.Views
+import io.horizen.node.NodeWalletBase
+import io.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 
 import java.math.BigInteger

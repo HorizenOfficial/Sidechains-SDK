@@ -1,10 +1,10 @@
 package io.horizen.websocket.client
-import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainCreationVersions, SidechainsVersionsManager}
-import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
-import com.horizen.params.NetworkParams
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.websocket.client.MainchainNodeChannelImpl.MAX_SIDECHAINS_REQUEST
+import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainCreationVersions, SidechainsVersionsManager}
+import io.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
+import io.horizen.params.NetworkParams
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.horizen.websocket.client.MainchainNodeChannelImpl.MAX_SIDECHAINS_REQUEST
 
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}

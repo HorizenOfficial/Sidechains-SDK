@@ -3,16 +3,16 @@ package io.horizen.block
 import java.util
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.history.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
-import com.horizen.params.NetworkParams
-import com.horizen.proposition.Proposition
-import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.json.Views
+import io.horizen.history.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
+import io.horizen.params.NetworkParams
+import io.horizen.proposition.Proposition
+import io.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
+import io.horizen.json.Views
 import sparkz.core.serialization.BytesSerializable
-import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
-import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
-import com.horizen.utxo.box.Box
+import io.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
+import io.horizen.transaction.exception.TransactionSemanticValidityException
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
+import io.horizen.utxo.box.Box
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.util.SparkzLogging

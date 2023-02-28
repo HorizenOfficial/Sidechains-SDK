@@ -3,9 +3,9 @@ package io.horizen.secret;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.proof.ProofOfKnowledge;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.json.Views;
+import io.horizen.proof.ProofOfKnowledge;
+import io.horizen.proposition.ProofOfKnowledgeProposition;
+import io.horizen.json.Views;
 
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties({"secretTypeId", "serializer", "sign", "owns", "publicKeyValid"})

@@ -3,14 +3,14 @@ package io.horizen.utxo.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.block.SidechainBlockHeaderBase
-import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
-import com.horizen.history.validation.InvalidSidechainBlockHeaderException
-import com.horizen.json.serializer.{MerklePathJsonSerializer, SparkzModifierIdSerializer}
-import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
-import com.horizen.json.Views
-import com.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree}
+import io.horizen.block.SidechainBlockHeaderBase
+import io.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
+import io.horizen.history.validation.InvalidSidechainBlockHeaderException
+import io.horizen.json.serializer.{MerklePathJsonSerializer, SparkzModifierIdSerializer}
+import io.horizen.params.NetworkParams
+import io.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
+import io.horizen.json.Views
+import io.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}

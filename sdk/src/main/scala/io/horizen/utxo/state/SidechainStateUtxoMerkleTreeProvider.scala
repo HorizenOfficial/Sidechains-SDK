@@ -1,11 +1,11 @@
 package io.horizen.utxo.state
 
-import com.horizen.SidechainTypes
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.storage.SidechainStorageInfo
-import com.horizen.utils.ByteArrayWrapper
-import com.horizen.utxo.box.CoinsBox
-import com.horizen.utxo.storage.SidechainStateUtxoMerkleTreeStorage
+import io.horizen.SidechainTypes
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.storage.SidechainStorageInfo
+import io.horizen.utils.ByteArrayWrapper
+import io.horizen.utxo.box.CoinsBox
+import io.horizen.utxo.storage.SidechainStateUtxoMerkleTreeStorage
 
 import scala.util.Try
 

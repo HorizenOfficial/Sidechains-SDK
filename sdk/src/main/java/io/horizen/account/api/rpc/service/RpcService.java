@@ -2,11 +2,11 @@ package io.horizen.account.api.rpc.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.horizen.account.api.rpc.handler.RpcException;
-import com.horizen.account.api.rpc.request.RpcRequest;
-import com.horizen.account.api.rpc.utils.RpcCode;
-import com.horizen.account.api.rpc.utils.RpcError;
-import com.horizen.account.serialization.EthJsonMapper;
+import io.horizen.account.api.rpc.handler.RpcException;
+import io.horizen.account.api.rpc.request.RpcRequest;
+import io.horizen.account.api.rpc.utils.RpcCode;
+import io.horizen.account.api.rpc.utils.RpcError;
+import io.horizen.account.serialization.EthJsonMapper;
 import org.apache.logging.log4j.LogManager;
 
 import java.lang.reflect.InvocationTargetException;

@@ -1,8 +1,8 @@
 package io.horizen.utxo.helper
 
 import com.google.inject.{Inject, Provider}
-import com.horizen.utxo.SidechainApp
-import com.horizen.utxo.node.SidechainNodeView
+import io.horizen.utxo.SidechainApp
+import io.horizen.utxo.node.SidechainNodeView
 
 import java.util.function.Consumer
 

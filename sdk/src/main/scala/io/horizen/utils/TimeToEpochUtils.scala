@@ -1,7 +1,7 @@
 package io.horizen.utils
 
-import com.horizen.consensus._
-import com.horizen.params.NetworkParams
+import io.horizen.consensus._
+import io.horizen.params.NetworkParams
 import sparkz.core.block.Block
 
 object TimeToEpochUtils {

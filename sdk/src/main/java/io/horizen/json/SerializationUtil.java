@@ -1,9 +1,9 @@
 package io.horizen.json;
 
-import com.horizen.api.http.SidechainApiErrorResponseSchema;
-import com.horizen.api.http.SidechainApiManagedError;
-import com.horizen.api.http.SidechainApiResponseBody;
-import com.horizen.json.serializer.ApplicationJsonSerializer;
+import io.horizen.api.http.SidechainApiErrorResponseSchema;
+import io.horizen.api.http.SidechainApiManagedError;
+import io.horizen.api.http.SidechainApiResponseBody;
+import io.horizen.json.serializer.ApplicationJsonSerializer;
 import scala.Option;
 
 public class SerializationUtil {

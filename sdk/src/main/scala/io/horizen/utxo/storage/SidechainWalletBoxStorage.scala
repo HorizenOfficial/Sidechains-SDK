@@ -1,12 +1,12 @@
 package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.proposition.Proposition
-import com.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator}
-import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
-import com.horizen.utxo.box.Box
-import com.horizen.utxo.companion.SidechainBoxesCompanion
-import com.horizen.utxo.wallet.{WalletBox, WalletBoxSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.proposition.Proposition
+import io.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator}
+import io.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
+import io.horizen.utxo.box.Box
+import io.horizen.utxo.companion.SidechainBoxesCompanion
+import io.horizen.utxo.wallet.{WalletBox, WalletBoxSerializer}
 import sparkz.util.SparkzLogging
 
 import java.util.{ArrayList => JArrayList}

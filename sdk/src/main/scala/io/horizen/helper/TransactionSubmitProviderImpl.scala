@@ -3,8 +3,8 @@ package io.horizen.helper
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.transaction.Transaction
+import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import io.horizen.transaction.Transaction
 import sparkz.util.ModifierId
 
 import scala.concurrent.ExecutionContext.Implicits.global

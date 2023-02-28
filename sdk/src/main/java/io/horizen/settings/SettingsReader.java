@@ -1,7 +1,7 @@
 package io.horizen.settings;
 
-import com.horizen.SidechainSettings;
-import com.horizen.SidechainSettingsReader;
+import io.horizen.SidechainSettings;
+import io.horizen.SidechainSettingsReader;
 import com.typesafe.config.Config;
 
 import java.util.Optional;

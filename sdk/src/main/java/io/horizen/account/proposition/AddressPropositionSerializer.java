@@ -1,6 +1,6 @@
 package io.horizen.account.proposition;
 
-import com.horizen.proposition.PropositionSerializer;
+import io.horizen.proposition.PropositionSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

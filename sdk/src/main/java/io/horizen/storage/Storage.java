@@ -2,8 +2,8 @@ package io.horizen.storage;
 
 import java.util.Optional;
 import java.util.List;
-import com.horizen.utils.Pair;
-import com.horizen.utils.ByteArrayWrapper;
+import io.horizen.utils.Pair;
+import io.horizen.utils.ByteArrayWrapper;
 
 public interface Storage extends AutoCloseable {
 

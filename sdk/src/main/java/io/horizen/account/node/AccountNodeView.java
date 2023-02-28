@@ -1,13 +1,13 @@
 package io.horizen.account.node;
 
-import com.horizen.SidechainNodeViewBase;
-import com.horizen.account.block.AccountBlock;
-import com.horizen.account.block.AccountBlockHeader;
-import com.horizen.account.chain.AccountFeePaymentsInfo;
-import com.horizen.account.transaction.AccountTransaction;
-import com.horizen.node.NodeWalletBase;
-import com.horizen.proof.Proof;
-import com.horizen.proposition.Proposition;
+import io.horizen.SidechainNodeViewBase;
+import io.horizen.account.block.AccountBlock;
+import io.horizen.account.block.AccountBlockHeader;
+import io.horizen.account.chain.AccountFeePaymentsInfo;
+import io.horizen.account.transaction.AccountTransaction;
+import io.horizen.node.NodeWalletBase;
+import io.horizen.proof.Proof;
+import io.horizen.proposition.Proposition;
 
 public class AccountNodeView implements
         SidechainNodeViewBase<

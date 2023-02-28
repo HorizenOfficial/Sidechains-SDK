@@ -1,8 +1,8 @@
 package io.horizen.account.helper
 
 import com.google.inject.{Inject, Provider}
-import com.horizen.account.AccountSidechainApp
-import com.horizen.account.node.AccountNodeView
+import io.horizen.account.AccountSidechainApp
+import io.horizen.account.node.AccountNodeView
 
 import java.util.function.Consumer
 

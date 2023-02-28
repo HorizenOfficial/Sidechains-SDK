@@ -1,9 +1,9 @@
 package io.horizen.utxo.box;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.horizen.utxo.box.data.ForgerBoxData;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.proposition.VrfPublicKey;
+import io.horizen.utxo.box.data.ForgerBoxData;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.proposition.VrfPublicKey;
 
 import static com.horizen.utxo.box.CoreBoxesIdsEnum.ForgerBoxId;
 

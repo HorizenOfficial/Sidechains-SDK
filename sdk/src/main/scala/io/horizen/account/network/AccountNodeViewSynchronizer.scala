@@ -1,12 +1,12 @@
 package io.horizen.account.network
 
 import akka.actor.{ActorRef, ActorRefFactory, Props}
-import com.horizen._
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.network.AbstractSidechainNodeViewSynchronizer
+import io.horizen._
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.storage.AccountHistoryStorage
+import io.horizen.network.AbstractSidechainNodeViewSynchronizer
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.transaction.MempoolReader

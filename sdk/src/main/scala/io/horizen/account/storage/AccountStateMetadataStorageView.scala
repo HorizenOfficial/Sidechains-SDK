@@ -1,14 +1,14 @@
 package io.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSerializer}
-import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
-import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
-import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
-import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.storage.Storage
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
+import io.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSerializer}
+import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
+import io.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
+import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
+import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
+import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import io.horizen.storage.Storage
+import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 import sparkz.core.{VersionTag, versionToBytes}

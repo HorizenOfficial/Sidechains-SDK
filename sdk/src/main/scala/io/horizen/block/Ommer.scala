@@ -1,12 +1,12 @@
 package io.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.account.block.{AccountBlockHeader, AccountBlockHeaderSerializer}
-import com.horizen.history.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
-import com.horizen.params.NetworkParams
-import com.horizen.json.Views
-import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
-import com.horizen.utxo.block.{SidechainBlockHeader, SidechainBlockHeaderSerializer}
+import io.horizen.account.block.{AccountBlockHeader, AccountBlockHeaderSerializer}
+import io.horizen.history.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
+import io.horizen.params.NetworkParams
+import io.horizen.json.Views
+import io.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
+import io.horizen.utxo.block.{SidechainBlockHeader, SidechainBlockHeaderSerializer}
 import sparkz.util.idToBytes
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}

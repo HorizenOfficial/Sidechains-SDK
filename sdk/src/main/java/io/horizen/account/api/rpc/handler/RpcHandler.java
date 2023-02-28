@@ -1,12 +1,12 @@
 package io.horizen.account.api.rpc.handler;
 
-import com.horizen.account.api.rpc.request.RpcRequest;
-import com.horizen.account.api.rpc.response.RpcResponseError;
-import com.horizen.account.api.rpc.response.RpcResponseSuccess;
-import com.horizen.account.api.rpc.service.RpcService;
-import com.horizen.account.api.rpc.utils.RpcCode;
-import com.horizen.account.api.rpc.utils.RpcError;
-import com.horizen.api.http.ApiResponse;
+import io.horizen.account.api.rpc.request.RpcRequest;
+import io.horizen.account.api.rpc.response.RpcResponseError;
+import io.horizen.account.api.rpc.response.RpcResponseSuccess;
+import io.horizen.account.api.rpc.service.RpcService;
+import io.horizen.account.api.rpc.utils.RpcCode;
+import io.horizen.account.api.rpc.utils.RpcError;
+import io.horizen.api.http.ApiResponse;
 
 public class RpcHandler {
     private final RpcService rpcService;

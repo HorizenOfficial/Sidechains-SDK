@@ -1,31 +1,31 @@
 package io.horizen.account.forger
 
 import akka.util.Timeout
-import com.horizen.SidechainTypes
-import com.horizen.account.block.AccountBlock.calculateReceiptRoot
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state._
-import com.horizen.account.state.receipt.EthereumConsensusDataReceipt
-import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.FeeUtils.calculateBaseFee
-import com.horizen.account.utils._
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.block._
-import com.horizen.consensus._
-import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
-import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519, Secret}
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{
+import io.horizen.SidechainTypes
+import io.horizen.account.block.AccountBlock.calculateReceiptRoot
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.PrivateKeySecp256k1
+import io.horizen.account.state._
+import io.horizen.account.state.receipt.EthereumConsensusDataReceipt
+import io.horizen.account.storage.AccountHistoryStorage
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.FeeUtils.calculateBaseFee
+import io.horizen.account.utils._
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.block._
+import io.horizen.consensus._
+import io.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
+import io.horizen.params.NetworkParams
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.secret.{PrivateKey25519, Secret}
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils.{
   ByteArrayWrapper,
   ClosableResourceHandler,
   DynamicTypedSerializer,
@@ -37,7 +37,7 @@ import com.horizen.utils.{
   WithdrawalEpochInfo,
   WithdrawalEpochUtils
 }
-import com.horizen.vrf.VrfOutput
+import io.horizen.vrf.VrfOutput
 import io.horizen.evm.Hash
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}

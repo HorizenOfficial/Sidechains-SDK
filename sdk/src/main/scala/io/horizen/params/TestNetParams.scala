@@ -1,12 +1,12 @@
 package io.horizen.params
 
-import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 
 import java.math.BigInteger
-import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit}
-import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
-import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
+import io.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit}
+import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
+import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import sparkz.util.ModifierId
 import sparkz.util.bytesToId

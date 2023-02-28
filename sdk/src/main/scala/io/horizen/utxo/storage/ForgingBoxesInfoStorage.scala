@@ -1,10 +1,10 @@
 package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.storage.{SidechainStorageInfo, Storage}
-import com.horizen.utils.{ByteArrayWrapper, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, ListSerializer, Pair}
-import com.horizen.utxo.box.{ForgerBox, ForgerBoxSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.consensus.ConsensusEpochNumber
+import io.horizen.storage.{SidechainStorageInfo, Storage}
+import io.horizen.utils.{ByteArrayWrapper, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, ListSerializer, Pair}
+import io.horizen.utxo.box.{ForgerBox, ForgerBoxSerializer}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.SparkzLogging
 

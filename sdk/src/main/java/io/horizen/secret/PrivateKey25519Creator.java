@@ -1,7 +1,7 @@
 package io.horizen.secret;
 
-import com.horizen.utils.Ed25519;
-import com.horizen.utils.Pair;
+import io.horizen.utils.Ed25519;
+import io.horizen.utils.Pair;
 import java.nio.charset.StandardCharsets;
 
 public final class PrivateKey25519Creator implements SecretCreator<PrivateKey25519>

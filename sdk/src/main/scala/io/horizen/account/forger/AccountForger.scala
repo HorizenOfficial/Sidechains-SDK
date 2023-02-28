@@ -1,17 +1,17 @@
 package io.horizen.account.forger
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.{SidechainTypes, _}
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.AccountState
-import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.forge.{AbstractForger, MainchainSynchronizer}
-import com.horizen.params.NetworkParams
+import io.horizen.{SidechainTypes, _}
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.state.AccountState
+import io.horizen.account.storage.AccountHistoryStorage
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.forge.{AbstractForger, MainchainSynchronizer}
+import io.horizen.params.NetworkParams
 import sparkz.core.utils.NetworkTimeProvider
 
 

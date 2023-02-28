@@ -1,13 +1,13 @@
 package io.horizen.secret;
 
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Pair;
-import com.horizen.cryptolibprovider.VrfFunctions;
-import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.proof.VrfProof;
-import com.horizen.proposition.VrfPublicKey;
-import com.horizen.vrf.VrfOutput;
+import io.horizen.proposition.ProofOfKnowledgeProposition;
+import io.horizen.utils.BytesUtils;
+import io.horizen.utils.Pair;
+import io.horizen.cryptolibprovider.VrfFunctions;
+import io.horizen.cryptolibprovider.CryptoLibProvider;
+import io.horizen.proof.VrfProof;
+import io.horizen.proposition.VrfPublicKey;
+import io.horizen.vrf.VrfOutput;
 
 import java.util.Arrays;
 import java.util.EnumMap;

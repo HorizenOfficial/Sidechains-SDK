@@ -1,9 +1,9 @@
 package io.horizen.utxo.box.data;
 
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.proposition.PublicKey25519PropositionSerializer;
-import com.horizen.proposition.VrfPublicKey;
-import com.horizen.proposition.VrfPublicKeySerializer;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.proposition.PublicKey25519PropositionSerializer;
+import io.horizen.proposition.VrfPublicKey;
+import io.horizen.proposition.VrfPublicKeySerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

@@ -1,6 +1,6 @@
 package io.horizen.websocket.client
-import com.horizen.block.{MainchainBlockReference, MainchainHeader}
-import com.horizen.mainchain.api.MainchainNodeCertificateApi
+import io.horizen.block.{MainchainBlockReference, MainchainHeader}
+import io.horizen.mainchain.api.MainchainNodeCertificateApi
 
 import scala.util.Try
 

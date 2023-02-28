@@ -1,7 +1,7 @@
 package io.horizen.account.secret;
 
-import com.horizen.account.utils.Secp256k1;
-import com.horizen.secret.SecretSerializer;
+import io.horizen.account.utils.Secp256k1;
+import io.horizen.secret.SecretSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

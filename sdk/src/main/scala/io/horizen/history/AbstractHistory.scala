@@ -1,17 +1,17 @@
 package io.horizen.history
 
-import com.horizen.SidechainSyncInfo
-import com.horizen.account.state.HistoryBlockHashProvider
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain._
-import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
-import com.horizen.node.NodeHistoryBase
-import com.horizen.params.{NetworkParams, NetworkParamsUtils}
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.storage.leveldb.Algos.encoder
-import com.horizen.transaction.Transaction
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import io.horizen.SidechainSyncInfo
+import io.horizen.account.state.HistoryBlockHashProvider
+import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain._
+import io.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
+import io.horizen.node.NodeHistoryBase
+import io.horizen.params.{NetworkParams, NetworkParamsUtils}
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.storage.leveldb.Algos.encoder
+import io.horizen.transaction.Transaction
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import sparkz.core.NodeViewModifier
 import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}

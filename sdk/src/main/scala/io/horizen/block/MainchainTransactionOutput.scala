@@ -1,6 +1,6 @@
 package io.horizen.block
 
-import com.horizen.utils.{BytesUtils, CompactSize}
+import io.horizen.utils.{BytesUtils, CompactSize}
 
 case class MainchainTransactionOutput(outputBytes: Array[Byte], value: Long, script: Array[Byte]) {
   def size: Int = outputBytes.length

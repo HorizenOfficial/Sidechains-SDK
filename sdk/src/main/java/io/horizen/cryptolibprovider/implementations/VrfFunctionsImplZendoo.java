@@ -1,10 +1,10 @@
 package io.horizen.cryptolibprovider.implementations;
 
-import com.horizen.cryptolibprovider.VrfFunctions;
-import com.horizen.cryptolibprovider.utils.FieldElementUtils;
-import com.horizen.librustsidechains.FieldElement;
-import com.horizen.vrfnative.*;
-import com.horizen.librustsidechains.Constants;
+import io.horizen.cryptolibprovider.VrfFunctions;
+import io.horizen.cryptolibprovider.utils.FieldElementUtils;
+import io.horizen.librustsidechains.FieldElement;
+import io.horizen.vrfnative.*;
+import io.horizen.librustsidechains.Constants;
 
 import java.util.EnumMap;
 import java.util.Optional;

@@ -1,8 +1,8 @@
 package io.horizen.helper
 
 import com.google.inject.{Inject, Provider}
-import com.horizen.AbstractSidechainApp
-import com.horizen.secret.Secret
+import io.horizen.AbstractSidechainApp
+import io.horizen.secret.Secret
 
 class SecretSubmitHelperImpl @Inject()(val appProvider: Provider[AbstractSidechainApp]) extends SecretSubmitHelper {
 

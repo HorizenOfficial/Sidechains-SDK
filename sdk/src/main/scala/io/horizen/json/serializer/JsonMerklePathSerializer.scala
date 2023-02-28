@@ -3,7 +3,7 @@ package io.horizen.json.serializer
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind
 import com.fasterxml.jackson.databind.SerializerProvider
-import com.horizen.utils.{BytesUtils, MerklePath}
+import io.horizen.utils.{BytesUtils, MerklePath}
 
 import scala.collection.JavaConverters._
 

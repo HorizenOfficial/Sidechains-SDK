@@ -1,10 +1,10 @@
 package io.horizen.account.storage
 
-import com.horizen.account.block.{AccountBlock, AccountBlockSerializer}
-import com.horizen.account.chain.{AccountFeePaymentsInfo, AccountFeePaymentsInfoSerializer}
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.params.NetworkParams
-import com.horizen.storage.{AbstractHistoryStorage, Storage}
+import io.horizen.account.block.{AccountBlock, AccountBlockSerializer}
+import io.horizen.account.chain.{AccountFeePaymentsInfo, AccountFeePaymentsInfoSerializer}
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.params.NetworkParams
+import io.horizen.storage.{AbstractHistoryStorage, Storage}
 
 
 class AccountHistoryStorage(storage: Storage,

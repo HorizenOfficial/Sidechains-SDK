@@ -1,20 +1,20 @@
 package io.horizen.account.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.account.block.AccountBlock.{MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE, calculateReceiptRoot}
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
-import com.horizen.account.utils.Bloom
-import com.horizen.block._
-import com.horizen.consensus.ForgingStakeInfo
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.secret.PrivateKey25519
-import com.horizen.json.Views
-import com.horizen.utils.{BytesUtils, ListSerializer, MerklePath}
-import com.horizen.history.validation.InconsistentSidechainBlockDataException
-import com.horizen.vrf.VrfOutput
-import com.horizen.{SidechainTypes, account}
+import io.horizen.account.block.AccountBlock.{MAX_ACCOUNT_BLOCK_OVERHEAD_SIZE, calculateReceiptRoot}
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
+import io.horizen.account.utils.Bloom
+import io.horizen.block._
+import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.secret.PrivateKey25519
+import io.horizen.json.Views
+import io.horizen.utils.{BytesUtils, ListSerializer, MerklePath}
+import io.horizen.history.validation.InconsistentSidechainBlockDataException
+import io.horizen.vrf.VrfOutput
+import io.horizen.{SidechainTypes, account}
 import io.horizen.evm.TrieHasher
 import sparkz.core.block.Block
 import sparkz.util.SparkzLogging

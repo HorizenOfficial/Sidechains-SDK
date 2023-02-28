@@ -4,20 +4,20 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainTypes
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.route.SidechainApiRoute
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
-import com.horizen.json.Views
-import com.horizen.params.NetworkParams
-import com.horizen.utils.BytesUtils
-import com.horizen.utxo.api.http.route.SidechainCswErrorResponse._
-import com.horizen.utxo.api.http.route.SidechainCswRestScheme._
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCswBoxIds, GetCswInfo}
-import com.horizen.utxo.csw.CswManager.Responses._
-import com.horizen.utxo.node._
+import io.horizen.SidechainTypes
+import io.horizen.api.http.JacksonSupport._
+import io.horizen.api.http.route.SidechainApiRoute
+import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import io.horizen.json.Views
+import io.horizen.params.NetworkParams
+import io.horizen.utils.BytesUtils
+import io.horizen.utxo.api.http.route.SidechainCswErrorResponse._
+import io.horizen.utxo.api.http.route.SidechainCswRestScheme._
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCswBoxIds, GetCswInfo}
+import io.horizen.utxo.csw.CswManager.Responses._
+import io.horizen.utxo.node._
 import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}

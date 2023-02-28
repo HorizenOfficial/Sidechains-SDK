@@ -1,10 +1,10 @@
 package io.horizen.node;
 
-import com.horizen.proposition.*;
-import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.SchnorrSecret;
-import com.horizen.secret.Secret;
-import com.horizen.secret.VrfSecretKey;
+import io.horizen.proposition.*;
+import io.horizen.secret.PrivateKey25519;
+import io.horizen.secret.SchnorrSecret;
+import io.horizen.secret.Secret;
+import io.horizen.secret.VrfSecretKey;
 
 import java.util.List;
 import java.util.Optional;

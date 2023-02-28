@@ -1,10 +1,10 @@
 package io.horizen.utxo.storage
 
-import com.horizen.params.NetworkParams
-import com.horizen.storage.{AbstractHistoryStorage, Storage}
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
-import com.horizen.utxo.chain.{FeePaymentsInfoSerializer, SidechainFeePaymentsInfo}
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.params.NetworkParams
+import io.horizen.storage.{AbstractHistoryStorage, Storage}
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
+import io.horizen.utxo.chain.{FeePaymentsInfoSerializer, SidechainFeePaymentsInfo}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 
 class SidechainHistoryStorage(
                     storage: Storage,

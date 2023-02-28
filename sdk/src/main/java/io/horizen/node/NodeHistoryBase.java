@@ -1,14 +1,14 @@
 package io.horizen.node;
 
-import com.horizen.block.MainchainBlockReference;
-import com.horizen.block.MainchainHeader;
-import com.horizen.block.SidechainBlockBase;
-import com.horizen.block.SidechainBlockHeaderBase;
-import com.horizen.chain.AbstractFeePaymentsInfo;
-import com.horizen.chain.MainchainHeaderInfo;
-import com.horizen.chain.SidechainBlockInfo;
-import com.horizen.chain.MainchainBlockReferenceInfo;
-import com.horizen.transaction.Transaction;
+import io.horizen.block.MainchainBlockReference;
+import io.horizen.block.MainchainHeader;
+import io.horizen.block.SidechainBlockBase;
+import io.horizen.block.SidechainBlockHeaderBase;
+import io.horizen.chain.AbstractFeePaymentsInfo;
+import io.horizen.chain.MainchainHeaderInfo;
+import io.horizen.chain.SidechainBlockInfo;
+import io.horizen.chain.MainchainBlockReferenceInfo;
+import io.horizen.transaction.Transaction;
 
 import java.util.List;
 import java.util.Optional;

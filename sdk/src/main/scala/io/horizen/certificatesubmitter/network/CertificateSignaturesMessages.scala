@@ -1,8 +1,8 @@
 package io.horizen.certificatesubmitter.network
 
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.CertificateSignatureInfo
-import com.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.proof.SchnorrSignatureSerializer
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.CertificateSignatureInfo
+import io.horizen.cryptolibprovider.utils.FieldElementUtils
+import io.horizen.proof.SchnorrSignatureSerializer
 import sparkz.core.network.message.{Message, MessageSpecV1}
 import sparkz.util.serialization.{Reader, Writer}
 

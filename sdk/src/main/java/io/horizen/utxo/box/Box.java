@@ -3,8 +3,8 @@ package io.horizen.utxo.box;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.proposition.Proposition;
-import com.horizen.json.Views;
+import io.horizen.proposition.Proposition;
+import io.horizen.json.Views;
 
 /**
  * Just to not farget what is a Box interface

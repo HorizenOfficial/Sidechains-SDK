@@ -3,7 +3,7 @@ package io.horizen.utxo.websocket.server
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.block.SidechainBlock
 import sparkz.util.SparkzLogging
 
 import java.util

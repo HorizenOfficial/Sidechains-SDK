@@ -1,6 +1,6 @@
 package io.horizen.settings;
 
-import com.horizen.SidechainSettings;
+import io.horizen.SidechainSettings;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

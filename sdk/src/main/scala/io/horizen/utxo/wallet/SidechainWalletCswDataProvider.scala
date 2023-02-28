@@ -1,17 +1,17 @@
 package io.horizen.utxo.wallet
 
-import com.horizen.SidechainTypes
-import com.horizen.block.MainchainBlockReferenceData
-import com.horizen.params.NetworkParams
-import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.storage.SidechainStorageInfo
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.ByteArrayWrapper
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.utxo.box.CoinsBox
-import com.horizen.utxo.storage.SidechainWalletCswDataStorage
-import com.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
-import com.horizen.utxo.state.UtxoMerkleTreeView
+import io.horizen.SidechainTypes
+import io.horizen.block.MainchainBlockReferenceData
+import io.horizen.params.NetworkParams
+import io.horizen.proposition.PublicKey25519Proposition
+import io.horizen.storage.SidechainStorageInfo
+import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
+import io.horizen.utils.ByteArrayWrapper
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.box.CoinsBox
+import io.horizen.utxo.storage.SidechainWalletCswDataStorage
+import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
+import io.horizen.utxo.state.UtxoMerkleTreeView
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer

@@ -2,11 +2,11 @@ package io.horizen.companion
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-import com.horizen.SidechainTypes
-import com.horizen.account.secret.PrivateKeySecp256k1Serializer
-import com.horizen.secret.SecretsIdsEnum.{PrivateKey25519SecretId, SchnorrSecretKeyId, VrfPrivateKeySecretId, PrivateKeySecp256k1SecretId}
-import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretSerializer, SecretSerializer, VrfSecretKeySerializer}
-import com.horizen.utils.DynamicTypedSerializer
+import io.horizen.SidechainTypes
+import io.horizen.account.secret.PrivateKeySecp256k1Serializer
+import io.horizen.secret.SecretsIdsEnum.{PrivateKey25519SecretId, SchnorrSecretKeyId, VrfPrivateKeySecretId, PrivateKeySecp256k1SecretId}
+import io.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretSerializer, SecretSerializer, VrfSecretKeySerializer}
+import io.horizen.utils.DynamicTypedSerializer
 
 
 case class SidechainSecretsCompanion(customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]])

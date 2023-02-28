@@ -1,8 +1,8 @@
 package io.horizen.utxo.transaction;
 
-import com.horizen.utxo.box.Box;
-import com.horizen.utxo.box.data.BoxData;
-import com.horizen.proposition.Proposition;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.box.data.BoxData;
+import io.horizen.proposition.Proposition;
 
 import java.util.ArrayList;
 import java.util.Collections;

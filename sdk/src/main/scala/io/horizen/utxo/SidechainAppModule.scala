@@ -2,18 +2,18 @@ package io.horizen.utxo
 
 import com.google.inject.Provides
 import com.google.inject.name.Named
-import com.horizen.api.http.ApplicationApiGroup
-import com.horizen.fork.ForkConfigurator
-import com.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
-import com.horizen.secret.SecretSerializer
-import com.horizen.storage.Storage
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.Pair
-import com.horizen.utxo.box.BoxSerializer
-import com.horizen.utxo.helper.{NodeViewHelper, NodeViewHelperImpl, TransactionSubmitHelper, TransactionSubmitHelperImpl}
-import com.horizen.utxo.state.ApplicationState
-import com.horizen.utxo.wallet.ApplicationWallet
-import com.horizen.{AbstractSidechainApp, SidechainAppStopper, SidechainSettings, SidechainTypes}
+import io.horizen.api.http.ApplicationApiGroup
+import io.horizen.fork.ForkConfigurator
+import io.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
+import io.horizen.secret.SecretSerializer
+import io.horizen.storage.Storage
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils.Pair
+import io.horizen.utxo.box.BoxSerializer
+import io.horizen.utxo.helper.{NodeViewHelper, NodeViewHelperImpl, TransactionSubmitHelper, TransactionSubmitHelperImpl}
+import io.horizen.utxo.state.ApplicationState
+import io.horizen.utxo.wallet.ApplicationWallet
+import io.horizen.{AbstractSidechainApp, SidechainAppStopper, SidechainSettings, SidechainTypes}
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}

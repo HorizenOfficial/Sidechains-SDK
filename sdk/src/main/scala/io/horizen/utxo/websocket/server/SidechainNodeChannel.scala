@@ -1,7 +1,7 @@
 package io.horizen.utxo.websocket.server
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.block.SidechainBlock
 
 import scala.util.Try
 

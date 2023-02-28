@@ -1,7 +1,7 @@
 package io.horizen.account.utils
 
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.history.AccountHistory
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.history.AccountHistory
 import sparkz.core.block.Block.BlockId
 
 import java.math.BigInteger

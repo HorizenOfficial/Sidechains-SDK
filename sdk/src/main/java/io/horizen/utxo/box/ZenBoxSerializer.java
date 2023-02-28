@@ -1,7 +1,7 @@
 package io.horizen.utxo.box;
 
-import com.horizen.utxo.box.data.ZenBoxData;
-import com.horizen.utxo.box.data.ZenBoxDataSerializer;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.box.data.ZenBoxDataSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

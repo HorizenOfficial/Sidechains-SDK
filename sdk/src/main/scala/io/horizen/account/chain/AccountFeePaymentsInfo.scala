@@ -1,10 +1,10 @@
 package io.horizen.account.chain
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.account.utils.{AccountPayment, AccountPaymentSerializer}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.json.Views
-import com.horizen.utils.ListSerializer
+import io.horizen.account.utils.{AccountPayment, AccountPaymentSerializer}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.json.Views
+import io.horizen.utils.ListSerializer
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
 

@@ -2,8 +2,8 @@ package io.horizen.account.api.rpc.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.horizen.account.api.rpc.request.RpcId;
-import com.horizen.api.http.SuccessResponse;
+import io.horizen.account.api.rpc.request.RpcId;
+import io.horizen.api.http.SuccessResponse;
 
 public class RpcResponseSuccess extends RpcResponse implements SuccessResponse {
     @JsonProperty("result")

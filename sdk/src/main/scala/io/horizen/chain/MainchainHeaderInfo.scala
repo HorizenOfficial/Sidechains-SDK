@@ -1,7 +1,7 @@
 package io.horizen.chain
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.json.Views
+import io.horizen.json.Views
 import sparkz.util.ModifierId
 
 @JsonView(Array(classOf[Views.Default]))

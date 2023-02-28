@@ -1,9 +1,9 @@
 package io.horizen.account.state.events;
 
-import com.horizen.account.state.events.annotation.Anonymous;
-import com.horizen.account.state.events.annotation.Indexed;
-import com.horizen.account.state.events.annotation.Parameter;
-import com.horizen.account.state.receipt.EthereumConsensusDataLog;
+import io.horizen.account.state.events.annotation.Anonymous;
+import io.horizen.account.state.events.annotation.Indexed;
+import io.horizen.account.state.events.annotation.Parameter;
+import io.horizen.account.state.receipt.EthereumConsensusDataLog;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
 import org.web3j.abi.EventEncoder;

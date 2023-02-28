@@ -1,6 +1,6 @@
 package io.horizen.node;
 
-import com.horizen.transaction.Transaction;
+import io.horizen.transaction.Transaction;
 
 import java.util.Comparator;
 import java.util.List;

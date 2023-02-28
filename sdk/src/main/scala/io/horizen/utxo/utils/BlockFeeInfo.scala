@@ -1,6 +1,6 @@
 package io.horizen.utxo.utils
 
-import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
+import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

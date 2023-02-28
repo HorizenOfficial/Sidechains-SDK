@@ -1,9 +1,9 @@
 package io.horizen.utxo.helper;
 
-import com.horizen.helper.BaseTransactionSubmitHelper;
-import com.horizen.utxo.box.Box;
-import com.horizen.proposition.Proposition;
-import com.horizen.utxo.transaction.BoxTransaction;
+import io.horizen.helper.BaseTransactionSubmitHelper;
+import io.horizen.utxo.box.Box;
+import io.horizen.proposition.Proposition;
+import io.horizen.utxo.transaction.BoxTransaction;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 

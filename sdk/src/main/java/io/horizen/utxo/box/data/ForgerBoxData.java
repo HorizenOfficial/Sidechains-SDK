@@ -1,9 +1,9 @@
 package io.horizen.utxo.box.data;
 
 import com.google.common.primitives.Bytes;
-import com.horizen.utxo.box.ForgerBox;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.proposition.VrfPublicKey;
+import io.horizen.utxo.box.ForgerBox;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.proposition.VrfPublicKey;
 import sparkz.crypto.hash.Blake2b256;
 import java.util.Objects;
 

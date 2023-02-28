@@ -1,12 +1,12 @@
 package io.horizen.cryptolibprovider.implementations;
 
-import com.horizen.cryptolibprovider.SchnorrFunctions;
-import com.horizen.librustsidechains.Constants;
-import com.horizen.librustsidechains.FieldElement;
-import com.horizen.schnorrnative.SchnorrKeyPair;
-import com.horizen.schnorrnative.SchnorrPublicKey;
-import com.horizen.schnorrnative.SchnorrSecretKey;
-import com.horizen.schnorrnative.SchnorrSignature;
+import io.horizen.cryptolibprovider.SchnorrFunctions;
+import io.horizen.librustsidechains.Constants;
+import io.horizen.librustsidechains.FieldElement;
+import io.horizen.schnorrnative.SchnorrKeyPair;
+import io.horizen.schnorrnative.SchnorrPublicKey;
+import io.horizen.schnorrnative.SchnorrSecretKey;
+import io.horizen.schnorrnative.SchnorrSignature;
 import java.util.EnumMap;
 import static com.horizen.cryptolibprovider.utils.FieldElementUtils.messageToFieldElement;
 import static com.horizen.cryptolibprovider.SchnorrFunctions.KeyType.PUBLIC;

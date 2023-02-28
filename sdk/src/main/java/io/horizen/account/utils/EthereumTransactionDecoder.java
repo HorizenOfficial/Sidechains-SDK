@@ -1,9 +1,9 @@
 package io.horizen.account.utils;
 
-import com.horizen.account.proof.SignatureSecp256k1;
-import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.transaction.EthereumTransaction;
-import com.horizen.utils.BytesUtils;
+import io.horizen.account.proof.SignatureSecp256k1;
+import io.horizen.account.proposition.AddressProposition;
+import io.horizen.account.transaction.EthereumTransaction;
+import io.horizen.utils.BytesUtils;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import org.web3j.utils.Numeric;

@@ -1,10 +1,10 @@
 package io.horizen.utxo.storage
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.SidechainTypes
-import com.horizen.storage.{SidechainStorageInfo, Storage}
-import com.horizen.utils.{ByteArrayWrapper, ListSerializer, Utils, Pair => JPair}
-import com.horizen.utxo.utils.{CswData, CswDataSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.storage.{SidechainStorageInfo, Storage}
+import io.horizen.utils.{ByteArrayWrapper, ListSerializer, Utils, Pair => JPair}
+import io.horizen.utxo.utils.{CswData, CswDataSerializer}
 import sparkz.util.SparkzLogging
 
 import java.nio.charset.StandardCharsets

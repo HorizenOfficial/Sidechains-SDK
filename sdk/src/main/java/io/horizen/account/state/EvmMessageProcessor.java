@@ -4,7 +4,7 @@ import io.horizen.evm.BlockHashCallback;
 import io.horizen.evm.Evm;
 import io.horizen.evm.EvmContext;
 import io.horizen.evm.Hash;
-import com.horizen.utils.BytesUtils;
+import io.horizen.utils.BytesUtils;
 import scala.compat.java8.OptionConverters;
 
 import java.math.BigInteger;

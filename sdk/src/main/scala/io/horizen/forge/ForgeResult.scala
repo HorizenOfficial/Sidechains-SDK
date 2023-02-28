@@ -1,7 +1,7 @@
 package io.horizen.forge
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.transaction.Transaction
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.transaction.Transaction
 
 sealed trait ForgeResult
 

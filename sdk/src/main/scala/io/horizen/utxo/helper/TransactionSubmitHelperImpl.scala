@@ -1,10 +1,10 @@
 package io.horizen.utxo.helper
 
 import com.google.inject.{Inject, Provider}
-import com.horizen.proposition.Proposition
-import com.horizen.utxo.SidechainApp
-import com.horizen.utxo.box.Box
-import com.horizen.utxo.transaction.BoxTransaction
+import io.horizen.proposition.Proposition
+import io.horizen.utxo.SidechainApp
+import io.horizen.utxo.box.Box
+import io.horizen.utxo.transaction.BoxTransaction
 
 import java.lang
 import java.util.Optional

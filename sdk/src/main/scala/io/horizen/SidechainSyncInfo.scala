@@ -1,6 +1,6 @@
 package io.horizen
 
-import com.horizen.block.SidechainBlockBase
+import io.horizen.block.SidechainBlockBase
 import sparkz.core.NodeViewModifier
 import sparkz.core.consensus.History.ModifierIds
 import sparkz.util.ModifierId

@@ -1,10 +1,10 @@
 package io.horizen.account.state.receipt
 
-import com.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import com.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
-import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import com.horizen.account.utils.{Bloom, RlpStreamDecoder, RlpStreamEncoder}
-import com.horizen.utils.BytesUtils
+import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
+import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
+import io.horizen.account.utils.{Bloom, RlpStreamDecoder, RlpStreamEncoder}
+import io.horizen.utils.BytesUtils
 import org.web3j.rlp._
 import sparkz.util.ByteArrayBuilder
 import sparkz.util.serialization.{VLQByteBufferReader, VLQByteBufferWriter}

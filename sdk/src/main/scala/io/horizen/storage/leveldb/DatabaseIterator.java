@@ -1,6 +1,6 @@
 package io.horizen.storage.leveldb;
 
-import com.horizen.storage.StorageIterator;
+import io.horizen.storage.StorageIterator;
 import org.iq80.leveldb.DBIterator;
 
 import java.io.IOException;

@@ -2,8 +2,8 @@ package io.horizen.utxo.box;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
-import com.horizen.utxo.box.data.AbstractBoxData;
-import com.horizen.proposition.Proposition;
+import io.horizen.utxo.box.data.AbstractBoxData;
+import io.horizen.proposition.Proposition;
 import sparkz.crypto.hash.Blake2b256;
 import sparkz.util.SparkzEncoder;
 

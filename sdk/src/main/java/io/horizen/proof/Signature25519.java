@@ -1,9 +1,9 @@
 package io.horizen.proof;
 
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.secret.PrivateKey25519;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Ed25519;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.secret.PrivateKey25519;
+import io.horizen.utils.BytesUtils;
+import io.horizen.utils.Ed25519;
 
 
 public final class Signature25519 extends AbstractSignature25519<PrivateKey25519, PublicKey25519Proposition>

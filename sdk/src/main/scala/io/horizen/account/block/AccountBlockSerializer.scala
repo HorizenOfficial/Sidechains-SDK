@@ -1,9 +1,9 @@
 package io.horizen.account.block
 
-import com.horizen.SidechainTypes
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.block._
-import com.horizen.utils.ListSerializer
+import io.horizen.SidechainTypes
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.block._
+import io.horizen.utils.ListSerializer
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 

@@ -2,12 +2,12 @@ package io.horizen.transaction.mainchain;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
-import com.horizen.utxo.box.ZenBox;
-import com.horizen.utxo.box.data.ZenBoxData;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Utils;
+import io.horizen.block.MainchainTxForwardTransferCrosschainOutput;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.utils.BytesUtils;
+import io.horizen.utils.Utils;
 import sparkz.crypto.hash.Blake2b256;
 
 

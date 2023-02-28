@@ -1,7 +1,7 @@
 package io.horizen.utxo.wallet
 
-import com.horizen.SidechainTypes
-import com.horizen.utxo.companion.SidechainBoxesCompanion
+import io.horizen.SidechainTypes
+import io.horizen.utxo.companion.SidechainBoxesCompanion
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
 import sparkz.util.serialization.{Reader, Writer}

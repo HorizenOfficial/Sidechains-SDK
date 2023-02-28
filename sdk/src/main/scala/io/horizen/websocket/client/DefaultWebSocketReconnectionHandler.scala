@@ -1,6 +1,6 @@
 package io.horizen.websocket.client
 
-import com.horizen.WebSocketSettings
+import io.horizen.WebSocketSettings
 import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration.FiniteDuration

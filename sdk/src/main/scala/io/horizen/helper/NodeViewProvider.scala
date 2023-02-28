@@ -1,10 +1,10 @@
 package io.horizen.helper
 
-import com.horizen.SidechainNodeViewBase
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
-import com.horizen.transaction.Transaction
+import io.horizen.SidechainNodeViewBase
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import io.horizen.transaction.Transaction
 
 trait NodeViewProvider[TX <: Transaction,
   H <: SidechainBlockHeaderBase,

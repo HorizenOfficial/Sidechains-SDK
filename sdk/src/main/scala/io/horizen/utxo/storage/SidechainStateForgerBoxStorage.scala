@@ -1,9 +1,9 @@
 package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.storage.{SidechainStorageInfo, Storage}
-import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
-import com.horizen.utxo.box.{ForgerBox, ForgerBoxSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.storage.{SidechainStorageInfo, Storage}
+import io.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
+import io.horizen.utxo.box.{ForgerBox, ForgerBoxSerializer}
 import sparkz.util.SparkzLogging
 
 import java.util.{ArrayList => JArrayList}

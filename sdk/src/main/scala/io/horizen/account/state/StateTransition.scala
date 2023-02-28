@@ -1,6 +1,6 @@
 package io.horizen.account.state
 
-import com.horizen.account.utils.BigIntegerUtil
+import io.horizen.account.utils.BigIntegerUtil
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger

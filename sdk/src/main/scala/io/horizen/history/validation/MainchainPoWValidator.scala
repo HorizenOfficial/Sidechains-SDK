@@ -1,12 +1,12 @@
 package io.horizen.history.validation
 
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.history.AbstractHistory
-import com.horizen.params.NetworkParams
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
-import com.horizen.utils.BytesUtils
+import io.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.history.AbstractHistory
+import io.horizen.params.NetworkParams
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.Transaction
+import io.horizen.utils.BytesUtils
 import sparkz.util.idToBytes
 
 import scala.util.{Failure, Success, Try}

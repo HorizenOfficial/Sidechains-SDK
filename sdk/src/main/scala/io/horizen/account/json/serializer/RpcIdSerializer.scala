@@ -2,7 +2,7 @@ package io.horizen.account.json.serializer
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.{JsonSerializer, SerializerProvider}
-import com.horizen.account.api.rpc.request.RpcId
+import io.horizen.account.api.rpc.request.RpcId
 
 class RpcIdSerializer extends JsonSerializer[RpcId] {
   override def serialize(rpcId: RpcId, jsonGenerator: JsonGenerator, serializerProvider: SerializerProvider): Unit = {

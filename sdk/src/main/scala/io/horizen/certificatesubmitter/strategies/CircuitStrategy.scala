@@ -1,16 +1,16 @@
 package io.horizen.certificatesubmitter.strategies
 
-import com.horizen._
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.dataproof.CertificateData
-import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.fork.ForkManager
-import com.horizen.history.AbstractHistory
-import com.horizen.params.NetworkParams
-import com.horizen.transaction.Transaction
-import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
+import io.horizen._
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
+import io.horizen.certificatesubmitter.dataproof.CertificateData
+import io.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.consensus.ConsensusEpochNumber
+import io.horizen.fork.ForkManager
+import io.horizen.history.AbstractHistory
+import io.horizen.params.NetworkParams
+import io.horizen.transaction.Transaction
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.transaction.MemoryPool

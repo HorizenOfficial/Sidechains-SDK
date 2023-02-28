@@ -1,15 +1,15 @@
 package io.horizen.cryptolibprovider;
 
-import com.horizen.block.MainchainBackwardTransferCertificateOutput;
-import com.horizen.block.WithdrawalEpochCertificate;
-import com.horizen.utxo.box.WithdrawalRequestBox;
-import com.horizen.certnative.BackwardTransfer;
-import com.horizen.certnative.WithdrawalCertificate;
-import com.horizen.librustsidechains.FieldElement;
-import com.horizen.provingsystemnative.ProvingSystem;
-import com.horizen.provingsystemnative.ProvingSystemType;
-import com.horizen.schnorrnative.SchnorrSignature;
-import com.horizen.utils.BytesUtils;
+import io.horizen.block.MainchainBackwardTransferCertificateOutput;
+import io.horizen.block.WithdrawalEpochCertificate;
+import io.horizen.utxo.box.WithdrawalRequestBox;
+import io.horizen.certnative.BackwardTransfer;
+import io.horizen.certnative.WithdrawalCertificate;
+import io.horizen.librustsidechains.FieldElement;
+import io.horizen.provingsystemnative.ProvingSystem;
+import io.horizen.provingsystemnative.ProvingSystemType;
+import io.horizen.schnorrnative.SchnorrSignature;
+import io.horizen.utils.BytesUtils;
 import scala.Enumeration;
 import scala.collection.Seq;
 

@@ -1,6 +1,6 @@
 package io.horizen.account.history.validation
 
-import com.horizen.history.validation.InvalidBlockException
+import io.horizen.history.validation.InvalidBlockException
 
 
 class MissingTransactionSignatureException(message: String = "", cause: Option[Throwable] = None)

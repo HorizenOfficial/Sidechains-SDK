@@ -1,9 +1,9 @@
 package io.horizen.consensus
 
 import java.util.{ArrayList => JArrayList}
-import com.horizen.storage.{SidechainStorageInfo, Storage}
-import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
-import com.horizen.utils.Utils
+import io.horizen.storage.{SidechainStorageInfo, Storage}
+import io.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import io.horizen.utils.Utils
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.SparkzLogging
 

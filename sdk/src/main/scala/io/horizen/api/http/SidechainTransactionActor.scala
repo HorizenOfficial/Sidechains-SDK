@@ -1,8 +1,8 @@
 package io.horizen.api.http
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.transaction.Transaction
+import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import io.horizen.transaction.Transaction
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 import sparkz.util.{ModifierId, SparkzLogging}

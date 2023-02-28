@@ -1,7 +1,7 @@
 package io.horizen.utxo.transaction;
 
-import com.horizen.utxo.box.BoxUnlocker;
-import com.horizen.utils.ByteArrayWrapper;
+import io.horizen.utxo.box.BoxUnlocker;
+import io.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;
 

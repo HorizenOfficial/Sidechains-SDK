@@ -1,16 +1,16 @@
 package io.horizen.history.validation
 
-import com.horizen.account.block.AccountBlock
-import com.horizen.block.{OmmersContainer, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
-import com.horizen.consensus._
-import com.horizen.fork.ForkManager
-import com.horizen.history.AbstractHistory
-import com.horizen.params.NetworkParams
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
-import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
-import com.horizen.vrf.VrfOutput
+import io.horizen.account.block.AccountBlock
+import io.horizen.block.{OmmersContainer, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
+import io.horizen.consensus._
+import io.horizen.fork.ForkManager
+import io.horizen.history.AbstractHistory
+import io.horizen.params.NetworkParams
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.Transaction
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
+import io.horizen.vrf.VrfOutput
 import sparkz.core.block.Block
 import sparkz.core.utils.TimeProvider
 import sparkz.util.{ModifierId, SparkzLogging}

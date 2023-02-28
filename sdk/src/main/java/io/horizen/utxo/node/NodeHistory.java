@@ -1,12 +1,12 @@
 package io.horizen.utxo.node;
 
-import com.horizen.utxo.block.SidechainBlock;
-import com.horizen.utxo.block.SidechainBlockHeader;
-import com.horizen.node.NodeHistoryBase;
-import com.horizen.utxo.box.Box;
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo;
-import com.horizen.proposition.Proposition;
-import com.horizen.utxo.transaction.BoxTransaction;
+import io.horizen.utxo.block.SidechainBlock;
+import io.horizen.utxo.block.SidechainBlockHeader;
+import io.horizen.node.NodeHistoryBase;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo;
+import io.horizen.proposition.Proposition;
+import io.horizen.utxo.transaction.BoxTransaction;
 
 
 public interface NodeHistory extends NodeHistoryBase<

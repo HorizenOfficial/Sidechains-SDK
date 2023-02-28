@@ -1,7 +1,7 @@
 package io.horizen.utxo.box;
 
-import com.horizen.utxo.box.data.ForgerBoxData;
-import com.horizen.utxo.box.data.ForgerBoxDataSerializer;
+import io.horizen.utxo.box.data.ForgerBoxData;
+import io.horizen.utxo.box.data.ForgerBoxDataSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

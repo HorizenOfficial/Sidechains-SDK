@@ -1,7 +1,7 @@
 package io.horizen.secret;
 
-import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.cryptolibprovider.SchnorrFunctions;
+import io.horizen.cryptolibprovider.CryptoLibProvider;
+import io.horizen.cryptolibprovider.SchnorrFunctions;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 

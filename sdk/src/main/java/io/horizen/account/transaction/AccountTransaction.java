@@ -1,9 +1,9 @@
 package io.horizen.account.transaction;
 
-import com.horizen.proof.Proof;
-import com.horizen.proposition.Proposition;
-import com.horizen.transaction.Transaction;
-import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import io.horizen.proof.Proof;
+import io.horizen.proposition.Proposition;
+import io.horizen.transaction.Transaction;
+import io.horizen.transaction.exception.TransactionSemanticValidityException;
 
 import java.math.BigInteger;
 import java.util.Optional;

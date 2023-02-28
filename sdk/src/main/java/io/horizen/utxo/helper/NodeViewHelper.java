@@ -1,6 +1,6 @@
 package io.horizen.utxo.helper;
 
-import com.horizen.utxo.node.SidechainNodeView;
+import io.horizen.utxo.node.SidechainNodeView;
 import java.util.function.Consumer;
 
 public interface NodeViewHelper {

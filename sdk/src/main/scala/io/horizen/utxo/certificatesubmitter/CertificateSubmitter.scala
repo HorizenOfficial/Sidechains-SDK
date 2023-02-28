@@ -1,21 +1,21 @@
 package io.horizen.utxo.certificatesubmitter
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen._
-import com.horizen.api.http.client.SecureEnclaveApiClient
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
-import com.horizen.certificatesubmitter.dataproof.CertificateData
-import com.horizen.certificatesubmitter.strategies._
-import com.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
-import com.horizen.params.NetworkParams
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.state.SidechainState
-import com.horizen.utxo.storage.SidechainHistoryStorage
-import com.horizen.utxo.wallet.SidechainWallet
-import com.horizen.websocket.client.MainchainNodeChannel
+import io.horizen._
+import io.horizen.api.http.client.SecureEnclaveApiClient
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter
+import io.horizen.certificatesubmitter.dataproof.CertificateData
+import io.horizen.certificatesubmitter.strategies._
+import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
+import io.horizen.params.NetworkParams
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.utxo.wallet.SidechainWallet
+import io.horizen.websocket.client.MainchainNodeChannel
 import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.concurrent.ExecutionContext

@@ -3,17 +3,17 @@ package io.horizen.api.http.route
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewBase
-import com.horizen.api.http.route.MainchainErrorResponse._
-import com.horizen.api.http.route.MainchainRestSchema._
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainBlockReferenceInfo, MainchainHeaderInfo}
-import com.horizen.json.Views
-import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
-import com.horizen.transaction.Transaction
-import com.horizen.utils.BytesUtils
+import io.horizen.SidechainNodeViewBase
+import io.horizen.api.http.route.MainchainErrorResponse._
+import io.horizen.api.http.route.MainchainRestSchema._
+import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import io.horizen.api.http.JacksonSupport._
+import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainBlockReferenceInfo, MainchainHeaderInfo}
+import io.horizen.json.Views
+import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import io.horizen.transaction.Transaction
+import io.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding
 

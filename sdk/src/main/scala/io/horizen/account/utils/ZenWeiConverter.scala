@@ -1,6 +1,6 @@
 package io.horizen.account.utils
 
-import com.horizen.utils.ZenCoinsUtils
+import io.horizen.utils.ZenCoinsUtils
 
 import java.math.BigInteger
 

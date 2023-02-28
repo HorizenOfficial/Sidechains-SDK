@@ -1,9 +1,9 @@
 package io.horizen.account.api.rpc.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.horizen.account.api.rpc.request.RpcId;
-import com.horizen.account.api.rpc.utils.RpcError;
-import com.horizen.api.http.ErrorResponse;
+import io.horizen.account.api.rpc.request.RpcId;
+import io.horizen.account.api.rpc.utils.RpcError;
+import io.horizen.api.http.ErrorResponse;
 
 import java.util.Optional;
 

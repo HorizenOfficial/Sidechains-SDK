@@ -2,14 +2,14 @@ package io.horizen.account.proof;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.secret.PrivateKeySecp256k1;
-import com.horizen.account.utils.Secp256k1;
+import io.horizen.account.proposition.AddressProposition;
+import io.horizen.account.secret.PrivateKeySecp256k1;
+import io.horizen.account.utils.Secp256k1;
 import io.horizen.evm.Address;
-import com.horizen.proof.ProofOfKnowledge;
-import com.horizen.proof.ProofSerializer;
-import com.horizen.json.Views;
-import com.horizen.utils.BytesUtils;
+import io.horizen.proof.ProofOfKnowledge;
+import io.horizen.proof.ProofSerializer;
+import io.horizen.json.Views;
+import io.horizen.utils.BytesUtils;
 
 @JsonView(Views.Default.class)
 public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp256k1, AddressProposition> {

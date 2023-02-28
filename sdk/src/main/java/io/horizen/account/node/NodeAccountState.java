@@ -1,8 +1,8 @@
 package io.horizen.account.node;
 
-import com.horizen.account.state.AccountStateReader;
-import com.horizen.node.NodeStateBase;
-import com.horizen.state.BaseStateReader;
+import io.horizen.account.state.AccountStateReader;
+import io.horizen.node.NodeStateBase;
+import io.horizen.state.BaseStateReader;
 
 public interface NodeAccountState extends NodeStateBase, AccountStateReader, BaseStateReader {
 

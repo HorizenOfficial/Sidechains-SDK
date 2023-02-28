@@ -1,21 +1,21 @@
 package io.horizen.storage
 
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, MainchainBlockReferenceDataInfo, MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
-import com.horizen.params.NetworkParams
-import com.horizen.utils.ByteArrayWrapper
+import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, MainchainBlockReferenceDataInfo, MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
+import io.horizen.params.NetworkParams
+import io.horizen.utils.ByteArrayWrapper
 import sparkz.core.consensus.ModifierSemanticValidity
-import com.horizen.transaction.Transaction
+import io.horizen.transaction.Transaction
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
-import com.horizen.utils._
+import io.horizen.utils._
 
 import java.util.{ArrayList => JArrayList, List => JList}
-import com.horizen.utils.{Pair => JPair}
+import io.horizen.utils.{Pair => JPair}
 import sparkz.core.serialization.SparkzSerializer
 
 trait SidechainBlockInfoProvider {

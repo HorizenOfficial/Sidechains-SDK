@@ -1,17 +1,17 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import com.horizen.account.abi.{ABIDecoder, ABIEncodable}
-import com.horizen.account.state.CertificateKeyRotationMsgProcessor.{CertificateKeyRotationContractAddress, CertificateKeyRotationContractCode, SubmitKeyRotationReqCmdSig}
-import com.horizen.account.state.events.SubmitKeyRotation
-import com.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
-import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.params.NetworkParams
-import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import io.horizen.account.abi.{ABIDecoder, ABIEncodable}
+import io.horizen.account.state.CertificateKeyRotationMsgProcessor.{CertificateKeyRotationContractAddress, CertificateKeyRotationContractCode, SubmitKeyRotationReqCmdSig}
+import io.horizen.account.state.events.SubmitKeyRotation
+import io.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
+import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.params.NetworkParams
+import io.horizen.proof.SchnorrProof
+import io.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
 import io.horizen.evm.Address
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}

@@ -1,8 +1,8 @@
 package io.horizen.utxo.chain
 
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.utxo.box.ZenBox
-import com.horizen.utxo.transaction.{FeePaymentsTransaction, FeePaymentsTransactionSerializer}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.utxo.box.ZenBox
+import io.horizen.utxo.transaction.{FeePaymentsTransaction, FeePaymentsTransactionSerializer}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
 

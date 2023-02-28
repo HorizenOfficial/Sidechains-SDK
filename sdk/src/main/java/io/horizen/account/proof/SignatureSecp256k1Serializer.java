@@ -1,7 +1,7 @@
 package io.horizen.account.proof;
 
-import com.horizen.account.utils.Secp256k1;
-import com.horizen.proof.ProofSerializer;
+import io.horizen.account.utils.Secp256k1;
+import io.horizen.proof.ProofSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

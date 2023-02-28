@@ -2,13 +2,13 @@ package io.horizen.chain
 
 import com.fasterxml.jackson.annotation._
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.json.Views
-import com.horizen.json.serializer.ModifierSemanticValiditySerializer
-import com.horizen.transaction.Transaction
-import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
-import com.horizen.utxo.block.SidechainBlock
-import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.json.Views
+import io.horizen.json.serializer.ModifierSemanticValiditySerializer
+import io.horizen.transaction.Transaction
+import io.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import io.horizen.utxo.block.SidechainBlock
+import io.horizen.vrf.{VrfOutput, VrfOutputSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
 import sparkz.core.NodeViewModifier

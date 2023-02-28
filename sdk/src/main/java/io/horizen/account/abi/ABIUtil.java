@@ -1,7 +1,7 @@
 package io.horizen.account.abi;
 
-import com.horizen.account.state.ExecutionFailedException;
-import com.horizen.utils.BytesUtils;
+import io.horizen.account.state.ExecutionFailedException;
+import io.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 import sparkz.crypto.hash.Keccak256;
 

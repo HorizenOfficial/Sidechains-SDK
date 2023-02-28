@@ -1,7 +1,7 @@
 package io.horizen.account.secret;
 
-import com.horizen.account.utils.Secp256k1;
-import com.horizen.secret.SecretCreator;
+import io.horizen.account.utils.Secp256k1;
+import io.horizen.secret.SecretCreator;
 import java.nio.charset.StandardCharsets;
 
 

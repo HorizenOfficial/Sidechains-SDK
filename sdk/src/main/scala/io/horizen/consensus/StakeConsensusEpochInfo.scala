@@ -1,6 +1,6 @@
 package io.horizen.consensus
 
-import com.horizen.utils._
+import io.horizen.utils._
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

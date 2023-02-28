@@ -1,14 +1,14 @@
 package io.horizen.utxo.node;
 
-import com.horizen.SidechainNodeViewBase;
-import com.horizen.utxo.block.SidechainBlock;
-import com.horizen.utxo.block.SidechainBlockHeader;
-import com.horizen.utxo.box.Box;
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo;
-import com.horizen.proposition.Proposition;
-import com.horizen.utxo.state.ApplicationState;
-import com.horizen.utxo.transaction.BoxTransaction;
-import com.horizen.utxo.wallet.ApplicationWallet;
+import io.horizen.SidechainNodeViewBase;
+import io.horizen.utxo.block.SidechainBlock;
+import io.horizen.utxo.block.SidechainBlockHeader;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo;
+import io.horizen.proposition.Proposition;
+import io.horizen.utxo.state.ApplicationState;
+import io.horizen.utxo.transaction.BoxTransaction;
+import io.horizen.utxo.wallet.ApplicationWallet;
 
 public class SidechainNodeView implements
         SidechainNodeViewBase<

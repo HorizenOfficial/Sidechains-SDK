@@ -1,6 +1,6 @@
 package io.horizen.helper;
 
-import com.horizen.transaction.Transaction;
+import io.horizen.transaction.Transaction;
 
 import java.util.Optional;
 import java.util.function.BiConsumer;

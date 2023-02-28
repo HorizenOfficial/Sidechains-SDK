@@ -3,10 +3,10 @@ package io.horizen.api.http.route
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
-import com.horizen.AbstractSidechainNodeViewHolder
+import io.horizen.AbstractSidechainNodeViewHolder
 import akka.pattern.ask
-import com.horizen.api.http.{ApplicationApiGroup, FunctionsApplierOnSidechainNodeView}
-import com.horizen.utxo.node.SidechainNodeView
+import io.horizen.api.http.{ApplicationApiGroup, FunctionsApplierOnSidechainNodeView}
+import io.horizen.utxo.node.SidechainNodeView
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding

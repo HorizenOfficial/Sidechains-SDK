@@ -1,14 +1,14 @@
 package io.horizen.utxo.transaction;
 
-import com.horizen.transaction.TransactionSerializer;
-import com.horizen.utxo.box.Box;
-import com.horizen.proof.Proof;
-import com.horizen.proof.ProofSerializer;
-import com.horizen.proof.Signature25519Serializer;
-import com.horizen.proposition.Proposition;
-import com.horizen.utils.DynamicTypedSerializer;
-import com.horizen.utils.ListSerializer;
-import com.horizen.utxo.box.data.*;
+import io.horizen.transaction.TransactionSerializer;
+import io.horizen.utxo.box.Box;
+import io.horizen.proof.Proof;
+import io.horizen.proof.ProofSerializer;
+import io.horizen.proof.Signature25519Serializer;
+import io.horizen.proposition.Proposition;
+import io.horizen.utils.DynamicTypedSerializer;
+import io.horizen.utils.ListSerializer;
+import io.horizen.utxo.box.data.*;
 import sparkz.core.NodeViewModifier$;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;

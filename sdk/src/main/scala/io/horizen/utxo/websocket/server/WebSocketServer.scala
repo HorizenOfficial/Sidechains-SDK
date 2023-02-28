@@ -1,7 +1,7 @@
 package io.horizen.utxo.websocket.server
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.block.SidechainBlock
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 import sparkz.util.SparkzLogging
 

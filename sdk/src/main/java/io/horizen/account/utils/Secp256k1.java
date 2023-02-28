@@ -1,9 +1,9 @@
 package io.horizen.account.utils;
 
-import com.horizen.account.proposition.AddressProposition;
+import io.horizen.account.proposition.AddressProposition;
 import io.horizen.evm.Address;
-import com.horizen.utils.ChaChaPrngSecureRandom;
-import com.horizen.utils.Pair;
+import io.horizen.utils.ChaChaPrngSecureRandom;
+import io.horizen.utils.Pair;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
 import sparkz.crypto.hash.Keccak256;

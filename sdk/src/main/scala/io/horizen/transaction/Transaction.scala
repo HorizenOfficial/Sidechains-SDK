@@ -1,6 +1,6 @@
 package io.horizen.transaction
 
-import com.horizen.transaction.exception.TransactionSemanticValidityException
+import io.horizen.transaction.exception.TransactionSemanticValidityException
 
 abstract class Transaction
   extends sparkz.core.transaction.Transaction

@@ -1,7 +1,7 @@
 package io.horizen.utxo.mempool
 
-import com.horizen.SidechainTypes
-import com.horizen.utils.FeeRate
+import io.horizen.SidechainTypes
+import io.horizen.utils.FeeRate
 
 case class SidechainMemoryPoolEntry(unconfirmedTx: SidechainTypes#SCBT) {
   def getUnconfirmedTx(): SidechainTypes#SCBT = {

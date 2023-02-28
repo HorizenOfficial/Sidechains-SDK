@@ -1,11 +1,11 @@
 package io.horizen.state
 
-import com.horizen.account.state.receipt.EthereumReceipt
-import com.horizen.account.utils.AccountBlockFeeInfo
-import com.horizen.block.WithdrawalEpochCertificate
-import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.transaction.Transaction
-import com.horizen.utils.WithdrawalEpochInfo
+import io.horizen.account.state.receipt.EthereumReceipt
+import io.horizen.account.utils.AccountBlockFeeInfo
+import io.horizen.block.WithdrawalEpochCertificate
+import io.horizen.consensus.ConsensusEpochNumber
+import io.horizen.transaction.Transaction
+import io.horizen.utils.WithdrawalEpochInfo
 import sparkz.util.ModifierId
 import sparkz.core.VersionTag
 

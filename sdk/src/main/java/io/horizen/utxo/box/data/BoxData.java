@@ -1,7 +1,7 @@
 package io.horizen.utxo.box.data;
 
-import com.horizen.utxo.box.Box;
-import com.horizen.proposition.Proposition;
+import io.horizen.utxo.box.Box;
+import io.horizen.proposition.Proposition;
 import sparkz.core.serialization.BytesSerializable;
 
 public interface BoxData<P extends Proposition, B extends Box<P>> extends BytesSerializable {

@@ -1,7 +1,7 @@
 package io.horizen.account.utils;
 
-import com.horizen.account.proposition.AddressProposition;
-import com.horizen.utils.BytesUtils;
+import io.horizen.account.proposition.AddressProposition;
+import io.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 import java.util.Optional;

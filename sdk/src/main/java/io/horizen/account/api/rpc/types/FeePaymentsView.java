@@ -1,6 +1,6 @@
 package io.horizen.account.api.rpc.types;
 
-import com.horizen.account.chain.AccountFeePaymentsInfo;
+import io.horizen.account.chain.AccountFeePaymentsInfo;
 import io.horizen.evm.Address;
 import scala.collection.JavaConverters;
 

@@ -1,12 +1,12 @@
 
 package io.horizen.account.wallet
 
-import com.horizen.account.block.AccountBlock
-import com.horizen.consensus.ConsensusEpochInfo
-import com.horizen.node.NodeWalletBase
-import com.horizen.storage.SidechainSecretStorage
-import com.horizen.SidechainTypes
-import com.horizen.wallet.AbstractWallet
+import io.horizen.account.block.AccountBlock
+import io.horizen.consensus.ConsensusEpochInfo
+import io.horizen.node.NodeWalletBase
+import io.horizen.storage.SidechainSecretStorage
+import io.horizen.SidechainTypes
+import io.horizen.wallet.AbstractWallet
 import sparkz.core.VersionTag
 import sparkz.util.SparkzLogging
 

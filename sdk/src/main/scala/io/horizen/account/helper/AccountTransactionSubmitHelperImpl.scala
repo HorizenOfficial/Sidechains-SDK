@@ -1,8 +1,8 @@
 package io.horizen.account.helper
 
 import com.google.inject.{Inject, Provider}
-import com.horizen.SidechainTypes
-import com.horizen.account.AccountSidechainApp
+import io.horizen.SidechainTypes
+import io.horizen.account.AccountSidechainApp
 
 import java.lang
 import java.util.Optional

@@ -1,10 +1,10 @@
 package io.horizen.secret;
 
-import com.horizen.proof.SchnorrProof;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proposition.SchnorrProposition;
-import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.utils.BytesUtils;
+import io.horizen.proof.SchnorrProof;
+import io.horizen.proposition.ProofOfKnowledgeProposition;
+import io.horizen.proposition.SchnorrProposition;
+import io.horizen.cryptolibprovider.CryptoLibProvider;
+import io.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 import java.util.Objects;

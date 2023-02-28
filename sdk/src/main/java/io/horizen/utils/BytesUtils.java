@@ -5,8 +5,8 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import com.horizen.params.MainNetParams;
-import com.horizen.params.NetworkParams;
+import io.horizen.params.MainNetParams;
+import io.horizen.params.NetworkParams;
 
 import sparkz.util.encode.Base58;
 

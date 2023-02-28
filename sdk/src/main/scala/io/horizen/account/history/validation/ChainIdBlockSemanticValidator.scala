@@ -1,9 +1,9 @@
 package io.horizen.account.history.validation
 
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.transaction.{AccountTransactionsIdsEnum, EthereumTransaction}
-import com.horizen.history.validation.SemanticBlockValidator
-import com.horizen.params.NetworkParams
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.transaction.{AccountTransactionsIdsEnum, EthereumTransaction}
+import io.horizen.history.validation.SemanticBlockValidator
+import io.horizen.params.NetworkParams
 import sparkz.util.SparkzLogging
 
 import scala.util.Try

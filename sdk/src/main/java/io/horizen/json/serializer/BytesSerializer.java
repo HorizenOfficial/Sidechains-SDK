@@ -3,7 +3,7 @@ package io.horizen.json.serializer;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.horizen.utils.BytesUtils;
+import io.horizen.utils.BytesUtils;
 
 
 import java.io.IOException;

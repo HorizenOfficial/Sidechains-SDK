@@ -1,9 +1,9 @@
 package io.horizen.cryptolibprovider.utils;
 
 import com.google.common.collect.*;
-import com.horizen.librustsidechains.FieldElement;
-import com.horizen.merkletreenative.InMemorySparseMerkleTree;
-import com.horizen.merkletreenative.MerklePath;
+import io.horizen.librustsidechains.FieldElement;
+import io.horizen.merkletreenative.InMemorySparseMerkleTree;
+import io.horizen.merkletreenative.MerklePath;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

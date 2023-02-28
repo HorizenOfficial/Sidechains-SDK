@@ -3,10 +3,10 @@ package io.horizen.block
 import java.time.Instant
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.history.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
-import com.horizen.params.NetworkParams
-import com.horizen.json.Views
-import com.horizen.utils.{BytesUtils, Utils}
+import io.horizen.history.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
+import io.horizen.params.NetworkParams
+import io.horizen.json.Views
+import io.horizen.utils.{BytesUtils, Utils}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

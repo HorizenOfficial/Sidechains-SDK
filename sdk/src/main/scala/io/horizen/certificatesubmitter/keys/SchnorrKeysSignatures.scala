@@ -1,8 +1,8 @@
 package io.horizen.certificatesubmitter.keys
 
-import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.SchnorrProposition
-import com.horizen.utils.BytesUtils
+import io.horizen.proof.SchnorrProof
+import io.horizen.proposition.SchnorrProposition
+import io.horizen.utils.BytesUtils
 
 case class SchnorrKeysSignatures(
                                   schnorrSigners: Seq[SchnorrProposition],

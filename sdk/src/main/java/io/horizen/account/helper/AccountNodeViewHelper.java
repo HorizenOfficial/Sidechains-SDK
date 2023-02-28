@@ -1,6 +1,6 @@
 package io.horizen.account.helper;
 
-import com.horizen.account.node.AccountNodeView;
+import io.horizen.account.node.AccountNodeView;
 
 import java.util.function.Consumer;
 

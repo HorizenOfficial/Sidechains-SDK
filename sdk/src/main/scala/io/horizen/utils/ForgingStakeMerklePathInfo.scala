@@ -1,6 +1,6 @@
 package io.horizen.utils
 
-import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
+import io.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

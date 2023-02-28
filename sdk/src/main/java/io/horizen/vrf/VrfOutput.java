@@ -2,9 +2,9 @@ package io.horizen.vrf;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.json.Views;
-import com.horizen.utils.BytesUtils;
+import io.horizen.cryptolibprovider.CryptoLibProvider;
+import io.horizen.json.Views;
+import io.horizen.utils.BytesUtils;
 import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
 

@@ -1,14 +1,14 @@
 package io.horizen.certificatesubmitter.strategies
 
-import com.horizen._
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
-import com.horizen.certnative.BackwardTransfer
-import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
-import com.horizen.history.AbstractHistory
-import com.horizen.params.NetworkParams
-import com.horizen.transaction.Transaction
+import io.horizen._
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
+import io.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
+import io.horizen.certnative.BackwardTransfer
+import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
+import io.horizen.history.AbstractHistory
+import io.horizen.params.NetworkParams
+import io.horizen.transaction.Transaction
 
 import java.util.Optional
 import scala.collection.JavaConverters._

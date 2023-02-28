@@ -1,7 +1,7 @@
 package io.horizen.account.utils
 
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.transaction.EthereumTransaction
 
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter

@@ -1,9 +1,9 @@
 package io.horizen.utxo.mempool
 
-import com.horizen.utxo.box.{Box, WithdrawalRequestBox}
-import com.horizen.utxo.node.NodeMemoryPool
-import com.horizen.utxo.transaction.BoxTransaction
-import com.horizen.{MempoolSettings, SidechainTypes, utxo}
+import io.horizen.utxo.box.{Box, WithdrawalRequestBox}
+import io.horizen.utxo.node.NodeMemoryPool
+import io.horizen.utxo.transaction.BoxTransaction
+import io.horizen.{MempoolSettings, SidechainTypes, utxo}
 import sparkz.core.transaction.MempoolReader
 import sparkz.util.{ModifierId, SparkzLogging}
 

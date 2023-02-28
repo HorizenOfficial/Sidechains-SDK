@@ -1,6 +1,6 @@
 package io.horizen.account.state;
 
-import com.horizen.account.block.AccountBlockHeader;
+import io.horizen.account.block.AccountBlockHeader;
 import io.horizen.evm.results.EvmResult;
 import io.horizen.evm.TraceOptions;
 import io.horizen.evm.Address;

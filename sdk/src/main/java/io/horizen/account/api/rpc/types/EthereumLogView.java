@@ -1,7 +1,7 @@
 package io.horizen.account.api.rpc.types;
 
-import com.horizen.account.state.receipt.EthereumConsensusDataLog;
-import com.horizen.account.state.receipt.EthereumReceipt;
+import io.horizen.account.state.receipt.EthereumConsensusDataLog;
+import io.horizen.account.state.receipt.EthereumReceipt;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
 

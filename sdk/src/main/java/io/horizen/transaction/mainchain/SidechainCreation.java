@@ -2,14 +2,14 @@ package io.horizen.transaction.mainchain;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
-import com.horizen.utxo.box.ForgerBox;
-import com.horizen.utxo.box.data.ForgerBoxData;
-import com.horizen.consensus.ForgingStakeInfo;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Utils;
-import com.horizen.proposition.VrfPublicKey;
+import io.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
+import io.horizen.utxo.box.ForgerBox;
+import io.horizen.utxo.box.data.ForgerBoxData;
+import io.horizen.consensus.ForgingStakeInfo;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.utils.BytesUtils;
+import io.horizen.utils.Utils;
+import io.horizen.proposition.VrfPublicKey;
 import scala.compat.java8.OptionConverters;
 import sparkz.crypto.hash.Blake2b256;
 

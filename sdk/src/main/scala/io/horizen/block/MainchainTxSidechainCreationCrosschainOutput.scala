@@ -1,11 +1,11 @@
 package io.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.commitmenttreenative.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
-import com.horizen.utils.{BytesUtils, Utils, CompactSize}
-import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
-import com.horizen.json.serializer.{ReverseBytesOptSerializer, ReverseBytesSerializer}
+import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import io.horizen.commitmenttreenative.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
+import io.horizen.utils.{BytesUtils, Utils, CompactSize}
+import io.horizen.librustsidechains.{Utils => ScCryptoUtils}
+import io.horizen.json.serializer.{ReverseBytesOptSerializer, ReverseBytesSerializer}
 
 import scala.util.Try
 

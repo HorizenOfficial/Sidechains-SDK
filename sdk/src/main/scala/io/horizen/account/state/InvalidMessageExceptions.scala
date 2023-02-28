@@ -1,9 +1,9 @@
 package io.horizen.account.state
 
-import com.horizen.account.state.InvalidMessageException.toHex
-import com.horizen.account.utils.Secp256k1
-import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.BytesUtils
+import io.horizen.account.state.InvalidMessageException.toHex
+import io.horizen.account.utils.Secp256k1
+import io.horizen.transaction.exception.TransactionSemanticValidityException
+import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
 
 import java.math.BigInteger

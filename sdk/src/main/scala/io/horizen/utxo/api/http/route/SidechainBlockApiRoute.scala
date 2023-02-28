@@ -3,18 +3,18 @@ package io.horizen.utxo.api.http.route
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainTypes
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.route.BlockBaseApiRoute
-import com.horizen.api.http.route.BlockBaseRestSchema.ReqFeePayments
-import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
-import com.horizen.json.Views
-import com.horizen.params.NetworkParams
-import com.horizen.utxo.api.http.route.SidechainBlockRestSchema._
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.box.ZenBox
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.node._
+import io.horizen.SidechainTypes
+import io.horizen.api.http.JacksonSupport._
+import io.horizen.api.http.route.BlockBaseApiRoute
+import io.horizen.api.http.route.BlockBaseRestSchema.ReqFeePayments
+import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
+import io.horizen.json.Views
+import io.horizen.params.NetworkParams
+import io.horizen.utxo.api.http.route.SidechainBlockRestSchema._
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.box.ZenBox
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.node._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.RESTApiSettings
 

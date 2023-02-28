@@ -2,10 +2,10 @@ package io.horizen.utxo.companion
 
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
-import com.horizen.utxo.box.CoreBoxesIdsEnum._
-import com.horizen.SidechainTypes
-import com.horizen.utxo.box._
-import com.horizen.utils.DynamicTypedSerializer
+import io.horizen.utxo.box.CoreBoxesIdsEnum._
+import io.horizen.SidechainTypes
+import io.horizen.utxo.box._
+import io.horizen.utils.DynamicTypedSerializer
 
 
 case class SidechainBoxesCompanion(customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]])

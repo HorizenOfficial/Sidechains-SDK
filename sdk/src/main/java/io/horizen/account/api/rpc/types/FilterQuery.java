@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
-import com.horizen.account.api.rpc.handler.RpcException;
-import com.horizen.account.api.rpc.utils.RpcCode;
-import com.horizen.account.api.rpc.utils.RpcError;
+import io.horizen.account.api.rpc.handler.RpcException;
+import io.horizen.account.api.rpc.utils.RpcCode;
+import io.horizen.account.api.rpc.utils.RpcError;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
 

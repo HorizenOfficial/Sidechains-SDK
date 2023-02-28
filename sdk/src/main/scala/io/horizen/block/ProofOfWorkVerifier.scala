@@ -1,11 +1,11 @@
 package io.horizen.block
 
 import com.google.common.primitives.UnsignedInts
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.params.NetworkParams
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
-import com.horizen.utils.{BytesUtils, Utils}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.params.NetworkParams
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.Transaction
+import io.horizen.utils.{BytesUtils, Utils}
 
 import java.math.BigInteger
 import scala.util.control.Breaks._

@@ -1,14 +1,14 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
-import com.horizen.account.state.events.AddWithdrawalRequest
-import com.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
-import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
-import com.horizen.utils.ZenCoinsUtils
+import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
+import io.horizen.account.state.events.AddWithdrawalRequest
+import io.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
+import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.proposition.MCPublicKeyHashProposition
+import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
+import io.horizen.utils.ZenCoinsUtils
 import io.horizen.evm.Address
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}

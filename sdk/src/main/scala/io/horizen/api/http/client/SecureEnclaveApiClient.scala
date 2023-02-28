@@ -5,13 +5,13 @@ import akka.http.scaladsl.client.RequestBuilding.Post
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.http.scaladsl.{Http, HttpExt}
-import com.horizen.RemoteKeysManagerSettings
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.client.SecureEnclaveApiClient.{CreateSignatureRequest, CreateSignatureResponse, ListPublicKeysRequest, ListPublicKeysResponse}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.CertificateSignatureInfo
-import com.horizen.proof.SchnorrSignatureSerializer
-import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
-import com.horizen.utils.BytesUtils
+import io.horizen.RemoteKeysManagerSettings
+import io.horizen.api.http.JacksonSupport._
+import io.horizen.api.http.client.SecureEnclaveApiClient.{CreateSignatureRequest, CreateSignatureResponse, ListPublicKeysRequest, ListPublicKeysResponse}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.CertificateSignatureInfo
+import io.horizen.proof.SchnorrSignatureSerializer
+import io.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import io.horizen.utils.BytesUtils
 import io.circe.generic.auto._
 import io.circe.syntax._
 import sparkz.util.SparkzLogging

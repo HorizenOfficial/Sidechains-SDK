@@ -1,7 +1,7 @@
 package io.horizen.utils
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.transaction.mainchain.SidechainCreation
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.transaction.mainchain.SidechainCreation
 import scala.util.Try
 
 object BlockUtils {

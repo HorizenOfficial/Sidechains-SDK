@@ -1,7 +1,7 @@
 package io.horizen.utxo.box.data;
 
-import com.horizen.proposition.MCPublicKeyHashProposition;
-import com.horizen.proposition.MCPublicKeyHashPropositionSerializer;
+import io.horizen.proposition.MCPublicKeyHashProposition;
+import io.horizen.proposition.MCPublicKeyHashPropositionSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

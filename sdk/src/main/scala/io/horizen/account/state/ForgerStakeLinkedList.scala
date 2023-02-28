@@ -1,7 +1,7 @@
 package io.horizen.account.state
 
-import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
-import com.horizen.utils.BytesUtils
+import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
+import io.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.crypto.hash.Blake2b256

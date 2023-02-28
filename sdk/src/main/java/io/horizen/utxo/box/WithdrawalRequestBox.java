@@ -1,7 +1,7 @@
 package io.horizen.utxo.box;
 
-import com.horizen.utxo.box.data.WithdrawalRequestBoxData;
-import com.horizen.proposition.MCPublicKeyHashProposition;
+import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
+import io.horizen.proposition.MCPublicKeyHashProposition;
 
 
 public final class WithdrawalRequestBox

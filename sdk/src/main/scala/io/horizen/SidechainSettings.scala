@@ -1,6 +1,6 @@
 package io.horizen
 
-import com.horizen.cryptolibprovider.CircuitTypes
+import io.horizen.cryptolibprovider.CircuitTypes
 import CircuitTypes.CircuitTypes
 import sparkz.core.settings.SparkzSettings
 

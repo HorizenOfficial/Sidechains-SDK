@@ -1,10 +1,10 @@
 package io.horizen.state
 
-import com.horizen.account.state.receipt.EthereumReceipt
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
-import com.horizen.block.WithdrawalEpochCertificate
-import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.utils.WithdrawalEpochInfo
+import io.horizen.account.state.receipt.EthereumReceipt
+import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
+import io.horizen.block.WithdrawalEpochCertificate
+import io.horizen.consensus.ConsensusEpochNumber
+import io.horizen.utils.WithdrawalEpochInfo
 
 import java.math.BigInteger
 

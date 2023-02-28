@@ -1,12 +1,12 @@
 package io.horizen.account.secret;
 
-import com.horizen.account.proof.SignatureSecp256k1;
-import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.utils.Secp256k1;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.secret.Secret;
-import com.horizen.secret.SecretSerializer;
-import com.horizen.utils.BytesUtils;
+import io.horizen.account.proof.SignatureSecp256k1;
+import io.horizen.account.proposition.AddressProposition;
+import io.horizen.account.utils.Secp256k1;
+import io.horizen.proposition.ProofOfKnowledgeProposition;
+import io.horizen.secret.Secret;
+import io.horizen.secret.SecretSerializer;
+import io.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 

@@ -1,6 +1,6 @@
 package io.horizen.block
 
-import com.horizen.utils.BytesUtils
+import io.horizen.utils.BytesUtils
 
 trait MainchainTxCrosschainOutput {
   // In Little Endian as in MC

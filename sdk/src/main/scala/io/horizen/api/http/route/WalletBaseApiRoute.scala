@@ -4,23 +4,23 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.route.WalletBaseErrorResponse._
-import com.horizen.api.http.route.WalletBaseRestScheme._
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiError, SuccessResponse}
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.json.Views
-import com.horizen.node._
-import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.secret._
-import com.horizen.transaction.Transaction
-import com.horizen.utils.BytesUtils
-import com.horizen.utxo.api.http.route.ImportSecretsDetail
-import com.horizen.{SidechainNodeViewBase, SidechainTypes}
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
+import io.horizen.api.http.JacksonSupport._
+import io.horizen.api.http.route.WalletBaseErrorResponse._
+import io.horizen.api.http.route.WalletBaseRestScheme._
+import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiError, SuccessResponse}
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.json.Views
+import io.horizen.node._
+import io.horizen.proposition.{Proposition, VrfPublicKey}
+import io.horizen.secret._
+import io.horizen.transaction.Transaction
+import io.horizen.utils.BytesUtils
+import io.horizen.utxo.api.http.route.ImportSecretsDetail
+import io.horizen.{SidechainNodeViewBase, SidechainTypes}
 import sparkz.core.settings.RESTApiSettings
 
 import java.io.{File, PrintWriter}

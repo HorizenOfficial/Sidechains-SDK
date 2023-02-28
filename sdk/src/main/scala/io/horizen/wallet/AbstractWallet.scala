@@ -1,13 +1,13 @@
 package io.horizen.wallet
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.SidechainTypes
-import com.horizen.consensus.ConsensusEpochInfo
-import com.horizen.node.NodeWalletBase
-import com.horizen.proposition._
-import com.horizen.secret._
-import com.horizen.storage._
-import com.horizen.transaction.Transaction
+import io.horizen.SidechainTypes
+import io.horizen.consensus.ConsensusEpochInfo
+import io.horizen.node.NodeWalletBase
+import io.horizen.proposition._
+import io.horizen.secret._
+import io.horizen.storage._
+import io.horizen.transaction.Transaction
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.SparkzLogging
 

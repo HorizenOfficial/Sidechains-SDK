@@ -1,12 +1,12 @@
 package io.horizen.cryptolibprovider;
 
-import com.horizen.block.WithdrawalEpochCertificate;
-import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
-import com.horizen.certnative.BackwardTransfer;
-import com.horizen.certnative.WithdrawalCertificate;
-import com.horizen.schnorrnative.SchnorrPublicKey;
-import com.horizen.schnorrnative.ValidatorKeysUpdatesList;
-import com.horizen.utils.Pair;
+import io.horizen.block.WithdrawalEpochCertificate;
+import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
+import io.horizen.certnative.BackwardTransfer;
+import io.horizen.certnative.WithdrawalCertificate;
+import io.horizen.schnorrnative.SchnorrPublicKey;
+import io.horizen.schnorrnative.ValidatorKeysUpdatesList;
+import io.horizen.utils.Pair;
 
 import java.util.List;
 import java.util.Optional;

@@ -1,11 +1,11 @@
 package io.horizen.chain
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
-import com.horizen.json.Views
-import com.horizen.utils.BytesUtils
-import com.horizen.transaction.Transaction
+import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
+import io.horizen.json.Views
+import io.horizen.utils.BytesUtils
+import io.horizen.transaction.Transaction
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

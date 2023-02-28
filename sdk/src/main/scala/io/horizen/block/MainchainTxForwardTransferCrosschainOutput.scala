@@ -1,8 +1,8 @@
 package io.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.json.serializer.ReverseBytesSerializer
-import com.horizen.utils.{BytesUtils, Utils}
+import io.horizen.json.serializer.ReverseBytesSerializer
+import io.horizen.utils.{BytesUtils, Utils}
 
 import scala.util.Try
 

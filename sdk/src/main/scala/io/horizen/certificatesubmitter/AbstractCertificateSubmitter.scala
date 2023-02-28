@@ -3,29 +3,29 @@ package io.horizen.certificatesubmitter
 import akka.actor.{Actor, ActorRef, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen._
-import com.horizen.api.http.client.SecureEnclaveApiClient
-import com.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.{LocallyGeneratedSignature, TryToGenerateCertificate, TryToScheduleCertificateGeneration}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
-import com.horizen.certificatesubmitter.dataproof.CertificateData
-import com.horizen.certificatesubmitter.strategies.{CertificateSubmissionStrategy, CircuitStrategy, SubmissionWindowStatus}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.fork.ForkManager
-import com.horizen.history.AbstractHistory
-import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeCertificateApi, SendCertificateRequest}
-import com.horizen.params.NetworkParams
-import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.SchnorrProposition
-import com.horizen.secret.SchnorrSecret
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
-import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.BytesUtils
-import com.horizen.wallet.Wallet
+import io.horizen._
+import io.horizen.api.http.client.SecureEnclaveApiClient
+import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.{LocallyGeneratedSignature, TryToGenerateCertificate, TryToScheduleCertificateGeneration}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter._
+import io.horizen.certificatesubmitter.dataproof.CertificateData
+import io.horizen.certificatesubmitter.strategies.{CertificateSubmissionStrategy, CircuitStrategy, SubmissionWindowStatus}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.cryptolibprovider.utils.FieldElementUtils
+import io.horizen.fork.ForkManager
+import io.horizen.history.AbstractHistory
+import io.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeCertificateApi, SendCertificateRequest}
+import io.horizen.params.NetworkParams
+import io.horizen.proof.SchnorrProof
+import io.horizen.proposition.SchnorrProposition
+import io.horizen.secret.SchnorrSecret
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.Transaction
+import io.horizen.transaction.mainchain.SidechainCreation
+import io.horizen.utils.BytesUtils
+import io.horizen.wallet.Wallet
 import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView

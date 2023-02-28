@@ -2,16 +2,16 @@ package io.horizen.account
 
 import com.google.inject.Provides
 import com.google.inject.name.Named
-import com.horizen.account.helper.{AccountTransactionSubmitHelper, AccountTransactionSubmitHelperImpl}
-import com.horizen.account.helper.{AccountNodeViewHelper, AccountNodeViewHelperImpl}
-import com.horizen.account.state.MessageProcessor
-import com.horizen.api.http.ApplicationApiGroup
-import com.horizen.fork.ForkConfigurator
-import com.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
-import com.horizen.secret.SecretSerializer
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.Pair
-import com.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppStopper, SidechainSettings, SidechainTypes}
+import io.horizen.account.helper.{AccountTransactionSubmitHelper, AccountTransactionSubmitHelperImpl}
+import io.horizen.account.helper.{AccountNodeViewHelper, AccountNodeViewHelperImpl}
+import io.horizen.account.state.MessageProcessor
+import io.horizen.api.http.ApplicationApiGroup
+import io.horizen.fork.ForkConfigurator
+import io.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
+import io.horizen.secret.SecretSerializer
+import io.horizen.transaction.TransactionSerializer
+import io.horizen.utils.Pair
+import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppStopper, SidechainSettings, SidechainTypes}
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}

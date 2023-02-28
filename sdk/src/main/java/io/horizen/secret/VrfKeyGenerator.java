@@ -1,7 +1,7 @@
 package io.horizen.secret;
 
-import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.cryptolibprovider.VrfFunctions.KeyType;
+import io.horizen.cryptolibprovider.CryptoLibProvider;
+import io.horizen.cryptolibprovider.VrfFunctions.KeyType;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 

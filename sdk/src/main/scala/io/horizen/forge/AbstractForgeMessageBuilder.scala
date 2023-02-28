@@ -1,19 +1,19 @@
 package io.horizen.forge
 
 import akka.util.Timeout
-import com.horizen.block._
-import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
-import com.horizen.consensus._
-import com.horizen.fork.ForkManager
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.{Transaction, TransactionSerializer}
-import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils, WithdrawalEpochInfo}
-import com.horizen.vrf.VrfOutput
-import com.horizen.history.AbstractHistory
-import com.horizen.wallet.AbstractWallet
+import io.horizen.block._
+import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
+import io.horizen.consensus._
+import io.horizen.fork.ForkManager
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.proof.{Signature25519, VrfProof}
+import io.horizen.secret.{PrivateKey25519, VrfSecretKey}
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.{Transaction, TransactionSerializer}
+import io.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils, WithdrawalEpochInfo}
+import io.horizen.vrf.VrfOutput
+import io.horizen.history.AbstractHistory
+import io.horizen.wallet.AbstractWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.block.Block

@@ -1,17 +1,17 @@
 package io.horizen.utxo.transaction;
 
 import com.google.common.primitives.Ints;
-import com.horizen.transaction.TransactionSerializer;
-import com.horizen.utxo.box.BoxUnlocker;
-import com.horizen.utxo.box.ZenBox;
-import com.horizen.utxo.box.data.ZenBoxData;
-import com.horizen.proof.Proof;
-import com.horizen.proof.Signature25519;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.Secret;
-import com.horizen.transaction.exception.TransactionSemanticValidityException;
-import com.horizen.utils.Pair;
+import io.horizen.transaction.TransactionSerializer;
+import io.horizen.utxo.box.BoxUnlocker;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.proof.Proof;
+import io.horizen.proof.Signature25519;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.secret.PrivateKey25519;
+import io.horizen.secret.Secret;
+import io.horizen.transaction.exception.TransactionSemanticValidityException;
+import io.horizen.utils.Pair;
 import scala.Array;
 
 import java.util.*;

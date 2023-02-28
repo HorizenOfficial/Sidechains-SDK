@@ -4,21 +4,21 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewBase
-import com.horizen.api.http.route.BlockBaseErrorResponse._
-import com.horizen.api.http.route.BlockBaseRestSchema._
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
-import com.horizen.api.http.JacksonSupport._
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
-import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
-import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
-import com.horizen.forge.ForgingInfo
-import com.horizen.json.Views
-import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.transaction.Transaction
-import com.horizen.utils.BytesUtils
+import io.horizen.SidechainNodeViewBase
+import io.horizen.api.http.route.BlockBaseErrorResponse._
+import io.horizen.api.http.route.BlockBaseRestSchema._
+import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import io.horizen.api.http.JacksonSupport._
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
+import io.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
+import io.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import io.horizen.forge.ForgingInfo
+import io.horizen.json.Views
+import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.transaction.Transaction
+import io.horizen.utils.BytesUtils
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.ModifierId

@@ -2,8 +2,8 @@ package io.horizen.helper
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
-import com.horizen.secret.Secret
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
+import io.horizen.secret.Secret
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}

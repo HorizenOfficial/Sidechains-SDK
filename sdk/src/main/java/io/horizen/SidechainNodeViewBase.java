@@ -1,13 +1,13 @@
 package io.horizen;
 
-import com.horizen.block.SidechainBlockBase;
-import com.horizen.block.SidechainBlockHeaderBase;
-import com.horizen.chain.AbstractFeePaymentsInfo;
-import com.horizen.node.NodeHistoryBase;
-import com.horizen.node.NodeMemoryPoolBase;
-import com.horizen.node.NodeStateBase;
-import com.horizen.node.NodeWalletBase;
-import com.horizen.transaction.Transaction;
+import io.horizen.block.SidechainBlockBase;
+import io.horizen.block.SidechainBlockHeaderBase;
+import io.horizen.chain.AbstractFeePaymentsInfo;
+import io.horizen.node.NodeHistoryBase;
+import io.horizen.node.NodeMemoryPoolBase;
+import io.horizen.node.NodeStateBase;
+import io.horizen.node.NodeWalletBase;
+import io.horizen.transaction.Transaction;
 
 public interface SidechainNodeViewBase<
         TX extends Transaction,

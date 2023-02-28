@@ -1,10 +1,10 @@
 package io.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.json.serializer.ReverseBytesSerializer
-import com.horizen.utils.{BytesUtils, Utils, CompactSize}
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.cryptolibprovider.utils.FieldElementUtils
+import io.horizen.json.serializer.ReverseBytesSerializer
+import io.horizen.utils.{BytesUtils, Utils, CompactSize}
 
 import scala.util.Try
 

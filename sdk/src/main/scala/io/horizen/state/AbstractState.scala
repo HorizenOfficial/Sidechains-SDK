@@ -1,11 +1,11 @@
 package io.horizen
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.certnative.BackwardTransfer
-import com.horizen.consensus.ConsensusEpochInfo
-import com.horizen.transaction.Transaction
-import com.horizen.utils.WithdrawalEpochInfo
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import io.horizen.certnative.BackwardTransfer
+import io.horizen.consensus.ConsensusEpochInfo
+import io.horizen.transaction.Transaction
+import io.horizen.utils.WithdrawalEpochInfo
 import sparkz.util.ModifierId
 import sparkz.core.transaction.state.MinimalState
 

@@ -1,11 +1,11 @@
 package io.horizen.transaction;
 
-import com.horizen.transaction.mainchain.BwtRequestSerializer;
-import com.horizen.transaction.mainchain.ForwardTransferSerializer;
-import com.horizen.transaction.mainchain.SidechainCreationSerializer;
-import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
-import com.horizen.utils.DynamicTypedSerializer;
-import com.horizen.utils.ListSerializer;
+import io.horizen.transaction.mainchain.BwtRequestSerializer;
+import io.horizen.transaction.mainchain.ForwardTransferSerializer;
+import io.horizen.transaction.mainchain.SidechainCreationSerializer;
+import io.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
+import io.horizen.utils.DynamicTypedSerializer;
+import io.horizen.utils.ListSerializer;
 import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;

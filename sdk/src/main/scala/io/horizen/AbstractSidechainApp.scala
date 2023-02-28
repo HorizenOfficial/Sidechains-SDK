@@ -4,28 +4,28 @@ package io.horizen
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.horizen.api.http
-import com.horizen.api.http._
-import com.horizen.api.http.client.SecureEnclaveApiClient
-import com.horizen.api.http.route.{ApplicationApiRoute, SidechainRejectionApiRoute}
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
-import com.horizen.companion._
-import com.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
-import com.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
-import com.horizen.customconfig.CustomAkkaConfiguration
-import com.horizen.forge.MainchainSynchronizer
-import com.horizen.fork.{ForkConfigurator, ForkManager}
-import com.horizen.helper.TransactionSubmitProvider
-import com.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl}
-import com.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
-import com.horizen.params._
-import com.horizen.proposition._
-import com.horizen.secret.SecretSerializer
-import com.horizen.transaction._
-import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
-import com.horizen.websocket.client._
+import io.horizen.api.http
+import io.horizen.api.http._
+import io.horizen.api.http.client.SecureEnclaveApiClient
+import io.horizen.api.http.route.{ApplicationApiRoute, SidechainRejectionApiRoute}
+import io.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
+import io.horizen.companion._
+import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
+import io.horizen.customconfig.CustomAkkaConfiguration
+import io.horizen.forge.MainchainSynchronizer
+import io.horizen.fork.{ForkConfigurator, ForkManager}
+import io.horizen.helper.TransactionSubmitProvider
+import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl}
+import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
+import io.horizen.params._
+import io.horizen.proposition._
+import io.horizen.secret.SecretSerializer
+import io.horizen.transaction._
+import io.horizen.transaction.mainchain.SidechainCreation
+import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
+import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
 import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry

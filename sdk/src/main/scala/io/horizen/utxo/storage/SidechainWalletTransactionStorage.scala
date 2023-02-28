@@ -1,9 +1,9 @@
 package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.storage.{SidechainStorageInfo, Storage}
-import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
-import com.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.SidechainTypes
+import io.horizen.storage.{SidechainStorageInfo, Storage}
+import io.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
 
 import java.util.{ArrayList => JArrayList}

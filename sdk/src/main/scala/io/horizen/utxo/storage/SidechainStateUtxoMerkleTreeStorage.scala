@@ -1,12 +1,12 @@
 package io.horizen.utxo.storage
 
-import com.horizen.SidechainTypes
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper
-import com.horizen.librustsidechains.FieldElement
-import com.horizen.storage.{SidechainStorageInfo, Storage}
-import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
-import com.horizen.utxo.utils.{UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}
+import io.horizen.SidechainTypes
+import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper
+import io.horizen.librustsidechains.FieldElement
+import io.horizen.storage.{SidechainStorageInfo, Storage}
+import io.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
+import io.horizen.utxo.utils.{UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}
 import sparkz.util.SparkzLogging
 
 import java.util.{List => JList}

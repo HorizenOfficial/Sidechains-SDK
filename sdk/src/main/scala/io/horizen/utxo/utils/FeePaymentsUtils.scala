@@ -1,8 +1,8 @@
 package io.horizen.utxo.utils
 
-import com.horizen.utils.{BytesUtils, Utils}
-import com.horizen.utxo.box.ZenBox
-import com.horizen.utxo.transaction.FeePaymentsTransaction
+import io.horizen.utils.{BytesUtils, Utils}
+import io.horizen.utxo.box.ZenBox
+import io.horizen.utxo.transaction.FeePaymentsTransaction
 
 import scala.collection.JavaConverters._
 

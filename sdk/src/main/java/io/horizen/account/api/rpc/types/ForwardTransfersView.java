@@ -1,9 +1,9 @@
 package io.horizen.account.api.rpc.types;
 
-import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
-import com.horizen.account.utils.ZenWeiConverter;
+import io.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
+import io.horizen.account.utils.ZenWeiConverter;
 import io.horizen.evm.Address;
-import com.horizen.transaction.mainchain.ForwardTransfer;
+import io.horizen.transaction.mainchain.ForwardTransfer;
 
 import java.math.BigInteger;
 import java.util.List;

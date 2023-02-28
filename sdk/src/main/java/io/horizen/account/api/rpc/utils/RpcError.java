@@ -2,7 +2,7 @@ package io.horizen.account.api.rpc.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.json.Views;
+import io.horizen.json.Views;
 
 @JsonView(Views.Default.class)
 public class RpcError {

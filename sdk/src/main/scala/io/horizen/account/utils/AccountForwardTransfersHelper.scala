@@ -1,7 +1,7 @@
 package io.horizen.account.utils
 
-import com.horizen.account.block.AccountBlock
-import com.horizen.transaction.mainchain.ForwardTransfer
+import io.horizen.account.block.AccountBlock
+import io.horizen.transaction.mainchain.ForwardTransfer
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 

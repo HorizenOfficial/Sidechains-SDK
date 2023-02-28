@@ -1,13 +1,13 @@
 package io.horizen.network
 
 import akka.actor.ActorRef
-import com.horizen._
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.history.AbstractHistory
-import com.horizen.history.validation.{BlockInFutureException, InconsistentDataException}
-import com.horizen.storage.AbstractHistoryStorage
-import com.horizen.transaction.Transaction
+import io.horizen._
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.history.AbstractHistory
+import io.horizen.history.validation.{BlockInFutureException, InconsistentDataException}
+import io.horizen.storage.AbstractHistoryStorage
+import io.horizen.transaction.Transaction
 import sparkz.core.network.NodeViewSynchronizer
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import sparkz.core.serialization.SparkzSerializer

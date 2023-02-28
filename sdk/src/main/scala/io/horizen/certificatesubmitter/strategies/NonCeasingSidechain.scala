@@ -1,10 +1,10 @@
 package io.horizen.certificatesubmitter.strategies
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.strategies.NonCeasingSidechain.NON_CEASING_SUBMISSION_DELAY
-import com.horizen.params.NetworkParams
-import com.horizen.utils.WithdrawalEpochInfo
-import com.horizen.AbstractState
-import com.horizen.history.AbstractHistory
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
+import io.horizen.certificatesubmitter.strategies.NonCeasingSidechain.NON_CEASING_SUBMISSION_DELAY
+import io.horizen.params.NetworkParams
+import io.horizen.utils.WithdrawalEpochInfo
+import io.horizen.AbstractState
+import io.horizen.history.AbstractHistory
 import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 

@@ -1,21 +1,21 @@
 package io.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.history.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.node.AccountNodeView
-import com.horizen.account.state._
-import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.consensus._
-import com.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import com.horizen.params.NetworkParams
-import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
-import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.history.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.node.AccountNodeView
+import io.horizen.account.state._
+import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.consensus._
+import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import io.horizen.params.NetworkParams
+import io.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
+import io.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import io.horizen.evm.Database
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion

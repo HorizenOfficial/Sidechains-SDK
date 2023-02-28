@@ -1,6 +1,6 @@
 package io.horizen.forge
 
-import com.horizen.consensus.ConsensusEpochAndSlot
+import io.horizen.consensus.ConsensusEpochAndSlot
 
 case class ForgingInfo(consensusSecondsInSlot: Int,
                        consensusSlotsInEpoch: Int,

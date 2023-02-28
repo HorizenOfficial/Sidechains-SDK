@@ -1,11 +1,11 @@
 package io.horizen.account.storage
 
-import com.horizen.account.state.receipt.EthereumReceipt
-import com.horizen.account.utils.AccountBlockFeeInfo
-import com.horizen.block.WithdrawalEpochCertificate
-import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.storage.{SidechainStorageInfo, Storage}
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
+import io.horizen.account.state.receipt.EthereumReceipt
+import io.horizen.account.utils.AccountBlockFeeInfo
+import io.horizen.block.WithdrawalEpochCertificate
+import io.horizen.consensus.ConsensusEpochNumber
+import io.horizen.storage.{SidechainStorageInfo, Storage}
+import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.JavaConverters._

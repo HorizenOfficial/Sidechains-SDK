@@ -1,9 +1,9 @@
 package io.horizen.storage
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.SidechainTypes
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
+import io.horizen.SidechainTypes
+import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import sparkz.util.SparkzLogging
 
 import java.nio.charset.StandardCharsets

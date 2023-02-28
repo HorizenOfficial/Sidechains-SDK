@@ -1,8 +1,8 @@
 package io.horizen.account.state
 
-import com.horizen.account.state.receipt.EthereumConsensusDataLog
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.BigIntegerUtil
+import io.horizen.account.state.receipt.EthereumConsensusDataLog
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.BigIntegerUtil
 
 import java.math.BigInteger
 

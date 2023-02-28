@@ -3,9 +3,9 @@ package io.horizen.storage.leveldb
 import java.io.File
 import java.util
 import java.util.{Optional, List => JList}
-import com.horizen.storage.{Storage, StorageIterator}
-import com.horizen.storage.leveldb.LDBFactory.factory
-import com.horizen.utils.{Pair => JPair, _}
+import io.horizen.storage.{Storage, StorageIterator}
+import io.horizen.storage.leveldb.LDBFactory.factory
+import io.horizen.utils.{Pair => JPair, _}
 import org.iq80.leveldb.{Options}
 
 import scala.collection.JavaConverters._

@@ -1,19 +1,19 @@
 package io.horizen.utxo
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen._
-import com.horizen.consensus._
-import com.horizen.params.NetworkParams
-import com.horizen.storage._
-import com.horizen.transaction.Transaction
-import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.utxo.chain.SidechainFeePaymentsInfo
-import com.horizen.utxo.history.SidechainHistory
-import com.horizen.utxo.mempool.SidechainMemoryPool
-import com.horizen.utxo.node.SidechainNodeView
-import com.horizen.utxo.state.{ApplicationState, SidechainState, SidechainStateUtxoMerkleTreeProvider}
-import com.horizen.utxo.storage._
-import com.horizen.utxo.wallet.{ApplicationWallet, SidechainWallet, SidechainWalletCswDataProvider}
+import io.horizen._
+import io.horizen.consensus._
+import io.horizen.params.NetworkParams
+import io.horizen.storage._
+import io.horizen.transaction.Transaction
+import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.history.SidechainHistory
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.node.SidechainNodeView
+import io.horizen.utxo.state.{ApplicationState, SidechainState, SidechainStateUtxoMerkleTreeProvider}
+import io.horizen.utxo.storage._
+import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWallet, SidechainWalletCswDataProvider}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{idToVersion, versionToId}

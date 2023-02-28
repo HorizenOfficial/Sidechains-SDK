@@ -1,11 +1,11 @@
 package io.horizen.certificatesubmitter.keys
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.account.abi.ABIEncodable
-import com.horizen.certificatesubmitter.keys.KeyRotationProofTypes.KeyRotationProofType
-import com.horizen.proof.{SchnorrProof, SchnorrSignatureSerializer}
-import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
-import com.horizen.json.Views
+import io.horizen.account.abi.ABIEncodable
+import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.KeyRotationProofType
+import io.horizen.proof.{SchnorrProof, SchnorrSignatureSerializer}
+import io.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import io.horizen.json.Views
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import sparkz.util.serialization.{Reader, Writer}

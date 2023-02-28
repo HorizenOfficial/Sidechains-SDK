@@ -3,11 +3,11 @@ package io.horizen.api.http.route
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
-import com.horizen.transaction.Transaction
-import com.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase}
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import io.horizen.transaction.Transaction
+import io.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}

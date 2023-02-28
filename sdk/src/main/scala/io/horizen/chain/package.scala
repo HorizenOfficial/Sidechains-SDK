@@ -1,6 +1,6 @@
 package io.horizen
 
-import com.horizen.utils.ByteArrayWrapper
+import io.horizen.utils.ByteArrayWrapper
 import supertagged.TaggedType
 
 package object chain {

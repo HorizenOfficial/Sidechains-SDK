@@ -1,10 +1,10 @@
 package io.horizen.utxo.state;
 
-import com.horizen.utxo.backup.BoxIterator;
-import com.horizen.utxo.block.SidechainBlock;
-import com.horizen.utxo.box.Box;
-import com.horizen.proposition.Proposition;
-import com.horizen.utxo.transaction.BoxTransaction;
+import io.horizen.utxo.backup.BoxIterator;
+import io.horizen.utxo.block.SidechainBlock;
+import io.horizen.utxo.box.Box;
+import io.horizen.proposition.Proposition;
+import io.horizen.utxo.transaction.BoxTransaction;
 
 import java.util.List;
 

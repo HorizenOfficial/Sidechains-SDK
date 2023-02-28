@@ -1,6 +1,6 @@
 package io.horizen.chain;
 
-import com.horizen.params.CommonParams;
+import io.horizen.params.CommonParams;
 import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;

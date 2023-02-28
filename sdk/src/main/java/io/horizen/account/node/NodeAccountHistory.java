@@ -1,12 +1,12 @@
 package io.horizen.account.node;
 
-import com.horizen.account.block.AccountBlock;
-import com.horizen.account.block.AccountBlockHeader;
-import com.horizen.account.chain.AccountFeePaymentsInfo;
-import com.horizen.account.transaction.AccountTransaction;
-import com.horizen.node.NodeHistoryBase;
-import com.horizen.proof.Proof;
-import com.horizen.proposition.Proposition;
+import io.horizen.account.block.AccountBlock;
+import io.horizen.account.block.AccountBlockHeader;
+import io.horizen.account.chain.AccountFeePaymentsInfo;
+import io.horizen.account.transaction.AccountTransaction;
+import io.horizen.node.NodeHistoryBase;
+import io.horizen.proof.Proof;
+import io.horizen.proposition.Proposition;
 
 public interface NodeAccountHistory extends NodeHistoryBase<
         AccountTransaction<Proposition, Proof<Proposition>>,

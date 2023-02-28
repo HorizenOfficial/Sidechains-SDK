@@ -3,8 +3,8 @@ package io.horizen.api.http
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
-import com.horizen.{SidechainSettings, SidechainSyncInfo}
+import io.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
+import io.horizen.{SidechainSettings, SidechainSyncInfo}
 import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
 import sparkz.util.{ModifierId, SparkzLogging}

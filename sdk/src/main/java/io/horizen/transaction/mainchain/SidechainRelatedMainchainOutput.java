@@ -1,7 +1,7 @@
 package io.horizen.transaction.mainchain;
 
-import com.horizen.utxo.box.Box;
-import com.horizen.proposition.Proposition;
+import io.horizen.utxo.box.Box;
+import io.horizen.proposition.Proposition;
 
 public interface SidechainRelatedMainchainOutput<B extends Box<? extends Proposition>> extends sparkz.core.serialization.BytesSerializable
 {
