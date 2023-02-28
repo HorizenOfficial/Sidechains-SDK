@@ -621,11 +621,11 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
   @Test
   def testForbidLegacyTransaction(): Unit = {
     val settings = mock[SidechainSettings]
-    val mempoolSetting = mock[MempoolSettings]
+    val mempoolSetting = mock[AccountMempoolSettings]
     mockedNodeViewHolderRef = getMockedAccountSidechainNodeViewHolderRef(history, state, wallet, mempool, settings)
     val tx = mock[EthereumTransaction]
 
-    Mockito.when(settings.mempool).thenReturn(mempoolSetting)
+    Mockito.when(settings.accountMempool).thenReturn(mempoolSetting)
     Mockito.when(mempoolSetting.allowUnprotectedTxs).thenReturn(false)
     Mockito.when(tx.isLegacy).thenReturn(true)
     Mockito.when(tx.isEIP155).thenReturn(false)

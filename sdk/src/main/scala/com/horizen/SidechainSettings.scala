@@ -62,8 +62,7 @@ case class ForgerSettings(
 
 case class MempoolSettings(
     maxSize: Int = 300,
-    minFeeRate: Long = 0,
-    allowUnprotectedTxs: Boolean = false
+    minFeeRate: Long = 0
 )
 
 case class WalletSettings(
@@ -96,7 +95,8 @@ case class AccountMempoolSettings(maxNonceGap: Int = 16,
                                   maxAccountSlots: Int = 16,
                                   maxMemPoolSlots: Int = 6144, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
                                   maxNonExecMemPoolSlots: Int = 1024,
-                                  txLifetime: FiniteDuration = 3.hours){
+                                  txLifetime: FiniteDuration = 3.hours,
+                                  allowUnprotectedTxs: Boolean = false){
   require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
   require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
   require(maxMemPoolSlots >= MempoolMap.MaxNumOfSlotsForTx, s"Maximum Memory Pool Slots number should be at least " +

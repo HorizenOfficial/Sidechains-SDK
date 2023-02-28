@@ -175,7 +175,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
        */
       if (tx.isInstanceOf[EthereumTransaction]) {
         val ethTx: EthereumTransaction = tx.asInstanceOf[EthereumTransaction]
-        if (!sidechainSettings.mempool.allowUnprotectedTxs && ethTx.isLegacy && !ethTx.isEIP155) {
+        if (!sidechainSettings.accountMempool.allowUnprotectedTxs && ethTx.isLegacy && !ethTx.isEIP155) {
           context.system.eventStream.publish(
             FailedTransaction(
               tx.id,
