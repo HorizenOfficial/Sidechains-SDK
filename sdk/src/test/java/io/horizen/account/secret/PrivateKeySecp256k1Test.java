@@ -7,7 +7,7 @@ import org.junit.Test;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 
-import static com.horizen.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
+import static io.horizen.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
 import static org.junit.Assert.*;
 
 public class PrivateKeySecp256k1Test {

@@ -19,7 +19,7 @@ class SecretsDeterministicGenerationScalaTest
   val anotherConstantSeed: Array[Byte] = "another seed".getBytes(StandardCharsets.UTF_8)
 
   def localGetPrivateKey25519(seed: Array[Byte]): PrivateKey25519 = {
-    val keyPair: com.horizen.utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(seed)
+    val keyPair: io.horizen.utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(seed)
     new PrivateKey25519(keyPair.getKey, keyPair.getValue)
   }
 

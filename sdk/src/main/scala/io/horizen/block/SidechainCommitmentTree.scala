@@ -2,9 +2,9 @@ package io.horizen.block
 
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.utils.BytesUtils
-import io.horizen.commitmenttreenative.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
-import io.horizen.librustsidechains.FieldElement
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.commitmenttreenative.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
+import com.horizen.librustsidechains.FieldElement
+import com.horizen.certnative.BackwardTransfer
 
 import scala.compat.java8.OptionConverters._
 import scala.collection.JavaConverters._

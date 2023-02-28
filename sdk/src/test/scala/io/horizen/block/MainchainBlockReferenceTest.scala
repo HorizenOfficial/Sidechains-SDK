@@ -2,7 +2,7 @@ package io.horizen.block
 
 import com.google.common.primitives.Ints
 import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
-import io.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, CustomSidechainsVersions, SidechainVersionZero, TestSidechainsVersionsManager}

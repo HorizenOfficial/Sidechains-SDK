@@ -2,7 +2,7 @@ package io.horizen
 
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.consensus.ConsensusEpochInfo
 import io.horizen.transaction.Transaction
 import io.horizen.utils.WithdrawalEpochInfo

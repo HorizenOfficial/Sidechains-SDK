@@ -3,7 +3,7 @@ package io.horizen
 import com.google.common.io.Files
 import io.horizen.block.{FieldElementCertificateField, SidechainCreationVersions, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}

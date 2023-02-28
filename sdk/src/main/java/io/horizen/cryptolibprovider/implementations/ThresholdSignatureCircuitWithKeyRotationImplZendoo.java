@@ -4,20 +4,20 @@ import com.google.common.primitives.Ints;
 import io.horizen.block.SidechainCreationVersions;
 import io.horizen.block.WithdrawalEpochCertificate;
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
-import io.horizen.certnative.BackwardTransfer;
-import io.horizen.certnative.CreateProofResult;
-import io.horizen.certnative.NaiveThresholdSignatureWKeyRotation;
-import io.horizen.certnative.WithdrawalCertificate;
+import com.horizen.certnative.BackwardTransfer;
+import com.horizen.certnative.CreateProofResult;
+import com.horizen.certnative.NaiveThresholdSignatureWKeyRotation;
+import com.horizen.certnative.WithdrawalCertificate;
 import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation;
 import io.horizen.cryptolibprovider.utils.FieldElementUtils;
-import io.horizen.librustsidechains.FieldElement;
+import com.horizen.librustsidechains.FieldElement;
 import io.horizen.proof.SchnorrProof;
 import io.horizen.proposition.SchnorrProposition;
-import io.horizen.provingsystemnative.ProvingSystemType;
-import io.horizen.schnorrnative.SchnorrPublicKey;
-import io.horizen.schnorrnative.SchnorrSignature;
-import io.horizen.schnorrnative.ValidatorKeysUpdatesList;
+import com.horizen.provingsystemnative.ProvingSystemType;
+import com.horizen.schnorrnative.SchnorrPublicKey;
+import com.horizen.schnorrnative.SchnorrSignature;
+import com.horizen.schnorrnative.ValidatorKeysUpdatesList;
 import io.horizen.utils.Pair;
 import scala.Option;
 import scala.collection.Seq;
@@ -25,7 +25,7 @@ import scala.collection.Seq;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.horizen.cryptolibprovider.CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION;
+import static io.horizen.cryptolibprovider.CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION;
 
 public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements ThresholdSignatureCircuitWithKeyRotation {
     // Note: supportedSegmentSize should correlate with the snark circuit complexity,

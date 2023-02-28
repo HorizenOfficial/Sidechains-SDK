@@ -51,7 +51,7 @@
 						<manifest>
 							<addClasspath>true</addClasspath>
 							<classpathPrefix>lib/</classpathPrefix>
-							<mainClass>com.horizen.ScBootstrappingTool</mainClass>
+							<mainClass>io.horizen.ScBootstrappingTool</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

@@ -4,7 +4,7 @@ import io.horizen._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
@@ -24,7 +24,7 @@ class WithoutKeyRotationCircuitStrategy[
                             cryptolibCircuit: ThresholdSignatureCircuit)
   extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithoutKeyRotation](settings, params) {
 
-  override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       certificateData.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)

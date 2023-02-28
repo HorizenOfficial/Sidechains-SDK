@@ -9,7 +9,7 @@ import io.horizen.utils.BytesUtils;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static com.horizen.secret.SecretsIdsEnum.SchnorrSecretKeyId;
+import static io.horizen.secret.SecretsIdsEnum.SchnorrSecretKeyId;
 
 public class SchnorrSecret implements Secret {
     public static final int SECRET_KEY_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrSecretKeyLength();

@@ -13,9 +13,9 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Optional;
-import static com.horizen.account.utils.EthereumTransactionUtils.convertToLong;
-import static com.horizen.account.utils.EthereumTransactionUtils.getRealV;
-import static com.horizen.account.utils.Secp256k1.*;
+import static io.horizen.account.utils.EthereumTransactionUtils.convertToLong;
+import static io.horizen.account.utils.EthereumTransactionUtils.getRealV;
+import static io.horizen.account.utils.Secp256k1.*;
 
 
 public class EthereumTransactionDecoder {

@@ -24,7 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static com.horizen.utxo.transaction.CoreTransactionsIdsEnum.KeyRotationTransactionId;
+import static io.horizen.utxo.transaction.CoreTransactionsIdsEnum.KeyRotationTransactionId;
 
 /*
  * CertificateKeyRotationTransaction is used for key rotation of signer or master key of certificate submitter

@@ -16,7 +16,7 @@ import io.horizen.utxo.transaction.TransactionIncompatibilityChecker;
 import scala.Array;
 import sparkz.util.encode.Base16;
 import java.util.*;
-import static com.horizen.utxo.transaction.CoreTransactionsIdsEnum.MC2SCAggregatedTransactionId;
+import static io.horizen.utxo.transaction.CoreTransactionsIdsEnum.MC2SCAggregatedTransactionId;
 
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties({"mc2scTransactionsOutputs", "encoder"})

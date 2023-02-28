@@ -6,7 +6,7 @@ import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, M
 import io.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
 import io.horizen.fixtures.{FieldElementFixture, MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
 import io.horizen.params.{MainNetParams, NetworkParams}
-import io.horizen.poseidonnative.PoseidonHash
+import com.horizen.poseidonnative.PoseidonHash
 import io.horizen.utils.WithdrawalEpochInfo
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo

@@ -3,7 +3,7 @@ package io.horizen
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
-import io.horizen.poseidonnative.PoseidonHash
+import com.horizen.poseidonnative.PoseidonHash
 import io.horizen.vrf.VrfOutput
 import sparkz.util.ModifierId
 import supertagged.TaggedType

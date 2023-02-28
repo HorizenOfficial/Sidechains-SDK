@@ -124,7 +124,7 @@ abstract class WalletBaseApiRoute[
 
   def getClassBySecretClassName(className: String): Try[java.lang.Class[_ <: SidechainTypes#SCS]] = {
     Try(Class.forName(className).asSubclass(classOf[SidechainTypes#SCS])) orElse
-      Try(Class.forName("com.horizen.secret." + className).asSubclass(classOf[SidechainTypes#SCS]))
+      Try(Class.forName("io.horizen.secret." + className).asSubclass(classOf[SidechainTypes#SCS]))
   }
 
   /**

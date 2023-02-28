@@ -1,8 +1,8 @@
 package io.horizen.utxo.utils
 
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
-import io.horizen.fwtnative.ForwardTransferOutput
-import io.horizen.scutxonative.ScUtxoOutput
+import com.horizen.fwtnative.ForwardTransferOutput
+import com.horizen.scutxonative.ScUtxoOutput
 import io.horizen.utils.BytesUtils
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}

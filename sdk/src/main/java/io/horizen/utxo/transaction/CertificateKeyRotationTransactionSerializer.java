@@ -15,7 +15,7 @@ import sparkz.core.NodeViewModifier$;
 
 import java.util.Optional;
 
-import static com.horizen.utxo.transaction.CertificateKeyRotationTransaction.CERTIFICATE_KEY_ROTATION_TRANSACTION_VERSION;
+import static io.horizen.utxo.transaction.CertificateKeyRotationTransaction.CERTIFICATE_KEY_ROTATION_TRANSACTION_VERSION;
 
 public class CertificateKeyRotationTransactionSerializer implements TransactionSerializer<CertificateKeyRotationTransaction>
 {

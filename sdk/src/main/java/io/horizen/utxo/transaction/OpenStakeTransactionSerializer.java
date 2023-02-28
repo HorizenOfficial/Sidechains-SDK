@@ -11,7 +11,7 @@ import sparkz.util.serialization.Writer;
 
 import java.util.Optional;
 
-import static com.horizen.utxo.transaction.OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION;
+import static io.horizen.utxo.transaction.OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION;
 
 public class OpenStakeTransactionSerializer implements TransactionSerializer<OpenStakeTransaction>
 {

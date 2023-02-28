@@ -16,7 +16,7 @@ import scala.Array;
 
 import java.util.*;
 
-import static com.horizen.utxo.transaction.CoreTransactionsIdsEnum.OpenStakeTransactionId;
+import static io.horizen.utxo.transaction.CoreTransactionsIdsEnum.OpenStakeTransactionId;
 
 /**
  * OpenStakeTransaction is used to open the forging stake to the world.

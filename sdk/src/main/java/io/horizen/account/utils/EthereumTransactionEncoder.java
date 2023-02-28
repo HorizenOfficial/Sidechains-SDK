@@ -13,7 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.horizen.account.utils.Secp256k1.*;
+import static io.horizen.account.utils.Secp256k1.*;
 
 public class EthereumTransactionEncoder {
 

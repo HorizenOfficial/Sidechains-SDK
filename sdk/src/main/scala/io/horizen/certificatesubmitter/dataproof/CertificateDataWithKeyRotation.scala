@@ -2,7 +2,7 @@ package io.horizen.certificatesubmitter.dataproof
 
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition

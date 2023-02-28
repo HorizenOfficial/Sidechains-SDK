@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /**
  * When creating a new event, use this annotation at the class declaration to annotate anonymous events.
- * Check usage example at com.horizen.account.events and EthereumEventTest in com.horizen.account.event.
+ * Check usage example at io.horizen.account.events and EthereumEventTest in io.horizen.account.event.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})

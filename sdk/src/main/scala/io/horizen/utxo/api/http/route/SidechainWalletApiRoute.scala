@@ -115,7 +115,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 
   def getClassByBoxClassName(className: String): Try[java.lang.Class[_ <: SidechainTypes#SCB]] = {
     Try(Class.forName(className).asSubclass(classOf[SidechainTypes#SCB])) orElse
-      Try(Class.forName("com.horizen.utxo.box." + className).asSubclass(classOf[SidechainTypes#SCB]))
+      Try(Class.forName("io.horizen.utxo.box." + className).asSubclass(classOf[SidechainTypes#SCB]))
   }
 }
 

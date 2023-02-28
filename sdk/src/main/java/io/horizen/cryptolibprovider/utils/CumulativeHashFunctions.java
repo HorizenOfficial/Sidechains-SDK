@@ -1,7 +1,7 @@
 package io.horizen.cryptolibprovider.utils;
-import io.horizen.librustsidechains.FieldElement;
-import io.horizen.poseidonnative.PoseidonHash;
-import io.horizen.librustsidechains.Constants;
+import com.horizen.librustsidechains.FieldElement;
+import com.horizen.poseidonnative.PoseidonHash;
+import com.horizen.librustsidechains.Constants;
 
 public class CumulativeHashFunctions {
     public static int hashLength() {

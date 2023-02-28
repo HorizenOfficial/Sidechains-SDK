@@ -1,7 +1,7 @@
 package io.horizen.utils
 
 import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
-import io.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.cryptolibprovider.CircuitTypes
 import CircuitTypes.CircuitTypes

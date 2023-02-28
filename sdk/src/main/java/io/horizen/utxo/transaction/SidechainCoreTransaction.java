@@ -9,7 +9,7 @@ import io.horizen.utxo.box.BoxUnlocker;
 import io.horizen.utxo.box.data.BoxData;
 import scala.Array;
 
-import static com.horizen.utxo.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
+import static io.horizen.utxo.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
 
 import java.util.*;
 

@@ -9,7 +9,7 @@ import io.horizen.utils.Ed25519;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static com.horizen.secret.SecretsIdsEnum.PrivateKey25519SecretId;
+import static io.horizen.secret.SecretsIdsEnum.PrivateKey25519SecretId;
 
 public final class PrivateKey25519 implements Secret
 {

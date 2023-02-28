@@ -7,8 +7,8 @@ import sparkz.util.serialization.Writer;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.horizen.account.utils.RlpStreamDecoder.OFFSET_SHORT_LIST;
-import static com.horizen.account.utils.RlpStreamDecoder.OFFSET_SHORT_STRING;
+import static io.horizen.account.utils.RlpStreamDecoder.OFFSET_SHORT_LIST;
+import static io.horizen.account.utils.RlpStreamDecoder.OFFSET_SHORT_STRING;
 
 
 /**

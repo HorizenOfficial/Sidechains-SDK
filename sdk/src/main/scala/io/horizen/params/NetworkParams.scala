@@ -5,7 +5,7 @@ import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 
 import java.math.BigInteger
-import io.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block

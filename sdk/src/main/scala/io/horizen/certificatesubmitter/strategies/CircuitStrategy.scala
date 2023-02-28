@@ -26,7 +26,7 @@ abstract class CircuitStrategy[
   MS <: AbstractState[TX, H, PM, MS],
   T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends SparkzLogging{
   
-  def generateProof(certificateData: T, provingFileAbsolutePath: String): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
+  def generateProof(certificateData: T, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
   def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): T
 

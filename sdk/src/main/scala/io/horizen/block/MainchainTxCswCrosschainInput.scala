@@ -3,7 +3,7 @@ package io.horizen.block
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.json.serializer.ReverseBytesSerializer
-import io.horizen.librustsidechains.FieldElement
+import com.horizen.librustsidechains.FieldElement
 import io.horizen.utils.{BytesUtils, Utils, CompactSize}
 
 import scala.util.Try

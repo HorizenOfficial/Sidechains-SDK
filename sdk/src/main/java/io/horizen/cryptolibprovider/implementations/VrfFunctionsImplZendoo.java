@@ -2,15 +2,15 @@ package io.horizen.cryptolibprovider.implementations;
 
 import io.horizen.cryptolibprovider.VrfFunctions;
 import io.horizen.cryptolibprovider.utils.FieldElementUtils;
-import io.horizen.librustsidechains.FieldElement;
-import io.horizen.vrfnative.*;
-import io.horizen.librustsidechains.Constants;
+import com.horizen.librustsidechains.FieldElement;
+import com.horizen.vrfnative.*;
+import com.horizen.librustsidechains.Constants;
 
 import java.util.EnumMap;
 import java.util.Optional;
 
-import static com.horizen.cryptolibprovider.VrfFunctions.KeyType.PUBLIC;
-import static com.horizen.cryptolibprovider.VrfFunctions.KeyType.SECRET;
+import static io.horizen.cryptolibprovider.VrfFunctions.KeyType.PUBLIC;
+import static io.horizen.cryptolibprovider.VrfFunctions.KeyType.SECRET;
 
 public class VrfFunctionsImplZendoo implements VrfFunctions {
     @Override

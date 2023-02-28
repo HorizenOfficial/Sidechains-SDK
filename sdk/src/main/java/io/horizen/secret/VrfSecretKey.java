@@ -13,9 +13,9 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Objects;
 
-import static com.horizen.secret.SecretsIdsEnum.VrfPrivateKeySecretId;
-import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_PROOF;
-import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_OUTPUT;
+import static io.horizen.secret.SecretsIdsEnum.VrfPrivateKeySecretId;
+import static io.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_PROOF;
+import static io.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_OUTPUT;
 
 public class VrfSecretKey implements Secret {
     public static final int SECRET_KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfSecretKeyLength();

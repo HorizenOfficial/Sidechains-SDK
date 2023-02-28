@@ -1,6 +1,6 @@
 package io.horizen.cryptolibprovider;
 
-import io.horizen.certnative.BackwardTransfer;
+import com.horizen.certnative.BackwardTransfer;
 import io.horizen.utils.Pair;
 import java.util.List;
 import java.util.Optional;

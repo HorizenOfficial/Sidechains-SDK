@@ -7,7 +7,7 @@ import io.horizen.account.utils.Secp256k1
 import io.horizen.customtypes._
 import io.horizen.proof.Signature25519
 import io.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
-import io.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
+import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
 import io.horizen.secret._
 
 import java.math.BigInteger

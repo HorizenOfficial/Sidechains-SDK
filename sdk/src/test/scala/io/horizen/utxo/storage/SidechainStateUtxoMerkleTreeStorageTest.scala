@@ -3,7 +3,7 @@ package io.horizen.utxo.storage
 import io.horizen.SidechainTypes
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.fixtures.StoreFixture
-import io.horizen.librustsidechains.FieldElement
+import com.horizen.librustsidechains.FieldElement
 import io.horizen.proposition.Proposition
 import io.horizen.storage.Storage
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}

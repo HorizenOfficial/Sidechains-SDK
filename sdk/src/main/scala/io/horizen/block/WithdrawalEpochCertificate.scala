@@ -10,7 +10,7 @@ import io.horizen.json.serializer.ReverseBytesSerializer
 import io.horizen.utils.{BytesUtils, Utils, CompactSize}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
-import io.horizen.librustsidechains.{Utils => ScCryptoUtils}
+import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
 import sparkz.util.SparkzLogging
 
 import scala.util.Try

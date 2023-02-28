@@ -1,7 +1,7 @@
 package io.horizen.cryptolibprovider.utils;
 
-import io.horizen.librustsidechains.FieldElement;
-import io.horizen.librustsidechains.Constants;
+import com.horizen.librustsidechains.FieldElement;
+import com.horizen.librustsidechains.Constants;
 
 import java.util.Arrays;
 

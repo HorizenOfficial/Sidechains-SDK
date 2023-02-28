@@ -9,12 +9,12 @@ import akka.util.Timeout
 import com.google.common.io.Files
 import io.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import io.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proposition.MCPublicKeyHashProposition
-import io.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
+import com.horizen.schnorrnative.{SchnorrKeyPair, SchnorrSecretKey}
 import io.horizen.utils.BytesUtils
 import io.horizen.utxo.box.WithdrawalRequestBox
 import io.horizen.utxo.box.data.WithdrawalRequestBoxData
@@ -35,7 +35,7 @@ private class ProofThreadActorReceiver
   extends Actor with SecretFixture{
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
-    var proofWithQuality:com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
+    var proofWithQuality:io.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
 
   case class DataForProofGeneration(sidechainId: Array[Byte],
                                     processedEpochNumber: Int,
@@ -111,7 +111,7 @@ private class ProofThreadActorReceiver
     DataForProofGeneration(sidechainId, epochNumber, threshold, wb, endCummulativeTransactionCommTreeHash, publicKeysBytes, signatures, merkelTreeRoot)
   }
 
-  private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  private def generateProof(dataForProofGeneration: DataForProofGeneration): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(dataForProofGeneration.withdrawalRequests.map(box => new BackwardTransfer(box.proposition.bytes, box.value)).asJava, dataForProofGeneration.sidechainId, dataForProofGeneration.processedEpochNumber, dataForProofGeneration.endCumulativeEpochBlockHash, 0, 0, Optional.of(dataForProofGeneration.merkelTreeRoot), dataForProofGeneration.signatures, dataForProofGeneration.publicKeysBytes, dataForProofGeneration.threshold, ProofThreadActorReceiver.provingKeyPath, true, true)
   }
 }

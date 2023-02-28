@@ -127,7 +127,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
                                initialCumulativeHash: Array[Byte] = FieldElementFixture.generateFieldElement()
                               ): SidechainBlockInfo = {
     val blockId = bytesToId(new Array[Byte](32))
-    val mainchainHeaderHash : MainchainHeaderHash = com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))
+    val mainchainHeaderHash : MainchainHeaderHash = io.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))
 
     SidechainBlockInfo(
       1,

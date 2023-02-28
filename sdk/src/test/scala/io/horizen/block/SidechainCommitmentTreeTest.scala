@@ -3,8 +3,8 @@ package io.horizen.block
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.fixtures.SecretFixture
-import io.horizen.librustsidechains.{Constants, FieldElement}
-import io.horizen.merkletreenative.MerklePath
+import com.horizen.librustsidechains.{Constants, FieldElement}
+import com.horizen.merkletreenative.MerklePath
 import io.horizen.transaction.mainchain.ForwardTransfer
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.assertTrue

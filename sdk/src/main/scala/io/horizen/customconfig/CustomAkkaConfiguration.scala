@@ -9,10 +9,10 @@ object CustomAkkaConfiguration {
    ConfigFactory.parseString("""
         akka.actor.deployment {
             prio-mailbox {
-                mailbox-type = "com.horizen.mailbox.PrioritizedMailbox"
+                mailbox-type = "io.horizen.mailbox.PrioritizedMailbox"
             }
             submitter-prio-mailbox {
-                mailbox-type = "com.horizen.mailbox.SubmitterPrioritizedMailbox"
+                mailbox-type = "io.horizen.mailbox.SubmitterPrioritizedMailbox"
             }
         }
       """)

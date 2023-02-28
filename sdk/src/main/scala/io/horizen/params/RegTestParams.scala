@@ -3,7 +3,7 @@ package io.horizen.params
 import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 
 import java.math.BigInteger
-import io.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions

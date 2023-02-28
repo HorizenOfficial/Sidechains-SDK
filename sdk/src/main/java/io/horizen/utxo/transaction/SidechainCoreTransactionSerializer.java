@@ -17,9 +17,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.horizen.utxo.transaction.BoxTransaction.MAX_TRANSACTION_NEW_BOXES;
-import static com.horizen.utxo.transaction.BoxTransaction.MAX_TRANSACTION_UNLOCKERS;
-import static com.horizen.utxo.transaction.SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION;
+import static io.horizen.utxo.transaction.BoxTransaction.MAX_TRANSACTION_NEW_BOXES;
+import static io.horizen.utxo.transaction.BoxTransaction.MAX_TRANSACTION_UNLOCKERS;
+import static io.horizen.utxo.transaction.SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION;
 
 public final class SidechainCoreTransactionSerializer implements TransactionSerializer<SidechainCoreTransaction>
 {

@@ -13,7 +13,7 @@ import sparkz.util.serialization.Writer;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.horizen.transaction.MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION;
+import static io.horizen.transaction.MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION;
 
 public final class MC2SCAggregatedTransactionSerializer implements TransactionSerializer<MC2SCAggregatedTransaction> {
     private static MC2SCAggregatedTransactionSerializer serializer;

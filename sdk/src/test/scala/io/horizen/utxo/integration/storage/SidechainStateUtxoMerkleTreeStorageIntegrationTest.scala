@@ -2,7 +2,7 @@ package io.horizen.utxo.integration.storage
 
 import io.horizen.SidechainTypes
 import io.horizen.fixtures.StoreFixture
-import io.horizen.librustsidechains.FieldElement
+import com.horizen.librustsidechains.FieldElement
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.storage.SidechainStateUtxoMerkleTreeStorage

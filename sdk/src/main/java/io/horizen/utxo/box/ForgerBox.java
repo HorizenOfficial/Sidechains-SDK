@@ -5,7 +5,7 @@ import io.horizen.utxo.box.data.ForgerBoxData;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.proposition.VrfPublicKey;
 
-import static com.horizen.utxo.box.CoreBoxesIdsEnum.ForgerBoxId;
+import static io.horizen.utxo.box.CoreBoxesIdsEnum.ForgerBoxId;
 
 public final class ForgerBox
         extends AbstractBox<PublicKey25519Proposition, ForgerBoxData, ForgerBox>

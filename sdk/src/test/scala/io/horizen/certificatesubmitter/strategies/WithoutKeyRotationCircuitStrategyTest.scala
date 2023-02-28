@@ -6,16 +6,16 @@ import io.horizen.block.SidechainCreationVersions
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import io.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import io.horizen.librustsidechains.FieldElement
+import com.horizen.librustsidechains.FieldElement
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.schnorrnative.SchnorrKeyPair
+import com.horizen.schnorrnative.SchnorrKeyPair
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.WithdrawalRequestBox
@@ -144,7 +144,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       assertResult("filePath")(answer.getArgument(10).asInstanceOf[String])
       assertResult(true)(answer.getArgument(11).asInstanceOf[Boolean]) // compressedPk
       assertResult(true)(answer.getArgument(12).asInstanceOf[Boolean]) // compressProof
-      new com.horizen.utils.Pair(key, 425L)
+      new io.horizen.utils.Pair(key, 425L)
     })
     val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     val pair: utils.Pair[Array[Byte], lang.Long] = keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")
@@ -169,7 +169,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       assertResult(2L)(answer.getArgument(4).asInstanceOf[Long])
       assertResult(2L)(answer.getArgument(5).asInstanceOf[Long])
       assert(answer.getArgument(6).asInstanceOf[java.util.Optional[Byte]].isPresent)
-      new com.horizen.utils.Pair(Array(67.toByte), 425L)
+      new io.horizen.utils.Pair(Array(67.toByte), 425L)
     })
     val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     keyRotationStrategy.getMessageToSign(sidechainNodeView().history, sidechainNodeView().state, WithoutKeyRotationCircuitStrategyTest.epochNumber)

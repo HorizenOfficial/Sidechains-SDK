@@ -16,9 +16,9 @@ import sparkz.util.serialization.Writer;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.horizen.utxo.box.CoreBoxesIdsEnum.*;
-import static com.horizen.utxo.transaction.BoxTransaction.MAX_TRANSACTION_NEW_BOXES;
-import static com.horizen.utxo.transaction.BoxTransaction.MAX_TRANSACTION_UNLOCKERS;
+import static io.horizen.utxo.box.CoreBoxesIdsEnum.*;
+import static io.horizen.utxo.transaction.BoxTransaction.MAX_TRANSACTION_NEW_BOXES;
+import static io.horizen.utxo.transaction.BoxTransaction.MAX_TRANSACTION_UNLOCKERS;
 
 
 public final class RegularTransactionSerializer implements TransactionSerializer<RegularTransaction>

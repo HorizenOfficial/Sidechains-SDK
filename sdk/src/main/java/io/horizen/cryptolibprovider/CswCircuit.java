@@ -2,7 +2,7 @@ package io.horizen.cryptolibprovider;
 
 import io.horizen.block.WithdrawalEpochCertificate;
 import io.horizen.utxo.box.Box;
-import io.horizen.librustsidechains.FieldElement;
+import com.horizen.librustsidechains.FieldElement;
 import io.horizen.proposition.Proposition;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.utxo.utils.ForwardTransferCswData;

@@ -1,7 +1,7 @@
 package io.horizen.cryptolibprovider;
 
 import io.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper;
-import io.horizen.librustsidechains.FieldElement;
+import com.horizen.librustsidechains.FieldElement;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
 

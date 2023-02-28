@@ -45,7 +45,7 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        com.horizen.proof.VrfProof vrfProof = (com.horizen.proof.VrfProof) o;
+        io.horizen.proof.VrfProof vrfProof = (io.horizen.proof.VrfProof) o;
         return Arrays.equals(proofBytes, vrfProof.proofBytes);
     }
 

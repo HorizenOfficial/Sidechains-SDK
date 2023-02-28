@@ -3,7 +3,7 @@ package io.horizen
 import com.google.common.io.Files
 import io.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import io.horizen.proposition.MCPublicKeyHashProposition
 import io.horizen.utils.BytesUtils

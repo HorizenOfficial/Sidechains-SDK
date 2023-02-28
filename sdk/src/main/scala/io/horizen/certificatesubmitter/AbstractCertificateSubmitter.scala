@@ -383,7 +383,7 @@ abstract class AbstractCertificateSubmitter[
             // to unlock the Actor message queue for another requests.
             new Thread(new Runnable() {
               override def run(): Unit = {
-                var proofWithQuality: com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
+                var proofWithQuality: io.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
                 try {
                   proofWithQuality = keyRotationStrategy.generateProof(dataForProofGeneration, provingFileAbsolutePath)
                 } catch {

@@ -1,6 +1,6 @@
 package io.horizen.cryptolibprovider;
 
-import io.horizen.librustsidechains.FieldElement;
+import com.horizen.librustsidechains.FieldElement;
 
 import java.util.EnumMap;
 

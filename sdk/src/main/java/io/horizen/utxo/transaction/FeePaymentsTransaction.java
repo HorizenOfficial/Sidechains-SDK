@@ -10,7 +10,7 @@ import sparkz.core.serialization.SparkzSerializer;
 import java.util.Collections;
 import java.util.List;
 
-import static com.horizen.utxo.transaction.CoreTransactionsIdsEnum.FeePaymentsTransactionId;
+import static io.horizen.utxo.transaction.CoreTransactionsIdsEnum.FeePaymentsTransactionId;
 import static java.util.Collections.emptyList;
 
 /*

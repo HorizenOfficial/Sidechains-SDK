@@ -5,7 +5,7 @@ import io.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 import java.util.Optional;
-import static com.horizen.account.utils.Secp256k1.LOWER_REAL_V;
+import static io.horizen.account.utils.Secp256k1.LOWER_REAL_V;
 
 public final class EthereumTransactionUtils {
 

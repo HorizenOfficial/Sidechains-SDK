@@ -1,7 +1,7 @@
 package io.horizen.fork
 
 import io.horizen.utils.ZenCoinsUtils
-import io.horizen.librustsidechains.Constants
+import com.horizen.librustsidechains.Constants
 
 /**
  * Sidechain Fork # 1

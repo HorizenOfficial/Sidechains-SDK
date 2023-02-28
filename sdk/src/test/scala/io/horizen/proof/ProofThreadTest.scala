@@ -6,7 +6,7 @@ import java.util.Optional
 import com.google.common.io.Files
 import io.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import io.horizen.certnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import io.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import io.horizen.params.{NetworkParams, RegTestParams}
@@ -24,7 +24,7 @@ import scala.util.Random
 
 class ProofThreadTest extends SecretFixture {
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
-  var proofWithQuality:com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
+  var proofWithQuality:io.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
 
   private val tmpDir: File = Files.createTempDir
   private val provingKeyPath: String = tmpDir.getAbsolutePath + "/snark_pk"
@@ -100,7 +100,7 @@ class ProofThreadTest extends SecretFixture {
     DataForProofGeneration(sidechainId, epochNumber, threshold, wb, endCummulativeTransactionCommTreeHash, publicKeysBytes, signatures, merkelTreeRoot)
   }
 
-  private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  private def generateProof(dataForProofGeneration: DataForProofGeneration): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(dataForProofGeneration.withdrawalRequests.map(box => new BackwardTransfer(box.proposition.bytes, box.value)).asJava, dataForProofGeneration.sidechainId, dataForProofGeneration.processedEpochNumber, dataForProofGeneration.endCumulativeEpochBlockHash, 0, 0, Optional.of(dataForProofGeneration.merkelTreeRoot), dataForProofGeneration.signatures, dataForProofGeneration.publicKeysBytes, dataForProofGeneration.threshold, provingKeyPath, true, true)
   }
 

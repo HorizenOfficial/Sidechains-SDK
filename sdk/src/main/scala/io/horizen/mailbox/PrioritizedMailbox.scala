@@ -11,7 +11,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedTransactio
 class PrioritizedMailbox (settings: Settings, cfg: Config) extends UnboundedStablePriorityMailbox (
   PriorityGenerator {
     case sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView => 0 // internal calls must go first
-    case com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView => 1 // api calls
+    case io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView => 1 // api calls
     case ApplyFunctionOnNodeView => 1
     case ApplyBiFunctionOnNodeView => 1
     case LocallyGeneratedSecret => 1

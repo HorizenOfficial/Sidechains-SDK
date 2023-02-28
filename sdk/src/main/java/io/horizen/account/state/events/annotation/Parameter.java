@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /**
  * When creating a new event, every parameter in the constructor needs to be annotated by this annotation combined with @getter.
- * Check usage example at com.horizen.account.events and EthereumEventTest in com.horizen.account.event.
+ * Check usage example at io.horizen.account.events and EthereumEventTest in io.horizen.account.event.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
