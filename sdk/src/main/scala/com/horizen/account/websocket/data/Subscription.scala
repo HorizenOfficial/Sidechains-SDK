@@ -1,11 +1,9 @@
 package com.horizen.account.websocket.data
 
-import com.horizen.account.receipt.Bloom
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Hash
+import com.horizen.account.receipt.{Bloom, EthereumConsensusDataLog}
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.Hash
 import org.web3j.utils.Numeric
-
 import jakarta.websocket.Session
 
 trait BaseSubscription {
@@ -32,7 +30,7 @@ case class SubscriptionWithFilter(session: Session, subscriptionId: String,
       true
   }
 
-  def filterTransactionLogs(log: EvmLog): Boolean = {
+  def filterTransactionLogs(log: EthereumConsensusDataLog): Boolean = {
     if (address.isDefined && !address.get.contains(log.address.toString))
       false
     else

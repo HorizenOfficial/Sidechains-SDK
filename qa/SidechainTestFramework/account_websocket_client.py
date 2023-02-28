@@ -1,6 +1,4 @@
-import websocket
 from websocket import create_connection
-from test_framework.util import assert_equal, assert_true
 import time
 import json
 
