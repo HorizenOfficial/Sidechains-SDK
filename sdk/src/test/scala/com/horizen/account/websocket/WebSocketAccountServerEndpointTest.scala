@@ -9,17 +9,16 @@ import com.horizen.account.AccountSidechainNodeViewHolder.ReceivableMessages.Mem
 import com.horizen.account.api.rpc.types.EthereumBlockView
 import com.horizen.account.api.rpc.utils.RpcCode
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.receipt.{EthereumConsensusDataLog, EthereumReceipt}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.SidechainApiMockConfiguration
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Hash
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.{BytesUtils, CountDownLatchController}
+import io.horizen.evm.Hash
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
-import org.junit.{After, Assert, Before, Test}
-import org.scalatest.{BeforeAndAfterAll, Ignore}
+import org.junit.{After, Assert, Test}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
@@ -619,7 +618,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Verify that we receive a negative response
     assertEquals(1, endpoint.receivedMessage.size())
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkErrorResponse(response, clientId1, RpcCode.InvalidParams.code, "Missing filters (address, topcis).")
+    checkErrorResponse(response, clientId1, RpcCode.InvalidParams.code, "Missing filters (address, topics).")
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -754,17 +753,17 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     assertEquals("Wrong block difficulty", blockJson.get("difficulty").asText(), "0x0")
     assertEquals("Wrong block extraData", blockJson.get("extraData").asText(), ethereumBlockView.extraData)
-    assertEquals("Wrong block gasLimit", blockJson.get("gasLimit").asText(), ethereumBlockView.gasLimit)
-    assertEquals("Wrong block gasUsed", blockJson.get("gasUsed").asText(), ethereumBlockView.gasUsed)
-    assertEquals("Wrong block logsBloom", blockJson.get("logsBloom").asText(), ethereumBlockView.logsBloom)
+    assertEquals("Wrong block gasLimit", blockJson.get("gasLimit").asText(), Numeric.toHexStringWithPrefix(ethereumBlockView.gasLimit))
+    assertEquals("Wrong block gasUsed", blockJson.get("gasUsed").asText(), Numeric.toHexStringWithPrefix(ethereumBlockView.gasUsed))
+    assertEquals("Wrong block logsBloom", blockJson.get("logsBloom").asText(), Numeric.prependHexPrefix(BytesUtils.toHexString(ethereumBlockView.logsBloom)))
     assertEquals("Wrong block miner", blockJson.get("miner").asText(), ethereumBlockView.miner.toString)
     assertEquals("Wrong block nonce", blockJson.get("nonce").asText(), ethereumBlockView.nonce)
-    assertEquals("Wrong block number", blockJson.get("number").asText(), ethereumBlockView.number)
+    assertEquals("Wrong block number", blockJson.get("number").asText(), Numeric.toHexStringWithPrefix(ethereumBlockView.number))
     assertEquals("Wrong block parentHash", blockJson.get("parentHash").asText(), ethereumBlockView.parentHash.toString)
     assertEquals("Wrong block receiptRoot", blockJson.get("receiptRoot").asText(), ethereumBlockView.receiptsRoot.toString)
     assertEquals("Wrong block sha3Uncles", blockJson.get("sha3Uncles").asText(), ethereumBlockView.sha3Uncles)
     assertEquals("Wrong block stateRoot", blockJson.get("stateRoot").asText(), ethereumBlockView.stateRoot.toString)
-    assertEquals("Wrong block timestamp", blockJson.get("timestamp").asText(), ethereumBlockView.timestamp)
+    assertEquals("Wrong block timestamp", blockJson.get("timestamp").asText(), Numeric.toHexStringWithPrefix(ethereumBlockView.timestamp))
     assertEquals("Wrong block transactionsRoot", blockJson.get("transactionsRoot").asText(), ethereumBlockView.transactionsRoot.toString)
   }
 
@@ -775,7 +774,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals("Wrong transaction hash", txHashJson, Numeric.prependHexPrefix(tx.id()))
   }
 
-  private def checkLogs(wsResponse: JsonNode, transactionReceipt: EthereumReceipt, transactionLog: EvmLog, addressFilter: Option[Array[String]], logIndex: String, removed: Boolean = false): Unit = {
+  private def checkLogs(wsResponse: JsonNode, transactionReceipt: EthereumReceipt, transactionLog: EthereumConsensusDataLog, addressFilter: Option[Array[String]], logIndex: String, removed: Boolean = false): Unit = {
     checkWsEventStaticFields(wsResponse)
     assertEquals("Wrong log removed property", wsResponse.get("params").get("removed").asBoolean(), removed)
 
