@@ -10,6 +10,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}
 import com.horizen.utxo.backup.{BackupBox, BoxIterator}
 import com.horizen.utxo.box.{BoxSerializer, CoinsBox}
 import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.utxo.state.SidechainBackup
 import com.horizen.utxo.storage.{BackupStorage, BoxBackupInterface}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.rules.TemporaryFolder

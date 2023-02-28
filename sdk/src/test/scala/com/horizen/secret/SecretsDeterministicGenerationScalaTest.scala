@@ -2,8 +2,7 @@ package com.horizen.secret
 
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.utils.Secp256k1
-import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
-import com.horizen.cryptolibprovider.utils.SchnorrFunctions
+import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctions, VrfFunctions}
 import com.horizen.utils.Ed25519
 import org.junit.Assert.{assertEquals, assertNotEquals}
 import org.junit.Test

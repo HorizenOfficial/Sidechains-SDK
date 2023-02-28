@@ -1,7 +1,6 @@
 package com.horizen.utxo.mempool
 
 import com.horizen.fixtures.TransactionFixture
-import com.horizen.utxo.utils.MempoolMap
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

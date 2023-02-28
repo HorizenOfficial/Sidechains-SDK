@@ -679,7 +679,7 @@ class EthService(
 
           // get a receipt obj with non consensus data (logs updated too)
           val fullReceipt =
-            receipt.EthereumReceipt(
+            EthereumReceipt(
               consensusDataReceipt,
               txHash,
               i,

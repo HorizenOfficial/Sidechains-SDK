@@ -1,15 +1,15 @@
-package com.horizen.utxo
+package com.horizen.utxo.state
 
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen.SidechainTypes
-import com.horizen.utxo.companion.SidechainBoxesCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import com.horizen.utxo.backup.BoxIterator
 import com.horizen.utxo.box.BoxSerializer
+import com.horizen.utxo.companion.SidechainBoxesCompanion
 import com.horizen.utxo.storage.{BackupStorage, BoxBackupInterface, SidechainStateStorage}
 import org.apache.commons.io.FileUtils
 import sparkz.util.SparkzLogging

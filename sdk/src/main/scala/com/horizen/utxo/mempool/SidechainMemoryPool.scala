@@ -3,7 +3,6 @@ package com.horizen.utxo.mempool
 import com.horizen.utxo.box.{Box, WithdrawalRequestBox}
 import com.horizen.utxo.node.NodeMemoryPool
 import com.horizen.utxo.transaction.BoxTransaction
-import com.horizen.utxo.utils.MempoolMap
 import com.horizen.{MempoolSettings, SidechainTypes, utxo}
 import sparkz.core.transaction.MempoolReader
 import sparkz.util.{ModifierId, SparkzLogging}
