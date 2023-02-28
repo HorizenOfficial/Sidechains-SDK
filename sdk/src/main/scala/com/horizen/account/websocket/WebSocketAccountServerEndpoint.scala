@@ -13,6 +13,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebsocketAccountResponse}
+import com.horizen.evm.utils.Address
 import com.horizen.serialization.SerializationUtil
 import jakarta.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
 import jakarta.websocket.server.ServerEndpoint
@@ -171,7 +172,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   var logsSubscriptions: util.ArrayList[SubscriptionWithFilter] = new util.ArrayList[SubscriptionWithFilter]()
 
   val webSocketAccountChannelImpl = new WebSocketAccountChannelImpl()
-  private var walletKeys: Set[String] = webSocketAccountChannelImpl.getWalletKeys()
+  private var walletAddresses: Set[Address] = webSocketAccountChannelImpl.getWalletAddresses()
   private var cachedBlocksReceipts: mutable.Queue[(String, Seq[EthereumReceipt])] = new mutable.Queue[(String, Seq[EthereumReceipt])]()
 
   def notifySemanticallySuccessfulModifier(block: AccountBlock): Unit = {
@@ -203,7 +204,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   def notifyNewPendingTransaction(tx: EthereumTransaction): Unit = {
     log.info("Websocket received new tx: "+tx.id())
 
-    if (walletKeys.contains(tx.getFromAddress.toString)) {
+    if (walletAddresses.contains(tx.getFromAddress)) {
       val responsePayload = mapper.createObjectNode()
       responsePayload.put("result", Numeric.prependHexPrefix(tx.id()))
 
@@ -254,7 +255,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   }
 
   def onVaultChanged(): Unit = {
-    walletKeys = webSocketAccountChannelImpl.getWalletKeys()
+    walletAddresses = webSocketAccountChannelImpl.getWalletAddresses()
   }
 
   def addNewHeadsSubscription(subscription: Subscription): Unit = {
