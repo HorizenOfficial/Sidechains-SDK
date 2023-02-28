@@ -15,9 +15,10 @@ import sparkz.core.NodeViewHolder.CurrentView
 import com.horizen.account.websocket.WebSocketAccountServerRef.sidechainNodeViewHolderRef
 import akka.pattern.ask
 import com.horizen.account.api.rpc.types.EthereumBlockView
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.websocket.data.SubscriptionWithFilter
-import com.horizen.evm.utils.Hash
+import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
@@ -28,7 +29,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class WebSocketAccountChannelImpl extends WebSocketAccountChannel with SparkzLogging{
+class WebSocketAccountChannelImpl extends SparkzLogging{
   implicit val duration: Timeout = 20 seconds
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
@@ -54,19 +55,19 @@ class WebSocketAccountChannelImpl extends WebSocketAccountChannel with SparkzLog
       }
   }
 
-  override def getWalletKeys(): Set[String] = {
+  def getWalletAddresses(): Set[Address] = {
     applyOnAccountView { nodeView =>
-      nodeView.vault.getWalletReader.getPublicKeys.map(key => Numeric.prependHexPrefix(BytesUtils.toHexString(key)))
+      nodeView.vault.publicKeys().filter(key => key.isInstanceOf[AddressProposition]).map(addressProposition => addressProposition.asInstanceOf[AddressProposition].address())
     }
   }
 
-  override def getTransactionReceipt(txHash: String): Option[EthereumReceipt] = {
+  def getTransactionReceipt(txHash: String): Option[EthereumReceipt] = {
     applyOnAccountView { nodeView =>
       nodeView.state.getTransactionReceipt(BytesUtils.fromHexString(txHash))
     }
   }
 
-  override def createWsLogEventFromEthereumReceipt(txReceipt: EthereumReceipt, subscriptionWithFilter: SubscriptionWithFilter): Array[ObjectNode] = {
+  def createWsLogEventFromEthereumReceipt(txReceipt: EthereumReceipt, subscriptionWithFilter: SubscriptionWithFilter): Array[ObjectNode] = {
     val txLogs: java.util.ArrayList[ObjectNode] = new util.ArrayList[ObjectNode]()
     if (subscriptionWithFilter.checkSubscriptionInBloom(txReceipt.consensusDataReceipt.logsBloom)) {
       txReceipt.consensusDataReceipt.logs.zipWithIndex.foreach {
@@ -90,7 +91,7 @@ class WebSocketAccountChannelImpl extends WebSocketAccountChannel with SparkzLog
   }
 
 
-  override def accountBlockToWebsocketJson(block: AccountBlock): ObjectNode = {
+  def accountBlockToWebsocketJson(block: AccountBlock): ObjectNode = {
     applyOnAccountView { nodeView =>
       val blockNumber = nodeView.history.getBlockHeightById(block.id).get().toLong
       val blockHash = new Hash(block.id.toBytes)

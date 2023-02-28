@@ -12,7 +12,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.{AccountState, GasUtil}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.EthereumTransactionUtils
-import com.horizen.account.wallet.{AccountWallet, AccountWalletReader}
+import com.horizen.account.wallet.AccountWallet
 import com.horizen.evm.interop.EvmLog
 import com.horizen.fixtures.CompanionsFixture
 import com.horizen.utils.BytesUtils
@@ -112,10 +112,8 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
 
   def getNodeWalletMock: AccountWallet = {
     val wallet: AccountWallet = mock[AccountWallet]
-    val walletReader: AccountWalletReader = mock[AccountWalletReader]
 
-    Mockito.when(walletReader.getPublicKeys).thenAnswer(_ => Set(pubKeys1.pubKeyBytes(), pubKeys2.pubKeyBytes()))
-    Mockito.when(wallet.getWalletReader).thenAnswer(_ => walletReader)
+    Mockito.when(wallet.publicKeys()).thenAnswer(_ => Set(pubKeys1, pubKeys2))
 
     wallet
   }
