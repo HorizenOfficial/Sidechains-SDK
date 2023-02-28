@@ -33,9 +33,6 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.co
   def generateNextSecret[T <: Secret](secretCreator: SecretCreator[T]): Try[(W, T)]
 }
 
-trait WalletReader extends sparkz.core.transaction.wallet.VaultReader {
-  def getPublicKeys: Set[Array[Byte]]
-}
 
 abstract class AbstractWallet[
   TX <: Transaction,

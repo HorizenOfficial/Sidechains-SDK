@@ -1,4 +1,3 @@
-
 package io.horizen.account.wallet
 
 import io.horizen.account.block.AccountBlock
@@ -40,6 +39,7 @@ class AccountWallet private[horizen](seed: Array[Byte],
   override def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): AccountWallet = {
     this
   }
+}
 
 object AccountWallet {
   private[horizen] def restoreWallet(seed: Array[Byte],
