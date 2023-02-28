@@ -1,9 +1,8 @@
 package com.horizen.account.websocket
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
+import com.horizen.account.AccountSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.transaction.EthereumTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedVault, SemanticallySuccessfulModifier, SuccessfulTransaction}
 import sparkz.util.SparkzLogging

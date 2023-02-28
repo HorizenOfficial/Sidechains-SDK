@@ -574,6 +574,7 @@ class SCWsAccountServerTest(AccountChainSetup):
         method = 'transfer(address,uint256)'
         res = contract_function_call(sc_node, erc20_contract, erc20_address, self.evm_address, method, other_address,
                                transfer_amount)
+
         # SC node 1 generate 1 block
         logging.info("SC node 1 generate 1 block")
 
