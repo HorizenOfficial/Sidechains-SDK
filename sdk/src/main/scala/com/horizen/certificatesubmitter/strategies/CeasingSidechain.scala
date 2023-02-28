@@ -3,7 +3,8 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{ObsoleteWi
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
-import com.horizen.{AbstractHistory, AbstractState}
+import com.horizen.AbstractState
+import com.horizen.history.AbstractHistory
 import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.NodeViewHolder.CurrentView
 

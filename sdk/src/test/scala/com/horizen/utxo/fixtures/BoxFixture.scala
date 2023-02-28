@@ -7,10 +7,10 @@ import com.horizen.fixtures.SecretFixture
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.utils.ZenCoinsUtils
-import com.horizen.utxo.WalletBox
 import com.horizen.utxo.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.utxo.customtypes.{CustomBox, CustomBoxData}
+import com.horizen.utxo.wallet.WalletBox
 import sparkz.core.bytesToId
 
 import java.util.{ArrayList => JArrayList, List => JList}

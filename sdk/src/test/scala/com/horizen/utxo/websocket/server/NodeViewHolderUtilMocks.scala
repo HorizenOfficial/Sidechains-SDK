@@ -15,8 +15,11 @@ import com.horizen.utxo.box.{Box, ForgerBox, ZenBox}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
 import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.utxo.fixtures.BoxFixture
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
 import com.horizen.utxo.transaction.RegularTransaction
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.state.SidechainState
+import com.horizen.utxo.wallet.SidechainWallet
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView

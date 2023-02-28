@@ -9,15 +9,16 @@ import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
 import com.horizen.utxo.block.SidechainBlock
 import com.horizen.utxo.box.data.{BoxData, ForgerBoxData, ZenBoxData}
 import com.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.utxo.customtypes.DefaultApplicationState
+import com.horizen.utxo.state.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import com.horizen.utxo.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.utxo.transaction.RegularTransaction
-import com.horizen.utxo.utils.BlockFeeInfo
-import com.horizen.utxo.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
+import com.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
+import com.horizen.utxo.state.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito

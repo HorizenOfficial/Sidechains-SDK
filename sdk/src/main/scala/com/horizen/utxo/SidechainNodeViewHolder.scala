@@ -8,10 +8,12 @@ import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
 import com.horizen.utxo.node.SidechainNodeView
-import com.horizen.utxo.state.ApplicationState
+import com.horizen.utxo.state.{ApplicationState, SidechainState, SidechainStateUtxoMerkleTreeProvider}
 import com.horizen.utxo.storage._
-import com.horizen.utxo.wallet.ApplicationWallet
+import com.horizen.utxo.wallet.{ApplicationWallet, SidechainWallet, SidechainWalletCswDataProvider}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{idToVersion, versionToId}

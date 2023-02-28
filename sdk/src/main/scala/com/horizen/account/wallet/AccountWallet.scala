@@ -5,7 +5,8 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
 import com.horizen.storage.SidechainSecretStorage
-import com.horizen.{AbstractWallet, SidechainTypes}
+import com.horizen.SidechainTypes
+import com.horizen.wallet.AbstractWallet
 import sparkz.core.VersionTag
 import sparkz.util.SparkzLogging
 

@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef}
 import com.horizen.block.ProofOfWorkVerifier
-import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CircuitTypes
 import com.horizen.customconfig.CustomAkkaConfiguration
@@ -17,14 +17,15 @@ import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetP
 import com.horizen.secret.SecretSerializer
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.utils.BytesUtils
-import com.horizen.utxo.api.http.SidechainTransactionApiRoute
+import com.horizen.utxo.SidechainNodeViewHolderRef
+import com.horizen.utxo.api.http.route.SidechainTransactionApiRoute
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.utxo.box.BoxSerializer
+import com.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
 import com.horizen.utxo.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
-import com.horizen.utxo.state.ApplicationState
+import com.horizen.utxo.state.{ApplicationState, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import com.horizen.utxo.storage._
-import com.horizen.utxo.wallet.ApplicationWallet
-import com.horizen.utxo.{SidechainUtxoMerkleTreeProviderCSWEnabled, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
+import com.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
 import com.horizen.{SidechainSettings, SidechainSettingsReader, SidechainTypes, utxo}
 import sparkz.core.api.http.ApiRejectionHandler
 import sparkz.core.utils.NetworkTimeProvider

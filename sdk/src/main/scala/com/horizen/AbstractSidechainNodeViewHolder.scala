@@ -3,12 +3,14 @@ package com.horizen
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
+import com.horizen.history.AbstractHistory
+import com.horizen.history.validation._
 import com.horizen.params.NetworkParams
 import com.horizen.secret.{Secret, SecretCreator}
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
-import com.horizen.validation._
+import com.horizen.wallet.AbstractWallet
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._

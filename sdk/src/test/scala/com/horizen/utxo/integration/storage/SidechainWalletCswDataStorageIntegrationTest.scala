@@ -2,9 +2,9 @@ package com.horizen.utxo.integration.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.fixtures.StoreFixture
-import com.horizen.utils.CswData
 import com.horizen.utxo.fixtures.CswDataFixture
 import com.horizen.utxo.storage.SidechainWalletCswDataStorage
+import com.horizen.utxo.utils.CswData
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

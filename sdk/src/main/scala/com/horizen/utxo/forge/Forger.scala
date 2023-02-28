@@ -5,10 +5,13 @@ import com.horizen._
 import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
+import com.horizen.utxo.state.SidechainState
 import com.horizen.utxo.storage.SidechainHistoryStorage
+import com.horizen.utxo.wallet.SidechainWallet
 import sparkz.core.utils.NetworkTimeProvider
 
 

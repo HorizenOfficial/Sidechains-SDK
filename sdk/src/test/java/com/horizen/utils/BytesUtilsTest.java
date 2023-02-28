@@ -3,7 +3,7 @@ package com.horizen.utils;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Shorts;
-import com.horizen.cryptolibprovider.utils.CircuitTypes;
+import com.horizen.cryptolibprovider.CircuitTypes;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.TestNetParams;

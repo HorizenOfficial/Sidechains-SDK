@@ -10,7 +10,7 @@ import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.utils.BytesUtils
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.utxo.transaction.{RegularTransaction, RegularTransactionSerializer}
-import com.horizen.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
+import com.horizen.history.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{After, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

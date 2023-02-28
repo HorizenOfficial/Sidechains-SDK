@@ -19,7 +19,7 @@ import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret._
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
-import com.horizen.utxo.api.http.ImportSecretsDetail
+import com.horizen.utxo.api.http.route.ImportSecretsDetail
 import com.horizen.{SidechainNodeViewBase, SidechainTypes}
 import sparkz.core.settings.RESTApiSettings
 

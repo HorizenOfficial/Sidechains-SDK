@@ -6,6 +6,7 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesS
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuit
+import com.horizen.history.AbstractHistory
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 

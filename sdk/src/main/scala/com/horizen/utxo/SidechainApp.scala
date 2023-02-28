@@ -18,17 +18,20 @@ import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.utxo.api.http._
+import com.horizen.utxo.api.http.route.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
 import com.horizen.utxo.backup.BoxIterator
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
 import com.horizen.utxo.box.BoxSerializer
 import com.horizen.utxo.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
 import com.horizen.utxo.csw.CswManagerRef
+import com.horizen.utxo.history.SidechainHistory
 import com.horizen.utxo.network.SidechainNodeViewSynchronizer
 import com.horizen.utxo.node._
-import com.horizen.utxo.state.ApplicationState
+import com.horizen.utxo.state.{ApplicationState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import com.horizen.utxo.storage._
-import com.horizen.utxo.wallet.ApplicationWallet
+import com.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWDisabled, SidechainWalletCswDataProviderCSWEnabled}
 import com.horizen.utxo.websocket.server.WebSocketServerRef
 import com.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes}
 import sparkz.core.api.http.ApiRoute

@@ -8,10 +8,12 @@ import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
 import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import com.horizen.history.AbstractHistory
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.TimeToEpochUtils
+import com.horizen.wallet.Wallet
 import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import sparkz.core.NodeViewHolder.{CurrentView, ReceivableMessages}

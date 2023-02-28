@@ -3,12 +3,14 @@ package com.horizen.account.validation
 import com.horizen.account.utils.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
+import com.horizen.account.history.validation.{BaseFeeBlockValidator, InvalidBaseFeeException}
 import com.horizen.account.utils.AccountMockDataHelper
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.bytesToId
 import org.web3j.utils.Numeric
+
 import java.math.BigInteger
 import scala.util.Random
 

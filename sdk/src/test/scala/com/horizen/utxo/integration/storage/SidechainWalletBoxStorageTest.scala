@@ -1,10 +1,9 @@
 package com.horizen.utxo.integration.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.companion._
-import com.horizen.customtypes._
+import com.horizen.utxo.companion._
 import com.horizen.fixtures._
-import com.horizen.utxo.WalletBox
+import com.horizen.utxo.wallet.WalletBox
 import com.horizen.utxo.box.{BoxSerializer, ZenBox}
 import com.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.utxo.fixtures.BoxFixture

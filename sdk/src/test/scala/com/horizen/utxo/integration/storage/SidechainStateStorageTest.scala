@@ -2,9 +2,8 @@ package com.horizen.utxo.integration.storage
 
 import com.horizen._
 import com.horizen.block.WithdrawalEpochCertificateFixture
-import com.horizen.companion._
+import com.horizen.utxo.companion._
 import com.horizen.consensus._
-import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}

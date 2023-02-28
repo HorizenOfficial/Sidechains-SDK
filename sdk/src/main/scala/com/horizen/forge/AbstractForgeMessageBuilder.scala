@@ -12,7 +12,8 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.{Transaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils, WithdrawalEpochInfo}
 import com.horizen.vrf.VrfOutput
-import com.horizen.{AbstractHistory, AbstractWallet}
+import com.horizen.history.AbstractHistory
+import com.horizen.wallet.AbstractWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.block.Block

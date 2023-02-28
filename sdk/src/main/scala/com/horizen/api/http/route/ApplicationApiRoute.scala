@@ -4,12 +4,14 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
 import com.horizen.AbstractSidechainNodeViewHolder
+import akka.pattern.ask
 import com.horizen.api.http.{ApplicationApiGroup, FunctionsApplierOnSidechainNodeView}
 import com.horizen.utxo.node.SidechainNodeView
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding
 
+import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}
 
 case class ApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: ApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)

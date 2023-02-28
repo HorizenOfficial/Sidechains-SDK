@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.api.http.SidechainApiMockConfiguration
 import com.horizen.utils.CountDownLatchController
-import com.horizen.utxo.SidechainMemoryPool
 import com.horizen.utxo.block.SidechainBlock
+import com.horizen.utxo.mempool.SidechainMemoryPool
 import com.horizen.utxo.transaction.RegularTransaction
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}

@@ -3,7 +3,8 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesS
 import com.horizen.certificatesubmitter.strategies.NonCeasingSidechain.NON_CEASING_SUBMISSION_DELAY
 import com.horizen.params.NetworkParams
 import com.horizen.utils.WithdrawalEpochInfo
-import com.horizen.{AbstractHistory, AbstractState}
+import com.horizen.AbstractState
+import com.horizen.history.AbstractHistory
 import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 

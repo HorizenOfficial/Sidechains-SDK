@@ -2,6 +2,7 @@ package com.horizen.account.validation
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.history.validation.{ChainIdBlockSemanticValidator, InvalidTransactionChainIdException, MissingTransactionSignatureException}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.transaction.EthereumTransaction

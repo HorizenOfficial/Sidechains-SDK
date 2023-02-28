@@ -9,8 +9,11 @@ import com.horizen.SidechainSyncInfo
 import com.horizen.json.SerializationUtil
 import com.horizen.utxo.block.SidechainBlock
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
 import com.horizen.utxo.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.state.SidechainState
+import com.horizen.utxo.wallet.SidechainWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.util.{ModifierId, SparkzLogging}

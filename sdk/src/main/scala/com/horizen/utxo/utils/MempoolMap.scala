@@ -1,6 +1,6 @@
 package com.horizen.utxo.utils
 
-import com.horizen.utxo.SidechainMemoryPoolEntry
+import com.horizen.utxo.mempool.SidechainMemoryPoolEntry
 
 import scala.collection.concurrent.TrieMap
 

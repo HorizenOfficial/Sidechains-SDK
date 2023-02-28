@@ -9,7 +9,7 @@ import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
-import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
+import com.horizen.history.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test

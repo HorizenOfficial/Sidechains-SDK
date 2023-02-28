@@ -17,10 +17,13 @@ import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.schnorrnative.SchnorrKeyPair
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.WithdrawalRequestBox
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
+import com.horizen.utxo.state.SidechainState
 import com.horizen.utxo.storage.SidechainHistoryStorage
+import com.horizen.utxo.wallet.SidechainWallet
 import org.junit.{Before, Test}
 import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}

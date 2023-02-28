@@ -5,8 +5,8 @@ import com.horizen.utxo.box.Box;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.utils.ForwardTransferCswData;
-import com.horizen.utils.UtxoCswData;
+import com.horizen.utxo.utils.ForwardTransferCswData;
+import com.horizen.utxo.utils.UtxoCswData;
 import scala.Enumeration;
 
 import java.util.List;

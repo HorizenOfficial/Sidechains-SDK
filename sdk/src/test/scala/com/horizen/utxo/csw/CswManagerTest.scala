@@ -17,10 +17,14 @@ import com.horizen.fixtures.{MainchainBlockReferenceFixture, SidechainBlockFixtu
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.{PrivateKey25519Creator, Secret}
-import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import com.horizen._
 import com.horizen.utxo.fixtures.CswDataFixture
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
+import com.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
+import com.horizen.utxo.state.SidechainState
+import com.horizen.utxo.wallet.SidechainWallet
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

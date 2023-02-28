@@ -1,7 +1,8 @@
 package com.horizen.certificatesubmitter.strategies
 
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
-import com.horizen.{AbstractHistory, AbstractState}
+import com.horizen.AbstractState
+import com.horizen.history.AbstractHistory
 import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 

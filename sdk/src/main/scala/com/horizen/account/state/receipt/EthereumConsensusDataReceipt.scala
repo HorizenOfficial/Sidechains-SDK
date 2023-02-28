@@ -1,7 +1,9 @@
 package com.horizen.account.state.receipt
 
+import com.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import com.horizen.account.utils.{RlpStreamDecoder, RlpStreamEncoder}
+import com.horizen.account.utils.{Bloom, RlpStreamDecoder, RlpStreamEncoder}
 import com.horizen.utils.BytesUtils
 import org.web3j.rlp._
 import sparkz.util.ByteArrayBuilder

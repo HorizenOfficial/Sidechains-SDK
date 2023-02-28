@@ -7,6 +7,7 @@ import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.fork.ForkManager
+import com.horizen.history.AbstractHistory
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils}

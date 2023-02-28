@@ -4,17 +4,17 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
+import com.horizen.account.history.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.AccountNodeView
 import com.horizen.account.state._
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
+import com.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
-import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import io.horizen.evm.Database
 import sparkz.util.{ModifierId, bytesToId}
@@ -22,6 +22,7 @@ import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, RollbackFailed}
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.idToVersion
+
 import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
 

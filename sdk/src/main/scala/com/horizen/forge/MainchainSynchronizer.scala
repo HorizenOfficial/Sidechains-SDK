@@ -1,8 +1,8 @@
 package com.horizen.forge
 
-import com.horizen.AbstractHistory
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, byteArrayToMainchainHeaderHash}
+import com.horizen.history.AbstractHistory
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.utils.BytesUtils
 import com.horizen.utils._

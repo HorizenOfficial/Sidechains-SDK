@@ -4,9 +4,10 @@ import akka.actor.ActorRef
 import com.horizen._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
+import com.horizen.history.AbstractHistory
+import com.horizen.history.validation.{BlockInFutureException, InconsistentDataException}
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
 import sparkz.core.network.NodeViewSynchronizer
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import sparkz.core.serialization.SparkzSerializer
@@ -14,6 +15,7 @@ import sparkz.core.settings.NetworkSettings
 import sparkz.core.transaction.MempoolReader
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
+
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 

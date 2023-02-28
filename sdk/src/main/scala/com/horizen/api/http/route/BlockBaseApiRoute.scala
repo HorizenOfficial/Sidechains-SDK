@@ -8,6 +8,7 @@ import com.horizen.SidechainNodeViewBase
 import com.horizen.api.http.route.BlockBaseErrorResponse._
 import com.horizen.api.http.route.BlockBaseRestSchema._
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import com.horizen.api.http.JacksonSupport._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}

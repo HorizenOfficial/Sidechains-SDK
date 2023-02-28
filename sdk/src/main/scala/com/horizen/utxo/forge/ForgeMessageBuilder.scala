@@ -8,7 +8,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -17,8 +17,12 @@ import com.horizen.vrf.VrfOutput
 import com.horizen._
 import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
+import com.horizen.utxo.state.SidechainState
 import com.horizen.utxo.storage.SidechainHistoryStorage
+import com.horizen.utxo.utils.FeePaymentsUtils
+import com.horizen.utxo.wallet.SidechainWallet
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block
 import sparkz.core.block.Block.BlockId

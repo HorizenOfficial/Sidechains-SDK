@@ -5,6 +5,7 @@ import com.horizen.SidechainTypes
 import com.horizen.block._
 import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ForgingStakeInfo
+import com.horizen.history.validation.InconsistentSidechainBlockDataException
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
@@ -13,7 +14,6 @@ import com.horizen.utils.{ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.transaction.SidechainTransaction
 import com.horizen.utxo.utils.BlockFeeInfo
-import com.horizen.validation.InconsistentSidechainBlockDataException
 import sparkz.core.block.Block
 import sparkz.core.idToBytes
 import sparkz.core.serialization.SparkzSerializer

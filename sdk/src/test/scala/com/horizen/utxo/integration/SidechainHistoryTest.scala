@@ -5,16 +5,17 @@ import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.fixtures._
 import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import com.horizen.history.AbstractHistory
+import com.horizen.history.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.{InMemoryStorageAdapter, Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
-import com.horizen.utxo.SidechainHistory
+import com.horizen.utxo.history.SidechainHistory
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.utxo.storage.SidechainHistoryStorage
-import com.horizen.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
-import com.horizen.{AbstractHistory, SidechainSettings, SidechainSyncInfo, SidechainTypes}
+import com.horizen.{SidechainSettings, SidechainSyncInfo, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

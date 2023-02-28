@@ -15,15 +15,16 @@ import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import com.horizen.utils.WithdrawalEpochInfo
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import com.horizen.utxo.block.SidechainBlock
 import com.horizen.utxo.box.{Box, ZenBox}
 import com.horizen.utxo.box.data.{BoxData, ZenBoxData}
 import com.horizen.utxo.fixtures.BoxFixture
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
 import com.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
-import com.horizen.utxo.state.ApplicationState
+import com.horizen.utxo.state.{ApplicationState, SidechainState}
 import com.horizen.utxo.transaction.RegularTransaction
-import com.horizen.utxo.wallet.ApplicationWallet
+import com.horizen.utxo.wallet.{ApplicationWallet, SidechainWallet}
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId, idToBytes}

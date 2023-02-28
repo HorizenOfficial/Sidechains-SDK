@@ -9,11 +9,11 @@ import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture, ForgerAccountFixture}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import com.horizen.account.receipt.ReceiptFixture
-import com.horizen.account.state.receipt.{Bloom, EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.state.receipt.{EthereumConsensusDataReceipt, EthereumReceipt, ReceiptFixture}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
+import com.horizen.account.utils.Bloom
 import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
 import com.horizen.block._
 import com.horizen.fixtures._
@@ -25,7 +25,8 @@ import com.horizen.secret.VrfSecretKey
 import com.horizen.json.SerializationUtil
 import com.horizen.json.serializer.ApplicationJsonSerializer
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
-import com.horizen.validation._
+import com.horizen.history.validation._
+import com.horizen.utxo.block.SidechainBlock
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import io.horizen.evm.Hash
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
@@ -377,7 +378,7 @@ class AccountBlockTest
 
 
     // Test12: AccountBlock has unsupported version
-    invalidBlock = createBlock(blockVersion = AccountBlock.ACCOUNT_BLOCK_VERSION) // UTXO model version
+    invalidBlock = createBlock(blockVersion = SidechainBlock.BLOCK_VERSION) // UTXO model version
     invalidBlock.semanticValidity(params) match {
       case Success(_) =>
         jFail("AccountBlock expected to be semantically Invalid.")

@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.horizen.api.http
 import com.horizen.api.http._
 import com.horizen.api.http.client.SecureEnclaveApiClient
-import com.horizen.api.http.route.ApplicationApiRoute
+import com.horizen.api.http.route.{ApplicationApiRoute, SidechainRejectionApiRoute}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._

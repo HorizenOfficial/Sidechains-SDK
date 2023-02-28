@@ -3,7 +3,7 @@ package com.horizen.consensus
 import java.util.Random
 import com.horizen.fixtures.sidechainblock.generation._
 import com.horizen.params.{NetworkParams, TestNetParams}
-import com.horizen.utxo.SidechainHistory
+import com.horizen.utxo.history.SidechainHistory
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 

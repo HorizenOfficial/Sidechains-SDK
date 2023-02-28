@@ -14,12 +14,12 @@ import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
-import com.horizen.account.state.receipt.{Bloom, EthereumReceipt}
+import com.horizen.account.state.receipt.EthereumReceipt
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
 import com.horizen.account.utils.Secp256k1.generateContractAddress
-import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, FeeUtils}
+import com.horizen.account.utils.{BigIntegerUtil, Bloom, EthereumTransactionDecoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo

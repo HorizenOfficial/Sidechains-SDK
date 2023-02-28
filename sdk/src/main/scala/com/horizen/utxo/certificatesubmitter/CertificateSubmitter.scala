@@ -8,10 +8,13 @@ import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies._
 import com.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import com.horizen.params.NetworkParams
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import com.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
+import com.horizen.utxo.state.SidechainState
 import com.horizen.utxo.storage.SidechainHistoryStorage
+import com.horizen.utxo.wallet.SidechainWallet
 import com.horizen.websocket.client.MainchainNodeChannel
 import sparkz.core.NodeViewHolder.CurrentView
 

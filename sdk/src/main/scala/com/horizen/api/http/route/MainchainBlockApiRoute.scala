@@ -7,6 +7,7 @@ import com.horizen.SidechainNodeViewBase
 import com.horizen.api.http.route.MainchainErrorResponse._
 import com.horizen.api.http.route.MainchainRestSchema._
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import com.horizen.api.http.JacksonSupport._
 import com.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainBlockReferenceInfo, MainchainHeaderInfo}
 import com.horizen.json.Views

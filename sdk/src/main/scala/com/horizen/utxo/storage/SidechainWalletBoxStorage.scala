@@ -6,7 +6,7 @@ import com.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator}
 import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.companion.SidechainBoxesCompanion
-import com.horizen.utxo.{WalletBox, WalletBoxSerializer}
+import com.horizen.utxo.wallet.{WalletBox, WalletBoxSerializer}
 import sparkz.util.SparkzLogging
 
 import java.util.{ArrayList => JArrayList}

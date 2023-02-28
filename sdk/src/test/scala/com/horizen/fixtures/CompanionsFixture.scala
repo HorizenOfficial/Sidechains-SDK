@@ -5,9 +5,10 @@ import java.util.{HashMap => JHashMap}
 import com.horizen.SidechainTypes
 import com.horizen.account.companion
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.companion.{SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.secret.SecretSerializer
 import com.horizen.transaction.TransactionSerializer
+import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.utxo.transaction.RegularTransactionSerializer
 
 trait CompanionsFixture

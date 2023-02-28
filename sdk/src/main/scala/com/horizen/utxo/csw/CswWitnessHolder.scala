@@ -1,7 +1,8 @@
 package com.horizen.utxo.csw
 
 import com.horizen.block.WithdrawalEpochCertificate
-import com.horizen.utils.{ByteArrayWrapper, ForwardTransferCswData, UtxoCswData}
+import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utxo.utils.{ForwardTransferCswData, UtxoCswData}
 
 case class CswWitnessHolder(utxoCswDataMap: Map[ByteArrayWrapper, UtxoCswData],
                             ftCswDataMap: Map[ByteArrayWrapper, ForwardTransferCswData],

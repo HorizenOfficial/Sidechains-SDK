@@ -6,8 +6,9 @@ import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.NodeAccountHistory
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
+import com.horizen.history.AbstractHistory
 import com.horizen.params.NetworkParams
-import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import com.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import sparkz.util.{SparkzEncoding, SparkzLogging}
 
 import scala.util.Try
@@ -24,7 +25,7 @@ class AccountHistory private(storage: AccountHistoryStorage,
                                  AccountFeePaymentsInfo,
                                  AccountHistoryStorage,
                                  AccountHistory]])
-extends com.horizen.AbstractHistory[
+extends AbstractHistory[
   SidechainTypes#SCAT,
   AccountBlockHeader,
   AccountBlock,

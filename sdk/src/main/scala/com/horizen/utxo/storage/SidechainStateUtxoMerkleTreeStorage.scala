@@ -5,7 +5,8 @@ import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.storage.{SidechainStorageInfo, Storage}
-import com.horizen.utils.{ByteArrayWrapper, Utils, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer, Pair => JPair}
+import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
+import com.horizen.utxo.utils.{UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}
 import sparkz.util.SparkzLogging
 
 import java.util.{List => JList}

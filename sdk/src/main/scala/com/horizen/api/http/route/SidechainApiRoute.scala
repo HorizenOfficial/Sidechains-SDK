@@ -2,6 +2,7 @@ package com.horizen.api.http.route
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.Route
+import akka.pattern.ask
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}

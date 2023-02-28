@@ -13,10 +13,14 @@ import com.horizen.params.NetworkParams
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.json.Views
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochUtils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochUtils}
 import com.horizen._
 import com.horizen.json.serializer.CswProofStatusSerializer
-import com.horizen.utxo.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
+import com.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
+import com.horizen.utxo.state.SidechainState
+import com.horizen.utxo.wallet.SidechainWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
@@ -442,7 +446,7 @@ class CswManager(settings: SidechainSettings,
   private def getCswOwner(cswData: CswData): Option[PrivateKey25519] = {
     val pubKeyBytes: Array[Byte] = cswData match {
       case ft: ForwardTransferCswData => BytesUtils.reverseBytes(ft.receiverPubKeyReversed)
-      case utxo: UtxoCswData => spendingPubKey
+      case utxo: UtxoCswData => utxo.spendingPubKey
     }
 
     val publicKey25519Proposition: PublicKey25519Proposition = Try {

@@ -2,13 +2,13 @@ package com.horizen.account.state
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.history.validation.InvalidTransactionChainIdException
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Secp256k1.generateContractAddress
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
-import com.horizen.account.validation.InvalidTransactionChainIdException
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer

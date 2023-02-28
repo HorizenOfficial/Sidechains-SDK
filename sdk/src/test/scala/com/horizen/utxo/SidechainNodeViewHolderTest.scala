@@ -12,7 +12,11 @@ import com.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochI
 import com.horizen.utxo.block.SidechainBlock
 import com.horizen.utxo.box.ZenBox
 import com.horizen.utxo.chain.SidechainFeePaymentsInfo
+import com.horizen.utxo.history.SidechainHistory
+import com.horizen.utxo.mempool.SidechainMemoryPool
+import com.horizen.utxo.state.{SidechainState, UtxoMerkleTreeView}
 import com.horizen.utxo.utils.BlockFeeInfo
+import com.horizen.utxo.wallet.SidechainWallet
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.Mockito.times

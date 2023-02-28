@@ -1,10 +1,10 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.history.validation.InvalidOmmerDataException
 import com.horizen.params.NetworkParams
 import com.horizen.json.Views
 import com.horizen.utils.TimeToEpochUtils
-import com.horizen.validation.InvalidOmmerDataException
 
 import scala.util.{Failure, Success, Try}
 

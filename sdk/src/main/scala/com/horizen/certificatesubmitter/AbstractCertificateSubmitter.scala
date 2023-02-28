@@ -15,6 +15,7 @@ import com.horizen.certificatesubmitter.strategies.{CertificateSubmissionStrateg
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.fork.ForkManager
+import com.horizen.history.AbstractHistory
 import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeCertificateApi, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -24,6 +25,7 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.BytesUtils
+import com.horizen.wallet.Wallet
 import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView

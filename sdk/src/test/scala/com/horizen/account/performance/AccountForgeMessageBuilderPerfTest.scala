@@ -5,9 +5,9 @@ import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.state._
 import com.horizen.account.state.receipt.EthereumConsensusDataReceipt
+import com.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.utils.{FeeUtils, ZenWeiConverter}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.MainchainBlockReferenceData

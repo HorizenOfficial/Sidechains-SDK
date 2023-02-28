@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.block._
 import com.horizen.utxo.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
+import com.horizen.history.validation.{InconsistentOmmerDataException, InconsistentSidechainBlockDataException, InvalidMainchainHeaderException, InvalidOmmerDataException, InvalidSidechainBlockDataException, InvalidSidechainBlockHeaderException}
 import com.horizen.json.serializer.ApplicationJsonSerializer
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -12,7 +13,6 @@ import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey
 import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.utxo.box.Box
 import com.horizen.utxo.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
-import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test

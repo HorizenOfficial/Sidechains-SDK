@@ -3,6 +3,7 @@ package com.horizen.block
 import java.util
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.history.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
@@ -14,7 +15,6 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
 import com.horizen.utxo.box.Box
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
-import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
 import sparkz.util.SparkzLogging
 
 import scala.collection.JavaConverters._
