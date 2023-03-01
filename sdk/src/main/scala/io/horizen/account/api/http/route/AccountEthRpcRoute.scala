@@ -38,6 +38,7 @@ case class AccountEthRpcRoute(
     sidechainSettings: SidechainSettings,
     params: NetworkParams,
     sidechainTransactionActorRef: ActorRef,
+    syncStatusActorRef: ActorRef,
     metadataStorage: AccountStateMetadataStorage,
     stateDb: LevelDBDatabase,
     messageProcessors: Seq[MessageProcessor]
@@ -71,7 +72,8 @@ case class AccountEthRpcRoute(
       sidechainSettings.ethService,
       sidechainSettings.sparkzSettings.network.maxIncomingConnections,
       getClientVersion,
-      sidechainTransactionActorRef
+      sidechainTransactionActorRef,
+      syncStatusActorRef
     )
   )
 
