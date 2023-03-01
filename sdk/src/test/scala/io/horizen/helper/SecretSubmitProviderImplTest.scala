@@ -1,0 +1,76 @@
+package io.horizen.helper
+
+import akka.actor.{ActorRef, ActorSystem}
+import akka.testkit.{TestActor, TestProbe}
+import akka.util.Timeout
+import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
+import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension}
+import io.horizen.secret.PrivateKey25519
+import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Test
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
+
+import java.nio.charset.StandardCharsets
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
+import scala.language.postfixOps
+
+class SecretSubmitProviderImplTest extends JUnitSuite with MockitoSugar with SecretFixture with SidechainTypesTestsExtension {
+  implicit lazy val actorSystem: ActorSystem = ActorSystem("tx-actor-test")
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
+  implicit val timeout: Timeout = 5 seconds
+
+  @Test
+  def submitTransactionSuccessful(): Unit = {
+    val mockedSidechainNodeViewHolder = TestProbe()
+    mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case LocallyGeneratedSecret(_) =>
+          sender ! Success(Unit)
+      }
+      TestActor.KeepRunning
+    })
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+    val secretSubmitProvider: SecretSubmitProviderImpl = new SecretSubmitProviderImpl(mockedSidechainNodeViewHolderRef)
+
+    val secret: PrivateKey25519 = getPrivateKey25519("123".getBytes(StandardCharsets.UTF_8))
+    val tryRes: Try[Unit] = Try {
+      secretSubmitProvider.submitSecret(secret)
+    }
+    tryRes match {
+      case Success(_) => // expected behavior
+      case Failure(exception) => fail("Secret expected to be submitted successfully.", exception)
+    }
+  }
+
+  @Test
+  def submitTransactionFailure(): Unit = {
+    // Note: ex type is Exception, that is expected to be transformed to IllegalArgumentException by SecretSubmitProvider
+    val ex = new Exception("invalid tx")
+    val mockedSidechainNodeViewHolder = TestProbe()
+    mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case LocallyGeneratedSecret(_) =>
+          sender ! Failure(ex)
+      }
+      TestActor.KeepRunning
+    })
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+    val secretSubmitProvider: SecretSubmitProviderImpl = new SecretSubmitProviderImpl(mockedSidechainNodeViewHolderRef)
+
+    val secret: PrivateKey25519 = getPrivateKey25519("123".getBytes(StandardCharsets.UTF_8))
+    val tryRes: Try[Unit] = Try {
+      secretSubmitProvider.submitSecret(secret)
+    }
+    tryRes match {
+      case Success(_) => fail("Secret expected to be not submitted.")
+      case Failure(exception) =>
+        assertTrue("Secret submission failed but with different exception type.", exception.isInstanceOf[IllegalArgumentException])
+        assertEquals("Secret submission failed but with different exception.", ex.toString, exception.getMessage)
+    }
+  }
+}
