@@ -1,6 +1,6 @@
 package io.horizen.account.performance
 
-import io.horizen.SidechainTypes
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.forger.AccountForgeMessageBuilder
 import io.horizen.account.history.AccountHistory
@@ -54,11 +54,9 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
   Mockito.when(state.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
   Mockito.when(state.getNonce(ArgumentMatchers.any[Address])).thenReturn(BigInteger.ZERO)
-  val mempool: AccountMemoryPool = AccountMemoryPool.createEmptyMempool(() => state, () => state)
 
   val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool] =
     mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
-  Mockito.when(nodeView.pool).thenReturn(mempool)
 
   val blockContext = new BlockContext(
     Address.ZERO,
@@ -94,13 +92,18 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
 
       out.write(s"Date and time of the test: ${cal.getTime}\n\n")
 
-      val numOfAccounts = 1000
-      val numOfTxsPerAccount = 100
+      val numOfAccounts = 10000
+      val numOfTxsPerAccount = 10
       val numOfTxs = numOfAccounts * numOfTxsPerAccount
 
       out.write(s"Total number of transactions:                    $numOfTxs\n")
       out.write(s"Number of accounts:                              $numOfAccounts\n")
       out.write(s"Number of transactions for each account:         $numOfTxsPerAccount\n")
+      val mempool = AccountMemoryPool.createEmptyMempool(
+        () => state,
+        () => state,
+        AccountMempoolSettings(maxNonceGap = numOfTxsPerAccount, maxAccountSlots = numOfTxsPerAccount, maxMemPoolSlots = numOfTxs))
+      Mockito.when(nodeView.pool).thenReturn(mempool)
 
       println("Creating transactions...")
       val listOfTxs = createTransactions(numOfAccounts, numOfTxsPerAccount)

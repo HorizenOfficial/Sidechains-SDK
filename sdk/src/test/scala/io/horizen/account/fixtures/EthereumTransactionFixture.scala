@@ -1,12 +1,14 @@
 package io.horizen.account.fixtures
 
 import com.google.common.primitives.Ints
+import io.horizen.account.mempool.MempoolMap
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state.GasUtil
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import io.horizen.utils.BytesUtils
+import org.mockito.Mockito
 
 import java.{lang, util}
 import java.math.BigInteger
@@ -46,12 +48,13 @@ trait EthereumTransactionFixture {
                                keyOpt: Option[PrivateKeySecp256k1] = None,
                                gasFee: BigInteger = BigInteger.valueOf(10000),
                                priorityGasFee: BigInteger = BigInteger.valueOf(10000),
-                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
+                               gasLimit: BigInteger = GasUtil.TxGas,
+                               data: Array[Byte] = new Array[Byte](0)): EthereumTransaction = {
 
     val unsignedTx = new EthereumTransaction(
       1997L,
       EthereumTransactionUtils.getToAddressFromString("0x1234567890123456789012345678901234567890"),
-      nonce, gasLimit, priorityGasFee, gasFee, value, new Array[Byte](0), null)
+      nonce, gasLimit, priorityGasFee, gasFee, value, data, null)
     createSignedTransaction(unsignedTx, keyOpt)
   }
 
@@ -236,6 +239,17 @@ trait EthereumTransactionFixture {
     )
   }
 
+  def addMockSizeToTx(txToMock: EthereumTransaction, size: Long): EthereumTransaction = {
+    val tx = Mockito.spy[EthereumTransaction](txToMock)
+    Mockito.when(tx.size()).thenReturn(size)
+    tx
+  }
+
+  def setupMockSizeInSlotsToTx(txToMock: EthereumTransaction, numOfSlots: Int): EthereumTransaction = {
+    val tx = Mockito.spy[EthereumTransaction](txToMock)
+    Mockito.when(tx.size()).thenReturn((numOfSlots - 1) * MempoolMap.TxSlotSize + 1)
+    tx
+  }
 
   def copyEip1599EthereumTransaction(
                                       inTx: EthereumTransaction,
@@ -380,6 +394,7 @@ trait EthereumTransactionFixture {
   def createTransactions(
                           numOfAccount: Int,
                           numOfTxsPerAccount: Int,
+                          seed: Int = 0,
                           orphanIdx: Int = -1
                         ): scala.collection.mutable.ListBuffer[EthereumTransaction] = {
     val value = BigInteger.valueOf(12)
@@ -394,7 +409,7 @@ trait EthereumTransactionFixture {
     val gasBuilder = new CircularPriorityGasBuilder(baseGas, 17)
 
     (1 to numOfAccount).foreach(idx => {
-      listOfAccounts += Some(PrivateKeySecp256k1Creator.getInstance().generateSecret(Ints.toByteArray(idx)))
+      listOfAccounts += Some(PrivateKeySecp256k1Creator.getInstance().generateSecret(Ints.toByteArray(seed + idx)))
     })
 
     (0 until numOfTxsPerAccount).foreach(nonceTx => {

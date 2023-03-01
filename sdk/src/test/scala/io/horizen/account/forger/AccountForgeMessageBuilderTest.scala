@@ -1,6 +1,6 @@
 package io.horizen.account.forger
 
-import io.horizen.SidechainTypes
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import io.horizen.account.block.AccountBlockHeader
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.history.AccountHistory
@@ -328,7 +328,8 @@ class AccountForgeMessageBuilderTest
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
     Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address])).thenReturn(initialStateNonce)
 
-    val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock, () => baseStateViewMock)
+    val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock,
+      () => baseStateViewMock, AccountMempoolSettings())
 
     // Adding some txs in the mempool
 

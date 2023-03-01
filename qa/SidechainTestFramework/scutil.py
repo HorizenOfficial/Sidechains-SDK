@@ -539,7 +539,12 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),
         "CIRCUIT_TYPE": bootstrap_info.circuit_type,
         "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false"),
-        "REMOTE_SERVER_ADDRESS": (sc_node_config.remote_keys_server_address if sc_node_config.remote_keys_manager_enabled else "")
+        "REMOTE_SERVER_ADDRESS": (sc_node_config.remote_keys_server_address if sc_node_config.remote_keys_manager_enabled else ""),
+        'MAX_NONCE_GAP': sc_node_config.max_nonce_gap,
+        'MAX_ACCOUNT_SLOTS': sc_node_config.max_account_slots,
+        'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
+        'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
+        'TX_LIFETIME': sc_node_config.tx_lifetime
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
