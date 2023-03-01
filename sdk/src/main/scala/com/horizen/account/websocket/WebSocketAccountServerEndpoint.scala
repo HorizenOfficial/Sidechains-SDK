@@ -1,7 +1,5 @@
 package com.horizen.account.websocket
 
-import com.fasterxml.jackson.databind.node.ObjectNode
-
 import java.util
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -11,10 +9,9 @@ import com.horizen.account.api.rpc.response.{RpcResponseError, RpcResponseSucces
 import com.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.serialization.EthJsonMapper
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebsocketAccountResponse}
-import com.horizen.serialization.SerializationUtil
-import com.horizen.utils.BytesUtils
+import com.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventLogParams, WebSocketAccountEventParams, WebSocketTransactionLog}
 import io.horizen.evm.Address
 import jakarta.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
 import jakarta.websocket.server.ServerEndpoint
@@ -73,7 +70,7 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
       case ex: Throwable =>
         val sw = new StringWriter
         ex.printStackTrace(new PrintWriter(sw))
-        WebSocketAccountServerEndpoint.send(new RpcResponseError(new RpcId("1"),
+        WebSocketAccountServerEndpoint.send(new RpcResponseError(null,
           new RpcError(RpcCode.ExecutionError, "Websocket On receive message processing exception occurred", sw.toString)),
           session)
         log.error("Websocket On receive message processing exception occurred = " + ex.getMessage)
@@ -173,8 +170,9 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   var logsSubscriptions: util.ArrayList[SubscriptionWithFilter] = new util.ArrayList[SubscriptionWithFilter]()
 
   val webSocketAccountChannelImpl = new WebSocketAccountChannelImpl()
-  private var walletAddresses: Set[Address] = webSocketAccountChannelImpl.getWalletAddresses()
+  private var walletAddresses: Set[Address] = webSocketAccountChannelImpl.getWalletAddresses
   private var cachedBlocksReceipts: mutable.Queue[(String, Seq[EthereumReceipt])] = new mutable.Queue[(String, Seq[EthereumReceipt])]()
+  private val maxCachedBlockReceipts = 100
 
   def notifySemanticallySuccessfulModifier(block: AccountBlock): Unit = {
     log.info("Websocket received new block: "+block.toString)
@@ -182,11 +180,10 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     val responsePayload = mapper.createObjectNode()
 
     val blockJson = webSocketAccountChannelImpl.accountBlockToWebsocketJson(block)
-    responsePayload.set("result", blockJson)
 
     newHeadsSubscriptions.forEach(subscription => {
       responsePayload.put("subscription", subscription.subscriptionId)
-      send(new WebsocketAccountResponse("eth_subscription", responsePayload), subscription.session)
+      send(new WebSocketAccountEvent("eth_subscription", new WebSocketAccountEventParams(subscription.subscriptionId, blockJson)), subscription.session)
     })
 
     //We have a chain reorganization
@@ -211,7 +208,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
 
       newPendingTransactionsSubscriptions.forEach(subscription => {
         responsePayload.put("subscription", subscription.subscriptionId)
-        send(new WebsocketAccountResponse("eth_subscription", responsePayload), subscription.session)
+        send(new WebSocketAccountEvent("eth_subscription", responsePayload), subscription.session)
       })
     }
   }
@@ -230,7 +227,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
       }
     })
     cachedBlocksReceipts.enqueue((block.id, relevantBlockReceipt.toArray(Array[EthereumReceipt]()).toSeq))
-    if (cachedBlocksReceipts.size > 10) {
+    if (cachedBlocksReceipts.size > maxCachedBlockReceipts) {
       cachedBlocksReceipts.dequeue()
     }
   }
@@ -245,18 +242,14 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
 
   }
 
-  private def sendTransactionLog(txLogs: Array[ObjectNode], subscription: SubscriptionWithFilter, removed: Boolean = false): Unit = {
+  private def sendTransactionLog(txLogs: Array[WebSocketTransactionLog], subscription: SubscriptionWithFilter, removed: Boolean = false): Unit = {
     txLogs.foreach(txLog => {
-      val responsePayload = mapper.createObjectNode()
-      responsePayload.set("result", txLog)
-      responsePayload.put("subscription", subscription.subscriptionId)
-      responsePayload.put("removed", removed)
-      send(new WebsocketAccountResponse("eth_subscription", responsePayload), subscription.session)
+      send(new WebSocketAccountEvent( "eth_subscription", new WebSocketAccountEventLogParams(removed, subscription.subscriptionId, txLog)), subscription.session)
     })
   }
 
   def onVaultChanged(): Unit = {
-    walletAddresses = webSocketAccountChannelImpl.getWalletAddresses()
+    walletAddresses = webSocketAccountChannelImpl.getWalletAddresses
   }
 
   def addNewHeadsSubscription(subscription: Subscription): Unit = {
@@ -298,7 +291,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   }
 
   def send(websocketResponse: Object, session: Session): Unit = {
-    session.getAsyncRemote.sendObject(SerializationUtil.serialize(websocketResponse), new SendHandler {
+    session.getAsyncRemote.sendText(EthJsonMapper.serialize(websocketResponse), new SendHandler {
       override def onResult(sendResult: SendResult): Unit = {
         if (!sendResult.isOK) {
           log.debug("Websocket send message failed. "+session.getId)
