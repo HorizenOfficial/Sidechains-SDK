@@ -650,8 +650,8 @@ def get_lib_separator():
 def get_examples_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
 
-SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
-EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* com.horizen.examples.EvmApp"
+SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
+EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* io.horizen.examples.EvmApp"
 
 
 
@@ -815,7 +815,7 @@ def assert_true(condition, message=""):
 Verify if a mainchain block data is equal to mainchain block reference info data.
 
 Parameters:
- - mc_block_reference_info: the JSON representation of a mainchain block reference info. See com.horizen.node.util.MainchainBlockReferenceInfo
+ - mc_block_reference_info: the JSON representation of a mainchain block reference info. See io.horizen.node.util.MainchainBlockReferenceInfo
  - expected_mc_block: the JSON representation of a mainchain block
 """
 
@@ -846,7 +846,7 @@ def check_mainchain_block_reference_info(mc_block_reference_info, expected_mc_bl
 Verify if a mainchain block is included in a sidechain block.
 
 Parameters:
- - sc_block: the JSON representation of a sidechain block. See com.horizen.block.SidechainBlock
+ - sc_block: the JSON representation of a sidechain block. See io.horizen.block.SidechainBlock
  - expected_mc_block: the JSON representation of a mainchain block
 """
 

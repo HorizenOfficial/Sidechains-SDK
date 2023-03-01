@@ -4,7 +4,7 @@
     <envs>
       <env name="LD_PRELOAD" value="/usr/lib/x86_64-linux-gnu/libjemalloc.so.2" />
     </envs>
-    <option name="MAIN_CLASS_NAME" value="com.horizen.examples.EvmApp" />
+    <option name="MAIN_CLASS_NAME" value="io.horizen.examples.EvmApp" />
     <module name="sidechains-sdk-evmapp" />
     <option name="PROGRAM_PARAMETERS" value="src/main/resources/sc_evm_settings.conf" />
     <option name="VM_PARAMETERS" value="--add-opens java.base/java.lang=ALL-UNNAMED" />

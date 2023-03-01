@@ -45,7 +45,7 @@
 						<manifest>
 							<addClasspath>true</addClasspath>
 							<classpathPrefix>lib/</classpathPrefix>
-							<mainClass>com.horizen.DbTool</mainClass>
+							<mainClass>io.horizen.DbTool</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

@@ -1,0 +1,76 @@
+package io.horizen.actors
+
+import akka.actor.{ActorRef, ActorSystem}
+import akka.pattern.ask
+import akka.testkit.{TestActor, TestProbe}
+import akka.util.Timeout
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import io.horizen.api.http.SidechainTransactionActorRef
+import io.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
+import io.horizen.utxo.transaction.RegularTransaction
+import org.junit.Test
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
+
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success}
+import org.junit.Assert._
+import sparkz.util.ModifierId
+
+import scala.language.postfixOps
+import scala.concurrent.duration._
+
+class SidechainTransactionActorTest extends JUnitSuite with MockitoSugar with TransactionFixture with SidechainTypesTestsExtension {
+  implicit lazy val actorSystem: ActorSystem = ActorSystem("tx-actor-test")
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
+  implicit val timeout: Timeout = 1 second
+
+  @Test
+  def submitTransactionSuccessful(): Unit = {
+    val mockedSidechainNodeViewHolder = TestProbe()
+    mockedSidechainNodeViewHolder.setAutoPilot((_: ActorRef, msg: Any) => {
+      msg match {
+        case LocallyGeneratedTransaction(tx) =>
+          actorSystem.eventStream.publish(SuccessfulTransaction(tx))
+      }
+      TestActor.KeepRunning
+    })
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+    val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(mockedSidechainNodeViewHolderRef)
+
+    val transaction: RegularTransaction = getRegularTransaction
+    val resFuture = Await.result(
+      sidechainTransactionActorRef ? BroadcastTransaction(regularTxToScbt(transaction)), timeout.duration).asInstanceOf[Future[ModifierId]]
+    Await.ready(resFuture, timeout.duration).value.get match {
+      case Success(txId: ModifierId) => assertEquals(transaction.id(), txId)
+      case Failure(_) => fail("Transaction expected to be submitted successfully.")
+    }
+  }
+
+  @Test
+  def submitTransactionFailure(): Unit = {
+    val ex = new IllegalArgumentException("invalid tx")
+    val mockedSidechainNodeViewHolder = TestProbe()
+    mockedSidechainNodeViewHolder.setAutoPilot((_: ActorRef, msg: Any) => {
+      msg match {
+        case LocallyGeneratedTransaction(tx) =>
+          actorSystem.eventStream.publish(FailedTransaction(tx.id, ex, immediateFailure = true))
+      }
+      TestActor.KeepRunning
+    })
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+    val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(mockedSidechainNodeViewHolderRef)
+
+    val transaction: RegularTransaction = getRegularTransaction
+    val resFuture = Await.result(
+      sidechainTransactionActorRef ? BroadcastTransaction(regularTxToScbt(transaction)), timeout.duration).asInstanceOf[Future[ModifierId]]
+    Await.ready(resFuture, timeout.duration).value.get match {
+      case Success(_) => fail("Transaction expected to be not submitted.")
+      case Failure(exception) => assertEquals("Transaction submission failed but with different exception.", ex, exception)
+    }
+  }
+}
