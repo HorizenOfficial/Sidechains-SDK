@@ -12,7 +12,7 @@ import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.serialization.EthJsonMapper
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventLogParams, WebSocketAccountEventParams, WebSocketTransactionLog}
-import io.horizen.evm.Address
+import io.horizen.evm.{Address, Hash}
 import jakarta.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
 import jakarta.websocket.server.ServerEndpoint
 import sparkz.util.SparkzLogging
@@ -35,7 +35,6 @@ case object LOGS_SUBSCRIPTION extends WebSocketAccountSubscription("logs")
 
 @ServerEndpoint("/")
 class WebSocketAccountServerEndpoint() extends SparkzLogging {
-  private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
 
   @OnClose
   def onClose(session: Session): Unit = {
@@ -52,8 +51,7 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
   @OnMessage
   def onMessageReceived(session: Session, message: String): Unit = {
     try {
-      val json = mapper.readTree(message)
-      val rpcRequest = new RpcRequest(json)
+      val rpcRequest = new RpcRequest(EthJsonMapper.getMapper.readTree(message))
 
       rpcRequest.method match {
         case SUBSCRIBE_REQUEST.request =>
@@ -79,17 +77,26 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
 
   private def subscribe(session: Session, rpcRequest: RpcRequest): Unit = {
     val rpcParams = rpcRequest.params
+
+    if (rpcParams == null || !rpcParams.isArray || rpcParams.size() < 1) {
+      log.debug("Missing or empty field params.")
+      WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
+        new RpcError(RpcCode.InvalidParams, "Missing or empty field params.", "")),
+        session)
+    }
+
     val subscribeMethod = rpcParams.get(0)
-    val subscriptionId = createSubscriptionId()
 
     subscribeMethod.asText() match {
 
       case NEW_HEADS_SUBSCRIPTION.method =>
+        val subscriptionId = createSubscriptionId()
         WebSocketAccountServerEndpoint.addNewHeadsSubscription(Subscription(session, subscriptionId))
         log.debug("New Subscription on newHeads "+session.getId)
         WebSocketAccountServerEndpoint.send(new RpcResponseSuccess(rpcRequest.id, subscriptionId), session)
 
       case NEW_PENDING_TRANSACTIONS_SUBSCRIPTION.method =>
+        val subscriptionId = createSubscriptionId()
         WebSocketAccountServerEndpoint.addNewPendingTransactionsSubscription(Subscription(session, subscriptionId))
         log.debug("New Subscription on newPendingTransactions "+session.getId)
         WebSocketAccountServerEndpoint.send(new RpcResponseSuccess(rpcRequest.id, subscriptionId), session)
@@ -102,6 +109,7 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
         val logs = rpcParams.get(1)
         val addressFilter = getLogAddresses(logs)
         val topicFilter = getLogTopics(logs)
+        val subscriptionId = createSubscriptionId()
         WebSocketAccountServerEndpoint.addLogsSubscription(SubscriptionWithFilter(session, subscriptionId,
           addressFilter,
           topicFilter
@@ -121,9 +129,11 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
   private def unsubscribe(session: Session, rpcRequest: RpcRequest): Unit = {
     val rpcParams = rpcRequest.params
 
-    val subscriptionIdsToRemove: util.ArrayList[String] = new util.ArrayList[String]()
-    rpcParams.forEach(subscriptionId => subscriptionIdsToRemove.add(subscriptionId.asText()))
-    val removedSubscription = WebSocketAccountServerEndpoint.removeSubscriptions(subscriptionIdsToRemove.toArray(new Array[String](0)))
+    val subscriptionIdsToRemove: util.ArrayList[BigInteger] = new util.ArrayList[BigInteger]()
+    rpcParams.forEach(subscriptionId => {
+      subscriptionIdsToRemove.add(Numeric.decodeQuantity(subscriptionId.asText()))
+    })
+    val removedSubscription = WebSocketAccountServerEndpoint.removeSubscriptions(subscriptionIdsToRemove.toArray(new Array[BigInteger](0)))
     if (!removedSubscription) {
       WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
         new RpcError(RpcCode.InvalidParams, s"Subscription ID not found.", "")),
@@ -132,38 +142,37 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
       WebSocketAccountServerEndpoint.send(new RpcResponseSuccess(rpcRequest.id, true), session)
   }
 
-  private def createSubscriptionId(): String = {
-    Numeric.toHexStringWithPrefix(BigInteger.valueOf(WebSocketAccountServerEndpoint.subscriptionCounter.incrementAndGet()))
+  private def createSubscriptionId(): BigInteger = {
+    BigInteger.valueOf(WebSocketAccountServerEndpoint.subscriptionCounter.incrementAndGet())
   }
 
-  private def getLogAddresses(logParams: JsonNode): Option[Array[String]] = {
-    var address: Option[Array[String]] = Option.empty
+  private def getLogAddresses(logParams: JsonNode): Option[Array[Address]] = {
+    var address: Option[Array[Address]] = Option.empty
     if (logParams.has("address")) {
       val addressParams = logParams.get("address")
       if (addressParams.isArray) {
-        val addresses: util.ArrayList[String] = new util.ArrayList[String]()
-        addressParams.forEach(addr => addresses.add(addr.asText()))
-        address = Some(addresses.toArray(new Array[String](0)))
+        val addresses: util.ArrayList[Address] = new util.ArrayList[Address]()
+        addressParams.forEach(addr => addresses.add(new Address(addr.asText())))
+        address = Some(addresses.toArray(new Array[Address](0)))
       } else {
-        address = Some(Array[String]{addressParams.asText()})
+        address = Some(Array[Address]{new Address(addressParams.asText())})
       }
     }
     address
   }
 
-  private def getLogTopics(logParams: JsonNode): Option[Array[String]] = {
-    var topics: Option[Array[String]] = Option.empty
+  private def getLogTopics(logParams: JsonNode): Option[Array[Hash]] = {
+    var topics: Option[Array[Hash]] = Option.empty
     if (logParams.has("topics")) {
-      val topicArray: util.ArrayList[String] = new util.ArrayList[String]()
-      logParams.get("topics").forEach(topic => topicArray.add(topic.asText()))
-      topics = Some(topicArray.toArray(new Array[String](0)))
+      val topicArray: util.ArrayList[Hash] = new util.ArrayList[Hash]()
+      logParams.get("topics").forEach(topic => topicArray.add(new Hash(topic.asText())))
+      topics = Some(topicArray.toArray(new Array[Hash](0)))
     }
     topics
   }
 }
 
 private object WebSocketAccountServerEndpoint extends SparkzLogging {
-  private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
   var subscriptionCounter: AtomicInteger = new AtomicInteger(0)
   var newHeadsSubscriptions: util.ArrayList[Subscription] = new util.ArrayList[Subscription]()
   var newPendingTransactionsSubscriptions: util.ArrayList[Subscription] = new util.ArrayList[Subscription]()
@@ -177,12 +186,9 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   def notifySemanticallySuccessfulModifier(block: AccountBlock): Unit = {
     log.info("Websocket received new block: "+block.toString)
 
-    val responsePayload = mapper.createObjectNode()
-
     val blockJson = webSocketAccountChannelImpl.accountBlockToWebsocketJson(block)
 
     newHeadsSubscriptions.forEach(subscription => {
-      responsePayload.put("subscription", subscription.subscriptionId)
       send(new WebSocketAccountEvent("eth_subscription", new WebSocketAccountEventParams(subscription.subscriptionId, blockJson)), subscription.session)
     })
 
@@ -203,12 +209,8 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     log.info("Websocket received new tx: "+tx.id())
 
     if (walletAddresses.contains(tx.getFromAddress)) {
-      val responsePayload = mapper.createObjectNode()
-      responsePayload.put("result", Numeric.prependHexPrefix(tx.id()))
-
       newPendingTransactionsSubscriptions.forEach(subscription => {
-        responsePayload.put("subscription", subscription.subscriptionId)
-        send(new WebSocketAccountEvent("eth_subscription", responsePayload), subscription.session)
+        send(new WebSocketAccountEvent("eth_subscription", new WebSocketAccountEventParams(subscription.subscriptionId, Numeric.prependHexPrefix(tx.id()))), subscription.session)
       })
     }
   }
@@ -270,7 +272,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     }
   }
 
-  def removeSubscriptions(subscriptionIdsToRemove: Array[String]): Boolean = {
+  def removeSubscriptions(subscriptionIdsToRemove: Array[BigInteger]): Boolean = {
     var removedNewHeadSubscription = false
     var removedNewPendingTransactionsSubcription = false
     var removedLogsSubcription = false
