@@ -27,9 +27,9 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.mindrot</groupId>
-			<artifactId>jbcrypt</artifactId>
-			<version>0.4</version>
+			<groupId>at.favre.lib</groupId>
+			<artifactId>bcrypt</artifactId>
+			<version>0.10.2</version>
 		</dependency>
 	</dependencies>
 
@@ -51,7 +51,7 @@
 						<manifest>
 							<addClasspath>true</addClasspath>
 							<classpathPrefix>lib/</classpathPrefix>
-							<mainClass>com.horizen.ScBootstrappingTool</mainClass>
+							<mainClass>io.horizen.ScBootstrappingTool</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

@@ -45,7 +45,7 @@
 						<manifest>
 							<addClasspath>true</addClasspath>
 							<classpathPrefix>lib/</classpathPrefix>
-							<mainClass>com.horizen.SigningTool</mainClass>
+							<mainClass>io.horizen.SigningTool</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
