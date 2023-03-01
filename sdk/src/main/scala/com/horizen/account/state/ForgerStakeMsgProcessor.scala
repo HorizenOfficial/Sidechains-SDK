@@ -19,6 +19,7 @@ import sparkz.crypto.hash.{Blake2b256, Keccak256}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.util.{Failure, Success, Try}
 
 trait ForgerStakesProvider {
   private[horizen] def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
@@ -147,7 +148,16 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
     val inputParams = getArgumentsFromData(msg.getData)
 
-    val cmdInput = AddNewStakeCmdInputDecoder.decode(inputParams)
+    val cmdInput : AddNewStakeCmdInput = Try {
+      // it also checks that the input has the expected length and throws an exception in case it has not. We must trap
+      // such case and return the execution reverted exception
+      AddNewStakeCmdInputDecoder.decode(inputParams)
+    } match {
+      case Success(decodedBytes) => decodedBytes
+      case Failure(ex) =>
+        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
+    }
+
     val blockSignPublicKey: PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress = cmdInput.ownerAddress
@@ -242,7 +252,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
-    val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams)
+    val cmdInput : RemoveStakeCmdInput = Try {
+      // it also checks that the input has the expected length and throws an exception in case it has not. We must trap
+      // such case and return the execution reverted exception
+      RemoveStakeCmdInputDecoder.decode(inputParams)
+    } match {
+      case Success(decodedBytes) => decodedBytes
+      case Failure(ex) =>
+        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
+    }
     val stakeId: Array[Byte] = cmdInput.stakeId
     val signature: SignatureSecp256k1 = cmdInput.signature
 
@@ -252,7 +270,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
     // check signature
     val msgToSign = getRemoveStakeCmdMessageToSign(stakeId, msg.getFrom, msg.getNonce.toByteArray)
-    if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
+    val isValid : Boolean = Try {
+      signature.isValid(stakeData.ownerPublicKey, msgToSign)
+    } match {
+      case Success(result) => result
+      case Failure(ex) =>
+        // can throw IllegalArgumentexception if the signature data are really wrong
+        throw new ExecutionRevertedException("Could not verify ill-formed signature: " + ex.getMessage)
+    }
+    if (!isValid) {
       throw new ExecutionRevertedException("Invalid signature")
     }
 
@@ -304,7 +330,16 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
-    val cmdInput = OpenStakeForgerListCmdInputDecoder.decode(inputParams)
+
+    val cmdInput : OpenStakeForgerListCmdInput = Try {
+      // it also checks that the input has the expected length and throws an exception in case it has not. We must trap
+      // such case and return the execution reverted exception
+      OpenStakeForgerListCmdInputDecoder.decode(inputParams)
+    } match {
+      case Success(decodedBytes) => decodedBytes
+      case Failure(ex) =>
+        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
+    }
     val forgerIndex: Int = cmdInput.forgerIndex
     val signature: Signature25519 = cmdInput.signature
 
@@ -354,7 +389,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       case AddNewStakeCmd => doAddNewStakeCmd(msg, gasView)
       case RemoveStakeCmd => doRemoveStakeCmd(msg, gasView)
       case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(msg, gasView)
-      case opCodeHex => throw new ExecutionRevertedException(s"op code $opCodeHex not supported")
+      case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
 

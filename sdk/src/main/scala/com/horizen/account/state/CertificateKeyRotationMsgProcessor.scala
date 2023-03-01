@@ -23,6 +23,7 @@ import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import java.nio.charset.StandardCharsets
 import java.util
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 trait CertificateKeysProvider {
   private[horizen] def getKeyRotationProof(epochNum: Int, index: Int, keyType: KeyRotationProofType,  view: BaseAccountStateView): Option[KeyRotationProof]
@@ -147,7 +148,17 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
   private def execSubmitKeyRotation(msg: Message, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
     //verify
     checkMessageValidity(msg)
-    val inputData = SubmitKeyRotationCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
+
+    val inputData : SubmitKeyRotationCmdInput = Try {
+      // We must trap any exception arising in case of wrong data that can not be encoded according to the types
+      // and return the execution reverted exception
+      SubmitKeyRotationCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
+    } match {
+      case Success(decodedBytes) => decodedBytes
+      case Failure(ex) =>
+        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
+    }
+
     val keyRotationProof = inputData.keyRotationProof
     val keyIndex = keyRotationProof.index
     val keyType = keyRotationProof.keyType

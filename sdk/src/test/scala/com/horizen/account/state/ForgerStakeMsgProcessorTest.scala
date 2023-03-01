@@ -22,7 +22,6 @@ import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
-
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util
@@ -121,7 +120,7 @@ class ForgerStakeMsgProcessorTest
 
   @Test
   def testMethodIds(): Unit = {
-    //The expected methodIds were calcolated using this site: https://emn178.github.io/online-tools/keccak_256.html
+    //The expected methodIds were calculated using this site: https://emn178.github.io/online-tools/keccak_256.html
     assertEquals("Wrong MethodId for GetListOfForgersCmd", "f6ad3c23", ForgerStakeMsgProcessor.GetListOfForgersCmd)
     assertEquals("Wrong MethodId for AddNewStakeCmd", "5ca748ff", ForgerStakeMsgProcessor.AddNewStakeCmd)
     assertEquals("Wrong MethodId for RemoveStakeCmd", "f7419d79", ForgerStakeMsgProcessor.RemoveStakeCmd)
@@ -227,6 +226,28 @@ class ForgerStakeMsgProcessorTest
       var isOpen = forgerStakeMessageProcessor.isForgerListOpen(view)
       assertFalse(isOpen)
 
+      // negative test: add spurious byte to operation arguments
+      nonce = 1
+      forgerIndex = 1
+      msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
+        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+
+      signature = blockSignSecret2.sign(msgToSign)
+      cmdInput = OpenStakeForgerListCmdInput(
+        forgerIndex, signature
+      )
+
+      val badInputEncoded = Bytes.concat(cmdInput.encode(), BytesUtils.fromHexString("aa"))
+
+      msg = getMessage(
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ badInputEncoded, nonce, ownerAddressProposition.address())
+
+      // should fail because cmd input has a spurious trailing byte
+      val ex = intercept[ExecutionRevertedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+      }
+      assertTrue(ex.getMessage.contains("Wrong message data field length"))
+
       // negative test: use a wrong index (out of bound)
       forgerIndex = 10
       nonce = 1
@@ -249,6 +270,8 @@ class ForgerStakeMsgProcessorTest
       // negative test: use a wrong index (negative value)
       forgerIndex = -1
       nonce = 1
+      // Note: this method is called from http api and by msg processor. The latter calls it after having ABI encoded
+      // the input which has an Uint32 ABI type and therefore this case will never happen there
       assertThrows[IllegalArgumentException] {
         msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
           forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
@@ -414,11 +437,21 @@ class ForgerStakeMsgProcessorTest
       val txHash2 = Keccak256.hash("second tx")
       view.setupTxContext(txHash2, 10)
       // try processing a msg with the same stake (same msg), should fail
-      assertThrows[ExecutionFailedException](withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)))
+      assertThrows[ExecutionRevertedException](withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)))
 
       // Checking that log doesn't change
       listOfLogs = view.getLogs(txHash2)
       assertEquals("Wrong number of logs", 0, listOfLogs.length)
+
+      // try processing a msg with a trailing byte in the arguments
+      val badData = Bytes.concat(data, new Array[Byte](1))
+      val msgBad = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ badData, randomNonce)
+
+      // should fail because input has a trailing byte
+      val ex = intercept[ExecutionRevertedException] {
+        withGas(forgerStakeMessageProcessor.process(msgBad, view, _, defaultBlockContext))
+      }
+      assertTrue(ex.getMessage.contains("Wrong message data field length"))
 
       // try processing a msg with different stake id (different nonce), should succeed
       val msg2 = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
@@ -520,9 +553,28 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because forger is not in the allowed list
-      assertThrows[ExecutionFailedException] {
+      val ex = intercept[ExecutionRevertedException] {
         assertGas(4800, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
+      assertTrue(ex.getMessage.contains("Forger is not in the allowed list"))
+
+      view.commit(bytesToVersion(getVersion.data()))
+    }
+  }
+
+  @Test
+  def testProcessShortOpCode(): Unit = {
+    usingView(forgerStakeMessageProcessor) { view =>
+      forgerStakeMessageProcessor.init(view)
+      val args: Array[Byte] = new Array[Byte](0)
+      val opCode = BytesUtils.fromHexString("ac")
+      val msg = getDefaultMessage(opCode, args, randomNonce)
+
+      // should fail because op code is invalid (1 byte instead of 4 bytes)
+      val ex = intercept[ExecutionRevertedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+      }
+      assertTrue(ex.getMessage.contains("Data length"))
 
       view.commit(bytesToVersion(getVersion.data()))
     }
@@ -532,13 +584,15 @@ class ForgerStakeMsgProcessorTest
   def testProcessInvalidOpCode(): Unit = {
     usingView(forgerStakeMessageProcessor) { view =>
       forgerStakeMessageProcessor.init(view)
-      val data: Array[Byte] = BytesUtils.fromHexString("1234567890")
-      val msg = getDefaultMessage(BytesUtils.fromHexString("03"), data, randomNonce)
+      val args: Array[Byte] = BytesUtils.fromHexString("1234567890")
+      val opCode = BytesUtils.fromHexString("abadc0de")
+      val msg = getDefaultMessage(opCode, args, randomNonce)
 
       // should fail because op code is invalid
-      assertThrows[ExecutionFailedException] {
+      val ex = intercept[ExecutionRevertedException] {
         assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
+      assertTrue(ex.getMessage.contains("op code not supported"))
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
@@ -577,7 +631,7 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, invalidWeiAmount)
 
       // should fail because staked amount is not a zat amount
-      assertThrows[ExecutionFailedException] {
+      assertThrows[ExecutionRevertedException] {
         assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
@@ -649,11 +703,12 @@ class ForgerStakeMsgProcessorTest
       val data: Array[Byte] = new Array[Byte](1)
       val msg = getDefaultMessage(
         BytesUtils.fromHexString(GetListOfForgersCmd),
-        data, randomNonce)
+        data, randomNonce, value = BigInteger.ZERO)
 
-      assertThrows[ExecutionFailedException] {
+      val ex = intercept[ExecutionRevertedException] {
         assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
+      assertTrue(ex.getMessage.contains("invalid msg data length"))
 
       view.commit(bytesToVersion(getVersion.data()))
     }
@@ -777,7 +832,7 @@ class ForgerStakeMsgProcessorTest
   }
 
   @Test
-  def testRejectSendingInvalidValueToWithdraw(): Unit = {
+  def testInvalidRemoveStakeCmd(): Unit = {
     val expectedBlockSignerProposition = "aa22334455667788112233445586778811223344556677881122334455667788" // 32 bytes
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(expectedBlockSignerProposition)) // 32 bytes
     val expectedVrfKey = "aabbccddeeff0099aabb87ddeeff0099aabbccddeeff0099aabbccd2aeff001234"
@@ -810,7 +865,6 @@ class ForgerStakeMsgProcessorTest
       val addNewStakeReturnData = withGas(forgerStakeMessageProcessor.process(addNewStakeMsg, view, _, defaultBlockContext))
       assertNotNull(addNewStakeReturnData)
 
-
       val nonce = randomNonce
 
       val msgToSign = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(forgingStakeInfo.stakeId, origin, nonce.toByteArray)
@@ -819,17 +873,52 @@ class ForgerStakeMsgProcessorTest
       // create command arguments
       val removeCmdInput = RemoveStakeCmdInput(forgingStakeInfo.stakeId, msgSignature)
       val data: Array[Byte] = removeCmdInput.encode()
+
+      // should fail because value in msg should be 0 (value=1)
       var msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
-
       assertThrows[ExecutionRevertedException] {
         withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
       }
 
+      // should fail because value in msg should be 0 (value=-1)
       msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
-
       assertThrows[ExecutionRevertedException] {
         withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
       }
+
+      // should fail because input data has a trailing byte
+      val badData = Bytes.concat(data, new Array[Byte](1))
+      msg = getMessage(contractAddress, BigInteger.ZERO, BytesUtils.fromHexString(RemoveStakeCmd) ++ badData, nonce)
+      val ex = intercept[ExecutionRevertedException] {
+        withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+      }
+      assertTrue(ex.getMessage.contains("Wrong message data field length"))
+
+      // should fail when an illegal signature is provided
+      val chunk1 = data.slice(0, 32) // Bytes32 - stakeId
+      val chunk2 = data.slice(32, 64) // Bytes1 - v siganture value
+      val _ = data.slice(64, 96) // Bytes32 - r siganture value
+      val chunk4 = data.slice(96, data.length) // Bytes32 - s signature value
+
+      val rndBytes = new Array[Byte](31)
+      scala.util.Random.nextBytes(rndBytes)
+
+      // corrupt the 1-32 bytes of v and r fields of the signature
+      val chunk2Bad = Bytes.concat(chunk2.slice(0,1), rndBytes)
+      val chunk3Bad = BytesUtils.fromHexString("48dcf38802818477dcf922bd5d23726f9627fefee1643678b8ed13dba00ecdff")
+      val badData2 = Bytes.concat(chunk1, chunk2Bad, chunk3Bad, chunk4)
+
+      // verify we still have the same signature v value because it is encoded as a Bytes1 ABI field and the padding
+      // bytes are not considered when decoding
+      val decodingOk = RemoveStakeCmdInputDecoder.decode(data)
+      val decodingBad = RemoveStakeCmdInputDecoder.decode(badData2)
+      assertArrayEquals(decodingOk.signature.getV, decodingBad.signature.getV)
+
+      msg = getMessage(contractAddress, BigInteger.ZERO, BytesUtils.fromHexString(RemoveStakeCmd) ++ badData2, nonce)
+      val ex2 = intercept[ExecutionRevertedException] {
+        withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+      }
+      assertTrue(ex2.getMessage.contains("ill-formed signature"))
 
       view.commit(bytesToVersion(getVersion.data()))
     }
