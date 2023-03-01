@@ -1,5 +1,6 @@
 package io.horizen;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -54,7 +55,6 @@ import io.horizen.vrf.VrfOutput;
 import scala.Enumeration;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
-import org.mindrot.jbcrypt.BCrypt;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -626,7 +626,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
         String toEncode = json.get("string").asText();
-        String encoded = BCrypt.hashpw(toEncode, BCrypt.gensalt());
+        String encoded = BCrypt.with(BCrypt.Version.VERSION_2Y).hashToString(8, toEncode.toCharArray());
+
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("encodedString", encoded);
 
