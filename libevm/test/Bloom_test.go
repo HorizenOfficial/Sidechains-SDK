@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// replicate test in: com.horizen.account.receipt.BloomTest.bloomFilterTest
+// replicate test in: io.horizen.account.receipt.BloomTest.bloomFilterTest
 func TestGethBloom(t *testing.T) {
 	data := common.FromHex("ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
 	var bin types.Bloom

@@ -506,30 +506,30 @@ Run an Example App with the `my_settings.conf`:
 
 * For Windows:
  ```
-    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar;./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Glibc):
 ```
-    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Jemalloc):
 ```
-    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 
 **Model: Account**
 
 * For Windows:
  ```
-    java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar;./examples/evmapp/target/lib/* com.horizen.examples.EvmApp ./examples/my_settings.conf
+    java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar;./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
 ```
 * For Linux (Glibc):
 ```
-    java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar:./examples/evmapp/target/lib/\* com.horizen.examples.EvmApp ./examples/my_settings.conf
+    java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar:./examples/evmapp/target/lib/\* io.horizen.examples.EvmApp ./examples/my_settings.conf
 ```
 * For Linux (Jemalloc):
 ```
-    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar:./examples/evmapp/target/lib/* com.horizen.examples.EvmApp ./examples/my_settings.conf
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar:./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
 ```
 
 
