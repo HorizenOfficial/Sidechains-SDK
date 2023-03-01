@@ -6,6 +6,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
+import com.horizen.fixtures.BasicAuthenticationFixture
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
 import io.horizen.SidechainTypes
 import io.horizen.account.api.http.AccountNodeViewUtilMocks
