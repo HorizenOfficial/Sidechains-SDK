@@ -32,7 +32,7 @@ case class AccountBlockHeader(
                                override val forgingStakeInfo: ForgingStakeInfo,
                                @JsonSerialize(using = classOf[MerklePathJsonSerializer]) override val forgingStakeMerklePath: MerklePath,
                                override val vrfProof: VrfProof,
-                               vrfOutput: VrfOutput, // explicitly set in AccountBlockHeader to by used as a PREVRANDAO/random in the BlockContext
+                               vrfOutput: VrfOutput, // explicitly set in AccountBlockHeader to be used as a PREVRANDAO/random in the BlockContext
                                override val sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
                                override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                stateRoot: Array[Byte],
