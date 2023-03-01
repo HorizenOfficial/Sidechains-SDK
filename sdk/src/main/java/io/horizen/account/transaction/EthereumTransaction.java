@@ -68,6 +68,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private String hashString;
     private BigInteger txCost;
 
+    private long size = -1;
+
     private synchronized String getTxHash() {
         if (this.hashString == null) {
             byte[] encodedMessage = encode(isSigned());
@@ -239,7 +241,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     "non-positive gas limit", id()));
         if (!BigIntegerUtil.isUint64(getGasLimit()))
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "gas limit uint64 owerflow", id()));
+                    "gas limit uint64 overflow", id()));
 
         if (isEIP1559()) {
             if (getMaxFeePerGas().signum() < 0)
@@ -284,8 +286,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     @JsonProperty("size")
-    public long size() {
-        return serializer().toBytes(this).length;
+    public synchronized long size() {
+        if (this.size == -1){
+            this.size = serializer().toBytes(this).length;
+        }
+        return size;
     }
 
     @Override

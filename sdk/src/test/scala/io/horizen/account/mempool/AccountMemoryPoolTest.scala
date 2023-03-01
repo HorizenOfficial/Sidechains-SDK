@@ -1,6 +1,6 @@
 package io.horizen.account.mempool
 
-import io.horizen.SidechainTypes
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state.AccountStateReader
@@ -34,7 +34,11 @@ class AccountMemoryPoolTest
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
     Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address])).thenReturn(initialStateNonce)
 
-    val accountMemoryPool = AccountMemoryPool.createEmptyMempool(() => accountStateViewMock, () => baseStateViewMock)
+    val mempoolSettings = AccountMempoolSettings()
+    val accountMemoryPool = AccountMemoryPool.createEmptyMempool(
+      () => accountStateViewMock,
+      () => baseStateViewMock,
+      mempoolSettings)
 
     assertTrue("Wrong tx list size ", accountMemoryPool.takeExecutableTxs().isEmpty)
 
@@ -57,7 +61,12 @@ class AccountMemoryPoolTest
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)
     assertEquals("Wrong tx ", account1ExecTransaction0.id(), listOfExecTxs.head.id)
 
-    val account1NonExecTransaction0 = createEIP1559Transaction(value, BigInteger.valueOf(1000), Option(account1Key))
+    val account1NonExecTransaction0 = {
+      val validButNonExecNonce = initialStateNonce.add(BigInteger.valueOf(mempoolSettings.maxNonceGap - 1))
+      createEIP1559Transaction(value,
+        nonce=validButNonExecNonce,
+        Option(account1Key))
+    }
     assertTrue(accountMemoryPool.put(account1NonExecTransaction0).isSuccess)
     listOfExecTxs = accountMemoryPool.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)

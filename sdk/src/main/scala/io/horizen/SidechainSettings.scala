@@ -2,10 +2,11 @@ package io.horizen
 
 import io.horizen.cryptolibprovider.CircuitTypes
 import CircuitTypes.CircuitTypes
+import io.horizen.account.mempool.MempoolMap
 import sparkz.core.settings.SparkzSettings
 
 import java.math.BigInteger
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class ForgerKeysData(
     blockSignProposition: String,
@@ -61,8 +62,7 @@ case class ForgerSettings(
 
 case class MempoolSettings(
     maxSize: Int = 300,
-    minFeeRate: Long = 0,
-    allowUnprotectedTxs: Boolean = false
+    minFeeRate: Long = 0
 )
 
 case class WalletSettings(
@@ -90,6 +90,27 @@ case class EthServiceSettings(
     globalRpcGasCap: BigInteger = BigInteger.valueOf(50000000),
 )
 
+// Default values are the same as in Geth/Erigon
+case class AccountMempoolSettings(maxNonceGap: Int = 16,
+                                  maxAccountSlots: Int = 16,
+                                  maxMemPoolSlots: Int = 6144, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
+                                  maxNonExecMemPoolSlots: Int = 1024,
+                                  txLifetime: FiniteDuration = 3.hours,
+                                  allowUnprotectedTxs: Boolean = false){
+  require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
+  require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
+  require(maxMemPoolSlots >= MempoolMap.MaxNumOfSlotsForTx, s"Maximum Memory Pool Slots number should be at least " +
+    s"${MempoolMap.MaxNumOfSlotsForTx} but it is $maxMemPoolSlots")
+  require(maxNonExecMemPoolSlots >= MempoolMap.MaxNumOfSlotsForTx, s"Maximum Non Executable Memory Sub Pool Slots number " +
+    s"should be at least ${MempoolMap.MaxNumOfSlotsForTx} but it is $maxNonExecMemPoolSlots")
+  require(maxNonExecMemPoolSlots < maxMemPoolSlots, s"Maximum Non Executable Memory Sub Pool Slots " +
+    s"($maxNonExecMemPoolSlots) are greater than Maximum Memory Pool Slots ($maxMemPoolSlots)")
+  require(maxMemPoolSlots >= maxAccountSlots, s"Maximum number of account slots cannot be bigger than maximum number of " +
+    s"Memory Pool slots: account slots $maxAccountSlots - Memory Pool slots $maxMemPoolSlots")
+  require(txLifetime.toSeconds > 0, s"Transaction lifetime cannot be 0 or less seconds: $txLifetime")
+
+}
+
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
     genesisData: GenesisDataSettings,
@@ -102,4 +123,5 @@ case class SidechainSettings(
     csw: CeasedSidechainWithdrawalSettings,
     logInfo: LogInfoSettings,
     ethService: EthServiceSettings,
+    accountMempool: AccountMempoolSettings,
 )

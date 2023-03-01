@@ -12,6 +12,10 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, DEFAULT_EVM
 from test_framework.util import start_nodes, websocket_port_by_mc_node_index, assert_equal, assert_true, \
     forward_transfer_to_sidechain
 
+from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
+    SC_CREATION_VERSION_1, DEFAULT_MAX_NONCE_GAP, DEFAULT_MAX_ACCOUNT_SLOTS, \
+    DEFAULT_MAX_MEMPOOL_SLOTS, DEFAULT_MAX_NONEXEC_POOL_SLOTS, DEFAULT_TX_LIFETIME
+
 
 class AccountChainSetup(SidechainTestFramework):
 
@@ -20,8 +24,11 @@ class AccountChainSetup(SidechainTestFramework):
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
                  initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
                  allow_unprotected_txs=True, remote_keys_server_address=None, max_incoming_connections=100,
-                 connect_nodes=True):
+                 connect_nodes=True, max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
+                 tx_lifetime=DEFAULT_TX_LIFETIME):
         super().__init__()
+
 
         self.evm_address = None
         self.sc_nodes = None
@@ -43,6 +50,12 @@ class AccountChainSetup(SidechainTestFramework):
         self.allow_unprotected_txs = allow_unprotected_txs
         self.max_incoming_connections = max_incoming_connections
         self.connect_nodes = connect_nodes
+        self.max_nonce_gap = max_nonce_gap
+        self.max_account_slots = max_account_slots
+        self.max_mempool_slots = max_mempool_slots
+        self.max_nonexec_pool_slots = max_nonexec_pool_slots
+        self.tx_lifetime = tx_lifetime
+
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -72,7 +85,13 @@ class AccountChainSetup(SidechainTestFramework):
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
                     remote_keys_server_address=self.remote_keys_server_address,
                     allow_unprotected_txs=self.allow_unprotected_txs,
-                    max_incoming_connections=self.max_incoming_connections))
+                    max_incoming_connections=self.max_incoming_connections,
+                    max_nonce_gap=self.max_nonce_gap,
+                    max_account_slots=self.max_account_slots,
+                    max_mempool_slots=self.max_mempool_slots,
+                    max_nonexec_pool_slots=self.max_nonexec_pool_slots,
+                    tx_lifetime =  self.tx_lifetime
+                ))
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
@@ -83,7 +102,13 @@ class AccountChainSetup(SidechainTestFramework):
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
                     allow_unprotected_txs=self.allow_unprotected_txs,
                     remote_keys_server_address=self.remote_keys_server_address,
-                    max_incoming_connections=self.max_incoming_connections))
+                    max_incoming_connections=self.max_incoming_connections,
+                    max_nonce_gap=self.max_nonce_gap,
+                    max_account_slots=self.max_account_slots,
+                    max_mempool_slots=self.max_mempool_slots,
+                    max_nonexec_pool_slots=self.max_nonexec_pool_slots,
+                    tx_lifetime = self.tx_lifetime
+                ))
 
         if self.circuittype_override is not None:
             circuit_type = self.circuittype_override

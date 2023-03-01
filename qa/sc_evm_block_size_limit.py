@@ -26,7 +26,7 @@ Test:
 
 class SCEvmBlockSizeLimit(AccountChainSetup):
     def __init__(self):
-        super().__init__(number_of_sidechain_nodes=2)
+        super().__init__(number_of_sidechain_nodes=2, max_nonce_gap=100, max_account_slots=100)
 
     def sendEoa2EoaWithData(self, from_sc_node, to_sc_node, from_addr, to_addr, amount_in_zen, *,
                     nonce=None, data=None, gasLimit=21000):
