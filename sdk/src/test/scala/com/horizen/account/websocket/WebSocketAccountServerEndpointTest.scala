@@ -300,6 +300,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals(1, endpoint.receivedMessage.size())
 
     response = mapper.readTree(endpoint.receivedMessage.get(0))
+    System.out.println(endpoint.receivedMessage.get(0))
     checkBlock(response)
     endpoint.receivedMessage.remove(0)
 
@@ -760,7 +761,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals("Wrong block nonce", blockJson.get("nonce").asText(), ethereumBlockView.nonce)
     assertEquals("Wrong block number", blockJson.get("number").asText(), Numeric.toHexStringWithPrefix(ethereumBlockView.number))
     assertEquals("Wrong block parentHash", blockJson.get("parentHash").asText(), ethereumBlockView.parentHash.toString)
-    assertEquals("Wrong block receiptRoot", blockJson.get("receiptRoot").asText(), ethereumBlockView.receiptsRoot.toString)
+    assertEquals("Wrong block receiptsRoot", blockJson.get("receiptsRoot").asText(), ethereumBlockView.receiptsRoot.toString)
     assertEquals("Wrong block sha3Uncles", blockJson.get("sha3Uncles").asText(), ethereumBlockView.sha3Uncles)
     assertEquals("Wrong block stateRoot", blockJson.get("stateRoot").asText(), ethereumBlockView.stateRoot.toString)
     assertEquals("Wrong block timestamp", blockJson.get("timestamp").asText(), Numeric.toHexStringWithPrefix(ethereumBlockView.timestamp))
