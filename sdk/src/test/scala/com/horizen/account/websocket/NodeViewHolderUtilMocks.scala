@@ -9,7 +9,7 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{Bloom, EthereumConsensusDataLog, EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.{AccountState, GasUtil}
+import com.horizen.account.state.{AccountState, AccountStateView, GasUtil}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.EthereumTransactionUtils
 import com.horizen.account.wallet.AccountWallet
@@ -104,8 +104,12 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
 
   def getNodeStateMock: AccountState = {
     val state: AccountState = mock[AccountState]
+    val stateView: AccountStateView = mock[AccountStateView]
 
     Mockito.when(state.getTransactionReceipt(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => Option.apply(transactionReceipt))
+    Mockito.when(state.getView).thenAnswer(_ => stateView)
+    Mockito.when(stateView.getTransactionReceipt(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => Option.apply(transactionReceipt))
+
     state
   }
 
