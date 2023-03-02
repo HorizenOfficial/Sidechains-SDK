@@ -1,11 +1,10 @@
-package com.horizen.account.api.rpc.service
+package io.horizen.account.api.rpc.service
 
-import com.horizen.account.api.rpc.types.{EthereumLogView, FilterQuery}
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.receipt.Bloom
-import com.horizen.account.state.AccountStateView
+import io.horizen.account.api.rpc.types.{EthereumLogView, FilterQuery}
 import io.horizen.evm.{Address, Hash}
-
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.state.AccountStateView
+import io.horizen.account.utils.Bloom
 
 object RpcFilter {
   /**
@@ -13,10 +12,10 @@ object RpcFilter {
    * github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:227
    */
   def getBlockLogs(
-                            stateView: AccountStateView,
-                            block: AccountBlock,
-                            query: FilterQuery
-                          ): Seq[EthereumLogView] = {
+                    stateView: AccountStateView,
+                    block: AccountBlock,
+                    query: FilterQuery
+                  ): Seq[EthereumLogView] = {
     val filtered = query.address.length > 0 || query.topics.length > 0
     if (filtered && !testBloom(block.header.logsBloom, query.address, query.topics)) {
       // bail out if address or topic queries are given, but they fail the bloom filter test

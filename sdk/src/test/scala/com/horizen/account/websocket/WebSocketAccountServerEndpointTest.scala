@@ -4,17 +4,18 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.SidechainTypes
-import com.horizen.account.AccountSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
-import com.horizen.account.api.rpc.types.EthereumBlockView
-import com.horizen.account.api.rpc.utils.RpcCode
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.receipt.{EthereumConsensusDataLog, EthereumReceipt}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.api.http.SidechainApiMockConfiguration
-import com.horizen.serialization.SerializationUtil
-import com.horizen.utils.{BytesUtils, CountDownLatchController}
+import io.horizen.SidechainTypes
+import io.horizen.account.AccountSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
+import io.horizen.account.api.rpc.types.EthereumBlockView
+import io.horizen.account.api.rpc.utils.RpcCode
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.websocket.{LOGS_SUBSCRIPTION, NEW_HEADS_SUBSCRIPTION, NEW_PENDING_TRANSACTIONS_SUBSCRIPTION, SUBSCRIBE_REQUEST, UNSUBSCRIBE_REQUEST, WebSocketAccountRequest, WebSocketAccountServerRef, WebSocketAccountSubscription}
+import io.horizen.api.http.SidechainApiMockConfiguration
 import io.horizen.evm.Hash
+import io.horizen.json.SerializationUtil
+import io.horizen.utils.{BytesUtils, CountDownLatchController}
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{After, Assert, Test}
