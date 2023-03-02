@@ -30,10 +30,6 @@ public class RpcId {
         }
     }
 
-    public RpcId(String stringId) {
-        this.stringId = stringId;
-    }
-
     public Long getLongId() {
         return longId;
     }

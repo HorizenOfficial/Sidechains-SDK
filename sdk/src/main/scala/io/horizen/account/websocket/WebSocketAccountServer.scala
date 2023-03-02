@@ -29,7 +29,7 @@ class WebSocketAccountServer(wsPort: Int)
   }
 
   override def postStop(): Unit = {
-    log.debug("WebSocket Server actor is stopping...")
+    log.debug("Websocket Server actor is stopping...")
     websocket.stop()
     super.postStop()
   }

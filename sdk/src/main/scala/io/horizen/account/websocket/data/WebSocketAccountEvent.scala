@@ -7,7 +7,7 @@ import java.math.BigInteger
 
 @JsonIgnoreProperties(Array("id", "result"))
 class WebSocketAccountEvent(@JsonProperty("method")
-                            val method: String,
+                            val method: String = "eth_subscription",
                             @JsonProperty("params")
                             val params: Object) extends RpcResponseSuccess(null, params){
 }

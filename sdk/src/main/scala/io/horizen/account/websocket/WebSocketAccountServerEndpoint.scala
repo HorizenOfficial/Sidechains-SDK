@@ -162,7 +162,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     val blockJson = webSocketAccountChannelImpl.accountBlockToWebsocketJson(block)
 
     newHeadsSubscriptions.forEach(subscription => {
-      send(new WebSocketAccountEvent("eth_subscription", new WebSocketAccountEventParams(subscription.subscriptionId, blockJson)), subscription.session)
+      send(new WebSocketAccountEvent(params = new WebSocketAccountEventParams(subscription.subscriptionId, blockJson)), subscription.session)
     })
 
     //We have a chain reorganization
@@ -182,7 +182,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
 
     if (walletAddresses.contains(tx.getFromAddress)) {
       newPendingTransactionsSubscriptions.forEach(subscription => {
-        send(new WebSocketAccountEvent("eth_subscription", new WebSocketAccountEventParams(subscription.subscriptionId, Numeric.prependHexPrefix(tx.id()))), subscription.session)
+        send(new WebSocketAccountEvent(params = new WebSocketAccountEventParams(subscription.subscriptionId, Numeric.prependHexPrefix(tx.id()))), subscription.session)
       })
     }
   }
@@ -211,7 +211,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
 
   private def sendTransactionLog(txLogs: Seq[EthereumLogView], subscription: SubscriptionWithFilter): Unit = {
     txLogs.foreach(txLog => {
-      send(new WebSocketAccountEvent( "eth_subscription", new WebSocketAccountEventParams(subscription.subscriptionId, txLog)), subscription.session)
+      send(new WebSocketAccountEvent( params =  new WebSocketAccountEventParams(subscription.subscriptionId, txLog)), subscription.session)
     })
   }
 
