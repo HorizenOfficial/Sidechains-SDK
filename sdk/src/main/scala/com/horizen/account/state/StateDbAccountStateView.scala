@@ -5,31 +5,26 @@ import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.sc2sc.{CrossChainMessageProvider, CrossChainRedeemMessageProvider}
 import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import com.horizen.block.{
-  MainchainBlockReferenceData,
-  MainchainTxForwardTransferCrosschainOutput,
-  MainchainTxSidechainCreationCrosschainOutput
-}
+import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.evm.{ResourceHandle, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.BytesUtils
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
+
 import java.math.BigInteger
 import java.util.Optional
-
-import com.horizen.account.sc2sc.{AccountCrossChainMessage, CrossChainMessageProvider}
-import com.horizen.sc2sc.{CrossChainMessageHash, CrossChainMessage}
-
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 
@@ -48,6 +43,8 @@ class StateDbAccountStateView(
   lazy val certificateKeysProvider: CertificateKeysProvider =
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
   lazy val crossChainMessageProviders: Seq[CrossChainMessageProvider] = messageProcessors.filter(_.isInstanceOf[CrossChainMessageProvider]).map(_.asInstanceOf[CrossChainMessageProvider])
+  lazy val crossChainRedeemMessageProvider: CrossChainRedeemMessageProvider =
+    messageProcessors.find(_.isInstanceOf[CrossChainRedeemMessageProvider]).get.asInstanceOf[CrossChainRedeemMessageProvider]
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
@@ -374,4 +371,10 @@ class StateDbAccountStateView(
 
   override def getGasTrackedView(gas: GasPool): BaseAccountStateView =
     new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, gas)
+
+  override def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean =
+    crossChainRedeemMessageProvider.doesScTxCommitmentTreeRootExist(hash, this)
+
+  override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
+    crossChainRedeemMessageProvider.doesCrossChainMessageHashFromRedeemMessageExist(hash, this)
 }

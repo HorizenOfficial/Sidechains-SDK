@@ -7,11 +7,13 @@ import com.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerial
 import com.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import com.horizen.sc2sc.CrossChainMessageHash
 import com.horizen.storage.Storage
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 import sparkz.core.{VersionTag, versionToBytes}
+
 import java.math.BigInteger
 import java.util.{ArrayList => JArrayList}
 import scala.collection.mutable.ListBuffer
@@ -49,6 +51,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var topCertificateMainchainHashes: Map[Int, Array[Byte]] = Map()
   //Contains the base fee to be used when forging the next block
   private[horizen] var nextBaseFeeOpt: Option[BigInteger] = None
+  private[horizen] var scTxCommitmentTreeRootHash: Option[Array[Byte]] = None
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
@@ -59,6 +62,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     withdrawalEpochInfoOpt.orElse(getWithdrawalEpochInfoFromStorage).getOrElse(WithdrawalEpochInfo(0, 0))
   }
+
+  def getScTxCommitmentTreeRootHash: Option[Array[Byte]] = scTxCommitmentTreeRootHash
 
   private[horizen] def getWithdrawalEpochInfoFromStorage: Option[WithdrawalEpochInfo] = {
     storage.get(withdrawalEpochInformationKey).asScala match {
@@ -146,7 +151,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       }
   }
 
-    private[horizen] def getTopQualityCertificateFromStorage(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+  private[horizen] def getTopQualityCertificateFromStorage(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
       case Some(baw) =>
         WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
@@ -184,6 +189,13 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case _ => Option.empty
     }
   }
+
+  private[horizen] def doesScTxCommitmentTreeRootExist(scTxCommitmentTreeRoot: Array[Byte]): Boolean = {
+    storage.get(getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeRoot)).isPresent
+  }
+
+  private[horizen] def doesCrossChainMessageHashFromRedeemMessageExist(ccMsgHash: CrossChainMessageHash): Boolean =
+    storage.get(getCrossChainMessageHashFromRedeemMessageKey(ccMsgHash)).isPresent
 
   override def hasCeased: Boolean = hasCeasedOpt.getOrElse(storage.get(ceasingStateKey).isPresent)
 
@@ -259,6 +271,9 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   def getNextBaseFee: BigInteger = {
     nextBaseFeeOpt.orElse(getNextBaseFeeFromStorage).getOrElse(FeeUtils.INITIAL_BASE_FEE)
   }
+
+  def updateSidechainTxCommitmentTreeRootHash(hash: Array[Byte]): Unit =
+    scTxCommitmentTreeRootHash = Some(hash)
 
   def setCeased(): Unit = hasCeasedOpt = Some(true)
 
@@ -344,6 +359,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     // If sidechain has ceased set the flag
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
 
+    scTxCommitmentTreeRootHash.foreach(hash => updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(hash), hash)))
+
     // update the height unless we have the very first version of the db
     //--
     // We are assuming that the saveToStorage() is called on a per-block base.
@@ -426,6 +443,12 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getReceiptKey(txHash : Array[Byte]): ByteArrayWrapper = {
     calculateKey(Bytes.concat("receipt".getBytes, txHash))
   }
+
+  private[horizen] def getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeRoot: Array[Byte]) =
+    calculateKey(Bytes.concat("scTxCommitmentTreeKey".getBytes, scTxCommitmentTreeRoot))
+
+  private[horizen] def getCrossChainMessageHashFromRedeemMessageKey(ccMsgHash: CrossChainMessageHash) =
+    calculateKey(Bytes.concat("ccMessageHashFromRedeemMessage".getBytes, ccMsgHash.bytes))
 
   private[horizen] val getLastCertificateEpochNumberKey: ByteArrayWrapper = calculateKey("lastCertificateEpochNumber".getBytes)
 

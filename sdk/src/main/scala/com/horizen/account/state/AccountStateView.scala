@@ -7,15 +7,13 @@ import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.evm.StateDB
+import com.horizen.sc2sc.CrossChainMessageHash
 import com.horizen.state.StateView
 import com.horizen.utils.WithdrawalEpochInfo
 import sparkz.core.VersionTag
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
-
-import com.horizen.account.sc2sc.{AccountCrossChainMessage, CrossChainMessageProvider}
-import com.horizen.sc2sc.CrossChainMessageHash
 
 // this class extends 2 main hierarchies, which are kept separate:
 //  - StateView (trait): metadata read/write
@@ -67,6 +65,8 @@ class AccountStateView(
 
   def updateNextBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateNextBaseFee(baseFee)
 
+  def updateSidechainTxCommitmentTreeRootHash(hash: Array[Byte]): Unit = metadataStorageView.updateSidechainTxCommitmentTreeRootHash(hash)
+
   def getNextBaseFee: BigInteger = metadataStorageView.getNextBaseFee
 
   override def setCeased(): Unit = metadataStorageView.setCeased()
@@ -97,4 +97,10 @@ class AccountStateView(
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
+
+  override def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean =
+    metadataStorageView.doesScTxCommitmentTreeRootExist(hash)
+
+  override def doesCrossChainMessageHashFromRedeemMessageExist(ccRedeemMsg: CrossChainMessageHash): Boolean =
+    metadataStorageView.doesCrossChainMessageHashFromRedeemMessageExist(ccRedeemMsg)
 }

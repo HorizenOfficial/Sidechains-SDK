@@ -3,13 +3,13 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.{Bloom, EthereumReceipt}
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Secp256k1.generateContractAddress
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
 import com.horizen.account.validation.InvalidTransactionChainIdException
-import com.horizen.block.{SidechainBlockBase, WithdrawalEpochCertificate}
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
@@ -18,6 +18,7 @@ import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
+import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import sparkz.core._
@@ -27,10 +28,6 @@ import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 
 import java.math.BigInteger
 import java.util
-
-import com.horizen.account.sc2sc.AccountCrossChainMessage
-import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageImpl, CrossChainProtocolVersion, Sc2ScConfigurator}
-
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -103,6 +100,9 @@ class AccountState(
           // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
           // then the whole block is invalid.
           mod.mainchainBlockReferencesData.flatMap(_.topQualityCertificate).foreach(cert => validateTopQualityCertificate(cert, stateView))
+
+          // Save the scTxCommitmentTreeRootHash of every mainchain header in a block
+          mod.mainchainHeaders.foreach(mcHeader => stateView.updateSidechainTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment))
         } else {
           // For ceasing sidechains submission window concept is used.
           // If SC block has reached the certificate submission window end -> check the top quality certificate
@@ -522,6 +522,13 @@ class AccountState(
     // TODO: no CSW support expected for the Eth sidechain
     None
   }
+
+  override def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean =
+    if (sc2scConfig.canSendMessages) using(getView)(_.doesScTxCommitmentTreeRootExist(hash)) else false
+
+  override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
+    if (sc2scConfig.canSendMessages) using(getView)(_.doesCrossChainMessageHashFromRedeemMessageExist(hash)) else false
+
 }
 
 object AccountState extends SparkzLogging {
