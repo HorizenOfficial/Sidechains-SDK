@@ -1,4 +1,4 @@
-package com.horizen.account.websocket
+package io.horizen.account.websocket
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
@@ -11,11 +11,11 @@ import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.websocket.{LOGS_SUBSCRIPTION, NEW_HEADS_SUBSCRIPTION, NEW_PENDING_TRANSACTIONS_SUBSCRIPTION, SUBSCRIBE_REQUEST, UNSUBSCRIBE_REQUEST, WebSocketAccountRequest, WebSocketAccountServerRef, WebSocketAccountSubscription}
 import io.horizen.api.http.SidechainApiMockConfiguration
 import io.horizen.evm.Hash
 import io.horizen.json.SerializationUtil
 import io.horizen.utils.{BytesUtils, CountDownLatchController}
+import jakarta.websocket._
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{After, Assert, Test}
@@ -29,8 +29,6 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{Semantically
 import java.math.BigInteger
 import java.net.URI
 import java.util
-import jakarta.websocket.{ClientEndpointConfig, Endpoint, EndpointConfig, MessageHandler, Session}
-
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 

@@ -6,10 +6,10 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
-import com.horizen.fixtures.BasicAuthenticationFixture
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import io.horizen.account.api.http.AccountNodeViewUtilMocks
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.fixtures.BasicAuthenticationFixture
 import io.horizen.account.node.AccountNodeView
 import io.horizen.account.state.MessageProcessor
 import io.horizen.account.storage.AccountStateMetadataStorage
