@@ -11,14 +11,12 @@ import sparkz.core.NodeViewHolder
 import sparkz.core.NodeViewHolder.CurrentView
 import com.horizen.account.websocket.WebSocketAccountServerRef.sidechainNodeViewHolderRef
 import akka.pattern.ask
-import com.horizen.account.api.rpc.types.EthereumBlockView
+import com.horizen.account.api.rpc.service.RpcFilter
+import com.horizen.account.api.rpc.types.{EthereumBlockView, EthereumLogView}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumReceipt
-import com.horizen.account.websocket.data.{SubscriptionWithFilter, WebSocketEthereumBlockView, WebSocketTransactionLog}
-import com.horizen.utils.BytesUtils
+import com.horizen.account.websocket.data.{SubscriptionWithFilter, WebSocketEthereumBlockView}
 import io.horizen.evm.{Address, Hash}
 
-import java.util
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -54,23 +52,10 @@ class WebSocketAccountChannelImpl extends SparkzLogging{
     }
   }
 
-  def getTransactionReceipt(txHash: String): Option[EthereumReceipt] = {
+  def getEthereumLogsFromBlock(block: AccountBlock, subscriptionWithFilter: SubscriptionWithFilter): Seq[EthereumLogView] = {
     applyOnAccountView { nodeView =>
-      nodeView.state.getTransactionReceipt(BytesUtils.fromHexString(txHash))
+      RpcFilter.getBlockLogs(nodeView.state.getView, block, subscriptionWithFilter.filter)
     }
-  }
-
-  def createWsLogEventFromEthereumReceipt(txReceipt: EthereumReceipt, subscriptionWithFilter: SubscriptionWithFilter): Array[WebSocketTransactionLog] = {
-    val txLogs: java.util.ArrayList[WebSocketTransactionLog] = new util.ArrayList[WebSocketTransactionLog]()
-    if (subscriptionWithFilter.checkSubscriptionInBloom(txReceipt.consensusDataReceipt.logsBloom)) {
-      txReceipt.consensusDataReceipt.logs.zipWithIndex.foreach {
-        case (log, index) =>
-          if (subscriptionWithFilter.filterTransactionLogs(log)) {
-            txLogs.add(new WebSocketTransactionLog(txReceipt, log, index))
-          }
-      }
-    }
-    txLogs.toArray(new Array[WebSocketTransactionLog](0))
   }
 
 

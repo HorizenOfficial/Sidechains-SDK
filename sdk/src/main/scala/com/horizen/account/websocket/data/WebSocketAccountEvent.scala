@@ -16,5 +16,3 @@ class WebSocketAccountEventParams(@JsonProperty("subscription")
                                   val subscription: BigInteger,
                                   @JsonProperty("result")
                                   val result: Object)
-
-class WebSocketAccountEventLogParams(@JsonProperty("removed") val removed: Boolean, subscription: BigInteger, result: Object) extends WebSocketAccountEventParams(subscription, result)
