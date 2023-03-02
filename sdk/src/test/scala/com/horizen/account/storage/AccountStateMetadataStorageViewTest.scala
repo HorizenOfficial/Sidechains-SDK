@@ -51,7 +51,7 @@ class AccountStateMetadataStorageViewTest
     assertTrue("Block fee info should be empty in view", storageView.getFeePayments(0).isEmpty)
     assertTrue("Block fee info should be empty in storage", stateMetadataStorage.getFeePayments(0).isEmpty)
 
-    assertTrue("Top certificate mainchain sidechainTxCommitmentTreeRootHash should be empty in view", storageView.getTopCertificateMainchainHash(0).isEmpty)
+    assertTrue("Top certificate mainchain hash should be empty in view", storageView.getTopCertificateMainchainHash(0).isEmpty)
 
     assertTrue("Consensus epoch number should be empty in view", storageView.getConsensusEpochNumber.isEmpty)
     assertTrue("Consensus epoch number should be empty in storage", stateMetadataStorage.getConsensusEpochNumber.isEmpty)
@@ -80,8 +80,8 @@ class AccountStateMetadataStorageViewTest
     storageView.addTopCertificateMainchainHash(currentEpoch, generateRandomMainchainHash())
     assertFalse("Certificate is not present in view", storageView.getTopQualityCertificate(currentEpoch).isEmpty)
     assertTrue("Certificate is present in storage", stateMetadataStorage.getTopQualityCertificate(currentEpoch).isEmpty)
-    assertFalse("Top certificate mainchain sidechainTxCommitmentTreeRootHash is not present in view", storageView.getTopCertificateMainchainHash(currentEpoch).isEmpty)
-    assertTrue("Top certificate mainchain sidechainTxCommitmentTreeRootHash is present in storage", stateMetadataStorage.getTopCertificateMainchainHash(currentEpoch).isEmpty)
+    assertFalse("Top certificate mainchain hash is not present in view", storageView.getTopCertificateMainchainHash(currentEpoch).isEmpty)
+    assertTrue("Top certificate mainchain hash is present in storage", stateMetadataStorage.getTopCertificateMainchainHash(currentEpoch).isEmpty)
 
     // Check state root of empty storage and view
     assertArrayEquals("Non-default account state was set in the view", DEFAULT_ACCOUNT_STATE_ROOT, storageView.getAccountStateRoot)
@@ -127,7 +127,7 @@ class AccountStateMetadataStorageViewTest
       stateMetadataStorage.getAccountStateRoot)
     assertEquals("Certificate is different in view and in storage after a commit", storageView.getTopQualityCertificate(currentEpoch).get.epochNumber,
       stateMetadataStorage.getTopQualityCertificate(currentEpoch).get.epochNumber)
-    assertArrayEquals("Top certificate mainchain sidechainTxCommitmentTreeRootHash is different in view and in storage after a commit", storageView.getTopCertificateMainchainHash(currentEpoch).get,
+    assertArrayEquals("Top certificate mainchain hash is different in view and in storage after a commit", storageView.getTopCertificateMainchainHash(currentEpoch).get,
       stateMetadataStorage.getTopCertificateMainchainHash(currentEpoch).get)
 
     assertEquals("Height after commit should be 1 in view", 1, storageView.getHeight)

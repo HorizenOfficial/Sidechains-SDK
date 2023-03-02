@@ -12,7 +12,7 @@ import java.io.FileWriter;
 
 import static org.junit.Assert.*;
 
-public class MainchainTxCrossChainOutputAddressUtilTest {
+public class MainchainTxCrosschainOutputAddressUtilTest {
 
     AddressProposition addressProposition;
 
@@ -20,7 +20,7 @@ public class MainchainTxCrossChainOutputAddressUtilTest {
     public void setUp() {
         byte[] mcAddress = BytesUtils.fromHexString("aaaa22334455667700112233445566770011223344556677001122334455bbbb");
         addressProposition = new AddressProposition(
-                MainchainTxCrossChainOutputAddressUtil.getAccountAddress(mcAddress));
+                MainchainTxCrosschainOutputAddressUtil.getAccountAddress(mcAddress));
         // Set `true` and run if you want to update regression data.
         if (false) {
             try {
@@ -58,7 +58,7 @@ public class MainchainTxCrossChainOutputAddressUtilTest {
         byte[] mcAddress = BytesUtils.fromHexString("aaaa22334455667700112233445566770011223344556677001122334455bb");
         try {
             addressProposition = new AddressProposition(
-                    MainchainTxCrossChainOutputAddressUtil.getAccountAddress(mcAddress));
+                    MainchainTxCrosschainOutputAddressUtil.getAccountAddress(mcAddress));
             fail("Expected a failure");
         } catch (Throwable t) {
             // expected
@@ -71,7 +71,7 @@ public class MainchainTxCrossChainOutputAddressUtilTest {
         byte[] mcAddress = BytesUtils.fromHexString("aaaa22334455667700112233445566770011223344556677001122334455bbbbcc");
         try {
             addressProposition = new AddressProposition(
-                    MainchainTxCrossChainOutputAddressUtil.getAccountAddress(mcAddress));
+                    MainchainTxCrosschainOutputAddressUtil.getAccountAddress(mcAddress));
             fail("Expected a failure");
         } catch (Throwable t) {
             // expected
@@ -86,7 +86,7 @@ public class MainchainTxCrossChainOutputAddressUtilTest {
         byte[] mcAddress = BytesUtils.fromHexString("aaaa223344556677001122334455667700112233000000000000000000000000");
 
         var compAddressProposition = new AddressProposition(
-                MainchainTxCrossChainOutputAddressUtil.getAccountAddress(mcAddress));
+                MainchainTxCrosschainOutputAddressUtil.getAccountAddress(mcAddress));
         assertEquals(compAddressProposition, addressProposition);
     }
 
@@ -96,7 +96,7 @@ public class MainchainTxCrossChainOutputAddressUtilTest {
         byte[] mcAddress = BytesUtils.fromHexString("bbaa223344556677001122334455667700112233000000000000000000000000");
 
         var compAddressProposition = new AddressProposition(
-                MainchainTxCrossChainOutputAddressUtil.getAccountAddress(mcAddress));
+                MainchainTxCrosschainOutputAddressUtil.getAccountAddress(mcAddress));
         assertNotEquals(compAddressProposition, addressProposition);
     }
 }
