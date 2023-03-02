@@ -48,12 +48,42 @@ class CertificateKeyRotationMsgProcessorTest
 
   // the payload of a command input which makes ABI decode() throw an exception
   val notDecodableData =
-    "89a252fa1cc228c0c514b0adfdcc3e0ccb760a997ebe8001f7efbdf80d1425ee576e8641aeef0de718d58e1436674f648a4ae71" +
-    "4ed235ad03d4c63d3966a0fa60427a5a7eb690400ea598e10087e4a915696214b6901b1c2ed4c02e65ed8c98ffa55f2c31f3275a767157c" +
-    "67ec925ad783cd8e77df2cef2e2a7924694d69e4e614cdf9dff95a98b64ab91f8d6131c657163fa4dfe1bfe2c5ee7cf9b9944f339225c15" +
-    "caa0f519818661564ec66ab3d0d4a58ebdc2668fdc7826f9f1e26e8eba36fb437fb58b3a52821464d6000e673580fb7cb870848fd57086a" +
-    "bda73acfad092c316bd6b0bb7df0f43216ebba355415860c95690467a1f8f16d6a89cb04ea57095451575737254dec5c0f6b204b672986c" +
-    "ff2cf3eb24b95879b9aca18215ad8a626aa58720fda352cfd18a6432f393c1abf33b7fa8cb2cf64b88c1724997987"
+    "89a252fa1cc228c0c514b0adfdcc3e0ccb760a997ebe8001f7efbdf80d1425ee" +
+    "576e8641aeef0de718d58e1436674f648a4ae714ed235ad03d4c63d3966a0fa6" +
+    "0427a5a7eb690400ea598e10087e4a915696214b6901b1c2ed4c02e65ed8c98f" +
+    "fa55f2c31f3275a767157c67ec925ad783cd8e77df2cef2e2a7924694d69e4e6" +
+    "14cdf9dff95a98b64ab91f8d6131c657163fa4dfe1bfe2c5ee7cf9b9944f3392" +
+    "25c15caa0f519818661564ec66ab3d0d4a58ebdc2668fdc7826f9f1e26e8eba3" +
+    "6fb437fb58b3a52821464d6000e673580fb7cb870848fd57086abda73acfad09" +
+    "2c316bd6b0bb7df0f43216ebba355415860c95690467a1f8f16d6a89cb04ea57" +
+    "095451575737254dec5c0f6b204b672986cff2cf3eb24b95879b9aca18215ad8" +
+    "a626aa58720fda352cfd18a6432f393c1abf33b7fa8cb2cf64b88c1724997987"
+
+  // a bad value for the enum of proof type (7) is detectd by decode() as well
+  val badTypeData =
+    "0000000000000000000000000000000000000000000000000000000000000007" +
+    "0000000000000000000000000000000000000000000000000000000000000000" +
+    "242a6d34802ecd7470cdeae47756b52d33a61052cdb9e5d47599c38fdef8e319" +
+    "0000000000000000000000000000000000000000000000000000000000000000" +
+    "9775594a015fd0dcb4c6a8207302d50a6048560257d8018f130e20d8e4861e00" +
+    "aafc31eb0d4f1cd8d47a1cf9057be504eb12bff5799a8d930fd30b58e060b509" +
+    "7b6755e256e8cd4f4cdb0fe07bfa4c8575bcd2f2ad4a09b242ae4f5504bbd406" +
+    "1a077c51f41d7b16f1d4da51c4e6a4e4f07b9a8e6a902cad80d3af850ca81d05" +
+    "dbecbb38bdc334aa449803aecf66fd220b65ec328dbdbcd67f4125f488ed2b34" +
+    "c0a18b2fcd1e4f496d6f2e786804a795ff771d8c6e20d7d8fd58a214e1e7bf2c"
+
+  // a zero-bytes schnorr key lead to a failure in crypto lib
+  val badSchnorrKeyData =
+    "0000000000000000000000000000000000000000000000000000000000000001" +
+    "0000000000000000000000000000000000000000000000000000000000000000" +
+    "0000000000000000000000000000000000000000000000000000000000000000" +
+    "0000000000000000000000000000000000000000000000000000000000000000" +
+    "9775594a015fd0dcb4c6a8207302d50a6048560257d8018f130e20d8e4861e00" +
+    "aafc31eb0d4f1cd8d47a1cf9057be504eb12bff5799a8d930fd30b58e060b509" +
+    "7b6755e256e8cd4f4cdb0fe07bfa4c8575bcd2f2ad4a09b242ae4f5504bbd406" +
+    "1a077c51f41d7b16f1d4da51c4e6a4e4f07b9a8e6a902cad80d3af850ca81d05" +
+    "dbecbb38bdc334aa449803aecf66fd220b65ec328dbdbcd67f4125f488ed2b34" +
+    "c0a18b2fcd1e4f496d6f2e786804a795ff771d8c6e20d7d8fd58a214e1e7bf2c"
 
   @Before
   def setUp(): Unit = {
@@ -109,7 +139,7 @@ class CertificateKeyRotationMsgProcessorTest
   }
 
   private def processKeyRotationMessage(newKey: SchnorrSecret, keyRotationProof: KeyRotationProof, view: AccountStateView, epoch: Int = 0,
-                                        spuriousBytes: Option[Array[Byte]] = None, badBytes: Boolean = false): Array[Byte] = {
+                                        spuriousBytes: Option[Array[Byte]] = None, badBytes: Option[Array[Byte]] = None): Array[Byte] = {
     val blockContext =
       if (epoch == 0)
         defaultBlockContext
@@ -125,14 +155,16 @@ class CertificateKeyRotationMsgProcessorTest
 
     val encodedInputOk = SubmitKeyRotationCmdInput(keyRotationProof, newKey.sign(messageToSign)).encode()
 
-    val encodedInput = if (badBytes) {
-      BytesUtils.fromHexString(notDecodableData)
-    } else {
-      spuriousBytes match {
-        case Some(bytes) =>
-          Bytes.concat(encodedInputOk, bytes)
-        case None =>
-          encodedInputOk
+    val encodedInput = badBytes match {
+      case Some(bytes) =>
+        bytes
+      case None => {
+        spuriousBytes match {
+          case Some(bytes) =>
+            Bytes.concat(encodedInputOk, bytes)
+          case None =>
+            encodedInputOk
+        }
       }
     }
 
@@ -149,7 +181,7 @@ class CertificateKeyRotationMsgProcessorTest
 
 
   private def processBadKeyRotationMessage(newKey: SchnorrSecret, keyRotationProof: KeyRotationProof, view: AccountStateView, epoch: Int = 0,
-                                           spuriousBytes: Option[Array[Byte]], badBytes: Boolean, errMsg : String) = {
+                                           spuriousBytes: Option[Array[Byte]], badBytes: Option[Array[Byte]], errMsg : String) = {
     val ex = intercept[ExecutionRevertedException] {
       processKeyRotationMessage(newKey, keyRotationProof, view, epoch, spuriousBytes, badBytes)
     }
@@ -216,9 +248,16 @@ class CertificateKeyRotationMsgProcessorTest
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
       // negative test: try using an input with a trailing byte
-      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = Some(new Array[Byte](1)), badBytes = false, errMsg = "Wrong message data field length")
+      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = Some(new Array[Byte](1)), badBytes = None, errMsg = "Wrong message data field length")
       // negative test: try using a message with right length but wrong bytes
-      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = None, badBytes = true, errMsg = "Could not decode")
+      val badBytes1 = Some(BytesUtils.fromHexString(notDecodableData))
+      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = None, badBytes = badBytes1, errMsg = "Could not decode")
+      // negative test: try using a message with wrong key type
+      val badBytes2 = Some(BytesUtils.fromHexString(badTypeData))
+      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = None, badBytes = badBytes2, errMsg = "Could not decode")
+      // negative test: try using a message with wrong key (null bytes)
+      val badBytes3 = Some(BytesUtils.fromHexString(badSchnorrKeyData))
+      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = None, badBytes = badBytes3, errMsg = "Key Rotation Proof is invalid")
 
       // positive case
       processKeyRotationMessage(newMasterKey, keyRotationProof, view)

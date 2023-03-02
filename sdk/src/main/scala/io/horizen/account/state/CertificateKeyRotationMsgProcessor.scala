@@ -118,7 +118,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
       None
   }
 
-  private def checkKeyRotationProofValidity(keyRotationProof: KeyRotationProof, newKeySignature: SchnorrProof, currentEpochNum: Int, view: BaseAccountStateView): Unit = {
+  private def checkKeyRotationProofValidity(keyRotationProof: KeyRotationProof, newKeySignature: SchnorrProof, currentEpochNum: Int, view: BaseAccountStateView): Try[Unit] = Try {
     val index = keyRotationProof.index
     if (index < 0 || index >= params.signersPublicKeys.length)
       throw new ExecutionRevertedException(s"Key rotation proof - key index out for range: $index")
@@ -143,6 +143,10 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
     if (!newKeySignature.isValid(keyRotationProof.newKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - self signature is invalid: $index")
+
+  } recoverWith {
+     case t : Exception =>
+     Failure(t)
   }
 
   private def execSubmitKeyRotation(msg: Message, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
@@ -162,7 +166,11 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
     val keyRotationProof = inputData.keyRotationProof
     val keyIndex = keyRotationProof.index
     val keyType = keyRotationProof.keyType
-    checkKeyRotationProofValidity(keyRotationProof, inputData.newKeySignature, currentEpochNum, view)
+    checkKeyRotationProofValidity(keyRotationProof, inputData.newKeySignature, currentEpochNum, view) match {
+      case Success(_) =>
+      case Failure(ex) =>
+        throw new ExecutionRevertedException("Key Rotation Proof is invalid: " + ex.getMessage)
+    }
 
     //save proof
     putKeyRotationProof(currentEpochNum, view, keyRotationProof)

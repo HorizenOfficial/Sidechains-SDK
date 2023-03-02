@@ -12,8 +12,8 @@ public class FieldElementUtils {
 
     public static FieldElement messageToFieldElement(byte[] message) {
         if (message.length != fieldElementLength()) {
-            throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
-                    message.length + " but it shall be equal to " + fieldElementLength());
+            throw new IllegalArgumentException("Unexpected message length. Message len " +
+                    message.length + " but it should be equal to " + fieldElementLength());
         }
         return FieldElement.deserialize(message);
     }
