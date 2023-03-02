@@ -324,6 +324,19 @@ class AccountForgeMessageBuilder(
       logsBloom
     )
 
+    if (isWithdrawalEpochLastBlock) {
+      block match {
+        case Success(b) =>
+          val epochNumber = parentInfo.withdrawalEpochInfo.epoch
+          log.info(s"End of Withdrawal Epoch $epochNumber reached, added ${feePayments.length} rewards with block ${b.header.id}")
+          feePayments.foreach(
+            payment => {
+              log.debug(s"  address: ${payment.address.address()} / value: ${payment.value}")
+            }
+          )
+      }
+    }
+
     block
 
   }
