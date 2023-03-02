@@ -1,12 +1,12 @@
 package io.horizen.account.api.http.route
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.javadsl.model.headers.HttpCredentials
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
+import com.horizen.fixtures.BasicAuthenticationFixture
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import io.horizen.account.api.http.AccountNodeViewUtilMocks
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -22,7 +22,6 @@ import io.horizen.params.MainNetParams
 import io.horizen.{SidechainSettings, SidechainTypes}
 import io.horizen.evm.LevelDBDatabase
 import org.junit.runner.RunWith
-import org.mindrot.jbcrypt.BCrypt
 import org.mockito.Mockito
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -37,7 +36,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 @RunWith(classOf[JUnitRunner])
-abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
+abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes with BasicAuthenticationFixture {
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
@@ -51,9 +50,9 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
 
   val utilMocks = new AccountNodeViewUtilMocks()
 
-  val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
-  val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
-  val apiKeyHash = BCrypt.hashpw(credentials.password(), BCrypt.gensalt())
+  val credentials = getBasicAuthCredentials()
+  val badCredentials = getBasicAuthCredentials(password = "wrong_password")
+  val apiKeyHash = getBasicAuthApiKeyHash(credentials.password())
 
   val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]

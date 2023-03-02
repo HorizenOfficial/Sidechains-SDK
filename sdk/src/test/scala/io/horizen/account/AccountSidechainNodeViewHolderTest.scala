@@ -3,7 +3,7 @@ package io.horizen.account
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import io.horizen.{MempoolSettings, SidechainSettings}
+import io.horizen.{MempoolSettings, SidechainSettings, AccountMempoolSettings}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -65,7 +65,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     wallet = mock[AccountWallet]
     accountStateReaderProvider = mock[AccountStateReaderProvider]
     baseStateReaderProvider = mock[BaseStateReaderProvider]
-    mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider)
+    mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider, AccountMempoolSettings())
     mockedNodeViewHolderRef = getMockedAccountSidechainNodeViewHolderRef(history, state, wallet, mempool)
   }
 
@@ -621,11 +621,11 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
   @Test
   def testForbidLegacyTransaction(): Unit = {
     val settings = mock[SidechainSettings]
-    val mempoolSetting = mock[MempoolSettings]
+    val mempoolSetting = mock[AccountMempoolSettings]
     mockedNodeViewHolderRef = getMockedAccountSidechainNodeViewHolderRef(history, state, wallet, mempool, settings)
     val tx = mock[EthereumTransaction]
 
-    Mockito.when(settings.mempool).thenReturn(mempoolSetting)
+    Mockito.when(settings.accountMempool).thenReturn(mempoolSetting)
     Mockito.when(mempoolSetting.allowUnprotectedTxs).thenReturn(false)
     Mockito.when(tx.isLegacy).thenReturn(true)
     Mockito.when(tx.isEIP155).thenReturn(false)

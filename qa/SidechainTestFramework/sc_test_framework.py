@@ -242,7 +242,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         else:
             logging.info("Note: client processes were not stopped and may still be running")
 
-        if not self.options.nocleanup and not self.options.noshutdown:
+        if success and not self.options.nocleanup and not self.options.noshutdown:
             logging.info("Cleaning up")
             shutil.rmtree(self.options.tmpdir)
 

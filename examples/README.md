@@ -168,7 +168,7 @@ HTTP request:
 Config file:
 
         restApi {
-            "apiKeyHash": "$2a$10$6CUHuJzctrPAsxWO5K4Pi.mx3OV0TIb2bSaq4ZBZQsR0MV3SVB6rC"
+            "apiKeyHash": "$2y$08$sB9Zrn4S2/YYfJ8/lhNxXO/Ku7uciazel3hx4bvjMs7nrqcLqMS0y"
         }
 
 **Sidechain-related RPC commands in Mainchain**

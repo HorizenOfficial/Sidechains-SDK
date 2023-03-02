@@ -106,6 +106,8 @@ testScriptsEvm=(
     'sc_evm_context_blockhash.py'
     'sc_evm_forbid_unprotected_txs.py'
     'sc_evm_block_size_limit.py'
+    'sc_evm_mempool_size.py'
+    'sc_evm_mempool_timeout.py'
 );
 
 testScriptsUtxo=(
