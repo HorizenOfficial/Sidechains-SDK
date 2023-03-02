@@ -1,10 +1,10 @@
-package com.horizen.websocket.server
+package io.horizen.websocket.server
 
-import com.horizen.websocket.client.WebSocketConnector
+import io.horizen.websocket.client.WebSocketConnector
+import jakarta.websocket._
 import org.glassfish.tyrus.server.Server
 import sparkz.util.SparkzLogging
 
-import jakarta.websocket._
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
 

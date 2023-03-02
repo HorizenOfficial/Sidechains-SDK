@@ -356,7 +356,7 @@ class MempoolMap(
       (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
   }
 
-  def updateMemPool(rejectedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): Unit = {
+  def updateMemPool(rejectedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): Seq[SidechainTypes#SCAT] = {
     /* Mem pool needs to be updated after state modifications. Transactions that have become invalid
     (or for a nonce too low or for insufficient balance or else), should be removed. Txs
     from blocks rejected due to a switch of the active chain, that are still valid, should be re-added
@@ -368,6 +368,7 @@ class MempoolMap(
     //Creates a map with with the max nonce for each account. The txs in a block are ordered by nonce,
     //so there is no need to check if the nonce already in the map is greater or not => the last one is
     //always the greatest.
+    var readdedTxs: Seq[SidechainTypes#SCAT] = Seq()
     val appliedTxNoncesByAccount = TrieMap.empty[SidechainTypes#SCP, BigInteger]
     appliedBlocks.foreach(block => {
       block.transactions.foreach(tx => appliedTxNoncesByAccount.put(tx.getFrom, tx.getNonce))
@@ -381,7 +382,7 @@ class MempoolMap(
       if (latestNonceAfterAppliedTxs.isDefined)
         updateAccount(account, latestNonceAfterAppliedTxs.get, rejectedTxs)
       else
-        updateAccountWithRevertedNonce(account, rejectedTxs)
+        readdedTxs = readdedTxs ++ updateAccountWithRevertedNonce(account, rejectedTxs)
     }
     appliedTxNoncesByAccount.foreach { case (account, nonce) =>
       updateAccount(account, nonce)
@@ -390,12 +391,20 @@ class MempoolMap(
     removeTimedoutTransactions()
 
     checkMempoolSize()
+
+    if (readdedTxs.size > this.size)
+      // If the number of the transactions to be readded exceed the mempool size, we just return the mempool
+      // because the mempool now contains only transactions taken from the removed blocks because are newer than
+      // the transactions previously contained
+      txCache.values.toSeq
+    else
+      readdedTxs
   }
 
   private[mempool] def updateAccountWithRevertedNonce(
                                    account: SidechainTypes#SCP,
                                    txsFromRejectedBlocks: Seq[SidechainTypes#SCAT]
-                                 ): Unit = {
+                                 ): Seq[SidechainTypes#SCAT] = {
     // In this case, we had a chain switch and the resulting state nonce for the current account is lower than before
     // the switch.
     // There is no need to check for nonce too low, because the txs in the mempool were already
@@ -535,6 +544,7 @@ class MempoolMap(
       nonExecutableTxs.put(account, newNonExecTxs)
     }
 
+    txsToReinject.map(el => el._1)
   }
 
   private[mempool] def existRejectedTxsWithValidNonce(rejectedTxs: Seq[SidechainTypes#SCAT], expectedNonce: BigInteger): Boolean = {

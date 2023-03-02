@@ -3,7 +3,6 @@ package io.horizen.account
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.horizen.account.websocket.WebSocketAccountServerRef
 import io.horizen._
 import io.horizen.account.api.http.route
 import io.horizen.account.api.http.route.{AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
@@ -32,6 +31,12 @@ import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.transaction._
 import io.horizen.utils.{BytesUtils, Pair}
+import io.horizen._
+import io.horizen.account.api.http.route.{AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import io.horizen.account.websocket.WebSocketAccountServerRef
+import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
+import io.horizen.helper.{TransactionSubmitProvider, TransactionSubmitProviderImpl}
+import io.horizen.evm.LevelDBDatabase
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction

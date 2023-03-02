@@ -1,7 +1,7 @@
-package com.horizen.account.websocket.data
+package io.horizen.account.websocket.data
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty}
-import com.horizen.account.api.rpc.types.EthereumBlockView
+import io.horizen.account.api.rpc.types.EthereumBlockView
 import io.horizen.evm.{Address, Hash}
 
 import java.math.BigInteger

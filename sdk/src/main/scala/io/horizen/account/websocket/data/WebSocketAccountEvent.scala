@@ -1,7 +1,7 @@
-package com.horizen.account.websocket.data
+package io.horizen.account.websocket.data
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty}
-import com.horizen.account.api.rpc.response.RpcResponseSuccess
+import io.horizen.account.api.rpc.response.RpcResponseSuccess
 
 import java.math.BigInteger
 

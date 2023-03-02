@@ -1,27 +1,25 @@
-package com.horizen.account.websocket
+package io.horizen.account.websocket
 
 import com.fasterxml.jackson.databind.JsonNode
-
-import java.util
-import com.horizen.account.api.rpc.request.{RpcId, RpcRequest}
-import com.horizen.account.api.rpc.response.{RpcResponseError, RpcResponseSuccess}
-import com.horizen.account.api.rpc.service.RpcFilter
-import com.horizen.account.api.rpc.types.{EthereumLogView, FilterQuery}
-import com.horizen.account.api.rpc.utils.{RpcCode, RpcError}
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.serialization.EthJsonMapper
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams}
+import io.horizen.account.api.rpc.request.{RpcId, RpcRequest}
+import io.horizen.account.api.rpc.response.{RpcResponseError, RpcResponseSuccess}
+import io.horizen.account.api.rpc.service.RpcFilter
+import io.horizen.account.api.rpc.types.{EthereumLogView, FilterQuery}
+import io.horizen.account.api.rpc.utils.{RpcCode, RpcError}
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.serialization.EthJsonMapper
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams}
 import io.horizen.evm.Address
-import jakarta.websocket.{OnClose, OnError, OnMessage, SendHandler, SendResult, Session}
+import jakarta.websocket._
 import jakarta.websocket.server.ServerEndpoint
+import org.web3j.utils.Numeric
 import sparkz.util.SparkzLogging
 
 import java.io.{PrintWriter, StringWriter}
-import java.util.concurrent.atomic.AtomicInteger
-import org.web3j.utils.Numeric
-
 import java.math.BigInteger
+import java.util
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 
 abstract class WebSocketAccountRequest(val request: String)
