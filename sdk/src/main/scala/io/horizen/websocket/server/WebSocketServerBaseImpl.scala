@@ -40,7 +40,7 @@ class WebSocketServerBaseImpl(bindPort: Int, configuration: Class[_]) extends We
     if (this.server != null) {
       this.server.stop()
       this.server = null
-      log.info("Web socket server stopped.")
+      log.info("Websocket server stopped.")
     }
   }
 

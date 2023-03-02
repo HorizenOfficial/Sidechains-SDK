@@ -1,4 +1,4 @@
-package com.horizen.account.websocket
+package io.horizen.account.websocket
 
 import io.horizen.SidechainTypes
 import io.horizen.account.block.AccountBlock
@@ -8,8 +8,8 @@ import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
-import io.horizen.account.state.{AccountState, AccountStateView, GasUtil}
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt, EthereumReceipt}
+import io.horizen.account.state.{AccountState, AccountStateView, GasUtil}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{Bloom, EthereumTransactionUtils}
 import io.horizen.account.wallet.AccountWallet

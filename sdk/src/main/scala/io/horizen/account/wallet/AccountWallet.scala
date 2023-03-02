@@ -1,3 +1,4 @@
+
 package io.horizen.account.wallet
 
 import io.horizen.account.block.AccountBlock
