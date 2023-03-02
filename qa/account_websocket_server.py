@@ -8,7 +8,7 @@ from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import CallMethod, deploy_smart_contract, \
     contract_function_static_call, contract_function_call, ac_makeForgerStake
 from SidechainTestFramework.scutil import generate_next_block, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks
-from test_framework.util import assert_equal, forward_transfer_to_sidechain
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account_websocket_client import AccountWebsocketClient
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei
@@ -72,11 +72,11 @@ Test:
     - Unsubscribe to the "logs" method
     - SC node 1 subscribe to logs method using the new SM address and some topics as filter (not all)
     - Transfer some tokens from one address to another (emit Transfer event) and mine a new block
-    - Verify that we received the ws event containing the transaction logs with all the topics inside the transaction log
+    - Verify that we received the ws event containing the transaction log
     - Unsubscribe to the "logs" method
-    - SC node 1 subscribe to logs method using the new SM address and some topics as filter with one topic not used
+    - SC node 1 subscribe to logs method using the new SM address and some topics as filter containing one topic not used
     - Transfer some tokens from one address to another (emit Transfer event) and mine a new block
-    - Verify that we received the ws event containing the transaction logs without the not used topic
+    - Verify that we don't receive the ws event containing transaction log
     - Unsubscribe to the "logs" method
     - SC node 1 subscribe to logs method using the new SM address and a topic which is not included in the transaction log
     - Transfer some tokens from one address to another (emit Transfer event) and mine a new block
@@ -116,13 +116,14 @@ class SCWsAccountServerTest(AccountChainSetup):
         assert_equal(wsBlock["nonce"], rpcBlock["nonce"])
         assert_equal(wsBlock["number"], rpcBlock["number"])
         assert_equal(wsBlock["parentHash"], rpcBlock["parentHash"])
-        assert_equal(wsBlock["receiptRoot"], rpcBlock["receiptsRoot"])
+        assert_equal(wsBlock["receiptsRoot"], rpcBlock["receiptsRoot"])
         assert_equal(wsBlock["sha3Uncles"], rpcBlock["sha3Uncles"])
         assert_equal(wsBlock["stateRoot"], rpcBlock["stateRoot"])
         assert_equal(wsBlock["timestamp"], rpcBlock["timestamp"])
         assert_equal(wsBlock["transactionsRoot"], rpcBlock["transactionsRoot"])
+        assert_equal(wsBlock["hash"], rpcBlock["hash"])
 
-    def checkWsLogResponse(self, wsLog, rpcLog, address):
+    def checkWsLogResponse(self, wsLog, rpcLog, address, removed = False):
         assert_equal(wsLog["address"], address)
         assert_equal(wsLog["blockHash"], rpcLog["blockHash"])
         assert_equal(wsLog["blockNumber"], rpcLog["blockNumber"])
@@ -131,6 +132,7 @@ class SCWsAccountServerTest(AccountChainSetup):
         assert_equal(wsLog["transactionHash"], rpcLog["logs"][0]["transactionHash"])
         assert_equal(wsLog["transactionIndex"], rpcLog["logs"][0]["transactionIndex"])
         assert_equal(wsLog["topics"], rpcLog["logs"][0]["topics"])
+        assert_equal(wsLog["removed"],removed)
 
 
     def run_test(self):
@@ -219,14 +221,14 @@ class SCWsAccountServerTest(AccountChainSetup):
         generate_next_block(sc_node2, "second node")
         generate_next_block(sc_node2, "second node")
         node2_best_block = sc_node2.rpc_eth_getBlockByNumber("latest", "true")
-        assert_equal("0xb", node2_best_block["result"]["number"]) #height = 11
+        assert_equal("0xa", node2_best_block["result"]["number"]) #height = 10
 
         # SC node 1 generate 1 block
         logging.info("SC node 1 generate 1 block")
 
         generate_next_block(sc_node, "first node")
         node1_best_block = sc_node.rpc_eth_getBlockByNumber("latest", "true")
-        assert_equal("0x9", node1_best_block["result"]["number"]) #height = 9
+        assert_equal("0x8", node1_best_block["result"]["number"]) #height = 8
 
         # Reconnect the nodes and verify that we receive the 3 blocks from the SC node 2
         logging.info("Reconnect the nodes and verify that we receive the 3 blocks from the SC node 2")
@@ -447,7 +449,7 @@ class SCWsAccountServerTest(AccountChainSetup):
         logging.info("SC node 1 subscribe to logs method using the new SM address as filter plus an additional address not inlcuded")
 
         unused_sc_node2_address = sc_node2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
-        logs_subscription = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.SUBSCRIBE_REQUEST, ["logs", {"address":[erc20_address, unused_sc_node2_address]}]))["result"]
+        logs_subscription = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.SUBSCRIBE_REQUEST, ["logs", {"address":[erc20_address, add_0x_prefix(unused_sc_node2_address)]}]))["result"]
 
         # ERC20 transfer transaction
         logging.info("ERC20 transfer transaction")
@@ -477,6 +479,8 @@ class SCWsAccountServerTest(AccountChainSetup):
         topics_filter = rpc_tx_receipt["result"]["logs"][0]["topics"]
 
         # SC node 1 subscribe to logs method using the new SM address and some topics as filter (not all)
+        # Tx log topics: [t0, t1, t2]
+        # Ws topic fiter: [t0, t1]
         logging.info("SC node 1 subscribe to logs method using the new SM address and some topics as filter (not all)")
         logs_subscription = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.SUBSCRIBE_REQUEST, ["logs", {"address":[erc20_address], "topics":topics_filter[:-1]}]))["result"]
    
@@ -504,8 +508,11 @@ class SCWsAccountServerTest(AccountChainSetup):
         response = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.UNSUBSCRIBE_REQUEST, [logs_subscription]))
 
         # SC node 1 subscribe to logs method using the new SM address and some topics as filter with one topic not used
+        # Tx log topics: [t0, t1, t2]
+        # Ws topic fiter: [t0, t1, t2, unused_topic]
+        unused_topic = "0xedf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
         logging.info("SC node 1 subscribe to logs method using the new SM address and some topics as filter with one topic not included")
-        logs_subscription = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.SUBSCRIBE_REQUEST, ["logs", {"address":[erc20_address], "topics":topics_filter+["0xedf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"]}]))["result"]
+        logs_subscription = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.SUBSCRIBE_REQUEST, ["logs", {"address":[erc20_address], "topics":topics_filter+[unused_topic]}]))["result"]
    
         # ERC20 transfer transaction
         logging.info("ERC20 transfer transaction")
@@ -517,23 +524,17 @@ class SCWsAccountServerTest(AccountChainSetup):
         generate_next_block(sc_node, "first node")
         self.sc_sync_all()
 
-        # Verify that we received the transaction logs without the not used topic
-        logging.info("Verify that we received the transaction logs")
-        response = json.loads(ws_connection.recv())
-
-        rpc_tx_receipt = sc_node.rpc_eth_getTransactionReceipt(res)
-        self.checkWsResponseStaticField(response, ws.SUBSCRIBE_RESPONSE, logs_subscription)
-        self.checkWsLogResponse(response["params"]["result"], rpc_tx_receipt["result"], erc20_address)  
-
         # SC node 1 unsubscribe to the log filter
         logging.info("SC node 1 unsubscribe to the log filter")
-
+        # By checking the result field we verify that we didn't receive any websocket event for the previously transaction but only the result from the unsubscription
         response = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.UNSUBSCRIBE_REQUEST, [logs_subscription]))
-
+        assert_equal(response["result"], True)
 
         # SC node 1 subscribe to logs method using the new SM address and a topic which is not included in the transaction log
+        # Tx log topics: [t0, t1, t2]
+        # Ws topic fiter: [unused_topic]
         logging.info("SC node 1 subscribe to logs method using the new SM address and a topic which is not included in the transaction log")
-        logs_subscription = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.SUBSCRIBE_REQUEST, ["logs", {"address":[erc20_address], "topics":["0xedf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"]}]))["result"]
+        logs_subscription = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.SUBSCRIBE_REQUEST, ["logs", {"address":[erc20_address], "topics":[unused_topic]}]))["result"]
    
         # ERC20 transfer transaction
         logging.info("ERC20 transfer transaction")
@@ -595,8 +596,7 @@ class SCWsAccountServerTest(AccountChainSetup):
 
         response = json.loads(ws_connection.recv())
         self.checkWsResponseStaticField(response, ws.SUBSCRIBE_RESPONSE, logs_subscription)
-        self.checkWsLogResponse(response["params"]["result"], rpc_tx_receipt["result"], erc20_address)  
-        assert_equal(response["params"]["removed"], True)
+        self.checkWsLogResponse(response["params"]["result"], rpc_tx_receipt["result"], erc20_address, True)  
 
         logging.info("SC node 1 generate 1 block")
         generate_next_block(sc_node, "first node")
@@ -606,7 +606,6 @@ class SCWsAccountServerTest(AccountChainSetup):
         rpc_tx_receipt = sc_node.rpc_eth_getTransactionReceipt(res)
         self.checkWsResponseStaticField(response, ws.SUBSCRIBE_RESPONSE, logs_subscription)
         self.checkWsLogResponse(response["params"]["result"], rpc_tx_receipt["result"], erc20_address)  
-        assert_equal(response["params"]["removed"], False)
         
         ws_connection.close()
 
