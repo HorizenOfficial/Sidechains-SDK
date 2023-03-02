@@ -210,6 +210,10 @@ class AccountState(
       // check stateRoot and receiptRoot against block header
       mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
 
+      // check gas used
+      val gasUsed: BigInteger = receiptList.lastOption.map(_.consensusDataReceipt.cumulativeGasUsed).getOrElse(BigInteger.ZERO)
+      mod.verifyGasUsedConsistency(gasUsed)
+
       val stateRoot = stateView.getIntermediateRoot
       mod.verifyStateRootDataConsistency(stateRoot)
 
