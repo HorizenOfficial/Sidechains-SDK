@@ -1,6 +1,6 @@
-package com.horizen.account.websocket.data
+package io.horizen.account.websocket.data
 
-import com.horizen.account.api.rpc.types.FilterQuery
+import io.horizen.account.api.rpc.types.FilterQuery
 import jakarta.websocket.Session
 
 import java.math.BigInteger

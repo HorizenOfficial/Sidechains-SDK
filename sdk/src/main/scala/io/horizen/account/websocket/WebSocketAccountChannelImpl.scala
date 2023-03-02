@@ -1,21 +1,21 @@
-package com.horizen.account.websocket
+package io.horizen.account.websocket
 
+import akka.pattern.ask
 import akka.util.Timeout
-import sparkz.util.SparkzLogging
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.AccountState
-import com.horizen.account.wallet.AccountWallet
+import io.horizen.account.api.rpc.service.RpcFilter
+import io.horizen.account.api.rpc.types.{EthereumBlockView, EthereumLogView}
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.AccountState
+import io.horizen.account.wallet.AccountWallet
+import io.horizen.account.websocket.WebSocketAccountServerRef.sidechainNodeViewHolderRef
+import io.horizen.account.websocket.data.{SubscriptionWithFilter, WebSocketEthereumBlockView}
+import io.horizen.evm.{Address, Hash}
 import sparkz.core.NodeViewHolder
 import sparkz.core.NodeViewHolder.CurrentView
-import com.horizen.account.websocket.WebSocketAccountServerRef.sidechainNodeViewHolderRef
-import akka.pattern.ask
-import com.horizen.account.api.rpc.service.RpcFilter
-import com.horizen.account.api.rpc.types.{EthereumBlockView, EthereumLogView}
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.websocket.data.{SubscriptionWithFilter, WebSocketEthereumBlockView}
-import io.horizen.evm.{Address, Hash}
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}

@@ -1,10 +1,8 @@
-package com.horizen.account.websocket
+package io.horizen.account.websocket
 
-import com.horizen.SidechainTypes
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.receipt.EthereumReceipt
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.websocket.server.WebSocketServerBaseImpl
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.websocket.server.WebSocketServerBaseImpl
 import jakarta.websocket._
 
 @ClientEndpoint

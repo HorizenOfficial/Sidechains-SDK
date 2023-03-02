@@ -1,21 +1,21 @@
 package com.horizen.account.websocket
 
-import com.horizen.SidechainTypes
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture}
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{Bloom, EthereumConsensusDataLog, EthereumConsensusDataReceipt, EthereumReceipt}
-import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.{AccountState, AccountStateView, GasUtil}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.EthereumTransactionUtils
-import com.horizen.account.wallet.AccountWallet
-import com.horizen.fixtures.CompanionsFixture
-import com.horizen.utils.BytesUtils
+import io.horizen.SidechainTypes
+import io.horizen.account.block.AccountBlock
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture}
+import io.horizen.account.history.AccountHistory
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.secret.PrivateKeySecp256k1
+import io.horizen.account.state.{AccountState, AccountStateView, GasUtil}
+import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt, EthereumReceipt}
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.{Bloom, EthereumTransactionUtils}
+import io.horizen.account.wallet.AccountWallet
 import io.horizen.evm.{Address, Hash}
+import io.horizen.fixtures.CompanionsFixture
+import io.horizen.utils.BytesUtils
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView
@@ -106,7 +106,6 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
     val state: AccountState = mock[AccountState]
     val stateView: AccountStateView = mock[AccountStateView]
 
-    Mockito.when(state.getTransactionReceipt(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => Option.apply(transactionReceipt))
     Mockito.when(state.getView).thenAnswer(_ => stateView)
     Mockito.when(stateView.getTransactionReceipt(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => Option.apply(transactionReceipt))
 
