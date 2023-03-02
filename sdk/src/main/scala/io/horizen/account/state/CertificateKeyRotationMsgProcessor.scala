@@ -143,10 +143,6 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
     if (!newKeySignature.isValid(keyRotationProof.newKey, newKeyAsMessage))
       throw new ExecutionRevertedException(s"Key rotation proof - self signature is invalid: $index")
-
-  } recoverWith {
-     case t : Exception =>
-     Failure(t)
   }
 
   private def execSubmitKeyRotation(msg: Message, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
