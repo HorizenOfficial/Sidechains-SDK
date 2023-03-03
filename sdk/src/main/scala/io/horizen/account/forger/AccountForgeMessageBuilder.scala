@@ -323,9 +323,7 @@ class AccountForgeMessageBuilder(
       companion.asInstanceOf[SidechainAccountTransactionsCompanion],
       logsBloom
     )
-
     block
-
   }
 
   override def precalculateBlockHeaderSize(
