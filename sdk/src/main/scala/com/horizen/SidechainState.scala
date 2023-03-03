@@ -670,7 +670,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     val withdrawalRequestsToAppend: ListBuffer[WithdrawalRequestBox] = ListBuffer()
     val crossChainMessagesToAppend: ListBuffer[CrossChainMessage] = ListBuffer()
-    val crossChainMessageHashesToAppend: ListBuffer[CrossChainMessageHash] = ListBuffer()
+    val crossChainMessageHashFromRedeemMessagesToAppend: ListBuffer[CrossChainMessageHash] = ListBuffer()
     val forgerBoxesToAppend: ListBuffer[ForgerBox] = ListBuffer()
     val otherBoxesToAppend: ListBuffer[SidechainTypes#SCB] = ListBuffer()
 
@@ -724,7 +724,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         crossChainMessagesToAppend.append(SidechainState.buildCrosschainMessageFromUTXO(box.asInstanceOf[CrossChainMessageBox], params))
       } else if (box.isInstanceOf[CrossChainRedeemMessageBox]) {
         val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(box.asInstanceOf[CrossChainRedeemMessageBox].getCrossChainMessage)
-        crossChainMessageHashesToAppend.append(messageHash)
+        crossChainMessageHashFromRedeemMessagesToAppend.append(messageHash)
       } else {
         otherBoxesToAppend.append(box)
       }
@@ -746,7 +746,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, crossChainMessagesToAppend, crossChainMessageHashesToAppend, hashScTxsCommitment,
+            withdrawalRequestsToAppend, crossChainMessagesToAppend, crossChainMessageHashFromRedeemMessagesToAppend, hashScTxsCommitment,
             consensusEpoch, topQualityCerts, blockFeeInfo, utxoMerkleTreeRootOpt,
             scHasCeased, forgerListIndexes, params.allowedForgersList.size, keyRotationProofsToAdd, actualCertifiersKeys).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
