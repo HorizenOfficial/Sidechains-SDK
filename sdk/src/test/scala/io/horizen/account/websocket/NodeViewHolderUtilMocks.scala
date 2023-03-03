@@ -85,12 +85,18 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
     null
   )
 
+  val blockBloom = new Bloom()
+  blockBloom.add(transactionAddress.toBytes)
+  blockBloom.add(transactionTopic0.toBytes)
+  blockBloom.add(transactionTopic1.toBytes)
+  blockBloom.add(transactionTopic2.toBytes)
+
   def getNextBlockWithTransaction(prevBlockId: Option[Block.BlockId] = None): AccountBlock = {
     AccountBlockFixture.generateAccountBlock(
       sidechainAccountTransactionsCompanion,
       parentOpt = prevBlockId,
       transactions = Some(Seq(transactionWithLogs.asInstanceOf[SidechainTypes#SCAT])),
-      bloom = Some(new Bloom(BytesUtils.fromHexString("00000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000001000000040000008000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000010000100000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000001000000000000000000000004000000000000000000000000000000040000000000")))
+      bloom = Some(blockBloom)
     )
   }
 
