@@ -787,7 +787,7 @@ class EthService(
   def eth_syncing(): Any = {
     implicit val timeout: Timeout = new Timeout(nvtimeout)
     Try {
-      Await.result(syncStatusActorRef ? ReturnSyncStatus(), nvtimeout).asInstanceOf[SyncStatus]
+      Await.result(syncStatusActorRef ? ReturnSyncStatus, nvtimeout).asInstanceOf[SyncStatus]
     } match {
       case Success(syncStatus: SyncStatus) =>
         if (!syncStatus.syncStatus) false

@@ -309,7 +309,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val mockedSyncStatusActor = TestProbe()
     mockedSyncStatusActor.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
-        case ReturnSyncStatus() =>
+        case ReturnSyncStatus =>
           sender ! new SyncStatus(true, BigInt(250), BigInt(200), BigInt(300))
       }
       TestActor.KeepRunning

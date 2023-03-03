@@ -121,7 +121,7 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   mockedSyncStatusActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case ReturnSyncStatus() =>
+        case ReturnSyncStatus =>
           if (sidechainApiMockConfiguration.getShould_syncStatusActor_ReturnSyncStatus_reply()) sender ! new SyncStatus(false)
           else sender ! Future.failed(new Exception("Broadcast failed."))
       }
