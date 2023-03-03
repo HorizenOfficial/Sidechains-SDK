@@ -13,6 +13,7 @@ import io.horizen.account.wallet.AccountWallet
 import io.horizen.account.websocket.WebSocketAccountServerRef.sidechainNodeViewHolderRef
 import io.horizen.account.websocket.data.{SubscriptionWithFilter, WebSocketEthereumBlockView}
 import io.horizen.evm.{Address, Hash}
+import io.horizen.utils.ClosableResourceHandler
 import sparkz.core.NodeViewHolder
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.util.SparkzLogging
@@ -21,7 +22,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class WebSocketAccountChannelImpl extends SparkzLogging{
+class WebSocketAccountChannelImpl extends SparkzLogging with ClosableResourceHandler {
   implicit val duration: Timeout = 20 seconds
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -54,7 +55,9 @@ class WebSocketAccountChannelImpl extends SparkzLogging{
 
   def getEthereumLogsFromBlock(block: AccountBlock, subscriptionWithFilter: SubscriptionWithFilter): Seq[EthereumLogView] = {
     applyOnAccountView { nodeView =>
-      RpcFilter.getBlockLogs(nodeView.state.getView, block, subscriptionWithFilter.filter)
+      using(nodeView.state.getView) { stateView =>
+        RpcFilter.getBlockLogs(stateView, block, subscriptionWithFilter.filter)
+      }
     }
   }
 

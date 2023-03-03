@@ -91,7 +91,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Client 1 subscribe to the websocket
     val clientId1 = 1
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we received the websocket response
@@ -108,7 +108,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Client 2 subscribe to the websocket
     val clientId2 = 2
-    sendWebsocketRequest(clientId2, SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session2)
+    sendWebsocketRequest(Option.apply(clientId2), SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session2)
     assertTrue("No event messages received.", countDownController2.await(5000))
 
     //Verify that we received the websocket response
@@ -147,7 +147,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Client 1 subscribe to the websocket method newHeads
     val clientId1 = 1
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we received the websocket response
@@ -159,7 +159,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Client 1 subscribe to the websocket method newPendingTransactions
     countDownController.reset(1)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(NEW_PENDING_TRANSACTIONS_SUBSCRIPTION.method), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(NEW_PENDING_TRANSACTIONS_SUBSCRIPTION.method), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we received the websocket response
@@ -179,7 +179,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Unsubscribe to the newPendingTransaction method and verify that we still receive the newHeads events
     countDownController.reset(1)
-    sendWebsocketRequest(clientId1, UNSUBSCRIBE_REQUEST, Option.apply(pendingTransactionSubscriptionId), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), UNSUBSCRIBE_REQUEST, Option.apply(pendingTransactionSubscriptionId), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we received the websocket response
@@ -199,7 +199,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Unsubscribe to the newHeads method
     countDownController.reset(1)
-    sendWebsocketRequest(clientId1, UNSUBSCRIBE_REQUEST, Option.apply(newHeadsSubscriptionId), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), UNSUBSCRIBE_REQUEST, Option.apply(newHeadsSubscriptionId), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we received the websocket response
@@ -218,13 +218,13 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Try to unsubscribe to a non existing subscription
     countDownController.reset(1)
     val invalidSubscriptionId = "0x10"
-    sendWebsocketRequest(clientId1, UNSUBSCRIBE_REQUEST, Option.apply(invalidSubscriptionId), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), UNSUBSCRIBE_REQUEST, Option.apply(invalidSubscriptionId), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we received the websocket error response
     assertEquals(1, endpoint.receivedMessage.size())
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkErrorResponse(response, clientId1, RpcCode.InvalidParams.code, "Subscription ID not found.")
+    checkErrorResponse(response, Option.apply(clientId1), RpcCode.InvalidParams.code, "Subscription ID not found.")
 
     // Disconnect client 1
     session.close()
@@ -244,35 +244,47 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Client 1 try to send an invalid websocket request
     val clientId1 = 1
-    sendWebsocketRequest(clientId1, INVALID_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), INVALID_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we send back an error
     assertEquals(1, endpoint.receivedMessage.size())
     var response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkErrorResponse(response, clientId1, RpcCode.MethodNotFound.code, s"Method ${INVALID_REQUEST.request} not supported.")
+    checkErrorResponse(response, Option.apply(clientId1), RpcCode.MethodNotFound.code, s"Method ${INVALID_REQUEST.request} not supported.")
     endpoint.receivedMessage.remove(0)
 
     //Client 1 try to subscribe to an invalid websocket method
     countDownController.reset(1)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(INVALID_SUBSCRIPTION.method), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(INVALID_SUBSCRIPTION.method), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we send back an error
     assertEquals(1, endpoint.receivedMessage.size())
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkErrorResponse(response, clientId1, RpcCode.InvalidParams.code, s"unsupported subscription type ${INVALID_SUBSCRIPTION.method}")
+    checkErrorResponse(response, Option.apply(clientId1), RpcCode.InvalidParams.code, s"unsupported subscription type ${INVALID_SUBSCRIPTION.method}")
     endpoint.receivedMessage.remove(0)
 
     //Client 1 try to subscribe with no params field
     countDownController.reset(1)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.empty, Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.empty, Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we send back an error
     assertEquals(1, endpoint.receivedMessage.size())
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkErrorResponse(response, clientId1, RpcCode.InvalidParams.code, "Missing or empty field params.")
+    checkErrorResponse(response, Option.apply(clientId1), RpcCode.InvalidParams.code, "Missing or empty field params.")
+    endpoint.receivedMessage.remove(0)
+
+    //Client 1 try to subscribe with no field id
+    countDownController.reset(1)
+    assertEquals(0, endpoint.receivedMessage.size())
+    sendWebsocketRequest(Option.empty, SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
+    assertTrue("No event messages received.", countDownController.await(5000))
+
+    //Verify that we send back an error
+    assertEquals(1, endpoint.receivedMessage.size())
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkErrorResponse(response, Option.empty, RpcCode.ExecutionError.code, "Websocket On receive message processing exception occurred")
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -293,7 +305,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Client 1 subscribe to newHeads method
     val clientId1 = 1
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we receive a positive response
@@ -342,7 +354,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Client 1 subscribe to newHeads method
     val clientId1 = 1
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(NEW_PENDING_TRANSACTIONS_SUBSCRIPTION.method), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(NEW_PENDING_TRANSACTIONS_SUBSCRIPTION.method), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(5000))
 
     //Verify that we receive a positive response
@@ -414,7 +426,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     val clientId1 = 1
     val logFilters = mapper.createObjectNode()
     logFilters.put("address", utilMocks.transactionAddress.toString)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     // Verify that we receive a positive response
@@ -455,7 +467,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     val logAddressNotIncluded = "0x1234567890123456789012345678901234567890"
     logFilters.removeAll()
     logFilters.set("address", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionAddress.toString, logAddressNotIncluded))))
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     // Verify that we receive a positive response
@@ -492,7 +504,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     session = startSession(client, cec, endpoint)
     logFilters.removeAll()
     logFilters.put("address", logAddressNotIncluded)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     // Verify that we receive a positive response
@@ -526,7 +538,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     session = startSession(client, cec, endpoint)
     logFilters.removeAll()
     logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionTopic0))))
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     // Verify that we receive a positive response
@@ -572,7 +584,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     logFilters.removeAll()
     logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionTopic0))))
     logFilters.put("address", utilMocks.transactionAddress.toString)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     // Verify that we receive a positive response
@@ -618,7 +630,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     logFilters.removeAll()
     logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(utilMocks.transactionTopic0, utilMocks.transactionTopic1, utilMocks.transactionTopic2))))
     logFilters.put("address", utilMocks.transactionAddress.toString)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     //Verify that we receive a positive response
@@ -658,7 +670,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     logFilters.removeAll()
     logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(Array(utilMocks.transactionTopic0, utilMocks.transactionTopic1, utilMocks.transactionTopic2), utilMocks.transactionTopic1))))
     logFilters.put("address", utilMocks.transactionAddress.toString)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     //Verify that we receive a positive response
@@ -699,7 +711,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     logFilters.removeAll()
     logFilters.set("topics", mapper.readTree(SerializationUtil.serialize(Array(), Array(), Array(utilMocks.transactionTopic2))))
     logFilters.put("address", utilMocks.transactionAddress.toString)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     //Verify that we receive a positive response
@@ -729,13 +741,13 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Client 1 subscribe to logs method with no filters
     countDownController.reset(1)
     session = startSession(client, cec, endpoint)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.empty, session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.empty, session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     //Verify that we receive a negative response
     assertEquals(1, endpoint.receivedMessage.size())
     response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkErrorResponse(response, clientId1, RpcCode.InvalidParams.code, "Missing filters (address, topics).")
+    checkErrorResponse(response, Option.apply(clientId1), RpcCode.InvalidParams.code, "Missing filters (address, topics).")
     endpoint.receivedMessage.remove(0)
 
     // Disconnect client 1
@@ -748,7 +760,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     session = startSession(client, cec, endpoint)
     logFilters.removeAll()
     logFilters.put("address", utilMocks.transactionAddress.toString)
-    sendWebsocketRequest(clientId1, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
+    sendWebsocketRequest(Option.apply(clientId1), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters), session)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     //Verify that we receive a positive response
@@ -808,7 +820,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     val clientId2 = 2
     val logFilters2 = mapper.createObjectNode()
     logFilters2.put("address", logAddressNotIncluded)
-    sendWebsocketRequest(clientId2, SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters2), session2)
+    sendWebsocketRequest(Option.apply(clientId2), SUBSCRIBE_REQUEST, Option.apply(LOGS_SUBSCRIPTION.method), Option.apply(logFilters2), session2)
     assertTrue("No event messages received.", countDownController.await(10000))
 
     // Verify that we receive a positive response
@@ -859,11 +871,13 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
 
 
-  private def sendWebsocketRequest(id: Int, request: WebSocketAccountRequest, method: Option[String], additional_arguments: Option[JsonNode] = Option.empty, session: Session): Unit = {
+  private def sendWebsocketRequest(id: Option[Int], request: WebSocketAccountRequest, method: Option[String], additional_arguments: Option[JsonNode] = Option.empty, session: Session): Unit = {
     val rpcRequest = mapper.createObjectNode()
     rpcRequest.put("jsonrpc", "2.0")
     rpcRequest.put("method", request.request)
-    rpcRequest.put("id", id)
+    if (id.isDefined) {
+      rpcRequest.put("id", id.get)
+    }
     if (method.isDefined) {
       var params = Array[Object]{method.get}
       if (additional_arguments.isDefined)
@@ -883,13 +897,16 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals("Wrong id", wsResponse.get("id").asInt(), expectedId)
   }
 
-  private def checkErrorResponse(wsResponse: JsonNode, expectedId: Int, expectedError: Int, expectedErrorMessage: String): Unit = {
+  private def checkErrorResponse(wsResponse: JsonNode, expectedId: Option[Int], expectedError: Int, expectedErrorMessage: String): Unit = {
     assertTrue("Missing field jsonrpc.", wsResponse.has("jsonrpc"))
     assertTrue("Missing field id.", wsResponse.has("id"))
     assertTrue("Missing field error.", wsResponse.has("error"))
 
     assertEquals("Wrong jsonrpc version", wsResponse.get("jsonrpc").asText(), "2.0")
-    assertEquals("Wrong id", wsResponse.get("id").asInt(), expectedId)
+    if (expectedId.isDefined)
+      assertEquals("Wrong id", wsResponse.get("id").asInt(), expectedId.get)
+    else
+      assertTrue("Wrong id", wsResponse.get("id").isNull)
     val error = wsResponse.get("error")
     assertEquals("Wrong error code", error.get("code").asInt(), expectedError)
     assertEquals("Wrong error message", error.get("message").asText(), expectedErrorMessage)
