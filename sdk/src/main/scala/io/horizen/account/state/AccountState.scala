@@ -210,6 +210,10 @@ class AccountState(
       // check stateRoot and receiptRoot against block header
       mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
 
+      // check gas used
+      val gasUsed: BigInteger = receiptList.lastOption.map(_.consensusDataReceipt.cumulativeGasUsed).getOrElse(BigInteger.ZERO)
+      mod.verifyGasUsedConsistency(gasUsed)
+
       val stateRoot = stateView.getIntermediateRoot
       mod.verifyStateRootDataConsistency(stateRoot)
 
@@ -242,6 +246,8 @@ class AccountState(
       // current block fee info is already in the view therefore we pass None as second param
       val feePayments = stateView.getFeePaymentsInfo(modWithdrawalEpochInfo.epoch, None)
 
+      log.info(s"End of Withdrawal Epoch ${modWithdrawalEpochInfo.epoch} reached, added ${feePayments.length} rewards with block ${mod.header.id}")
+
       // Verify that Forger assumed the same fees to be paid as the current node does.
       val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
@@ -252,7 +258,12 @@ class AccountState(
       }
 
       // add rewards to forgers balance
-      feePayments.foreach(payment => stateView.addBalance(payment.address.address(), payment.value))
+      feePayments.foreach(
+        payment => {
+          stateView.addBalance(payment.address.address(), payment.value)
+          log.debug(s" address: ${payment.address.address()} / value: ${payment.value}")
+        }
+      )
 
     } else {
       // No fee payments expected
