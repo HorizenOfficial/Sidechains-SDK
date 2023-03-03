@@ -148,16 +148,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
     val inputParams = getArgumentsFromData(msg.getData)
 
-    val cmdInput : AddNewStakeCmdInput = Try {
-      // it also checks that the input has the expected length and throws an exception in case it has not. We must trap
-      // such case and return the execution reverted exception
-      AddNewStakeCmdInputDecoder.decode(inputParams)
-    } match {
-      case Success(decodedBytes) => decodedBytes
-      case Failure(ex) =>
-        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
-    }
-
+    val cmdInput = AddNewStakeCmdInputDecoder.decode(inputParams)
     val blockSignPublicKey: PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress = cmdInput.ownerAddress
@@ -252,15 +243,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
-    val cmdInput : RemoveStakeCmdInput = Try {
-      // it also checks that the input has the expected length and throws an exception in case it has not. We must trap
-      // such case and return the execution reverted exception
-      RemoveStakeCmdInputDecoder.decode(inputParams)
-    } match {
-      case Success(decodedBytes) => decodedBytes
-      case Failure(ex) =>
-        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
-    }
+    val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams)
     val stakeId: Array[Byte] = cmdInput.stakeId
     val signature: SignatureSecp256k1 = cmdInput.signature
 
@@ -330,16 +313,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
-
-    val cmdInput : OpenStakeForgerListCmdInput = Try {
-      // it also checks that the input has the expected length and throws an exception in case it has not. We must trap
-      // such case and return the execution reverted exception
-      OpenStakeForgerListCmdInputDecoder.decode(inputParams)
-    } match {
-      case Success(decodedBytes) => decodedBytes
-      case Failure(ex) =>
-        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
-    }
+    val cmdInput = OpenStakeForgerListCmdInputDecoder.decode(inputParams)
     val forgerIndex: Int = cmdInput.forgerIndex
     val signature: Signature25519 = cmdInput.signature
 

@@ -6,7 +6,7 @@ import org.web3j.abi.datatypes.Type;
 
 import java.util.List;
 
-public interface  ABIDecoder<T> {
+public interface ABIDecoder<T> {
 
     List<TypeReference<Type>> getListOfABIParamTypes();
 

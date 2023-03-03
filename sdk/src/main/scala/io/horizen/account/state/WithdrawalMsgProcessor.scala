@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
+import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.state.events.AddWithdrawalRequest
 import io.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.ZenWeiConverter
@@ -113,13 +113,7 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
     val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1
     setWithdrawalEpochCounter(view, currentEpochNum, nextNumOfWithdrawalReqs)
 
-    val inputParams : AddWithdrawalRequestCmdInput = Try {
-      AddWithdrawalRequestCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
-    } match {
-      case Success(decodedBytes) => decodedBytes
-      case Failure(ex) =>
-        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
-    }
+    val inputParams = AddWithdrawalRequestCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
 
     val withdrawalAmount = msg.getValue
     val request = WithdrawalRequest(inputParams.mcAddr, withdrawalAmount)
@@ -148,7 +142,9 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
   }
 }
 
-object AddWithdrawalRequestCmdInputDecoder extends ABIDecoder[AddWithdrawalRequestCmdInput] {
+object AddWithdrawalRequestCmdInputDecoder
+  extends ABIDecoder[AddWithdrawalRequestCmdInput]
+    with MsgProcessorInputDecoder[AddWithdrawalRequestCmdInput] {
 
   override def getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes20]() {}))
 
@@ -167,7 +163,9 @@ case class AddWithdrawalRequestCmdInput(mcAddr: MCPublicKeyHashProposition) exte
   }
 }
 
-object GetListOfWithdrawalRequestsCmdInputDecoder extends ABIDecoder[GetListOfWithdrawalRequestsCmdInput] {
+object GetListOfWithdrawalRequestsCmdInputDecoder
+  extends ABIDecoder[GetListOfWithdrawalRequestsCmdInput]
+    with MsgProcessorInputDecoder[GetListOfWithdrawalRequestsCmdInput] {
   override def getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Uint32]() {}))
 
   override def createType(listOfParams: util.List[Type[_]]): GetListOfWithdrawalRequestsCmdInput = {

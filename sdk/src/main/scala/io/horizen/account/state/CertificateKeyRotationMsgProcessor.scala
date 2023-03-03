@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import io.horizen.account.abi.{ABIDecoder, ABIEncodable}
+import io.horizen.account.abi.{ABIDecoder, ABIEncodable, MsgProcessorInputDecoder}
 import io.horizen.account.state.CertificateKeyRotationMsgProcessor.{CertificateKeyRotationContractAddress, CertificateKeyRotationContractCode, SubmitKeyRotationReqCmdSig}
 import io.horizen.account.state.events.SubmitKeyRotation
 import io.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
@@ -149,16 +149,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
     //verify
     checkMessageValidity(msg)
 
-    val inputData : SubmitKeyRotationCmdInput = Try {
-      // We must trap any exception arising in case of wrong data that can not be encoded according to the types
-      // and return the execution reverted exception
-      SubmitKeyRotationCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
-    } match {
-      case Success(decodedBytes) => decodedBytes
-      case Failure(ex) =>
-        throw new ExecutionRevertedException("Could not decode input params: " + ex.getMessage)
-    }
-
+    val inputData = SubmitKeyRotationCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
     val keyRotationProof = inputData.keyRotationProof
     val keyIndex = keyRotationProof.index
     val keyType = keyRotationProof.keyType
@@ -249,7 +240,9 @@ case class SubmitKeyRotationCmdInput(keyRotationProof: KeyRotationProof, newKeyS
     .format(this.getClass.toString, keyRotationProof)
 }
 
-object SubmitKeyRotationCmdInputDecoder extends ABIDecoder[SubmitKeyRotationCmdInput] {
+object SubmitKeyRotationCmdInputDecoder
+  extends ABIDecoder[SubmitKeyRotationCmdInput]
+    with MsgProcessorInputDecoder[SubmitKeyRotationCmdInput] {
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
     org.web3j.abi.Utils.convert(util.Arrays.asList(
