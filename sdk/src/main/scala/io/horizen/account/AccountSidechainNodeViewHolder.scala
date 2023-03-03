@@ -1,7 +1,6 @@
 package io.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import io.horizen.account.AccountSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.history.AccountHistory
