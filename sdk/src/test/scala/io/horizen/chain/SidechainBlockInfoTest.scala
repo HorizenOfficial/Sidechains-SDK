@@ -6,6 +6,7 @@ import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
+import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -131,7 +132,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     //check equals and hash code
     val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mcHeaderBaseInfo, mcRefDataHeaderHashes, withdrawalEpochInfo, Option((vrfOutput)), lastBlockIdInPreviousConsensusEpoch)
 
-    assert(serializedInfoTry.get == info)
-    assert(serializedInfoTry.get.hashCode() == info.hashCode())
+    serializedInfoTry.get shouldBe info
+    serializedInfoTry.get.hashCode() shouldBe info.hashCode()
   }
 }
