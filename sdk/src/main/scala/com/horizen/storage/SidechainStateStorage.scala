@@ -67,9 +67,18 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     Utils.calculateKey(Bytes.concat("ccMessage".getBytes, hash.bytes))
   }
 
+  private[horizen] def getCrossChainMessageHashFromRedeemMessage(hash: CrossChainMessageHash): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("ccMessageHashFromRedeemMessage".getBytes, hash.bytes))
+  }
+
+  private[horizen] def getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeHash: Array[Byte]): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("scTxCommitmentTreeKey".getBytes, scTxCommitmentTreeHash))
+  }
+
   private[horizen] def getCertifiersStorageKey(withdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("certificateKeys".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
+
   private[horizen] def getKeyRotationProofKey(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, Ints.toByteArray(withdrawalEpoch),
       Ints.toByteArray(indexOfSigner), Ints.toByteArray(keyType)))
@@ -220,6 +229,14 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
+  def doesCrossChainMessageHashFromRedeemMessageExist(msgHash: CrossChainMessageHash): Boolean = {
+    storage.get(getCrossChainMessageHashFromRedeemMessage(msgHash)).isPresent
+  }
+
+  def doesScTxCommitmentTreeRootExist(scTxCommitmentTreeRoot: Array[Byte]): Boolean = {
+    storage.get(getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeRoot)).isPresent
+  }
+
   def getCertifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     storage.get(getCertifiersStorageKey(withdrawalEpoch)).asScala match {
       case Some(baw) =>
@@ -343,6 +360,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              crossChainMessagesToAppendSeq: Seq[CrossChainMessage],
+             crossChainMessageHashesToAppend: Seq[CrossChainMessageHash],
+             hashScTxsCommitment: Seq[Array[Byte]],
              consensusEpoch: ConsensusEpochNumber,
              topQualityCerts: Seq[(WithdrawalEpochCertificate, Array[Byte])],
              blockFeeInfo: BlockFeeInfo,
@@ -478,7 +497,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     // Store referenced epoch number and the top quality cert for epoch if present
     topQualityCertificateOpt.foreach(certificate => {
       updateList.add(new JPair(getLastCertificateEpochNumberKey,
-       new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
+        new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
 
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
@@ -507,7 +526,18 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           new ByteArrayWrapper(crossChainMessagesSerializer.toBytes(ccMessages))))
 
       }
-      //for sidechain2Sidehcain we stor also the mainchain hash for each top quality certificate
+
+      // Save all the cross-chain message hashes received in a redeem tx
+      crossChainMessageHashesToAppend.foreach(msgHash =>
+        updateList.add(new JPair(getCrossChainMessageHashFromRedeemMessage(msgHash), Array.emptyByteArray))
+      )
+
+      // Save all the hash sidechain transaction commitment in mainchain header
+      hashScTxsCommitment.foreach(scCommHash =>
+        updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(scCommHash), Array.emptyByteArray))
+      )
+
+      //for sidechain2Sidehcain we store also the mainchain hash for each top quality certificate
       topQualityCerts.foreach(ele =>
         updateList.add(new JPair(getTopQualityCertificateMainchainHeaderKey(ele._1.epochNumber),
           new ByteArrayWrapper(ele._2)))

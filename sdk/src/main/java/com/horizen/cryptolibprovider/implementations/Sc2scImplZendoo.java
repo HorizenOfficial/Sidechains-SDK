@@ -43,7 +43,7 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
     @Override
     public boolean verifyRedeemProof(CrossChainMessageHash messageHash,
                                      FieldElement sc_tx_commitment_root_cert_epochN,
-                                     MerklePath merklePath_topQuality_cert_epochN1,
+                                     FieldElement sc_tx_commitment_root_cert_epochN1,
                                      byte[] proof) {
         return false;
     }

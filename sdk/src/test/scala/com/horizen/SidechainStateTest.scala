@@ -27,9 +27,9 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.util.ModifierId
 import sparkz.core.{bytesToId, bytesToVersion}
-import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
-import com.horizen.sc2sc.{CrossChainMessage, Sc2ScConfigurator}
+import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
+import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
 
 import scala.collection.JavaConverters._
 import scala.collection.Seq
@@ -342,7 +342,7 @@ class SidechainStateTest
 
     // Mock get and update methods of BoxStorage
     Mockito.when(mockedStateStorage.lastVersionId)
-        .thenAnswer(answer => {Some(stateVersion.last)})
+      .thenAnswer(answer => {Some(stateVersion.last)})
 
     Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
       .thenAnswer(answer => {
@@ -350,12 +350,19 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
+    val mcHeader1 = mock[MainchainHeader]
+    val mcHeader2 = mock[MainchainHeader]
+    val hashScTxsCommitment1 = "hashScTxsCommitment1".getBytes
+    val hashScTxsCommitment2 = "hashScTxsCommitment2".getBytes
+
     Mockito.when(mockedStateStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[WithdrawalEpochInfo](),
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
       ArgumentMatchers.any[Seq[CrossChainMessage]](),
+      ArgumentMatchers.any[Seq[CrossChainMessageHash]](),
+      ArgumentMatchers.eq(Seq(hashScTxsCommitment1, hashScTxsCommitment2)),
       ArgumentMatchers.any[ConsensusEpochNumber](),
       ArgumentMatchers.any[Seq[(WithdrawalEpochCertificate, Array[Byte])]](),
       ArgumentMatchers.any[BlockFeeInfo](),
@@ -371,11 +378,11 @@ class SidechainStateTest
         val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](2)
         val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
         val withdrawalRequestAppendSeq = answer.getArgument[ListBuffer[WithdrawalRequestBox]](4)
-        val consensusEpoch = answer.getArgument[ConsensusEpochNumber](6)
-        val backwardTransferCertificate = answer.getArgument[Seq[(WithdrawalEpochCertificate, Array[Byte])]](7)
-        val blockFeeInfo = answer.getArgument[BlockFeeInfo](8)
-        val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](9)
-        val scHasCeased = answer.getArgument[Boolean](10)
+        val consensusEpoch = answer.getArgument[ConsensusEpochNumber](8)
+        val backwardTransferCertificate = answer.getArgument[Seq[(WithdrawalEpochCertificate, Array[Byte])]](9)
+        val blockFeeInfo = answer.getArgument[BlockFeeInfo](10)
+        val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](11)
+        val scHasCeased = answer.getArgument[Boolean](12)
 
         // Verify withdrawals
         assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
@@ -476,6 +483,10 @@ class SidechainStateTest
     Mockito.when(mockedBlock.feeInfo).thenReturn(modBlockFeeInfo)
 
     Mockito.when(mockedBlock.feePaymentsHash).thenReturn(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH)
+
+    Mockito.when(mcHeader1.hashScTxsCommitment).thenReturn(hashScTxsCommitment1)
+    Mockito.when(mcHeader2.hashScTxsCommitment).thenReturn(hashScTxsCommitment2)
+    Mockito.when(mockedBlock.mainchainHeaders).thenReturn(Seq(mcHeader1, mcHeader2))
 
     Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())
