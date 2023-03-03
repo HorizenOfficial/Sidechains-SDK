@@ -5,7 +5,7 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import io.horizen.SidechainTypes
-import io.horizen.account.AccountSidechainNodeViewHolder.ReceivableMessages.MempoolReAddedTransactions
+import io.horizen.account.MempoolReAddedTransactions
 import io.horizen.account.api.rpc.types.EthereumBlockView
 import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
