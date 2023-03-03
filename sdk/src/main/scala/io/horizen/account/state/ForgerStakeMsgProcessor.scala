@@ -19,6 +19,7 @@ import sparkz.crypto.hash.{Blake2b256, Keccak256}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.util.{Failure, Success, Try}
 
 trait ForgerStakesProvider {
   private[horizen] def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
@@ -252,7 +253,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
     // check signature
     val msgToSign = getRemoveStakeCmdMessageToSign(stakeId, msg.getFrom, msg.getNonce.toByteArray)
-    if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
+    val isValid : Boolean = Try {
+      signature.isValid(stakeData.ownerPublicKey, msgToSign)
+    } match {
+      case Success(result) => result
+      case Failure(ex) =>
+        // can throw IllegalArgumentexception if the signature data are really wrong
+        throw new ExecutionRevertedException("Could not verify ill-formed signature: " + ex.getMessage)
+    }
+    if (!isValid) {
       throw new ExecutionRevertedException("Invalid signature")
     }
 
@@ -354,7 +363,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       case AddNewStakeCmd => doAddNewStakeCmd(msg, gasView)
       case RemoveStakeCmd => doRemoveStakeCmd(msg, gasView)
       case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(msg, gasView)
-      case opCodeHex => throw new ExecutionRevertedException(s"op code $opCodeHex not supported")
+      case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
 

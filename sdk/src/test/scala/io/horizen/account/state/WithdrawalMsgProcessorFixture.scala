@@ -19,7 +19,7 @@ trait WithdrawalMsgProcessorFixture extends MessageProcessorFixture {
   }
 
   def listWithdrawalRequestsMessage(epochNum: Int): Message = {
-    val params = GetListOfWithdrawalRequestsInputCmd(epochNum).encode()
+    val params = GetListOfWithdrawalRequestsCmdInput(epochNum).encode()
     val data = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig), params)
     getMessage(WithdrawalMsgProcessor.contractAddress, BigInteger.ZERO, data)
   }

@@ -6,7 +6,7 @@ import org.web3j.abi.datatypes.Type;
 
 import java.util.List;
 
-public interface  ABIDecoder<T> {
+public interface ABIDecoder<T> {
 
     List<TypeReference<Type>> getListOfABIParamTypes();
 
@@ -16,7 +16,8 @@ public interface  ABIDecoder<T> {
 
     default T decode(byte[] abiEncodedData) {
         if (abiEncodedData.length != getABIDataParamsLengthInBytes()){
-            throw  new IllegalArgumentException("Wrong message data field length: " + abiEncodedData.length);
+            throw  new IllegalArgumentException("Wrong message data field length: " + abiEncodedData.length +
+                    ", expected: " + getABIDataParamsLengthInBytes());
         }
         String inputParamsString = org.web3j.utils.Numeric.toHexString(abiEncodedData);
         DefaultFunctionReturnDecoder decoder = new DefaultFunctionReturnDecoder();

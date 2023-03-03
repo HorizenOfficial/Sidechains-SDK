@@ -1,6 +1,5 @@
 package io.horizen.cryptolibprovider.implementations;
 
-import com.google.common.primitives.Ints;
 import io.horizen.block.SidechainCreationVersions;
 import io.horizen.block.WithdrawalEpochCertificate;
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
@@ -18,10 +17,10 @@ import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.schnorrnative.ValidatorKeysUpdatesList;
+import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
 import scala.Option;
 import scala.collection.Seq;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -294,52 +293,67 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         return serializedHash;
     }
 
-    @Override
-    public byte[] getMsgToSignForSigningKeyUpdate(byte[] newSigningKeyBytes, int epochNumber, byte[] sidechainId) {
+    private enum KeyType {SIGNING, MASTER}
+    private FieldElement getMsgToSign(SchnorrPublicKey pubKey, int epochNumber, FieldElement scIdFe, KeyType type) throws Exception {
+        switch (type){
+            case SIGNING:
+                return NaiveThresholdSignatureWKeyRotation.getMsgToSignForSigningKeyUpdate(pubKey, epochNumber, scIdFe);
+            case MASTER:
+                return NaiveThresholdSignatureWKeyRotation.getMsgToSignForMasterKeyUpdate(pubKey, epochNumber, scIdFe);
+            default:
+                throw new IllegalArgumentException("Invalid key type: " + type);
+        }
+    }
+
+    private byte[] getMsgToSignForKeyUpdate(byte[] newKeyBytes, int epochNumber, byte[] sidechainId, KeyType type) {
         byte[] messageAsBytes;
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        SchnorrPublicKey newSigningKey = SchnorrPublicKey.deserialize(newSigningKeyBytes);
+        SchnorrPublicKey newKey = SchnorrPublicKey.deserialize(newKeyBytes);
         try {
-            FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForSigningKeyUpdate(newSigningKey,
-                    epochNumber, sidechainIdFe);
-            messageAsBytes = messageToSign.serializeFieldElement();
-            messageToSign.freeFieldElement();
+            if (sidechainIdFe != null && newKey != null) {
+
+                FieldElement messageToSign = getMsgToSign(newKey, epochNumber, sidechainIdFe, type);
+
+                if (messageToSign != null) {
+                    messageAsBytes = messageToSign.serializeFieldElement();
+                    messageToSign.freeFieldElement();
+                } else {
+                    throw new IllegalArgumentException("Could not get a valid message to sign from key (type " + type + "): " + BytesUtils.toHexString(newKeyBytes));
+                }
+            } else {
+                throw new IllegalArgumentException(
+                        "Invalid deserialized obj: sidechainId=" +  BytesUtils.toHexString(sidechainId) +
+                                " / newKeyBytes=" + BytesUtils.toHexString(newKeyBytes));
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
-            sidechainIdFe.freeFieldElement();
-            newSigningKey.freePublicKey();
+            if (sidechainIdFe != null)
+                sidechainIdFe.freeFieldElement();
+            if (newKey != null)
+                newKey.freePublicKey();
         }
         return messageAsBytes;
+    }
+
+    @Override
+    public byte[] getMsgToSignForSigningKeyUpdate(byte[] newSigningKeyBytes, int epochNumber, byte[] sidechainId) {
+        return getMsgToSignForKeyUpdate(newSigningKeyBytes, epochNumber, sidechainId, KeyType.SIGNING);
     }
 
     @Override
     public byte[] getMsgToSignForMasterKeyUpdate(byte[] newMasterKeyBytes, int epochNumber, byte[] sidechainId) {
-        byte[] messageAsBytes;
-        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        SchnorrPublicKey newMasterKey = SchnorrPublicKey.deserialize(newMasterKeyBytes);
-        try {
-            FieldElement messageToSign = NaiveThresholdSignatureWKeyRotation.getMsgToSignForMasterKeyUpdate(newMasterKey,
-                    epochNumber, sidechainIdFe);
-            messageAsBytes = messageToSign.serializeFieldElement();
-            messageToSign.freeFieldElement();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            sidechainIdFe.freeFieldElement();
-            newMasterKey.freePublicKey();
-        }
-        return messageAsBytes;
+        return getMsgToSignForKeyUpdate(newMasterKeyBytes, epochNumber, sidechainId, KeyType.MASTER);
     }
 
     private static List<SchnorrPublicKey> byteArrayToKeysList(Seq<SchnorrProposition> schnorrPublicKeysBytesList) {
-        return scala.collection.JavaConverters.<SchnorrProposition>seqAsJavaList(schnorrPublicKeysBytesList)
+        return scala.collection.JavaConverters.seqAsJavaList(schnorrPublicKeysBytesList)
                 .stream().map(SchnorrProposition::pubKeyBytes).map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
     }
 
 
     private static List<SchnorrSignature> byteArrayToSignaturesList(Seq<Option<SchnorrProof>> schnorrSignaturesBytesSeq) {
-        return scala.collection.JavaConverters.<Option<SchnorrProof>>seqAsJavaList(schnorrSignaturesBytesSeq).stream().map(b -> {
+        return scala.collection.JavaConverters.seqAsJavaList(schnorrSignaturesBytesSeq).stream().map(b -> {
             if (b.isDefined()) {
                 return SchnorrSignature.deserialize(b.get().bytes());
             } else {
