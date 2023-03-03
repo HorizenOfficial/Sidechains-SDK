@@ -234,7 +234,7 @@ class SCWsAccountServerTest(AccountChainSetup):
         logging.info("Reconnect the nodes and verify that we receive the 3 blocks from the SC node 2")
 
         connect_sc_nodes(self.sc_nodes[0], 1)
-        self.sc_sync_all()
+        sync_sc_blocks(self.sc_nodes, wait_for=60)
 
         node1_best_block = sc_node.rpc_eth_getBlockByNumber("latest", "true")
         node2_best_block = sc_node2.rpc_eth_getBlockByNumber("latest", "true")

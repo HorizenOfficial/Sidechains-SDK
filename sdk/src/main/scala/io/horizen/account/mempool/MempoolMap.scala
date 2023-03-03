@@ -307,6 +307,12 @@ class MempoolMap(
       (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
   }
 
+  /**
+   *
+   * @param rejectedBlocks list of blocks to be removed
+   * @param appliedBlocks list of blocks to be applied
+   * @return list of transactions that were previous part of the active chain and now were removed from the blocks and readded to the mempool
+   */
   def updateMemPool(rejectedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): Seq[SidechainTypes#SCAT] = {
     /* Mem pool needs to be updated after state modifications. Transactions that have become invalid
     (or for a nonce too low or for insufficient balance or else), should be removed. Txs
