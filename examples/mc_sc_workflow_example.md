@@ -128,17 +128,17 @@ The creation of Sidechains requires data for proving backward transfer operation
 Note:
 - `signersPublicKeys` - list of Schnorr public keys of certificate Signers generated on step 5;
 - `threshold` - the minimum set of participants required for a valid proof creation;
-- `isCSWEnabled` - Its value should be true if the Ceased Sidechain Withdrawal is enabled, false otherwise. For non ceasing sidechains, it's always false.
+- `isCSWEnabled` - Its value should be true if the Ceased Sidechain Withdrawal is enabled, false otherwise.
 
 *If circuit with key rotation:*
 
-`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [signerPk1, signerPk2, ...], "mastersPublicKeys": [masterPk1, masterPk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk", "isCSWEnabled": false}`
+`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [signerPk1, signerPk2, ...], "mastersPublicKeys": [masterPk1, masterPk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk"}`
 
 Note:
 - `signersPublicKeys` - list of Schnorr public signing keys of certificate Signers generated on step 5;
 - `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey, mastersKeys have to be different from signersKeys;
 - `threshold` - the minimum set of participants required for a valid proof creation;
-- `isCSWEnabled` - Its value should be always false.
+- `isCSWEnabled` - For non ceasing sidechains, it's always false and is not specified for generateCertWithKeyRotationProofInfo.
 
 *Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys and signersPublicKeys and mastersPublicKeys size should be equal.*
 
