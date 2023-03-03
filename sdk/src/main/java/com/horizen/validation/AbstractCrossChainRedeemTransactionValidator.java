@@ -86,8 +86,6 @@ public class AbstractCrossChainRedeemTransactionValidator implements Transaction
                 ccMsgHash,
                 FieldElementUtils.messageToFieldElement(ccMsgBoxData.getScCommitmentTreeRoot()),
                 FieldElementUtils.messageToFieldElement(ccMsgBoxData.getNextScCommitmentTreeRoot()),
-                MerklePath.deserialize(ccMsgBoxData.getCertificateDataHash()),
-                MerklePath.deserialize(ccMsgBoxData.getNextCertificateDataHash()),
                 ccMsgBoxData.getProof()
         );
 
