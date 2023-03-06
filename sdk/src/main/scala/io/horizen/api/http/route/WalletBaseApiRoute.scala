@@ -134,13 +134,21 @@ abstract class WalletBaseApiRoute[
     withBasicAuth {
       _ => {
         entity(as[ReqImportSecret]) { body =>
-          val secret = sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(body.privKey))
-          val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
-          Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-            case Success(_) =>
-              ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
+          sidechainSecretsCompanion.parseBytesTry(BytesUtils.fromHexString(body.privKey)) match {
+            case Success(secret) =>
+
+              val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+              Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+                case Success(_) =>
+                  ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
+                case Failure(e) =>
+                  ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to add the key.", JOptional.of(e)))
+              }
+
             case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to add the key.", JOptional.of(e)))
+              log.error(s"Import Wallet: Failed to parse secret: ${body.privKey}", e)
+              ApiResponseUtil.toResponse(ErrorFailedToParseSecret("ErrorFailedToParseSecret", JOptional.of(e)))
+
           }
         }
       }
