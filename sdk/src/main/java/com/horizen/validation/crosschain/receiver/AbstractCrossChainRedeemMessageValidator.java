@@ -1,4 +1,4 @@
-package com.horizen.validation;
+package com.horizen.validation.crosschain.receiver;
 
 import com.horizen.SidechainSettings;
 import com.horizen.box.data.CrossChainRedeemMessageBoxData;
@@ -8,17 +8,17 @@ import com.horizen.merkletreenative.MerklePath;
 import com.horizen.sc2sc.CrossChainMessage;
 import com.horizen.sc2sc.CrossChainMessageHash;
 import com.horizen.storage.SidechainStateStorage;
-import com.horizen.transaction.AbstractCrossChainRedeemTransaction;
 import com.horizen.utils.BytesUtils;
+import com.horizen.validation.crosschain.CrossChainValidator;
 
 import java.util.Arrays;
 
-public class AbstractCrossChainRedeemTransactionValidator implements TransactionValidator<AbstractCrossChainRedeemTransaction> {
+public class AbstractCrossChainRedeemMessageValidator implements CrossChainValidator<CrossChainRedeemMessageBodyToValidate> {
     private final SidechainSettings sidechainSettings;
     private final SidechainStateStorage scStateStorage;
     private final Sc2scCircuit sc2scCircuit;
 
-    public AbstractCrossChainRedeemTransactionValidator(
+    public AbstractCrossChainRedeemMessageValidator(
             SidechainSettings sidechainSettings,
             SidechainStateStorage scStateStorage,
             Sc2scCircuit sc2scCircuit
@@ -29,9 +29,9 @@ public class AbstractCrossChainRedeemTransactionValidator implements Transaction
     }
 
     @Override
-    public void validate(AbstractCrossChainRedeemTransaction txToBeValidated) throws IllegalArgumentException {
-        CrossChainRedeemMessageBoxData redeemMessageBox = txToBeValidated.getRedeemMessageBox();
-        CrossChainMessage ccMsg = redeemMessageBox.getMessage();
+    public void validate(CrossChainRedeemMessageBodyToValidate objectToValidate) {
+        CrossChainRedeemMessageBoxData boxData = objectToValidate.getBodyToValidate();
+        CrossChainMessage ccMsg = boxData.getMessage();
 
         // CrossChainRedeemMsg.message.receivingScId = current sidechain
         validateCorrectSidechain(ccMsg);
@@ -41,12 +41,12 @@ public class AbstractCrossChainRedeemTransactionValidator implements Transaction
 
         // CrossChainRedeemMsg.sc_commitment_tree_root and CrossChainRedeemMsg.next_sc_commitment_tree_root have been seen before
         verifyCommitmentTreeRootAndNextCommitmentTreeRoot(
-                redeemMessageBox.getScCommitmentTreeRoot(),
-                redeemMessageBox.getNextScCommitmentTreeRoot()
+                boxData.getScCommitmentTreeRoot(),
+                boxData.getNextScCommitmentTreeRoot()
         );
 
         // CrossChainRedeemMsg.proof is valid (requires zk circuit invocation)
-        verifyProof(redeemMessageBox);
+        verifyProof(boxData);
     }
 
     private void validateCorrectSidechain(CrossChainMessage msg) {

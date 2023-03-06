@@ -13,6 +13,9 @@ import com.horizen.sc2sc.CrossChainMessageHash;
 import com.horizen.storage.SidechainStateStorage;
 import com.horizen.transaction.AbstractCrossChainRedeemTransaction;
 import com.horizen.utils.BytesUtils;
+import com.horizen.validation.crosschain.receiver.AbstractCrossChainRedeemMessageValidator;
+import com.horizen.validation.crosschain.receiver.CrossChainRedeemMessageBodyToValidate;
+import com.horizen.validation.crosschain.receiver.CrossChainRedeemMessageValidator;
 import org.junit.Test;
 import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
@@ -25,13 +28,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class AbstractCrossChainRedeemTransactionValidatorTest {
-
-    private static class CrossChainRedeemTransactionValidatorMock extends AbstractCrossChainRedeemTransactionValidator {
-        public CrossChainRedeemTransactionValidatorMock(SidechainSettings sidechainSettings, SidechainStateStorage scStateStorage, Sc2scCircuit sc2scCircuit) {
-            super(sidechainSettings, scStateStorage, sc2scCircuit);
-        }
-    }
+public class AbstractCrossChainRedeemMessageValidatorTest {
 
     private static class CrossChainRedeemTransactionMock extends AbstractCrossChainRedeemTransaction {
         public CrossChainRedeemTransactionMock(List<byte[]> inputZenBoxIds, List<Signature25519> inputZenBoxProofs, List<ZenBoxData> outputZenBoxesData, long fee, CrossChainRedeemMessageBoxData redeemMessageBox) {
@@ -82,12 +79,14 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
     public void whenReceivingScIdIsDifferentThenTheScIdInSettings_throwsAnIllegalArgumentException() {
         // Arrange
         String badScIdHex = BytesUtils.toHexString("badScIdHex".getBytes());
-        AbstractCrossChainRedeemTransactionValidator validator = new CrossChainRedeemTransactionValidatorMock(
+        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
+        CrossChainRedeemMessageBodyToValidate bodyToValidate = new CrossChainRedeemMessageBodyToValidate(txToBeValidated);
+
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
         when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
@@ -96,7 +95,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         // Act
         IllegalArgumentException thrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> validator.validate(txToBeValidated)
+                () -> validator.validate(bodyToValidate)
         );
 
         // Assert
@@ -107,12 +106,14 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
     @Test
     public void whenTryToRedeemTheSameMessageTwice_throwsAnIllegalArgumentException() {
         // Arrange
-        AbstractCrossChainRedeemTransactionValidator validator = new CrossChainRedeemTransactionValidatorMock(
+        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
+        CrossChainRedeemMessageBodyToValidate bodyToValidate = new CrossChainRedeemMessageBodyToValidate(txToBeValidated);
+
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
         when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
@@ -124,7 +125,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         // Act
         IllegalArgumentException thrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> validator.validate(txToBeValidated)
+                () -> validator.validate(bodyToValidate)
         );
 
         // Assert
@@ -138,12 +139,14 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
     @Test
     public void whenScTxCommitmentTreeHashDoesNotExist_throwsAnIllegalArgumentException() {
         // Arrange
-        AbstractCrossChainRedeemTransactionValidator validator = new CrossChainRedeemTransactionValidatorMock(
+        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
+        CrossChainRedeemMessageBodyToValidate bodyToValidate = new CrossChainRedeemMessageBodyToValidate(txToBeValidated);
+
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
         when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
@@ -158,7 +161,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         // Act
         IllegalArgumentException thrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> validator.validate(txToBeValidated)
+                () -> validator.validate(bodyToValidate)
         );
 
         // Assert
@@ -170,12 +173,14 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
     @Test
     public void whenNextScTxCommitmentTreeHashDoesNotExist_throwsAnIllegalArgumentException() {
         // Arrange
-        AbstractCrossChainRedeemTransactionValidator validator = new CrossChainRedeemTransactionValidatorMock(
+        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
+        CrossChainRedeemMessageBodyToValidate bodyToValidate = new CrossChainRedeemMessageBodyToValidate(txToBeValidated);
+
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
         when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
@@ -192,7 +197,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         // Act
         IllegalArgumentException thrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> validator.validate(txToBeValidated)
+                () -> validator.validate(bodyToValidate)
         );
 
         // Assert
@@ -204,12 +209,14 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
     @Test
     public void whenNextScTxCommitmentTreeHashDoesNotExistd_throwsAnIllegalArgumentException() {
         // Arrange
-        AbstractCrossChainRedeemTransactionValidator validator = new CrossChainRedeemTransactionValidatorMock(
+        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
+        CrossChainRedeemMessageBodyToValidate bodyToValidate = new CrossChainRedeemMessageBodyToValidate(txToBeValidated);
+
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
         when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
@@ -239,7 +246,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
         // Act
         IllegalArgumentException thrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> validator.validate(txToBeValidated)
+                () -> validator.validate(bodyToValidate)
         );
 
         // Assert
@@ -251,12 +258,14 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
     @Test
     public void whenAllValidationsPass_throwsNoException() {
         // Arrange
-        AbstractCrossChainRedeemTransactionValidator validator = new CrossChainRedeemTransactionValidatorMock(
+        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
         );
+        CrossChainRedeemMessageBodyToValidate bodyToValidate = new CrossChainRedeemMessageBodyToValidate(txToBeValidated);
+
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
         when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
@@ -285,7 +294,7 @@ public class AbstractCrossChainRedeemTransactionValidatorTest {
 
         // Act & Assert
         try {
-            validator.validate(txToBeValidated);
+            validator.validate(bodyToValidate);
         } catch (Exception e) {
             fail("Test failed unexpectedly");
         }
