@@ -12,9 +12,9 @@ import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
 import com.horizen.account.proof.SignatureSecp256k1
-import com.horizen.account.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
+import com.horizen.account.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
@@ -23,13 +23,13 @@ import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, Fe
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
+import io.horizen.evm.results.ProofAccountResult
+import io.horizen.evm.{Address, Hash, TraceOptions}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
-import io.horizen.evm.{Address, Hash, TraceOptions}
-import io.horizen.evm.results.ProofAccountResult
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -39,11 +39,12 @@ import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.{FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future}
 import scala.jdk.CollectionConverters
 import scala.language.postfixOps
@@ -209,9 +210,10 @@ class EthService(
 
   @RpcMethod("eth_signTransaction")
   def signTransaction(params: TransactionArgs): Array[Byte] = {
+    val unsignedTx = params.toTransaction(networkParams)
     applyOnAccountView { nodeView =>
-      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value.add(params.gas))
-        .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
+      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), unsignedTx.maxCost())
+        .map(secret => signTransactionWithSecret(secret, unsignedTx))
         .map(tx => tx.encode(tx.isSigned))
         .orNull
     }
@@ -224,7 +226,7 @@ class EthService(
   @RpcMethod("eth_sign")
   def sign(sender: Address, message: Array[Byte]): Array[Byte] = {
     val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
-    val messageToSign = prefix.getBytes() ++ message
+    val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ message
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
         .map(secret => secret.sign(messageToSign))
@@ -237,7 +239,7 @@ class EthService(
       wallet: AccountWallet,
       state: AccountState,
       fromAddress: Option[Address],
-      txCostInWei: BigInteger
+      minimumBalance: BigInteger
   ): Option[PrivateKeySecp256k1] = {
     wallet
       .secretsOfType(classOf[PrivateKeySecp256k1])
@@ -245,8 +247,7 @@ class EthService(
       .find(secret =>
         // if from address is given the secrets public key needs to match, otherwise check all of the secrets
         fromAddress.forall(_.equals(secret.publicImage.address)) &&
-          // TODO account for gas
-          state.getBalance(secret.publicImage.address).compareTo(txCostInWei) >= 0
+          state.getBalance(secret.publicImage.address).compareTo(minimumBalance) >= 0
       )
   }
 
@@ -284,27 +285,19 @@ class EthService(
           highBound = blockContext.blockGasLimit
         }
         // Normalize the max fee per gas the call is willing to spend.
-        var feeCap = BigInteger.ZERO
-        if (params.gasPrice != null && (params.maxFeePerGas != null || params.maxPriorityFeePerGas != null)) {
-          throw new RpcException(
-            RpcError
-              .fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-          )
-        } else if (params.gasPrice != null) {
-          feeCap = params.gasPrice
+        val feeCap = if (params.gasPrice != null) {
+          params.gasPrice
         } else if (params.maxFeePerGas != null) {
-          feeCap = params.maxFeePerGas
+          params.maxFeePerGas
+        } else {
+          BigInteger.ZERO
         }
         // Recap the highest gas limit with account's available balance.
         if (feeCap.bitLength() > 0) {
           val balance = tagStateView.getBalance(params.getFrom)
-          val available = if (params.value == null) { balance }
-          else {
-            if (params.value.compareTo(balance) >= 0)
-              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
-            balance.subtract(params.value)
-          }
-          val allowance = available.divide(feeCap)
+          if (params.value.compareTo(balance) >= 0)
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
+          val allowance = balance.subtract(params.value).divide(feeCap)
           if (highBound.compareTo(allowance) > 0) {
             highBound = allowance
           }
@@ -1061,7 +1054,6 @@ class EthService(
 
   @RpcMethod("eth_getLogs")
   def getLogs(query: FilterQuery): Seq[EthereumLogView] = {
-    query.sanitize()
     applyOnAccountView { nodeView =>
       using(nodeView.state.getView) { stateView =>
         if (query.blockHash != null) {
