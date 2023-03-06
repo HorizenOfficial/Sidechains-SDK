@@ -67,12 +67,17 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private AddressProposition from;
     private String hashString;
     private BigInteger txCost;
+    private byte[] messageToSign;
 
     private long size = -1;
 
     private synchronized String getTxHash() {
         if (this.hashString == null) {
-            byte[] encodedMessage = encode(isSigned());
+            byte[] encodedMessage;
+            if (isSigned())
+                encodedMessage = encode(true);
+            else
+                encodedMessage = this.messageToSign();
             this.hashString = BytesUtils.toHexString((byte[]) Keccak256.hash(encodedMessage));
         }
         return this.hashString;
@@ -273,15 +278,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     "gas limit %s is below intrinsic gas %s",
                     id(), getGasLimit(), GasUtil.intrinsicGas(getData(), getTo().isEmpty())));
         }
-        try {
-            if (!getSignature().isValid(getFrom(), messageToSign()))
-                throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
-                        "signature");
-        } catch (Throwable t) {
-            // in case of really malformed signature we can not even compute the id()
-            throw new TransactionSemanticValidityException(String.format("Transaction signature not readable: %s", t.getMessage()));
-        }
 
+        if (getFrom() == null) {
+            // we already checked that this tx is signed, therefore we must be able to get a from address from a valid
+            // signature
+            throw new TransactionSemanticValidityException("Invalid signature: " + this.getSignature().toString());
+        }
     }
 
     @Override
@@ -390,10 +392,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public synchronized AddressProposition getFrom() {
         if (this.from == null && this.signature != null) {
             try {
-                byte[] encodedTransaction = encode(false);
+                byte[] message = messageToSign();
                 this.from = new AddressProposition(
                         Secp256k1.signedMessageToAddress(
-                                encodedTransaction,
+                                message,
                                 signature.getV(),
                                 signature.getR(),
                                 signature.getS()
@@ -474,8 +476,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    public byte[] messageToSign() {
-       return encode(false);
+    public synchronized byte[] messageToSign() {
+        if (this.messageToSign == null) {
+            this.messageToSign = encode(false);
+        }
+        return this.messageToSign;
     }
 
     public Message asMessage(BigInteger baseFee) {
