@@ -8,10 +8,10 @@ class SyncStatusUtil () {}
 
 object SyncStatusUtil {
 
-  var calculationThreshold: Int = 15000
-  var defaultCorrectionParameter: Double = 0.65
-  val averageWeightFromGenesis: Double = 0.5
-  val averageWeightFromHalf: Double = 1.0
+  private val calculationThreshold: Int = 15000
+  private val defaultCorrectionParameter: Double = 0.65
+  private val averageWeightFromGenesis: Double = 0.5
+  private val averageWeightFromHalf: Double = 1.0
 
   /*
   The calculateEstimatedHighestBlock will calculate the estimated highest block given a set of input data and reading
@@ -35,22 +35,23 @@ object SyncStatusUtil {
   ): Int = {
 
     val blockCorrection = {
-      // if the current block height is less than the threshold value requested calculate the block correction
-      if (calculationThreshold.compare(currentBlockHeight) < 0) {
+      // if the current block height is higher than the threshold value requested calculate the block correction
+      if(currentBlockHeight > calculationThreshold) {
 
         // block correction calculated on genesis block
         var timestampDifference = currentBlockTimestamp - genesisBlockTimestamp
-        val expectedBlocksInRangeFromGenesis = timestampDifference / consensusSecondsInSlot.toDouble
-        val blockCorrectionFromGenesis = currentBlockHeight / expectedBlocksInRangeFromGenesis
+        val maxBlocksInRangeFromGenesis = timestampDifference / consensusSecondsInSlot.toDouble
+        val blockCorrectionFromGenesis = currentBlockHeight / maxBlocksInRangeFromGenesis
 
         // sidechain half height block info
-        val halfBlockId = sidechainNodeView.history.getBlockIdByHeight(1).get()
+        val sidechainHalfHeight = currentBlockHeight / 2
+        val halfBlockId = sidechainNodeView.history.getBlockIdByHeight(sidechainHalfHeight).get()
         val halfBlockInfo = sidechainNodeView.history.getBlockInfoById(halfBlockId).get()
 
         // block correction calculated on sidechain half height
         timestampDifference = currentBlockTimestamp - halfBlockInfo.timestamp
-        val expectedBlocksInRangeFromHalf = timestampDifference / consensusSecondsInSlot.toDouble
-        val blockCorrectionFromHalf = (currentBlockHeight/2) / expectedBlocksInRangeFromHalf
+        val maxBlocksInRangeFromHalf = timestampDifference / consensusSecondsInSlot.toDouble
+        val blockCorrectionFromHalf = sidechainHalfHeight / maxBlocksInRangeFromHalf
 
         // weighted average between slot corrections from genesis and from sidechain half
         val blockCorrection = (((blockCorrectionFromGenesis * averageWeightFromGenesis) + (blockCorrectionFromHalf * averageWeightFromHalf))

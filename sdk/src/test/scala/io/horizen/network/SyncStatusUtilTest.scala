@@ -88,13 +88,15 @@ class SyncStatusUtilTest {
 
     // define the mocked sidechain node view holder
     val mockedSidechainNodeViewHolder = TestProbe()
+    val mockedBlockId = "0x1b"
     mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          when(history.getBlockIdByHeight(ArgumentMatchers.any[Int]()))
-            .thenAnswer(_ => Optional.of("0x1b"))
-          when(history.getBlockInfoById(ArgumentMatchers.any[String]()))
+          // return mocked id when getBlockIdByHeight is called for sidechain half height
+          when(history.getBlockIdByHeight(ArgumentMatchers.eq(currentBlockHeight/2)))
+            .thenAnswer(_ => Optional.of(mockedBlockId))
+          when(history.getBlockInfoById(ArgumentMatchers.eq(mockedBlockId)))
             .thenAnswer(_ => Optional.of(mockedSidechainBlockInfo))
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }

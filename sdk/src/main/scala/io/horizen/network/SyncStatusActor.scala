@@ -5,16 +5,18 @@ import akka.pattern.ask
 import akka.util.Timeout
 import io.horizen._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import io.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
+import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.history.AbstractHistory
-import io.horizen.network.SyncStatusActor.ReceivableMessages.{CheckBlockTimestamps, NotifySyncStart, NotifySyncStop, ReturnSyncStatus}
+import io.horizen.network.SyncStatusActor.InternalReceivableMessages.CheckBlockTimestamps
+import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
+import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop}
 import io.horizen.params.NetworkParams
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
 import io.horizen.wallet.Wallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import sparkz.core.network.NodeViewSynchronizer.Events.{BetterNeighbourAppeared, NodeViewSynchronizerEvent}
+import sparkz.core.network.NodeViewSynchronizer.Events.{BetterNeighbourAppeared, NoBetterNeighbour, NodeViewSynchronizerEvent}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.transaction.MemoryPool
 import sparkz.core.utils.NetworkTimeProvider
@@ -45,9 +47,7 @@ class SyncStatusActor[
 
   private var syncStatus: Boolean = _
   private var processNewBlocks: Boolean = true
-
   private val confidenceParameter: Int = 2
-  private var genesisBlockTimestamp: Long = _
 
   private var currentBlock: Int = _
   private var startingBlock: Int = _
@@ -55,13 +55,13 @@ class SyncStatusActor[
 
   lazy val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
-  private val checkBlocksTimestampInterval: FiniteDuration = 5 seconds
 
-  var checkBlockTimestampsScheduler: Cancellable = _
-  var currentBlockTimestamp: Long = _
-  var schedulerBlockTimestamp: Long = _
-  var updateHighestBlockCalculationThreshold: Int = 20000
-  var updateHighestBlockCounter: Int = _
+  private val checkBlocksTimestampInterval: FiniteDuration = 30 seconds
+  private var checkBlockTimestampsScheduler: Cancellable = _
+  private var currentBlockTimestamp: Long = _
+  private var schedulerBlockTimestamp: Long = _
+  private val updateHighestBlockCalculationThreshold: Int = 20000
+  private var updateHighestBlockCounter: Int = _
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[PMOD]])
@@ -85,16 +85,10 @@ class SyncStatusActor[
     sidechainNodeView.history.getCurrentHeight
   }
 
-  def retrieveBlockInfoByHeight(sidechainNodeView: View, blockHeight: Int): SidechainBlockInfo = {
-    val pastBlockId = sidechainNodeView.history.getBlockIdByHeight(blockHeight).get()
-    val pastBlockInfo = sidechainNodeView.history.getBlockInfoById(pastBlockId).get()
-    pastBlockInfo
-  }
-
   // return true if the difference between current timestamp and applied block timestamp is less than block rate * confidence parameter
   // return false otherwise
   def checkAppliedBlockTimestamp(blockTimestamp: Long): Boolean = {
-    ((timeProvider.time() / 1000) - blockTimestamp).compareTo(params.consensusSecondsInSlot * confidenceParameter) < 0
+    ((timeProvider.time() / 1000) - blockTimestamp) < (params.consensusSecondsInSlot * confidenceParameter)
   }
 
   // common method to reset the internal state
@@ -122,14 +116,10 @@ class SyncStatusActor[
         val currentHeightFromView = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(retrieveCurrentHeight), timeoutDuration)
           .asInstanceOf[Int]
 
-        // retrieve genesis block timestamp needed for estimated highest block calculation
-        genesisBlockTimestamp = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) =>
-          SyncStatusUtil.getGenesisBlockTimestamp(view)), timeoutDuration)
-          .asInstanceOf[Long]
-
         // calculate the estimated highest block given a block correction calculated on how many slots were filled
         val estimatedHighestBlock = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) =>
-          SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, params.consensusSecondsInSlot, genesisBlockTimestamp, currentHeightFromView, sidechainBlock.timestamp)), timeoutDuration)
+          SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, params.consensusSecondsInSlot,
+            params.sidechainGenesisBlockTimestamp, currentHeightFromView, sidechainBlock.timestamp)), timeoutDuration)
           .asInstanceOf[Int]
 
         // set the current internal state
@@ -160,8 +150,8 @@ class SyncStatusActor[
 
         if (checkAppliedBlockTimestamp(sidechainBlock.timestamp)) {
           context.system.eventStream.publish(NotifySyncStop) // broadcast sync stop
-          checkBlockTimestampsScheduler.cancel() // stop the scheduler
-          resetInternalState() // reset the internal state
+          checkBlockTimestampsScheduler.cancel()             // stop the scheduler
+          resetInternalState()                               // reset the internal state
         }
 
         // recalculate the highest block and reset the counter:
@@ -169,10 +159,10 @@ class SyncStatusActor[
         // - if the currentBlock is equal to the calculated highest block
         updateHighestBlockCounter += 1
         if (
-          updateHighestBlockCounter.compareTo(updateHighestBlockCalculationThreshold) > 0 ||
-          currentBlock.compareTo(highestBlock) == 0) {
+          updateHighestBlockCounter > updateHighestBlockCalculationThreshold || currentBlock == highestBlock) {
           highestBlock = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) =>
-            SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, params.consensusSecondsInSlot, genesisBlockTimestamp, currentBlock, sidechainBlock.timestamp)), timeoutDuration)
+            SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, params.consensusSecondsInSlot,
+              params.sidechainGenesisBlockTimestamp, currentBlock, sidechainBlock.timestamp)), timeoutDuration)
             .asInstanceOf[Int]
           // reset the update highest block counter
           updateHighestBlockCounter = 0
@@ -189,6 +179,17 @@ class SyncStatusActor[
     processNewBlocks = true
   }
 
+  private def processNoBetterNeighbour(): Unit = {
+    // if syncStatus is true and a NoBetterNeighbour message is received the sync status is set back to false and the
+    // internal state is reset
+    if(syncStatus) {
+      context.system.eventStream.publish(NotifySyncStop) // broadcast sync stop
+      checkBlockTimestampsScheduler.cancel()             // stop the scheduler
+      resetInternalState()                               // reset the internal state
+    }
+
+  }
+
   protected def processSidechainNodeViewHolderEvents: Receive = {
 
     case SemanticallySuccessfulModifier(sidechainBlock: PMOD) =>
@@ -200,6 +201,9 @@ class SyncStatusActor[
 
     case BetterNeighbourAppeared =>
       processBetterNeighbour()
+
+    case NoBetterNeighbour =>
+      processNoBetterNeighbour()
 
   }
 
@@ -216,7 +220,7 @@ class SyncStatusActor[
   // if not we will update the scheduler block timestamp (schedulerBlockTimestamp) otherwise we will set the syncStatus false and
   // reset the internal state (this means that the node synchronization is stopped or blocked for some reason)
   protected def checkBlockTimestamps(): Unit = {
-    if(schedulerBlockTimestamp.compareTo(currentBlockTimestamp) == 0) {
+    if(schedulerBlockTimestamp == currentBlockTimestamp) {
       context.system.eventStream.publish(NotifySyncStop) // broadcast sync stop
       checkBlockTimestampsScheduler.cancel() // stop the scheduler
       resetInternalState() // reset the internal state
@@ -251,16 +255,16 @@ class SyncStatusActor[
 
 object SyncStatusActor {
 
+  case class NotifySyncStart(syncStatus: SyncStatus)
+
+  case object NotifySyncStop
+
   object ReceivableMessages {
-
     case object ReturnSyncStatus
+  }
 
-    case class NotifySyncStart(syncStatus: SyncStatus)
-
-    case object NotifySyncStop
-
+  object InternalReceivableMessages {
     case object CheckBlockTimestamps
-
   }
 
 }

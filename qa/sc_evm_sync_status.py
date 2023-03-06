@@ -168,7 +168,7 @@ class EvmSyncStatus(SidechainTestFramework):
         # restart the sidechain node 2 and sync it
         time.sleep(2)
         self.startAndSyncScNode2(execute_stop=True)
-        time.sleep(30)
+        time.sleep(60)
         res = self.sc_nodes[1].rpc_eth_syncing()["result"]
         assert_true(res == False, "unexpected value for eth_syncing result")
 
