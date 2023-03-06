@@ -34,11 +34,11 @@ public class TransactionArgs {
     // We accept "data" and "input" for backwards-compatibility reasons.
     // "input" is the newer name and should be preferred by clients.
     // Issue detail: https://github.com/ethereum/go-ethereum/issues/15628
-    private final byte[] data;
+    public final byte[] data;
 
     // Introduced by AccessListTxType transaction.
 //    public final AccessList[] accessList;
-    private final BigInteger chainId;
+    public final BigInteger chainId;
 
     public TransactionArgs(
         @JsonProperty("type") BigInteger type,
@@ -93,14 +93,6 @@ public class TransactionArgs {
         }
     }
 
-    public byte[] getData() {
-        return data;
-    }
-
-    public String getDataString() {
-        return Numeric.toHexString(data);
-    }
-
     /**
      * Get sender address or use zero address if none specified.
      */
@@ -125,7 +117,7 @@ public class TransactionArgs {
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing gas limit"));
         }
         var saneType = type == null ? 0 : type.intValueExact();
-        var optionalToAddress = Optional.ofNullable(to == null ? null : new AddressProposition(to));
+        var optionalToAddress = Optional.ofNullable(to).map(AddressProposition::new);
 
         switch (saneType) {
             case 0: // LEGACY type
@@ -199,8 +191,9 @@ public class TransactionArgs {
                 effectiveGasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
             }
         }
-        return new Message(getFrom(), to == null ? Optional.empty() : Optional.of(to), effectiveGasPrice, gasFeeCap,
-            gasTipCap, gasLimit, value, nonce, getData(), true
+        return new Message(
+            getFrom(), Optional.ofNullable(to), effectiveGasPrice, gasFeeCap, gasTipCap, gasLimit, value, nonce, data,
+            true
         );
     }
 
@@ -216,7 +209,7 @@ public class TransactionArgs {
             ", maxPriorityFeePerGas=" + (maxPriorityFeePerGas != null ? maxPriorityFeePerGas.toString() : "empty") +
             ", value=" + value.toString() +
             ", nonce=" + (nonce != null ? nonce.toString() : "empty") +
-            ", data='" + getDataString() + "'" +
+            ", data='" + Numeric.toHexString(data) + "'" +
             ", chainId=" + (chainId != null ? chainId.toString() : "empty") +
             '}';
     }
