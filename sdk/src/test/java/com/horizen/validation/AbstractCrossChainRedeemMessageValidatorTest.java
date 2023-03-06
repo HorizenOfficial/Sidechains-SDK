@@ -238,8 +238,6 @@ public class AbstractCrossChainRedeemMessageValidatorTest {
                 crossChainMsgHash,
                 FieldElementUtils.messageToFieldElement(redeemMessageBox.getScCommitmentTreeRoot()),
                 FieldElementUtils.messageToFieldElement(redeemMessageBox.getNextScCommitmentTreeRoot()),
-                MerklePath.deserialize(redeemMessageBox.getCertificateDataHash()),
-                MerklePath.deserialize(redeemMessageBox.getNextCertificateDataHash()),
                 redeemMessageBox.getProof()
         )).thenReturn(false);
 
@@ -287,8 +285,6 @@ public class AbstractCrossChainRedeemMessageValidatorTest {
                 crossChainMsgHash,
                 FieldElementUtils.messageToFieldElement(redeemMessageBox.getScCommitmentTreeRoot()),
                 FieldElementUtils.messageToFieldElement(redeemMessageBox.getNextScCommitmentTreeRoot()),
-                MerklePath.deserialize(redeemMessageBox.getCertificateDataHash()),
-                MerklePath.deserialize(redeemMessageBox.getNextCertificateDataHash()),
                 redeemMessageBox.getProof()
         )).thenReturn(true);
 

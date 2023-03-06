@@ -529,12 +529,12 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
       // Save all the cross-chain message hashes received in a redeem tx
       crossChainMessageHashesToAppend.foreach(msgHash =>
-        updateList.add(new JPair(getCrossChainMessageHashFromRedeemMessage(msgHash), msgHash.getValue))
+        updateList.add(new JPair(getCrossChainMessageHashFromRedeemMessage(msgHash), Array.emptyByteArray))
       )
 
       // Save all the hash sidechain transaction commitment in mainchain header
       hashScTxsCommitment.foreach(scCommHash =>
-        updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(scCommHash), scCommHash))
+        updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(scCommHash), Array.emptyByteArray))
       )
 
       //for sidechain2Sidehcain we store also the mainchain hash for each top quality certificate
