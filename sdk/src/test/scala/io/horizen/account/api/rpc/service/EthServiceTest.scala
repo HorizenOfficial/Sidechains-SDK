@@ -18,14 +18,13 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
+import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
+import io.horizen.network.SyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
 import io.horizen.params.RegTestParams
 import io.horizen.utils.BytesUtils
 import io.horizen.{EthServiceSettings, SidechainTypes}
-import io.horizen.evm.Address
-import io.horizen.network.SyncStatus
-import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
-import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
@@ -289,6 +288,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       }
       TestActor.KeepRunning
     })
+    val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
     val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
     val mockedNetworkControllerActor = TestProbe()
@@ -303,7 +303,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     })
     val mockedNetworkControllerRef: ActorRef = mockedNetworkControllerActor.ref
 
-    val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 
     val mockedSyncStatusActor = TestProbe()
@@ -317,6 +316,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val mockedSyncStatusActorRef: ActorRef = mockedSyncStatusActor.ref
 
     val ethServiceSettings = EthServiceSettings()
+
     ethService = new EthService(
       nodeViewHolderRef,
       mockedNetworkControllerRef,

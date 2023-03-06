@@ -118,16 +118,6 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
 
   val mockedSyncStatusActor = TestProbe()
-  mockedSyncStatusActor.setAutoPilot(new testkit.TestActor.AutoPilot {
-    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
-      msg match {
-        case ReturnSyncStatus =>
-          if (sidechainApiMockConfiguration.getShould_syncStatusActor_ReturnSyncStatus_reply()) sender ! new SyncStatus(false)
-          else sender ! Future.failed(new Exception("Broadcast failed."))
-      }
-      TestActor.KeepRunning
-    }
-  })
   val mockedSyncStatusActorRef: ActorRef = mockedSyncStatusActor.ref
 
   val mockedNetworkControllerActor = TestProbe()

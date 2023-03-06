@@ -71,7 +71,7 @@ class EvmSyncStatus(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               binary=[EVM_APP_BINARY] * 2)
 
-    def sync_sc_blocks(self, wait_for=180, execute_stop=False):
+    def sync_sc_blocks(self, wait_for=360, execute_stop=False):
 
         # wait for maximum wait_for seconds for everybody to have the same block count
         start = time.time()
@@ -79,7 +79,6 @@ class EvmSyncStatus(SidechainTestFramework):
 
             # call eth_syncing rpc method, if the sync status result is true check if the block values are correct
             res = self.sc_nodes[1].rpc_eth_syncing()["result"]
-            print(res)
             if(isinstance(res, dict) and "currentBlock" in res):
                 decimalCurrentBlock = int(res["currentBlock"], 16)
                 deciamlStartingBlock = int(res["startingBlock"], 16)
@@ -153,7 +152,7 @@ class EvmSyncStatus(SidechainTestFramework):
         # Test 2
         # the test workflow is:
         # stop SC2 node
-        # forge 1000 blocks on node SC1
+        # forge 2500 blocks on node SC1
         # restart SC2 and sync the recently created blocks on SC1 but stop after 15 seconds the SC1 node
         # call the eth_syncing endpoint and if the response is not False check the block height values
         # wait 20 seconds and check if the eth_syncing method return False
@@ -162,17 +161,16 @@ class EvmSyncStatus(SidechainTestFramework):
         stop_sc_node(sc_node2, 1)
 
         # forge 1000 blocks on SC1
-        NUM_BLOCKS = 1000
+        NUM_BLOCKS = 2500
         logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS, verbose=False))
 
         # restart the sidechain node 2 and sync it
         time.sleep(2)
         self.startAndSyncScNode2(execute_stop=True)
-        time.sleep(20)
+        time.sleep(30)
         res = self.sc_nodes[1].rpc_eth_syncing()["result"]
         assert_true(res == False, "unexpected value for eth_syncing result")
-
 
 if __name__ == "__main__":
     EvmSyncStatus().main()
