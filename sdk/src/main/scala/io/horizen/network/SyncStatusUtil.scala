@@ -13,7 +13,18 @@ object SyncStatusUtil {
   val averageWeightFromGenesis: Double = 0.5
   val averageWeightFromHalf: Double = 1.0
 
-  // TODO add comment
+  /*
+  The calculateEstimatedHighestBlock will calculate the estimated highest block given a set of input data and reading
+  other data from the node view . The method will calculate the block correction performing a weighted average between
+  block corrections from genesis and from sidechain half.
+  The block correction from genesis block is calculated taking the timestamp between the genesis block and the current
+  block and then calculate how many blocks would be present if they had been generated in a period equal to the block
+  time (12 seconds). Calculate in the same way the block correction starting from sidechain half.
+  Then we calculate the global block correction performing a weighted average between the block corrections from genesis
+  with a weight equal to 0.5 and the block correction from sidechain half with a weight of 1.0.
+  With the global block correction, the current timestamp and the current block height is finally possible to calculate
+  the estimated highest block
+   */
   def calculateEstimatedHighestBlock[V <: CurrentView[_<:AbstractHistory[_, _, _, _, _, _], _, _, _]](
       sidechainNodeView: V,
       timeProvider: NetworkTimeProvider,

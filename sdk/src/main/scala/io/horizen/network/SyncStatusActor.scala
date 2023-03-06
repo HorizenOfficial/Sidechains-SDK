@@ -26,7 +26,6 @@ import scala.concurrent.{Await, ExecutionContext}
 class SyncStatusActor[
   TX <: Transaction, H <: SidechainBlockHeaderBase,
   PMOD <: SidechainBlockBase[TX, H],
-  SI <: SidechainSyncInfo,
   FPI <: AbstractFeePaymentsInfo,
   HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
   HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS],
@@ -122,7 +121,6 @@ class SyncStatusActor[
         // retrieve the current block height from the node view
         val currentHeightFromView = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(retrieveCurrentHeight), timeoutDuration)
           .asInstanceOf[Int]
-        log.debug(s"DAG01032022 processNewBlockApplied - current height from view: ${currentHeightFromView}")
 
         // retrieve genesis block timestamp needed for estimated highest block calculation
         genesisBlockTimestamp = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) =>
@@ -133,7 +131,6 @@ class SyncStatusActor[
         val estimatedHighestBlock = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) =>
           SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, params.consensusSecondsInSlot, genesisBlockTimestamp, currentHeightFromView, sidechainBlock.timestamp)), timeoutDuration)
           .asInstanceOf[Int]
-        log.debug(s"DAG03032022 processNewBlockApplied - blocks from current to tip (estimated highest block): ${estimatedHighestBlock}")
 
         // set the current internal state
         syncStatus = true
@@ -167,13 +164,15 @@ class SyncStatusActor[
           resetInternalState() // reset the internal state
         }
 
-        // update the current timestamp every updateHighestBlockCalculationThreshold blocks and reset the counter
+        // recalculate the highest block and reset the counter:
+        // - every updateHighestBlockCalculationThreshold blocks
+        // - if the currentBlock is equal to the calculated highest block
         updateHighestBlockCounter += 1
-        if (updateHighestBlockCounter.compareTo(updateHighestBlockCalculationThreshold) > 0) {
-          val currentHeightFromView = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(retrieveCurrentHeight), timeoutDuration)
-            .asInstanceOf[Int]
+        if (
+          updateHighestBlockCounter.compareTo(updateHighestBlockCalculationThreshold) > 0 ||
+          currentBlock.compareTo(highestBlock) == 0) {
           highestBlock = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) =>
-            SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, params.consensusSecondsInSlot, genesisBlockTimestamp, currentHeightFromView, sidechainBlock.timestamp)), timeoutDuration)
+            SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, params.consensusSecondsInSlot, genesisBlockTimestamp, currentBlock, sidechainBlock.timestamp)), timeoutDuration)
             .asInstanceOf[Int]
           // reset the update highest block counter
           updateHighestBlockCounter = 0
@@ -270,7 +269,6 @@ object SyncStatusActorRef {
   def props[
     TX <: Transaction, H <: SidechainBlockHeaderBase,
     PMOD <: SidechainBlockBase[TX, H],
-    SI <: SidechainSyncInfo,
     FPI <: AbstractFeePaymentsInfo,
     HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
     HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS],
@@ -279,12 +277,11 @@ object SyncStatusActorRef {
     MP <: MemoryPool[TX, MP]
   ](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams, timeProvider: NetworkTimeProvider)
    (implicit ec: ExecutionContext): Props =
-    Props(new SyncStatusActor[TX, H, PMOD, SI, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider))
+    Props(new SyncStatusActor[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider))
 
   def apply[
     TX <: Transaction, H <: SidechainBlockHeaderBase,
     PMOD <: SidechainBlockBase[TX, H],
-    SI <: SidechainSyncInfo,
     FPI <: AbstractFeePaymentsInfo,
     HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
     HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS],
@@ -293,12 +290,11 @@ object SyncStatusActorRef {
     MP <: MemoryPool[TX, MP]
   ](name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams, timeProvider: NetworkTimeProvider)
    (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props[TX, H, PMOD, SI, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider), name)
+    system.actorOf(props[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider), name)
 
   def apply[
     TX <: Transaction, H <: SidechainBlockHeaderBase,
     PMOD <: SidechainBlockBase[TX, H],
-    SI <: SidechainSyncInfo,
     FPI <: AbstractFeePaymentsInfo,
     HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
     HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS],
@@ -307,6 +303,6 @@ object SyncStatusActorRef {
     MP <: MemoryPool[TX, MP]
   ](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams, timeProvider: NetworkTimeProvider)
    (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props[TX, H, PMOD, SI, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider))
+    system.actorOf(props[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider))
 }
 
