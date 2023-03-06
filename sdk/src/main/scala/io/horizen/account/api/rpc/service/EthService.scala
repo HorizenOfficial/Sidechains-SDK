@@ -285,16 +285,12 @@ class EthService(
           highBound = blockContext.blockGasLimit
         }
         // Normalize the max fee per gas the call is willing to spend.
-        var feeCap = BigInteger.ZERO
-        if (params.gasPrice != null && (params.maxFeePerGas != null || params.maxPriorityFeePerGas != null)) {
-          throw new RpcException(
-            RpcError
-              .fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-          )
-        } else if (params.gasPrice != null) {
-          feeCap = params.gasPrice
+        val feeCap = if (params.gasPrice != null) {
+          params.gasPrice
         } else if (params.maxFeePerGas != null) {
-          feeCap = params.maxFeePerGas
+          params.maxFeePerGas
+        } else {
+          BigInteger.ZERO
         }
         // Recap the highest gas limit with account's available balance.
         if (feeCap.bitLength() > 0) {

@@ -116,23 +116,39 @@ public class TransactionArgs {
                 String.format("invalid chainID: got %d, want %d", chainId, saneChainId)
             ));
         }
+        if (nonce == null) {
+            // TODO: should automatically use current nonce from "latest" state
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing nonce"));
+        }
+        if (gas == null) {
+            // TODO: should automatically use gas estimation
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing gas limit"));
+        }
         var saneType = type == null ? 0 : type.intValueExact();
         var optionalToAddress = Optional.ofNullable(to == null ? null : new AddressProposition(to));
 
         switch (saneType) {
             case 0: // LEGACY type
+                if (gasPrice == null) {
+                    // TODO: should automatically use suggested values
+                    throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing gasPrice"));
+                }
                 if (chainId != null) {
                     // eip155
-                    return new EthereumTransaction(saneChainId, optionalToAddress, nonce, gasPrice, gas, value,
-                        data, null
-                    );
+                    return new EthereumTransaction(
+                        saneChainId, optionalToAddress, nonce, gasPrice, gas, value, data, null);
                 } else {
+                    // non-eip155
                     return new EthereumTransaction(optionalToAddress, nonce, gasPrice, gas, value, data, null);
                 }
             case 2: // EIP-1559
-                return new EthereumTransaction(saneChainId, optionalToAddress, nonce, gas, maxPriorityFeePerGas,
-                    maxFeePerGas, value, data, null
-                );
+                if (maxFeePerGas == null || maxPriorityFeePerGas == null) {
+                    // TODO: should automatically use suggested values, i.e. suggestFeeCap+baseFee*2 and suggestFeeCap, respectively
+                    throw new RpcException(
+                        RpcError.fromCode(RpcCode.InvalidParams, "missing maxFeePerGas or maxPriorityFeePerGas"));
+                }
+                return new EthereumTransaction(
+                    saneChainId, optionalToAddress, nonce, gas, maxPriorityFeePerGas, maxFeePerGas, value, data, null);
             default:
                 // unsupported type
                 return null;
