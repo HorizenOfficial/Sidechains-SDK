@@ -2,6 +2,7 @@ package io.horizen.utxo.api.http.route
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
+import com.google.common.primitives.Bytes
 import io.horizen.api.http.route.SidechainApiRouteTest
 import io.horizen.json.SerializationUtil
 import io.horizen.proposition.PublicKey25519Proposition
@@ -314,6 +315,19 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements().asScala.length)
         val tNode = result.get("transaction")
         jsonChecker.assertsOnTransactionJson(tNode)
+      }
+      // add spurious byte after data --> Should fail
+      Post(basePath + "decodeTransactionBytes")
+        .withEntity(SerializationUtil.serialize(ReqDecodeTransactionBytes(
+          BytesUtils.toHexString(Bytes.concat(sidechainTransactionsCompanion.toBytes(memoryPool.get(0)), new Array[Byte](1)))
+        ))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        // assert we got an error of the expected type
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorByteTransactionParsing("", JOptional.empty()).code)
+        // assert we have the expected specific error of that type
+        val errMsg = mapper.readTree(entityAs[String]).get("error").get("detail").asText()
+        assertTrue(errMsg.contains("Spurious bytes found"))
       }
       // companion.parseBytesTry -> FAILURE
       Post(basePath + "decodeTransactionBytes")
