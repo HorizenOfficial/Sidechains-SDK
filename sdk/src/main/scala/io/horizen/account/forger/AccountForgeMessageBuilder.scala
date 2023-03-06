@@ -26,7 +26,18 @@ import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, Secret}
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import io.horizen.utils.{
+  ByteArrayWrapper,
+  ClosableResourceHandler,
+  DynamicTypedSerializer,
+  ForgingStakeMerklePathInfo,
+  ListSerializer,
+  MerklePath,
+  MerkleTree,
+  TimeToEpochUtils,
+  WithdrawalEpochInfo,
+  WithdrawalEpochUtils
+}
 import io.horizen.vrf.VrfOutput
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
@@ -189,12 +200,10 @@ class AccountForgeMessageBuilder(
 
     // 1. As forger address take first address from the wallet
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
-    val forgerAddress = (
-      if (addressList.isEmpty) {
-        if (isPending) new AddressProposition(Address.ZERO)
-        else throw new IllegalArgumentException("No addresses in wallet!")
-      } else addressList.get(0).publicImage().asInstanceOf[AddressProposition]
-      )
+    val forgerAddress = addressList.asScala.headOption.map(_.publicImage().asInstanceOf[AddressProposition]).getOrElse(
+      if (isPending) new AddressProposition(Address.ZERO)
+      else throw new IllegalArgumentException("No addresses in wallet!")
+    )
 
     // 2. calculate baseFee
     val baseFee = calculateBaseFee(nodeView.history, parentId)
