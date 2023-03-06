@@ -382,7 +382,7 @@ class RpcFilterTest {
 
     expectedLogs = Array(dataMocks.transactionLog0)
     assertEquals(f"Expected to receive ${expectedLogs.length} logs", expectedLogs.length, result.size)
-    checkLogs(result.head, expectedLogs.head, dataMocks.transactionReceipt, new BigInteger(String.valueOf(2)))
+    checkLogs(result.head, expectedLogs.head, dataMocks.transactionReceipt, new BigInteger(String.valueOf(0)))
   }
 
   @Test

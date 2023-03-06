@@ -19,8 +19,6 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.io.{PrintWriter, StringWriter}
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 
 abstract class WebSocketAccountRequest(val request: String)
 case object SUBSCRIBE_REQUEST extends WebSocketAccountRequest("eth_subscribe")
@@ -156,9 +154,9 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
 
 private object WebSocketAccountServerEndpoint extends SparkzLogging {
   var subscriptionCounter: AtomicInteger = new AtomicInteger(0)
-  var newHeadsSubscriptions: ArrayBuffer[Subscription] = ArrayBuffer()
-  var newPendingTransactionsSubscriptions: ArrayBuffer[Subscription] = ArrayBuffer()
-  var logsSubscriptions: ArrayBuffer[SubscriptionWithFilter] = ArrayBuffer()
+  var newHeadsSubscriptions: List[Subscription] = List()
+  var newPendingTransactionsSubscriptions: List[Subscription] = List()
+  var logsSubscriptions: List[SubscriptionWithFilter] = List()
 
   val webSocketAccountChannelImpl = new WebSocketAccountChannelImpl()
   private var walletAddresses: Set[Address] = webSocketAccountChannelImpl.getWalletAddresses
@@ -230,48 +228,40 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   }
 
   def addNewHeadsSubscription(subscription: Subscription): Unit = {
-    synchronized{
-      WebSocketAccountServerEndpoint.newHeadsSubscriptions += subscription
-    }
+      newHeadsSubscriptions = subscription :: newHeadsSubscriptions
   }
 
   def addNewPendingTransactionsSubscription(subscription: Subscription): Unit = {
-    synchronized{
-      WebSocketAccountServerEndpoint.newPendingTransactionsSubscriptions += subscription
-    }
+      newPendingTransactionsSubscriptions = subscription :: newPendingTransactionsSubscriptions
   }
 
   def addLogsSubscription(subscription: SubscriptionWithFilter): Unit = {
-    synchronized{
-      WebSocketAccountServerEndpoint.logsSubscriptions += subscription
-    }
+      logsSubscriptions =  subscription :: logsSubscriptions
   }
 
   def removeSubscriptions(subscriptionIdToRemove: BigInteger): Boolean = {
     val foundNewHeadsSubscriptionToRemove = newHeadsSubscriptions.indexWhere(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
     if (foundNewHeadsSubscriptionToRemove != -1) {
-      newHeadsSubscriptions.remove(foundNewHeadsSubscriptionToRemove)
+      newHeadsSubscriptions = newHeadsSubscriptions.filterNot(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
       return true
     }
     val foundNewPendingTransactionsSubscriptionToRemove = newPendingTransactionsSubscriptions.indexWhere(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
     if (foundNewPendingTransactionsSubscriptionToRemove != -1) {
-      newPendingTransactionsSubscriptions.remove(foundNewPendingTransactionsSubscriptionToRemove)
+      newPendingTransactionsSubscriptions = newPendingTransactionsSubscriptions.filterNot(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
       return true
     }
     val foundLogSubscriptionToRemove = logsSubscriptions.indexWhere(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
     if (foundLogSubscriptionToRemove != -1) {
-      logsSubscriptions.remove(foundLogSubscriptionToRemove)
+      logsSubscriptions = logsSubscriptions.filterNot(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
       return true
     }
     false
   }
 
   def removeSession(session: Session): Unit = {
-    synchronized {
       newHeadsSubscriptions = newHeadsSubscriptions.filterNot(subscription => subscription.session.getId.equals(session.getId))
       newPendingTransactionsSubscriptions = newPendingTransactionsSubscriptions.filterNot(subscription => subscription.session.getId.equals(session.getId))
       logsSubscriptions = logsSubscriptions.filterNot(subscription => subscription.session.getId.equals(session.getId))
-    }
   }
 
   def send(websocketResponse: Object, session: Session): Unit = {
