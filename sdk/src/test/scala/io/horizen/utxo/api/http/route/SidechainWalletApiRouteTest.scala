@@ -7,7 +7,6 @@ import io.horizen.api.http.route.WalletBaseErrorResponse.{ErrorFailedToParseSecr
 import io.horizen.api.http.route.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpSecrets, ReqExportSecret, ReqImportSecret}
 import io.horizen.json.SerializationUtil
 import io.horizen.utils.BytesUtils
-import io.horizen.utxo.api.http.route.SidechainTransactionErrorResponse.ErrorByteTransactionParsing
 import io.horizen.utxo.api.http.route.SidechainWalletRestScheme._
 import org.junit.Assert._
 

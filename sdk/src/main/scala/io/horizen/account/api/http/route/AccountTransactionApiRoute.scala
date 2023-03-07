@@ -267,9 +267,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqSignTransaction]) {
           body => {
             applyOnNodeView { sidechainNodeView =>
-              val unsignedTxObj = companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes))
-
-              unsignedTxObj match {
+              companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes)) match {
                 case Success(unsignedTx) =>
                   val txCost = unsignedTx.maxCost
                   val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
@@ -282,7 +280,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   }
                 case Failure(exception) =>
                   ApiResponseUtil.toResponse(ErrorByteTransactionParsing("ErrorByteTransactionParsing", JOptional.of(exception)))
-
               }
             }
           }
@@ -774,14 +771,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 }
 
 object AccountTransactionRestScheme {
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class RespAllTransactions(transactions: List[SidechainTypes#SCAT]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespAllWithdrawalRequests(listOfWR: List[WithdrawalRequest]) extends SuccessResponse

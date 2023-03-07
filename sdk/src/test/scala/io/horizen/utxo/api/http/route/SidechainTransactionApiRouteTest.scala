@@ -4,10 +4,11 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.google.common.primitives.Bytes
 import io.horizen.api.http.route.SidechainApiRouteTest
+import io.horizen.api.http.route.TransactionBaseErrorResponse._
+import io.horizen.api.http.route.TransactionBaseRestScheme.{ReqAllTransactions, ReqDecodeTransactionBytes}
 import io.horizen.json.SerializationUtil
 import io.horizen.proposition.PublicKey25519Proposition
 import io.horizen.utils.BytesUtils
-import io.horizen.utxo.api.http.route.SidechainTransactionErrorResponse.{ErrorByteTransactionParsing, ErrorNotFoundTransactionId, ErrorNotFoundTransactionInput, GenericTransactionError}
 import io.horizen.utxo.api.http.route.SidechainTransactionRestScheme._
 import io.horizen.utxo.transaction.RegularTransactionSerializer
 import org.junit.Assert._
@@ -32,7 +33,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
 
       Post(basePath + "allTransactions").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "allTransactions").withEntity("maybe_a_json") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -40,7 +41,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
 
       Post(basePath + "findById").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "findById").withEntity("maybe_a_json") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -48,7 +49,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
 
       Post(basePath + "decodeTransactionBytes").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "decodeTransactionBytes").withEntity("maybe_a_json") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -56,68 +57,68 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
 
       Post(basePath + "createCoreTransaction").addCredentials(credentials) ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "createCoreTransaction").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "createCoreTransaction").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       Post(basePath + "createCoreTransaction").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       Post(basePath + "createCoreTransactionSimplified").addCredentials(credentials) ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "createCoreTransactionSimplified").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "createCoreTransactionSimplified").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       Post(basePath + "createCoreTransactionSimplified").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       Post(basePath + "sendCoinsToAddress").addCredentials(credentials) ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "sendCoinsToAddress").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "sendCoinsToAddress").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       Post(basePath + "sendCoinsToAddress").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       Post(basePath + "sendTransaction").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "sendTransaction").addCredentials(credentials).withEntity("maybe_a_json") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       Post(basePath + "sendTransaction").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       Post(basePath + "spendForgingStake").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       Post(basePath + "makeForgerStake").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       Post(basePath + "withdrawCoins").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
     }
@@ -136,7 +137,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         assertTrue(result.get("transactions").isArray)
         assertEquals(memoryPool.size(), result.get("transactions").elements().asScala.length)
         val transactionJsonNode = result.get("transactions").elements().asScala.toList
-        for (i <- 0 to transactionJsonNode.size - 1)
+        for (i <- transactionJsonNode.indices)
           jsonChecker.assertsOnTransactionJson(transactionJsonNode(i), memoryPool.get(i))
       }
       // parameter 'format' = false
@@ -152,7 +153,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         assertTrue(result.get("transactionIds").isArray)
         assertEquals(memoryPool.size(), result.get("transactionIds").elements().asScala.length)
         val transactionIdsJsonNode = result.get("transactionIds").elements().asScala.toList
-        for (i <- 0 to transactionIdsJsonNode.size - 1)
+        for (i <- transactionIdsJsonNode.indices)
           assertEquals(memoryPool.get(i).id, transactionIdsJsonNode(i).asText())
       }
     }
@@ -466,6 +467,19 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         } catch {
           case _: Throwable => fail()
         }
+      }
+      // add trailing bytes after payload, it should fail
+      Post(basePath + "sendTransaction")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqSendTransactionPost(
+        BytesUtils.toHexString(transactionBytes) + "abcd"
+      ))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        // assert we got an error of the expected type
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorByteTransactionParsing("", JOptional.empty()).code)
+        // assert we have the expected specific error of that type
+        val errMsg = mapper.readTree(entityAs[String]).get("error").get("detail").asText()
+        assertTrue(errMsg.contains("Spurious bytes found"))
       }
       // BytesUtils.fromHexString(body.transactionBytes) -> ERROR
       Post(basePath + "sendTransaction")

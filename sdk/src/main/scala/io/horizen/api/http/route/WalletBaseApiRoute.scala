@@ -19,7 +19,6 @@ import io.horizen.proposition.{Proposition, VrfPublicKey}
 import io.horizen.secret._
 import io.horizen.transaction.Transaction
 import io.horizen.utils.BytesUtils
-import io.horizen.utxo.api.http.route.ImportSecretsDetail
 import io.horizen.{SidechainNodeViewBase, SidechainTypes}
 import sparkz.core.settings.RESTApiSettings
 
@@ -328,5 +327,18 @@ object WalletBaseErrorResponse {
 
   case class ErrorFailedToParseSecret(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0305"
+  }
+}
+
+
+@JsonView(Array(classOf[Views.Default]))
+case class ImportSecretsDetail private (lineNumber: Int,
+                                        description: String) {
+  def getLineNumber: Int = {
+    lineNumber
+  }
+
+  def getDescription: String = {
+    description
   }
 }
