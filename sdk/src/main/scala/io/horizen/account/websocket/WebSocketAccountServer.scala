@@ -1,7 +1,7 @@
 package io.horizen.account.websocket
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import io.horizen.account.MempoolReAddedTransactions
+import io.horizen.account.NewExecTransactionsEvent
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedVault, SemanticallySuccessfulModifier, SuccessfulTransaction}
@@ -25,7 +25,7 @@ class WebSocketAccountServer(wsPort: Int)
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[_]])
     context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[_]])
     context.system.eventStream.subscribe(self, classOf[ChangedVault[_]])
-    context.system.eventStream.subscribe(self, classOf[MempoolReAddedTransactions[_]])
+    context.system.eventStream.subscribe(self, classOf[NewExecTransactionsEvent])
   }
 
   override def postStop(): Unit = {
@@ -47,7 +47,7 @@ class WebSocketAccountServer(wsPort: Int)
       websocket.onSuccessfulTransaction(tx)
     case ChangedVault(_) =>
       websocket.onChangedVault()
-    case MempoolReAddedTransactions(readdedTxs: Seq[EthereumTransaction]) =>
+    case NewExecTransactionsEvent(readdedTxs: Seq[EthereumTransaction]) =>
       websocket.onMempoolReaddedTransaction(readdedTxs)
   }
 }
