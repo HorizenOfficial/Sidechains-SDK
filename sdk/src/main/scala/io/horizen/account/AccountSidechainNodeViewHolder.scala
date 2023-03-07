@@ -1,6 +1,7 @@
 package io.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.history.AccountHistory
@@ -100,7 +101,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
               restoredState.rollbackTo(idToVersion(rollbackTo)) match {
                 case Success(s) =>
-                  log.debug("State succesfully rolled back")
+                  log.debug("State successfully rolled back")
                   dumpStorages()
                   // We are done with the recovery. The evm-state storage does not need to be dealt with. A consistent
                   // view of it will be built using the db-root got from the metadata state db, that is now consistent
@@ -196,6 +197,12 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 }
 
+object AccountSidechainNodeViewHolder {
+
+  case class NewExecTransactionsEvent(newExecTxs: Iterable[SidechainTypes#SCAT]) extends NodeViewHolderEvent
+
+}
+
 object AccountNodeViewHolderRef {
   def props(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
@@ -241,4 +248,3 @@ object AccountNodeViewHolderRef {
 
 }
 
-case class NewExecTransactionsEvent(newExecTxs: Iterable[SidechainTypes#SCAT]) extends NodeViewHolderEvent

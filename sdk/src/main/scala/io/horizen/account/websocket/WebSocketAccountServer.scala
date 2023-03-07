@@ -1,6 +1,7 @@
 package io.horizen.account.websocket
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.NewExecTransactionsEvent
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction

@@ -2,6 +2,7 @@ package io.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{TestActorRef, TestProbe}
+import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.history.AccountHistory

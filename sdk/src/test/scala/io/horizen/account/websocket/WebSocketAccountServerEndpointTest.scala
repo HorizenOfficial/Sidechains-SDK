@@ -5,7 +5,7 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import io.horizen.SidechainTypes
-import io.horizen.account.NewExecTransactionsEvent
+import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.api.rpc.types.EthereumBlockView
 import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
@@ -137,7 +137,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
   }
 
   @Test
-  def unsbuscriptionTest(): Unit = {
+  def unsubscriptionTest(): Unit = {
     // Test the handle of subscription and unsubscription
 
     // Add client 1

@@ -1,8 +1,8 @@
 package io.horizen.account.performance
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.testkit.{TestActorRef, TestProbe}
-import io.horizen.account.{AccountSidechainNodeViewHolder, NewExecTransactionsEvent}
+import akka.testkit.TestActorRef
+import io.horizen.account.AccountSidechainNodeViewHolder
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.history.AccountHistory
@@ -33,7 +33,7 @@ import java.io.{BufferedWriter, FileWriter}
 import java.math.BigInteger
 import java.util.Calendar
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 /*
