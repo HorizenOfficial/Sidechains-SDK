@@ -1,8 +1,13 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="SimpleApp" type="Application" factoryName="Application">
+    <envs>
+      <env name="LD_PRELOAD" value="/usr/lib/x86_64-linux-gnu/libjemalloc.so.2" />
+    </envs>
     <option name="MAIN_CLASS_NAME" value="com.horizen.examples.SimpleApp" />
     <module name="sidechains-sdk-simpleapp" />
-    <option name="PROGRAM_PARAMETERS" value="examples/simpleapp/src/main/resources/sc_settings.conf" />
+    <option name="PROGRAM_PARAMETERS" value="src/main/resources/sc_settings.conf" />
+    <option name="VM_PARAMETERS" value="--add-opens java.base/java.lang=ALL-UNNAMED" />
+    <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="com.horizen.examples.*" />
