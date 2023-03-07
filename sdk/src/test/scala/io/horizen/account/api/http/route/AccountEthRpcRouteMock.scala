@@ -16,11 +16,13 @@ import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.api.http._
+import io.horizen.evm.LevelDBDatabase
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import io.horizen.json.serializer.ApplicationJsonSerializer
+import io.horizen.network.SyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
 import io.horizen.params.MainNetParams
 import io.horizen.{SidechainSettings, SidechainTypes}
-import io.horizen.evm.LevelDBDatabase
 import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.scalatest.matchers.should.Matchers
@@ -115,6 +117,9 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   })
   val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
 
+  val mockedSyncStatusActor = TestProbe()
+  val mockedSyncStatusActorRef: ActorRef = mockedSyncStatusActor.ref
+
   val mockedNetworkControllerActor = TestProbe()
   mockedNetworkControllerActor.setAutoPilot((sender: ActorRef, msg: Any) => {
     msg match {
@@ -147,6 +152,7 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
     mockedSidechainSettings,
     params,
     mockedSidechainTransactionActorRef,
+    mockedSyncStatusActorRef,
     metadataStorage,
     stateDb,
     messageProcessors

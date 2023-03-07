@@ -1,5 +1,6 @@
 package io.horizen.account.state
 
+import com.google.common.primitives.Bytes
 import io.horizen.account.state.events.AddWithdrawalRequest
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.account.utils.{FeeUtils, ZenWeiConverter}
@@ -67,12 +68,12 @@ class WithdrawalMsgProcessorIntegrationTest
       val expectedListOfWR = new util.ArrayList[WithdrawalRequest]()
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
 
-      // Invalid request for insufficient balance
+      // Invalid request for withdrawal amount under dust threshold
       view.subBalance(msgForListOfWR.getFrom, view.getBalance(msgForListOfWR.getFrom))
       val withdrawalAmount = ZenWeiConverter.convertZenniesToWei(10)
       val msgBalance = addWithdrawalRequestMessage(withdrawalAmount)
-      // Withdrawal request with insufficient balance should result in ExecutionFailed
-      assertThrows[ExecutionFailedException] {
+      // Withdrawal request with amount under dust threshold should result in ExecutionRevertedException
+      assertThrows[ExecutionRevertedException] {
         assertGas(0, msgBalance, view, WithdrawalMsgProcessor, blockContext)
       }
 
@@ -100,6 +101,17 @@ class WithdrawalMsgProcessorIntegrationTest
 
       val txHash2 = Keccak256.hash("second tx")
       view.setupTxContext(txHash2, 10)
+
+      // Negative test: check we have an exception if using a request with bytes which not decode (epoch number not an Uint32)
+      val badMsgGetList = {
+        val params = BytesUtils.fromHexString("46ed7a8f0346ff7e3125646e7ef1e83dcf4af172c69a37550f5c250da430ec04")
+        val data = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig), params)
+        getMessage(WithdrawalMsgProcessor.contractAddress, BigInteger.ZERO, data)
+      }
+      val exGetList = intercept[Throwable] {
+         assertGas(0, badMsgGetList, view, WithdrawalMsgProcessor, defaultBlockContext)
+      }
+      assertTrue(exGetList.getMessage.contains("Could not decode"))
 
       // GetListOfWithdrawalRequest after first withdrawal request creation
       wrListInBytes = assertGas(6300, msgForListOfWR, view, WithdrawalMsgProcessor, blockContext)
@@ -134,6 +146,17 @@ class WithdrawalMsgProcessorIntegrationTest
       // GetListOfWithdrawalRequest after second withdrawal request creation
       wrListInBytes = assertGas(10500, msgForListOfWR, view, WithdrawalMsgProcessor, blockContext)
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
+
+      // Negative test: check we have an exception if using a request with trailing bytes in the input params
+      val badMsg = {
+        val params = Bytes.concat(AddWithdrawalRequestCmdInput(mcAddr).encode(), new Array[Byte](1))
+        val data = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), params)
+        getMessage(WithdrawalMsgProcessor.contractAddress, withdrawalAmount2, data)
+      }
+      val ex = intercept[ExecutionRevertedException] {
+        assertGas(0, badMsg, view, WithdrawalMsgProcessor, defaultBlockContext)
+      }
+      assertTrue(ex.getMessage.contains("Wrong message data field length"))
     }
   }
 

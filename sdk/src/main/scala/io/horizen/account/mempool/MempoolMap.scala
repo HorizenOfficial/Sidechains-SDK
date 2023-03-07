@@ -329,6 +329,7 @@ class MempoolMap(
     //Creates a map with with the max nonce for each account. The txs in a block are ordered by nonce,
     //so there is no need to check if the nonce already in the map is greater or not => the last one is
     //always the greatest.
+    var readdedTxs: Seq[SidechainTypes#SCAT] = Seq()
     val appliedTxNoncesByAccount = TrieMap.empty[SidechainTypes#SCP, BigInteger]
     appliedBlocks.foreach(block => {
       block.transactions.foreach(tx => appliedTxNoncesByAccount.put(tx.getFrom, tx.getNonce))

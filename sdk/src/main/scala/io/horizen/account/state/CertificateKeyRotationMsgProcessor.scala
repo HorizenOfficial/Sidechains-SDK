@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import io.horizen.account.abi.{ABIDecoder, ABIEncodable}
+import io.horizen.account.abi.{ABIDecoder, ABIEncodable, MsgProcessorInputDecoder}
 import io.horizen.account.state.CertificateKeyRotationMsgProcessor.{CertificateKeyRotationContractAddress, CertificateKeyRotationContractCode, SubmitKeyRotationReqCmdSig}
 import io.horizen.account.state.events.SubmitKeyRotation
 import io.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
@@ -23,6 +23,7 @@ import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import java.nio.charset.StandardCharsets
 import java.util
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 trait CertificateKeysProvider {
   private[horizen] def getKeyRotationProof(epochNum: Int, index: Int, keyType: KeyRotationProofType,  view: BaseAccountStateView): Option[KeyRotationProof]
@@ -117,7 +118,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
       None
   }
 
-  private def checkKeyRotationProofValidity(keyRotationProof: KeyRotationProof, newKeySignature: SchnorrProof, currentEpochNum: Int, view: BaseAccountStateView): Unit = {
+  private def checkKeyRotationProofValidity(keyRotationProof: KeyRotationProof, newKeySignature: SchnorrProof, currentEpochNum: Int, view: BaseAccountStateView): Try[Unit] = Try {
     val index = keyRotationProof.index
     if (index < 0 || index >= params.signersPublicKeys.length)
       throw new ExecutionRevertedException(s"Key rotation proof - key index out for range: $index")
@@ -147,11 +148,16 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
   private def execSubmitKeyRotation(msg: Message, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
     //verify
     checkMessageValidity(msg)
+
     val inputData = SubmitKeyRotationCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
     val keyRotationProof = inputData.keyRotationProof
     val keyIndex = keyRotationProof.index
     val keyType = keyRotationProof.keyType
-    checkKeyRotationProofValidity(keyRotationProof, inputData.newKeySignature, currentEpochNum, view)
+    checkKeyRotationProofValidity(keyRotationProof, inputData.newKeySignature, currentEpochNum, view) match {
+      case Success(_) =>
+      case Failure(ex) =>
+        throw new ExecutionRevertedException("Key Rotation Proof is invalid: " + ex.getMessage)
+    }
 
     //save proof
     putKeyRotationProof(currentEpochNum, view, keyRotationProof)
@@ -234,7 +240,9 @@ case class SubmitKeyRotationCmdInput(keyRotationProof: KeyRotationProof, newKeyS
     .format(this.getClass.toString, keyRotationProof)
 }
 
-object SubmitKeyRotationCmdInputDecoder extends ABIDecoder[SubmitKeyRotationCmdInput] {
+object SubmitKeyRotationCmdInputDecoder
+  extends ABIDecoder[SubmitKeyRotationCmdInput]
+    with MsgProcessorInputDecoder[SubmitKeyRotationCmdInput] {
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
     org.web3j.abi.Utils.convert(util.Arrays.asList(

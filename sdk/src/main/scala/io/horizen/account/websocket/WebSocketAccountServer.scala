@@ -1,6 +1,7 @@
 package io.horizen.account.websocket
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import io.horizen.SidechainTypes
 import io.horizen.account.NewExecTransactionsEvent
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction
@@ -47,8 +48,8 @@ class WebSocketAccountServer(wsPort: Int)
       websocket.onSuccessfulTransaction(tx)
     case ChangedVault(_) =>
       websocket.onChangedVault()
-    case NewExecTransactionsEvent(readdedTxs: Seq[EthereumTransaction]) =>
-      websocket.onMempoolReaddedTransaction(readdedTxs)
+    case NewExecTransactionsEvent(newExecTxs: Iterable[SidechainTypes#SCAT]) =>
+      websocket.onMempoolReaddedTransaction(newExecTxs.toSeq.asInstanceOf[Seq[EthereumTransaction]])
   }
 }
 

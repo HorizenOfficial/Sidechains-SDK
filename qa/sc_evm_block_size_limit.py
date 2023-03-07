@@ -82,9 +82,9 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
         evm_address_sc1 = remove_0x_prefix(self.evm_address)
         evm_address_sc2 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
-        # create huge FTs for filling up the MC ref data. This constant allows us to have tx with size ~96K, a little
-        # below the 100K MC limit
-        outputs_in_ft = 1050
+        # create huge FTs for filling up the MC ref data. This constant allows us to have tx with size ~90K, a little
+        # below the 100K MC limit and moreover stay within the max FT number CommTree limit of 4095 FT per sidechain
+        outputs_in_ft = 1000
 
         mc_return_address = mc_node.getnewaddress()
 
@@ -100,7 +100,7 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
 
         # number of block to mine. They will be tried to be referenced by the next SC block. Each MC block built in this way
         # will generate MC ref data of more than 500K, therefore only 9 of them should be included in the SC block
-        # 9 blocks * 4 batch * 1050 ft = 37800 ft outs
+        # 9 blocks * 4 batch * 1000 ft = 36000 ft outs
         mc_blocks = 10
 
         for i in range(0, mc_blocks):
@@ -178,7 +178,7 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
                 sc_best_block['mainchainBlockReferencesData'][i]['sidechainRelatedAggregatedTransaction']['size'])
             assert_equal(len(
                 sc_best_block['mainchainBlockReferencesData'][i]['sidechainRelatedAggregatedTransaction']['newBoxes']),
-                         outputs_in_ft * ft_in_block)  # = 1050 * 8
+                         outputs_in_ft * ft_in_block)  # = 1000 * 4
 
         print("Block size: {}".format(blockSize))
         print("Num of txes in block {}".format(numOfTxInBlock))

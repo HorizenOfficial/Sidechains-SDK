@@ -24,7 +24,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2
 
     var filterQuery: FilterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress.toString)), Option.empty)
-    filterQuery.sanitize()
     var result: Seq[EthereumLogView] = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     var expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2)
@@ -39,7 +38,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress.toString)), Option.apply(Array(Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2)
@@ -54,7 +52,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress2.toString)), Option.apply(Array(Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog3)
@@ -69,7 +66,6 @@ class RpcFilterTest {
     // Expected result: None
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.unusedTransactionAddress.toString)), Option.apply(Array(Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array()
@@ -83,7 +79,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2, log3
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress.toString, dataMocks.transactionAddress2.toString)), Option.apply(Array(Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2, dataMocks.transactionLog3)
@@ -98,7 +93,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress.toString, dataMocks.unusedTransactionAddress.toString)), Option.apply(Array(Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2)
@@ -113,7 +107,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2, log3
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress.toString, dataMocks.transactionAddress2.toString, dataMocks.unusedTransactionAddress.toString)), Option.apply(Array(Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2, dataMocks.transactionLog3)
@@ -128,7 +121,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2, log3
 
     var filterQuery: FilterQuery =  createFilterQuery(Option.empty, Option.empty)
-    filterQuery.sanitize()
     var result: Seq[EthereumLogView] = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     var expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2, dataMocks.transactionLog3)
@@ -143,7 +135,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2, log3
 
     filterQuery =  createFilterQuery(Option.apply(Array()), Option.empty)
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2, dataMocks.transactionLog3)
@@ -158,7 +149,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2, log3
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2, dataMocks.transactionLog3)
@@ -173,7 +163,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2, log3
 
     filterQuery =  createFilterQuery(Option.apply(Array()), Option.apply(Array(Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2, dataMocks.transactionLog3)
@@ -188,7 +177,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log3
 
     var filterQuery: FilterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0))))
-    filterQuery.sanitize()
     var result: Seq[EthereumLogView] = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     var expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog3)
@@ -204,7 +192,6 @@ class RpcFilterTest {
     // Expected result: log2
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic3))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog2)
@@ -218,7 +205,6 @@ class RpcFilterTest {
     // Expected result: log2
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic3))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog2)
@@ -232,7 +218,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log3
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0, dataMocks.transactionTopic1))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog3)
@@ -248,7 +233,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log3
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0, dataMocks.transactionTopic1))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog3)
@@ -264,7 +248,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2, log3
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0, dataMocks.transactionTopic3))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2, dataMocks.transactionLog3)
@@ -278,7 +261,6 @@ class RpcFilterTest {
     // Expected result: log0, log1, log2, log3
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0, dataMocks.transactionTopic1, dataMocks.transactionTopic3))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1, dataMocks.transactionLog2, dataMocks.transactionLog3)
@@ -292,7 +274,6 @@ class RpcFilterTest {
     // Expected result: log0
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0), Array(dataMocks.transactionTopic1))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0)
@@ -306,7 +287,6 @@ class RpcFilterTest {
     // Expected result: log0
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(), Array(dataMocks.transactionTopic1))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0)
@@ -321,7 +301,6 @@ class RpcFilterTest {
     // Only log0 has 3 topics to check
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0), Array(), Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0)
@@ -336,7 +315,6 @@ class RpcFilterTest {
     // No logs with 4 topics
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0), Array(), Array(), Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array()
@@ -350,7 +328,6 @@ class RpcFilterTest {
     // No logs with 4 topics
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(), Array(), Array(), Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array()
@@ -363,7 +340,6 @@ class RpcFilterTest {
     // Expected result: log0
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0), Array(), Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0)
@@ -377,7 +353,6 @@ class RpcFilterTest {
     // Expected result: log0
 
     filterQuery =  createFilterQuery(Option.empty, Option.apply(Array(Array(dataMocks.transactionTopic0), Array(), Array())))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog0)
@@ -393,7 +368,6 @@ class RpcFilterTest {
     // Expected result: log0, log1
 
     var filterQuery: FilterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress.toString)), Option.apply(Array(Array(dataMocks.transactionTopic0))))
-    filterQuery.sanitize()
     var result: Seq[EthereumLogView] = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     var expectedLogs = Array(dataMocks.transactionLog0, dataMocks.transactionLog1)
@@ -408,7 +382,6 @@ class RpcFilterTest {
     // Expected result: log2
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress.toString)), Option.apply(Array(Array(dataMocks.transactionTopic3))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog2)
@@ -423,7 +396,6 @@ class RpcFilterTest {
     // Expected result: log3
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress2.toString)), Option.apply(Array(Array(dataMocks.transactionTopic0))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array(dataMocks.transactionLog3)
@@ -438,7 +410,6 @@ class RpcFilterTest {
     // Expected result: None
 
     filterQuery =  createFilterQuery(Option.apply(Array(dataMocks.transactionAddress2.toString)), Option.apply(Array(Array(dataMocks.transactionTopic1))))
-    filterQuery.sanitize()
     result = RpcFilter.getBlockLogs(dataMocks.getNodeStateMock, dataMocks.mockedBlock, filterQuery)
 
     expectedLogs = Array()

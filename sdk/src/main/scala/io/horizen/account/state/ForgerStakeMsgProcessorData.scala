@@ -1,7 +1,7 @@
 package io.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
-import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
+import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import io.horizen.account.utils.BigIntegerUInt256
@@ -145,7 +145,9 @@ case class AddNewStakeCmdInput(
     .format(this.getClass.toString, forgerPublicKeys, ownerAddress)
 }
 
-object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
+object AddNewStakeCmdInputDecoder
+  extends ABIDecoder[AddNewStakeCmdInput]
+    with MsgProcessorInputDecoder[AddNewStakeCmdInput] {
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
     org.web3j.abi.Utils.convert(util.Arrays.asList(
@@ -184,7 +186,9 @@ case class RemoveStakeCmdInput(
     .format(this.getClass.toString, BytesUtils.toHexString(stakeId), signature)
 }
 
-object RemoveStakeCmdInputDecoder extends ABIDecoder[RemoveStakeCmdInput] {
+object RemoveStakeCmdInputDecoder
+  extends ABIDecoder[RemoveStakeCmdInput]
+    with MsgProcessorInputDecoder [RemoveStakeCmdInput] {
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
     org.web3j.abi.Utils.convert(util.Arrays.asList(
@@ -225,7 +229,9 @@ case class OpenStakeForgerListCmdInput(
 
 }
 
-object OpenStakeForgerListCmdInputDecoder extends ABIDecoder[OpenStakeForgerListCmdInput] {
+object OpenStakeForgerListCmdInputDecoder
+  extends ABIDecoder[OpenStakeForgerListCmdInput]
+    with MsgProcessorInputDecoder[OpenStakeForgerListCmdInput] {
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
     org.web3j.abi.Utils.convert(util.Arrays.asList(

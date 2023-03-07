@@ -93,5 +93,10 @@ In order to build and use `SNAPSHOT.jar` package version refer to the following 
 5. cd jni
 6. mvn clean install -Dmaven.test.skip=true
 7. Go to project Sidechains-SDK
-7. sdk/pom.xml change version of <artifactId>zendoo-sc-cryptolib to version in line 6 of zendoo-sc-cryptolib/jni/pom.xml
-8. mvn clean install -Dmaven.test.skip=true
+8. sdk/pom.xml change version of <artifactId>zendoo-sc-cryptolib to version in line 6 of zendoo-sc-cryptolib/jni/pom.xml
+9. mvn clean install -Dmaven.test.skip=true
+
+## Backward Compatibility
+
+Version 0.7.0 is not backward compatible with any previous versions.
+Due to a change in the consensus protocol, you cannot update any existing Sidechain of version <=0.6.0 into a >=0.7.0

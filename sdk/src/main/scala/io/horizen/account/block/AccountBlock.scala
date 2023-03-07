@@ -68,6 +68,15 @@ class AccountBlock(override val header: AccountBlockHeader,
   }
 
   @throws(classOf[InconsistentSidechainBlockDataException])
+  def verifyGasUsedConsistency(expectedGasUsed: BigInteger): Unit = {
+    if (!expectedGasUsed.equals(header.gasUsed)) {
+      val reason = s"Invalid gas used: actual ${header.gasUsed}, expected $expectedGasUsed"
+      log.error(reason)
+      throw new InconsistentSidechainBlockDataException(reason)
+    }
+  }
+
+  @throws(classOf[InconsistentSidechainBlockDataException])
   def verifyStateRootDataConsistency(stateRoot: Array[Byte]): Unit = {
     if (!java.util.Arrays.equals(stateRoot, header.stateRoot)) {
       val reason = s"Invalid state root hash: actual ${BytesUtils.toHexString(header.stateRoot)}, expected ${BytesUtils.toHexString(stateRoot)}"

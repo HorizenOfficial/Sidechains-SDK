@@ -18,11 +18,13 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
+import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
+import io.horizen.network.SyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
 import io.horizen.params.RegTestParams
 import io.horizen.utils.BytesUtils
 import io.horizen.{EthServiceSettings, SidechainTypes}
-import io.horizen.evm.Address
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
@@ -88,7 +90,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "hash": "0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc",
         "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "miner": "0x1234567891011121314112345678910111213141",
-        "mixHash": "0xbd76bfc4a33248e02d5c5690c345c05e7a0b51ddbba89c1b3621c87358c9cb18",
+        "mixHash": "0x2615aa670ccc0b19233528479b72ba75b133e2cf03c99c886624ded1f4b52123",
         "nonce": "0x0000000000000000",
         "number": "0x1",
         "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000123",
@@ -286,6 +288,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       }
       TestActor.KeepRunning
     })
+    val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
     val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
     val mockedNetworkControllerActor = TestProbe()
@@ -300,9 +303,20 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     })
     val mockedNetworkControllerRef: ActorRef = mockedNetworkControllerActor.ref
 
-    val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
+
+    val mockedSyncStatusActor = TestProbe()
+    mockedSyncStatusActor.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case ReturnSyncStatus =>
+          sender ! new SyncStatus(true, BigInt(250), BigInt(200), BigInt(300))
+      }
+      TestActor.KeepRunning
+    })
+    val mockedSyncStatusActorRef: ActorRef = mockedSyncStatusActor.ref
+
     val ethServiceSettings = EthServiceSettings()
+
     ethService = new EthService(
       nodeViewHolderRef,
       mockedNetworkControllerRef,
@@ -311,7 +325,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ethServiceSettings,
       10,
       "testVersion",
-      transactionActorRef
+      transactionActorRef,
+      mockedSyncStatusActorRef
     )
   }
 
@@ -352,7 +367,13 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def eth_syncing(): Unit = {
-    assertJsonEquals("false", ethService.execute(getRpcRequest()))
+    val expectedSyncStatus =
+      """{
+        "currentBlock": "0xfa",
+        "startingBlock": "0xc8",
+        "highestBlock": "0x12c"
+      }"""
+    assertJsonEquals(expectedSyncStatus, ethService.execute(getRpcRequest()))
   }
 
   @Test
