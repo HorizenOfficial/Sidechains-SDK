@@ -211,10 +211,9 @@ class EthService(
   def signTransaction(params: TransactionArgs): Array[Byte] = {
     val unsignedTx = params.toTransaction(networkParams)
     applyOnAccountView { nodeView =>
-      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), unsignedTx.maxCost())
-        .map(secret => signTransactionWithSecret(secret, unsignedTx))
-        .map(tx => tx.encode(tx.isSigned))
-        .orNull
+      val secret = getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), unsignedTx.maxCost())
+      val tx = signTransactionWithSecret(secret, unsignedTx)
+      tx.encode(tx.isSigned)
     }
   }
 
@@ -227,27 +226,28 @@ class EthService(
     val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
     val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ message
     applyOnAccountView { nodeView =>
-      getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
-        .map(secret => secret.sign(messageToSign))
-        .map(signature => signature.getR ++ signature.getS ++ signature.getV)
-        .orNull
+      val secret = getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
+      val signature = secret.sign(messageToSign)
+      signature.getR ++ signature.getS ++ signature.getV
     }
   }
 
   private def getFittingSecret(
       wallet: AccountWallet,
       state: AccountState,
-      fromAddress: Option[Address],
+      sender: Option[Address],
       minimumBalance: BigInteger
-  ): Option[PrivateKeySecp256k1] = {
-    wallet
+  ): PrivateKeySecp256k1 = {
+    val matchingKeys = wallet
       .secretsOfType(classOf[PrivateKeySecp256k1])
       .map(_.asInstanceOf[PrivateKeySecp256k1])
-      .find(secret =>
-        // if from address is given the secrets public key needs to match, otherwise check all of the secrets
-        fromAddress.forall(_.equals(secret.publicImage.address)) &&
-          state.getBalance(secret.publicImage.address).compareTo(minimumBalance) >= 0
-      )
+      // if from address is given the secrets public key needs to match, otherwise check all of the secrets
+      .filter(secret => sender.forall(_.equals(secret.publicImage.address)))
+    if (matchingKeys.isEmpty) {
+      throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "no matching key for given sender"))
+    }
+    matchingKeys.find(secret => state.getBalance(secret.publicImage.address).compareTo(minimumBalance) >= 0)
+      .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds")))
   }
 
   private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
