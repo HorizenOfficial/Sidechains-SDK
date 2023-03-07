@@ -21,6 +21,8 @@ import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionA
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
+import io.horizen.network.SyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
 import io.horizen.params.RegTestParams
 import io.horizen.utils.BytesUtils
 import io.horizen.{EthServiceSettings, SidechainTypes}
@@ -287,6 +289,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       }
       TestActor.KeepRunning
     })
+    val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
     val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
     val mockedNetworkControllerActor = TestProbe()
@@ -301,10 +304,21 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     })
     val mockedNetworkControllerRef: ActorRef = mockedNetworkControllerActor.ref
 
-    val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
+
+    val mockedSyncStatusActor = TestProbe()
+    mockedSyncStatusActor.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case ReturnSyncStatus =>
+          sender ! new SyncStatus(true, BigInt(250), BigInt(200), BigInt(300))
+      }
+      TestActor.KeepRunning
+    })
+    val mockedSyncStatusActorRef: ActorRef = mockedSyncStatusActor.ref
+
     val ethServiceSettings = EthServiceSettings()
     val transactionsCompanion = getDefaultAccountTransactionsCompanion
+
     ethService = new EthService(
       nodeViewHolderRef,
       mockedNetworkControllerRef,
@@ -314,6 +328,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       10,
       "testVersion",
       transactionActorRef,
+      mockedSyncStatusActorRef,
       transactionsCompanion
     )
   }
@@ -355,7 +370,13 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def eth_syncing(): Unit = {
-    assertJsonEquals("false", ethService.execute(getRpcRequest()))
+    val expectedSyncStatus =
+      """{
+        "currentBlock": "0xfa",
+        "startingBlock": "0xc8",
+        "highestBlock": "0x12c"
+      }"""
+    assertJsonEquals(expectedSyncStatus, ethService.execute(getRpcRequest()))
   }
 
   @Test

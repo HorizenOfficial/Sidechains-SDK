@@ -1,5 +1,6 @@
 package io.horizen.account.api.rpc.types;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -14,6 +15,7 @@ import io.horizen.evm.Hash;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Replicated from the original implementation in GETH, see:
@@ -24,17 +26,17 @@ public class FilterQuery {
     /**
      * used by eth_getLogs, return logs only from block with this hash
      */
-    public Hash blockHash;
+    public final Hash blockHash;
 
     /**
      * beginning of the queried range, null means genesis block
      */
-    public String fromBlock;
+    public final String fromBlock;
 
     /**
      * end of the range, null means the latest block
      */
-    public String toBlock;
+    public final String toBlock;
 
     /**
      * Restricts matches to events created by specific contracts.
@@ -44,7 +46,7 @@ public class FilterQuery {
      * </p>
      */
     @JsonDeserialize(using = AddressFilterDeserializer.class)
-    public Address[] address;
+    public final Address[] address;
 
     /**
      * The Topic list restricts matches to particular event topics. Each event has a list
@@ -61,7 +63,31 @@ public class FilterQuery {
      * </ul>
      */
     @JsonDeserialize(using = TopicFilterDeserializer.class)
-    public Hash[][] topics;
+    public final Hash[][] topics;
+
+    public FilterQuery(
+        @JsonProperty("blockHash") Hash blockHash,
+        @JsonProperty("fromBlock") String fromBlock,
+        @JsonProperty("toBlock") String toBlock,
+        @JsonProperty("address") Address[] address,
+        @JsonProperty("topics") Hash[][] topics
+    ) throws RpcException {
+        if (blockHash != null && (fromBlock != null || toBlock != null)) {
+            throw new RpcException(RpcError.fromCode(
+                RpcCode.InvalidParams,
+                "cannot specify both BlockHash and FromBlock/ToBlock, choose one or the other"
+            ));
+        }
+        if (blockHash == null) {
+            if (fromBlock == null) fromBlock = "earliest";
+            if (toBlock == null) toBlock = "latest";
+        }
+        this.blockHash = blockHash;
+        this.fromBlock = fromBlock;
+        this.toBlock = toBlock;
+        this.address = Objects.requireNonNullElse(address, new Address[0]);
+        this.topics = Objects.requireNonNullElse(topics, new Hash[0][0]);
+    }
 
     private static class AddressFilterDeserializer extends JsonDeserializer<Address[]> {
         @Override
@@ -141,26 +167,6 @@ public class FilterQuery {
                 }
             }
             return topics;
-        }
-    }
-
-    public void sanitize() throws RpcException {
-        if (blockHash != null) {
-            if (fromBlock != null || toBlock != null) {
-                throw new RpcException(RpcError.fromCode(
-                    RpcCode.InvalidParams,
-                    "cannot specify both BlockHash and FromBlock/ToBlock, choose one or the other"
-                ));
-            }
-        } else {
-            if (fromBlock == null) fromBlock = "earliest";
-            if (toBlock == null) toBlock = "latest";
-        }
-        if (address == null) {
-            address = new Address[0];
-        }
-        if (topics == null) {
-            topics = new Hash[0][0];
         }
     }
 

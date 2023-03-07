@@ -49,6 +49,14 @@ public class RpcService {
             return convertedArgs;
         } catch (IllegalArgumentException err) {
             LogManager.getLogger().trace("RPC call with invalid params: " + method, err);
+            // look for an RpcException in the root cause
+            var cause = err.getCause();
+            while (cause != null) {
+                if (cause instanceof RpcException) {
+                    throw (RpcException) cause;
+                }
+                cause = cause.getCause();
+            }
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, err.getMessage()));
         }
     }

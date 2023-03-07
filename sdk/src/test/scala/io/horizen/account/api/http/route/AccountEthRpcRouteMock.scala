@@ -115,6 +115,9 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   })
   val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
 
+  val mockedSyncStatusActor = TestProbe()
+  val mockedSyncStatusActorRef: ActorRef = mockedSyncStatusActor.ref
+
   val mockedNetworkControllerActor = TestProbe()
   mockedNetworkControllerActor.setAutoPilot((sender: ActorRef, msg: Any) => {
     msg match {
@@ -147,6 +150,7 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
     mockedSidechainSettings,
     params,
     mockedSidechainTransactionActorRef,
+    mockedSyncStatusActorRef,
     metadataStorage,
     stateDb,
     messageProcessors,

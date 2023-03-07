@@ -24,6 +24,7 @@ import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.evm.LevelDBDatabase
 import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
+import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
@@ -144,6 +145,8 @@ class AccountSidechainApp @Inject()
   val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
+  // Init Sync Status actor
+  val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
@@ -152,7 +155,7 @@ class AccountSidechainApp @Inject()
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, networkControllerRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala, sidechainTransactionsCompanion)
+    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, networkControllerRef, sidechainSettings, params, sidechainTransactionActorRef, syncStatusActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala, sidechainTransactionsCompanion)
   )
 
   val nodeViewProvider: NodeViewProvider[
