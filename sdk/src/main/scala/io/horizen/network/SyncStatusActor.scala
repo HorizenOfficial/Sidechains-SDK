@@ -255,15 +255,16 @@ class SyncStatusActor[
 
 object SyncStatusActor {
 
-  case class NotifySyncStart(syncStatus: SyncStatus)
+  sealed trait SyncEvent
 
-  case object NotifySyncStop
+  case class NotifySyncStart(syncStatus: SyncStatus) extends SyncEvent
+  case object NotifySyncStop extends SyncEvent
 
   object ReceivableMessages {
     case object ReturnSyncStatus
   }
 
-  object InternalReceivableMessages {
+  private[network] object InternalReceivableMessages {
     case object CheckBlockTimestamps
   }
 
@@ -309,4 +310,3 @@ object SyncStatusActorRef {
    (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider))
 }
-

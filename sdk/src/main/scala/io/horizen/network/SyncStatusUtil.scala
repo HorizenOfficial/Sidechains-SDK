@@ -70,14 +70,5 @@ object SyncStatusUtil {
     estimatedHighestBlock
   }
 
-  // method to retrieve the genesis block timestamp needed in the estimated highest block calculation
-  def getGenesisBlockTimestamp[V <: CurrentView[_ <: AbstractHistory[_, _, _, _, _, _], _, _, _]](
-       sidechainNodeView: V,
-   ): Long = {
-    val genesisBlockId = sidechainNodeView.history.getBlockIdByHeight(1).get()
-    val genesisBlockInfo = sidechainNodeView.history.getBlockInfoById(genesisBlockId).get()
-    genesisBlockInfo.timestamp
-  }
-
 }
 

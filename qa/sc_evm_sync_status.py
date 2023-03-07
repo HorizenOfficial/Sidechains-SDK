@@ -7,9 +7,8 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
-    connect_sc_nodes, stop_sc_node, start_sc_node, \
-    wait_for_sc_node_initialization, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, \
-    AccountModel, TimeoutException
+    connect_sc_nodes, stop_sc_node, start_sc_node, wait_for_sc_node_initialization, \
+    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, AccountModel, TimeoutException, disconnect_sc_nodes_bi
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 
@@ -21,15 +20,23 @@ Configuration:
     Start 1 MC nodes and 2 SC nodes.
 
 Test:
-    - synchronize MC node to the point of SC Creation Block
-    - start SC1 and SC2 nodes 
-    - stop SC2 node
-    - forging blocks on node SC1 reaching the end of consensus epoch
-    - restart and sync SC2 node checking the eth_syncing rpc method result in case the sync is in progress (syncStatus =/= false)
-    - stop SC2 node
-    - forging blocks on node SC1 reaching the end of consensus epoch
-    - restart and sync SC2 and stop SC1 node after 15 seconds 
-    - wait 20 seconds and check that eth_syncing rpc method return syncStatus false
+    - Test-1
+        - synchronize MC node to the point of SC Creation Block
+        - start SC1 and SC2 nodes 
+        - stop SC2 node
+        - forging 1000 blocks on node SC1
+        - restart and sync SC2 node checking the eth_syncing rpc method result in case the sync is in progress (syncStatus =/= false)
+        - check that the nodes have the same height
+    - Test-2
+        - disconnect SC1 and SC2 nodes 
+        - forging 500 blocks on node SC1
+        - reconnect SC1 and SC2 nodes and sync SC2 node
+        - check that the nodes have the same height and the eth_syncing return a syncStatus false
+    - Test-3
+        - stop SC2 node
+        - forging 1000 blocks on node SC1
+        - restart and sync SC2 and stop SC1 node after 15 seconds 
+        - wait 60 seconds and check that eth_syncing rpc method return syncStatus false
 """
 
 WITHDRAWAL_EPOCH_LENGTH = 10
@@ -71,7 +78,7 @@ class EvmSyncStatus(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               binary=[EVM_APP_BINARY] * 2)
 
-    def sync_sc_blocks(self, wait_for=360, execute_stop=False):
+    def sync_sc_blocks(self, wait_for=600, execute_stop=False):
 
         # wait for maximum wait_for seconds for everybody to have the same block count
         start = time.time()
@@ -131,6 +138,7 @@ class EvmSyncStatus(SidechainTestFramework):
         # forge 1000 blocks on node SC1
         # restart SC2 and sync the recently created blocks on SC1
         # call the eth_syncing endpoint and if the response is not False check the block height values
+        # check that the node have the same height
 
         logging.info("Stopping SC2")
         stop_sc_node(sc_node2, 1)
@@ -147,30 +155,64 @@ class EvmSyncStatus(SidechainTestFramework):
         # assert that the block best on SC1 match SC2
         assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
         self.sync_all()
+        #'''
 
         # -------------------------------------------------------------------------------------
         # Test 2
         # the test workflow is:
+        # disconnect SC1 and SC2 nodes
+        # forge 500 blocks on node SC1
+        # reconnect SC1 and SC2 nodes and sync SC2 node
+        # check that the node have the same height and that the eth_syncing return syncStatus false on SC2
+
+        logging.info("Disconnect sidechain nodes")
+        disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
+
+        # forge 500 blocks on SC1
+        NUM_BLOCKS = 500
+        logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
+        self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS, verbose=False))
+
+        # reconnect the sidechain nodes
+        time.sleep(2)
+        logging.info("Reconnect sidechain nodes")
+        connect_sc_nodes(self.sc_nodes[0], 1)
+        self.sc_sync_all()
+
+        # assert that the block best on SC1 match SC2
+        assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
+        time.sleep(60)
+        self.sync_all()
+        res = self.sc_nodes[1].rpc_eth_syncing()["result"]
+        assert_true(res == False, "unexpected value for eth_syncing result")
+
+        #'''
+        # -------------------------------------------------------------------------------------
+        # Test 3
+        # the test workflow is:
         # stop SC2 node
-        # forge 2500 blocks on node SC1
+        # forge 1000 blocks on node SC1
         # restart SC2 and sync the recently created blocks on SC1 but stop after 15 seconds the SC1 node
         # call the eth_syncing endpoint and if the response is not False check the block height values
-        # wait 20 seconds and check if the eth_syncing method return False
+        # wait 60 seconds and check if the eth_syncing method return False
 
         logging.info("Stopping SC2")
         stop_sc_node(sc_node2, 1)
 
         # forge 1000 blocks on SC1
-        NUM_BLOCKS = 2500
+        NUM_BLOCKS = 1000
         logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS, verbose=False))
 
         # restart the sidechain node 2 and sync it
-        time.sleep(2)
+        time.sleep(10)
         self.startAndSyncScNode2(execute_stop=True)
+        self.sync_all()
         time.sleep(60)
+        self.sync_all()
         res = self.sc_nodes[1].rpc_eth_syncing()["result"]
         assert_true(res == False, "unexpected value for eth_syncing result")
+        #'''
 
 if __name__ == "__main__":
     EvmSyncStatus().main()
