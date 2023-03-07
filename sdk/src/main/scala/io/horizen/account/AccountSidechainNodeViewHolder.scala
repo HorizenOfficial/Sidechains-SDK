@@ -35,7 +35,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      customMessageProcessors: Seq[MessageProcessor],
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, timeProvider){
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, timeProvider)
+  with AccountEventNotifier {
 
   override type HSTOR = AccountHistoryStorage
   override type HIS = AccountHistory
@@ -126,7 +127,10 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
       state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, blockHashProvider)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
-      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState(), sidechainSettings.accountMempool))
+      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(),
+        () => minimalState(),
+        sidechainSettings.accountMempool,
+        () => this))
     } yield (history, state, wallet, pool)
 
     val result = checkAndRecoverStorages(restoredData)
@@ -140,7 +144,10 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
-      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState(), sidechainSettings.accountMempool))
+      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(),
+                                                           () => minimalState(),
+                                                           sidechainSettings.accountMempool,
+                                                           () => this))
     } yield (history, state, wallet, pool)
 
     result.get
@@ -181,11 +188,12 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   override protected def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock], memPool: MP, state: MS): MP = {
-    //Update mempool and send a MempoolReaddedTransactions with the transactions reverted from the blockchain and re added to the mempool
-    val updatedMempool = memPool.updateMemPool(removedBlocks, appliedBlocks, (addedTx: Seq[SidechainTypes#SCAT]) => {context.system.eventStream.publish(MempoolReAddedTransactions(addedTx))})
-    updatedMempool
+    memPool.updateMemPool(removedBlocks, appliedBlocks)
   }
 
+  override def sendNewExecTxsEvent(listOfNewExecTxs: Iterable[SidechainTypes#SCAT]): Unit = {
+    context.system.eventStream.publish(NewExecTransactionsEvent(listOfNewExecTxs))
+  }
 }
 
 object AccountNodeViewHolderRef {
@@ -233,4 +241,4 @@ object AccountNodeViewHolderRef {
 
 }
 
-case class MempoolReAddedTransactions[T <: SidechainTypes#SCAT](readdedTxs: Seq[T]) extends NodeViewHolderEvent
+case class NewExecTransactionsEvent(newExecTxs: Iterable[SidechainTypes#SCAT]) extends NodeViewHolderEvent

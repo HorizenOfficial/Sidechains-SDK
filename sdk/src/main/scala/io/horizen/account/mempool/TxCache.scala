@@ -70,10 +70,13 @@ class TxCache(txLifetime: FiniteDuration) {
   }
 
 
-  def promoteTransaction(txId: ModifierId): Unit = {
-    all.get(txId).foreach { txInfo =>
-      txInfo.executableStatus = TxExecutableStatus.EXEC
-      nonExecSizeInSlots -= txSizeInSlot(txInfo.tx)
+  def promoteTransaction(txId: ModifierId): SidechainTypes#SCAT = {
+    all.get(txId) match {
+      case Some(txInfo) =>
+        txInfo.executableStatus = TxExecutableStatus.EXEC
+        nonExecSizeInSlots -= txSizeInSlot(txInfo.tx)
+        txInfo.tx
+      case None => throw new IllegalStateException("Trying to promote a non existent transaction")
     }
   }
 
