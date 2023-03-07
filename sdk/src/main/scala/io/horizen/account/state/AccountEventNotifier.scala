@@ -4,7 +4,7 @@ import io.horizen.SidechainTypes
 
 
 trait AccountEventNotifier {
-  def sendNewExecTxsEvent(listOfNewExecTxs: Iterable[SidechainTypes#SCAT])
+  def sendNewExecTxsEvent(listOfNewExecTxs: Iterable[SidechainTypes#SCAT]): Unit
 }
 
 trait AccountEventNotifierProvider {
