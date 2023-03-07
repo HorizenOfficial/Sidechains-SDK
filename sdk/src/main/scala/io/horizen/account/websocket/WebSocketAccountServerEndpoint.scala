@@ -122,7 +122,7 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
     val subscriptionIdsToRemove = EthJsonMapper.deserialize(rpcRequest.params.toString, classOf[Array[BigInteger]])
 
     // The RPC format allows to put multiple subscription Ids, but accordingly to the GETH implementation, only the first one is processed
-    val removedSubscription = WebSocketAccountServerEndpoint.removeSubscriptions(subscriptionIdsToRemove(0))
+    val removedSubscription = WebSocketAccountServerEndpoint.removeSubscription(subscriptionIdsToRemove(0))
     if (!removedSubscription) {
       WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
         new RpcError(RpcCode.InvalidParams, s"Subscription ID not found.", "")),
@@ -142,8 +142,9 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
   private def tryGetRpcRequestId(message: String): Option[RpcId] = {
     var rpcId: Option[RpcId] = Option.empty
     try {
-      val rpcRequest = new RpcRequest(EthJsonMapper.getMapper.readTree(message))
-      rpcId = Option.apply(rpcRequest.id)
+      val rpcRequest = EthJsonMapper.getMapper.readTree(message)
+      if (rpcRequest.has("id"))
+        rpcId = Option.apply(new RpcId(rpcRequest.get("id")))
     } catch {
       case ex: Throwable =>
         log.error("Missing id field in websocket request")
@@ -222,9 +223,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   }
 
   def onVaultChanged(): Unit = {
-    synchronized{
-      walletAddresses = webSocketAccountChannelImpl.getWalletAddresses
-    }
+    walletAddresses = webSocketAccountChannelImpl.getWalletAddresses
   }
 
   def addNewHeadsSubscription(subscription: Subscription): Unit = {
@@ -239,7 +238,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
       logsSubscriptions =  subscription :: logsSubscriptions
   }
 
-  def removeSubscriptions(subscriptionIdToRemove: BigInteger): Boolean = {
+  def removeSubscription(subscriptionIdToRemove: BigInteger): Boolean = {
     val foundNewHeadsSubscriptionToRemove = newHeadsSubscriptions.indexWhere(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
     if (foundNewHeadsSubscriptionToRemove != -1) {
       newHeadsSubscriptions = newHeadsSubscriptions.filterNot(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
