@@ -8,7 +8,7 @@ from SidechainTestFramework.account.ac_utils import format_eoa, format_evm, depl
     contract_function_static_call, contract_function_call, generate_block_and_get_tx_receipt
 from SidechainTestFramework.scutil import is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, \
     generate_next_block
-from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, fail
 
 """
 Check an EVM ERC20 Smart Contract.
@@ -132,19 +132,16 @@ class SCEvmERC20Contract(AccountChainSetup):
 
         # Test reverting
         reverting_transfer_amount = 2
-        exception_thrown = False
         try:
             method = 'transfer(address,uint256)'
             contract_function_static_call(sc_node, smart_contract, smart_contract_address, evm_address,
                                           method, other_address,
                                           reverting_transfer_amount)
         except EvmExecutionError as err:
-            exception_thrown = True
             logging.info("Expected exception thrown: {}".format(err))
 
-        finally:
-            assert_true(exception_thrown, "Exception should have been thrown")
-            pass
+        else:
+            fail("Exception should have been thrown")
 
         res = smart_contract.get_balance(sc_node, evm_address, smart_contract_address)
         assert_equal(initial_balance - transfer_amount, res[0])

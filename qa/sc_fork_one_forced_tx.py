@@ -14,7 +14,7 @@ from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoi
 from httpCalls.wallet.allBoxes import http_wallet_allBoxes
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from test_framework.util import assert_true, assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
 """
     Setup 1 SC Node with a closed list of forger.
@@ -119,16 +119,15 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
 
         # Generate block with unverified tx with low amount, it should fail to validate against stake
         low_amount_tx_bytes = sendCoinsToAddressDryRun(sc_node1, new_public_key, 0, 0)["transactionBytes"]
-        error_occurred = False
         try:
             generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True,
                                 forced_tx=[low_amount_tx_bytes])
         except Exception as e:
             logging.info("We had an exception as expected: {}".format(str(e)))
             assert_true("semantically invalid" in str(e))
-            error_occurred = True
+        else:
+            fail("Forced transaction should fail to verify against stake")
 
-        assert_true(error_occurred, "Forced transaction should fail to verify against stake")
         # Generate block with forced unverified openStakeTransaction, it should succeed and transaction be included
         forger0_box = self.find_box(allBoxes, self.allowed_forger_propositions[0].publicKey)
         open_stake_tx_bytes = createOpenStakeTransaction(sc_node1, forger0_box["id"], new_public_key, forger_index=0, fee=forger0_box["value"])["transactionBytes"]

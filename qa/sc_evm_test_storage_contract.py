@@ -6,7 +6,7 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
 from SidechainTestFramework.account.ac_utils import format_evm, generate_block_and_get_tx_receipt
 from SidechainTestFramework.scutil import generate_next_blocks
-from test_framework.util import assert_equal, assert_true
+from test_framework.util import assert_equal, assert_true, fail
 
 """
 Check an EVM Storage Smart Contract.
@@ -91,16 +91,13 @@ class SCEvmStorageContract(AccountChainSetup):
         tx_hash = block['result']['transactions'][0]
         logging.info(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
         logging.info(sc_node.rpc_eth_getTransactionByHash(tx_hash))
-        was_exception = False
         test_message = 'This is a message'
         try:
             self.__set_storage_value(smart_contract, smart_contract_address, self.evm_address, test_message,
                                      static_call=True, generate_block=False)
         except EvmExecutionError as err:
             logging.info(err)
-            was_exception = True
-        finally:
-            assert_true(not was_exception, "static call failed but should not have")
+            fail("static call failed but should not have")
 
         tx_receipt = self.__set_storage_value(smart_contract, smart_contract_address, self.evm_address,
                                               test_message,
