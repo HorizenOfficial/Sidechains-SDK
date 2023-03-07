@@ -258,7 +258,7 @@ object SyncStatusActor {
   sealed trait SyncEvent
 
   case class NotifySyncStart(syncStatus: SyncStatus) extends SyncEvent
-  case object NotifySyncStop extends SyncEvent
+  case class NotifySyncStop() extends SyncEvent
 
   object ReceivableMessages {
     case object ReturnSyncStatus
