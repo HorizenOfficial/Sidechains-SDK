@@ -101,7 +101,6 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
             new RpcError(RpcCode.InvalidParams, "Missing filters (address, topics).", "")),
             session)
         val filterQuery = EthJsonMapper.deserialize(rpcParams.get(1).toString, classOf[FilterQuery])
-        filterQuery.sanitize()
         val subscriptionId = createSubscriptionId()
         WebSocketAccountServerEndpoint.addLogsSubscription(SubscriptionWithFilter(session, subscriptionId,
           filterQuery
