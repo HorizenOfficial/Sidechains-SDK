@@ -30,6 +30,10 @@ import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import io.horizen.{EthServiceSettings, SidechainTypes}
+import io.horizen.evm.{Address, Hash, TraceOptions}
+import io.horizen.evm.results.ProofAccountResult
+import io.horizen.network.SyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -44,7 +48,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, Future}
 import scala.jdk.CollectionConverters
 import scala.language.postfixOps
@@ -58,7 +62,8 @@ class EthService(
     settings: EthServiceSettings,
     maxIncomingConnections: Int,
     rpcClientVersion: String,
-    sidechainTransactionActorRef: ActorRef
+    sidechainTransactionActorRef: ActorRef,
+    syncStatusActorRef: ActorRef
 ) extends RpcService
       with ClosableResourceHandler
       with SparkzLogging {
@@ -779,7 +784,18 @@ class EthService(
   def eth_getUncleByBlockNumberAndIndex(tag: String, index: BigInteger): Null = null
 
   @RpcMethod("eth_syncing")
-  def eth_syncing() = false
+  def eth_syncing(): Any = {
+    implicit val timeout: Timeout = new Timeout(nvtimeout)
+    Try {
+      Await.result(syncStatusActorRef ? ReturnSyncStatus(), nvtimeout).asInstanceOf[SyncStatus]
+    } match {
+      case Success(syncStatus: SyncStatus) =>
+        if (!syncStatus.syncStatus) false
+        else syncStatus
+      case Failure(e) =>
+        throw new RpcException(RpcError.fromCode(RpcCode.InternalError, s"error during eth_syncing call: ${e.getMessage}"))
+    }
+  }
 
   private def traceBlockById(blockId: ModifierId, config: TraceOptions): List[JsonNode] = {
     applyOnAccountView { nodeView =>

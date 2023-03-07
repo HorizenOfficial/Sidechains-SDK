@@ -2,8 +2,8 @@ package io.horizen.api.http
 
 import io.horizen.consensus.ConsensusEpochAndSlot
 import io.horizen.forge.ForgingInfo
-import sparkz.util.ModifierId
 import io.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
+import sparkz.util.ModifierId
 
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable
@@ -33,6 +33,7 @@ class SidechainApiMockConfiguration {
   private var should_history_getMainchainBlockReferenceByHash_return_value = true
   private var should_history_getTransactionsSortedByFee_return_value = true
   private var should_transactionActor_BroadcastTransaction_reply = true
+  private var should_syncStatusActor_ReturnSyncStatus_reply = true
   private var should_memPool_searchTransactionInMemoryPool_return_value = true
   private var should_history_searchTransactionInBlockchain_return_value = true
   private var should_history_searchTransactionInBlock_return_value = true
@@ -112,6 +113,10 @@ class SidechainApiMockConfiguration {
   def getShould_transactionActor_BroadcastTransaction_reply(): Boolean = should_transactionActor_BroadcastTransaction_reply
 
   def setShould_transactionActor_BroadcastTransaction_reply(value: Boolean): Unit = should_transactionActor_BroadcastTransaction_reply = value
+
+  def getShould_syncStatusActor_ReturnSyncStatus_reply(): Boolean = should_syncStatusActor_ReturnSyncStatus_reply
+
+  def setShould_syncStatusActor_ReturnSyncStatus_reply(value: Boolean): Unit = should_syncStatusActor_ReturnSyncStatus_reply = value
 
   def getShould_memPool_searchTransactionInMemoryPool_return_value(): Boolean = should_memPool_searchTransactionInMemoryPool_return_value
 
