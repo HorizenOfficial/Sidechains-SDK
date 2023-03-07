@@ -16,6 +16,7 @@ import io.horizen.account.network.AccountNodeViewSynchronizer
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.state.MessageProcessor
 import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
+import io.horizen.account.websocket.WebSocketAccountServerRef
 import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
@@ -31,12 +32,6 @@ import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.transaction._
 import io.horizen.utils.{BytesUtils, Pair}
-import io.horizen._
-import io.horizen.account.api.http.route.{AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
-import io.horizen.account.websocket.WebSocketAccountServerRef
-import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
-import io.horizen.helper.{TransactionSubmitProvider, TransactionSubmitProviderImpl}
-import io.horizen.evm.LevelDBDatabase
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
