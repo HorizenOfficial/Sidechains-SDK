@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 import logging
 
-from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.ac_utils import CallMethod, deploy_smart_contract, \
-    contract_function_static_call, contract_function_call, ac_makeForgerStake
+from SidechainTestFramework.account.ac_utils import CallMethod
 from SidechainTestFramework.scutil import generate_next_block, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, generate_next_blocks
-from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain
-from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
+from test_framework.util import assert_equal, assert_true, assert_false
 from SidechainTestFramework.account_websocket_client import AccountWebsocketClient
-from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei
 import pprint
 import json
 import time
@@ -31,6 +26,14 @@ Configuration: bootstrap 2 SC nodes and start it with genesis info extracted fro
     - The SC node 2 starts the account websocket
     
 Test:
+    - Connect a WS client on SC node 2
+    - Initialize the SC nodes
+    - Verify that we received the websocket event SyncStart
+    - Disconnect SC node 1 and SC node 2
+    - Generate 600 blocks on SC node 1
+    - Reconnnect the SC node 1 and SC node 2 and generate a block
+    - Verify that we received the websocket event SyncUpdate (sent every 500 synced block)
+    - Verify that we received the websocket event SyncStop
 """
 
 websocket_server_port = 8027
@@ -41,8 +44,11 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
     def __init__(self):
         super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2, websocket_server_port=[None, websocket_server_port])
 
-    def checkSyncUpdate(self, wsEvent):
+    def checkSyncUpdate(self, wsEvent, currentBlock, startingBlock):
         assert_true(wsEvent["syncing"])
+        assert_equal(wsEvent["status"]["currentBlock"], currentBlock)
+        assert_equal(wsEvent["status"]["startingBlock"], startingBlock)
+        assert_true("highestBlock" in wsEvent["status"]) #Due to the behavior of the STF we can't check this value
 
 
     def run_test(self):
@@ -69,7 +75,7 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
 
         # Verify that we receive the SyncStart event
         response = json.loads(ws_connection.recv())
-        pprint.pprint(response)
+        self.checkSyncUpdate(response["result"], 2, 2)
 
         # Disconnect SC node 1 and SC node 2
         logging.info("Disconnect SC node 1 and SC node 2")
@@ -87,18 +93,26 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
         generate_next_block(sc_node, "first node")
         sync_sc_blocks(self.sc_nodes, wait_for=300)
 
-
+        # Verify that we receive the SyncStop event after the disconnection
         response = json.loads(ws_connection.recv())
         pprint.pprint(response)
-
-
-        response = json.loads(ws_connection.recv())
-        pprint.pprint(response)
+        assert_false(response["result"]["syncing"])
 
         time.sleep(60)
 
+        # Verify that we receive the SyncStart event after the reconnection
         response = json.loads(ws_connection.recv())
-        pprint.pprint(response)
+        self.checkSyncUpdate(response["result"], 3, 3)
+        
+         # Verify that we receive the SyncUpdate event after 500 blocks
+        response = json.loads(ws_connection.recv())
+        self.checkSyncUpdate(response["result"], 503, 3)
+
+        time.sleep(60)
+
+        # Verify that we receive the SyncStop event after sync all blocks
+        response = json.loads(ws_connection.recv())
+        assert_false(response["result"]["syncing"])
         
         ws_connection.close()
 
