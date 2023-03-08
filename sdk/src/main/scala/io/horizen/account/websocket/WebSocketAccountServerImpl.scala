@@ -13,10 +13,6 @@ class WebSocketAccountServerImpl(bindPort: Int, configuration: Class[_]) extends
     WebSocketAccountServerEndpoint.notifySemanticallySuccessfulModifier(block)
   }
 
-  def onSuccessfulTransaction(tx: EthereumTransaction): Unit = {
-    WebSocketAccountServerEndpoint.notifyNewPendingTransaction(tx)
-  }
-
   def onChangedVault(): Unit = {
     WebSocketAccountServerEndpoint.onVaultChanged()
   }

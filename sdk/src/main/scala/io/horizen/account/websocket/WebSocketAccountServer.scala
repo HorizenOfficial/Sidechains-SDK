@@ -7,7 +7,7 @@ import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop, NotifySyncUpdate}
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedVault, SemanticallySuccessfulModifier, SuccessfulTransaction}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedVault, SemanticallySuccessfulModifier}
 import sparkz.util.SparkzLogging
 
 import scala.concurrent.ExecutionContext
@@ -26,7 +26,6 @@ class WebSocketAccountServer(wsPort: Int)
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[_]])
-    context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[_]])
     context.system.eventStream.subscribe(self, classOf[ChangedVault[_]])
     context.system.eventStream.subscribe(self, classOf[NotifySyncStart])
     context.system.eventStream.subscribe(self, classOf[NotifySyncStop])
@@ -49,8 +48,6 @@ class WebSocketAccountServer(wsPort: Int)
   protected def checkMessage: Receive = {
     case SemanticallySuccessfulModifier(block: AccountBlock) =>
       websocket.onSemanticallySuccessfulModifier(block)
-    case SuccessfulTransaction(tx: EthereumTransaction) =>
-      websocket.onSuccessfulTransaction(tx)
     case ChangedVault(_) =>
       websocket.onChangedVault()
     case NewExecTransactionsEvent(newExecTxs: Iterable[SidechainTypes#SCAT]) =>

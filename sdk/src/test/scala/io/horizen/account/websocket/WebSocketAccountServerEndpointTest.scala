@@ -357,7 +357,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Publish a new transaction
     countDownController.reset(1)
 
-    publishNewTransactionEvent(utilMocks.exampleTransaction1)
+    publishNewExecTransactionEvent(Seq(utilMocks.exampleTransaction1))
     assertTrue("No event message received.", countDownController.await(5000))
     assertEquals(1, endpoint.receivedMessage.size())
 
@@ -368,7 +368,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Publish a new transaction
     countDownController.reset(1)
 
-    publishNewTransactionEvent(utilMocks.exampleTransaction2)
+    publishNewExecTransactionEvent(Seq(utilMocks.exampleTransaction2))
     assertTrue("No event message received.", countDownController.await(5000))
     assertEquals(1, endpoint.receivedMessage.size())
 
@@ -379,7 +379,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Publish a new transaction that is not signed by the node
     countDownController.reset(1)
 
-    publishNewTransactionEvent(utilMocks.nonIncludedTransaction)
+    publishNewExecTransactionEvent(Seq(utilMocks.nonIncludedTransaction))
     assertFalse("No event message received.", countDownController.await(5000))
     assertEquals(0, endpoint.receivedMessage.size())
 
@@ -1048,10 +1048,6 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
   def publishNewBlockEvent(block: AccountBlock): Unit = {
     actorSystem.eventStream.publish(SemanticallySuccessfulModifier[sparkz.core.PersistentNodeViewModifier](block))
-  }
-
-  def publishNewTransactionEvent(tx: EthereumTransaction): Unit = {
-    actorSystem.eventStream.publish(SuccessfulTransaction[EthereumTransaction](tx))
   }
 
   def publishNewExecTransactionEvent(txs: Seq[EthereumTransaction]): Unit = {
