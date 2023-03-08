@@ -191,11 +191,6 @@ class SCNodeConfiguration(object):
         self.max_nonexec_pool_slots = max_nonexec_pool_slots
         self.tx_lifetime = tx_lifetime
 
-    def update_websocket_config(self, websocket_server_enabled, websocket_server_port):
-        self.websocket_server_enabled = websocket_server_enabled
-        self.websocket_server_port = websocket_server_port
-
-
 """
 The full network of many sidechain nodes connected to many mainchain nodes.
 The JSON representation is only for documentation.

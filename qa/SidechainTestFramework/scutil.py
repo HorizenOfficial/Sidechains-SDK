@@ -485,7 +485,7 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
-        'LOG_FILE_LEVEL': log_info.logFileLevel,
+        'LOG_FILE_LEVEL': "all",
         'LOG_CONSOLE_LEVEL': log_info.logConsoleLevel,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
