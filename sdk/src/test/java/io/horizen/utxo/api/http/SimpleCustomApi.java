@@ -16,6 +16,7 @@ import java.util.Optional;
 
 public class SimpleCustomApi extends ApplicationApiGroup
 {
+
     @Override
     public String basePath() {
         return "customSecret";
@@ -34,7 +35,7 @@ public class SimpleCustomApi extends ApplicationApiGroup
     private ApiResponse getNSecretsFunction(GetSecretRequest ent) {
         try {
             RespAllSecret resp = new RespAllSecret();
-            List<Secret> res = new ArrayList<>(getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(v -> v.getNodeWallet().allSecrets()));
+            List<io.horizen.secret.Secret> res = new ArrayList<>((List<Secret>)getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(v -> ((SidechainNodeView)v).getNodeWallet().allSecrets()));
             resp.setSecrets(res.subList(0, ent.getSecretCount()));
             return resp;
         } catch (Exception e) {
