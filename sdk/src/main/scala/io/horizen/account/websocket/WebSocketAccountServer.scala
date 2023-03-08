@@ -53,6 +53,8 @@ class WebSocketAccountServer(wsPort: Int)
       websocket.onSuccessfulTransaction(tx)
     case ChangedVault(_) =>
       websocket.onChangedVault()
+    case NewExecTransactionsEvent(newExecTxs: Iterable[SidechainTypes#SCAT]) =>
+      websocket.onNewExecTransactionsEvent(newExecTxs.toSeq.asInstanceOf[Seq[EthereumTransaction]])
     case NotifySyncStart(syncStatus: SyncStatus) =>
       websocket.onSyncStart(syncStatus)
     case NotifySyncStop() =>
