@@ -12,14 +12,14 @@
 	"methods": [
 		{
 			"name": "zen_getForwardTransfers",
-			"description": "This is horizen specific",
+			"description": "This is Horizen specific",
 			"summary": "Returns a list of forward transfers contained in the block",
 			"params": [
 				{
 					"name": "Block",
 					"required": true,
 					"schema": {
-						"title": "Block number, block hash or tag",
+						"title": "Block number or block hash",
 						"oneOf": [
 							{
 								"title": "Block number",
@@ -57,14 +57,14 @@
 		},
 		{
 			"name": "zen_getFeePayments",
-			"description": "This is horizen specific",
+			"description": "This is Horizen specific",
 			"summary": "Returns a list of fee payments in the block",
 			"params": [
 				{
 					"name": "Block",
 					"required": true,
 					"schema": {
-						"title": "Block number, block hash or tag",
+						"title": "Block number or block hash",
 						"oneOf": [
 							{
 								"title": "Block number",
