@@ -15,6 +15,7 @@ import io.horizen.account.utils.{Bloom, EthereumTransactionUtils}
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.CompanionsFixture
+import io.horizen.network.SyncStatus
 import io.horizen.utils.BytesUtils
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
@@ -25,6 +26,8 @@ import java.math.BigInteger
 import java.util.Optional
 
 class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with AccountBlockFixture with EthereumTransactionFixture{
+
+  val syncStatus = new SyncStatus(false, new BigInteger("12345"), new BigInteger("100"), new BigInteger("123456789"))
 
   val sidechainAccountTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
 

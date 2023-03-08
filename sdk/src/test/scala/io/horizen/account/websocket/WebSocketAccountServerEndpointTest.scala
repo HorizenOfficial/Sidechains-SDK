@@ -9,11 +9,14 @@ import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEven
 import io.horizen.account.api.rpc.types.EthereumBlockView
 import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.serialization.EthJsonMapper
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.api.http.SidechainApiMockConfiguration
 import io.horizen.evm.Hash
 import io.horizen.json.SerializationUtil
+import io.horizen.network.SyncStatus
+import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop}
 import io.horizen.utils.{BytesUtils, CountDownLatchController}
 import jakarta.websocket._
 import org.glassfish.tyrus.client.ClientManager
@@ -881,6 +884,51 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     session2.close()
   }
 
+  @Test
+  def syncingSubscriptionTest(): Unit = {
+    // Test the handle of syncing websocket subscription
+
+    // Add client 1
+    val cec = ClientEndpointConfig.Builder.create.build
+    val client = ClientManager.createClient
+
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
+
+    //Client 1 subscribe to syncing method
+    val clientId1 = 1
+    sendWebsocketRequest(Option.apply(clientId1), Option.apply(SUBSCRIBE_REQUEST), Option.apply(SYNCING_SUBSCRIPTION.method), Option.empty, session)
+    assertTrue("No event messages received.", countDownController.await(5000))
+
+    //Verify that we receive a positive response
+    assertEquals(1, endpoint.receivedMessage.size())
+    var response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkResponseMessage(response, clientId1)
+    endpoint.receivedMessage.remove(0)
+
+    //Publish a new start sync event
+    countDownController.reset(1)
+
+    publishNewSyncStartEVent(utilMocks.syncStatus)
+    assertTrue("No event message received.", countDownController.await(5000))
+    assertEquals(1, endpoint.receivedMessage.size())
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkSyncStartStatus(response, utilMocks.syncStatus)
+    endpoint.receivedMessage.remove(0)
+
+    //Publish a new stop sync event
+    countDownController.reset(1)
+
+    publishNewSyncStopEvent()
+    assertTrue("No event message received.", countDownController.await(5000))
+    assertEquals(1, endpoint.receivedMessage.size())
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkSyncStopStatus(response)
+    endpoint.receivedMessage.remove(0)
+  }
 
 
   private def sendWebsocketRequest(id: Option[Int], request: Option[WebSocketAccountRequest], method: Option[String], additional_arguments: Option[JsonNode] = Option.empty, session: Session): Unit = {
@@ -977,6 +1025,33 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     assertEquals("Wrong log removed property", removed, logJson.get("removed").asBoolean())
   }
 
+  private def checkSyncStartStatus(wsResponse: JsonNode, expectedSyncStatus: SyncStatus): Unit = {
+    assertTrue("Missing field subscription in response.", wsResponse.has("subscription"))
+    assertTrue("Missing field result in response.", wsResponse.has("result"))
+
+    val result = wsResponse.get("result")
+    assertTrue("Missing field syncing in result.", result.has("syncing"))
+    assertEquals("Wrong syncing status", true, result.get("syncing").asBoolean())
+    assertTrue("Missing field status in result.", result.has("status"))
+
+    val status = result.get("status")
+    assertTrue("Missing field currentBlock in status.", status.has("currentBlock"))
+    assertEquals("Wrong currentBlock in status", Numeric.toHexStringWithPrefix(expectedSyncStatus.currentBlock), status.get("currentBlock").asText())
+    assertTrue("Missing field highestBlock in status.", status.has("highestBlock"))
+    assertEquals("Wrong highestBlock in status", Numeric.toHexStringWithPrefix(expectedSyncStatus.highestBlock), status.get("highestBlock").asText())
+    assertTrue("Missing field startingBlock in status.", status.has("startingBlock"))
+    assertEquals("Wrong startingBlock in status", Numeric.toHexStringWithPrefix(expectedSyncStatus.startingBlock), status.get("startingBlock").asText())
+  }
+
+  private def checkSyncStopStatus(wsResponse: JsonNode): Unit = {
+    assertTrue("Missing field subscription in response.", wsResponse.has("subscription"))
+    assertTrue("Missing field result in response.", wsResponse.has("result"))
+
+    val result = wsResponse.get("result")
+    assertTrue("Missing field syncing in result.", result.has("syncing"))
+    assertEquals("Wrong syncing status", false, result.get("syncing").asBoolean())
+  }
+
   private def checkWsEventStaticFields(wsResponse: JsonNode): Unit = {
     assertTrue("Missing field jsonrpc.", wsResponse.has("jsonrpc"))
     assertTrue("Missing field method.", wsResponse.has("method"))
@@ -998,6 +1073,14 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
   def publishNewReAddedTransactionEvent(txs: Seq[EthereumTransaction]): Unit = {
     actorSystem.eventStream.publish(NewExecTransactionsEvent(txs.asInstanceOf[Seq[SidechainTypes#SCAT]]))
+  }
+
+  def publishNewSyncStartEVent(syncStatus: SyncStatus): Unit = {
+    actorSystem.eventStream.publish(NotifySyncStart(syncStatus))
+  }
+
+  def publishNewSyncStopEvent(): Unit = {
+    actorSystem.eventStream.publish(NotifySyncStop())
   }
 }
 

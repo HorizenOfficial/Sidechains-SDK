@@ -2,6 +2,7 @@ package io.horizen.account.websocket
 
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.network.SyncStatus
 import io.horizen.websocket.server.WebSocketServerBaseImpl
 import jakarta.websocket._
 
@@ -22,6 +23,14 @@ class WebSocketAccountServerImpl(bindPort: Int, configuration: Class[_]) extends
 
   def onMempoolReaddedTransaction(readdedTxs: Seq[EthereumTransaction]): Unit = {
     WebSocketAccountServerEndpoint.notifyMempoolReaddedTransactions(readdedTxs)
+  }
+
+  def onSyncStart(syncStatus: SyncStatus): Unit = {
+    WebSocketAccountServerEndpoint.notifySyncStarted(syncStatus)
+  }
+
+  def onSyncStop(): Unit = {
+    WebSocketAccountServerEndpoint.notifySyncStopped()
   }
 
 }

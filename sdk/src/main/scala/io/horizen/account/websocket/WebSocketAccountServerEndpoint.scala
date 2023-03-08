@@ -9,8 +9,9 @@ import io.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.serialization.EthJsonMapper
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams}
+import io.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams, WebSocketSyncEvent}
 import io.horizen.evm.Address
+import io.horizen.network.SyncStatus
 import jakarta.websocket._
 import jakarta.websocket.server.ServerEndpoint
 import org.web3j.utils.Numeric
@@ -28,6 +29,7 @@ abstract class WebSocketAccountSubscription(val method: String)
 case object NEW_HEADS_SUBSCRIPTION extends WebSocketAccountSubscription("newHeads")
 case object NEW_PENDING_TRANSACTIONS_SUBSCRIPTION extends WebSocketAccountSubscription("newPendingTransactions")
 case object LOGS_SUBSCRIPTION extends WebSocketAccountSubscription("logs")
+case object SYNCING_SUBSCRIPTION extends WebSocketAccountSubscription("syncing")
 
 @ServerEndpoint("/")
 class WebSocketAccountServerEndpoint() extends SparkzLogging {
@@ -108,6 +110,12 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
         log.debug("New Subscription on logs "+session.getId)
         WebSocketAccountServerEndpoint.send(new RpcResponseSuccess(rpcRequest.id, subscriptionId), session)
 
+      case SYNCING_SUBSCRIPTION.method =>
+        val subscriptionId = createSubscriptionId()
+        WebSocketAccountServerEndpoint.addSyncingSubscription(Subscription(session, subscriptionId))
+        log.debug("New Subscription on syncing "+session.getId)
+        WebSocketAccountServerEndpoint.send(new RpcResponseSuccess(rpcRequest.id, subscriptionId), session)
+
       case unknownMethod =>
         WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
           new RpcError(RpcCode.InvalidParams, "unsupported subscription type " + unknownMethod, "")),
@@ -157,6 +165,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   var newHeadsSubscriptions: List[Subscription] = List()
   var newPendingTransactionsSubscriptions: List[Subscription] = List()
   var logsSubscriptions: List[SubscriptionWithFilter] = List()
+  var syncingSubscriptions: List[Subscription] = List()
 
   val webSocketAccountChannelImpl = new WebSocketAccountChannelImpl()
   private var walletAddresses: Set[Address] = webSocketAccountChannelImpl.getWalletAddresses
@@ -200,6 +209,18 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     )
   }
 
+  def notifySyncStarted(syncStatus: SyncStatus): Unit = {
+    for (subscription <- syncingSubscriptions) {
+      send(new WebSocketAccountEventParams(subscription = subscription.subscriptionId, result = new WebSocketSyncEvent(true, syncStatus)), subscription.session)
+    }
+  }
+
+  def notifySyncStopped(): Unit = {
+    for (subscription <- syncingSubscriptions) {
+      send(new WebSocketAccountEventParams(subscription = subscription.subscriptionId, result = new WebSocketSyncEvent(false, null)), subscription.session)
+    }
+  }
+
   private def processBlockReceipt(block: AccountBlock): Unit = {
     var relevantBlockReceipt: Seq[EthereumLogView] = Seq()
     for (subscription <- logsSubscriptions) {
@@ -237,6 +258,10 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
       logsSubscriptions =  subscription :: logsSubscriptions
   }
 
+  def addSyncingSubscription(subscription: Subscription): Unit = {
+    syncingSubscriptions =  subscription :: syncingSubscriptions
+  }
+
   def removeSubscription(subscriptionIdToRemove: BigInteger): Boolean = {
     val foundNewHeadsSubscriptionToRemove = newHeadsSubscriptions.indexWhere(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
     if (foundNewHeadsSubscriptionToRemove != -1) {
@@ -253,6 +278,11 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
       logsSubscriptions = logsSubscriptions.filterNot(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
       return true
     }
+    val foundSyncingSubscriptionToRemove = syncingSubscriptions.indexWhere(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
+    if (foundSyncingSubscriptionToRemove != -1) {
+      syncingSubscriptions = syncingSubscriptions.filterNot(subscription => subscription.subscriptionId.equals(subscriptionIdToRemove))
+      return true
+    }
     false
   }
 
@@ -260,6 +290,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
       newHeadsSubscriptions = newHeadsSubscriptions.filterNot(subscription => subscription.session.getId.equals(session.getId))
       newPendingTransactionsSubscriptions = newPendingTransactionsSubscriptions.filterNot(subscription => subscription.session.getId.equals(session.getId))
       logsSubscriptions = logsSubscriptions.filterNot(subscription => subscription.session.getId.equals(session.getId))
+      syncingSubscriptions = syncingSubscriptions.filterNot(subscription => subscription.session.getId.equals(session.getId))
   }
 
   def send(websocketResponse: Object, session: Session): Unit = {
