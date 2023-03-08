@@ -450,14 +450,14 @@ class EthService(
         }
       case "latest" | null => nodeView.history.getCurrentHeight
       case "pending" => nodeView.history.getCurrentHeight + 1
-      case height =>  parseBlockHeight(nodeView, height) match {
+      case height =>  parseBlockNumber(nodeView, height) match {
           case Success(res) => res
           case Failure(_) => throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null))
         }
     }
   }
 
-  private def parseBlockHeight(nodeView: NV, number: String): Try[Int] = {
+  private def parseBlockNumber(nodeView: NV, number: String): Try[Int] = {
     Try(Numeric.decodeQuantity(number).intValueExact())
       .filter(_ <= nodeView.history.getCurrentHeight)
   }
@@ -485,11 +485,11 @@ class EthService(
     }
   }
 
-  private def getBlockIdByHashOrHeight(nodeView: NV, blockHashOrNumber: String): ModifierId = {
+  private def getBlockIdByHashOrNumber(nodeView: NV, blockHashOrNumber: String): ModifierId = {
     getBlockIdByHash(blockHashOrNumber) match {
       case Some(blockId) => blockId
       case None =>
-        parseBlockHeight(nodeView, blockHashOrNumber) match {
+        parseBlockNumber(nodeView, blockHashOrNumber) match {
           case Success(height) => ModifierId(nodeView.history.blockIdByHeight(height).get)
           case Failure(_) => throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block input parameter", null))
         }
@@ -938,10 +938,10 @@ class EthService(
   }
 
   @RpcMethod("zen_getForwardTransfers")
-  def getForwardTransfers(tag: String): ForwardTransfersView = {
+  def getForwardTransfers(blockHashOrNumber: String): ForwardTransfersView = {
     applyOnAccountView { nodeView =>
       nodeView.history
-        .getStorageBlockById(getBlockIdByHashOrHeight(nodeView, tag))
+        .getStorageBlockById(getBlockIdByHashOrNumber(nodeView, blockHashOrNumber))
         .map(getForwardTransfersForBlock(_).asJava)
         .map(new ForwardTransfersView(_))
         .orNull
@@ -949,10 +949,10 @@ class EthService(
   }
 
   @RpcMethod("zen_getFeePayments")
-  def getFeePayments(tag: String): FeePaymentsView = {
+  def getFeePayments(blockHashOrNumber: String): FeePaymentsView = {
     applyOnAccountView { nodeView =>
       nodeView.history
-        .feePaymentsInfo(getBlockIdByHashOrHeight(nodeView, tag))
+        .feePaymentsInfo(getBlockIdByHashOrNumber(nodeView, blockHashOrNumber))
         .map(new FeePaymentsView(_))
         .orNull
     }
