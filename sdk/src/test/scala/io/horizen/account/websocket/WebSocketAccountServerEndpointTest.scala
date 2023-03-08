@@ -16,7 +16,7 @@ import io.horizen.api.http.SidechainApiMockConfiguration
 import io.horizen.evm.Hash
 import io.horizen.json.SerializationUtil
 import io.horizen.network.SyncStatus
-import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop}
+import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop, NotifySyncUpdate}
 import io.horizen.utils.{BytesUtils, CountDownLatchController}
 import jakarta.websocket._
 import org.glassfish.tyrus.client.ClientManager
@@ -928,6 +928,20 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     response = mapper.readTree(endpoint.receivedMessage.get(0))
     checkSyncStopStatus(response)
     endpoint.receivedMessage.remove(0)
+
+    //Publish a new update sync event
+    countDownController.reset(1)
+
+    publishNewSyncUpdateEvent(utilMocks.syncStatus)
+    assertTrue("No event message received.", countDownController.await(5000))
+    assertEquals(1, endpoint.receivedMessage.size())
+
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkSyncStartStatus(response, utilMocks.syncStatus)
+    endpoint.receivedMessage.remove(0)
+
+    // Disconnect client 1
+    session.close()
   }
 
 
@@ -1081,6 +1095,10 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
   def publishNewSyncStopEvent(): Unit = {
     actorSystem.eventStream.publish(NotifySyncStop())
+  }
+
+  def publishNewSyncUpdateEvent(syncStatus: SyncStatus): Unit = {
+    actorSystem.eventStream.publish(NotifySyncUpdate(syncStatus))
   }
 }
 

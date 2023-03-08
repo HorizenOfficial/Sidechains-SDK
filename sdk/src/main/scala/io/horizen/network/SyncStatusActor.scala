@@ -9,7 +9,7 @@ import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.history.AbstractHistory
 import io.horizen.network.SyncStatusActor.InternalReceivableMessages.CheckBlockTimestamps
 import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
-import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop}
+import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop, NotifySyncUpdate}
 import io.horizen.params.NetworkParams
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
@@ -52,6 +52,7 @@ class SyncStatusActor[
   private var currentBlock: Int = _
   private var startingBlock: Int = _
   private var highestBlock: Int = _
+  private var lastSyncNotification: Int = _
 
   lazy val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
@@ -129,6 +130,7 @@ class SyncStatusActor[
         highestBlock = estimatedHighestBlock
         currentBlockTimestamp = sidechainBlock.timestamp
         schedulerBlockTimestamp = sidechainBlock.timestamp
+        lastSyncNotification = 0
 
         // broadcast sync start and its details, starting block is equal to current block in this case
         val syncStatusMessage = new SyncStatus(true, BigInt(currentBlock), BigInt(startingBlock), BigInt(highestBlock))
@@ -146,6 +148,7 @@ class SyncStatusActor[
 
         // update the current block counter and set the current block timestamp
         currentBlock += 1
+        lastSyncNotification += 1
         currentBlockTimestamp = sidechainBlock.timestamp
 
         if (checkAppliedBlockTimestamp(sidechainBlock.timestamp)) {
@@ -166,6 +169,11 @@ class SyncStatusActor[
             .asInstanceOf[Int]
           // reset the update highest block counter
           updateHighestBlockCounter = 0
+        }
+        if (lastSyncNotification == 500) {
+          val syncStatusMessage = new SyncStatus(true, BigInt(currentBlock), BigInt(startingBlock), BigInt(highestBlock))
+          context.system.eventStream.publish(NotifySyncUpdate(syncStatusMessage)) // broadcast sync update
+          lastSyncNotification = 0
         }
       }
 
@@ -259,6 +267,7 @@ object SyncStatusActor {
 
   case class NotifySyncStart(syncStatus: SyncStatus) extends SyncEvent
   case class NotifySyncStop() extends SyncEvent
+  case class NotifySyncUpdate(syncStatus: SyncStatus) extends SyncEvent
 
   object ReceivableMessages {
     case object ReturnSyncStatus
