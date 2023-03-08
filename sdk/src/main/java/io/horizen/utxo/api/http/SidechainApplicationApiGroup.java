@@ -1,7 +1,6 @@
-package io.horizen.api.http;
+package io.horizen.utxo.api.http;
 
-
-import io.horizen.SidechainNodeViewBase;
+import io.horizen.api.http.ApplicationBaseApiGroup;
 import io.horizen.proposition.Proposition;
 import io.horizen.utxo.block.SidechainBlock;
 import io.horizen.utxo.block.SidechainBlockHeader;
@@ -10,11 +9,7 @@ import io.horizen.utxo.chain.SidechainFeePaymentsInfo;
 import io.horizen.utxo.node.*;
 import io.horizen.utxo.transaction.BoxTransaction;
 
-import java.util.Optional;
-import java.util.function.BiFunction;
-
-
-public abstract class ApplicationApiGroup extends ApplicationBaseApiGroup<
+public abstract class SidechainApplicationApiGroup extends ApplicationBaseApiGroup<
         BoxTransaction<Proposition, Box<Proposition>>,
         SidechainBlockHeader,
         SidechainBlock,
@@ -23,8 +18,5 @@ public abstract class ApplicationApiGroup extends ApplicationBaseApiGroup<
         NodeState,
         NodeWallet,
         NodeMemoryPool,
-        SidechainNodeView> {
-
-
-
-}
+        SidechainNodeView
+        > {}

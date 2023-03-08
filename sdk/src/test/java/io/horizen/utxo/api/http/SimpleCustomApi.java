@@ -3,7 +3,6 @@ package io.horizen.utxo.api.http;
 import akka.http.javadsl.server.Route;
 import com.fasterxml.jackson.annotation.JsonView;
 import io.horizen.api.http.ApiResponse;
-import io.horizen.api.http.ApplicationApiGroup;
 import io.horizen.api.http.ErrorResponse;
 import io.horizen.api.http.SuccessResponse;
 import io.horizen.utxo.node.SidechainNodeView;
@@ -14,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class SimpleCustomApi extends ApplicationApiGroup
+public class SimpleCustomApi extends SidechainApplicationApiGroup
 {
 
     @Override

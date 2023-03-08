@@ -1,11 +1,16 @@
-package io.horizen.api.http.route
+package io.horizen.account.api.http.route
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
 import io.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import akka.pattern.ask
-import io.horizen.api.http.{ApplicationApiGroup, FunctionsApplierOnSidechainNodeView}
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import io.horizen.api.http.FunctionsApplierOnSidechainNodeView
+import io.horizen.node.NodeWalletBase
+import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
@@ -16,21 +21,22 @@ import sparkz.util.SparkzEncoding
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}
 
-case class ApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: ApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)
-                              (implicit val context: ActorRefFactory)
+case class AccountApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: SidechainApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)
+                                       (implicit val context: ActorRefFactory)
   extends ApiRoute
     with ApiDirectives
     with SparkzEncoding
     with FunctionsApplierOnSidechainNodeView[
-    SidechainTypes#SCBT,
-    SidechainBlockHeader,
-    SidechainBlock,
-    SidechainFeePaymentsInfo,
-    NodeHistory,
-    NodeState,
-    NodeWallet,
-    NodeMemoryPool,
-    SidechainNodeView] {
+    SidechainTypes#SCAT,
+    AccountBlockHeader,
+    AccountBlock,
+    AccountFeePaymentsInfo,
+    NodeAccountHistory,
+    NodeAccountState,
+    NodeWalletBase,
+    NodeAccountMemoryPool,
+    AccountNodeView
+  ] {
 
 
   override def route: Route = convertRoutes
@@ -45,16 +51,16 @@ case class ApplicationApiRoute(override val settings: RESTApiSettings, applicati
     }
   }
 
-  override def applyFunctionOnSidechainNodeView[R](f: java.util.function.Function[SidechainNodeView, R]): R = {
+  override def applyFunctionOnSidechainNodeView[R](f: java.util.function.Function[AccountNodeView, R]): R = {
     val messageToSend = AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
-      SidechainNodeView,
+      AccountNodeView,
       R](f)
     sendMessageToSidechainNodeView(messageToSend)
   }
 
-  override def applyBiFunctionOnSidechainNodeView[T, R](f: java.util.function.BiFunction[SidechainNodeView, T, R], functionParameter: T): R = {
+  override def applyBiFunctionOnSidechainNodeView[T, R](f: java.util.function.BiFunction[AccountNodeView, T, R], functionParameter: T): R = {
     val messageToSend = AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
-      SidechainNodeView,
+      AccountNodeView,
       T, R](f, functionParameter)
     sendMessageToSidechainNodeView(messageToSend)
   }

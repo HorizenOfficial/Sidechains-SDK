@@ -9,7 +9,7 @@ import io.horizen.account.AccountAppModule;
 import io.horizen.account.state.EvmMessageProcessor;
 import io.horizen.account.state.MessageProcessor;
 import io.horizen.account.transaction.AccountTransaction;
-import io.horizen.api.http.ApplicationApiGroup;
+import io.horizen.account.api.http.AccountApplicationApiGroup;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.proof.Proof;
 import io.horizen.proposition.Proposition;
@@ -32,9 +32,9 @@ public class EvmAppModule extends AccountAppModule {
 
     @Override
     public void configureApp() {
-        Long regTestId = 1997L;
-        Long testNetId = 1662L;
-        Long mainNetId = 7331L;
+        long regTestId = 1997L;
+        long testNetId = 1662L;
+        long mainNetId = 7331L;
 
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
 
@@ -45,7 +45,7 @@ public class EvmAppModule extends AccountAppModule {
         AppForkConfigurator forkConfigurator = new AppForkConfigurator();
 
         // Here I can add my custom rest api and/or override existing one
-        List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
+        List<AccountApplicationApiGroup> customApiGroups = new ArrayList<>();
 
         // Here I can reject some of existing API routes
         // Each pair consists of "group name" -> "route name"
@@ -76,7 +76,7 @@ public class EvmAppModule extends AccountAppModule {
                 .annotatedWith(Names.named("CustomAccountTransactionSerializers"))
                 .toInstance(customAccountTransactionSerializers);
 
-        bind(new TypeLiteral<List<ApplicationApiGroup>>() {})
+        bind(new TypeLiteral<List<AccountApplicationApiGroup>>() {})
                 .annotatedWith(Names.named("CustomApiGroups"))
                 .toInstance(customApiGroups);
 

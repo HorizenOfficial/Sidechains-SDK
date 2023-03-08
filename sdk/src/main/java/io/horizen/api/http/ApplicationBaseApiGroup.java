@@ -106,7 +106,7 @@ public abstract class ApplicationBaseApiGroup<
         }
     }
 
-    protected <T> ApiResponse applyBiFunctionOnSidechainNodeView(T functionParameter, BiFunction<NV, T, ApiResponse> func) {
+    private <T> ApiResponse applyBiFunctionOnSidechainNodeView(T functionParameter, BiFunction<NV, T, ApiResponse> func) {
         try
         {
             return (ApiResponse) getFunctionsApplierOnSidechainNodeView().applyBiFunctionOnSidechainNodeView(func, functionParameter);

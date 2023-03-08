@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen._
 import io.horizen.account.api.http.route
-import io.horizen.account.api.http.route.{AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import io.horizen.account.api.http.route.{AccountApplicationApiRoute, AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import io.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
 import io.horizen.account.chain.AccountFeePaymentsInfo
@@ -17,7 +17,7 @@ import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccount
 import io.horizen.account.state.MessageProcessor
 import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import io.horizen.api.http._
-import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
+import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainApplicationApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import io.horizen.consensus.ConsensusDataStorage
@@ -31,6 +31,7 @@ import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.transaction._
 import io.horizen.utils.{BytesUtils, Pair}
+import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -46,7 +47,7 @@ class AccountSidechainApp @Inject()
   (@Named("SidechainSettings") sidechainSettings: SidechainSettings,
    @Named("CustomSecretSerializers") customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    @Named("CustomAccountTransactionSerializers") customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
-   @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
+   @Named("CustomApiGroups") customApiGroups: JList[SidechainApplicationApiGroup],
    @Named("RejectedApiPaths") rejectedApiPaths: JList[Pair[String, String]],
    @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
@@ -147,6 +148,8 @@ class AccountSidechainApp @Inject()
 
   // Init Sync Status actor
   val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
+
+  override lazy val applicationApiRoutes: Seq[AccountApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => AccountApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),

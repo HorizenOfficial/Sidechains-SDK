@@ -5,12 +5,12 @@ import com.google.inject.name.Named
 import io.horizen.account.helper.{AccountTransactionSubmitHelper, AccountTransactionSubmitHelperImpl}
 import io.horizen.account.helper.{AccountNodeViewHelper, AccountNodeViewHelperImpl}
 import io.horizen.account.state.MessageProcessor
-import io.horizen.api.http.ApplicationApiGroup
 import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.Pair
+import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppStopper, SidechainSettings, SidechainTypes}
 
 import java.lang.{Byte => JByte}
@@ -42,16 +42,16 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
 
   @Provides
   def get(
-          @Named("SidechainSettings") sidechainSettings: SidechainSettings,
-          @Named("CustomSecretSerializers")  customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
-          @Named("CustomAccountTransactionSerializers")  customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
-          @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
-          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
-          @Named("ChainInfo") chainInfo : ChainInfo,
-          @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
-          @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
-          @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
-          @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+           @Named("SidechainSettings") sidechainSettings: SidechainSettings,
+           @Named("CustomSecretSerializers")  customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+           @Named("CustomAccountTransactionSerializers")  customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
+           @Named("CustomApiGroups")  customApiGroups: JList[SidechainApplicationApiGroup],
+           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
+           @Named("ChainInfo") chainInfo : ChainInfo,
+           @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
+           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
+           @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
+           @Named("ConsensusSecondsInSlot") secondsInSlot: Int
          ): AccountSidechainApp = {
     synchronized {
       if (app == null) {

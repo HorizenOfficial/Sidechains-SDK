@@ -4,10 +4,9 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen.api.http._
-import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
+import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainApplicationApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import io.horizen.companion._
 import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.fork.ForkConfigurator
@@ -17,7 +16,7 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{BytesUtils, Pair}
-import io.horizen.utxo.api.http._
+import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.api.http.route.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
 import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
@@ -42,6 +41,7 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
+import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
@@ -61,7 +61,7 @@ class SidechainApp @Inject()
    @Named("WalletCswDataStorage") walletCswDataStorage: Storage,
    @Named("ConsensusStorage") consensusStorage: Storage,
    @Named("BackupStorage") backUpStorage: Storage,
-   @Named("CustomApiGroups") override val customApiGroups: JList[ApplicationApiGroup],
+   @Named("CustomApiGroups") override val customApiGroups: JList[SidechainApplicationApiGroup],
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
@@ -213,6 +213,8 @@ class SidechainApp @Inject()
   }
 
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
+
+  override lazy val applicationApiRoutes: Seq[SidechainApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX,

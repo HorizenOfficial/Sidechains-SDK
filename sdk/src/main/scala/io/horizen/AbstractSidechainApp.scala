@@ -4,10 +4,9 @@ package io.horizen
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import io.horizen.api.http
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
-import io.horizen.api.http.route.{ApplicationApiRoute, SidechainRejectionApiRoute}
+import io.horizen.api.http.route.SidechainRejectionApiRoute
 import io.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import io.horizen.companion._
@@ -25,6 +24,7 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
 import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
+import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -53,7 +53,7 @@ import scala.util.{Failure, Success, Try}
 abstract class AbstractSidechainApp
   (val sidechainSettings: SidechainSettings,
    val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
-   val customApiGroups: JList[ApplicationApiGroup],
+   val customApiGroups: JList[SidechainApplicationApiGroup],
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
@@ -307,7 +307,7 @@ abstract class AbstractSidechainApp
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
-  lazy val applicationApiRoutes: Seq[ApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
+  val applicationApiRoutes: Seq[ApiRoute]
 
   val coreApiRoutes: Seq[ApiRoute]
 
