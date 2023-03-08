@@ -48,9 +48,20 @@ class SCEvmForwardTransfer(AccountChainSetup):
         assert_equal(hex(ft_amount_in_wei), balance["result"], "FT to EOA failed")
 
         # verify forward transfer is contained in block and contains given value and to address via rpc
+        # First try with block hash
         forward_transfer = sc_node.rpc_zen_getForwardTransfers(add_0x_prefix(self.block_id))['result']['forwardTransfers'][0]
         assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
         assert_equal(self.evm_address.lower(), forward_transfer['to'])
+        # Second try with tag
+        forward_transfer = sc_node.rpc_zen_getForwardTransfers("latest")['result']['forwardTransfers'][0]
+        assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
+        assert_equal(self.evm_address.lower(), forward_transfer['to'])
+        # Third try with block number
+        block_number = sc_node.block_best()["result"]["height"]
+        forward_transfer = sc_node.rpc_zen_getForwardTransfers(block_number)['result']['forwardTransfers'][0]
+        assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
+        assert_equal(self.evm_address.lower(), forward_transfer['to'])
+
 
         # verify forward transfer is contained in block and contains given value and to address via api
         j = {

@@ -19,10 +19,10 @@ from test_framework.util import (
 
 
 class BlockFeeInfo(object):
-    def __init__(self, node, baseFee, forgerTips):
+    def __init__(self, node, base_fee, forger_tips):
         self.node = node
-        self.baseFee = baseFee
-        self.forgerTips = forgerTips
+        self.baseFee = base_fee
+        self.forgerTips = forger_tips
 
 
 class ScEvmFeePaymentsRpc(AccountChainSetup):
@@ -129,12 +129,13 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
 
         # Generate SC block on SC node 1
         sc_middle_we_block_id = generate_next_block(sc_node_1, "first node")
+        sc_middle_we_block_height = sc_node_1.block_best()["result"]["height"]
         self.sc_sync_all()
 
         transactionFee_1, forgersPoolFee_1, forgerTip_1 = computeForgedTxFee(sc_node_1, tx_hash_1)
         sc_block_fee_info.append(BlockFeeInfo(1, forgersPoolFee_1, forgerTip_1))
 
-        # Create a eip1559 transaction moving some fund from SC2 address to an external address.
+        # Create an eip1559 transaction moving some fund from SC2 address to an external address.
         # This also tests a too high maxPriorityFee value, which should be capped using maxFeePerGas
         transferred_amount_in_zen_2 = 0.001
         transferred_amount_in_wei_2 = convertZenToWei(transferred_amount_in_zen_2)
@@ -202,13 +203,42 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
         forger_data = sc_node_1.rpc_zen_getFeePayments(add_0x_prefix(sc_middle_we_block_id))
         assert_equal(forger_data["result"], None)
 
+        forger_data = sc_node_1.rpc_zen_getFeePayments(sc_middle_we_block_height)
+        assert_equal(forger_data["result"], None)
+
+        exp_forger_address_1 = add_0x_prefix(stakeList[0]["forgerStakeData"]["ownerPublicKey"]["address"])
+        exp_forger_address_2 = add_0x_prefix(stakeList[1]["forgerStakeData"]["ownerPublicKey"]["address"])
+
+        exp_forger_fee_1 = hex(forger_fees[1])
+        exp_forger_fee_2 = hex(forger_fees[2])
+
+        # Test with block hash
         (forger_data_1, forger_data_2) = sc_node_1.rpc_zen_getFeePayments(add_0x_prefix(sc_last_we_block_id))["result"]["payments"]
 
-        assert_equal(forger_data_1["address"], add_0x_prefix(stakeList[0]["forgerStakeData"]["ownerPublicKey"]["address"]))
-        assert_equal(forger_data_2["address"], add_0x_prefix(stakeList[1]["forgerStakeData"]["ownerPublicKey"]["address"]))
+        assert_equal(exp_forger_address_1, forger_data_1["address"])
+        assert_equal(exp_forger_address_2, forger_data_2["address"])
 
-        assert_equal(forger_data_1["value"], hex(forger_fees[1]))
-        assert_equal(forger_data_2["value"], hex(forger_fees[2]))
+        assert_equal(forger_data_1["value"], exp_forger_fee_1)
+        assert_equal(forger_data_2["value"], exp_forger_fee_2)
+
+        # Test with block number
+        sc_last_we_block_height = sc_node_1.block_best()["result"]["height"]
+        (forger_data_1, forger_data_2) = sc_node_1.rpc_zen_getFeePayments(sc_last_we_block_height)["result"]["payments"]
+
+        assert_equal(exp_forger_address_1, forger_data_1["address"])
+        assert_equal(exp_forger_address_2, forger_data_2["address"])
+
+        assert_equal(exp_forger_fee_1, forger_data_1["value"])
+        assert_equal(exp_forger_fee_2, forger_data_2["value"])
+
+        # Test with tag
+        (forger_data_1, forger_data_2) = sc_node_1.rpc_zen_getFeePayments("latest")["result"]["payments"]
+
+        assert_equal(exp_forger_fee_1, forger_data_1["value"])
+        assert_equal(exp_forger_fee_2, forger_data_2["value"])
+
+        assert_equal(exp_forger_fee_1, forger_data_1["value"])
+        assert_equal(exp_forger_fee_2, forger_data_2["value"])
 
 
 if __name__ == "__main__":

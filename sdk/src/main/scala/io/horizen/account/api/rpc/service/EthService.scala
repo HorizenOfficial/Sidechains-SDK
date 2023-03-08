@@ -915,10 +915,10 @@ class EthService(
   }
 
   @RpcMethod("zen_getForwardTransfers")
-  def getForwardTransfers(hash: Hash): ForwardTransfersView = {
+  def getForwardTransfers(tag: String): ForwardTransfersView = {
     applyOnAccountView { nodeView =>
       nodeView.history
-        .getStorageBlockById(bytesToId(hash.toBytes))
+        .getStorageBlockById(getBlockIdByHashOrTag(nodeView, tag))
         .map(getForwardTransfersForBlock(_).asJava)
         .map(new ForwardTransfersView(_))
         .orNull
@@ -926,10 +926,10 @@ class EthService(
   }
 
   @RpcMethod("zen_getFeePayments")
-  def getFeePayments(hash: Hash): FeePaymentsView = {
+  def getFeePayments(tag: String): FeePaymentsView = {
     applyOnAccountView { nodeView =>
       nodeView.history
-        .feePaymentsInfo(bytesToId(hash.toBytes))
+        .feePaymentsInfo(getBlockIdByHashOrTag(nodeView, tag))
         .map(new FeePaymentsView(_))
         .orNull
     }
