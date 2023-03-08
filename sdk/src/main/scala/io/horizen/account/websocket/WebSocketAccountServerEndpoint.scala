@@ -9,7 +9,7 @@ import io.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.serialization.EthJsonMapper
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams, WebSocketSyncEvent}
+import io.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams, WebSocketSyncEvent, WebSocketSyncStatus}
 import io.horizen.evm.Address
 import io.horizen.network.SyncStatus
 import jakarta.websocket._
@@ -210,12 +210,16 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   }
 
   def notifySyncStarted(syncStatus: SyncStatus): Unit = {
+    log.debug("Websocket received notification on sync update.")
+
     for (subscription <- syncingSubscriptions) {
-      send(new WebSocketAccountEventParams(subscription = subscription.subscriptionId, result = new WebSocketSyncEvent(true, syncStatus)), subscription.session)
+      send(new WebSocketAccountEventParams(subscription = subscription.subscriptionId, result = new WebSocketSyncEvent(true, new WebSocketSyncStatus(syncStatus))), subscription.session)
     }
   }
 
   def notifySyncStopped(): Unit = {
+    log.debug("Websocket received notification on sync stop.")
+
     for (subscription <- syncingSubscriptions) {
       send(new WebSocketAccountEventParams(subscription = subscription.subscriptionId, result = new WebSocketSyncEvent(false, null)), subscription.session)
     }
