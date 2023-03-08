@@ -23,4 +23,4 @@ class WebSocketSyncEvent(@JsonProperty("syncing")
                          val syncing: Boolean = true,
                          @JsonProperty("status")
                          @JsonInclude(Include.NON_NULL)
-                         val status: SyncStatus)
+                         val status: WebSocketSyncStatus)
