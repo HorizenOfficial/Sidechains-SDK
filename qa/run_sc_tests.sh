@@ -109,6 +109,8 @@ testScriptsEvm=(
     'sc_evm_mempool_size.py'
     'sc_evm_mempool_timeout.py'
     'sc_evm_sync_status.py'
+    'account_websocket_server.py'
+    'account_websocket_server_sync.py'
 );
 
 testScriptsUtxo=(

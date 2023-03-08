@@ -1050,11 +1050,11 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     val status = result.get("status")
     assertTrue("Missing field currentBlock in status.", status.has("currentBlock"))
-    assertEquals("Wrong currentBlock in status", Numeric.toHexStringWithPrefix(expectedSyncStatus.currentBlock), status.get("currentBlock").asText())
+    assertEquals("Wrong currentBlock in status", expectedSyncStatus.currentBlock.longValue(), status.get("currentBlock").asLong())
     assertTrue("Missing field highestBlock in status.", status.has("highestBlock"))
-    assertEquals("Wrong highestBlock in status", Numeric.toHexStringWithPrefix(expectedSyncStatus.highestBlock), status.get("highestBlock").asText())
+    assertEquals("Wrong highestBlock in status", expectedSyncStatus.highestBlock.longValue(), status.get("highestBlock").asLong())
     assertTrue("Missing field startingBlock in status.", status.has("startingBlock"))
-    assertEquals("Wrong startingBlock in status", Numeric.toHexStringWithPrefix(expectedSyncStatus.startingBlock), status.get("startingBlock").asText())
+    assertEquals("Wrong startingBlock in status", expectedSyncStatus.startingBlock.longValue(), status.get("startingBlock").asLong())
   }
 
   private def checkSyncStopStatus(wsResponse: JsonNode): Unit = {
