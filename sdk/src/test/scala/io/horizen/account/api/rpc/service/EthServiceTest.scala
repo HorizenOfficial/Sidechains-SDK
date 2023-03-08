@@ -565,16 +565,16 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block tag", "Full transaction objects", "Expected output"),
       ("latest", true, expectedBlockViewTxHydrated),
       ("latest", false, expectedBlockViewTxHashes),
-      ("0x2", true, expectedBlockViewTxHydrated)
+      ("0x2", true, expectedBlockViewTxHydrated),
+      ("safe", true, "null"),
+      ("finalized", true, "null"),
+      ("0x1337", true, "null"),
     )
 
     val invalidCases =
       Table(
         ("Block tag / number", "Full transaction objects"),
-        ("safe", true),
-        ("finalized", true),
         ("aaaa", true),
-        ("0x1337", true)
       )
 
     forAll(validCases) { (tag, fullTx, expectedOutput) =>
@@ -624,11 +624,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block tag / index", "Expected output"),
       ("latest", "\"0x1\""),
       ("0x2", "\"0x1\""),
-      ("0x1", "\"0x0\"")
+      ("0x1", "\"0x0\""),
+      ("0x1337", "null")
     )
 
     val invalidCases =
-      Table("Block tag / index", "0x1337", "1337abcd")
+      Table("Block tag / index", "1337abcd")
 
     forAll(validCases) { (tag, expectedOutput) =>
       assertJsonEquals(
