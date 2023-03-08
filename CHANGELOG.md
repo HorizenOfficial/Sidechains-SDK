@@ -7,6 +7,7 @@
 6. Remote keys manager added to the CertificateSubmitter: submitter is able to sign certificates using the Secure Enclave hosted keys.
 7. Config file structure updated: remote keys manager configuration section added `sparkz.remoteKeysManager`.
 8. Signing tool introduced.
+9. MC2SCAggregatedTransaction max size limit fixed to fit max FT allowed by the mainchain. 
 
 **0.5.0**
 1. Scorex dependency has been updated from Scorex 2.0.0-RC6 to Sparkz 2.0.0-RC9 (package name has been changed to sparkz).
