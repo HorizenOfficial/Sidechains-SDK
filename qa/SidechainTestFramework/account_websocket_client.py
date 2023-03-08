@@ -16,6 +16,7 @@ class AccountWebsocketClient():
     NEW_HEADS_SUBSCRIPTION = "newHeads"
     NEW_PENDING_TRANSACTIONS_SUBSCRIPTION = "newPendingTransactions"
     LOGS_SUBSCRIPTION = "logs"
+    SYNC_SUBSCRIPTION = "syncing"
 
     def create_connection(self, url):
         return create_connection(url)

@@ -26,7 +26,7 @@ class AccountChainSetup(SidechainTestFramework):
                  allow_unprotected_txs=True, remote_keys_server_address=None, max_incoming_connections=100,
                  connect_nodes=True, max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
                  max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
-                 tx_lifetime=DEFAULT_TX_LIFETIME, websocket_server_port = None):
+                 tx_lifetime=DEFAULT_TX_LIFETIME, websocket_server_port = []):
 
         super().__init__()
 
@@ -56,6 +56,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.max_mempool_slots = max_mempool_slots
         self.max_nonexec_pool_slots = max_nonexec_pool_slots
         self.tx_lifetime = tx_lifetime
+        assert(len(websocket_server_port) == number_of_sidechain_nodes)
         self.websocket_server_port = websocket_server_port
 
     def setup_nodes(self):
@@ -79,7 +80,7 @@ class AccountChainSetup(SidechainTestFramework):
 
         for x in range(self.number_of_sidechain_nodes):
             if self.forger_options is None:
-                sc_node_config = SCNodeConfiguration(
+               sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
@@ -91,11 +92,13 @@ class AccountChainSetup(SidechainTestFramework):
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
-                    tx_lifetime =  self.tx_lifetime
-                )
+                    tx_lifetime =  self.tx_lifetime,
+                    websocket_server_enabled = True if self.websocket_server_port[x] != None else False,
+                    websocket_server_port = self.websocket_server_port[x] if self.websocket_server_port[x] != None else 0
+                ))
 
             else:
-                sc_node_config = SCNodeConfiguration(
+                sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     forger_options=self.forger_options,
@@ -109,12 +112,10 @@ class AccountChainSetup(SidechainTestFramework):
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
-                    tx_lifetime = self.tx_lifetime
-                )
-
-            if x == 0 and self.websocket_server_port != None:
-                sc_node_config.update_websocket_config(True, self.websocket_server_port)
-            sc_node_configuration.append(sc_node_config)
+                    tx_lifetime = self.tx_lifetime,
+                    websocket_server_enabled = True if self.websocket_server_port[x] != None else False,
+                    websocket_server_port = self.websocket_server_port[x]
+                ))
    
         if self.circuittype_override is not None:
             circuit_type = self.circuittype_override
