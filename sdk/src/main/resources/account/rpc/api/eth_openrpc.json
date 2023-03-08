@@ -47,7 +47,7 @@
 							"pattern": "^0x[0-9,a-f,A-F]{40}$"
 						},
 						"value": {
-							"title": "hex encoded value",
+							"title": "hex encoded value in wei.",
 							"type": "string",
 							"pattern": "^0x[0-9,a-f,A-F]{40}$"
 						}
@@ -92,7 +92,7 @@
 							"pattern": "^0x[0-9,a-f,A-F]{40}$"
 						},
 						"value": {
-							"title": "hex encoded value",
+							"title": "hex encoded value in wei",
 							"type": "string",
 							"pattern": "^0x[0-9,a-f,A-F]{40}$"
 						}
