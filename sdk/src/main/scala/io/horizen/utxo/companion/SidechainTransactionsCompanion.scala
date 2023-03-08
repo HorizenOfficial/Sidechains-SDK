@@ -9,11 +9,11 @@ import io.horizen.SidechainTypes
 import io.horizen.cryptolibprovider.CircuitTypes
 import CircuitTypes.CircuitTypes
 import io.horizen.transaction.{MC2SCAggregatedTransactionSerializer, TransactionSerializer}
-import io.horizen.utils.DynamicTypedSerializer
+import io.horizen.utils.{CheckedCompanion, DynamicTypedSerializer}
 
-
-case class SidechainTransactionsCompanion(customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]], circuitType: CircuitTypes  = CircuitTypes.NaiveThresholdSignatureCircuit)
-  extends DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]]( {
+case class SidechainTransactionsCompanion(customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]], circuitType: CircuitTypes = CircuitTypes.NaiveThresholdSignatureCircuit)
+  extends DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]](
+    {
       val hashMap = new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]() {{
         put(MC2SCAggregatedTransactionId.id(), MC2SCAggregatedTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
         put(SidechainCoreTransactionId.id(), SidechainCoreTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
@@ -23,4 +23,6 @@ case class SidechainTransactionsCompanion(customTransactionSerializers: JHashMap
         hashMap.put(KeyRotationTransactionId.id(), CertificateKeyRotationTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
       hashMap
     },
-    customTransactionSerializers)
+    customTransactionSerializers
+  ) with CheckedCompanion[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]]
+

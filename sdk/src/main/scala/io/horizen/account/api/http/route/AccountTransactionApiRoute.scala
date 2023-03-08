@@ -267,23 +267,19 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqSignTransaction]) {
           body => {
             applyOnNodeView { sidechainNodeView =>
-              val unsignedTxObj = Try {
-                companion.parseBytes(BytesUtils.fromHexString(body.transactionBytes)).asInstanceOf[EthereumTransaction]
-              }
-              unsignedTxObj match {
+              companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes)) match {
                 case Success(unsignedTx) =>
                   val txCost = unsignedTx.maxCost
                   val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
                   secret match {
                     case Some(secret) =>
-                      val signedTx = signTransactionWithSecret(secret, unsignedTx)
+                      val signedTx = signTransactionWithSecret(secret, unsignedTx.asInstanceOf[EthereumTransaction])
                       ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
                     case None =>
                       ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
                   }
                 case Failure(exception) =>
                   ApiResponseUtil.toResponse(ErrorByteTransactionParsing("ErrorByteTransactionParsing", JOptional.of(exception)))
-
               }
             }
           }
@@ -775,14 +771,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 }
 
 object AccountTransactionRestScheme {
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class RespAllTransactions(transactions: List[SidechainTypes#SCAT]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespAllWithdrawalRequests(listOfWR: List[WithdrawalRequest]) extends SuccessResponse

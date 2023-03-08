@@ -3,7 +3,7 @@ package io.horizen.utxo.api.http.route
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import io.horizen.api.http.route.SidechainApiRouteTest
-import io.horizen.api.http.route.WalletBaseErrorResponse.{ErrorPropositionNotFound, ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
+import io.horizen.api.http.route.WalletBaseErrorResponse.{ErrorFailedToParseSecret, ErrorPropositionNotFound, ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
 import io.horizen.api.http.route.WalletBaseRestScheme.{ReqAllPropositions, ReqDumpSecrets, ReqExportSecret, ReqImportSecret}
 import io.horizen.json.SerializationUtil
 import io.horizen.utils.BytesUtils
@@ -282,6 +282,24 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /importSecret" in {
+      //private25519 secret is not added since there are spurious bytes after end of data
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
+      Post(basePath + "importSecret")
+        .addCredentials(credentials)
+        .withEntity(
+          SerializationUtil.serialize(ReqImportSecret(
+            "00" + // companion type
+              "2b64a179846da0b13ed5b4354dbdeb85a500c60ccb12c01a0fded2bd5d8b58e5" + // 32 bytes
+              "8bb8302e2b46763c830099c6fd862da0774a7b8f1323db5bbd96d3652176e485" + // 32 bytes
+              "ff" // spurious byte
+          ))) ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorFailedToParseSecret("", JOptional.empty()).code)
+        // assert we have the expected specific error of that type
+        val errMsg = mapper.readTree(entityAs[String]).get("error").get("detail").asText()
+        assertTrue(errMsg.contains("Spurious bytes found"))
+      }
       // private25519 secret is added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
       Post(basePath + "importSecret")

@@ -278,7 +278,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             case SCHNORR:
                 Secret secret;
                 try {
-                    secret = SECRETS_COMPANION.parseBytes(BytesUtils.fromHexString(privateKey));
+                    secret = (Secret)SECRETS_COMPANION.parseBytes(BytesUtils.fromHexString(privateKey));
                 } catch (IllegalArgumentException e) {
                     throw new IllegalArgumentException("Unable to parse privateKey bytes: " + e.getMessage());
                 }
@@ -300,7 +300,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
     private void signMessageSchnorr(String privateKey, byte[] message) {
         Secret secret;
         try {
-            secret = SECRETS_COMPANION.parseBytes(BytesUtils.fromHexString(privateKey));
+            secret = (Secret)SECRETS_COMPANION.parseBytes(BytesUtils.fromHexString(privateKey));
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Unable to parse privateKey bytes: " + e.getMessage());
         }
