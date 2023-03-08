@@ -923,11 +923,10 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block id", "Expected output"),
       ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
-      ("latest", "null"),
       ("0x2", "null"),
     )
 
-    val invalidCases = Table("Block id", "null", "dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")
+    val invalidCases = Table("Block id", "null", "dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "latest")
 
     forAll(validCases) { (id, expectedOutput) =>
       assertJsonEquals(
@@ -957,13 +956,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
           ]}"""
         ),
         (
-          "latest",
-          """{"forwardTransfers":[
-            {"to":"0x5d3eff12e7c2f48e1bd660694101049f8fb678c9","value":"0x51b7d5554400"},
-            {"to":"0xaea09d1e14cbf1604dc36c76cc9d5cb1e7e493a7","value":"0x378d4bb3f000"}
-          ]}"""
-        ),
-        (
           "0x2",
           """{"forwardTransfers":[
             {"to":"0x5d3eff12e7c2f48e1bd660694101049f8fb678c9","value":"0x51b7d5554400"},
@@ -973,7 +965,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
       )
 
-    val invalidCases = Table("Block id", "0x1337", "1337abcd")
+    val invalidCases = Table("Block id", "0x1337", "1337abcd", "latest", "pending")
 
     forAll(validCases) { (id, expectedOutput) =>
       assertJsonEquals(

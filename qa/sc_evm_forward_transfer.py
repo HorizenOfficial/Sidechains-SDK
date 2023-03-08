@@ -9,7 +9,7 @@ from SidechainTestFramework.account.ac_utils import format_eoa
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
 from httpCalls.transaction.allTransactions import allTransactions
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, NULL_ADDRESS
-from test_framework.util import assert_equal, forward_transfer_to_sidechain
+from test_framework.util import assert_equal, forward_transfer_to_sidechain, fail, assert_true
 
 """
 Check that forward transfer to non-EOA account does not change balance.
@@ -48,20 +48,21 @@ class SCEvmForwardTransfer(AccountChainSetup):
         assert_equal(hex(ft_amount_in_wei), balance["result"], "FT to EOA failed")
 
         # verify forward transfer is contained in block and contains given value and to address via rpc
-        # First try with block hash
+        # Try with block hash
         forward_transfer = sc_node.rpc_zen_getForwardTransfers(add_0x_prefix(self.block_id))['result']['forwardTransfers'][0]
         assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
         assert_equal(self.evm_address.lower(), forward_transfer['to'])
-        # Second try with tag
-        forward_transfer = sc_node.rpc_zen_getForwardTransfers("latest")['result']['forwardTransfers'][0]
-        assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
-        assert_equal(self.evm_address.lower(), forward_transfer['to'])
-        # Third try with block number
+
+        # Try with block number
         block_number = sc_node.block_best()["result"]["height"]
         forward_transfer = sc_node.rpc_zen_getForwardTransfers(block_number)['result']['forwardTransfers'][0]
         assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
         assert_equal(self.evm_address.lower(), forward_transfer['to'])
 
+        # Try with tag
+        result = sc_node.rpc_zen_getForwardTransfers("latest")
+        assert_true("error" in result, "rpc_zen_getForwardTransfers should fail when using tag parameter")
+        assert_true("Invalid block input parameter" in result["error"]["message"], "Wrong error")
 
         # verify forward transfer is contained in block and contains given value and to address via api
         j = {

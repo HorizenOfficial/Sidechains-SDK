@@ -13,7 +13,7 @@ from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_
 from SidechainTestFramework.account.utils import (computeForgedTxFee, convertZenToWei, convertZenToZennies)
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
-    generate_account_proposition, generate_next_block)
+    generate_account_proposition, generate_next_block, assert_true)
 from test_framework.util import (
     assert_equal, fail, forward_transfer_to_sidechain)
 
@@ -231,14 +231,10 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
         assert_equal(exp_forger_fee_1, forger_data_1["value"])
         assert_equal(exp_forger_fee_2, forger_data_2["value"])
 
-        # Test with tag
-        (forger_data_1, forger_data_2) = sc_node_1.rpc_zen_getFeePayments("latest")["result"]["payments"]
-
-        assert_equal(exp_forger_fee_1, forger_data_1["value"])
-        assert_equal(exp_forger_fee_2, forger_data_2["value"])
-
-        assert_equal(exp_forger_fee_1, forger_data_1["value"])
-        assert_equal(exp_forger_fee_2, forger_data_2["value"])
+        # Try with tag
+        result = sc_node_1.rpc_zen_getFeePayments("latest")
+        assert_true("error" in result, "rpc_zen_getFeePayments should fail when using tag parameter")
+        assert_true("Invalid block input parameter" in result["error"]["message"], "Wrong error")
 
 
 if __name__ == "__main__":

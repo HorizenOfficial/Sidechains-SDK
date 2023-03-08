@@ -450,12 +450,16 @@ class EthService(
         }
       case "latest" | null => nodeView.history.getCurrentHeight
       case "pending" => nodeView.history.getCurrentHeight + 1
-      case height =>
-        Try
-          .apply(Numeric.decodeQuantity(height).intValueExact())
-          .filter(_ <= nodeView.history.getCurrentHeight)
-          .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null)))
+      case height =>  parseBlockHeight(nodeView, height) match {
+          case Success(res) => res
+          case Failure(_) => throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null))
+        }
     }
+  }
+
+  private def parseBlockHeight(nodeView: NV, number: String): Try[Int] = {
+    Try(Numeric.decodeQuantity(number).intValueExact())
+      .filter(_ <= nodeView.history.getCurrentHeight)
   }
 
   private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
@@ -466,13 +470,32 @@ class EthService(
     blockId
   }
 
-  private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
+  private def getBlockIdByHash(tag: String): Option[ModifierId] = {
     if (tag.length == 66 && tag.substring(0, 2) == "0x")
-      bytesToId(BytesUtils.fromHexString(tag.substring(2)))
-    else {
-      getBlockIdByTag(nodeView, tag)
+      Some(bytesToId(BytesUtils.fromHexString(tag.substring(2))))
+    else
+      None
+  }
+
+
+  private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
+    getBlockIdByHash(tag) match {
+      case Some(blockId) => blockId
+      case None => getBlockIdByTag(nodeView, tag)
     }
   }
+
+  private def getBlockIdByHashOrHeight(nodeView: NV, blockHashOrNumber: String): ModifierId = {
+    getBlockIdByHash(blockHashOrNumber) match {
+      case Some(blockId) => blockId
+      case None =>
+        parseBlockHeight(nodeView, blockHashOrNumber) match {
+          case Success(height) => ModifierId(nodeView.history.blockIdByHeight(height).get)
+          case Failure(_) => throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block input parameter", null))
+        }
+    }
+  }
+
 
   @RpcMethod("net_version")
   def version: String = String.valueOf(networkParams.chainId)
@@ -918,7 +941,7 @@ class EthService(
   def getForwardTransfers(tag: String): ForwardTransfersView = {
     applyOnAccountView { nodeView =>
       nodeView.history
-        .getStorageBlockById(getBlockIdByHashOrTag(nodeView, tag))
+        .getStorageBlockById(getBlockIdByHashOrHeight(nodeView, tag))
         .map(getForwardTransfersForBlock(_).asJava)
         .map(new ForwardTransfersView(_))
         .orNull
@@ -929,7 +952,7 @@ class EthService(
   def getFeePayments(tag: String): FeePaymentsView = {
     applyOnAccountView { nodeView =>
       nodeView.history
-        .feePaymentsInfo(getBlockIdByHashOrTag(nodeView, tag))
+        .feePaymentsInfo(getBlockIdByHashOrHeight(nodeView, tag))
         .map(new FeePaymentsView(_))
         .orNull
     }
