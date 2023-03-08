@@ -409,7 +409,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     //Simulate the removal of these transactions from a block and the re insertion into the mempool
     countDownController.reset(1)
-    publishNewReAddedTransactionEvent(Seq(utilMocks.exampleTransaction1, utilMocks.exampleTransaction2))
+    publishNewExecTransactionEvent(Seq(utilMocks.exampleTransaction1, utilMocks.exampleTransaction2))
     assertTrue("No event message received.", countDownController.await(5000))
     countDownController.reset(1)
     assertTrue("No event message received.", countDownController.await(5000))
@@ -1071,7 +1071,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     actorSystem.eventStream.publish(SuccessfulTransaction[EthereumTransaction](tx))
   }
 
-  def publishNewReAddedTransactionEvent(txs: Seq[EthereumTransaction]): Unit = {
+  def publishNewExecTransactionEvent(txs: Seq[EthereumTransaction]): Unit = {
     actorSystem.eventStream.publish(NewExecTransactionsEvent(txs.asInstanceOf[Seq[SidechainTypes#SCAT]]))
   }
 

@@ -203,8 +203,8 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     }
   }
 
-  def notifyMempoolReaddedTransactions(readdedTxs: Seq[EthereumTransaction]): Unit = {
-    readdedTxs.foreach( tx =>
+  def notifyNewExecTransactions(newExecTxs: Seq[EthereumTransaction]): Unit = {
+    newExecTxs.foreach(tx =>
       notifyNewPendingTransaction(tx)
     )
   }

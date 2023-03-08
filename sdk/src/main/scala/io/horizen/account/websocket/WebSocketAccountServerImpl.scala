@@ -21,8 +21,8 @@ class WebSocketAccountServerImpl(bindPort: Int, configuration: Class[_]) extends
     WebSocketAccountServerEndpoint.onVaultChanged()
   }
 
-  def onMempoolReaddedTransaction(readdedTxs: Seq[EthereumTransaction]): Unit = {
-    WebSocketAccountServerEndpoint.notifyMempoolReaddedTransactions(readdedTxs)
+  def onNewExecTransactionsEvent(newExecTxs: Seq[EthereumTransaction]): Unit = {
+    WebSocketAccountServerEndpoint.notifyNewExecTransactions(newExecTxs)
   }
 
   def onSyncStart(syncStatus: SyncStatus): Unit = {
