@@ -216,6 +216,8 @@ abstract class BlockBaseApiRoute[
           s"Block was not created: transactionsBytes parameter can be used only in regtest", JOptional.empty()))
       } else {
 
+        // any exception raised by parsing bytes will result in the offending tx being excluded from container
+        // and that is acceptable because forcing a tx is a feature used in testing
         val forcedTx: Iterable[TX] = body.transactionsBytes
           .map(txBytes => companion.parseBytesTry(BytesUtils.fromHexString(txBytes)))
           .flatten(maybeTx => maybeTx.map(Seq(_)).getOrElse(None))

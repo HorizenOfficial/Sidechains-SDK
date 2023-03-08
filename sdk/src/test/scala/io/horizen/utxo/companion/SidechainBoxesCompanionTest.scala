@@ -1,5 +1,6 @@
 package io.horizen.utxo.companion
 
+import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
 import io.horizen.customtypes._
 import io.horizen.utxo.box.BoxSerializer
@@ -11,6 +12,7 @@ import org.scalatestplus.junit.JUnitSuite
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
+import scala.util.{Failure, Success}
 
 class SidechainBoxesCompanionTest
   extends JUnitSuite
@@ -90,5 +92,39 @@ class SidechainBoxesCompanionTest
     }
 
     assertTrue("Exception must be thrown for unregistered box type.", exceptionThrown)
+  }
+
+
+  @Test
+  def testSpuriousBytes(): Unit = {
+    // Test 1: ZenBox deserialization
+    val zenBox = getZenBox
+    val zenBoxBytes = Bytes.concat(sidechainBoxesCompanion.toBytes(zenBox), new Array[Byte](1))
+
+    assertEquals("Type of serialized box must be ZenBox.", zenBox.boxTypeId(), zenBoxBytes(0))
+    val exception1 = intercept[IllegalArgumentException](
+     sidechainBoxesCompanion.parseBytesTry(zenBoxBytes).get
+    )
+    assertTrue(exception1.getMessage.contains("Spurious bytes found"))
+
+    // Test 2: WithdrawalRequestBox serialization/deserialization
+    val withdrawalRequestBox = getWithdrawalRequestBox
+    val withdrawalRequestBoxBytes = Bytes.concat(sidechainBoxesCompanion.toBytes(withdrawalRequestBox), new Array[Byte](1))
+
+    assertEquals("Type of serialized box must be WithdrawalRequestBox.", withdrawalRequestBox.boxTypeId(), withdrawalRequestBoxBytes(0))
+    val exception2 = intercept[IllegalArgumentException](
+      sidechainBoxesCompanion.parseBytesTry(withdrawalRequestBoxBytes).get
+    )
+    assertTrue(exception2.getMessage.contains("Spurious bytes found"))
+
+    // Test 3: ForgerBox serialization/deserialization
+    val forgerBox = getForgerBox
+    val forgerBoxBytes = Bytes.concat(sidechainBoxesCompanion.toBytes(forgerBox), new Array[Byte](1))
+
+    assertEquals("Type of serialized box must be ForgerBox.", forgerBox.boxTypeId(), forgerBoxBytes(0))
+    val exception3 = intercept[IllegalArgumentException](
+      sidechainBoxesCompanion.parseBytesTry(forgerBoxBytes).get
+    )
+    assertTrue(exception3.getMessage.contains("Spurious bytes found"))
   }
 }
