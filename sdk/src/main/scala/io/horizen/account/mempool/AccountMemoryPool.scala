@@ -5,6 +5,8 @@ import io.horizen.account.block.AccountBlock
 import io.horizen.account.node.NodeAccountMemoryPool
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
+import io.horizen.evm.Address
+import io.horizen.proposition.Proposition
 import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.transaction.MempoolReader
 
@@ -126,10 +128,10 @@ class AccountMemoryPool(
   def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMap(false)
 
-  def getExecutableTransactionsMapFrom(from: AddressProposition): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getExecutableTransactionsMapFrom(from: Address): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMapFrom(true, from)
 
-  def getNonExecutableTransactionsMapFrom(from: AddressProposition): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getNonExecutableTransactionsMapFrom(from: Address): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMapFrom(false, from)
 
   override def getTransactions(
