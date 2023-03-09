@@ -20,6 +20,7 @@ import sparkz.crypto.hash.Keccak256;
 import sparkz.util.ByteArrayBuilder;
 import sparkz.util.serialization.VLQByteBufferWriter;
 import sparkz.util.serialization.Writer;
+
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.Optional;
@@ -66,10 +67,17 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     private AddressProposition from;
     private String hashString;
     private BigInteger txCost;
+    private byte[] messageToSign;
+
+    private long size = -1;
 
     private synchronized String getTxHash() {
         if (this.hashString == null) {
-            byte[] encodedMessage = encode(isSigned());
+            byte[] encodedMessage;
+            if (isSigned())
+                encodedMessage = encode(true);
+            else
+                encodedMessage = this.messageToSign();
             this.hashString = BytesUtils.toHexString((byte[]) Keccak256.hash(encodedMessage));
         }
         return this.hashString;
@@ -200,7 +208,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonProperty("version")
     public byte version() {
-        return (byte)this.type.ordinal();
+        return (byte) this.type.ordinal();
     }
 
     @Override
@@ -238,7 +246,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     "non-positive gas limit", id()));
         if (!BigIntegerUtil.isUint64(getGasLimit()))
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "gas limit uint64 owerflow", id()));
+                    "gas limit uint64 overflow", id()));
 
         if (isEIP1559()) {
             if (getMaxFeePerGas().signum() < 0)
@@ -270,20 +278,21 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     "gas limit %s is below intrinsic gas %s",
                     id(), getGasLimit(), GasUtil.intrinsicGas(getData(), getTo().isEmpty())));
         }
-        try {
-            if (!getSignature().isValid(getFrom(), messageToSign()))
-                throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
-                        "signature");
-        } catch (Throwable t) {
-            // in case of really malformed signature we can not even compute the id()
-            throw new TransactionSemanticValidityException(String.format("Transaction signature not readable: %s", t.getMessage()));
-        }
 
+        if (getFrom() == null) {
+            // we already checked that this tx is signed, therefore we must be able to get a from address from a valid
+            // signature
+            throw new TransactionSemanticValidityException("Invalid signature: " + this.getSignature().toString());
+        }
     }
 
     @Override
-    public long size() {
-        return serializer().toBytes(this).length;
+    @JsonProperty("size")
+    public synchronized long size() {
+        if (this.size == -1) {
+            this.size = serializer().toBytes(this).length;
+        }
+        return size;
     }
 
     @Override
@@ -330,6 +339,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     /**
      * Calculate effective gas price, this will work for both legacy and EIP1559 transactions.
+     *
      * @param base base fee applicable for this transaction
      * @return effective gas price
      */
@@ -383,10 +393,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public synchronized AddressProposition getFrom() {
         if (this.from == null && this.signature != null) {
             try {
-                byte[] encodedTransaction = encode(false);
+                byte[] message = messageToSign();
                 this.from = new AddressProposition(
                         Secp256k1.signedMessageToAddress(
-                                encodedTransaction,
+                                message,
                                 signature.getV(),
                                 signature.getR(),
                                 signature.getS()
@@ -420,7 +430,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonIgnore
     public String getDataString() {
         if (this.data != null)
-          return BytesUtils.toHexString(this.data);
+            return BytesUtils.toHexString(this.data);
         return "";
     }
 
@@ -467,27 +477,25 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    public byte[] messageToSign() {
-       return encode(false);
+    public synchronized byte[] messageToSign() {
+        if (this.messageToSign == null) {
+            this.messageToSign = encode(false);
+        }
+        return this.messageToSign;
     }
 
     public Message asMessage(BigInteger baseFee) {
-        var gasFeeCap = isEIP1559() ? getMaxFeePerGas() : getGasPrice();
-        var gasTipCap = isEIP1559() ? getMaxPriorityFeePerGas() : getGasPrice();
-        // calculate effective gas price as baseFee + tip capped at the fee cap
-        // this will default to gasPrice if the transaction is not EIP-1559
-        var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
-                getFrom() == null ? Address.ZERO : getFrom().address(),
-                getTo().map(AddressProposition::address),
-                effectiveGasPrice,
-                gasFeeCap,
-                gasTipCap,
-                getGasLimit(),
-                getValue(),
-                getNonce(),
-                getData(),
-                false
+            getFrom() == null ? Address.ZERO : getFrom().address(),
+            getTo().map(AddressProposition::address),
+            getEffectiveGasPrice(baseFee),
+            getMaxFeePerGas(),
+            getMaxPriorityFeePerGas(),
+            getGasLimit(),
+            getValue(),
+            getNonce(),
+            getData(),
+            false
         );
     }
 

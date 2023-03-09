@@ -134,6 +134,8 @@ class MempoolMap(
     this
   }
 
+  def getAccountNonce(account: SidechainTypes#SCP): Option[BigInteger] = nonces.get(account)
+
   def size: Int = all.size
 
   def getTransaction(txId: ModifierId): Option[SidechainTypes#SCAT] = all.get(txId)
