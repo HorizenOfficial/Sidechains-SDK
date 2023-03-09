@@ -283,32 +283,29 @@ class MempoolMap(
     else
       nonExecutableTxs
     for ((from, nonceIdsMap) <- mempoolIdsMap) {
-      val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
-      for ((txNonce, txId) <- nonceIdsMap) {
-        nonceTxsMap.put(txNonce, getTransaction(txId).get)
-      }
-      txsMap.put(from, nonceTxsMap)
+      txsMap.put(from, retrieveTxByNonceMap(nonceIdsMap))
     }
     txsMap
   }
 
   def mempoolTransactionsMapFrom(executable: Boolean, requestedAddress: Address): TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
     val txsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
-    val mempoolIdsMap = if (executable)
-      executableTxs
+    val mempoolIdByNonceMapFrom = if (executable)
+      executableTxs.get(new AddressProposition(requestedAddress)).getOrElse(mutable.SortedMap.empty[BigInteger, ModifierId])
     else
-      nonExecutableTxs
-    for ((from, nonceIdsMap) <- mempoolIdsMap) {
-      val fromAddress = from.asInstanceOf[AddressProposition].address()
-      if(fromAddress.equals(requestedAddress)) {
-        val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
-        for ((txNonce, txId) <- nonceIdsMap) {
-          nonceTxsMap.put(txNonce, getTransaction(txId).get)
-        }
-        txsMap.put(from, nonceTxsMap)
-      }
+      nonExecutableTxs.get(new AddressProposition(requestedAddress)).getOrElse(mutable.SortedMap.empty[BigInteger, ModifierId])
+    if(!mempoolIdByNonceMapFrom.isEmpty) {
+      txsMap.put(new AddressProposition(requestedAddress), retrieveTxByNonceMap(mempoolIdByNonceMapFrom))
     }
     txsMap
+  }
+
+  private def retrieveTxByNonceMap(txIdByNonceMap: TxIdByNonceMap): TxByNonceMap = {
+    val txByNonceMap: TxByNonceMap = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+    for ((txNonce, txId) <- txIdByNonceMap) {
+      txByNonceMap.put(txNonce, getTransaction(txId).get)
+    }
+    txByNonceMap
   }
 
   /**
