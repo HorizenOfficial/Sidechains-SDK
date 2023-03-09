@@ -174,6 +174,7 @@ testScriptsUtxo=(
     'sc_multiple_pending_certs_non_ceasing.py'
     'sc_node_api_test.py'
     'sc_node_response_along_sync.py'
+    'sc_node_termination_during_sync.py'
     'sc_nodes_initialize.py'
     'sc_storage_recovery_with_csw.py'
     'sc_storage_recovery_without_csw.py'
