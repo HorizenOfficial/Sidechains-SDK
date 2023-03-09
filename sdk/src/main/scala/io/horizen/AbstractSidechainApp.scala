@@ -24,7 +24,6 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
 import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
-import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -53,7 +52,6 @@ import scala.util.{Failure, Success, Try}
 abstract class AbstractSidechainApp
   (val sidechainSettings: SidechainSettings,
    val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
-   val customApiGroups: JList[SidechainApplicationApiGroup],
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
@@ -342,10 +340,10 @@ abstract class AbstractSidechainApp
     Http().newServerAt(bindAddress.getAddress.getHostAddress,bindAddress.getPort).bind(combinedRoute)
 
     //Remove the Logger shutdown hook
-    val factory = LogManager.getFactory
-    if (factory.isInstanceOf[Log4jContextFactory]) {
-      val contextFactory = factory.asInstanceOf[Log4jContextFactory]
-      contextFactory.getShutdownCallbackRegistry.asInstanceOf[DefaultShutdownCallbackRegistry].stop()
+    LogManager.getFactory match {
+      case contextFactory: Log4jContextFactory =>
+        contextFactory.getShutdownCallbackRegistry.asInstanceOf[DefaultShutdownCallbackRegistry].stop()
+      case _ => // do nothing
     }
 
     //Add a new Shutdown hook that closes all the storages and stops all the interfaces and actors.

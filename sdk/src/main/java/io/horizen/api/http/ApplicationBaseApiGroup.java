@@ -99,6 +99,7 @@ public abstract class ApplicationBaseApiGroup<
     private ApiResponse applyFunctionOnSidechainNodeView(Function<NV, ApiResponse> func) {
         try
         {
+            // TODO check why this cast is necessary
             return (ApiResponse) getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(func);
         }
         catch (Exception e) {
@@ -109,6 +110,7 @@ public abstract class ApplicationBaseApiGroup<
     private <T> ApiResponse applyBiFunctionOnSidechainNodeView(T functionParameter, BiFunction<NV, T, ApiResponse> func) {
         try
         {
+            // TODO check why this cast is necessary
             return (ApiResponse) getFunctionsApplierOnSidechainNodeView().applyBiFunctionOnSidechainNodeView(func, functionParameter);
         }
         catch (Exception e) {

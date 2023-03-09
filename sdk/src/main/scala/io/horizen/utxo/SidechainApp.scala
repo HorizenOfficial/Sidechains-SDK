@@ -61,7 +61,7 @@ class SidechainApp @Inject()
    @Named("WalletCswDataStorage") walletCswDataStorage: Storage,
    @Named("ConsensusStorage") consensusStorage: Storage,
    @Named("BackupStorage") backUpStorage: Storage,
-   @Named("CustomApiGroups") override val customApiGroups: JList[SidechainApplicationApiGroup],
+   @Named("CustomApiGroups") val customApiGroups: JList[SidechainApplicationApiGroup],
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
@@ -70,7 +70,6 @@ class SidechainApp @Inject()
   extends AbstractSidechainApp(
     sidechainSettings,
     customSecretSerializers,
-    customApiGroups,
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,

@@ -12,12 +12,6 @@ import io.horizen.api.http.ApplicationBaseApiGroup;
 import io.horizen.node.NodeWalletBase;
 import io.horizen.proof.Proof;
 import io.horizen.proposition.Proposition;
-import io.horizen.utxo.block.SidechainBlock;
-import io.horizen.utxo.block.SidechainBlockHeader;
-import io.horizen.utxo.box.Box;
-import io.horizen.utxo.chain.SidechainFeePaymentsInfo;
-import io.horizen.utxo.node.*;
-import io.horizen.utxo.transaction.BoxTransaction;
 
 public abstract class AccountApplicationApiGroup extends ApplicationBaseApiGroup<
         AccountTransaction<Proposition, Proof<Proposition>>,

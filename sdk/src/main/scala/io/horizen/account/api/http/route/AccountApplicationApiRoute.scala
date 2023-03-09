@@ -5,15 +5,12 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
 import io.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import akka.pattern.ask
+import io.horizen.account.api.http.AccountApplicationApiGroup
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.api.http.FunctionsApplierOnSidechainNodeView
 import io.horizen.node.NodeWalletBase
-import io.horizen.utxo.api.http.SidechainApplicationApiGroup
-import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import io.horizen.utxo.chain.SidechainFeePaymentsInfo
-import io.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding
@@ -21,7 +18,7 @@ import sparkz.util.SparkzEncoding
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}
 
-case class AccountApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: SidechainApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)
+case class AccountApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: AccountApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)
                                        (implicit val context: ActorRefFactory)
   extends ApiRoute
     with ApiDirectives
