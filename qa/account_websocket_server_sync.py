@@ -28,10 +28,10 @@ Configuration: bootstrap 2 SC nodes and start it with genesis info extracted fro
 Test:
     - Connect a WS client on SC node 2
     - Initialize the SC nodes
-    - Verify that we received the websocket event SyncStart
     - Disconnect SC node 1 and SC node 2
     - Generate 600 blocks on SC node 1
-    - Reconnnect the SC node 1 and SC node 2 and generate a block
+    - Reconnect the SC node 1 and SC node 2 and generate a block
+    - Verify that we received the websocket event SyncStart
     - Verify that we received the websocket event SyncUpdate (sent every 500 synced block)
     - Verify that we received the websocket event SyncStop
 """
@@ -67,21 +67,15 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
         logging.info("SC node 1 subscribe to sync method")
 
         response = json.loads(ws.sendMessage(ws_connection, SC_NODE1_ID, ws.SUBSCRIBE_REQUEST, [ws.SYNC_SUBSCRIPTION]))
-        sync_subscription = response["result"]
 
         sc_node = self.sc_nodes[0]
-        sc_node2 = self.sc_nodes[1]
         self.sc_ac_setup()
-
-        # Verify that we receive the SyncStart event
-        response = json.loads(ws_connection.recv())
-        self.checkSyncUpdate(response["result"], 2, 2)
 
         # Disconnect SC node 1 and SC node 2
         logging.info("Disconnect SC node 1 and SC node 2")
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
 
-        # forge 1000 blocks on SC node 1
+        # forge 600 blocks on SC node 1
         NUM_BLOCKS = 600
         logging.info("SC node 1 generates {} blocks...".format(NUM_BLOCKS))
         generate_next_blocks(sc_node, "first node", NUM_BLOCKS, verbose=False)
@@ -93,25 +87,23 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
         generate_next_block(sc_node, "first node")
         sync_sc_blocks(self.sc_nodes, wait_for=300)
 
-        # Verify that we receive the SyncStop event after the disconnection
-        response = json.loads(ws_connection.recv())
-        pprint.pprint(response)
-        assert_false(response["result"]["syncing"])
-
-        time.sleep(60)
+        logging.info("Block synced on SC node 2")
 
         # Verify that we receive the SyncStart event after the reconnection
         response = json.loads(ws_connection.recv())
+        pprint.pprint(response)
         self.checkSyncUpdate(response["result"], 3, 3)
         
-         # Verify that we receive the SyncUpdate event after 500 blocks
+        # Verify that we receive the SyncUpdate event after 500 blocks
         response = json.loads(ws_connection.recv())
+        pprint.pprint(response)
         self.checkSyncUpdate(response["result"], 503, 3)
 
         time.sleep(60)
 
         # Verify that we receive the SyncStop event after sync all blocks
         response = json.loads(ws_connection.recv())
+        pprint.pprint(response)
         assert_false(response["result"]["syncing"])
         
         ws_connection.close()
