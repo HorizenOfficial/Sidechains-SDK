@@ -44,7 +44,7 @@ import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.io.{Codec, Source}
 import scala.util.{Failure, Success, Try}
 
@@ -69,6 +69,7 @@ abstract class AbstractSidechainApp
 
   private val closableResourceList = mutable.ListBuffer[AutoCloseable]()
   protected val sidechainTransactionsCompanion: DynamicTypedSerializer[TX, TransactionSerializer[TX]]
+  protected val terminationTimeout: FiniteDuration = Duration(30, TimeUnit.SECONDS)
 
 
   log.info(s"Starting application with settings \n$sidechainSettings")
@@ -354,7 +355,7 @@ abstract class AbstractSidechainApp
 
   // this method does not override stopAll(), but it rewrites part of its contents
   def sidechainStopAll(fromEndpoint: Boolean = false): Unit = synchronized {
-    val currentThreadId     = Thread.currentThread.getId
+    val currentThreadId      = Thread.currentThread.getId
     val shutdownHookThreadId = shutdownHookThread.getId
 
     // remove the shutdown hook for avoiding being called twice when we eventually call System.exit()
@@ -367,22 +368,24 @@ abstract class AbstractSidechainApp
 
     log.info("Stopping actors")
     actorSystem.terminate()
-    Await.result(actorSystem.whenTerminated, Duration(5, TimeUnit.SECONDS))
+    Try(Await.result(actorSystem.whenTerminated, terminationTimeout))
+      .recover { case _ => log.info(s"Actor system failed to terminate in $terminationTimeout") }
+      .map { _ =>
+        synchronized {
+          log.info("Calling custom application stopAll...")
+          applicationStopper.stopAll()
 
-    synchronized {
-      log.info("Calling custom application stopAll...")
-      applicationStopper.stopAll()
+          log.info("Closing all closable resources...")
+          closableResourceList.foreach(_.close())
 
-      log.info("Closing all closable resources...")
-      closableResourceList.foreach(_.close())
+          log.info("Shutdown the logger...")
+          LogManager.shutdown()
 
-      log.info("Shutdown the logger...")
-      LogManager.shutdown()
-
-      if(fromEndpoint) {
-        System.exit(0)
+          if (fromEndpoint) {
+            System.exit(0)
+          }
+        }
       }
-    }
   }
 
   protected def registerClosableResource[S <: AutoCloseable](closableResource: S) : S = {
