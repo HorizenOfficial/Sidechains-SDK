@@ -18,6 +18,8 @@ import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, Sidechain
 import io.horizen.companion.SidechainSecretsCompanion
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
+import io.horizen.evm.results.ProofAccountResult
+import io.horizen.evm.{Address, Hash, StateDB}
 import io.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import io.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
 import io.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
@@ -28,8 +30,6 @@ import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
 import io.horizen.utxo.box.Box
-import io.horizen.evm.results.ProofAccountResult
-import io.horizen.evm.{Address, Hash, StateDB}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
@@ -75,6 +75,8 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     // executable address/nonces/transactions map
     val executableTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+    // executable address/nonces/transactions map from a single address
+    val executableTxsMapFrom = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
 
     // proposition 1 executable transactions
     val executableNonceTxsMap1: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] =
@@ -108,6 +110,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     executableNonceTxsMap1.put(BigInteger.valueOf(16), executableTx1.asInstanceOf[SidechainTypes#SCAT])
     executableNonceTxsMap1.put(BigInteger.valueOf(24), executableTx2.asInstanceOf[SidechainTypes#SCAT])
     executableTxsMap.put(proposition1.asInstanceOf[SidechainTypes#SCP], executableNonceTxsMap1)
+    executableTxsMapFrom.put(proposition1.asInstanceOf[SidechainTypes#SCP], executableNonceTxsMap1)
 
     // proposition 2 executable transactions
     val executableNonceTxsMap2: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] =
@@ -131,9 +134,14 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     // mock getExecutableTransactionsMap method call
     Mockito.when(memoryPool.getExecutableTransactionsMap).thenReturn(executableTxsMap)
+    // mock getExecutableTransactionsMapFrom method call
+    Mockito.when(memoryPool.getExecutableTransactionsMapFrom(any[AddressProposition])).thenReturn(executableTxsMapFrom)
 
+    // ----------------------------------------------------------------------------------------------------
     // non executable address/nonces/transactions map
     val nonExecutableTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+    // non executable address/nonces/transactions map from a single address
+    val nonExecutableTxsMapFrom = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
 
     // proposition 1 non executable transactions
     val nonExecutableNonceTxsMap1: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] =
@@ -153,9 +161,12 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     nonExecutableNonceTxsMap1.put(BigInteger.valueOf(40), nonExecutableTx1.asInstanceOf[SidechainTypes#SCAT])
     nonExecutableTxsMap.put(proposition1.asInstanceOf[SidechainTypes#SCP], nonExecutableNonceTxsMap1)
+    nonExecutableTxsMapFrom.put(proposition1.asInstanceOf[SidechainTypes#SCP], nonExecutableNonceTxsMap1)
 
-    // mock getExecutableTransactionsMap method call
+    // mock getNonExecutableTransactionsMap method call
     Mockito.when(memoryPool.getNonExecutableTransactionsMap).thenReturn(nonExecutableTxsMap)
+    // mock getNonExecutableTransactionsMapFrom method call
+    Mockito.when(memoryPool.getNonExecutableTransactionsMapFrom(any[AddressProposition])).thenReturn(nonExecutableTxsMapFrom)
 
     // return the mocked memory pool
     memoryPool

@@ -291,6 +291,24 @@ class MempoolMap(
     txsMap
   }
 
+  def mempoolTransactionsMapFrom(executable: Boolean, requestedFrom: AddressProposition): TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
+    val txsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
+    val mempoolIdsMap = if (executable)
+      executableTxs
+    else
+      nonExecutableTxs
+    for ((from, nonceIdsMap) <- mempoolIdsMap) {
+      if(from.equals(requestedFrom)) {
+        val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+        for ((txNonce, txId) <- nonceIdsMap) {
+          nonceTxsMap.put(txNonce, getTransaction(txId).get)
+        }
+        txsMap.put(from, nonceTxsMap)
+      }
+    }
+    txsMap
+  }
+
   /**
    * Returns executable transactions sorted by gas tip (descending) and nonce. The ordering is performed in a semi-lazy
    * way.
