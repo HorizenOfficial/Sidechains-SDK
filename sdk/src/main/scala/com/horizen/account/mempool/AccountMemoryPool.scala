@@ -120,6 +120,12 @@ class AccountMemoryPool(
   def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMap(false)
 
+  def getExecutableTransactionsMapFrom(from: AddressProposition): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+    unconfirmed.mempoolTransactionsMapFrom(true, from)
+
+  def getNonExecutableTransactionsMapFrom(from: AddressProposition): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+    unconfirmed.mempoolTransactionsMapFrom(false, from)
+
   /**
    * Get the highest nonce from the pool or default to the current nonce in the state.
    */

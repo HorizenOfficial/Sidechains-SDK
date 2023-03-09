@@ -114,11 +114,45 @@ class EthService(
       }
     )
 
+  private def convertMempoolMapInspect(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
+    CollectionConverters.mapAsJavaMap(
+      poolMap.map { case (proposition, txByNonce) =>
+        new Address(proposition.bytes()) -> CollectionConverters.mapAsJavaMap(
+          txByNonce.mapValues(tx => {
+            val txPoolTx = new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction])
+            // check to address if null it is a contract creation transaction
+            if(txPoolTx.to!=null) {
+              s"${txPoolTx.to.toString}: ${txPoolTx.value} wei + ${txPoolTx.gas} gas × ${txPoolTx.gasPrice} wei"
+            } else {
+              s"contract creation: ${txPoolTx.value} wei + ${txPoolTx.gas} gas × ${txPoolTx.gasPrice} wei"
+            }
+          })
+        )
+      }
+    )
+
   @RpcMethod("txpool_content")
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
       convertMempoolMap(nodeView.pool.getExecutableTransactionsMap),
       convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMap)
+    )
+  }
+
+  @RpcMethod("txpool_contentFrom")
+  def txpoolContent(from: String): TxPoolContent = applyOnAccountView { nodeView =>
+    val fromAddress = EthereumTransactionUtils.getToAddressFromString(from).get()
+    new TxPoolContent(
+      convertMempoolMap(nodeView.pool.getExecutableTransactionsMapFrom(fromAddress)),
+      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMapFrom(fromAddress))
+    )
+  }
+
+  @RpcMethod("txpool_inspect")
+  def txpoolInspect(): TxPoolInspect = applyOnAccountView { nodeView =>
+    new TxPoolInspect(
+      convertMempoolMapInspect(nodeView.pool.getExecutableTransactionsMap),
+      convertMempoolMapInspect(nodeView.pool.getNonExecutableTransactionsMap)
     )
   }
 
@@ -623,7 +657,7 @@ class EthService(
             // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
             // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
             // This does not impact our case since the CREATE2 result would not be part of the receipt.
-            Option(generateContractAddress(ethTx.getFrom.address, ethTx.getNonce))
+            Option(generateContractAddress(ethTx.getFrom.address(), ethTx.getNonce))
           } else {
             // otherwise nothing
             None
