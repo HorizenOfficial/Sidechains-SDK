@@ -112,7 +112,6 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-
   def getClassByBoxClassName(className: String): Try[java.lang.Class[_ <: SidechainTypes#SCB]] = {
     Try(Class.forName(className).asSubclass(classOf[SidechainTypes#SCB])) orElse
       Try(Class.forName("io.horizen.utxo.box." + className).asSubclass(classOf[SidechainTypes#SCB]))
@@ -135,14 +134,3 @@ object SidechainWalletRestScheme {
 
 }
 
-@JsonView(Array(classOf[Views.Default]))
-case class ImportSecretsDetail private (lineNumber: Int,
-                                        description: String) {
-  def getLineNumber: Int = {
-    lineNumber
-  }
-
-  def getDescription: String = {
-    description
-  }
-}

@@ -9,7 +9,7 @@ import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.TransactionBaseApiRoute
 import io.horizen.api.http.route.TransactionBaseErrorResponse.ErrorBadCircuit
 import io.horizen.api.http.route.TransactionBaseRestScheme.{TransactionBytesDTO, TransactionDTO}
-import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
+import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.json.Views
 import io.horizen.params.NetworkParams
@@ -17,7 +17,7 @@ import io.horizen.proof.{Proof, SchnorrSignatureSerializer}
 import io.horizen.proposition._
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
-import io.horizen.utxo.api.http.route.SidechainTransactionErrorResponse._
+import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.utxo.api.http.route.SidechainTransactionRestScheme._
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
@@ -27,8 +27,6 @@ import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.node._
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainCoreTransaction}
 import sparkz.core.settings.RESTApiSettings
-
-import java.lang
 import java.util.{Collections, ArrayList => JArrayList, List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -164,7 +162,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               body.forgerOutputs.foreach{element =>
                 val forgerBoxToAdd = new ForgerBoxData(
                   PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.publicKey)),
-                  new lang.Long(element.value),
+                  element.value,
                   PublicKey25519PropositionSerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
                   VrfPublicKeySerializer.getSerializer.parseBytesAndCheck(BytesUtils.fromHexString(element.vrfPubKey))
                 )
@@ -195,10 +193,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                 // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
                 val messageToSign = unsignedTransaction.messageToSign()
                 val proofs = inputBoxes.map(box => {
-                  if (box.proposition().isInstanceOf[PublicKey25519Proposition]) {
-                    wallet.secretByPublicKey25519Proposition(box.proposition().asInstanceOf[PublicKey25519Proposition]).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
-                  }else{
-                    throw new IllegalArgumentException(s"Unexpected box locking proposition for box id [${BytesUtils.toHexString(box.id())}]. Expected: PublicKey25519Proposition, got ${box.proposition().getClass}")
+                  box.proposition() match {
+                    case key25519Proposition: PublicKey25519Proposition =>
+                      wallet.secretByPublicKey25519Proposition(key25519Proposition).get().sign(messageToSign).asInstanceOf[Proof[SCP]]
+                    case _ =>
+                      throw new IllegalArgumentException(s"Unexpected box locking proposition for box id [${BytesUtils.toHexString(box.id())}]. Expected: PublicKey25519Proposition, got ${box.proposition().getClass}")
                   }
                 })
 
@@ -392,15 +391,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                 // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
                 val messageToSign = unsignedTransaction.messageToSign()
                 val proofs = inputBoxes.map(box => {
-                  if (box.proposition().isInstanceOf[PublicKey25519Proposition]) {
-                    wallet.secretByPublicKey25519Proposition(box.proposition().asInstanceOf[PublicKey25519Proposition]).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
-                  }else{
-                    throw new IllegalArgumentException(s"Unexpected box locking proposition for box id [${BytesUtils.toHexString(box.id())}]. Expected: PublicKey25519Proposition, got ${box.proposition().getClass}")
+                  box.proposition() match {
+                    case key25519Proposition: PublicKey25519Proposition =>
+                      wallet.secretByPublicKey25519Proposition(key25519Proposition).get().sign(messageToSign).asInstanceOf[Proof[SCP]]
+                    case _ =>
+                      throw new IllegalArgumentException(s"Unexpected box locking proposition for box id [${BytesUtils.toHexString(box.id())}]. Expected: PublicKey25519Proposition, got ${box.proposition().getClass}")
                   }
                 })
 
                 val transaction: SidechainCoreTransaction = new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
-                val txRepresentation: (SidechainTypes#SCBT => SuccessResponse) =
+                val txRepresentation: SidechainTypes#SCBT => SuccessResponse =
                   if (body.format.getOrElse(false)) {
                     tx => TransactionDTO(tx)
                   } else {
@@ -530,7 +530,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           && box.value() >= body.fee.getOrElse(0L)) match {
         case Some(inputBox) =>
           //Collect input private key
-          val inputPrivateKey = wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get().asInstanceOf[PrivateKey25519]
+          val inputPrivateKey = wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get()
           //Create openStakeTransaction
           createAndSignOpenStakeTransaction(inputBox, inputPrivateKey, body.forgerProposition, body.forgerIndex, body.fee)
         case None =>
@@ -552,7 +552,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         .find(box => BytesUtils.toHexString(box.id()).equals(body.transactionInput.boxId)) match {
         case Some(inputBox) =>
           //Collect input private key
-          val inputPrivateKey = wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get().asInstanceOf[PrivateKey25519]
+          val inputPrivateKey = wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get()
           //Create openStakeTransaction
           createAndSignOpenStakeTransaction(inputBox, inputPrivateKey, body.regularOutputProposition, body.forgerIndex, body.fee)
         case None =>
@@ -679,22 +679,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class RespAllTransactions(transactions: List[SidechainTypes#SCBT]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class ReqFindById(transactionId: String, blockHash: Option[String], format: Option[Boolean])
-
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class ReqDecodeTransactionBytes(transactionBytes: String)
-
-  @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class RespDecodeTransactionBytes(transaction: SidechainTypes#SCBT) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class TransactionInput(boxId: String)
@@ -803,22 +788,4 @@ object SidechainTransactionRestScheme {
   }
 }
 
-object SidechainTransactionErrorResponse {
 
-  case class ErrorNotFoundTransactionId(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0201"
-  }
-
-  case class ErrorNotFoundTransactionInput(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0202"
-  }
-
-  case class ErrorByteTransactionParsing(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0203"
-  }
-
-  case class GenericTransactionError(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0204"
-  }
-
-}

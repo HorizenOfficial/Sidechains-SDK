@@ -19,7 +19,6 @@ import io.horizen.proposition.{Proposition, VrfPublicKey}
 import io.horizen.secret._
 import io.horizen.transaction.Transaction
 import io.horizen.utils.BytesUtils
-import io.horizen.utxo.api.http.route.ImportSecretsDetail
 import io.horizen.{SidechainNodeViewBase, SidechainTypes}
 import sparkz.core.settings.RESTApiSettings
 
@@ -134,13 +133,21 @@ abstract class WalletBaseApiRoute[
     withBasicAuth {
       _ => {
         entity(as[ReqImportSecret]) { body =>
-          val secret = sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(body.privKey))
-          val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
-          Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-            case Success(_) =>
-              ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
+          sidechainSecretsCompanion.parseBytesTry(BytesUtils.fromHexString(body.privKey)) match {
+            case Success(secret) =>
+
+              val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+              Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+                case Success(_) =>
+                  ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
+                case Failure(e) =>
+                  ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to add the key.", JOptional.of(e)))
+              }
+
             case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to add the key.", JOptional.of(e)))
+              log.error(s"Import Wallet: Failed to parse secret: ${body.privKey}", e)
+              ApiResponseUtil.toResponse(ErrorFailedToParseSecret("ErrorFailedToParseSecret", JOptional.of(e)))
+
           }
         }
       }
@@ -320,5 +327,18 @@ object WalletBaseErrorResponse {
 
   case class ErrorFailedToParseSecret(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0305"
+  }
+}
+
+
+@JsonView(Array(classOf[Views.Default]))
+case class ImportSecretsDetail private (lineNumber: Int,
+                                        description: String) {
+  def getLineNumber: Int = {
+    lineNumber
+  }
+
+  def getDescription: String = {
+    description
   }
 }

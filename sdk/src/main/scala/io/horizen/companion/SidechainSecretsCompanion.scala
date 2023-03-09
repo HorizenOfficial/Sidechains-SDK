@@ -6,8 +6,7 @@ import io.horizen.SidechainTypes
 import io.horizen.account.secret.PrivateKeySecp256k1Serializer
 import io.horizen.secret.SecretsIdsEnum.{PrivateKey25519SecretId, SchnorrSecretKeyId, VrfPrivateKeySecretId, PrivateKeySecp256k1SecretId}
 import io.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretSerializer, SecretSerializer, VrfSecretKeySerializer}
-import io.horizen.utils.DynamicTypedSerializer
-
+import io.horizen.utils.{CheckedCompanion, DynamicTypedSerializer}
 
 case class SidechainSecretsCompanion(customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]])
   extends DynamicTypedSerializer[SidechainTypes#SCS, SecretSerializer[SidechainTypes#SCS]](
@@ -17,4 +16,5 @@ case class SidechainSecretsCompanion(customSecretSerializers: JHashMap[JByte, Se
       put(SchnorrSecretKeyId.id, SchnorrSecretSerializer.getSerializer.asInstanceOf[SecretSerializer[SidechainTypes#SCS]])
       put(PrivateKeySecp256k1SecretId.id, PrivateKeySecp256k1Serializer.getSerializer.asInstanceOf[SecretSerializer[SidechainTypes#SCS]])
     }},
-    customSecretSerializers)
+    customSecretSerializers
+  ) with CheckedCompanion[SidechainTypes#SCS, SecretSerializer[SidechainTypes#SCS]]

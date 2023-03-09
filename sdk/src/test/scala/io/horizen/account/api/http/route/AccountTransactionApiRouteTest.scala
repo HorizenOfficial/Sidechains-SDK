@@ -4,7 +4,8 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import io.horizen.account.api.http.route.AccountTransactionRestScheme._
 import io.horizen.account.utils.FeeUtils
-import io.horizen.api.http.route.TransactionBaseRestScheme.ReqSendTransaction
+import io.horizen.api.http.route.TransactionBaseErrorResponse.ErrorByteTransactionParsing
+import io.horizen.api.http.route.TransactionBaseRestScheme.{ReqAllTransactions, ReqSendTransaction}
 import io.horizen.json.SerializationUtil
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.utils.BytesUtils
@@ -13,12 +14,26 @@ import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar
 
 import java.math.BigInteger
+import java.util.Optional
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.util.Random
 
 class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with MockitoSugar {
 
   override val basePath = "/transaction/"
+
+  //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_unsigned_hex
+  val txUnsignedPayloadString: String =
+    "01" + "e946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e8000080808080"
+  val fromAddressString =
+    "dafea492d9c6733ae3d56b7ed1adb60692c98bc5"
+
+  //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_signed_hex
+  val txSignedPayloadString: String =
+    "01" + "f86946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e80000801ca02a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5a07ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"
+  val txSignedId =
+    "6d4f0bc052e919019d392debb1a39724baa85b3d9c54836e9892170180793613"
+
 
   "The Api should" should {
 
@@ -32,7 +47,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
       }
 
       Post(basePath + "allTransactions").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "allTransactions").withEntity("maybe_a_json") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -41,34 +56,34 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
 
 
       Post(basePath + "createLegacyEIP155Transaction").addCredentials(credentials) ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "createLegacyEIP155Transaction").addCredentials(credentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "createLegacyEIP155Transaction").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       Post(basePath + "createLegacyEIP155Transaction").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       Post(basePath + "makeForgerStake") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "makeForgerStake").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "makeForgerStake").addCredentials(badCredentials).withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
 
       Post(basePath + "spendForgingStake") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "spendForgingStake").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "spendForgingStake").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -76,10 +91,10 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
       }
 
       Post(basePath + "withdrawCoins") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "withdrawCoins").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "withdrawCoins").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -87,10 +102,10 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
       }
 
       Post(basePath + "createSmartContract") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "createSmartContract").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "createSmartContract").addCredentials(credentials) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -112,7 +127,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
         assertTrue(result.get("transactions").isArray)
         assertEquals(memoryPool.size(), result.get("transactions").elements().asScala.length)
         val transactionJsonNode = result.get("transactions").elements().asScala.toList
-        for (i <- 0 to transactionJsonNode.size - 1)
+        for (i <- transactionJsonNode.indices)
           jsonChecker.assertsOnAccountTransactionJson(transactionJsonNode(i), memoryPool.get(i))
       }
       // parameter 'format' = false
@@ -128,7 +143,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
         assertTrue(result.get("transactionIds").isArray)
         assertEquals(memoryPool.size(), result.get("transactionIds").elements().asScala.length)
         val transactionIdsJsonNode = result.get("transactionIds").elements().asScala.toList
-        for (i <- 0 to transactionIdsJsonNode.size - 1)
+        for (i <- transactionIdsJsonNode.indices)
           assertEquals(memoryPool.get(i).id, transactionIdsJsonNode(i).asText())
       }
     }
@@ -158,7 +173,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
         assertTrue(result.get("listOfWR").isArray)
         assertEquals(1, result.get("listOfWR").elements().asScala.length)
         val stakesJsonNode = result.get("listOfWR").elements().asScala.toList
-        for (i <- 0 to stakesJsonNode.size - 1)
+        for (i <- stakesJsonNode.indices)
           jsonChecker.assertsOnWithdrawalRequestJson(stakesJsonNode(i), utilMocks.listOfWithdrawalRequests(i))
       }
     }
@@ -194,7 +209,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
         assertTrue(result.get("stakes").isArray)
         assertEquals(utilMocks.listOfStakes.size, result.get("stakes").elements().asScala.length)
         val stakesJsonNode = result.get("stakes").elements().asScala.toList
-        for (i <- 0 to stakesJsonNode.size - 1)
+        for (i <- stakesJsonNode.indices)
           jsonChecker.assertsOnAccountStakeInfoJson(stakesJsonNode(i), utilMocks.listOfStakes(i))
       }
     }
@@ -314,31 +329,56 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
       //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_signed_hex
       Post(basePath + "sendTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqSendTransaction(
-          "01f86946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e80000801ca02a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5a07ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"
+          txSignedPayloadString
         ))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
         if (result == null)
           fail("Serialization failed for objecgit SidechainApiResponseBody")
-
-        assertEquals("6d4f0bc052e919019d392debb1a39724baa85b3d9c54836e9892170180793613", result.get("transactionId").asText())
+        assertEquals(txSignedId, result.get("transactionId").asText())
+      }
+      // add trailing bytes after payload, it should fail
+      Post(basePath + "sendTransaction")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqSendTransaction(
+        txSignedPayloadString + "abcd"
+      ))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        // assert we got an error of the expected type
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorByteTransactionParsing("", Optional.empty()).code)
+        // assert we have the expected specific error of that type
+        val errMsg = mapper.readTree(entityAs[String]).get("error").get("detail").asText()
+        assertTrue(errMsg.contains("Spurious bytes found"))
       }
     }
 
     "reply at /signTransaction" in {
-      //sdk/target/test-classes/ethereumtransaction_eoa2eoa_legacy_unsigned_hex
-      // with insufficient balance on given 'from' address
+      // insufficient balance on given 'from' address, should fail
       Post(basePath + "signTransaction").addCredentials(credentials)
-        .withEntity(SerializationUtil.serialize(ReqSignTransaction(Option.apply("dafea492d9c6733ae3d56b7ed1adb60692c98bc5"),
-          "01e946824ce38252089470997970c51812dc3a010c7d01b50e0d17dc79c8888ac7230489e8000080808080"))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqSignTransaction(
+          Option.apply(fromAddressString), txUnsignedPayloadString
+        ))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("error")
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
-
         assertEquals("0205", result.get("code").asText())
+      }
+      // trailing bytes after payload, should fail
+      Post(basePath + "signTransaction").addCredentials(credentials)
+        .withEntity(SerializationUtil.serialize(ReqSignTransaction(
+          Option.apply(fromAddressString), txUnsignedPayloadString + "badbad"
+        ))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        // assert we got an error of the expected type
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorByteTransactionParsing("", Optional.empty()).code)
+        // assert we have the expected specific error of that type
+        val errMsg = mapper.readTree(entityAs[String]).get("error").get("detail").asText()
+        assertTrue(errMsg.contains("Spurious bytes found"))
+
       }
     }
 
