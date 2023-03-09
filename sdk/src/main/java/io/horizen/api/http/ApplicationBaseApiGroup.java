@@ -37,17 +37,18 @@ public abstract class ApplicationBaseApiGroup<
         P extends NodeMemoryPoolBase<TX>,
         NV extends SidechainNodeViewBase<TX, H, PM, FPI, NH, S, W, P>
         > {
-    private FunctionsApplierOnSidechainNodeView functionsApplierOnSidechainNodeView;
+
+    private FunctionsApplierOnSidechainNodeView<TX, H, PM, FPI, NH, S, W, P, NV> functionsApplierOnSidechainNodeView;
 
     public abstract String basePath();
 
     public abstract List<Route> getRoutes();
 
-    public final FunctionsApplierOnSidechainNodeView getFunctionsApplierOnSidechainNodeView() {
+    public final FunctionsApplierOnSidechainNodeView<TX, H, PM, FPI, NH, S, W, P, NV> getFunctionsApplierOnSidechainNodeView() {
         return functionsApplierOnSidechainNodeView;
     }
 
-    public final void setFunctionsApplierOnSidechainNodeView(FunctionsApplierOnSidechainNodeView functionsApplierOnSidechainNodeView) {
+    public final void setFunctionsApplierOnSidechainNodeView(FunctionsApplierOnSidechainNodeView<TX, H, PM, FPI, NH, S, W, P, NV> functionsApplierOnSidechainNodeView) {
         this.functionsApplierOnSidechainNodeView = functionsApplierOnSidechainNodeView;
     }
 
@@ -99,8 +100,7 @@ public abstract class ApplicationBaseApiGroup<
     private ApiResponse applyFunctionOnSidechainNodeView(Function<NV, ApiResponse> func) {
         try
         {
-            // TODO check why this cast is necessary
-            return (ApiResponse) getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(func);
+            return getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(func);
         }
         catch (Exception e) {
             return new InternalExceptionApiErrorResponse(Optional.of(e));
@@ -110,8 +110,7 @@ public abstract class ApplicationBaseApiGroup<
     private <T> ApiResponse applyBiFunctionOnSidechainNodeView(T functionParameter, BiFunction<NV, T, ApiResponse> func) {
         try
         {
-            // TODO check why this cast is necessary
-            return (ApiResponse) getFunctionsApplierOnSidechainNodeView().applyBiFunctionOnSidechainNodeView(func, functionParameter);
+            return getFunctionsApplierOnSidechainNodeView().applyBiFunctionOnSidechainNodeView(func, functionParameter);
         }
         catch (Exception e) {
             return new InternalExceptionApiErrorResponse(Optional.of(e));
