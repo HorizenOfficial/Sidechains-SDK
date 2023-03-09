@@ -222,7 +222,7 @@ class EthService(
   @RpcMethod("eth_signTransaction")
   def signTransaction(params: TransactionArgs): Array[Byte] = {
     applyOnAccountView { nodeView =>
-      val unsignedTx = params.toTransaction(networkParams, nodeView.history)
+      val unsignedTx = params.toTransaction(networkParams, nodeView.history, nodeView.pool)
       val secret = getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), unsignedTx.maxCost())
       val tx = signTransactionWithSecret(secret, unsignedTx)
       tx.encode(tx.isSigned)

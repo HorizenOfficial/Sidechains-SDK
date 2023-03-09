@@ -7,6 +7,7 @@ import io.horizen.account.api.rpc.service.Backend;
 import io.horizen.account.api.rpc.utils.RpcCode;
 import io.horizen.account.api.rpc.utils.RpcError;
 import io.horizen.account.history.AccountHistory;
+import io.horizen.account.mempool.AccountMemoryPool;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.state.Message;
 import io.horizen.account.transaction.EthereumTransaction;
@@ -124,7 +125,8 @@ public class TransactionArgs {
      * @return a new unsigned EthereumTransaction
      * @throws RpcException If chainId is given but does not match, or if maxFeePerGas is less than maxPriorityFeePerGas.
      */
-    public EthereumTransaction toTransaction(NetworkParams params, AccountHistory history) throws RpcException {
+    public EthereumTransaction toTransaction(NetworkParams params, AccountHistory history, AccountMemoryPool pool)
+        throws RpcException {
         var saneChainId = params.chainId();
         if (chainId != null && chainId.longValueExact() != saneChainId) {
             throw new RpcException(RpcError.fromCode(
@@ -132,9 +134,10 @@ public class TransactionArgs {
                 String.format("invalid chainID: got %d, want %d", chainId, saneChainId)
             ));
         }
-        if (nonce == null) {
-            // TODO: get latest nonce from mempool, if there is none fallback to "latest" state
-            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing nonce"));
+        var saneNonce = nonce;
+        if (saneNonce == null) {
+            // get the latest nonce from mempool, if there is none fallback to "latest" state
+            saneNonce = pool.getPoolNonce(this.getFrom());
         }
         if (gas == null) {
             // TODO: use gas estimation
@@ -150,10 +153,10 @@ public class TransactionArgs {
             case LegacyTxType:
                 if (chainId == null) {
                     // non-eip155
-                    return new EthereumTransaction(recipient, nonce, gasPrice, gas, value, data, null);
+                    return new EthereumTransaction(recipient, saneNonce, gasPrice, gas, value, data, null);
                 }
                 // eip155
-                return new EthereumTransaction(saneChainId, recipient, nonce, gasPrice, gas, value, data, null);
+                return new EthereumTransaction(saneChainId, recipient, saneNonce, gasPrice, gas, value, data, null);
             case DynamicFeeTxType:
                 // if omitted use suggested tip cap
                 var tipCap = maxPriorityFeePerGas != null ? maxPriorityFeePerGas : Backend.suggestTipCap(history);
@@ -164,7 +167,7 @@ public class TransactionArgs {
                 // sanity check values after autofilling missing values
                 checkEIP1559values(maxFee, tipCap);
                 return new EthereumTransaction(
-                    saneChainId, recipient, nonce, gas, tipCap, maxFee, value, data, null);
+                    saneChainId, recipient, saneNonce, gas, tipCap, maxFee, value, data, null);
             default:
                 // unsupported type
                 return null;

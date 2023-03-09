@@ -156,10 +156,12 @@ class MempoolMap(
   }
 
   def getAccountSlots(account: SidechainTypes#SCP): Int = {
-    val execTxsSlots: Int = executableTxs.get(account).map(txs => txs.values.foldLeft(0) { (sum, txId) => sum + txSizeInSlot(txCache(txId)) }).getOrElse(0)
-    val accountSlots: Int = nonExecutableTxs.get(account).map(txs => txs.values.foldLeft(execTxsSlots) { (sum, txId) => sum + txSizeInSlot(txCache(txId)) }).getOrElse(execTxsSlots)
-    accountSlots
+    (executableTxs.get(account) ++ nonExecutableTxs.get(account))
+      .flatMap(_.values)
+      .foldLeft(0) { (sum, txId) => sum + txSizeInSlot(txCache(txId)) }
   }
+
+  def getAccountNonce(account: SidechainTypes#SCP): Option[BigInteger] = nonces.get(account)
 
   def getMempoolSizeInSlots: Int = txCache.getSizeInSlots
 
