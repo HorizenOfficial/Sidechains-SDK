@@ -4,6 +4,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.JsonNode
+import io.horizen.EthServiceSettings
 import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.types._
 import io.horizen.account.api.rpc.utils._
@@ -11,9 +12,8 @@ import io.horizen.account.block.AccountBlock
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.forger.AccountForgeMessageBuilder
 import io.horizen.account.history.AccountHistory
-import io.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
+import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.proof.SignatureSecp256k1
-import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
 import io.horizen.account.state._
 import io.horizen.account.state.receipt.EthereumReceipt
@@ -33,7 +33,6 @@ import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
-import io.horizen.{EthServiceSettings, SidechainTypes}
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -45,12 +44,10 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future}
-import scala.jdk.CollectionConverters
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -109,54 +106,27 @@ class EthService(
     )
   }
 
-  private def convertMempoolMap(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
-    CollectionConverters.mapAsJavaMap(
-      poolMap.map { case (proposition, txByNonce) =>
-        proposition.asInstanceOf[AddressProposition].address() -> CollectionConverters.mapAsJavaMap(
-          txByNonce.mapValues(tx => new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction]))
-        )
-      }
-    )
-
-  private def convertMempoolMapInspect(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
-    CollectionConverters.mapAsJavaMap(
-      poolMap.map { case (proposition, txByNonce) =>
-        proposition.asInstanceOf[AddressProposition].address() -> CollectionConverters.mapAsJavaMap(
-          txByNonce.mapValues(tx => {
-            val txPoolTx = new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction])
-            // check to address if null it is a contract creation transaction
-            if(txPoolTx.to!=null) {
-              s"${txPoolTx.to.toString}: ${txPoolTx.value} wei + ${txPoolTx.gas} gas × ${txPoolTx.gasPrice} wei"
-            } else {
-              s"contract creation: ${txPoolTx.value} wei + ${txPoolTx.gas} gas × ${txPoolTx.gasPrice} wei"
-            }
-          })
-        )
-      }
-    )
-
   @RpcMethod("txpool_content")
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
-      convertMempoolMap(nodeView.pool.getExecutableTransactionsMap),
-      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMap)
+      nodeView.pool.getExecutableTransactionsMap,
+      nodeView.pool.getNonExecutableTransactionsMap
     )
   }
 
   @RpcMethod("txpool_contentFrom")
-  def txpoolContent(from: Address): TxPoolContent = applyOnAccountView { nodeView =>
+  def txpoolContentFrom(from: Address): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
-      convertMempoolMap(nodeView.pool.getExecutableTransactionsMapFrom(from)),
-      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMapFrom(from))
+      nodeView.pool.getExecutableTransactionsMapFrom(from),
+      nodeView.pool.getNonExecutableTransactionsMapFrom(from)
     )
   }
 
   @RpcMethod("txpool_inspect")
   def txpoolInspect(): TxPoolInspect = applyOnAccountView { nodeView =>
     new TxPoolInspect(
-      convertMempoolMapInspect(nodeView.pool.getExecutableTransactionsMap),
-      convertMempoolMapInspect(nodeView.pool.getNonExecutableTransactionsMap)
-    )
+      nodeView.pool.getExecutableTransactionsMapInspect,
+      nodeView.pool.getNonExecutableTransactionsMapInspect)
   }
 
   @RpcMethod("eth_getBlockByNumber")
