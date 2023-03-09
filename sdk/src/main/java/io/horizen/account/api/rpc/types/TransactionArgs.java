@@ -161,7 +161,7 @@ public class TransactionArgs {
         }
 
         // if omitted get the latest nonce from mempool or fallback to current state nonce
-        if (nonce == null) nonce = pool.getPoolNonce(this.getFrom());
+        if (nonce == null) nonce = pool.getPoolNonce(new AddressProposition(this.getFrom()));
 
         // if omitted use gas estimation
         if (gas == null) gas = gasEstimator.get();

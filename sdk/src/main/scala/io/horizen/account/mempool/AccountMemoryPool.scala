@@ -4,7 +4,6 @@ import io.horizen.account.block.AccountBlock
 import io.horizen.account.node.NodeAccountMemoryPool
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
-import io.horizen.evm.Address
 import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import sparkz.core.transaction.MempoolReader
 import sparkz.util.{ModifierId, SparkzLogging}
@@ -126,8 +125,8 @@ class AccountMemoryPool(
   /**
    * Get the highest nonce from the pool or default to the current nonce in the state.
    */
-  def getPoolNonce(account: Address): BigInteger = {
-    unconfirmed.getAccountNonce(new AddressProposition(account)).getOrElse(
+  def getPoolNonce(account: SidechainTypes#SCP): BigInteger = {
+    unconfirmed.getAccountNonce(account).getOrElse(
       accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
     )
   }
