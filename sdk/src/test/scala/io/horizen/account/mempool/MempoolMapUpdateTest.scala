@@ -997,9 +997,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
   @Test
   def testTimedoutTxs() : Unit = {
-    var mempoolMap = new MempoolMap(accountStateProvider,
-      baseStateProvider,
-      AccountMempoolSettings(txLifetime = 2.seconds))
+    val mempoolSettings = AccountMempoolSettings(txLifetime = 2.seconds)
+    val mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
 
     //Test 1: add some txs and wait for the timeout, then add other still valid txs. Verify that the update removes only the
     // timed out txs
@@ -1007,7 +1006,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     val listOfTimedoutTxs = (0 to 5).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = accountKeyOpt))
     listOfTimedoutTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
 
-    Thread.sleep(mempoolMap.TxLifetime.toMillis)
+    Thread.sleep(mempoolSettings.txLifetime.toMillis)
 
     val listOfValidTxs = (6 to 10).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = accountKeyOpt))
     listOfValidTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))

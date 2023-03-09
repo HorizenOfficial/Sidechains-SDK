@@ -72,7 +72,7 @@ class BaseFeeBlockValidatorTest extends JUnitSuite {
     mockedHistory = mockHelper.getMockedAccountHistory(Some(mockedBlock))
 
     // Test 5 - 7
-    // https://github.com/ethereum/go-ethereum/blob/53b1420edefcf6be154ea6df887b1e4d68fcc36f/consensus/misc/eip1559_test.go
+    // https://github.com/ethereum/go-ethereum/blob/v1.10.26/consensus/misc/eip1559_test.go
     // Test 5: Successful validation, last block was 50% full, base fee did not change
     gasLimit = BigInteger.valueOf(20000000)
     gasUsed = 9000000
