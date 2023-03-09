@@ -3,11 +3,14 @@ package io.horizen.account.api.rpc.types;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.horizen.account.api.rpc.handler.RpcException;
+import io.horizen.account.api.rpc.service.Backend;
 import io.horizen.account.api.rpc.utils.RpcCode;
 import io.horizen.account.api.rpc.utils.RpcError;
+import io.horizen.account.history.AccountHistory;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.state.Message;
 import io.horizen.account.transaction.EthereumTransaction;
+import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType;
 import io.horizen.account.utils.BigIntegerUtil;
 import io.horizen.evm.Address;
 import io.horizen.params.NetworkParams;
@@ -20,7 +23,6 @@ import java.util.Optional;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
-    public final BigInteger type;
     public final Address from;
     public final Address to;
     // currently, gas cannot be final because the estimateGas algorithm needs to modify it
@@ -41,7 +43,6 @@ public class TransactionArgs {
     public final BigInteger chainId;
 
     public TransactionArgs(
-        @JsonProperty("type") BigInteger type,
         @JsonProperty("from") Address from,
         @JsonProperty("to") Address to,
         @JsonProperty("gas") BigInteger gas,
@@ -61,13 +62,8 @@ public class TransactionArgs {
             ));
         }
         // Sanity check the EIP-1559 fee parameters if present.
-        if (gasPrice == null && maxFeePerGas != null && maxPriorityFeePerGas != null) {
-            if (maxFeePerGas.compareTo(maxPriorityFeePerGas) < 0) {
-                throw new RpcException(RpcError.fromCode(
-                    RpcCode.InvalidParams,
-                    String.format("maxFeePerGas (%s) < maxPriorityFeePerGas (%s)", maxFeePerGas, maxPriorityFeePerGas)
-                ));
-            }
+        if (maxFeePerGas != null && maxPriorityFeePerGas != null) {
+            checkEIP1559values(maxFeePerGas, maxPriorityFeePerGas);
         }
         if (data != null && input != null && !Arrays.equals(data, input)) {
             throw new RpcException(RpcError.fromCode(
@@ -75,7 +71,6 @@ public class TransactionArgs {
                 "both \"data\" and \"input\" are set and not equal. Please use \"input\" to pass transaction call data"
             ));
         }
-        this.type = type;
         this.from = from;
         this.to = to;
         this.gas = gas;
@@ -93,6 +88,16 @@ public class TransactionArgs {
         }
     }
 
+    private static void checkEIP1559values(BigInteger maxFeePerGas, BigInteger maxPriorityFeePerGas)
+        throws RpcException {
+        if (maxFeePerGas.compareTo(maxPriorityFeePerGas) < 0) {
+            throw new RpcException(RpcError.fromCode(
+                RpcCode.InvalidParams,
+                String.format("maxFeePerGas (%s) < maxPriorityFeePerGas (%s)", maxFeePerGas, maxPriorityFeePerGas)
+            ));
+        }
+    }
+
     /**
      * Get sender address or use zero address if none specified.
      */
@@ -100,7 +105,26 @@ public class TransactionArgs {
         return from == null ? Address.ZERO : from;
     }
 
-    public EthereumTransaction toTransaction(NetworkParams params) throws RpcException {
+    /**
+     * Creates a new unsigned EthereumTransaction from the given arguments.
+     * <br>
+     * If gasPrice is given and both maxFee and priorityFee are omitted a legacy transaction is created,
+     * otherwise a dynamic fee transaction (type=2) is created.
+     * <br>
+     * Missing parameters are autofilled as follows:
+     * <ul>
+     * <li>nonce: latest nonce from mempool + 1
+     * <li>gas: estimate gas
+     * <li>maxPriorityFeePerGas: suggest tip cap
+     * <li>maxFeePerGas: maxPriorityFeePerGas + baseFee * 2
+     * </ul>
+     * An error is thrown if in any situation maxFeePerGas ends being less than maxPriorityFeePerGas.
+     *
+     * @param params NetworkParams, only used to get the current chainId
+     * @return a new unsigned EthereumTransaction
+     * @throws RpcException If chainId is given but does not match, or if maxFeePerGas is less than maxPriorityFeePerGas.
+     */
+    public EthereumTransaction toTransaction(NetworkParams params, AccountHistory history) throws RpcException {
         var saneChainId = params.chainId();
         if (chainId != null && chainId.longValueExact() != saneChainId) {
             throw new RpcException(RpcError.fromCode(
@@ -109,38 +133,38 @@ public class TransactionArgs {
             ));
         }
         if (nonce == null) {
-            // TODO: should automatically use current nonce from "latest" state
+            // TODO: get latest nonce from mempool, if there is none fallback to "latest" state
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing nonce"));
         }
         if (gas == null) {
-            // TODO: should automatically use gas estimation
+            // TODO: use gas estimation
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing gas limit"));
         }
-        var saneType = type == null ? 0 : type.intValueExact();
-        var optionalToAddress = Optional.ofNullable(to).map(AddressProposition::new);
+        var saneType = gasPrice != null
+            ? EthereumTransactionType.LegacyTxType
+            : EthereumTransactionType.DynamicFeeTxType;
+
+        var recipient = Optional.ofNullable(to).map(AddressProposition::new);
 
         switch (saneType) {
-            case 0: // LEGACY type
-                if (gasPrice == null) {
-                    // TODO: should automatically use suggested values
-                    throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing gasPrice"));
-                }
-                if (chainId != null) {
-                    // eip155
-                    return new EthereumTransaction(
-                        saneChainId, optionalToAddress, nonce, gasPrice, gas, value, data, null);
-                } else {
+            case LegacyTxType:
+                if (chainId == null) {
                     // non-eip155
-                    return new EthereumTransaction(optionalToAddress, nonce, gasPrice, gas, value, data, null);
+                    return new EthereumTransaction(recipient, nonce, gasPrice, gas, value, data, null);
                 }
-            case 2: // EIP-1559
-                if (maxFeePerGas == null || maxPriorityFeePerGas == null) {
-                    // TODO: should automatically use suggested values, i.e. suggestFeeCap+baseFee*2 and suggestFeeCap, respectively
-                    throw new RpcException(
-                        RpcError.fromCode(RpcCode.InvalidParams, "missing maxFeePerGas or maxPriorityFeePerGas"));
-                }
+                // eip155
+                return new EthereumTransaction(saneChainId, recipient, nonce, gasPrice, gas, value, data, null);
+            case DynamicFeeTxType:
+                // if omitted use suggested tip cap
+                var tipCap = maxPriorityFeePerGas != null ? maxPriorityFeePerGas : Backend.suggestTipCap(history);
+                // if omitted use 2 * baseFee + maxPriorityFeePerGas
+                var maxFee = maxFeePerGas != null
+                    ? maxFeePerGas
+                    : history.bestBlock().header().baseFee().multiply(BigInteger.TWO).add(tipCap);
+                // sanity check values after autofilling missing values
+                checkEIP1559values(maxFee, tipCap);
                 return new EthereumTransaction(
-                    saneChainId, optionalToAddress, nonce, gas, maxPriorityFeePerGas, maxFeePerGas, value, data, null);
+                    saneChainId, recipient, nonce, gas, tipCap, maxFee, value, data, null);
             default:
                 // unsupported type
                 return null;
@@ -200,8 +224,7 @@ public class TransactionArgs {
     @Override
     public String toString() {
         return "TransactionArgs{" +
-            "type=" + (type != null ? type.toString() : "empty") +
-            ", from=" + (from != null ? from.toString() : "empty") +
+            "from=" + (from != null ? from.toString() : "empty") +
             ", to=" + (to != null ? to.toString() : "empty") +
             ", gas=" + (gas != null ? gas.toString() : "empty") +
             ", gasPrice=" + (gasPrice != null ? gasPrice.toString() : "empty") +

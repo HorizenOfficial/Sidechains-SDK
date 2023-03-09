@@ -221,8 +221,8 @@ class EthService(
 
   @RpcMethod("eth_signTransaction")
   def signTransaction(params: TransactionArgs): Array[Byte] = {
-    val unsignedTx = params.toTransaction(networkParams)
     applyOnAccountView { nodeView =>
+      val unsignedTx = params.toTransaction(networkParams, nodeView.history)
       val secret = getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), unsignedTx.maxCost())
       val tx = signTransactionWithSecret(secret, unsignedTx)
       tx.encode(tx.isSigned)
@@ -519,81 +519,8 @@ class EthService(
   @RpcMethod("eth_gasPrice")
   def gasPrice: BigInteger = {
     applyOnAccountView { nodeView =>
-      calculateGasPrice(nodeView, nodeView.history.bestBlock.header.baseFee)
+      Backend.calculateGasPrice(nodeView.history, nodeView.history.bestBlock.header.baseFee)
     }
-  }
-
-  /**
-   * DefaultMaxPrice = 500 GWei, DefaultIgnorePrice = 2 Wei
-   * https://github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go
-   * FullNode Defaults: Blocks = 20, Percentile = 60
-   * LightClient Defaults: Blocks = 2, Percentile = 60
-   * https://github.com/ethereum/go-ethereum/blob/master/eth/ethconfig/config.go
-   */
-  private def calculateGasPrice(nodeView: NV, baseFee: BigInteger): BigInteger = {
-    val nrOfBlocks = 20
-    val percentile = 60
-    val maxPrice = INITIAL_BASE_FEE.multiply(BigInteger.valueOf(500))
-    val ignorePrice = BigInteger.TWO
-    suggestTipCap(nodeView, nrOfBlocks, percentile, maxPrice, ignorePrice).add(baseFee).min(maxPrice)
-  }
-
-  /**
-   * Get tip cap that newly created transactions can use to have a high chance to be included in the following blocks.
-   * Replication of the original implementation in GETH w/o caching, see:
-   * github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go#L150
-   */
-  private def suggestTipCap(
-      nodeView: NV,
-      blockCount: Int,
-      percentile: Int,
-      maxPrice: BigInteger,
-      ignorePrice: BigInteger
-  ): BigInteger = {
-    val blockHeight = nodeView.history.getCurrentHeight
-    // limit the range of blocks by the number of available blocks and cap at 1024
-    val blocks: Integer = (blockCount * 2).min(blockHeight).min(1024)
-
-    // define limit for included gas prices each block
-    val limit = 3
-    val prices: Seq[BigInteger] = {
-      var collected = 0
-      var moreBlocksNeeded = false
-      // Return lowest tx gas prices of each requested block, sorted in ascending order.
-      // Queries up to 2*blockCount blocks, but stops in range > blockCount if enough samples were found.
-      (0 until blocks).withFilter(_ => !moreBlocksNeeded || collected < 2).map { i =>
-        val block = nodeView.history
-          .blockIdByHeight(blockHeight - i)
-          .map(ModifierId(_))
-          .flatMap(nodeView.history.getStorageBlockById)
-          .get
-        val blockPrices = getBlockPrices(block, ignorePrice, limit)
-        collected += blockPrices.length
-        if (i >= blockCount) moreBlocksNeeded = true
-        blockPrices
-      }
-    }.flatten
-
-    prices
-      .sorted
-      .lift((prices.length - 1) * percentile / 100)
-      .getOrElse(BigInteger.ZERO)
-      .min(maxPrice)
-  }
-
-  /**
-   * Calculates the lowest transaction gas price in a given block
-   * If the block is empty or all transactions are sent by the miner itself, empty sequence is returned.
-   * Replication of the original implementation in GETH, see:
-   * github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go#L258
-   */
-  private def getBlockPrices(block: AccountBlock, ignoreUnder: BigInteger, limit: Int): Seq[BigInteger] = {
-    block.transactions
-      .filter(tx => !(tx.getFrom.bytes() sameElements block.forgerPublicKey.bytes()))
-      .map(tx => getEffectiveGasTip(tx.asInstanceOf[EthereumTransaction], block.header.baseFee))
-      .filter(gasTip => ignoreUnder == null || gasTip.compareTo(ignoreUnder) >= 0)
-      .sorted
-      .take(limit)
   }
 
   private def getTransactionAndReceipt(transactionHash: Hash)
@@ -1031,7 +958,7 @@ class EthService(
             .get
           baseFeePerGas(i) = block.header.baseFee
           gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
-          if (percentiles.nonEmpty) reward(i) = getRewardsForBlock(block, stateView, percentiles)
+          if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(block, stateView, percentiles)
         }
       }
       // calculate baseFee for the next block after the requested range
@@ -1057,48 +984,6 @@ class EthService(
         )
       )
     percentiles
-  }
-
-  private def getRewardsForBlock(
-      block: AccountBlock,
-      stateView: AccountStateView,
-      percentiles: Array[Double]
-  ): Array[BigInteger] = {
-    val txs = block.transactions.map(_.asInstanceOf[EthereumTransaction])
-    // return an all zero row if there are no transactions to gather data from
-    if (txs.isEmpty) return percentiles.map(_ => BigInteger.ZERO)
-
-    // collect gas used and reward (effective gas tip) per transaction, sorted ascending by reward
-    case class GasAndReward(gasUsed: Long, reward: BigInteger)
-    val sortedRewards = txs
-      .map(tx =>
-        GasAndReward(
-          stateView.getTransactionReceipt(BytesUtils.fromHexString(tx.id)).get.gasUsed.longValueExact(),
-          getEffectiveGasTip(tx, block.header.baseFee)
-        )
-      )
-      .sortBy(_.reward)
-      .iterator
-
-    var current = sortedRewards.next()
-    var sumGasUsed = current.gasUsed
-    val rewards = new Array[BigInteger](percentiles.length)
-    for (i <- percentiles.indices) {
-      val thresholdGasUsed = (block.header.gasUsed.doubleValue() * percentiles(i) / 100).toLong
-      // continue summation as long as the total is below the percentile threshold
-      while (sumGasUsed < thresholdGasUsed && sortedRewards.hasNext) {
-        current = sortedRewards.next()
-        sumGasUsed += current.gasUsed
-      }
-      rewards(i) = current.reward
-    }
-    rewards
-  }
-
-  private def getEffectiveGasTip(tx: EthereumTransaction, baseFee: BigInteger): BigInteger = {
-    if (baseFee == null) tx.getMaxPriorityFeePerGas
-    // we do not need to check if MaxFeePerGas is higher than baseFee, because the tx is already included in the block
-    else tx.getMaxPriorityFeePerGas.min(tx.getMaxFeePerGas.subtract(baseFee))
   }
 
   @RpcMethod("eth_getLogs")
