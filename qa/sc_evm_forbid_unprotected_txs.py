@@ -122,7 +122,7 @@ class SCEvmForbidUnprotectedTxs(AccountChainSetup):
         forced_tx = signTransaction(sc_node_1, fromAddress=evm_hex_address, payload=tx_bytes)
         block_id = generate_next_block(sc_node_1, "first node", forced_tx=[forced_tx])
         block_data = sc_node_1.block_findById(blockId=block_id)
-        assert_equal(len(block_data['result']['block']['sidechainTransactions']), 0)
+        assert_equal(len(block_data['result']['block']['sidechainTransactions']), 1)
         assert_equal(block_data['result']['block']['sidechainTransactions'][0]['legacy'], True)
 
         self.sc_sync_all()
