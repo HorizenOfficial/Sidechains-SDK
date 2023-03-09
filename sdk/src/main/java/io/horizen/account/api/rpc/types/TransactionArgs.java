@@ -111,19 +111,15 @@ public class TransactionArgs {
     }
 
     /**
-     * Creates a new unsigned EthereumTransaction from the given arguments.
-     * <br>
-     * If gasPrice is given and both maxFee and priorityFee are omitted a legacy transaction is created, otherwise a
-     * dynamic fee transaction (type=2) is created.
-     * <br>
+     * Creates a new unsigned EthereumTransaction from the given arguments. If gasPrice is given and both maxFee and
+     * priorityFee are omitted a legacy transaction is created, otherwise a dynamic fee transaction (type=2) is created.
      * Missing parameters are autofilled as follows:
      * <ul>
-     * <li>nonce: latest nonce from mempool + 1
-     * <li>gas: estimate gas
      * <li>maxPriorityFeePerGas: suggest tip cap
-     * <li>maxFeePerGas: maxPriorityFeePerGas + baseFee * 2
+     * <li>maxFeePerGas: 2 * baseFee + maxPriorityFeePerGas
+     * <li>nonce: latest nonce from mempool + 1 or current state nonce
+     * <li>gas: estimate gas
      * </ul>
-     * An error is thrown if in any situation maxFeePerGas ends being less than maxPriorityFeePerGas.
      *
      * @param params       to get the current chainId
      * @param history      to calculate fee values
