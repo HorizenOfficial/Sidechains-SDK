@@ -1,5 +1,11 @@
 **0.7.0**
-1. Change in the consensus protocol: forger eligibility rule.
+1. Account model introduced. EvmApp application example added.
+2. Base package renamed from `com.horizen` to `io.horizen`
+3. Packages overall refactoring, in particular UTXO specific classed moved to `io.horizen.utxo`, Account to `io.horizen.account`. 
+4. Change in the consensus protocol: forger eligibility rule. 
+5. zendoo-sc-cryptolib updated: certificate and CSW circuits were modified (backward incompatible to previous version). 
+6. Sparkz dependency updated from 2.0.0-RC9 to 2.0.0-RC11
+7. Deterministic key generation mechanism changed: all secret keys now deterministic. Ed25519 key generation algorithm modified.
 
 **0.6.0**
 1. Sidechain version 2 support with the new circuit type - threshold signature circuit with key rotation.
@@ -10,6 +16,7 @@
 6. Remote keys manager added to the CertificateSubmitter: submitter is able to sign certificates using the Secure Enclave hosted keys.
 7. Config file structure updated: remote keys manager configuration section added `sparkz.remoteKeysManager`.
 8. Signing tool introduced.
+9. MC2SCAggregatedTransaction max size limit fixed to fit max FT allowed by the mainchain. 
 
 **0.5.0**
 1. Scorex dependency has been updated from Scorex 2.0.0-RC6 to Sparkz 2.0.0-RC9 (package name has been changed to sparkz).

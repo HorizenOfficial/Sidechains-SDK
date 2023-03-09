@@ -164,33 +164,21 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     historyStorage, consensusDataStorage, stateMetadataStorage, secretStorage)
 
   override def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCAT]): Unit = {
-    newTxs.foreach(tx => {
-      // TODO FOR MERGE - Any custom implementation?
-      /*
-      if (tx.fee() > maxTxFee)
-        context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
-          immediateFailure = true))
-      else
-
-       */
-      if (tx.isInstanceOf[EthereumTransaction]) {
-        val ethTx: EthereumTransaction = tx.asInstanceOf[EthereumTransaction]
-        if (!sidechainSettings.accountMempool.allowUnprotectedTxs && ethTx.isLegacy && !ethTx.isEIP155) {
-          context.system.eventStream.publish(
-            FailedTransaction(
-              tx.id,
-              new IllegalArgumentException("Legacy unprotected transactions are not allowed."),
-              immediateFailure = true
-            )
+    newTxs.foreach {
+      case tx if Some(tx).filter(_.isInstanceOf[EthereumTransaction]).map(_.asInstanceOf[EthereumTransaction])
+        .exists(ethTx => !sidechainSettings.accountMempool.allowUnprotectedTxs && ethTx.isLegacy && !ethTx.isEIP155) =>
+        context.system.eventStream.publish(
+          FailedTransaction(
+            tx.id,
+            new IllegalArgumentException("Legacy unprotected transactions are not allowed."),
+            immediateFailure = true
           )
-        }
-      }
+        )
+      case tx =>
+        log.info(s"Got locally generated tx ${tx.id} of type ${tx.modifierTypeId}")
 
-      log.info(s"Got locally generated tx ${tx.id} of type ${tx.modifierTypeId}")
-
-      txModify(tx)
-
-    })
+        txModify(tx)
+    }
   }
 
   override protected def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock], memPool: MP, state: MS): MP = {
