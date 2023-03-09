@@ -25,7 +25,6 @@ class MempoolMap(
                   mempoolSettings: AccountMempoolSettings) extends SparkzLogging {
 
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
-  type TxByNonceMap = mutable.SortedMap[BigInteger, SidechainTypes#SCAT]
 
   // This constant added to the state nonce gives the maximum nonce that a tx can have to be accepted in the mempool
   val maxAllowedNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap).subtract(BigInteger.ONE)
