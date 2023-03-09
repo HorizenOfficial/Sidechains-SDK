@@ -13,6 +13,7 @@ import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
@@ -114,17 +115,23 @@ class AccountMemoryPool(
   def getNonExecutableTransactions: util.List[ModifierId] =
     unconfirmed.mempoolTransactions(false).toList.asJava
 
-  def getExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
     unconfirmed.mempoolTransactionsMap(true)
 
-  def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getNonExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
     unconfirmed.mempoolTransactionsMap(false)
 
-  def getExecutableTransactionsMapFrom(from: Address): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getExecutableTransactionsMapFrom(from: Address): TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
     unconfirmed.mempoolTransactionsMapFrom(true, from)
 
-  def getNonExecutableTransactionsMapFrom(from: Address): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getNonExecutableTransactionsMapFrom(from: Address): TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
     unconfirmed.mempoolTransactionsMapFrom(false, from)
+
+  def getExecutableTransactionsMapInspect: TrieMap[Address, mutable.SortedMap[BigInteger, String]] =
+    unconfirmed.mempoolTransactionsMapInspect(true)
+
+  def getNonExecutableTransactionsMapInspect: TrieMap[Address, mutable.SortedMap[BigInteger, String]] =
+    unconfirmed.mempoolTransactionsMapInspect(false)
 
   /**
    * Get the highest nonce from the pool or default to the current nonce in the state.

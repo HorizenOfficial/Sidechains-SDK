@@ -73,13 +73,19 @@ case class AccountMockDataHelper(genesis: Boolean)
     )
 
     // executable address/nonces/transactions map
-    val executableTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+    val executableTxsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
     // executable address/nonces/transactions map from a single address
-    val executableTxsMapFrom = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+    val executableTxsMapFrom = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
+    // executable address/nonces/inspect map
+    val executableTxsMapInspect = TrieMap.empty[Address, mutable.SortedMap[BigInteger, String]]
 
     // proposition 1 executable transactions
-    val executableNonceTxsMap1: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] =
-      new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+    val executableNonceTxsMap1: mutable.TreeMap[BigInteger, TxPoolTransaction] =
+      new mutable.TreeMap[BigInteger, TxPoolTransaction]()
+    // proposition 1 executable transactions inspect
+    val executableNonceTxsMapInspect1: mutable.TreeMap[BigInteger, String] =
+      new mutable.TreeMap[BigInteger, String]()
+
     val proposition1 = new AddressProposition(BytesUtils.fromHexString("15532e34426cd5c37371ff455a5ba07501c0f522"))
     val toProposition = new AddressProposition(BytesUtils.fromHexString("15532e34426cd5c37371ff455a5ba07501c0f522"))
 
@@ -106,14 +112,25 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    executableNonceTxsMap1.put(BigInteger.valueOf(16), executableTx1.asInstanceOf[SidechainTypes#SCAT])
-    executableNonceTxsMap1.put(BigInteger.valueOf(24), executableTx2.asInstanceOf[SidechainTypes#SCAT])
-    executableTxsMap.put(proposition1.asInstanceOf[SidechainTypes#SCP], executableNonceTxsMap1)
-    executableTxsMapFrom.put(proposition1.asInstanceOf[SidechainTypes#SCP], executableNonceTxsMap1)
+    val txPoolTransaction1 = new TxPoolTransaction(executableTx1)
+    val txPoolTransaction2 = new TxPoolTransaction(executableTx2)
+
+    executableNonceTxsMap1.put(BigInteger.valueOf(16), txPoolTransaction1)
+    executableNonceTxsMap1.put(BigInteger.valueOf(24), txPoolTransaction2)
+    executableTxsMap.put(proposition1.address(), executableNonceTxsMap1)
+    executableTxsMapFrom.put(proposition1.address(), executableNonceTxsMap1)
+
+    executableNonceTxsMapInspect1.put(BigInteger.valueOf(16), "0x15532e34426cd5c37371ff455a5ba07501c0f522: 15000000 wei + 15467876 gas × 1000000100 wei")
+    executableNonceTxsMapInspect1.put(BigInteger.valueOf(24), "0x15532e34426cd5c37371ff455a5ba07501c0f522: 4800000 wei + 15467876 gas × 1000000100 wei")
+    executableTxsMapInspect.put(proposition1.address(), executableNonceTxsMapInspect1)
 
     // proposition 2 executable transactions
-    val executableNonceTxsMap2: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] =
-      new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+    val executableNonceTxsMap2: mutable.TreeMap[BigInteger, TxPoolTransaction] =
+      new mutable.TreeMap[BigInteger, TxPoolTransaction]()
+    // proposition 2 executable transactions inspect
+    val executableNonceTxsMapInspect2: mutable.TreeMap[BigInteger, String] =
+      new mutable.TreeMap[BigInteger, String]()
+
     val proposition2 = new AddressProposition(BytesUtils.fromHexString("b039865dbea73df08e23f185847bab8e6a44108d"))
 
     val executableTx3 = new EthereumTransaction(
@@ -128,23 +145,35 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    executableNonceTxsMap2.put(BigInteger.valueOf(32), executableTx3.asInstanceOf[SidechainTypes#SCAT])
-    executableTxsMap.put(proposition2.asInstanceOf[SidechainTypes#SCP], executableNonceTxsMap2)
+    val txPoolTransaction3 = new TxPoolTransaction(executableTx3)
+
+    executableNonceTxsMap2.put(BigInteger.valueOf(32), txPoolTransaction3)
+    executableTxsMap.put(proposition2.address(), executableNonceTxsMap2)
+
+    executableNonceTxsMapInspect2.put(BigInteger.valueOf(32), "0x15532e34426cd5c37371ff455a5ba07501c0f522: 18000000 wei + 15467876 gas × 1000000100 wei")
+    executableTxsMapInspect.put(proposition2.address(), executableNonceTxsMapInspect2)
 
     // mock getExecutableTransactionsMap method call
     Mockito.when(memoryPool.getExecutableTransactionsMap).thenReturn(executableTxsMap)
     // mock getExecutableTransactionsMapFrom method call
     Mockito.when(memoryPool.getExecutableTransactionsMapFrom(any[Address])).thenReturn(executableTxsMapFrom)
+    // mock getExecutableTransactionsMapInspect method call
+    Mockito.when(memoryPool.getExecutableTransactionsMapInspect).thenReturn(executableTxsMapInspect)
 
     // ----------------------------------------------------------------------------------------------------
     // non executable address/nonces/transactions map
-    val nonExecutableTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+    val nonExecutableTxsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
     // non executable address/nonces/transactions map from a single address
-    val nonExecutableTxsMapFrom = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
+    val nonExecutableTxsMapFrom = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
+    // non executable address/nonces/inspect map
+    val nonExecutableTxsMapInspect = TrieMap.empty[Address, mutable.SortedMap[BigInteger, String]]
 
     // proposition 1 non executable transactions
-    val nonExecutableNonceTxsMap1: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] =
-      new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
+    val nonExecutableNonceTxsMap1: mutable.TreeMap[BigInteger, TxPoolTransaction] =
+      new mutable.TreeMap[BigInteger, TxPoolTransaction]()
+    // proposition 1 non executable transactions inspect
+    val nonExecutableNonceTxsMapInspect1: mutable.TreeMap[BigInteger, String] =
+      new mutable.TreeMap[BigInteger, String]()
 
     val nonExecutableTx1 = new EthereumTransaction(
       1997L,
@@ -158,14 +187,21 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    nonExecutableNonceTxsMap1.put(BigInteger.valueOf(40), nonExecutableTx1.asInstanceOf[SidechainTypes#SCAT])
-    nonExecutableTxsMap.put(proposition1.asInstanceOf[SidechainTypes#SCP], nonExecutableNonceTxsMap1)
-    nonExecutableTxsMapFrom.put(proposition1.asInstanceOf[SidechainTypes#SCP], nonExecutableNonceTxsMap1)
+    val nonExecTxPoolTransaction1 = new TxPoolTransaction(nonExecutableTx1)
+
+    nonExecutableNonceTxsMap1.put(BigInteger.valueOf(40), nonExecTxPoolTransaction1)
+    nonExecutableTxsMap.put(proposition1.address(), nonExecutableNonceTxsMap1)
+    nonExecutableTxsMapFrom.put(proposition1.address(), nonExecutableNonceTxsMap1)
+
+    nonExecutableNonceTxsMapInspect1.put(BigInteger.valueOf(40), "0x15532e34426cd5c37371ff455a5ba07501c0f522: 63000000 wei + 15467876 gas × 1000000100 wei")
+    nonExecutableTxsMapInspect.put(proposition1.address(), nonExecutableNonceTxsMapInspect1)
 
     // mock getNonExecutableTransactionsMap method call
     Mockito.when(memoryPool.getNonExecutableTransactionsMap).thenReturn(nonExecutableTxsMap)
     // mock getNonExecutableTransactionsMapFrom method call
-    Mockito.when(memoryPool.getNonExecutableTransactionsMapFrom(any[Address])).thenReturn(nonExecutableTxsMapFrom)
+    Mockito.when(memoryPool.getNonExecutableTransactionsMapFrom(any[Address])).thenReturn(nonExecutableTxsMap)
+    // mock getNonExecutableTransactionsMapInspect method call
+    Mockito.when(memoryPool.getNonExecutableTransactionsMapInspect).thenReturn(nonExecutableTxsMapInspect)
 
     // return the mocked memory pool
     memoryPool
