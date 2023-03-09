@@ -120,10 +120,10 @@ class AccountMemoryPool(
   def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMap(false)
 
-  def getExecutableTransactionsMapFrom(from: AddressProposition): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getExecutableTransactionsMapFrom(from: Address): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMapFrom(true, from)
 
-  def getNonExecutableTransactionsMapFrom(from: AddressProposition): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getNonExecutableTransactionsMapFrom(from: Address): TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
     unconfirmed.mempoolTransactionsMapFrom(false, from)
 
   /**

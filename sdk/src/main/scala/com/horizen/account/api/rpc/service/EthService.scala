@@ -108,7 +108,7 @@ class EthService(
   private def convertMempoolMap(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
     CollectionConverters.mapAsJavaMap(
       poolMap.map { case (proposition, txByNonce) =>
-        new Address(proposition.bytes()) -> CollectionConverters.mapAsJavaMap(
+        proposition.asInstanceOf[AddressProposition].address() -> CollectionConverters.mapAsJavaMap(
           txByNonce.mapValues(tx => new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction]))
         )
       }
@@ -117,7 +117,7 @@ class EthService(
   private def convertMempoolMapInspect(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
     CollectionConverters.mapAsJavaMap(
       poolMap.map { case (proposition, txByNonce) =>
-        new Address(proposition.bytes()) -> CollectionConverters.mapAsJavaMap(
+        proposition.asInstanceOf[AddressProposition].address() -> CollectionConverters.mapAsJavaMap(
           txByNonce.mapValues(tx => {
             val txPoolTx = new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction])
             // check to address if null it is a contract creation transaction
@@ -140,11 +140,10 @@ class EthService(
   }
 
   @RpcMethod("txpool_contentFrom")
-  def txpoolContent(from: String): TxPoolContent = applyOnAccountView { nodeView =>
-    val fromAddress = EthereumTransactionUtils.getToAddressFromString(from).get()
+  def txpoolContent(from: Address): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
-      convertMempoolMap(nodeView.pool.getExecutableTransactionsMapFrom(fromAddress)),
-      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMapFrom(fromAddress))
+      convertMempoolMap(nodeView.pool.getExecutableTransactionsMapFrom(from)),
+      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMapFrom(from))
     )
   }
 

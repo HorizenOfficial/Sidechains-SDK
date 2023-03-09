@@ -7,6 +7,7 @@ import io.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, 
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.evm.Address
 import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import sparkz.util.{ModifierId, SparkzLogging}
 
@@ -291,14 +292,15 @@ class MempoolMap(
     txsMap
   }
 
-  def mempoolTransactionsMapFrom(executable: Boolean, requestedFrom: AddressProposition): TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
+  def mempoolTransactionsMapFrom(executable: Boolean, requestedAddress: Address): TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
     val txsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
     val mempoolIdsMap = if (executable)
       executableTxs
     else
       nonExecutableTxs
     for ((from, nonceIdsMap) <- mempoolIdsMap) {
-      if(from.equals(requestedFrom)) {
+      val fromAddress = from.asInstanceOf[AddressProposition].address()
+      if(fromAddress.equals(requestedAddress)) {
         val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
         for ((txNonce, txId) <- nonceIdsMap) {
           nonceTxsMap.put(txNonce, getTransaction(txId).get)
