@@ -21,18 +21,19 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionArgs {
     public final Address from;
     public final Address to;
-    // currently, gas cannot be final because the estimateGas algorithm needs to modify it
+
     public BigInteger gas;
-    public final BigInteger gasPrice;
-    public final BigInteger maxFeePerGas;
-    public final BigInteger maxPriorityFeePerGas;
-    public final BigInteger value;
-    public final BigInteger nonce;
+    public BigInteger gasPrice;
+    public BigInteger maxFeePerGas;
+    public BigInteger maxPriorityFeePerGas;
+    public BigInteger value;
+    public BigInteger nonce;
 
     // We accept "data" and "input" for backwards-compatibility reasons.
     // "input" is the newer name and should be preferred by clients.
@@ -65,6 +66,9 @@ public class TransactionArgs {
         // Sanity check the EIP-1559 fee parameters if present.
         if (maxFeePerGas != null && maxPriorityFeePerGas != null) {
             checkEIP1559values(maxFeePerGas, maxPriorityFeePerGas);
+        }
+        if (gas != null && !BigIntegerUtil.isUint64(gas)) {
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid gas limit"));
         }
         if (data != null && input != null && !Arrays.equals(data, input)) {
             throw new RpcException(RpcError.fromCode(
@@ -109,8 +113,8 @@ public class TransactionArgs {
     /**
      * Creates a new unsigned EthereumTransaction from the given arguments.
      * <br>
-     * If gasPrice is given and both maxFee and priorityFee are omitted a legacy transaction is created,
-     * otherwise a dynamic fee transaction (type=2) is created.
+     * If gasPrice is given and both maxFee and priorityFee are omitted a legacy transaction is created, otherwise a
+     * dynamic fee transaction (type=2) is created.
      * <br>
      * Missing parameters are autofilled as follows:
      * <ul>
@@ -121,11 +125,20 @@ public class TransactionArgs {
      * </ul>
      * An error is thrown if in any situation maxFeePerGas ends being less than maxPriorityFeePerGas.
      *
-     * @param params NetworkParams, only used to get the current chainId
+     * @param params       to get the current chainId
+     * @param history      to calculate fee values
+     * @param pool         to get current nonce
+     * @param gasEstimator to estimate gas if required
      * @return a new unsigned EthereumTransaction
-     * @throws RpcException If chainId is given but does not match, or if maxFeePerGas is less than maxPriorityFeePerGas.
+     * @throws RpcException If chainId is given but does not match, or if maxFeePerGas is less than
+     *                      maxPriorityFeePerGas.
      */
-    public EthereumTransaction toTransaction(NetworkParams params, AccountHistory history, AccountMemoryPool pool)
+    public EthereumTransaction toTransaction(
+        NetworkParams params,
+        AccountHistory history,
+        AccountMemoryPool pool,
+        Supplier<BigInteger> gasEstimator
+    )
         throws RpcException {
         var saneChainId = params.chainId();
         if (chainId != null && chainId.longValueExact() != saneChainId) {
@@ -134,40 +147,40 @@ public class TransactionArgs {
                 String.format("invalid chainID: got %d, want %d", chainId, saneChainId)
             ));
         }
-        var saneNonce = nonce;
-        if (saneNonce == null) {
-            // get the latest nonce from mempool, if there is none fallback to "latest" state
-            saneNonce = pool.getPoolNonce(this.getFrom());
-        }
-        if (gas == null) {
-            // TODO: use gas estimation
-            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "missing gas limit"));
-        }
+
         var saneType = gasPrice != null
             ? EthereumTransactionType.LegacyTxType
             : EthereumTransactionType.DynamicFeeTxType;
+
+        if (saneType == EthereumTransactionType.DynamicFeeTxType) {
+            // if omitted use suggested tip cap
+            if (maxPriorityFeePerGas == null) maxPriorityFeePerGas = Backend.suggestTipCap(history);
+            // if omitted use 2 * baseFee + maxPriorityFeePerGas
+            if (maxFeePerGas == null) {
+                var baseFee = history.bestBlock().header().baseFee();
+                maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas);
+            }
+            // sanity check values after autofilling missing values
+            checkEIP1559values(maxFeePerGas, maxPriorityFeePerGas);
+        }
+
+        // if omitted get the latest nonce from mempool or fallback to current state nonce
+        if (nonce == null) nonce = pool.getPoolNonce(this.getFrom());
+
+        // if omitted use gas estimation
+        if (gas == null) gas = gasEstimator.get();
 
         var recipient = Optional.ofNullable(to).map(AddressProposition::new);
 
         switch (saneType) {
             case LegacyTxType:
-                if (chainId == null) {
-                    // non-eip155
-                    return new EthereumTransaction(recipient, saneNonce, gasPrice, gas, value, data, null);
-                }
+                // non-eip155
+                if (chainId == null) return new EthereumTransaction(recipient, nonce, gasPrice, gas, value, data, null);
                 // eip155
-                return new EthereumTransaction(saneChainId, recipient, saneNonce, gasPrice, gas, value, data, null);
+                return new EthereumTransaction(saneChainId, recipient, nonce, gasPrice, gas, value, data, null);
             case DynamicFeeTxType:
-                // if omitted use suggested tip cap
-                var tipCap = maxPriorityFeePerGas != null ? maxPriorityFeePerGas : Backend.suggestTipCap(history);
-                // if omitted use 2 * baseFee + maxPriorityFeePerGas
-                var maxFee = maxFeePerGas != null
-                    ? maxFeePerGas
-                    : history.bestBlock().header().baseFee().multiply(BigInteger.TWO).add(tipCap);
-                // sanity check values after autofilling missing values
-                checkEIP1559values(maxFee, tipCap);
                 return new EthereumTransaction(
-                    saneChainId, recipient, saneNonce, gas, tipCap, maxFee, value, data, null);
+                    saneChainId, recipient, nonce, gas, maxPriorityFeePerGas, maxFeePerGas, value, data, null);
             default:
                 // unsupported type
                 return null;
@@ -175,11 +188,10 @@ public class TransactionArgs {
     }
 
     /**
-     * Converts the transaction arguments to the Message type used by the core.
-     * This method is used in calls and traces that do not require a real live transaction.
-     * Reimplementation of the same logic in GETH.
+     * Converts the transaction arguments to the Message type used by the core. This method is used in calls and traces
+     * that do not require a real live transaction. Reimplementation of the same logic in GETH.
      */
-    public Message toMessage(BigInteger baseFee, BigInteger rpcGasCap) throws RpcException {
+    public Message toMessage(BigInteger baseFee, BigInteger rpcGasCap) {
         if (baseFee == null) {
             // Practically it's not possible. Because baseFee is always arrived from block header and every block header
             // has EIP-1559 support, so baseFee is never null.
@@ -189,13 +201,8 @@ public class TransactionArgs {
         // global RPC gas cap
         var gasLimit = rpcGasCap;
         // cap gas limit given by the caller
-        if (gas != null) {
-            if (!BigIntegerUtil.isUint64(gas)) {
-                throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid gas limit"));
-            }
-            if (gas.compareTo(gasLimit) < 0) {
-                gasLimit = gas;
-            }
+        if (gas != null && gas.compareTo(gasLimit) < 0) {
+            gasLimit = gas;
         }
         var effectiveGasPrice = BigInteger.ZERO;
         var gasFeeCap = BigInteger.ZERO;

@@ -18,7 +18,7 @@ import io.horizen.account.state._
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import io.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
+import io.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import io.horizen.account.utils.Secp256k1.generateContractAddress
 import io.horizen.account.utils.{BigIntegerUtil, Bloom, EthereumTransactionDecoder, FeeUtils}
 import io.horizen.account.wallet.AccountWallet
@@ -222,10 +222,11 @@ class EthService(
   @RpcMethod("eth_signTransaction")
   def signTransaction(params: TransactionArgs): Array[Byte] = {
     applyOnAccountView { nodeView =>
-      val unsignedTx = params.toTransaction(networkParams, nodeView.history, nodeView.pool)
+      val unsignedTx =
+        params.toTransaction(networkParams, nodeView.history, nodeView.pool, () => estimateGas(params, "pending"))
       val secret = getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), unsignedTx.maxCost())
-      val tx = signTransactionWithSecret(secret, unsignedTx)
-      tx.encode(tx.isSigned)
+      val signedTx = signTransactionWithSecret(secret, unsignedTx)
+      signedTx.encode(true)
     }
   }
 
