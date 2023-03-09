@@ -31,7 +31,7 @@ Test:
 """
 
 
-class BigBlockTest(SidechainTestFramework):
+class NodeTerminationDuringSync(SidechainTestFramework):
     MAX_TRANSACTION_OUTPUT = 998
     number_of_sidechain_nodes = 2
 
@@ -148,4 +148,4 @@ class BigBlockTest(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    BigBlockTest().main()
+    NodeTerminationDuringSync().main()
