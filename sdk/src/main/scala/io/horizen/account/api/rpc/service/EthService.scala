@@ -454,18 +454,18 @@ class EthService(
     tag match {
       case "earliest" => 1
       case "finalized" | "safe" => nodeView.history.getCurrentHeight match {
-        case height if height <= 100 => throw BlockNotFoundException()
-        case height if height > 100 => height - 100
-      }
+          case height if height <= 100 => throw BlockNotFoundException()
+          case height => height - 100
+        }
       case "latest" | null => nodeView.history.getCurrentHeight
       case "pending" => nodeView.history.getCurrentHeight + 1
       case height => parseBlockNumber(height)
-        .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block number or tag")))
+          .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block number or tag")))
     }
   }
 
-  private def parseBlockNumber(number: String): Try[Int] = {
-    Try(Numeric.decodeQuantity(number).intValueExact())
+  private def parseBlockNumber(number: String): Option[Int] = {
+    Try(Numeric.decodeQuantity(number).intValueExact()).toOption
   }
 
   private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
@@ -483,25 +483,18 @@ class EthService(
       None
   }
 
-
   private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
-    getBlockIdByHash(tag) match {
-      case Some(blockId) => blockId
-      case None => getBlockIdByTag(nodeView, tag)
-    }
+    getBlockIdByHash(tag).getOrElse(getBlockIdByTag(nodeView, tag))
   }
 
   private def getBlockIdByHashOrNumber(nodeView: NV, blockHashOrNumber: String): ModifierId = {
-    getBlockIdByHash(blockHashOrNumber) match {
-      case Some(blockId) => blockId
-      case None =>
-        parseBlockNumber(blockHashOrNumber) match {
-          case Success(height) => ModifierId(nodeView.history.blockIdByHeight(height).get)
-          case Failure(_) => throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block input parameter", null))
-        }
-    }
+    getBlockIdByHash(blockHashOrNumber).getOrElse(
+      parseBlockNumber(blockHashOrNumber)
+        .flatMap(nodeView.history.blockIdByHeight)
+        .map(ModifierId(_))
+        .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block input parameter", null)))
+    )
   }
-
 
   @RpcMethod("net_version")
   def version: String = String.valueOf(networkParams.chainId)
@@ -821,7 +814,10 @@ class EthService(
         if (!syncStatus.syncStatus) false
         else syncStatus
       case Failure(e) =>
-        throw new RpcException(RpcError.fromCode(RpcCode.InternalError, s"error during eth_syncing call: ${e.getMessage}"))
+        throw new RpcException(RpcError.fromCode(
+          RpcCode.InternalError,
+          s"error during eth_syncing call: ${e.getMessage}"
+        ))
     }
   }
 
@@ -1192,9 +1188,9 @@ class EthService(
    * see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:293
    */
   private def testLog(addresses: Array[Address], topics: Array[Array[Hash]])(log: EthereumLogView): Boolean = {
-    if (addresses.length > 0 && addresses.map(_.toString).contains(log.address)) return false
+    if (addresses.length > 0 && addresses.contains(log.address)) return false
     // skip if the number of filtered topics is greater than the amount of topics in the log
     if (topics.length > log.topics.length) return false
-    topics.zip(log.topics).forall({ case (sub, topic) => sub.length == 0 || sub.map(_.toString).contains(topic) })
+    topics.zip(log.topics).forall({ case (sub, topic) => sub.length == 0 || sub.contains(topic) })
   }
 }
