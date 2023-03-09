@@ -55,15 +55,14 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>zendoo-sc-cryptolib</artifactId>
-      <!-- 0.6.0-SNAPSHOT2 tag -->
-      <version>0.6.0-20230124.165959-5</version>
+      <version>0.6.0-rc1</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.sparkzfoundation/sparkz-core -->
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>sparkz-core_2.12</artifactId>
-      <version>2.0.0-RC9</version>
+      <version>2.0.0-RC11</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -82,25 +81,25 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <version>2.17.0</version>
+      <version>2.19.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
-      <version>2.17.1</version>
+      <version>2.19.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
-      <version>2.7</version>
+      <version>2.11.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>31.0.1-jre</version>
+      <version>31.1-jre</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.google.inject/guice -->
@@ -161,21 +160,21 @@
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-testkit_2.12</artifactId>
-      <version>2.6.19</version>
+      <version>2.7.0</version>
       <scope>test</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-testkit -->
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-http-testkit_2.12</artifactId>
-      <version>10.2.9</version>
+      <version>10.4.0</version>
       <scope>test</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-jackson -->
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-http-jackson_2.12</artifactId>
-      <version>10.2.9</version>
+      <version>10.4.0</version>
       <exclusions>
         <exclusion>
           <groupId>com.fasterxml.jackson.core</groupId>
@@ -187,7 +186,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.13.3</version>
+      <version>2.13.5</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
     <dependency>
@@ -207,28 +206,28 @@
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-scala_2.12</artifactId>
-      <version>2.13.3</version>
+      <version>2.13.5</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus.bundles/tyrus-standalone-client -->
     <dependency>
       <groupId>org.glassfish.tyrus.bundles</groupId>
       <artifactId>tyrus-standalone-client</artifactId>
-      <version>1.18</version>
+      <version>1.20</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-container-grizzly-server -->
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-container-grizzly-server</artifactId>
-      <version>1.18</version>
+      <version>1.20</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-server -->
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-server</artifactId>
-      <version>1.18</version>
+      <version>1.20</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-project -->
@@ -249,7 +248,7 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.69</version>
+      <version>1.70</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://repo.softmotions.com/repository/softmotions-public/org/ethereum/leveldbjni-all -->
@@ -258,6 +257,21 @@
       <artifactId>leveldbjni-all</artifactId>
       <version>1.18.3</version>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.web3j</groupId>
+      <artifactId>core</artifactId>
+      <version>4.9.5</version>
+    </dependency>
+    <dependency>
+      <groupId>io.horizen</groupId>
+      <artifactId>libevm</artifactId>
+      <version>0.1.0-20230307.142852-1</version>
+    </dependency>
+    <dependency>
+      <groupId>at.favre.lib</groupId>
+      <artifactId>bcrypt</artifactId>
+      <version>0.10.2</version>
     </dependency>
   </dependencies>
   <repositories>
@@ -283,17 +297,11 @@
           <include>publickey25519proposition_hex</include>
           <include>privatekey25519_hex</include>
           <include>regulartransaction_hex</include>
-          <include>RegularTransactionSerializerTestVrfPublicKey111</include>
-          <include>RegularTransactionSerializerTestVrfPublicKey221</include>
-          <include>SidechainBlockInfoTestVrfOutput234</include>
           <include>SidechainBlockTestVrfProof908</include>
-          <include>SidechainBlockTestVrfSecretKey908</include>
           <include>SidechainBlockHeaderTestVrfProof178</include>
-          <include>SidechainBlockHeaderTestVrfSecretKey178</include>
-          <include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
-          <include>ForgerBoxSerializationTestVrfPublicKey901</include>
+          <include>AccountBlockHeaderTestVrfProof178</include>
+          <include>AccountBlockTestVrfProof908</include>
           <include>OmmerTestVrfProof143</include>
-          <include>OmmerTestVrfSecretKey143</include>
           <include>zenbox_hex</include>
           <include>forgerbox_hex</include>
           <include>certifierrightbox_hex</include>
@@ -301,6 +309,8 @@
           <include>sidechainsyncinfo_hex</include>
           <include>sidechainblock_hex</include>
           <include>sidechainblockheader_hex</include>
+          <include>accountblock_hex</include>
+          <include>accountblockheader_hex</include>
           <include>ommer_hex</include>
           <include>mcblock473173_mainnet</include>
           <include>mcblock473174_mainnet</include>
@@ -311,16 +321,16 @@
           <include>mcpublickeyhashproposition_hex</include>
           <include>boxmerklepathinfo_hex</include>
           <include>sidechaincoretransaction_hex</include>
-          <include>schnorr_sk01_hex</include>
-          <include>schnorr_sk02_hex</include>
-          <include>schnorr_sk03_hex</include>
-          <include>schnorr_sk04_hex</include>
-          <include>schnorr_sk05_hex</include>
-          <include>schnorr_sk06_hex</include>
-          <include>schnorr_sk07_hex</include>
-          <include>schnorr_sk08_hex</include>
-          <include>schnorr_sk09_hex</include>
-          <include>schnorr_sk00_hex</include>
+          <include>ethereumtransaction_eoa2eoa_legacy_signed_hex</include>
+          <include>ethereumtransaction_eoa2eoa_legacy_unsigned_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip1559_signed_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip1559_unsigned_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip155_legacy_signed_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip155_legacy_unsigned_hex</include>
+          <include>ethereumtransaction_eoa2eoa_eip155_legacy_partially_signed_hex</include>
+          <include>ethereumtransaction_contract_deployment_eip1559_hex</include>
+          <include>ethereumtransaction_contract_call_eip155_legacy_hex</include>
+          <include>mc_ccout_evm_address_hex</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
           <include>mcblock501173</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
@@ -345,6 +355,7 @@
           <include>mctx_v-4_multiple_ft</include>
           <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_sc_creation</include>
+          <include>mctx_v-4_account_sc_creation</include>
           <!-- generated on regtest on 26.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_mbtr</include>
           <!-- generated on regtest on 31.05.2021 using MC qa/sc_csw_actcertdata.py -->
@@ -411,14 +422,25 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>3.10.1</version>
         <configuration/>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
-        <version>2.5.2</version>
+        <version>3.0.1</version>
         <executions>
           <execution>
             <id>install-jar-lib</id>
@@ -436,7 +458,7 @@
       <plugin>
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.8</version>
+        <version>1.6.13</version>
         <extensions>true</extensions>
         <configuration>
           <serverId>ossrh</serverId>
@@ -468,7 +490,7 @@
         <plugins>
           <plugin>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.6</version>
+            <version>3.0.1</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
@@ -521,7 +543,7 @@
             </executions>
             <configuration>
               <sourcepath>${project.basedir}/src/main/java</sourcepath>
-              <excludePackageNames>com.horizen.*</excludePackageNames>
+              <excludePackageNames>io.horizen.*</excludePackageNames>
             </configuration>
           </plugin>
         </plugins>

@@ -26,45 +26,104 @@ import re
 from test_framework.authproxy import AuthServiceProxy
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, NO_KEY_ROTATION_CIRCUIT
 
+COIN = 100000000  # 1 zen in zatoshis, aka zennies
 certificate_field_config_csw_enabled = [255, 255]
-
 certificate_field_config_csw_disabled = []
 certificate_with_key_rotation_field_config = [255] * 32  # 32 elements of size 255 bits each
+parallel_test = 0
 
-COIN = 100000000 # 1 zen in zatoshis
+
+def set_mc_parallel_test(n):
+    global parallel_test
+    parallel_test = n
+
+
+def start_port_modifier():
+    if parallel_test > 0:
+        return (parallel_test - 1) * 100
+
 
 def p2p_port(n):
-    return 11000 + n + os.getpid()%999
+    start_port = 11000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
+
+
 def rpc_port(n):
-    return 12000 + n + os.getpid()%999
+    start_port = 12000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
+
+
 def websocket_port_by_mc_node_index(n):
-    return 13000 + n + os.getpid()%999
+    start_port = 13000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
+
+
+def obj_to_hex(obj):
+    """Recursively convert integers to hex"""
+    if isinstance(obj, bool):
+        # do not change booleans - for history reasons bool is a subclass of int in python
+        return obj
+    if isinstance(obj, int):
+        return hex(obj)
+    if isinstance(obj, dict):
+        return {key: obj_to_hex(value) for key, value in obj.items()}
+    if isinstance(obj, list) or isinstance(obj, tuple):
+        return [obj_to_hex(item) for item in obj]
+    return obj
+
+
+def create_json2_rpc_request(method, args):
+    """Helper for creating json rpc requests correctly"""
+    return json.dumps({
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": obj_to_hex(args),
+        "id": "1"
+    })
+
 
 def check_json_precision():
     """Make sure json library being used does not lose precision converting BTC values"""
     n = Decimal("20000000.00000003")
-    satoshis = int(json.loads(json.dumps(float(n)))*1.0e8)
+    satoshis = int(json.loads(json.dumps(float(n))) * 1.0e8)
     if satoshis != 2000000000000003:
         raise RuntimeError("JSON encode/decode loses precision")
+
 
 def bytes_to_hex_str(byte_str):
     return hexlify(byte_str).decode('ascii')
 
+
 def hex_str_to_bytes(hex_str):
     return unhexlify(hex_str.encode('ascii'))
 
+
 def str_to_b64str(string):
     return b64encode(string.encode('utf-8')).decode('ascii')
+
 
 def sync_blocks(rpc_connections, wait=1):
     """
     Wait until everybody has the same block count
     """
     while True:
-        counts = [ x.getblockcount() for x in rpc_connections ]
-        if counts == [ counts[0] ]*len(counts):
+        counts = [x.getblockcount() for x in rpc_connections]
+        if counts == [counts[0]] * len(counts):
             break
         time.sleep(wait)
+
 
 def sync_mempools(rpc_connections, wait=1):
     """
@@ -76,15 +135,17 @@ def sync_mempools(rpc_connections, wait=1):
         num_match = 1
         for i in range(1, len(rpc_connections)):
             if set(rpc_connections[i].getrawmempool()) == pool:
-                num_match = num_match+1
+                num_match = num_match + 1
         if num_match == len(rpc_connections):
             break
         time.sleep(wait)
 
+
 bitcoind_processes = {}
 
+
 def initialize_datadir(dirname, n, websocket_port=None):
-    datadir = os.path.join(dirname, "node"+str(n))
+    datadir = os.path.join(dirname, "node" + str(n))
 
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
@@ -93,13 +154,14 @@ def initialize_datadir(dirname, n, websocket_port=None):
         f.write("showmetrics=0\n")
         f.write("rpcuser=rt\n")
         f.write("rpcpassword=rt\n")
-        f.write("port="+str(p2p_port(n))+"\n")
-        f.write("rpcport="+str(rpc_port(n))+"\n")
+        f.write("port=" + str(p2p_port(n)) + "\n")
+        f.write("rpcport=" + str(rpc_port(n)) + "\n")
         f.write("listenonion=0\n")
         f.write("debug=ws\n")
-        if(websocket_port is not None):
+        if (websocket_port is not None):
             f.write("wsport={0}\n".format(websocket_port))
     return datadir
+
 
 def initialize_chain(test_dir):
     """
@@ -112,25 +174,25 @@ def initialize_chain(test_dir):
         devnull = open("/dev/null", "w+")
         # Create cache directories, run bitcoinds:
         for i in range(4):
-            datadir=initialize_datadir("cache", i, [])
-            args = [ os.getenv("BITCOIND", "bitcoind"), "-keypool=1", "-datadir="+datadir, "-discover=0" ]
+            datadir = initialize_datadir("cache", i, [])
+            args = [os.getenv("BITCOIND", "bitcoind"), "-keypool=1", "-datadir=" + datadir, "-discover=0"]
             if i > 0:
-                args.append("-connect=127.0.0.1:"+str(p2p_port(0)))
+                args.append("-connect=127.0.0.1:" + str(p2p_port(0)))
             bitcoind_processes[i] = subprocess.Popen(args)
             if os.getenv("PYTHON_DEBUG", ""):
                 logging.debug("initialize_chain: bitcoind started, calling bitcoin-cli -rpcwait getblockcount")
-            subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir,
-                                    "-rpcwait", "getblockcount"], stdout=devnull)
+            subprocess.check_call([os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir=" + datadir,
+                                   "-rpcwait", "getblockcount"], stdout=devnull)
             if os.getenv("PYTHON_DEBUG", ""):
                 logging.debug("initialize_chain: bitcoin-cli -rpcwait getblockcount completed")
         devnull.close()
         rpcs = []
         for i in range(4):
             try:
-                url = "http://rt:rt@127.0.0.1:%d"%(rpc_port(i),)
+                url = "http://rt:rt@127.0.0.1:%d" % (rpc_port(i),)
                 rpcs.append(AuthServiceProxy(url))
             except:
-                sys.stderr.write("Error connecting to "+url+"\n")
+                sys.stderr.write("Error connecting to " + url + "\n")
                 sys.exit(1)
 
         # Create a 200-block-long chain; each of the 4 nodes
@@ -143,7 +205,7 @@ def initialize_chain(test_dir):
                 for j in range(25):
                     set_node_times(rpcs, block_time)
                     rpcs[peer].generate(1)
-                    block_time += 10*60
+                    block_time += 10 * 60
                 # Must sync before next peer starts generating blocks
                 sync_blocks(rpcs)
 
@@ -157,10 +219,11 @@ def initialize_chain(test_dir):
             os.remove(log_filename("cache", i, "fee_estimates.dat"))
 
     for i in range(4):
-        from_dir = os.path.join("cache", "node"+str(i))
-        to_dir = os.path.join(test_dir,  "node"+str(i))
+        from_dir = os.path.join("cache", "node" + str(i))
+        to_dir = os.path.join(test_dir, "node" + str(i))
         shutil.copytree(from_dir, to_dir)
-        initialize_datadir(test_dir, i) # Overwrite port/rpcport in zcash.conf
+        initialize_datadir(test_dir, i)  # Overwrite port/rpcport in zcash.conf
+
 
 def initialize_chain_clean(test_dir, num_nodes):
     """
@@ -169,6 +232,7 @@ def initialize_chain_clean(test_dir, num_nodes):
     """
     for i in range(num_nodes):
         initialize_datadir(test_dir, i, websocket_port_by_mc_node_index(i))
+
 
 def _rpchost_to_args(rpchost):
     '''Convert optional IP:port spec to rpcconnect/rpcport args'''
@@ -182,7 +246,7 @@ def _rpchost_to_args(rpchost):
     rpcconnect = match.group(1)
     rpcport = match.group(2)
 
-    if rpcconnect.startswith('['): # remove IPv6 [...] wrapping
+    if rpcconnect.startswith('['):  # remove IPv6 [...] wrapping
         rpcconnect = rpcconnect[1:-1]
 
     rv = ['-rpcconnect=' + rpcconnect]
@@ -190,24 +254,25 @@ def _rpchost_to_args(rpchost):
         rv += ['-rpcport=' + rpcport]
     return rv
 
+
 def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):
     """
     Start a bitcoind and return RPC connection to it
     """
-    datadir = os.path.join(dirname, "node"+str(i))
+    datadir = os.path.join(dirname, "node" + str(i))
     if binary is None:
         binary = os.getenv("BITCOIND", "zend")
     if not os.path.isfile(binary):
         raise Exception('no such file: ' + binary)
 
-    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest", "-websocket", "-logtimemicros"]
+    args = [binary, "-datadir=" + datadir, "-keypool=1", "-discover=0", "-rest", "-websocket", "-logtimemicros"]
     if extra_args is not None: args.extend(extra_args)
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open(os.devnull, "w+")
     if os.getenv("PYTHON_DEBUG", ""):
         logging.debug("start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount")
-    subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir] +
-                          _rpchost_to_args(rpchost)  +
+    subprocess.check_call([os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir=" + datadir] +
+                          _rpchost_to_args(rpchost) +
                           ["-rpcwait", "getblockcount"], stdout=devnull)
     if os.getenv("PYTHON_DEBUG", ""):
         logging.debug("start_node: calling bitcoin-cli -rpcwait getblockcount returned")
@@ -217,37 +282,44 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
         proxy = AuthServiceProxy(url, timeout=timewait)
     else:
         proxy = AuthServiceProxy(url)
-    proxy.url = url # store URL on proxy for info
+    proxy.url = url  # store URL on proxy for info
     return proxy
+
 
 def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
     """
     Start multiple bitcoinds, return RPC connections to them
     """
-    if extra_args is None: extra_args = [ None for i in range(num_nodes) ]
-    if binary is None: binary = [ None for i in range(num_nodes) ]
-    return [ start_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes) ]
+    if extra_args is None: extra_args = [None for i in range(num_nodes)]
+    if binary is None: binary = [None for i in range(num_nodes)]
+    return [start_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes)]
+
 
 def log_filename(dirname, n_node, logname):
-    return os.path.join(dirname, "node"+str(n_node), "regtest", logname)
+    return os.path.join(dirname, "node" + str(n_node), "regtest", logname)
+
 
 def check_node(i):
     bitcoind_processes[i].poll()
     return bitcoind_processes[i].returncode
+
 
 def stop_node(node, i):
     node.stop()
     bitcoind_processes[i].wait()
     del bitcoind_processes[i]
 
+
 def stop_nodes(nodes):
     for node in nodes:
         node.stop()
-    del nodes[:] # Emptying array closes connections as a side effect
+    del nodes[:]  # Emptying array closes connections as a side effect
+
 
 def set_node_times(nodes, t):
     for node in nodes:
         node.setmocktime(t)
+
 
 def wait_bitcoinds():
     # Wait for all bitcoinds to cleanly exit
@@ -255,29 +327,34 @@ def wait_bitcoinds():
         bitcoind.wait()
     bitcoind_processes.clear()
 
+
 def connect_nodes(from_connection, node_num):
-    ip_port = "127.0.0.1:"+str(p2p_port(node_num))
+    ip_port = "127.0.0.1:" + str(p2p_port(node_num))
     from_connection.addnode(ip_port, "onetry")
     # poll until version handshake complete to avoid race conditions
     # with transaction relaying
     while any(peer['version'] == 0 for peer in from_connection.getpeerinfo()):
         time.sleep(0.1)
 
+
 def connect_nodes_bi(nodes, a, b):
     connect_nodes(nodes[a], b)
     connect_nodes(nodes[b], a)
 
+
 def disconnect_nodes(from_connection, node_num):
-    ip_port = "127.0.0.1:"+str(p2p_port(node_num))
+    ip_port = "127.0.0.1:" + str(p2p_port(node_num))
     from_connection.disconnectnode(ip_port)
     # poll until version handshake complete to avoid race conditions
     # with transaction relaying
     while any(peer['version'] == 0 for peer in from_connection.getpeerinfo()):
         time.sleep(0.1)
 
+
 def disconnect_nodes_bi(nodes, a, b):
     disconnect_nodes(nodes[a], b)
     disconnect_nodes(nodes[b], a)
+
 
 def find_output(node, txid, amount):
     """
@@ -288,42 +365,44 @@ def find_output(node, txid, amount):
     for i in range(len(txdata["vout"])):
         if txdata["vout"][i]["value"] == amount:
             return i
-    raise RuntimeError("find_output txid %s : %s not found"%(txid,str(amount)))
+    raise RuntimeError("find_output txid %s : %s not found" % (txid, str(amount)))
 
 
 def gather_inputs(from_node, amount_needed, confirmations_required=1):
     """
     Return a random set of unspent txouts that are enough to pay amount_needed
     """
-    assert(confirmations_required >=0)
+    assert (confirmations_required >= 0)
     utxo = from_node.listunspent(confirmations_required)
     random.shuffle(utxo)
     inputs = []
     total_in = Decimal("0.00000000")
     while total_in < amount_needed and len(utxo) > 0:
-        t = utxo.pop()
+        t = pop()
         total_in += t["amount"]
-        inputs.append({ "txid" : t["txid"], "vout" : t["vout"], "address" : t["address"] } )
+        inputs.append({"txid": t["txid"], "vout": t["vout"], "address": t["address"]})
     if total_in < amount_needed:
-        raise RuntimeError("Insufficient funds: need %d, have %d"%(amount_needed, total_in))
+        raise RuntimeError("Insufficient funds: need %d, have %d" % (amount_needed, total_in))
     return (total_in, inputs)
+
 
 def make_change(from_node, amount_in, amount_out, fee):
     """
     Create change output(s), return them
     """
     outputs = {}
-    amount = amount_out+fee
+    amount = amount_out + fee
     change = amount_in - amount
-    if change > amount*2:
+    if change > amount * 2:
         # Create an extra change output to break up big inputs
         change_address = from_node.getnewaddress()
         # Split change in two, being careful of rounding:
-        outputs[change_address] = Decimal(change/2).quantize(Decimal('0.00000001'), rounding=ROUND_DOWN)
+        outputs[change_address] = Decimal(change / 2).quantize(Decimal('0.00000001'), rounding=ROUND_DOWN)
         change = amount_in - amount - outputs[change_address]
     if change > 0:
         outputs[from_node.getnewaddress()] = change
     return outputs
+
 
 def send_zeropri_transaction(from_node, to_node, amount, fee):
     """
@@ -335,25 +414,26 @@ def send_zeropri_transaction(from_node, to_node, amount, fee):
 
     # Create a send-to-self with confirmed inputs:
     self_address = from_node.getnewaddress()
-    (total_in, inputs) = gather_inputs(from_node, amount+fee*2)
-    outputs = make_change(from_node, total_in, amount+fee, fee)
-    outputs[self_address] = float(amount+fee)
+    (total_in, inputs) = gather_inputs(from_node, amount + fee * 2)
+    outputs = make_change(from_node, total_in, amount + fee, fee)
+    outputs[self_address] = float(amount + fee)
 
     self_rawtx = from_node.createrawtransaction(inputs, outputs)
     self_signresult = from_node.signrawtransaction(self_rawtx)
     self_txid = from_node.sendrawtransaction(self_signresult["hex"], True)
 
-    vout = find_output(from_node, self_txid, amount+fee)
+    vout = find_output(from_node, self_txid, amount + fee)
     # Now immediately spend the output to create a 1-input, 1-output
     # zero-priority transaction:
-    inputs = [ { "txid" : self_txid, "vout" : vout } ]
-    outputs = { to_node.getnewaddress() : float(amount) }
+    inputs = [{"txid": self_txid, "vout": vout}]
+    outputs = {to_node.getnewaddress(): float(amount)}
 
     rawtx = from_node.createrawtransaction(inputs, outputs)
     signresult = from_node.signrawtransaction(rawtx)
     txid = from_node.sendrawtransaction(signresult["hex"], True)
 
     return (txid, signresult["hex"])
+
 
 def random_zeropri_transaction(nodes, amount, min_fee, fee_increment, fee_variants):
     """
@@ -362,9 +442,10 @@ def random_zeropri_transaction(nodes, amount, min_fee, fee_increment, fee_varian
     """
     from_node = random.choice(nodes)
     to_node = random.choice(nodes)
-    fee = min_fee + fee_increment*random.randint(0,fee_variants)
+    fee = min_fee + fee_increment * random.randint(0, fee_variants)
     (txid, txhex) = send_zeropri_transaction(from_node, to_node, amount, fee)
     return (txid, txhex, fee)
+
 
 def random_transaction(nodes, amount, min_fee, fee_increment, fee_variants):
     """
@@ -373,9 +454,9 @@ def random_transaction(nodes, amount, min_fee, fee_increment, fee_variants):
     """
     from_node = random.choice(nodes)
     to_node = random.choice(nodes)
-    fee = min_fee + fee_increment*random.randint(0,fee_variants)
+    fee = min_fee + fee_increment * random.randint(0, fee_variants)
 
-    (total_in, inputs) = gather_inputs(from_node, amount+fee)
+    (total_in, inputs) = gather_inputs(from_node, amount + fee)
     outputs = make_change(from_node, total_in, amount, fee)
     outputs[to_node.getnewaddress()] = float(amount)
 
@@ -385,14 +466,17 @@ def random_transaction(nodes, amount, min_fee, fee_increment, fee_variants):
 
     return (txid, signresult["hex"], fee)
 
+
 def fail(message=""):
     raise AssertionError(message)
+
 
 def assert_equal(expected, actual, message=""):
     if expected != actual:
         if message:
-            message = "; %s" % message 
+            message = "; %s" % message
         raise AssertionError("(left == right)%s\n  left: <%s>\n right: <%s>" % (message, str(expected), str(actual)))
+
 
 def assert_not_equal(expected, actual, message=""):
     if expected == actual:
@@ -401,16 +485,19 @@ def assert_not_equal(expected, actual, message=""):
         raise AssertionError("(left != right)%s\n  left: <%s>\n right: <%s>" % (message, str(expected), str(actual)))
 
 
-def assert_true(condition, message = ""):
+def assert_true(condition, message=""):
     if not condition:
         raise AssertionError(message)
-        
-def assert_false(condition, message = ""):
+
+
+def assert_false(condition, message=""):
     assert_true(not condition, message)
+
 
 def assert_greater_than(thing1, thing2):
     if thing1 <= thing2:
-        raise AssertionError("%s <= %s"%(str(thing1),str(thing2)))
+        raise AssertionError("%s <= %s" % (str(thing1), str(thing2)))
+
 
 def assert_raises(exc, fun, *args, **kwds):
     try:
@@ -418,9 +505,10 @@ def assert_raises(exc, fun, *args, **kwds):
     except exc:
         pass
     except Exception as e:
-        raise AssertionError("Unexpected exception raised: "+type(e).__name__)
+        raise AssertionError("Unexpected exception raised: " + type(e).__name__)
     else:
         raise AssertionError("No exception raised")
+
 
 def fail(message=""):
     raise AssertionError(message)
@@ -464,21 +552,23 @@ def wait_and_assert_operationid_status(node, myopid, in_status='success', in_err
     else:
         return None
 
+
 # Find a coinbase address on the node, filtering by the number of UTXOs it has.
 # If no filter is provided, returns the coinbase address on the node containing
 # the greatest number of spendable UTXOs.
 # The default cached chain has one address per coinbase output.
 def get_coinbase_address(node, expected_utxos=None):
     addrs = [utxo['address'] for utxo in node.listunspent() if utxo['generated']]
-    assert(len(set(addrs)) > 0)
+    assert (len(set(addrs)) > 0)
 
     if expected_utxos is None:
         addrs = [(addrs.count(a), a) for a in set(addrs)]
         return sorted(addrs, reverse=True)[0][1]
 
     addrs = [a for a in set(addrs) if addrs.count(a) == expected_utxos]
-    assert(len(addrs) > 0)
+    assert (len(addrs) > 0)
     return addrs[0]
+
 
 """
 Perform SC creation, mine mainchain blocks, create genesis info.
@@ -494,27 +584,37 @@ Output: an array of two information:
  - created sidechain id
 
 """
+
+
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
                                           vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
-                                          sc_creation_version, is_csw_enabled, circuit_type):
+                                          sc_creation_version, is_csw_enabled, circuit_type, account_public_key=None):
     number_of_blocks_to_enable_sc_logic = 479
+
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
     if diff > 1:
         logging.info("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
-    if (circuit_type == KEY_ROTATION_CIRCUIT):
+    if account_public_key is not None:
+        # in account model, we pass to the customData fields not only the vrf public key bytes, but also block sign key
+        custom_creation_data = vrf_public_key + public_key
+        # the recipient address is a 20 byte account address. MC will pad them with 0 bytes up to 32 bytes
+        to_address = account_public_key
+    else:
+        custom_creation_data = vrf_public_key
+        to_address = public_key
+
+    if circuit_type == KEY_ROTATION_CIRCUIT:
         assert sc_creation_version >= 2, "With key rotation circuit sc creation version should be >= 2"
         assert not is_csw_enabled, "With key rotation circuit csw must be disabled"
         fe_certificate_field_configs = certificate_with_key_rotation_field_config
     else:
-        if (is_csw_enabled):
+        if is_csw_enabled:
             fe_certificate_field_configs = certificate_field_config_csw_enabled
         else:
-             fe_certificate_field_configs = certificate_field_config_csw_disabled
-
-    custom_creation_data = vrf_public_key
+            fe_certificate_field_configs = certificate_field_config_csw_disabled
 
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
     ft_min_amount = 0
@@ -523,7 +623,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     sc_create_args = {
         "version": sc_creation_version,
         "withdrawalEpochLength": withdrawal_epoch_length,
-        "toaddress": public_key,
+        "toaddress": to_address,
         "amount": forward_transfer_amount,
         "wCertVk": cert_vk,
         "customData": custom_creation_data,
@@ -546,7 +646,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     # For docs update
     tx_json_str = json.dumps(mainchain_node.gettransaction(transaction_id), indent=4, default=str)
     mc_block_hex = mainchain_node.getblock(mc_block_hash, False)
-    #logging.info(mc_block_hex)
+    # logging.info(mc_block_hex)
 
     return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount(), sidechain_id]
 
@@ -568,7 +668,6 @@ Output: an array of two information:
 
 def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
                                   public_key, forward_transfer_amount, mc_return_address, generate_block=True):
-
     ft_args = [{
         "toaddress": public_key,
         "amount": forward_transfer_amount,
@@ -590,6 +689,7 @@ def swap_bytes(input_buf):
 def get_spendable(mc_node, min_amount):
     # get a UTXO in node's wallet with minimal amount
     utx = False
+    change = 0
     listunspent = mc_node.listunspent()
     for aUtx in listunspent:
         if aUtx['amount'] > min_amount:
@@ -600,8 +700,9 @@ def get_spendable(mc_node, min_amount):
     if utx == False:
         logging.info(listunspent)
 
-    assert_equal(utx!=False, True)
+    assert_equal(utx != False, True)
     return utx, change
+
 
 """
     This function gets a Field Element hex string (typically shorter than 32 bytes)
@@ -610,6 +711,8 @@ def get_spendable(mc_node, min_amount):
     Padding is prepended or appended depending on the sidechain version specified
     (see fork 9 for more details).
 """
+
+
 def get_field_element_with_padding(field_element, sidechain_version):
     FIELD_ELEMENT_STRING_SIZE = 32 * 2
 
@@ -618,9 +721,10 @@ def get_field_element_with_padding(field_element, sidechain_version):
     elif (sidechain_version == 1) | (sidechain_version == 2):
         return field_element.ljust(FIELD_ELEMENT_STRING_SIZE, "0")
     else:
-        assert(False)
+        assert (False)
 
-def get_epoch_data(scid, node, epochLen, is_non_ceasing = False, reference_height = None):
+
+def get_epoch_data(scid, node, epochLen, is_non_ceasing=False, reference_height=None):
     sc_info = node.getscinfo(scid)['items'][0]
     last_cert_data_hash = 'PHANTOM_PREV_CERT_HASH'
     if sc_info['state'] == 'UNCONFIRMED':
@@ -628,7 +732,9 @@ def get_epoch_data(scid, node, epochLen, is_non_ceasing = False, reference_heigh
 
     if is_non_ceasing:
         # For non-ceasing sidechains
-        epoch_number = sc_info['unconfTopQualityCertificateEpoch'] + 1 if 'unconfTopQualityCertificateEpoch' in sc_info else sc_info['epoch']
+        epoch_number = sc_info[
+                           'unconfTopQualityCertificateEpoch'] + 1 if 'unconfTopQualityCertificateEpoch' in sc_info else \
+        sc_info['epoch']
         current_reference_height = node.getblockcount() if reference_height is None else reference_height
         epoch_cum_tree_hash = node.getblock(str(current_reference_height))['scCumTreeHash']
         if 'unconfTopQualityCertificateDataHash' in sc_info and sc_info['unconfTopQualityCertificateDataHash'] != '':

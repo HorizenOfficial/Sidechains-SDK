@@ -130,7 +130,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         # The following lines checks Certificate Submitter Api during the node synchronization
         assert_equal(True, sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
         assert_equal(True, sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
-        sync_sc_blocks(self.sc_nodes, 500, True)
+        sync_sc_blocks(self.sc_nodes, 1500, True)
         logging.info("Synchronization finished.")
 
         # Disable sc node 1 submitter

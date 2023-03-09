@@ -1,3 +1,6 @@
+**0.7.0**
+1. Change in the consensus protocol: forger eligibility rule.
+
 **0.6.0**
 1. Sidechain version 2 support with the new circuit type - threshold signature circuit with key rotation.
 2. Certificate key rotation API endpoints added. 
