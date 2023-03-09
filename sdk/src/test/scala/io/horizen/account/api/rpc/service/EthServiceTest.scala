@@ -21,7 +21,7 @@ import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionA
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.network.SyncStatus
-import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
 import io.horizen.utils.BytesUtils
 import io.horizen.{EthServiceSettings, SidechainTypes}
@@ -308,7 +308,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val mockedSyncStatusActor = TestProbe()
     mockedSyncStatusActor.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
-        case ReturnSyncStatus =>
+        case GetSyncStatus =>
           sender ! new SyncStatus(true, BigInt(250), BigInt(200), BigInt(300))
       }
       TestActor.KeepRunning

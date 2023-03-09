@@ -33,7 +33,7 @@ import io.horizen.{EthServiceSettings, SidechainTypes}
 import io.horizen.evm.{Address, Hash, TraceOptions}
 import io.horizen.evm.results.ProofAccountResult
 import io.horizen.network.SyncStatus
-import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -810,7 +810,7 @@ class EthService(
   def eth_syncing(): Any = {
     implicit val timeout: Timeout = new Timeout(nvtimeout)
     Try {
-      Await.result(syncStatusActorRef ? ReturnSyncStatus, nvtimeout).asInstanceOf[SyncStatus]
+      Await.result(syncStatusActorRef ? GetSyncStatus, nvtimeout).asInstanceOf[SyncStatus]
     } match {
       case Success(syncStatus: SyncStatus) =>
         if (!syncStatus.syncStatus) false
