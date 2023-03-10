@@ -15,7 +15,6 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
@@ -24,14 +23,14 @@ class MempoolMap(
                   baseStateReaderProvider: BaseStateReaderProvider,
                   mempoolSettings: AccountMempoolSettings) extends SparkzLogging {
 
-  type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
+  private type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
 
   // This constant added to the state nonce gives the maximum nonce that a tx can have to be accepted in the mempool
-  val maxAllowedNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap).subtract(BigInteger.ONE)
-  val MaxSlotsPerAccount: Int = mempoolSettings.maxAccountSlots
-  val MaxMemPoolSlots: Int = mempoolSettings.maxMemPoolSlots
-  val MaxNonExecSubPoolSlots: Int = mempoolSettings.maxNonExecMemPoolSlots
-  val TxLifetime: FiniteDuration = mempoolSettings.txLifetime
+  private val maxAllowedNonceGap: BigInteger = BigInteger.valueOf(mempoolSettings.maxNonceGap).subtract(BigInteger.ONE)
+  private val MaxSlotsPerAccount: Int = mempoolSettings.maxAccountSlots
+  private val MaxMemPoolSlots: Int = mempoolSettings.maxMemPoolSlots
+  private val MaxNonExecSubPoolSlots: Int = mempoolSettings.maxNonExecMemPoolSlots
+  private val TxLifetime: FiniteDuration = mempoolSettings.txLifetime
 
   // Cache of all transactions currently in the mempool
   private val txCache = new TxCache(TxLifetime)
@@ -46,7 +45,7 @@ class MempoolMap(
   // same value of the statedb nonce.
   private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap.empty[SidechainTypes#SCP, BigInteger]
 
-  def getMaxAcceptableNonce(stateNonce: BigInteger): BigInteger = stateNonce.add(maxAllowedNonceGap)
+  private def getMaxAcceptableNonce(stateNonce: BigInteger): BigInteger = stateNonce.add(maxAllowedNonceGap)
 
   private[mempool] def findTxWithSameNonce(account: SidechainTypes#SCP, nonce: BigInteger): Option[SidechainTypes#SCAT] = {
     val txOpt: Option[SidechainTypes#SCAT] = executableTxs.get(account).flatMap(txMap => txMap.get(nonce).map(txCache(_)))
@@ -160,10 +159,12 @@ class MempoolMap(
   }
 
   def getAccountSlots(account: SidechainTypes#SCP): Int = {
-    val execTxsSlots: Int = executableTxs.get(account).map(txs => txs.values.foldLeft(0) { (sum, txId) => sum + txSizeInSlot(txCache(txId)) }).getOrElse(0)
-    val accountSlots: Int = nonExecutableTxs.get(account).map(txs => txs.values.foldLeft(execTxsSlots) { (sum, txId) => sum + txSizeInSlot(txCache(txId)) }).getOrElse(execTxsSlots)
-    accountSlots
+    (executableTxs.get(account) ++ nonExecutableTxs.get(account))
+      .flatMap(_.values)
+      .foldLeft(0) { (sum, txId) => sum + txSizeInSlot(txCache(txId)) }
   }
+
+  def getAccountNonce(account: SidechainTypes#SCP): Option[BigInteger] = nonces.get(account)
 
   def getMempoolSizeInSlots: Int = txCache.getSizeInSlots
 
@@ -265,17 +266,8 @@ class MempoolMap(
   def values: Iterable[SidechainTypes#SCAT] = txCache.values
 
   def mempoolTransactions(executable: Boolean): Iterable[ModifierId] = {
-    val txsList = new ListBuffer[ModifierId]
-    val mempoolIdsMap = if (executable)
-      executableTxs
-    else
-      nonExecutableTxs
-    for ((_, v) <- mempoolIdsMap) {
-      for ((_, innerV) <- v) {
-        txsList += innerV
-      }
-    }
-    txsList
+    val mempoolIdsMap = if (executable) executableTxs else nonExecutableTxs
+    mempoolIdsMap.values.flatMap(_.values)
   }
 
   // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable TxPoolTransaction
@@ -616,7 +608,7 @@ class MempoolMap(
 
       // Last we need to check txs in nonExec map. The checks are the same as the other txs with the only difference that
       // some of them could have become executable, thanks to the txs in the applied block.
-      val listOfPromotedTxs = ListBuffer[SidechainTypes#SCAT]()
+      val listOfPromotedTxs = mutable.ListBuffer[SidechainTypes#SCAT]()
       val nonExecTxs = nonExecutableTxs.remove(account)
       if (nonExecTxs.nonEmpty) {
         nonExecTxs.get
