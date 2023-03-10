@@ -20,23 +20,9 @@ Configuration:
     Start 1 MC nodes and 2 SC nodes.
 
 Test:
-    - Test-1
-        - synchronize MC node to the point of SC Creation Block
-        - start SC1 and SC2 nodes 
-        - stop SC2 node
-        - forging 1000 blocks on node SC1
-        - restart and sync SC2 node checking the eth_syncing rpc method result in case the sync is in progress (syncStatus =/= false)
-        - check that the nodes have the same height
-    - Test-2
-        - disconnect SC1 and SC2 nodes 
-        - forging 500 blocks on node SC1
-        - reconnect SC1 and SC2 nodes and sync SC2 node
-        - check that the nodes have the same height and the eth_syncing return a syncStatus false
-    - Test-3
-        - stop SC2 node
-        - forging 1000 blocks on node SC1
-        - restart and sync SC2 and stop SC1 node after 15 seconds 
-        - wait 60 seconds and check that eth_syncing rpc method return syncStatus false
+    - Test that node can detect `isSync` after being restarted.
+    - Test that node can detect `isSync` again after being connected to the new better peer.
+    - Test that node can detect `isSync` when the sender peer was stopped and restarted in the middle of sync.
 """
 
 WITHDRAWAL_EPOCH_LENGTH = 10
