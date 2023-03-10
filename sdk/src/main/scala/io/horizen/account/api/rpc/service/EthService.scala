@@ -4,6 +4,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.JsonNode
+import io.horizen.EthServiceSettings
 import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.types._
 import io.horizen.account.api.rpc.utils._
@@ -11,7 +12,7 @@ import io.horizen.account.block.AccountBlock
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.forger.AccountForgeMessageBuilder
 import io.horizen.account.history.AccountHistory
-import io.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
+import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.secret.PrivateKeySecp256k1
 import io.horizen.account.state._
@@ -20,7 +21,7 @@ import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import io.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
 import io.horizen.account.utils.Secp256k1.generateContractAddress
-import io.horizen.account.utils.{BigIntegerUtil, Bloom, EthereumTransactionDecoder, FeeUtils}
+import io.horizen.account.utils._
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.chain.SidechainBlockInfo
@@ -31,7 +32,6 @@ import io.horizen.network.SyncStatus
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
-import io.horizen.{EthServiceSettings, SidechainTypes}
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
@@ -44,12 +44,10 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future}
-import scala.jdk.CollectionConverters
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -108,21 +106,27 @@ class EthService(
     )
   }
 
-  private def convertMempoolMap(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
-    CollectionConverters.mapAsJavaMap(
-      poolMap.map { case (proposition, txByNonce) =>
-        new Address(proposition.bytes()) -> CollectionConverters.mapAsJavaMap(
-          txByNonce.mapValues(tx => new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction]))
-        )
-      }
-    )
-
   @RpcMethod("txpool_content")
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
-      convertMempoolMap(nodeView.pool.getExecutableTransactionsMap),
-      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMap)
+      nodeView.pool.getExecutableTransactionsMap,
+      nodeView.pool.getNonExecutableTransactionsMap
     )
+  }
+
+  @RpcMethod("txpool_contentFrom")
+  def txpoolContentFrom(from: Address): TxPoolContentFrom = applyOnAccountView { nodeView =>
+    new TxPoolContentFrom(
+      nodeView.pool.getExecutableTransactionsMapFrom(from),
+      nodeView.pool.getNonExecutableTransactionsMapFrom(from)
+    )
+  }
+
+  @RpcMethod("txpool_inspect")
+  def txpoolInspect(): TxPoolInspect = applyOnAccountView { nodeView =>
+    new TxPoolInspect(
+      nodeView.pool.getExecutableTransactionsMapInspect,
+      nodeView.pool.getNonExecutableTransactionsMapInspect)
   }
 
   @RpcMethod("eth_getBlockByNumber")
@@ -690,7 +694,7 @@ class EthService(
             // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
             // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
             // This does not impact our case since the CREATE2 result would not be part of the receipt.
-            Option(generateContractAddress(ethTx.getFrom.address, ethTx.getNonce))
+            Option(generateContractAddress(ethTx.getFrom.address(), ethTx.getNonce))
           } else {
             // otherwise nothing
             None
