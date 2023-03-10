@@ -56,6 +56,8 @@ class AccountChainSetup(SidechainTestFramework):
         self.max_mempool_slots = max_mempool_slots
         self.max_nonexec_pool_slots = max_nonexec_pool_slots
         self.tx_lifetime = tx_lifetime
+        if len(websocket_server_port) == 0:
+            websocket_server_port = [None] * number_of_sidechain_nodes
         assert(len(websocket_server_port) == number_of_sidechain_nodes)
         self.websocket_server_port = websocket_server_port
 
