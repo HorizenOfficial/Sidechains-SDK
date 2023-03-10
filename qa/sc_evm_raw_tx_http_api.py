@@ -257,10 +257,10 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
                                             value=convertZenToWei(Decimal('0.1')))
         chainId_ok = decodeTransaction(sc_node_2, payload=raw_tx)['chainId']
 
-        # get the last byte of chain id value in the hex representation and decrement it (bytes 43 and 44 in this tx)
-        #  - 1997 = [07cd]  --> 1996 = [07cc]
+        # get the last byte of chain id value in the hex representation and decrement it (bytes [43; 46] in this tx)
+        #  - 1000000001 = [3B9ACA01]  --> 1000000000 = [3B9ACA00]
         tx_hex_array = list(bytearray(a2b_hex(raw_tx)))
-        tx_hex_array[44] -= 1
+        tx_hex_array[46] -= 1
         new_eip155_raw_tx = b2x(bytearray(tx_hex_array))
 
         # decode the modified unsigned tx via http api
