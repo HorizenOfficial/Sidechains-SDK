@@ -39,6 +39,18 @@ class WebSocketAccountServer(wsPort: Int)
     super.postStop()
   }
 
+  override def postRestart(reason: Throwable): Unit = {
+    super.postRestart(reason)
+    log.error("Websocket Server actor was restarted because of: ", reason)
+    // Subscribe to events after actor restart
+    context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[_]])
+    context.system.eventStream.subscribe(self, classOf[ChangedVault[_]])
+    context.system.eventStream.subscribe(self, classOf[NotifySyncStart])
+    context.system.eventStream.subscribe(self, NotifySyncStop.getClass)
+    context.system.eventStream.subscribe(self, classOf[NotifySyncUpdate])
+    context.system.eventStream.subscribe(self, classOf[NewExecTransactionsEvent])
+  }
+
   override def receive: Receive = {
     checkMessage orElse {
       case message: Any => log.error("WebsocketServer received strange message: " + message)
