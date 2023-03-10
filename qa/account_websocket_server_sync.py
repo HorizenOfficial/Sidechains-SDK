@@ -85,7 +85,7 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
 
         connect_sc_nodes(self.sc_nodes[0], 1)
         generate_next_block(sc_node, "first node")
-        sync_sc_blocks(self.sc_nodes, wait_for=300)
+        sync_sc_blocks(self.sc_nodes)
 
         logging.info("Block synced on SC node 2")
 
@@ -99,7 +99,7 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
         pprint.pprint(response)
         self.checkSyncUpdate(response["result"], 503, 3)
 
-        time.sleep(60)
+        time.sleep(30)
 
         # Verify that we receive the SyncStop event after sync all blocks
         response = json.loads(ws_connection.recv())
