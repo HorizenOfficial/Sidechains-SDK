@@ -313,20 +313,20 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
 
         # Try to force the inclusion of transaction T3 inside the next SC block and verify that we have an error
-        error = False
         try:
             generate_next_block(sc_node, "first node", 1, forced_tx=[across_epoch_txhex_t3])[0]
         except:
-            error = True
-        assert_true(error)
+            pass
+        else:
+            fail("Exception expected")
 
         # Try to force the inclusion of transaction T4 inside the next SC block and verify that we have an error
-        error = False
         try:
             generate_next_block(sc_node, "first node", 1, forced_tx=[across_epoch_txhex_t4])[0]
         except:
-            error = True
-        assert_true(error)
+            pass
+        else:
+            fail("Exception expected")
 
         # Generate a SC block
         generate_next_blocks(sc_node, "first node", 1)

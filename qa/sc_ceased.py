@@ -103,15 +103,12 @@ class SCCeased(SidechainTestFramework):
 
         # Try to generate 1 SC block after SC has ceased.
         # Node must fail on apply block, because of ceased SC.
-        error_occur = False
         try:
             generate_next_block(sc_node, "first node")
+            fail("Node wrongly verified block at the end of the submission window for epoch with no certs.")
         except Exception as e:
             logging.info("We had an exception as expected: {}".format(str(e)))
-            error_occur = True
 
-        assert_true(error_occur,
-                    "Node wrongly verified block at the end of the submission window for epoch with no certs.")
 
 
 if __name__ == "__main__":
