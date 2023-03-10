@@ -102,7 +102,8 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
       val mempool = AccountMemoryPool.createEmptyMempool(
         () => state,
         () => state,
-        AccountMempoolSettings(maxNonceGap = numOfTxsPerAccount, maxAccountSlots = numOfTxsPerAccount, maxMemPoolSlots = numOfTxs))
+        AccountMempoolSettings(maxNonceGap = numOfTxsPerAccount, maxAccountSlots = numOfTxsPerAccount, maxMemPoolSlots = numOfTxs),
+        () => mock[AccountEventNotifier])
       Mockito.when(nodeView.pool).thenReturn(mempool)
 
       println("Creating transactions...")

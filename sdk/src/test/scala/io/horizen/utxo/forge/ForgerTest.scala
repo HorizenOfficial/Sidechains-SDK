@@ -7,7 +7,7 @@ import io.horizen.forge.AbstractForger.ReceivableMessages.StartForging
 import io.horizen.forge.MainchainSynchronizer
 import io.horizen.params.NetworkParams
 import io.horizen.utxo.block.SidechainBlock
-import io.horizen.{SidechainSettings, WebSocketSettings}
+import io.horizen.{SidechainSettings, WebSocketClientSettings}
 import org.junit.Test
 import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers
@@ -55,10 +55,10 @@ class ForgerTest extends JUnitSuite with Matchers {
 
   def prepareTestData(params: NetworkParams, timeProvider: NetworkTimeProvider): (ActorRef, TestProbe) = {
     val settings = mock[SidechainSettings]
-    val webSocketSettings = mock[WebSocketSettings]
+    val webSocketSettings = mock[WebSocketClientSettings]
     val sparkzSettings = mock[SparkzSettings]
     val restApiSettings = mock[RESTApiSettings]
-    when(settings.websocket).thenReturn(webSocketSettings)
+    when(settings.websocketClient).thenReturn(webSocketSettings)
     when(webSocketSettings.allowNoConnectionInRegtest).thenReturn(true)
     when(settings.sparkzSettings).thenReturn(sparkzSettings)
     when(sparkzSettings.restApi).thenReturn(restApiSettings)
@@ -67,7 +67,7 @@ class ForgerTest extends JUnitSuite with Matchers {
     val mainchainSynchronizer = mock[MainchainSynchronizer]
     val companion = mock[SidechainTransactionsCompanion]
 
-    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
+    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocketClient.allowNoConnectionInRegtest)
 
     class ForgerUnderTest(settings: SidechainSettings,
                      viewHolderRef: ActorRef,

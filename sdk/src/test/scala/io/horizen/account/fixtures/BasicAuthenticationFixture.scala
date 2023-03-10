@@ -1,8 +1,7 @@
-package com.horizen.fixtures
+package io.horizen.account.fixtures
 
 import akka.http.javadsl.model.headers.{BasicHttpCredentials, HttpCredentials}
 import at.favre.lib.crypto.bcrypt.BCrypt
-
 
 trait BasicAuthenticationFixture {
 

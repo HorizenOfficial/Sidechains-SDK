@@ -3,14 +3,13 @@ package io.horizen.account
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import io.horizen.{MempoolSettings, SidechainSettings, AccountMempoolSettings}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
-import io.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountFixture, MockedAccountSidechainNodeViewHolderFixture}
+import io.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture, ForgerAccountFixture, MockedAccountSidechainNodeViewHolderFixture}
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
-import io.horizen.account.state.{AccountState, AccountStateReaderProvider, BaseStateReaderProvider}
+import io.horizen.account.state.{AccountEventNotifier, AccountState, AccountStateReaderProvider, BaseStateReaderProvider}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import io.horizen.account.wallet.AccountWallet
@@ -18,17 +17,19 @@ import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToCo
 import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
+import io.horizen.{AccountMempoolSettings, SidechainSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{Assert, Before, Test}
+import org.junit.{Before, Test}
 import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.util.{ModifierId, SparkzEncoding}
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, LocallyGeneratedTransaction, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, ModifiersProcessingResult, SemanticallySuccessfulModifier}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{VersionTag, idToVersion}
+import sparkz.util.{ModifierId, SparkzEncoding}
+
 import java.nio.charset.StandardCharsets
 import java.util
 import scala.concurrent.duration.DurationInt
@@ -40,6 +41,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
   with AccountBlockFixture
   with CompanionsFixture
   with SparkzEncoding
+  with EthereumTransactionFixture
 {
   var history: AccountHistory = _
   var state: AccountState = _
@@ -47,6 +49,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
   var mempool: AccountMemoryPool = _
   var accountStateReaderProvider: AccountStateReaderProvider = _
   var baseStateReaderProvider: BaseStateReaderProvider = _
+  var eventNotifier: AccountEventNotifier = _
 
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
@@ -65,7 +68,8 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     wallet = mock[AccountWallet]
     accountStateReaderProvider = mock[AccountStateReaderProvider]
     baseStateReaderProvider = mock[BaseStateReaderProvider]
-    mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider, AccountMempoolSettings())
+    mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider,
+      AccountMempoolSettings(), () => mock[AccountEventNotifier])
     mockedNodeViewHolderRef = getMockedAccountSidechainNodeViewHolderRef(history, state, wallet, mempool)
   }
 
@@ -98,7 +102,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     var walletChecksPassed: Boolean = false
     Mockito.when(wallet.scanPersistent(
       ArgumentMatchers.any[AccountBlock]))
-      .thenAnswer(args => {
+      .thenAnswer(_ => {
         walletChecksPassed = true
         wallet
       })
@@ -299,7 +303,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
 
     // Mock state fee payments with checks
-    Mockito.when(state.getFeePaymentsInfo(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])).thenAnswer(args => {
+    Mockito.when(state.getFeePaymentsInfo(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[AccountBlockFeeInfo]])).thenAnswer(_ => {
       Seq()
     })
 
@@ -307,7 +311,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     var walletChecksPassed: Boolean = false
     Mockito.when(wallet.scanPersistent(
       ArgumentMatchers.any[AccountBlock]))
-      .thenAnswer(args => {
+      .thenAnswer(_ => {
         walletChecksPassed = true
         wallet
       })
@@ -355,11 +359,10 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     })
 
     // Mock wallet scanPersistent with checks
-    var walletChecksPassed: Boolean = false
 
     Mockito.when(wallet.scanPersistent(
       ArgumentMatchers.any[AccountBlock]))
-      .thenAnswer(args => {
+      .thenAnswer(_ => {
         wallet
       })
 
@@ -392,8 +395,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     var blockIndex: Int = 0
 
     // History appending check
-    Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer( answer => {
-      val blockToAppend: AccountBlock = answer.getArgument(0).asInstanceOf[AccountBlock]
+    Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer( _ => {
       Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
     })
 
@@ -451,15 +453,14 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     var blockIndex = 0
 
     // Mock wallet scanPersistent with checks
-    var walletChecksPassed: Boolean = false
     Mockito.when(wallet.scanPersistent(
       ArgumentMatchers.any[AccountBlock]))
-      .thenAnswer(args => {
+      .thenAnswer(_ => {
         wallet
       })
 
     // History appending check
-    Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+    Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(_ => {
       Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
     })
 
@@ -608,11 +609,10 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     eventListener.fishForMessage(timeout.duration) {
       case m =>
         m match {
-          case ModifiersProcessingResult(applied, cleared) => {
+          case ModifiersProcessingResult(applied, cleared) =>
             assertEquals("Different number of applied blocks", blockToApply, applied.length)
             assertEquals("Different number of cleared blocks from cached", (blocksNumber - blockToApply - maxModifiersCacheSize), cleared.length)
             true
-          }
           case _ => false
         }
     }

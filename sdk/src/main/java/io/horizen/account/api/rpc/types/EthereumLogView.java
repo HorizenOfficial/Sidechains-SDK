@@ -16,7 +16,7 @@ public class EthereumLogView {
     public final Hash transactionHash;
     public final BigInteger transactionIndex;
     public final BigInteger logIndex;
-    public final boolean removed;
+    public boolean removed;
 
     public EthereumLogView(EthereumReceipt receipt, EthereumConsensusDataLog log, int logIndex) {
         this.address = log.address();
@@ -28,5 +28,9 @@ public class EthereumLogView {
         this.transactionIndex = BigInteger.valueOf(receipt.transactionIndex());
         this.logIndex = BigInteger.valueOf(logIndex);
         this.removed = false;
+    }
+
+    public void updateRemoved(boolean removed) {
+        this.removed = removed;
     }
 }

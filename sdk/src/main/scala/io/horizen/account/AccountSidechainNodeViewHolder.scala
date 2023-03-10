@@ -1,6 +1,7 @@
 package io.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.history.AccountHistory
@@ -19,9 +20,8 @@ import io.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, Sidechain
 import io.horizen.evm.Database
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, RollbackFailed}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, NodeViewHolderEvent, RollbackFailed}
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.idToVersion
 
 import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
@@ -36,7 +36,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      customMessageProcessors: Seq[MessageProcessor],
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, timeProvider){
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, timeProvider)
+  with AccountEventNotifier {
 
   override type HSTOR = AccountHistoryStorage
   override type HIS = AccountHistory
@@ -100,7 +101,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
               restoredState.rollbackTo(idToVersion(rollbackTo)) match {
                 case Success(s) =>
-                  log.debug("State succesfully rolled back")
+                  log.debug("State successfully rolled back")
                   dumpStorages()
                   // We are done with the recovery. The evm-state storage does not need to be dealt with. A consistent
                   // view of it will be built using the db-root got from the metadata state db, that is now consistent
@@ -127,7 +128,10 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
       state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, blockHashProvider)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
-      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState(), sidechainSettings.accountMempool))
+      pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(),
+        () => minimalState(),
+        sidechainSettings.accountMempool,
+        () => this))
     } yield (history, state, wallet, pool)
 
     val result = checkAndRecoverStorages(restoredData)
@@ -141,7 +145,10 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
-      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(), () => minimalState(), sidechainSettings.accountMempool))
+      pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(),
+                                                           () => minimalState(),
+                                                           sidechainSettings.accountMempool,
+                                                           () => this))
     } yield (history, state, wallet, pool)
 
     result.get
@@ -184,6 +191,15 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override protected def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock], memPool: MP, state: MS): MP = {
     memPool.updateMemPool(removedBlocks, appliedBlocks)
   }
+
+  override def sendNewExecTxsEvent(listOfNewExecTxs: Iterable[SidechainTypes#SCAT]): Unit = {
+    context.system.eventStream.publish(NewExecTransactionsEvent(listOfNewExecTxs))
+  }
+}
+
+object AccountSidechainNodeViewHolder {
+
+  case class NewExecTransactionsEvent(newExecTxs: Iterable[SidechainTypes#SCAT]) extends NodeViewHolderEvent
 
 }
 
@@ -231,3 +247,4 @@ object AccountNodeViewHolderRef {
       customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
 
 }
+
