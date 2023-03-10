@@ -2,13 +2,14 @@
 
 from decimal import Decimal
 from eth_utils import remove_0x_prefix
+
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.httpCalls.transaction.createRawEIP1559Transaction import createRawEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.transaction.sendTransaction import sendTransaction
 from SidechainTestFramework.account.httpCalls.transaction.signTransaction import signTransaction
 from SidechainTestFramework.account.utils import convertZenToWei
 from SidechainTestFramework.scutil import generate_next_block
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from test_framework.util import (assert_true)
 
 """
@@ -89,7 +90,7 @@ class SCEvmTxPool(AccountChainSetup):
         # txpool content from
         # 3 pending transactions from evm_address_1 with increasing nonce are expected
         content_from_res = sc_node.rpc_txpool_contentFrom('0x'+evm_address_1)['result']
-        assert_true(len(content_from_res['pending']['0x'+evm_address_1]) == 3)
+        assert_true(len(content_from_res['pending']) == 3)
         assert_true(len(content_from_res['queued']) == 0)
         # no transactions from evm_address_2 are expected
         content_from_res = sc_node.rpc_txpool_contentFrom('0x'+evm_address_2)['result']
@@ -168,11 +169,11 @@ class SCEvmTxPool(AccountChainSetup):
         # txpool content from
         # 1 pending and 1 queued transactions are expected from evm_address_1
         content_from_res = sc_node.rpc_txpool_contentFrom('0x'+evm_address_1)['result']
-        assert_true(len(content_from_res['pending']['0x'+evm_address_1]) == 1)
-        assert_true(len(content_from_res['queued']['0x'+evm_address_1]) == 1)
+        assert_true(len(content_from_res['pending']) == 1)
+        assert_true(len(content_from_res['queued']) == 1)
         # 1 pending and no queued transactions are expected from evm_address_2
         content_from_res = sc_node.rpc_txpool_contentFrom('0x'+evm_address_2)['result']
-        assert_true(len(content_from_res['pending']['0x'+evm_address_2]) == 1)
+        assert_true(len(content_from_res['pending']) == 1)
         assert_true(len(content_from_res['queued']) == 0)
 
         # txpool inspect

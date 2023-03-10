@@ -156,7 +156,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     // mock getExecutableTransactionsMap method call
     Mockito.when(memoryPool.getExecutableTransactionsMap).thenReturn(executableTxsMap)
     // mock getExecutableTransactionsMapFrom method call
-    Mockito.when(memoryPool.getExecutableTransactionsMapFrom(any[Address])).thenReturn(executableTxsMapFrom)
+    Mockito.when(memoryPool.getExecutableTransactionsMapFrom(any[Address])).thenReturn(executableNonceTxsMap1)
     // mock getExecutableTransactionsMapInspect method call
     Mockito.when(memoryPool.getExecutableTransactionsMapInspect).thenReturn(executableTxsMapInspect)
 
@@ -199,7 +199,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     // mock getNonExecutableTransactionsMap method call
     Mockito.when(memoryPool.getNonExecutableTransactionsMap).thenReturn(nonExecutableTxsMap)
     // mock getNonExecutableTransactionsMapFrom method call
-    Mockito.when(memoryPool.getNonExecutableTransactionsMapFrom(any[Address])).thenReturn(nonExecutableTxsMap)
+    Mockito.when(memoryPool.getNonExecutableTransactionsMapFrom(any[Address])).thenReturn(nonExecutableNonceTxsMap1)
     // mock getNonExecutableTransactionsMapInspect method call
     Mockito.when(memoryPool.getNonExecutableTransactionsMapInspect).thenReturn(nonExecutableTxsMapInspect)
 
