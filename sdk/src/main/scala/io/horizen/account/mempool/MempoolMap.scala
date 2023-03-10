@@ -294,13 +294,12 @@ class MempoolMap(
   // ordered by nonce filtering by from address
   def mempoolTransactionsMapFrom(executable: Boolean, fromAddress: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] = {
     val mempoolIdByNonceMapFrom = if (executable)
-      executableTxs.getOrElse(new AddressProposition(fromAddress), mutable.SortedMap.empty[BigInteger, ModifierId])
+      executableTxs.get(new AddressProposition(fromAddress))
     else
-      nonExecutableTxs.getOrElse(new AddressProposition(fromAddress), mutable.SortedMap.empty[BigInteger, ModifierId])
-    if (mempoolIdByNonceMapFrom.nonEmpty) {
-      retrieveTxPoolByNonceMap(mempoolIdByNonceMapFrom)
-    } else {
-      mutable.SortedMap.empty[BigInteger, TxPoolTransaction]
+      nonExecutableTxs.get(new AddressProposition(fromAddress))
+    mempoolIdByNonceMapFrom match {
+      case Some(map) => retrieveTxPoolByNonceMap(map)
+      case None => mutable.SortedMap.empty[BigInteger, TxPoolTransaction]
     }
   }
 
