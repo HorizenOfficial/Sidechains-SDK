@@ -49,7 +49,7 @@ class SCEvmRpcNetMethods(AccountChainSetup):
         assert_true(sc_node_1.rpc_net_listening()['result'] is True)
         assert_true(sc_node_2.rpc_net_listening()['result'] is True)
 
-        assert_true(int(sc_node_1.rpc_net_version()['result']) == 1997)
+        assert_true(int(sc_node_1.rpc_net_version()['result']) == 1000000001)
 
 
 if __name__ == "__main__":
