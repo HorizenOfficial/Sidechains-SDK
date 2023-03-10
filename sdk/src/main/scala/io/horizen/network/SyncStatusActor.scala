@@ -54,14 +54,13 @@ class SyncStatusActor[
   private var startingBlock: Int = 0
   private var highestBlock: Int = 0
 
-  // start the scheduler, it will compare the new block events density between two scheduler calls
+  // Start the scheduler, it will compare the new block events density between two scheduler calls
   private val checkBlocksDensityInterval: FiniteDuration = 15 seconds
   private val checkBlocksDensityScheduler: Cancellable = context.system.scheduler.scheduleAtFixedRate(
       checkBlocksDensityInterval, checkBlocksDensityInterval, self, CheckBlocksDensity)
 
   // The expected max new tips events when the node is already synced and receives new tips from the network
   private val standardBlockRate: Int = Math.ceil(checkBlocksDensityInterval.toSeconds.toDouble / params.consensusSecondsInSlot).toInt + 1
-  private var appliedBlocksNumberBetweenChecks: Int = 0
   private var appliedBlocksNumber: Int = 0
   private var prevAppliedBlocksNumber: Int = 0
 
@@ -81,7 +80,7 @@ class SyncStatusActor[
   override def postRestart(reason: Throwable): Unit = {
     super.postRestart(reason)
     log.error("SyncStatusActor was restarted because of: ", reason)
-    // subscribe to events after actor restart
+    // Subscribe to events after actor restart
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[PMOD]])
   }
 
@@ -95,6 +94,8 @@ class SyncStatusActor[
     if (isSyncing && isSyncStartEventSent) {
       // It may happen that Sync was detected just before getting close enough to the current time.
       // Before the NotifySyncStart event
+      log.debug(s"SyncStatusActor ${settings.sparkzSettings.network.nodeName} " +
+        s"sync STOP event published starting = $startingBlock, current = $currentBlock, highest = $highestBlock")
       context.system.eventStream.publish(NotifySyncStop)
     }
 
@@ -104,7 +105,6 @@ class SyncStatusActor[
     highestBlock = 0
     appliedBlocksNumber = 0
     prevAppliedBlocksNumber = 0
-    appliedBlocksNumberBetweenChecks = 0
   }
 
   // Note: this method doesn't separate locally and remote generated blocks
@@ -137,8 +137,8 @@ class SyncStatusActor[
           }
           currentBlock = currentBlock - revertedBlocks + 1
           lastAppliedBlockIds.drop(revertedBlocks)
-          // we must not consider fork blocks of the same height as "syncing"
-          // note: appliedBlockNumber can reach a negative value
+          // We must not consider fork blocks of the same height as "syncing"
+          // Note: appliedBlockNumber can reach a negative value
           appliedBlocksNumber -= revertedBlocks
         }
       }
@@ -147,6 +147,11 @@ class SyncStatusActor[
     lastAppliedBlockIds.prepend(sidechainBlock.id)
     if (lastAppliedBlockIds.size > maxLastBlockIds)
       lastAppliedBlockIds.dropRight(1)
+
+    // Check if the applied blocks density since the scheduler last check is big enough to consider ourselves syncing
+    val appliedBlocksNumberSinceSchedulerLastCheck = appliedBlocksNumber - prevAppliedBlocksNumber
+    if(appliedBlocksNumberSinceSchedulerLastCheck > standardBlockRate)
+      isSyncing = true
 
     isSyncing match {
       case false => // do nothing
@@ -172,13 +177,17 @@ class SyncStatusActor[
 
         if (!isSyncStartEventSent) {
           // Syncing status is detected with some delay -> consider it for the starting block
-          startingBlock = currentBlock - appliedBlocksNumberBetweenChecks
+          startingBlock = currentBlock - appliedBlocksNumberSinceSchedulerLastCheck + 1
 
+          log.debug(s"SyncStatusActor ${settings.sparkzSettings.network.nodeName} " +
+            s"sync START event published starting = $startingBlock, current = $currentBlock, highest = $highestBlock")
           val syncStatusMessage = new SyncStatus(true, BigInt(currentBlock), BigInt(startingBlock), BigInt(highestBlock))
           context.system.eventStream.publish(NotifySyncStart(syncStatusMessage))
           isSyncStartEventSent = true
         } else if((currentBlock - startingBlock) % SYNC_UPDATE_EVENT_FREQUENCY == 0) {
           // Every N new blocks emit SyncUpdate event
+          log.debug(s"SyncStatusActor ${settings.sparkzSettings.network.nodeName} " +
+            s"sync UPDATE event published starting = $startingBlock, current = $currentBlock, highest = $highestBlock")
           val syncStatusMessage = new SyncStatus(true, BigInt(currentBlock), BigInt(startingBlock), BigInt(highestBlock))
           context.system.eventStream.publish(NotifySyncUpdate(syncStatusMessage))
         }
@@ -193,21 +202,13 @@ class SyncStatusActor[
   protected def processSyncStatusScheduler: Receive = {
     case CheckBlocksDensity => // TODO: better to set bigger priority for CheckBlocksDensity
       // Update the counters
-      appliedBlocksNumberBetweenChecks = appliedBlocksNumber - prevAppliedBlocksNumber
+      val appliedBlocksNumberBetweenChecks: Int = appliedBlocksNumber - prevAppliedBlocksNumber
       prevAppliedBlocksNumber = appliedBlocksNumber
 
-      if(appliedBlocksNumberBetweenChecks > standardBlockRate) {
-        if(!isSyncing) {
-          // we have not considered ourselves as "syncing" before
-          // but from the last scheduler even have received a lot of new tips
-          isSyncing = true
-        }
-      } else {
-        if(isSyncing) {
-          // we have considered ourselves as "syncing" before,
-          // but from the last scheduler event haven't received enough new tips
-          stopSyncing()
-        }
+      if(appliedBlocksNumberBetweenChecks <= standardBlockRate && isSyncing) {
+        // We have considered ourselves as "syncing" before,
+        // but from the last scheduler event haven't received enough new tips
+        stopSyncing()
       }
   }
   protected def returnSyncStatus: Receive = {
