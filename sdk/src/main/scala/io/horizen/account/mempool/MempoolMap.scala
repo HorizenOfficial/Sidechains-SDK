@@ -276,7 +276,7 @@ class MempoolMap(
     txsList
   }
 
-  // method used by the txpool namespace rpc methods, it retrieve a map of executable or non-executable TxPoolTransaction
+  // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable TxPoolTransaction
   // ordered by address and nonce
   def mempoolTransactionsMap(executable: Boolean): TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] = {
     val txsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
@@ -290,7 +290,7 @@ class MempoolMap(
     txsMap
   }
 
-  // method used by the txpool namespace rpc methods, it retrieve a map of executable or non-executable TxPoolTransaction
+  // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable TxPoolTransaction
   // ordered by nonce filtering by from address
   def mempoolTransactionsMapFrom(executable: Boolean, fromAddress: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] = {
     val mempoolIdByNonceMapFrom = if (executable)
@@ -313,7 +313,7 @@ class MempoolMap(
     txPoolByNonceMap
   }
 
-  // method used by the txpool_inspect rpc method, it retrieve a map of transaction details ordered by address and nonce
+  // method used by the txpool_inspect rpc method, it retrieves a map of transaction details ordered by address and nonce
   def mempoolTransactionsMapInspect(executable: Boolean): TrieMap[Address, mutable.SortedMap[BigInteger, String]] = {
     val txsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, String]]
     val mempoolIdsMap = if (executable)
