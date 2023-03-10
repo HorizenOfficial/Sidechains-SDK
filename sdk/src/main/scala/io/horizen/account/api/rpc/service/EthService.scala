@@ -223,8 +223,13 @@ class EthService(
   def signTransaction(params: TransactionArgs): Array[Byte] = {
     applyOnAccountView { nodeView =>
       val unsignedTx =
-        params.toTransaction(networkParams, nodeView.history, nodeView.pool, () => estimateGas(params, "pending"))
-      val secret = getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), unsignedTx.maxCost())
+        params.toTransaction(
+          networkParams,
+          nodeView.history,
+          nodeView.pool,
+          () => doEstimateGas(nodeView, params, "pending")
+        )
+      val secret = getFittingSecret(nodeView.vault, nodeView.state, params.getFrom, unsignedTx.maxCost())
       val signedTx = signTransactionWithSecret(secret, unsignedTx)
       signedTx.encode(true)
     }
@@ -239,7 +244,7 @@ class EthService(
     val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
     val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ message
     applyOnAccountView { nodeView =>
-      val secret = getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
+      val secret = getFittingSecret(nodeView.vault, nodeView.state, sender, BigInteger.ZERO)
       val signature = secret.sign(messageToSign)
       signature.getR ++ signature.getS ++ signature.getV
     }
@@ -248,14 +253,13 @@ class EthService(
   private def getFittingSecret(
       wallet: AccountWallet,
       state: AccountState,
-      sender: Option[Address],
+      sender: Address,
       minimumBalance: BigInteger
   ): PrivateKeySecp256k1 = {
     val matchingKeys = wallet
       .secretsOfType(classOf[PrivateKeySecp256k1])
       .map(_.asInstanceOf[PrivateKeySecp256k1])
-      // if from address is given the secrets public key needs to match, otherwise check all of the secrets
-      .filter(secret => sender.forall(_.equals(secret.publicImage.address)))
+      .filter(_.publicImage.address.equals(sender))
     if (matchingKeys.isEmpty) {
       throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "no matching key for given sender"))
     }
@@ -284,67 +288,71 @@ class EthService(
     high
   }
 
+  private def doEstimateGas(nodeView: NV, params: TransactionArgs, tag: String): BigInteger = {
+    // Binary search the gas requirement, as it may be higher than the amount used
+    val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
+    // Determine the highest gas limit can be used during the estimation.
+    var highBound = params.gas
+    getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
+      if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
+        highBound = blockContext.blockGasLimit
+      }
+      // Normalize the max fee per gas the call is willing to spend.
+      val feeCap = if (params.gasPrice != null) {
+        params.gasPrice
+      } else if (params.maxFeePerGas != null) {
+        params.maxFeePerGas
+      } else {
+        BigInteger.ZERO
+      }
+      // Recap the highest gas limit with account's available balance.
+      if (feeCap.bitLength() > 0) {
+        val balance = tagStateView.getBalance(params.getFrom)
+        if (params.value.compareTo(balance) >= 0)
+          throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
+        val allowance = balance.subtract(params.value).divide(feeCap)
+        if (highBound.compareTo(allowance) > 0) {
+          highBound = allowance
+        }
+      }
+    }
+    if (highBound.compareTo(settings.globalRpcGasCap) > 0) {
+      highBound = settings.globalRpcGasCap
+    }
+    // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
+    // other exceptions are not caught as the call would not succeed with any amount of gas
+    val check = (gas: BigInteger) =>
+      try {
+        params.gas = gas
+        doCall(nodeView, params, tag)
+        (true, None)
+      } catch {
+        case err: ExecutionRevertedException => (false, Some(err))
+        case _: ExecutionFailedException => (false, None)
+        case _: IntrinsicGasException => (false, None)
+      }
+    // Execute the binary search and hone in on an executable gas limit
+    // We need to do a search because the gas required during execution is not necessarily equal to the consumed
+    // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
+    val requiredGasLimit = binarySearch(lowBound, highBound)(check(_)._1)
+    // Reject the transaction as invalid if it still fails at the highest allowance
+    if (requiredGasLimit == highBound) {
+      val (success, reverted) = check(highBound)
+      if (!success) {
+        val error = reverted
+          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.revertReason)))
+          .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
+        throw new RpcException(error)
+      }
+    }
+    requiredGasLimit
+  }
+
   @RpcMethod("eth_estimateGas")
   @RpcOptionalParameters(1)
   def estimateGas(params: TransactionArgs, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      // Binary search the gas requirement, as it may be higher than the amount used
-      val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
-      // Determine the highest gas limit can be used during the estimation.
-      var highBound = params.gas
-      getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
-        if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
-          highBound = blockContext.blockGasLimit
-        }
-        // Normalize the max fee per gas the call is willing to spend.
-        val feeCap = if (params.gasPrice != null) {
-          params.gasPrice
-        } else if (params.maxFeePerGas != null) {
-          params.maxFeePerGas
-        } else {
-          BigInteger.ZERO
-        }
-        // Recap the highest gas limit with account's available balance.
-        if (feeCap.bitLength() > 0) {
-          val balance = tagStateView.getBalance(params.getFrom)
-          if (params.value.compareTo(balance) >= 0)
-            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
-          val allowance = balance.subtract(params.value).divide(feeCap)
-          if (highBound.compareTo(allowance) > 0) {
-            highBound = allowance
-          }
-        }
-      }
-      if (highBound.compareTo(settings.globalRpcGasCap) > 0) {
-        highBound = settings.globalRpcGasCap
-      }
-      // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
-      // other exceptions are not caught as the call would not succeed with any amount of gas
-      val check = (gas: BigInteger) =>
-        try {
-          params.gas = gas
-          doCall(nodeView, params, tag)
-          (true, None)
-        } catch {
-          case err: ExecutionRevertedException => (false, Some(err))
-          case _: ExecutionFailedException => (false, None)
-          case _: IntrinsicGasException => (false, None)
-        }
-      // Execute the binary search and hone in on an executable gas limit
-      // We need to do a search because the gas required during execution is not necessarily equal to the consumed
-      // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
-      val requiredGasLimit = binarySearch(lowBound, highBound)(check(_)._1)
-      // Reject the transaction as invalid if it still fails at the highest allowance
-      if (requiredGasLimit == highBound) {
-        val (success, reverted) = check(highBound)
-        if (!success) {
-          val error = reverted
-            .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.revertReason)))
-            .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
-          throw new RpcException(error)
-        }
-      }
-      requiredGasLimit
+      doEstimateGas(nodeView, params, tag)
     }
   }
 
