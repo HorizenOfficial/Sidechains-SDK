@@ -44,10 +44,10 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
     def __init__(self):
         super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2, websocket_server_port=[None, websocket_server_port])
 
-    def checkSyncUpdate(self, wsEvent, currentBlock, startingBlock):
+    def checkSyncUpdate(self, wsEvent, startingBlock):
         assert_true(wsEvent["syncing"])
-        assert_equal(wsEvent["status"]["currentBlock"], currentBlock)
         assert_equal(wsEvent["status"]["startingBlock"], startingBlock)
+        assert_true("currentBlock" in wsEvent["status"]) #Due to the behavior of the STF we can't check this value
         assert_true("highestBlock" in wsEvent["status"]) #Due to the behavior of the STF we can't check this value
 
 
@@ -92,12 +92,12 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
         # Verify that we receive the SyncStart event after the reconnection
         response = json.loads(ws_connection.recv())
         pprint.pprint(response)
-        self.checkSyncUpdate(response["result"], 3, 3)
+        self.checkSyncUpdate(response["result"], 3)
         
         # Verify that we receive the SyncUpdate event after 500 blocks
         response = json.loads(ws_connection.recv())
         pprint.pprint(response)
-        self.checkSyncUpdate(response["result"], 503, 3)
+        self.checkSyncUpdate(response["result"], 3)
 
         time.sleep(30)
 

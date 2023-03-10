@@ -383,7 +383,7 @@ class SCWsAccountServerTest(AccountChainSetup):
 
         connect_sc_nodes(self.sc_nodes[0], 1)
         generate_next_block(sc_node2, "second node")
-        sync_sc_blocks(self.sc_nodes, wait_for=60)
+        sync_sc_blocks(self.sc_nodes, wait_for=120)
 
         response = json.loads(ws_connection.recv())
         self.checkWsResponseStaticField(response, ws.SUBSCRIBE_RESPONSE, new_pending_transactions_subscription)

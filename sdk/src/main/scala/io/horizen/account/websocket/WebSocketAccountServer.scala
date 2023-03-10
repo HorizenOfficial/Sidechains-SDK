@@ -1,8 +1,8 @@
 package io.horizen.account.websocket
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import io.horizen.SidechainTypes
 import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
-import io.horizen.account.NewExecTransactionsEvent
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.network.SyncStatus
@@ -28,7 +28,7 @@ class WebSocketAccountServer(wsPort: Int)
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[_]])
     context.system.eventStream.subscribe(self, classOf[ChangedVault[_]])
     context.system.eventStream.subscribe(self, classOf[NotifySyncStart])
-    context.system.eventStream.subscribe(self, classOf[NotifySyncStop])
+    context.system.eventStream.subscribe(self, NotifySyncStop.getClass)
     context.system.eventStream.subscribe(self, classOf[NotifySyncUpdate])
     context.system.eventStream.subscribe(self, classOf[NewExecTransactionsEvent])
   }
@@ -54,7 +54,7 @@ class WebSocketAccountServer(wsPort: Int)
       websocket.onNewExecTransactionsEvent(newExecTxs.toSeq.asInstanceOf[Seq[EthereumTransaction]])
     case NotifySyncStart(syncStatus: SyncStatus) =>
       websocket.onSyncStart(syncStatus)
-    case NotifySyncStop() =>
+    case NotifySyncStop =>
       websocket.onSyncStop()
     case NotifySyncUpdate(syncStatus: SyncStatus) =>
       websocket.onSyncStart(syncStatus)
