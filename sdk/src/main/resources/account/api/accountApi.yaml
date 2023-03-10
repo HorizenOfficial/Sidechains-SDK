@@ -651,7 +651,7 @@ paths:
                       format: int64
                 gasInfo:
                   $ref: '#/components/schemas/EIP1559GasInfo'
-        responses:
+      responses:
         '200':
           description: successful operation
           content:
@@ -964,12 +964,12 @@ paths:
 
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/createEIP1559Transaction:
     post:
@@ -1031,12 +1031,12 @@ paths:
 
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/signTransaction:
     post:
@@ -1074,12 +1074,12 @@ paths:
 
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/createSmartContract:
     post:
@@ -1120,12 +1120,12 @@ paths:
 
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/allWithdrawalRequests:
     post:
@@ -1171,12 +1171,12 @@ paths:
                               type: integer
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/allForgingStakes:
     post:
@@ -1202,12 +1202,12 @@ paths:
                           $ref: '#/components/schemas/AccountForgingStakeInfo'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/myForgingStakes:
     post:
@@ -1233,12 +1233,12 @@ paths:
                           $ref: '#/components/schemas/AccountForgingStakeInfo'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/openForgerList:
     post:
@@ -1279,12 +1279,12 @@ paths:
                         type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/allowedForgerList:
     post:
@@ -1318,12 +1318,12 @@ paths:
                               format: int32
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-    default:
-      description: any kind of http error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SidechainApiError'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   # Sidechain wallet operations
   /wallet/createPrivateKey25519:
@@ -1443,7 +1443,7 @@ paths:
                     type: object
                     properties:
                       proposition:
-                        $ref: '#/components/schemas/Proposition'
+                        $ref: '#/components/schemas/AddressProposition'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1927,7 +1927,7 @@ paths:
         - node
       summary: Disconnects from a node
       description: Sends the request to disconnects from a sidechain node.
-      operationId: connect
+      operationId: disconnect
       requestBody:
         content:
           application/json:
@@ -2191,7 +2191,7 @@ paths:
     post:
       tags:
         - submitter
-      summary: calculate and return signing key messageToSign to be used to key rotation proof
+      summary: calculates and returns signing key messageToSign to be used to key rotation proof
       description: Accepts public key and returns message to sign
       operationId: getKeyRotationMessageToSignForSigningKey
       requestBody:
@@ -2223,6 +2223,7 @@ paths:
                     properties:
                       keyRotationMessageToSign:
                         type: string
+                        format: byte
                         description: Calculated messageToSign to be used to key rotation proof
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -2237,7 +2238,7 @@ paths:
     post:
       tags:
         - submitter
-      summary: calculate and return master key messageToSign to be used to key rotation proof
+      summary: calculates and returns master key messageToSign to be used to key rotation proof
       description: Accepts public key and returns message to sign
       operationId: getKeyRotationMessageToSignForMasterKey
       requestBody:
@@ -2269,6 +2270,7 @@ paths:
                     properties:
                       keyRotationMessageToSign:
                         type: string
+                        format: byte
                         description: Calculated messageToSign to be used to key rotation proof
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -2312,6 +2314,9 @@ paths:
                       certifiersKeys:
                         $ref: '#/components/schemas/CertifiersKeys'
                         description: Signers and masters certificate submitter keys
+                      keysRootHash:
+                        type: string
+                        format: byte
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -2382,7 +2387,8 @@ paths:
       tags:
         - submitter
       summary: returns if certificate submitter is enabled
-      description: Returns if certificate submitter is enabled, so will automatically try to create and send certificate during the submission window.
+      description: "Returns if certificate submitter is enabled, so it will automatically try to create and send\n
+        certificates during the submission window."
       operationId: isCertificateSubmitterEnabled
       responses:
         '200':
@@ -2464,7 +2470,7 @@ paths:
       tags:
         - submitter
       summary: returns if certificate signing option is enabled
-      description: Returns if certificate signing is enabled, so will automatically try to sign certificate and broadcast the signature to the network.
+      description: Returns if certificate signing is enabled.
       operationId: isCertificateSignerEnabled
       responses:
         '200':
@@ -2568,6 +2574,7 @@ components:
         detail:
           type: string
 
+    #ST
     ImportSecretsResponse:
       description: The response of the importSecrets endpoint
       type: object
@@ -2583,6 +2590,7 @@ components:
           items:
             $ref: '#/components/schemas/ImportSecretDetailError'
 
+    #ST
     ImportSecretDetailError:
       description: Error generated while trying to import a secret in the importSecrets endpoint
       type: object
@@ -2789,25 +2797,25 @@ components:
           type: integer
           format: int64
 
-      #ST
-      MainchainBlockInfo:
-        type: object
-        properties:
-          mainchainHeaderSidechainBlockId:
-            type: string
-            format: byte
-          mainchainReferenceDataSidechainBlockId:
-            type: string
-            format: byte
-          hash:
-            type: string
-            format: byte
-          parentHash:
-            type: string
-            format: byte
-          height:
-            type: integer
-            format: int32
+    #ST
+    MainchainBlockInfo:
+      type: object
+      properties:
+        mainchainHeaderSidechainBlockId:
+          type: string
+          format: byte
+        mainchainReferenceDataSidechainBlockId:
+          type: string
+          format: byte
+        hash:
+          type: string
+          format: byte
+        parentHash:
+          type: string
+          format: byte
+        height:
+          type: integer
+          format: int32
 
     #ST
     SidechainBlock:
@@ -3019,6 +3027,7 @@ components:
           type: integer
           format: int32
 
+    #ST
     SchnorrProposition:
       type: object
       properties:
@@ -3026,6 +3035,15 @@ components:
           type: string
           format: byte
 
+    #ST
+    SchnorrProof:
+      type: object
+      properties:
+        signature:
+          type: string
+          format: byte
+
+    #ST
     CertifiersKeys:
       type: object
       properties:
@@ -3038,6 +3056,7 @@ components:
           items:
             $ref: '#/components/schemas/SchnorrProposition'
 
+    #ST
     KeyRotationProof:
       type: object
       properties:
@@ -3050,11 +3069,11 @@ components:
           type: integer
           format: int32
         newKey:
-          type: string
+          $ref: '#/components/schemas/SchnorrProposition'
         signingKeySignature:
-          type: string
+          $ref: '#/components/schemas/SchnorrProof'
         masterKeySignature:
-          type: string
+          $ref: '#/components/schemas/SchnorrProof'
 
     #ST
     ForwardTransferData:
@@ -3124,6 +3143,20 @@ components:
           type: string
           format: byte
 
+    SignatureSecp256k1:
+      type: object
+      properties:
+        v:
+          type: string
+          format: byte
+        r:
+          type: string
+          format: byte
+        f:
+          type: string
+          format: byte
+
+
     #ST
     Bloom:
       type: object
@@ -3132,45 +3165,110 @@ components:
           type: string
           format: byte
 
-  #ST
-  TransactionWithdrawalRequest:
-    type: object
-    properties:
-      mainchainAddress:
-        type: string
-      value:
-        type: integer
-        format: int64
+    #ST
+    TransactionWithdrawalRequest:
+      type: object
+      properties:
+        mainchainAddress:
+          type: string
+        value:
+          type: integer
+          format: int64
 
-  #ST
-  EIP1559GasInfo:
-    type: object
-    properties:
-      gasLimit:
-        type: integer
-      maxPriorityFeePerGas:
-        type: integer
-      maxFeePerGas:
-        type: integer
+    #ST
+    EIP1559GasInfo:
+      type: object
+      properties:
+        gasLimit:
+          type: integer
+        maxPriorityFeePerGas:
+          type: integer
+        maxFeePerGas:
+          type: integer
 
-  AccountForgingStakeInfo:
-    type: object
-    properties:
-      stakeId:
-        type: string
-        format: byte
-      forgerStakeData:
-        type: object
-        properties:
-          forgerPublicKeys:
+    #ST
+    AccountForgingStakeInfo:
+      type: object
+      properties:
+        stakeId:
+          type: string
+          format: byte
+        forgerStakeData:
+          type: object
+          properties:
+            forgerPublicKeys:
+              type: object
+              properties:
+                blockSignPublicKey:
+                  $ref: '#/components/schemas/PublicKey25519Proposition'
+                vrfPublicKey:
+                  $ref: '#/components/schemas/VrfPublicKey'
+            ownerPublicKey:
+              type: string
+              format: byte
+            stakedAmount:
+              type: integer
+
+    WithdrawalEpochCertificate:
+      type: object
+      properties:
+        certificateBytes:
+          type: string
+          format: byte
+        version:
+          type: integer
+          format: int32
+        sidechainId:
+          type: string
+          format: byte
+        epochNumber:
+          type: integer
+          format: int32
+        quality:
+          type: integer
+          format: int64
+        proof:
+          type: string
+          format: byte
+        fieldElementCertificateFields:
+          type: object
+          properties:
+            rawData:
+              type: string
+              format: byte
+        bitVectorCertificateFields:
+          type: array
+          items:
             type: object
             properties:
-              blockSignPublicKey:
-                $ref: '#/components/schemas/PublicKey25519Proposition'
-              vrfPublicKey:
-                $ref: '#/components/schemas/VrfPublicKey'
-          ownerPublicKey:
-            type: string
-            format: byte
-          stakedAmount:
-            type: integer
+              rawData:
+                type: string
+                format: byte
+        endCumulativeScTxCommitmentTreeRoot:
+          type: string
+          format: byte
+        btrFee:
+          type: integer
+          format: int64
+        ftMinAmount:
+          type: integer
+          format: int64
+        backwardTransferOutputs:
+          type: array
+          items:
+            type: object
+            properties:
+              address:
+                type: string
+                format: byte
+              amount:
+                type: integer
+                format: int64
+              size:
+                type: integer
+                format: int32
+
+
+
+
+
