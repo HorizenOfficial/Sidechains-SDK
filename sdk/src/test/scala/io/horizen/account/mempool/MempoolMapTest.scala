@@ -5,8 +5,8 @@ import io.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, 
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.state.BaseStateReader
 import io.horizen.evm.Address
+import io.horizen.state.BaseStateReader
 import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert._
 import org.junit._

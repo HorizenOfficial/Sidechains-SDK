@@ -7,7 +7,7 @@ from SidechainTestFramework.scutil import is_mainchain_block_included_in_sc_bloc
     generate_next_blocks
 from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from httpCalls.wallet.createPrivateKeySecp256k1 import http_wallet_createPrivateKeySec256k1
-from test_framework.util import assert_equal, assert_true
+from test_framework.util import assert_equal, assert_true, fail
 
 """
 Check the EVM bootstrap feature.
@@ -52,14 +52,12 @@ class SCEvmBootstrap(AccountChainSetup):
             "The mainchain block is not included inside SC block reference info.")
 
         # test we can not use a wrong key
-        exception_occurs = False
         try:
             http_wallet_createPrivateKeySec256k1(sc_node_1, "qqq")
         except Exception as e:
-            exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-        finally:
-            assert_true(exception_occurs, "Using a wrong key should fail")
+        else:
+            fail("Using a wrong key should fail")
 
         evm_address = http_wallet_createPrivateKeySec256k1(sc_node_1)
         logging.info("pubkey = {}".format(evm_address))

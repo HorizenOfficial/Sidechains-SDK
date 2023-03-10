@@ -8,8 +8,8 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     connect_sc_nodes, stop_sc_node, start_sc_node, wait_for_sc_node_initialization, \
-    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, AccountModel, TimeoutException, disconnect_sc_nodes_bi
-from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, \
+    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, AccountModel, disconnect_sc_nodes_bi
+from test_framework.util import assert_equal, assert_true, fail, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 
 """
@@ -20,23 +20,9 @@ Configuration:
     Start 1 MC nodes and 2 SC nodes.
 
 Test:
-    - Test-1
-        - synchronize MC node to the point of SC Creation Block
-        - start SC1 and SC2 nodes 
-        - stop SC2 node
-        - forging 1000 blocks on node SC1
-        - restart and sync SC2 node checking the eth_syncing rpc method result in case the sync is in progress (syncStatus =/= false)
-        - check that the nodes have the same height
-    - Test-2
-        - disconnect SC1 and SC2 nodes 
-        - forging 500 blocks on node SC1
-        - reconnect SC1 and SC2 nodes and sync SC2 node
-        - check that the nodes have the same height and the eth_syncing return a syncStatus false
-    - Test-3
-        - stop SC2 node
-        - forging 1000 blocks on node SC1
-        - restart and sync SC2 and stop SC1 node after 15 seconds 
-        - wait 60 seconds and check that eth_syncing rpc method return syncStatus false
+    - Test that node can detect `isSync` after being restarted.
+    - Test that node can detect `isSync` again after being connected to the new better peer.
+    - Test that node can detect `isSync` when the sender peer was stopped and restarted in the middle of sync.
 """
 
 WITHDRAWAL_EPOCH_LENGTH = 10
@@ -70,7 +56,7 @@ class EvmSyncStatus(SidechainTestFramework):
         bootstrap_sidechain_nodes(
             self.options,
             self.network,
-            block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
+            block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND * 5,
             model=AccountModel)
 
     def sc_setup_nodes(self):
@@ -78,141 +64,186 @@ class EvmSyncStatus(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               binary=[EVM_APP_BINARY] * 2)
 
-    def sync_sc_blocks(self, wait_for=600, execute_stop=False):
+    def check_sync_status(self, starting_block_height, execute_stop=False ):
+        logging.info("Syncing...")
+        t_0 = datetime.now()
+        self.sync_sc_blocks(starting_block_height, execute_stop)
+        t_1 = datetime.now()
+        u_sec = (t_1 - t_0).microseconds
+        sec = (t_1 - t_0).seconds
+        logging.info("SC node 1 synced in {}.{} secs".format(sec, u_sec))
 
+        node_check_blocks_density_freq = 15
+        logging.info("Wait 30 seconds for SC node 1 to stop consider itself syncing")
+        time.sleep(node_check_blocks_density_freq * 2)
+
+        is_sync = self.sc_nodes[1].rpc_eth_syncing()["result"]
+        logging.info("Current SC node 1 LAST sync info: " + str(is_sync))
+        if type(is_sync) is bool and bool(is_sync):
+            fail("SC node 1 still consider itself syncing")
+
+    def sync_sc_blocks(self, starting_block_height, execute_stop=False, wait_for=200):
         # wait for maximum wait_for seconds for everybody to have the same block count
         start = time.time()
+        sync_status = False
         while True:
-
             # call eth_syncing rpc method, if the sync status result is true check if the block values are correct
             res = self.sc_nodes[1].rpc_eth_syncing()["result"]
-            if(isinstance(res, dict) and "currentBlock" in res):
-                decimalCurrentBlock = int(res["currentBlock"], 16)
-                deciamlStartingBlock = int(res["startingBlock"], 16)
-                decimalHighestBlock = int(res["highestBlock"], 16)
-                assert_true(decimalCurrentBlock > 0, "unexpected value for currentBlock")
-                assert_true(deciamlStartingBlock >= 0, "unexpected value for startingBlock")
-                assert_true(decimalHighestBlock > 0, "unexpected value for highestBlock")
-                assert_true(decimalHighestBlock - decimalCurrentBlock > 0, "currentBlock is greater than highestBlock")
-                assert_true(decimalHighestBlock - deciamlStartingBlock > 0, "startingBlock is greater than highestBlock")
+            logging.info("Current SC node 1 sync info: " + str(res))
+            logging.info("SC node 1 height: " + str(self.sc_nodes[1].block_best()["result"]["height"]))
+            logging.info("SC node 1 connections " + str(self.sc_nodes[1].node_connectedPeers()["result"]["peers"]))
+            logging.info("SC node 0 connections " + str(self.sc_nodes[0].node_connectedPeers()["result"]["peers"]))
+            if isinstance(res, dict) and "currentBlock" in res:
+                sync_status = True
+
+                decimal_starting_block = int(res["startingBlock"], 16)
+                decimal_current_block = int(res["currentBlock"], 16)
+                decimal_highest_block = int(res["highestBlock"], 16)
+
+                assert_equal(starting_block_height, decimal_starting_block, "unexpected value for startingBlock")
+
+                assert_true(decimal_current_block > 0, "unexpected value for currentBlock")
+                assert_true(decimal_current_block >= decimal_starting_block, "startingBlock > currentBlock")
+
+                assert_true(decimal_highest_block > 0, "unexpected value for highestBlock")
+                assert_true(decimal_highest_block - decimal_current_block > 0, "currentBlock >= highestBlock")
+                assert_true(decimal_highest_block - decimal_starting_block > 0, "startingBlock >= highestBlock")
+            elif sync_status:
+                # Received status false after it was true for some period of time
+                sync_status = False
+                break
 
             if time.time() - start >= wait_for:
-                raise TimeoutException("Syncing blocks")
+                fail("Syncing blocks timeout")
+
             counts = [int(x.block_best()["result"]["height"]) for x in self.sc_nodes]
             if counts == [counts[0]] * len(counts):
                 break
+
+            # Stop node 0 after 15 seconds in execute_stop was set
             if execute_stop and time.time() - start >= 15:
-                stop_sc_node(self.sc_nodes[0],0)
+                logging.info("Disconnect sidechain nodes")
+                disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
+                logging.info("Stopping SC node 0")
+                stop_sc_node(self.sc_nodes[0], 0)
                 break
+
             time.sleep(1)
 
-    def startAndSyncScNode2(self, execute_stop=False):
-        logging.info("Starting SC2")
-        start_sc_node(1, self.options.tmpdir, binary=EVM_APP_BINARY)
+        if not sync_status:
+            fail("SC node 1 was in sync but has not detected that it is in sync")
+
+    def run_sc_node(self, sc_node_idx):
+        logging.info("Starting SC node " + str(sc_node_idx))
+        start_sc_node(sc_node_idx, self.options.tmpdir, binary=EVM_APP_BINARY)
         wait_for_sc_node_initialization(self.sc_nodes)
+        time.sleep(3)
+
+    def restart_sc_node(self, sc_node_idx):
+        logging.info("Stopping SC node " + str(sc_node_idx))
+        stop_sc_node(self.sc_nodes[sc_node_idx], sc_node_idx)
         time.sleep(2)
 
-        logging.info("Connecting SC2")
-        connect_sc_nodes(self.sc_nodes[0], 1)
-
-        logging.info("Syncing...")
-        T_0 = datetime.now()
-        self.sync_sc_blocks(execute_stop=execute_stop)
-        T_1 = datetime.now()
-        u_sec = (T_1 - T_0).microseconds
-        sec = (T_1 - T_0).seconds
-        logging.info("SC2 synced in {}.{} secs".format(sec, u_sec))
+        self.run_sc_node(sc_node_idx)
 
     def run_test(self):
+        sc_node0 = self.sc_nodes[0]
+        sc_node1 = self.sc_nodes[1]
 
-        sc_node1 = self.sc_nodes[0]
-        sc_node2 = self.sc_nodes[1]
+        # Note: in case machine is too fast we need more blocks to be able to get sync
+        num_blocks = 1500
 
-        self.blocks = []
         self.sync_all()
 
         # -------------------------------------------------------------------------------------
         # Test 1
         # the test workflow is:
-        # stop SC2 node
-        # forge 1000 blocks on node SC1
-        # restart SC2 and sync the recently created blocks on SC1
-        # call the eth_syncing endpoint and if the response is not False check the block height values
-        # check that the node have the same height
+        # stop SC1 node
+        # forge 1500 blocks on node SC0
+        # restart SC1 and sync the recently created blocks on SC0
 
-        logging.info("Stopping SC2")
-        stop_sc_node(sc_node2, 1)
+        logging.info("Stopping SC node 1")
+        stop_sc_node(sc_node1, 1)
 
-        # forge 1000 blocks on SC1
-        NUM_BLOCKS = 1000
-        logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
-        self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS, verbose=False))
+        logging.info("SC node 0 generates {} blocks...".format(num_blocks))
+        generate_next_blocks(sc_node0, "node 0", num_blocks, verbose=False)
 
-        # restart the sidechain node 2 and sync it
-        time.sleep(2)
-        self.startAndSyncScNode2()
+        # run the sidechain node 2 and sync it
+        self.run_sc_node(1)
+        sc_node_1_height = int(sc_node1.block_best()["result"]["height"])
 
-        # assert that the block best on SC1 match SC2
-        assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
-        self.sync_all()
-        #'''
+        logging.info("Connecting SC nodes")
+        time.sleep(5)
+        connect_sc_nodes(self.sc_nodes[0], 1)
+
+        self.check_sync_status(sc_node_1_height + 1)
 
         # -------------------------------------------------------------------------------------
         # Test 2
         # the test workflow is:
-        # disconnect SC1 and SC2 nodes
-        # forge 500 blocks on node SC1
-        # reconnect SC1 and SC2 nodes and sync SC2 node
-        # check that the node have the same height and that the eth_syncing return syncStatus false on SC2
+        # disconnect nodes
+        # forge 1500 blocks on node SC node 0
+        # reconnect nodes and sync SC node 1
 
         logging.info("Disconnect sidechain nodes")
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
 
-        # forge 500 blocks on SC1
-        NUM_BLOCKS = 500
-        logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
-        self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS, verbose=False))
+        sc_node_1_height = int(sc_node1.block_best()["result"]["height"])
+        # forge 1500 blocks on SC1
+        logging.info("SC node 0 generates {} blocks...".format(num_blocks))
+        generate_next_blocks(sc_node0, "node 0", num_blocks, verbose=False)
 
-        # reconnect the sidechain nodes
-        time.sleep(2)
+        assert_equal(sc_node_1_height, int(sc_node1.block_best()["result"]["height"]), "nodes are wrongly connected")
+
         logging.info("Reconnect sidechain nodes")
+        time.sleep(5)
         connect_sc_nodes(self.sc_nodes[0], 1)
-        self.sc_sync_all()
 
-        # assert that the block best on SC1 match SC2
-        assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
-        time.sleep(60)
-        self.sync_all()
-        res = self.sc_nodes[1].rpc_eth_syncing()["result"]
-        assert_true(res == False, "unexpected value for eth_syncing result")
+        self.check_sync_status(sc_node_1_height + 1)
 
-        #'''
         # -------------------------------------------------------------------------------------
         # Test 3
         # the test workflow is:
-        # stop SC2 node
-        # forge 1000 blocks on node SC1
-        # restart SC2 and sync the recently created blocks on SC1 but stop after 15 seconds the SC1 node
-        # call the eth_syncing endpoint and if the response is not False check the block height values
-        # wait 60 seconds and check if the eth_syncing method return False
+        # stop SC node 1
+        # forge 1500*2 blocks on node SC node 0
+        # restart SC node 1 and sync the recently created blocks on SC node 0 but stop after 15 seconds the SC node 0
+        # call the eth_syncing endpoint - expect True
+        # wait 15 seconds
+        # call the eth_syncing endpoint - expect False
+        # restart SC node 0 and connect nodes again
+        # keep syncing
 
-        logging.info("Stopping SC2")
-        stop_sc_node(sc_node2, 1)
+        logging.info("Disconnect sidechain nodes")
+        disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
 
-        # forge 1000 blocks on SC1
-        NUM_BLOCKS = 1000
-        logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
-        self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS, verbose=False))
+        logging.info("Stopping SC node 1")
+        stop_sc_node(sc_node1, 1)
 
-        # restart the sidechain node 2 and sync it
-        time.sleep(10)
-        self.startAndSyncScNode2(execute_stop=True)
-        self.sync_all()
-        time.sleep(60)
-        self.sync_all()
-        res = self.sc_nodes[1].rpc_eth_syncing()["result"]
-        assert_true(res == False, "unexpected value for eth_syncing result")
-        #'''
+        num_blocks = num_blocks * 2
+        logging.info("SC node 0 generates {} blocks...".format(num_blocks))
+        generate_next_blocks(sc_node0, "node 0", num_blocks, verbose=False)
+
+        self.run_sc_node(1)
+        sc_node_1_height = int(sc_node1.block_best()["result"]["height"])
+
+        logging.info("Connecting SC nodes")
+        time.sleep(5)
+        connect_sc_nodes(self.sc_nodes[0], 1)
+
+        # sleep a bit to be sure that node 1 will detect itself syncing before node 0 will stop
+        time.sleep(5)
+        self.check_sync_status(sc_node_1_height + 1, execute_stop=True)
+
+        sc_node_1_height = int(sc_node1.block_best()["result"]["height"])
+
+        # restart SC node 0, connect nodes and check if node 1 can resume syncing
+        self.run_sc_node(0)
+        logging.info("Connecting SC nodes")
+        time.sleep(5)
+        connect_sc_nodes(self.sc_nodes[1], 0)
+
+        self.check_sync_status(sc_node_1_height + 1)
+
 
 if __name__ == "__main__":
     EvmSyncStatus().main()

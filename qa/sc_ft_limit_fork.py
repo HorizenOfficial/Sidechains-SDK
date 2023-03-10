@@ -9,7 +9,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, check_wallet_coins_balance
 from httpCalls.block.forgingInfo import http_block_forging_info
 from test_framework.util import assert_equal, start_nodes, \
-    websocket_port_by_mc_node_index
+    websocket_port_by_mc_node_index, assert_true, fail
 
 """
 Check that after the hard fork, FT with amount < 54 satoshi is no longer possible
@@ -91,11 +91,14 @@ class SCFTLimitFork(SidechainTestFramework):
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         mc_node.generate(1)
         generate_next_blocks(sc_node, "first node", 1)
+
         # try to do another FT with 50 satoshi, assert it fails
         try:
             self.do_ft(_50cent)
         except Exception as e:
             assert_equal('16: bad-sc-tx-not-applicable', e.error['message'])
+        else:
+            fail("Exception should have been thrown")
 
         # 55 satoshi and above should be successful
         self.do_ft(0.00000055)

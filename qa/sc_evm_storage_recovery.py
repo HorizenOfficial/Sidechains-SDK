@@ -11,7 +11,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_no
     wait_for_sc_node_initialization, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, \
     AccountModel
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index
+    websocket_port_by_mc_node_index, assert_true, fail
 
 """
 Test that the EVM sidechain can recover after a crash that left the SC storages inconsistent. 
@@ -236,6 +236,8 @@ class EvmStorageRecoveryTest(SidechainTestFramework):
             logging.info("Expected exception caught during negative testing: " + str(e))
             logging.info("Stopping SC2")
             stop_sc_node(sc_node2, 1)
+        else:
+            fail("Exception should have been thrown")
 
 
 if __name__ == "__main__":

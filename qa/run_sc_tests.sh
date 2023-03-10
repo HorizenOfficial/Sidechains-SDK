@@ -110,6 +110,7 @@ testScriptsEvm=(
     'sc_evm_mempool_size.py'
     'sc_evm_mempool_timeout.py'
     'sc_evm_sync_status.py'
+    'sc_evm_txpool.py'
 );
 
 testScriptsUtxo=(
