@@ -87,8 +87,9 @@ class EvmSyncStatus(SidechainTestFramework):
         sec = (t_1 - t_0).seconds
         logging.info("SC node 1 synced in {}.{} secs".format(sec, u_sec))
 
+        node_check_blocks_density_freq = 15
         logging.info("Wait 30 seconds for SC node 1 to stop consider itself syncing")
-        time.sleep(30)
+        time.sleep(node_check_blocks_density_freq * 2)
 
         is_sync = self.sc_nodes[1].rpc_eth_syncing()["result"]
         logging.info("Current SC node 1 LAST sync info: " + str(is_sync))
@@ -103,7 +104,9 @@ class EvmSyncStatus(SidechainTestFramework):
             # call eth_syncing rpc method, if the sync status result is true check if the block values are correct
             res = self.sc_nodes[1].rpc_eth_syncing()["result"]
             logging.info("Current SC node 1 sync info: " + str(res))
-            logging.info("Current SC node 1 height: " + str(self.sc_nodes[1].block_best()["result"]["height"]))
+            logging.info("SC node 1 height: " + str(self.sc_nodes[1].block_best()["result"]["height"]))
+            logging.info("SC node 1 connections " + str(self.sc_nodes[1].node_connectedPeers()["result"]["peers"]))
+            logging.info("SC node 0 connections " + str(self.sc_nodes[0].node_connectedPeers()["result"]["peers"]))
             if isinstance(res, dict) and "currentBlock" in res:
                 sync_status = True
 
@@ -133,6 +136,7 @@ class EvmSyncStatus(SidechainTestFramework):
 
             # Stop node 0 after 15 seconds in execute_stop was set
             if execute_stop and time.time() - start >= 15:
+                logging.info("Stopping SC node 0")
                 stop_sc_node(self.sc_nodes[0], 0)
                 break
 
