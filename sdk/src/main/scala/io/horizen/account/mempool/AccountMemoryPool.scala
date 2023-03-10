@@ -129,10 +129,10 @@ class AccountMemoryPool(
   def getNonExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
     unconfirmed.mempoolTransactionsMap(false)
 
-  def getExecutableTransactionsMapFrom(from: Address): TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
+  def getExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] =
     unconfirmed.mempoolTransactionsMapFrom(true, from)
 
-  def getNonExecutableTransactionsMapFrom(from: Address): TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
+  def getNonExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] =
     unconfirmed.mempoolTransactionsMapFrom(false, from)
 
   def getExecutableTransactionsMapInspect: TrieMap[Address, mutable.SortedMap[BigInteger, String]] =

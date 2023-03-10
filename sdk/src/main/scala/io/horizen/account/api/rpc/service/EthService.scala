@@ -115,8 +115,8 @@ class EthService(
   }
 
   @RpcMethod("txpool_contentFrom")
-  def txpoolContentFrom(from: Address): TxPoolContent = applyOnAccountView { nodeView =>
-    new TxPoolContent(
+  def txpoolContentFrom(from: Address): TxPoolContentFrom = applyOnAccountView { nodeView =>
+    new TxPoolContentFrom(
       nodeView.pool.getExecutableTransactionsMapFrom(from),
       nodeView.pool.getNonExecutableTransactionsMapFrom(from)
     )
