@@ -19,7 +19,7 @@ tags:
   - name: submitter
     description: Sidechain submitter operations
   - name: csw
-    description: Cesead Sidechain Withdrawal operations
+    description: Ceased Sidechain Withdrawal operations
 
 paths:
 
@@ -2582,29 +2582,33 @@ components:
     MainchainHeader:
       type: object
       properties:
-        mainchainHeaderBytes:
-          type: string
         version:
           type: integer
           format: int32
+        hash:
+          type: string
+          format: byte
         hashPrevBlock:
           type: string
+          format: byte
         hashMerkleRoot:
           type: string
-        hashReserved:
+          format: byte
+        hashScTxsCommitment:
           type: string
-        hashSCMerkleRootsMap:
-          type: string
+          format: byte
         time:
           type: integer
-          format: int64
+          format: int32
         bits:
           type: integer
-          format: int64
+          format: int32
         nonce:
           type: string
+          format: byte
         solution:
           type: string
+          format: byte
 
     MC2SCAggregatedTransaction:
       type: object
@@ -2688,21 +2692,101 @@ components:
           type: string
         parentId:
           type: string
+        header:
+          $ref: '#/components/schemas/SidechainBlockHeader'
         timestamp:
           type: integer
           format: int64
-        mainchainBlocks:
+        mainchainBlockReferencesData:
           type: array
           items:
-            $ref: '#/components/schemas/MainchainBlock'
+            $ref: '#/components/schemas/MainchainBlockReferenceData'
+        mainchainHeaders:
+          type: array
+          items:
+            $ref: '#/components/schemas/MainchainHeader'
         sidechainTransactions:
           type: array
           items:
             $ref: '#/components/schemas/Transaction'
-        forgerPublicKey:
-          $ref: '#/components/schemas/Proposition'
+        ommers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ommer'
+        size:
+          type: integer
+          format: int64
+
+    SidechainBlockHeader:
+      type: object
+      properties:
+        version:
+          type: integer
+        parentId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        forgingStakeInfo:
+          $ref: '#/components/schemas/ForgingStakeInfo'
+        forgingStakeMerklePath:
+          type: string
+          format: byte
+        vrfProof:
+          $ref: '#/components/schemas/VrfProof'
+        sidechainTransactionsMerkleRootHash:
+          type: string
+          format: byte
+        mainchainMerkleRootHash:
+          type: string
+          format: byte
+        ommersMerkleRootHash:
+          type: string
+          format: byte
+        ommersCumulativeScore:
+          type: integer
+          format: int64
+        feePaymentsHash:
+          type: string
+          format: byte
         signature:
           $ref: '#/components/schemas/Signature25519'
+        id:
+          type: string
+
+    ForgingStakeInfo:
+      type: object
+      properties:
+        blockSignPublicKey:
+          $ref: '#/components/schemas/PublicKey25519Proposition'
+        vrfPublicKey:
+          $ref: '#/components/schemas/VrfPublicKey'
+        stakeAmount:
+          type: integer
+          format: int64
+
+    PublicKey25519Proposition:
+      type: object
+      properties:
+        publicKey:
+          type: string
+          format: byte
+
+    VrfPublicKey:
+      type: object
+      properties:
+        publicKey:
+          type: string
+          format: byte
+
+
+    #ST
+    VrfProof:
+      type: object
+      properties:
+        vrfProof:
+          type: string
+          format: byte
 
     SidechainBlockInfo:
       type: object
@@ -2731,6 +2815,30 @@ components:
           $ref: '#/components/schemas/VrfOutput'
         lastBlockInPreviousConsensusEpoch:
           type: string
+
+    MainchainBlockReferenceData:
+      type: object
+      properties:
+        headerHash:
+          type: string
+          format: byte
+        sidechainRelatedAggregatedTransaction:
+          $ref: '#/components/schemas/MC2SCAggregatedTransaction'
+          nullable: true
+        existenceProof:
+          type: string
+          format: byte
+          nullable: true
+        absenceProof:
+          type: string
+          format: byte
+          nullable: true
+        lowerCertificateLeaves:
+          type: string
+          format: byte
+        topQualityCertificate:
+          $ref: '#/components/schemas/WithdrawalEpochCertificate'
+          nullable: true
 
     CswInfo:
       type: object
@@ -2765,8 +2873,10 @@ components:
       properties:
         hash:
           type: string
+          format: byte
         cumulativeCommTreeHash:
           type: string
+          format: byte
 
     WithdrawalEpochInfo:
       type: object
@@ -2781,6 +2891,7 @@ components:
       properties:
         bytes:
           type: string
+          format: byte
 
     SchnorrProposition:
       type: object
