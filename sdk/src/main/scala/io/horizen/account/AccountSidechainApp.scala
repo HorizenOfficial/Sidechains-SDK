@@ -16,6 +16,7 @@ import io.horizen.account.network.AccountNodeViewSynchronizer
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.state.MessageProcessor
 import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
+import io.horizen.account.websocket.WebSocketAccountServerRef
 import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
@@ -147,6 +148,10 @@ class AccountSidechainApp @Inject()
 
   // Init Sync Status actor
   val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
+  
+  if(sidechainSettings.websocketServer.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
+  }
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),

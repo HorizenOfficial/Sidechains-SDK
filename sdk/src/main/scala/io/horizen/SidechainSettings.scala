@@ -13,26 +13,31 @@ case class ForgerKeysData(
     vrfPublicKey: String,
 )
 
-case class WebSocketSettings(
+case class WebSocketClientSettings(
     address: String,
     connectionTimeout: FiniteDuration,
     reconnectionDelay: FiniteDuration,
     reconnectionMaxAttempts: Int,
     // In Regtest allow to forge new blocks without connection to MC node, for example.
     allowNoConnectionInRegtest: Boolean = true,
-    wsServer: Boolean = false,
-    wsServerPort: Int = 8025,
+    enabled: Boolean
 )
 
-case class GenesisDataSettings(scGenesisBlockHex: String,
-                               scId: String,
-                               mcBlockHeight: Int,
-                               powData: String,
-                               mcNetwork: String,
-                               withdrawalEpochLength: Int,
-                               initialCumulativeCommTreeHash: String,
-                               isNonCeasing: Boolean
-                              )
+case class WebSocketServerSettings(
+    wsServer: Boolean = false,
+    wsServerPort: Int = 8025
+)
+
+case class GenesisDataSettings(
+    scGenesisBlockHex: String,
+    scId: String,
+    mcBlockHeight: Int,
+    powData: String,
+    mcNetwork: String,
+    withdrawalEpochLength: Int,
+    initialCumulativeCommTreeHash: String,
+    isNonCeasing: Boolean
+)
 
 case class WithdrawalEpochCertificateSettings(
     submitterIsEnabled: Boolean,
@@ -91,12 +96,14 @@ case class EthServiceSettings(
 )
 
 // Default values are the same as in Geth/Erigon
-case class AccountMempoolSettings(maxNonceGap: Int = 16,
-                                  maxAccountSlots: Int = 16,
-                                  maxMemPoolSlots: Int = 6144, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
-                                  maxNonExecMemPoolSlots: Int = 1024,
-                                  txLifetime: FiniteDuration = 3.hours,
-                                  allowUnprotectedTxs: Boolean = false){
+case class AccountMempoolSettings(
+    maxNonceGap: Int = 16,
+    maxAccountSlots: Int = 16,
+    maxMemPoolSlots: Int = 6144, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
+    maxNonExecMemPoolSlots: Int = 1024,
+    txLifetime: FiniteDuration = 3.hours,
+    allowUnprotectedTxs: Boolean = false
+){
   require(maxNonceGap > 0, s"Maximum Nonce Gap not positive: $maxNonceGap")
   require(maxAccountSlots > 0, s"Maximum Account Slots not positive: $maxAccountSlots")
   require(maxMemPoolSlots >= MempoolMap.MaxNumOfSlotsForTx, s"Maximum Memory Pool Slots number should be at least " +
@@ -114,7 +121,8 @@ case class AccountMempoolSettings(maxNonceGap: Int = 16,
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
     genesisData: GenesisDataSettings,
-    websocket: WebSocketSettings,
+    websocketClient: WebSocketClientSettings,
+    websocketServer: WebSocketServerSettings,
     withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,
     remoteKeysManagerSettings: RemoteKeysManagerSettings,
     mempool: MempoolSettings,

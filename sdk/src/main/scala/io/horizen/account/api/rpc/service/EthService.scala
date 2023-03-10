@@ -29,10 +29,10 @@ import io.horizen.evm.results.ProofAccountResult
 import io.horizen.evm.{Address, Hash, TraceOptions}
 import io.horizen.forge.MainchainSynchronizer
 import io.horizen.network.SyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
-import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -126,7 +126,8 @@ class EthService(
   def txpoolInspect(): TxPoolInspect = applyOnAccountView { nodeView =>
     new TxPoolInspect(
       nodeView.pool.getExecutableTransactionsMapInspect,
-      nodeView.pool.getNonExecutableTransactionsMapInspect)
+      nodeView.pool.getNonExecutableTransactionsMapInspect
+    )
   }
 
   @RpcMethod("eth_getBlockByNumber")
@@ -1008,8 +1009,8 @@ class EthService(
           // geth retrieves all logs of a block by blockhash
           val block = nodeView.history
             .getStorageBlockById(bytesToId(query.blockHash.toBytes))
-            .getOrElse(throw BlockNotFoundException())
-          getBlockLogs(stateView, block, query)
+            .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash")))
+          RpcFilter.getBlockLogs(stateView, block, query)
         } else {
           val start = parseBlockTag(nodeView, query.fromBlock)
           val end = parseBlockTag(nodeView, query.toBlock)
@@ -1022,73 +1023,11 @@ class EthService(
               .blockIdByHeight(blockNumber)
               .map(ModifierId(_))
               .flatMap(nodeView.history.getStorageBlockById)
-              .map(getBlockLogs(stateView, _, query))
+              .map(RpcFilter.getBlockLogs(stateView, _, query))
               .get
           })
         }
       }
     }
-  }
-
-  /**
-   * Get all logs of a block matching the given query. Replication of the original implementation in GETH, see:
-   * github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:227
-   */
-  private def getBlockLogs(
-      stateView: AccountStateView,
-      block: AccountBlock,
-      query: FilterQuery
-  ): Seq[EthereumLogView] = {
-    val filtered = query.address.length > 0 || query.topics.length > 0
-    if (filtered && !testBloom(block.header.logsBloom, query.address, query.topics)) {
-      // bail out if address or topic queries are given, but they fail the bloom filter test
-      return Seq.empty
-    }
-    // retrieve all logs of the given block
-    var logIndex = 0
-    val logs = block.sidechainTransactions
-      .map(_.id.toBytes)
-      .flatMap(stateView.getTransactionReceipt)
-      .flatMap(receipt =>
-        receipt.consensusDataReceipt.logs.map(log => {
-          val logView = new EthereumLogView(receipt, log, logIndex)
-          logIndex += 1
-          logView
-        })
-      )
-    if (filtered) {
-      // return filtered logs
-      logs.filter(testLog(query.address, query.topics))
-    } else {
-      // return all logs
-      logs
-    }
-  }
-
-  /**
-   * Tests if a bloom filter matches the given address and topic queries. Replication of the original implementation in
-   * GETH, see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:328
-   */
-  private def testBloom(bloom: Bloom, addresses: Array[Address], topics: Array[Array[Hash]]): Boolean = {
-    // bail out if an address filter is given and none of the addresses are contained in the bloom filter
-    if (addresses.length > 0 && !addresses.map(_.toBytes).exists(bloom.test)) {
-      false
-    } else {
-      topics.forall(sub => {
-        // empty rule set == wildcard, otherwise test if at least one of the given topics is contained
-        sub.length == 0 || sub.map(_.toBytes).exists(bloom.test)
-      })
-    }
-  }
-
-  /**
-   * Tests if a log matches the given address and topic queries. Replication of the original implementation in GETH,
-   * see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:293
-   */
-  private def testLog(addresses: Array[Address], topics: Array[Array[Hash]])(log: EthereumLogView): Boolean = {
-    if (addresses.length > 0 && addresses.contains(log.address)) return false
-    // skip if the number of filtered topics is greater than the amount of topics in the log
-    if (topics.length > log.topics.length) return false
-    topics.zip(log.topics).forall({ case (sub, topic) => sub.length == 0 || sub.contains(topic) })
   }
 }

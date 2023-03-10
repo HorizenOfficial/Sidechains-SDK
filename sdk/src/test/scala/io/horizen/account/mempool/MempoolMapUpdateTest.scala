@@ -1,15 +1,14 @@
 package io.horizen.account.mempool
 
-import io.horizen.SidechainTypes
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
+import io.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.ZenWeiConverter
-import io.horizen.state.BaseStateReader
 import io.horizen.evm.Address
+import io.horizen.state.BaseStateReader
 import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert._
 import org.junit._
@@ -19,8 +18,8 @@ import org.scalatestplus.mockito._
 import sparkz.util.ModifierId
 
 import java.math.BigInteger
-import scala.concurrent.duration.DurationInt
 import java.nio.charset.StandardCharsets
+import scala.concurrent.duration.DurationInt
 
 class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture with SidechainTypes with MockitoSugar {
 
@@ -65,12 +64,13 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    var newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", expectedNumOfTxs, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", expectedNumOfTxs, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", expectedNumOfTxs, newExecTxs.size)
 
     var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfTxs, executableTxs.size)
@@ -89,12 +89,13 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 0, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 0, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 0, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 0, newExecTxs.size)
 
     // Try with txs from applied and reverted blocks
     // Reset mempool
@@ -104,8 +105,9 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 0, mempoolMap.size)
+    assertEquals("Wrong number of new exec txs", 0, newExecTxs.size)
 
     // Reset mempool
     mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
@@ -118,15 +120,17 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(4))
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
+    var expectedNumOfExecTxs = listOfTxsToReAdd.size - listOfTxsToRemove.size
     assertEquals("Wrong number of txs in the mempool", listOfTxsToReAdd.size - listOfTxsToRemove.size, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", listOfTxsToReAdd.size - listOfTxsToRemove.size, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
-    assertEquals("Wrong number of exec txs", listOfTxsToReAdd.size - listOfTxsToRemove.size, mempoolMap.mempoolTransactions(true).size)
+    assertEquals("Wrong number of exec txs", expectedNumOfExecTxs, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", expectedNumOfExecTxs, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
-    assertEquals("Wrong number of executable transactions", listOfTxsToReAdd.size - listOfTxsToRemove.size, executableTxs.size)
+    assertEquals("Wrong number of executable transactions", expectedNumOfExecTxs, executableTxs.size)
 
     //With orphans for balance
     mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
@@ -143,14 +147,16 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getBalance(invalidTx.getFrom.address()))
       .thenReturn(listOfTxsToReAdd.head.maxCost())
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    expectedNumOfExecTxs = listOfTxsToReAdd.size - listOfTxsToRemove.size - 2
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", listOfTxsToReAdd.size - listOfTxsToRemove.size - 1, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", listOfTxsToReAdd.size - listOfTxsToRemove.size - 1, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 1, mempoolMap.getNonExecSubpoolSizeInSlots)
-    assertEquals("Wrong number of exec txs", listOfTxsToReAdd.size - listOfTxsToRemove.size - 2, mempoolMap.mempoolTransactions(true).size)
+    assertEquals("Wrong number of exec txs", expectedNumOfExecTxs, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 1, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", expectedNumOfExecTxs, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
-    assertEquals("Wrong number of executable transactions", listOfTxsToReAdd.size - listOfTxsToRemove.size - 2, executableTxs.size)
+    assertEquals("Wrong number of executable transactions", expectedNumOfExecTxs, executableTxs.size)
   }
 
   @Test
@@ -184,13 +190,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(expectedNumOfExecutableTxs))
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    var newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", expectedNumOfExecutableTxs, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 3, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 2, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 1, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 2, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 0, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 1, executableTxs.size)
 
@@ -205,12 +212,13 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .thenReturn(BigInteger.ZERO)
 
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", expectedNumOfTxs, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", expectedNumOfTxs - expectedNumOfExecutableTxs, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", expectedNumOfExecutableTxs, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", expectedNumOfTxs - expectedNumOfExecutableTxs, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 2, newExecTxs.size)
 
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs, executableTxs.size)
@@ -226,12 +234,13 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(2))
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs - 2, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", expectedNumOfTxs - 2, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 2, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", expectedNumOfExecutableTxs - 2, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 2, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 0, newExecTxs.size)
 
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs - 2, executableTxs.size)
@@ -244,12 +253,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.ZERO)
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", expectedNumOfTxs, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", expectedNumOfTxs, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", expectedNumOfTxs - expectedNumOfExecutableTxs, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", expectedNumOfExecutableTxs, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", expectedNumOfTxs - expectedNumOfExecutableTxs, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 2, newExecTxs.size)
+
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", expectedNumOfExecutableTxs, executableTxs.size)
 
@@ -262,12 +273,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(BigInteger.valueOf(expectedNumOfExecutableTxs + 1))
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 2, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 2, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 2, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 2, newExecTxs.size)
+
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 2, executableTxs.size)
 
@@ -324,13 +337,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getBalance(address))
       .thenReturn(tx1.maxCost().subtract(BigInteger.ONE))
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    var newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 2, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 2, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 2, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 0, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 2, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 0, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 0, executableTxs.size)
 
@@ -346,12 +360,13 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(tx1.getNonce)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 3, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 2, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 1, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 2, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 1, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 1, executableTxs.size)
 
@@ -370,12 +385,13 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(listOfTxs.head.getFrom.asInstanceOf[AddressProposition].address()))
       .thenReturn(tx3.getNonce)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 2, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 2, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 1, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 1, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 1, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 1, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 1, executableTxs.size)
 
@@ -424,13 +440,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(address))
       .thenReturn(tx0.getNonce)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    var newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 3, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 3, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 0, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 3, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 0, newExecTxs.size)
     var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 0, executableTxs.size)
 
@@ -458,13 +475,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(address))
       .thenReturn(tx2.getNonce)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 4, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 4, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 2, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 2, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 2, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 2, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 2, executableTxs.size)
     val iter = executableTxs.iterator
@@ -535,13 +553,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //With maxNonceGap = 7 and stateNonce = 12, after the update txs from tx12 to tx16 are exec, tx18 is
     // non exec and tx19 and tx20 are dropped from the mempool
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    var newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 6, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 6, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 1, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 5, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 1, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 2, newExecTxs.size)
     var executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 5, executableTxs.size)
 
@@ -565,13 +584,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //With maxNonceGap = 7 and stateNonce = 9, after the update txs from tx9 to tx15 are exec, tx16 to tx18
     // are dropped from the mempool
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 7, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 7, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 7, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 5, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
 
@@ -595,13 +615,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //With maxNonceGap = 7 and stateNonce = 6, after the update txs from tx6 to t12 are exec, tx13 onwards
     // are dropped from the mempool
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 7, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 7, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 7, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 7, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
 
@@ -625,13 +646,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //With maxNonceGap = 7 and stateNonce = 12, after the update txs from tx12 to tx16 are exec, tx18 is
     // non exec and tx19 and tx20 are dropped from the mempool
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 6, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 6, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 1, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 5, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 1, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 2, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 5, executableTxs.size)
 
@@ -653,13 +675,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //With maxNonceGap = 7 and stateNonce = 9, after the update txs from tx9 to tx15 are exec, tx16 and tx18
     // are dropped from the mempool
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 7, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 7, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 7, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 5, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
 
@@ -682,13 +705,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //With maxNonceGap = 7 and stateNonce = 6, after the update txs from tx6 to t12 are exec, tx13 onwards
     // are dropped from the mempool
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 7, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 7, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 7, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 7, newExecTxs.size)
     executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 7, executableTxs.size)
   }
@@ -745,15 +769,17 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getNonce(address))
       .thenReturn(stateNonce)
 
-    //After the update tx11 and tx12 are exec, tx14 is non-exec and the others are dropped from the mempool
+    //After the update tx11 and tx12 are exec, tx13 is dropped for the max account size, tx14 is non-exec and the others
+    // are dropped from the mempool
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    val newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 9, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 1, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 2, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 1, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 2, newExecTxs.size)
     val executableTxs = mempoolMap.takeExecutableTxs()
     assertEquals("Wrong number of executable transactions", 2, executableTxs.size)
     assertEquals("Wrong account size in slots", mempoolSettings.maxAccountSlots, mempoolMap.getAccountSlots(tx14.getFrom))
@@ -803,7 +829,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     //Prepare blocks. The rejected txs occupy 4 slots, there are already 6 slots occupied => total size 10 > maxMemPoolSlots (8)
     // txA3, that occupies 4 slots and it is the oldest, should be evicted.
-    var listOfTxsToReAdd = Seq[SidechainTypes#SCAT](txB1, txB2, txB3, txB4)
+    val listOfTxsToReAdd = Seq[SidechainTypes#SCAT](txB1, txB2, txB3, txB4)
     val listOfTxsToRemove = Seq.empty[SidechainTypes#SCAT]
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
@@ -815,13 +841,14 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     //After the update txA4, txB1, txB2, txB3, txB4 and txB5 will be in the mempool
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    val newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong mempool size in slots", 6, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 1, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 5, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 1, mempoolMap.mempoolTransactions(false).size)
     assertEquals("Wrong number of txs in the mempool", 6, mempoolMap.size)
+    assertEquals("Wrong number of new exec txs", 4, newExecTxs.size)
     assertTrue(mempoolMap.contains(ModifierId @@ txB1.id))
     assertTrue(mempoolMap.contains(ModifierId @@ txB2.id))
     assertTrue(mempoolMap.contains(ModifierId @@ txA4.id))
@@ -904,16 +931,17 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .when(accountStateViewMock.getBalance(address))
       .thenReturn(tx2.maxCost().subtract(BigInteger.ONE))
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    var newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 4, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 4, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 4, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 0, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 4, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 0, newExecTxs.size)
 
 
-    //Test 2: same as before but now after the uodate, bith non exec sub pool and the whole mempool are too big for 1 slot.
+    //Test 2: same as before but now after the update, both non exec sub pool and the whole mempool are too big for 1 slot.
     // Verify that just 1 non exec tx needs to be evicted.
     //Reset mempool
 
@@ -945,7 +973,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsAccountC.asInstanceOf[Seq[SidechainTypes#SCAT]])
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 10, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 10, mempoolMap.getMempoolSizeInSlots)
@@ -953,6 +981,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     assertEquals("Wrong number of exec txs", 6, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 4, mempoolMap.mempoolTransactions(false).size)
     assertTrue("Oldest tx was removed from the mempool", mempoolMap.contains(ModifierId @@ oldestTx.id))
+    assertEquals("Wrong number of new exec txs", 5, newExecTxs.size)
 
     // Test 3: after updating the mempool, the mempool size is too big but not the non exec sub pool. Oldest txs are removed
     // that cause some exec txs to become non exec. After that, also the non exec sub pool has too many txs and some need
@@ -986,12 +1015,13 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(rejectedBlock.transactions).thenReturn(listOfTxsToReAdd)
     Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsToRemove)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
     assertEquals("Wrong number of txs in the mempool", 6, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 6, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 4, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 2, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 4, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 2, newExecTxs.size)
 
   }
 
@@ -1020,11 +1050,12 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.when(rejectedBlock.transactions).thenReturn(Seq.empty)
     Mockito.when(appliedBlock.transactions).thenReturn(Seq.empty)
 
-    mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
+    val newExecTxs = mempoolMap.updateMemPool(listOfRejectedBlocks, listOfAppliedBlocks)
 
     assertEquals("Wrong number of txs in the mempool", 5, mempoolMap.size)
     assertEquals("Wrong number of exec txs", 0, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 5, mempoolMap.mempoolTransactions(false).size)
+    assertEquals("Wrong number of new exec txs", 0, newExecTxs.size)
 
   }
 

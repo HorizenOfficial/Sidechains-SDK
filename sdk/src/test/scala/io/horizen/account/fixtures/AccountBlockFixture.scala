@@ -107,7 +107,9 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
                            includeReference: Boolean = true,
                            vrfKeysOpt: Option[(VrfSecretKey, VrfPublicKey)] = None,
                            vrfProofOpt: Option[VrfProof] = None,
-                           vrfOutputOpt: Option[VrfOutput] = None
+                           vrfOutputOpt: Option[VrfOutput] = None,
+                           transactions: Option[Seq[SidechainTypes#SCAT]] = None,
+                           bloom: Option[Bloom] = None,
                             ): AccountBlock = {
     assert(vrfProofOpt.isDefined == vrfOutputOpt.isDefined, "VRF proof and output must be both defined or not")
     val vrfKey = VrfKeyGenerator.getInstance().generateSecret(Array.fill(32)(basicSeed.toByte))
@@ -130,14 +132,15 @@ object AccountBlockFixture extends MainchainBlockReferenceFixture with Companion
     val baseFee: BigInteger = BigInteger.ZERO
     val gasUsed: BigInteger = BigInteger.ZERO
     val gasLimit: BigInteger = BigInteger.ZERO
-    val logsBloom: Bloom = new Bloom()
+    val logsBloom: Bloom = bloom.getOrElse(new Bloom())
+    val sidechainTransactions = transactions.getOrElse(Seq())
 
     AccountBlock.create(
       parent,
       AccountBlock.ACCOUNT_BLOCK_VERSION,
       timestamp,
       references.map(_.data),
-      Seq(),
+      sidechainTransactions,
       references.map(_.header),
       Seq(),
       ownerPrivateKey,

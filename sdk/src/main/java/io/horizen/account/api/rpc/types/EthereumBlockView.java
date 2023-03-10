@@ -8,6 +8,7 @@ import io.horizen.evm.Hash;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -82,6 +83,10 @@ public class EthereumBlockView {
             .mapToObj(i -> new EthereumTransactionView(transactions.get(i), receipts.get(i), block.header().baseFee()))
             .collect(Collectors.toList());
         return new EthereumBlockView(blockNumber, blockHash, block, txViews);
+    }
+
+    public static EthereumBlockView withoutTransactions(Long blockNumber, Hash blockHash, AccountBlock block) {
+        return new EthereumBlockView(blockNumber, blockHash, block, new ArrayList<>());
     }
 }
 
