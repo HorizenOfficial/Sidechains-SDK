@@ -8,8 +8,8 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     connect_sc_nodes, stop_sc_node, start_sc_node, wait_for_sc_node_initialization, \
-    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, AccountModel, TimeoutException, disconnect_sc_nodes_bi
-from test_framework.util import assert_equal, assert_true, assert_false, fail, initialize_chain_clean, start_nodes, \
+    DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, AccountModel, disconnect_sc_nodes_bi
+from test_framework.util import assert_equal, assert_true, fail, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 
 """
@@ -136,6 +136,8 @@ class EvmSyncStatus(SidechainTestFramework):
 
             # Stop node 0 after 15 seconds in execute_stop was set
             if execute_stop and time.time() - start >= 15:
+                logging.info("Disconnect sidechain nodes")
+                disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
                 logging.info("Stopping SC node 0")
                 stop_sc_node(self.sc_nodes[0], 0)
                 break
@@ -159,7 +161,6 @@ class EvmSyncStatus(SidechainTestFramework):
         self.run_sc_node(sc_node_idx)
 
     def run_test(self):
-
         sc_node0 = self.sc_nodes[0]
         sc_node1 = self.sc_nodes[1]
 
@@ -225,6 +226,9 @@ class EvmSyncStatus(SidechainTestFramework):
         # call the eth_syncing endpoint - expect False
         # restart SC node 0 and connect nodes again
         # keep syncing
+
+        logging.info("Disconnect sidechain nodes")
+        disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
 
         logging.info("Stopping SC node 1")
         stop_sc_node(sc_node1, 1)
