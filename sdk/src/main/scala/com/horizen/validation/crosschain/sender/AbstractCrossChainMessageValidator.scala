@@ -17,10 +17,8 @@ class AbstractCrossChainMessageValidator(
                                           sc2ScConfig: Sc2ScConfigurator,
                                           scState: SidechainState,
                                           scStateStorage: SidechainStateStorage
-                                        ) extends CrossChainValidator[CrossChainMessageBodyToValidate] {
-  override def validate(objectToValidate: CrossChainMessageBodyToValidate): Unit = {
-    val scBlock = objectToValidate.getBodyToValidate
-
+                                        ) extends CrossChainValidator[SidechainBlock] {
+  override def validate(scBlock: SidechainBlock): Unit = {
     validateNoMoreThanOneMessagePerBlock(scBlock)
 
     scBlock.transactions.foreach(tx => validateNotDuplicateMessage(tx))

@@ -21,11 +21,11 @@ import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMe
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.transaction.{AbstractCrossChainRedeemTransaction, CertificateKeyRotationTransaction, MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
+import com.horizen.transaction.{CertificateKeyRotationTransaction, MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.validation.crosschain.{CrossChainValidatorContainer, CrossChainValidatorKey}
-import com.horizen.validation.crosschain.receiver.{CrossChainRedeemMessageBodyToValidate, CrossChainRedeemMessageValidator}
-import com.horizen.validation.crosschain.sender.{CrossChainMessageBodyToValidate, CrossChainMessageValidator}
+import com.horizen.validation.crosschain.CrossChainValidator
+import com.horizen.validation.crosschain.receiver.CrossChainRedeemMessageValidator
+import com.horizen.validation.crosschain.sender.CrossChainMessageValidator
 import sparkz.core._
 import sparkz.core.transaction.state._
 import sparkz.crypto.hash.Blake2b256
@@ -56,16 +56,13 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     with SparkzLogging
     with UtxoMerkleTreeView
     with NetworkParamsUtils {
-
-  protected val crossChainValidatorContainer: CrossChainValidatorContainer = new CrossChainValidatorContainer(
-    Map(
-      CrossChainValidatorKey.SenderValidator -> new CrossChainMessageValidator(params, sc2scConfig, this, stateStorage),
-      CrossChainValidatorKey.ReceiverValidator -> new CrossChainRedeemMessageValidator(sidechainSettings, stateStorage, CryptoLibProvider.sc2scCircuitFunctions)
-    ),
-    sc2scConfig
-  )
-
   override type NVCT = SidechainState
+  type PMOD = SidechainBlock
+
+  protected val crossChainValidators: Seq[CrossChainValidator[PMOD]] = Seq(
+    new CrossChainMessageValidator(params, sc2scConfig, this, stateStorage),
+    new CrossChainRedeemMessageValidator(sidechainSettings, stateStorage, CryptoLibProvider.sc2scCircuitFunctions)
+  )
 
   lazy val verificationKeyFullFilePath: String = {
     if (params.certVerificationKeyFilePath.equalsIgnoreCase("")) {
@@ -202,17 +199,8 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => {
       validate(tx, consensusEpochNumber, modWithdrawalEpochInfo.epoch).get
-      tx match {
-        case transaction: AbstractCrossChainRedeemTransaction =>
-          crossChainValidatorContainer.validateReceivingCrossChain(
-            new CrossChainRedeemMessageBodyToValidate(transaction)
-          )
-        case _ =>
-      }
     })
-    crossChainValidatorContainer.validateSenderCrossChain(
-      new CrossChainMessageBodyToValidate(mod)
-    )
+    crossChainValidators.foreach(validator => validator.validate(mod))
 
     if (params.isNonCeasing) {
       // For non-ceasing sidechains certificate must be validated just when it has been received.
