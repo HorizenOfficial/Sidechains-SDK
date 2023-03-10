@@ -42,6 +42,7 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
+import scala.io.{Codec, Source}
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
@@ -89,6 +90,8 @@ class SidechainApp @Inject()
   override type NVHT = SidechainNodeViewHolder
 
   log.info(s"Starting application with settings \n$sidechainSettings")
+
+  override val swaggerConfig: String = Source.fromResource("utxo/api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   override protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, circuitType)
   protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)

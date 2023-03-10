@@ -1,10 +1,8 @@
 package io.horizen
 
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import io.horizen.api.http
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
 import io.horizen.api.http.route.{ApplicationApiRoute, SidechainRejectionApiRoute}
@@ -36,7 +34,6 @@ import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 import sparkz.core.network.PeerFeature
 import sparkz.core.network.message.MessageSpec
 import sparkz.core.settings.SparkzSettings
-
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
@@ -46,7 +43,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.io.{Codec, Source}
 import scala.util.{Failure, Success, Try}
 
 
@@ -296,8 +292,6 @@ abstract class AbstractSidechainApp
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-
-  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
 //  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
 //  val applicationApiRoutes: Seq[ApplicationApiRoute]
