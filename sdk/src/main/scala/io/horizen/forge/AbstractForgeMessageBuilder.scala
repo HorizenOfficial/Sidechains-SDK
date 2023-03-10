@@ -5,6 +5,7 @@ import io.horizen.block._
 import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import io.horizen.consensus._
 import io.horizen.fork.ForkManager
+import io.horizen.history.AbstractHistory
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.secret.{PrivateKey25519, VrfSecretKey}
@@ -12,14 +13,13 @@ import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.{Transaction, TransactionSerializer}
 import io.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils, WithdrawalEpochInfo}
 import io.horizen.vrf.VrfOutput
-import io.horizen.history.AbstractHistory
 import io.horizen.wallet.AbstractWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.block.Block
 import sparkz.core.transaction.MemoryPool
-import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.transaction.state.MinimalState
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -243,7 +243,8 @@ abstract class AbstractForgeMessageBuilder[
                            vrfProof: VrfProof,
                            vrfOutput: VrfOutput,
                            mcRefDataRetrievalTimeout: Timeout,
-                           forcedTx: Iterable[TX]): ForgeResult = {
+                           forcedTx: Iterable[TX],
+                           isPending: Boolean = false): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
@@ -338,7 +339,8 @@ abstract class AbstractForgeMessageBuilder[
       vrfOutput,
       forgingStakeMerklePathInfo.merklePath,
       companion,
-      blockSize
+      blockSize,
+      isPending = isPending
     )
 
     tryBlock match {
@@ -364,7 +366,8 @@ abstract class AbstractForgeMessageBuilder[
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
                      inputBlockSize: Int,
-                     signatureOption: Option[Signature25519] = None
+                     signatureOption: Option[Signature25519] = None,
+                     isPending: Boolean = false
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
 
 

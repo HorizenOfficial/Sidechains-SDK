@@ -19,8 +19,6 @@ import io.horizen.api.http._
 import io.horizen.evm.LevelDBDatabase
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import io.horizen.json.serializer.ApplicationJsonSerializer
-import io.horizen.network.SyncStatus
-import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.MainNetParams
 import io.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.runner.RunWith
@@ -155,7 +153,8 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
     mockedSyncStatusActorRef,
     metadataStorage,
     stateDb,
-    messageProcessors
+    messageProcessors,
+    sidechainTransactionsCompanion
   ).route
 
   val basePath = "/ethv1"

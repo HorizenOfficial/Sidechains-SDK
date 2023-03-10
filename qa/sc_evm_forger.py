@@ -357,15 +357,13 @@ class SCEvmForger(AccountChainSetup):
         initial_balance_1 = account_1_balance
 
         # Verify SC node 2 can not forge yet
-        exception_occurs = False
         try:
             logging.info("SC2 Trying to generate a block: should fail...")
             generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=False)
         except Exception as e:
-            exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-        finally:
-            assert_true(exception_occurs, "No forging stakes expected for SC node 2.")
+        else:
+            fail("No forging stakes expected for SC node 2.")
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
@@ -375,15 +373,13 @@ class SCEvmForger(AccountChainSetup):
         print_current_epoch_and_slot(sc_node_1)
 
         # Verify SC node 2 can not forge yet
-        exception_occurs = False
         try:
             logging.info("Trying to generate a block: should fail...")
             generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=False)
         except Exception as e:
-            exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-        finally:
-            assert_true(exception_occurs, "No forging stakes expected for SC node 2.")
+        else:
+            fail("No forging stakes expected for SC node 2.")
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
@@ -444,15 +440,13 @@ class SCEvmForger(AccountChainSetup):
         print_current_epoch_and_slot(sc_node_1)
 
         # Verify SC node 1 now can not forge anymore if switching epoch
-        exception_occurs = False
         try:
             logging.info("SC1 Trying to generate a block: should fail...")
             generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
         except Exception as e:
-            exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-        finally:
-            assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
+        else:
+            fail("No forging stakes expected for SC node 1.")
 
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(2, len(stakeList))
@@ -546,17 +540,15 @@ class SCEvmForger(AccountChainSetup):
         # Try to generate one more SC block switching epoch, that should fail because even if the forging itself could
         # take place (the forger info points to two epoch earlier), the block would not be applied
         # since consensus epoch info are not valid (empty list of stakes)
-        exception_occurs = False
         try:
             logging.info("Trying to generate a block: should fail...")
             generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
             print_current_epoch_and_slot(sc_node_1)
         except Exception as e:
-            exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-        finally:
-            assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
+        else:
+            fail("No forging stakes expected for SC node 1.")
 
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
