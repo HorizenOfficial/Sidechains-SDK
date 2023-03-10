@@ -18,8 +18,6 @@ tags:
     description: Sidechain mainchain operations
   - name: submitter
     description: Sidechain submitter operations
-  - name: csw
-    description: Cesead Sidechain Withdrawal operations
 
 paths:
 
@@ -59,7 +57,7 @@ paths:
                         $ref: '#/components/schemas/SidechainBlock'
                       height:
                         type: integer
-                        format: int64
+                        format: int32
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -175,7 +173,7 @@ paths:
                         $ref: '#/components/schemas/SidechainBlock'
                       height:
                         type: integer
-                        format: int64
+                        format: int32
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -205,49 +203,7 @@ paths:
                     properties:
                       height:
                         type: integer
-                        format: int64
-                  error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
-
-  /block/getFeePayments:
-    post:
-      tags:
-        - block
-      summary: gets the list of forgers fee payments paid after the given block was applied
-      description: Returns the list of ZenBoxes that represents the forgers fee payments paid after the given block was applied.
-      operationId: getFeePayments
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - blockId
-              properties:
-                blockId:
-                  description: ID of block to return
-                  type: string
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      feePayments:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Box'
+                        format: int32
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -316,9 +272,6 @@ paths:
                 properties:
                   result:
                     type: object
-                    properties:
-                      result:
-                        type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -345,9 +298,6 @@ paths:
                 properties:
                   result:
                     type: object
-                    properties:
-                      result:
-                        type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -362,7 +312,7 @@ paths:
       tags:
         - block
       summary: tries to generate new block by epoch and slot number
-      description: Returns id of generated sidechain block
+      description: Tries to generate new block by epoch and slot number. Returns id of generated sidechain block.
       operationId: generateBlockForEpochNumberAndSlot
       requestBody:
         content:
@@ -372,6 +322,7 @@ paths:
               required:
                 - epochNumber
                 - slotNumber
+                - transactionsBytes
               properties:
                 epochNumber:
                   description: Epoch number
@@ -381,6 +332,11 @@ paths:
                   description: Slot number
                   type: integer
                   format: int32
+                transactionsBytes:
+                  type: array
+                  items:
+                    type: string
+                  description: Transactions that should be included in the block. It can be used only in Regtest
       responses:
         '200':
           description: successful operation
@@ -445,6 +401,90 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /block/getForwardTransfers:
+    post:
+      tags:
+        - block
+      summary: Return the list of forward transfers in a given block
+      description: Return the list of forward transfers in a given block
+      operationId: getForwardTransfers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - blockId
+              properties:
+                blockId:
+                  description: Block ID
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      forwardTransfers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ForwardTransferData'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/getFeePayments:
+    post:
+      tags:
+        - block
+      summary: Return the list of forgers fee payments paid after the given block was applied.
+      description: Return the list of forgers fee payments paid after the given block was applied. Return empty list in case no fee payments were paid.
+      operationId: getFeePayments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - blockId
+              properties:
+                blockId:
+                  description: Block ID
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      forwardTransfers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AccountPayment'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   # Sidechain transaction operations
   /transaction/allTransactions:
     post:
@@ -473,14 +513,17 @@ paths:
                   result:
                     type: object
                     properties:
-                      transactions:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Transaction'
-                      transactionIds:
-                        type: array
-                        items:
-                          type: string
+                      oneOf:
+                        $ref: '#/components/schemas/AllTransactions'
+                        $ref: '#/components/schemas/AllTransactionsIds'
+#                        transactions:
+#                          type: array
+#                          items:
+#                            $ref: '#/components/schemas/Transaction'
+#                        transactionIds:
+#                          type: array
+#                          items:
+#                            type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1459,7 +1502,7 @@ paths:
               type: object
               properties:
                 path:
-                  description: Path to the file contaning the secrets
+                  description: Path to the file containing the secrets
                   type: string
       responses:
         '200':
@@ -1832,7 +1875,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      blocReferencekInfo:
+                      blockReferenceInfo:
                         $ref: '#/components/schemas/MainchainBlockInfo'
                       blockHex:
                         type: string
@@ -2274,225 +2317,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  # Ceased Sidechain Withdrawal operations
-  /csw/hasCeased:
-    post:
-      tags:
-        - csw
-      summary: returns current status of the Sidechain
-      description: Returns current status of the Sidechain
-      operationId: hasCeased
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      state:
-                        type: boolean
-                        description: True or False depending if Sidechain is ceased
-                  error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
-
-  /csw/isCSWEnabled:
-    post:
-      tags:
-        - csw
-      summary: returns if the Ceased Sidechain Withdrawal is enabled in the Sidechain
-      description: returns if the Ceased Sidechain Withdrawal is enabled in the Sidechain
-      operationId: isCSWEnabled
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      cswEnabled:
-                        type: boolean
-                        description: True or False depending if CSW is enabled
-                  error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
-
-  /csw/generateCswProof:
-    post:
-      tags:
-        - csw
-      summary: generates csw proof
-      description: Tries to generate csw proof and returns current status of this operation
-      operationId: generateCswProof
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - boxId
-              properties:
-                boxId:
-                  type: string
-                  description: coin box id in hex
-                receiverAddress:
-                  type: string
-                  description: Horizen transparent address
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      state:
-                        type: string
-                        description: short description of current proof generation state
-                      description:
-                        type: string
-                        description: full description of current proof generation state
-                  error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
-
-  /csw/cswInfo:
-    post:
-      tags:
-        - csw
-      summary: csw information
-      description: Retrieves information about csw proof for given box id
-      operationId: cswInfo
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - boxId
-              properties:
-                boxId:
-                  type: string
-                  description: coin box id in hex
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      cswInfo:
-                        $ref: '#/components/schemas/CswInfo'
-                  error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
-
-  /csw/cswBoxIds:
-    post:
-      tags:
-        - csw
-      summary: returns list of available box ids for csw
-      description: Returns list of available box ids for csw
-      operationId: cswBoxIds
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      cswBoxIds:
-                        type: array
-                        items:
-                          type: string
-                  error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
-
-  /csw/nullifier:
-    post:
-      tags:
-        - csw
-      summary: retrieves nullifier
-      description: Retrieves nullifier for given box id
-      operationId: nullifier
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - boxId
-              properties:
-                boxId:
-                  type: string
-                  description: coin box id in hex
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      nullifier:
-                        type: string
-                        description: nullifier for given box id
-                  error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
 
 components:
   schemas:
@@ -2578,47 +2402,51 @@ components:
       properties:
         signature:
           type: string
+          format: byte
 
     MainchainHeader:
       type: object
       properties:
-        mainchainHeaderBytes:
-          type: string
         version:
           type: integer
           format: int32
         hashPrevBlock:
           type: string
+          format: byte
         hashMerkleRoot:
           type: string
-        hashReserved:
+          format: byte
+        hashScTxsCommitment:
           type: string
-        hashSCMerkleRootsMap:
-          type: string
+          format: byte
         time:
           type: integer
-          format: int64
+          format: int32
         bits:
           type: integer
-          format: int64
+          format: int32
         nonce:
           type: string
+          format: byte
         solution:
           type: string
+          format: byte
 
     MC2SCAggregatedTransaction:
       type: object
       properties:
         id:
           type: string
-        fee:
+        modifierTypeId:
           type: integer
-          format: int64
-        timestamp:
+        version:
+          type: integer
+        fee:
           type: integer
           format: int64
         mc2scTransactionsMerkleRootHash:
           type: string
+          format: byte
         newBoxes:
           type: array
           items:
@@ -2627,6 +2455,14 @@ components:
           type: string
         isCustom:
           type: boolean
+        unlockers:
+          type: array
+          items:
+            type: object
+          description: Always empty
+        size:
+          type: integer
+          format: int64
 
     Box:
       type: object
@@ -2645,6 +2481,16 @@ components:
           type: string
         isCustom:
           type: boolean
+
+
+    Proof:
+      type: object
+      properties:
+        closedBoxId:
+          type: string
+          format: byte
+
+
 
     MainchainBlock:
       type: object
@@ -2665,6 +2511,45 @@ components:
 
     Transaction:
       type: object
+      properties:
+        id:
+          type: string
+        from:
+          $ref: '#/components/schemas/AddressProposition'
+        to:
+          $ref: '#/components/schemas/AddressProposition'
+        value:
+          type: integer
+        nonce:
+          type: integer
+        data:
+          type: string
+          format: byte
+        gasPrice:
+          type: integer
+        gasLimit:
+          type: integer
+        maxFeePerGas:
+          type: integer
+        maxPriorityFeePerGas:
+          type: integer
+        eip1559:
+          type: boolean
+        legacy:
+          type: boolean
+        version:
+          type: integer
+        chainId:
+          type: integer
+          format: int64
+        signed:
+          type: boolean
+        signature:
+          $ref: '#/components/schemas/SignatureSecp256k1'
+        size:
+          type: integer
+          format: int64
+
 
     MainchainBlockInfo:
       type: object
@@ -2681,6 +2566,7 @@ components:
           type: integer
           format: int64
 
+    #ST
     SidechainBlock:
       type: object
       properties:
@@ -2688,22 +2574,89 @@ components:
           type: string
         parentId:
           type: string
+        header:
+          $ref: '#/components/schemas/SidechainBlockHeader'
         timestamp:
           type: integer
           format: int64
-        mainchainBlocks:
+        mainchainBlockReferencesData:
           type: array
           items:
-            $ref: '#/components/schemas/MainchainBlock'
+            $ref: '#/components/schemas/MainchainBlockReferenceData'
+        mainchainHeaders:
+          type: array
+          items:
+            $ref: '#/components/schemas/MainchainHeader'
         sidechainTransactions:
           type: array
           items:
             $ref: '#/components/schemas/Transaction'
-        forgerPublicKey:
-          $ref: '#/components/schemas/Proposition'
+        ommers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ommer'
+        size:
+          type: integer
+          format: int64
+
+    #ST
+    SidechainBlockHeader:
+      type: object
+      properties:
+        version:
+          type: integer
+        parentId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        forgingStakeInfo:
+          $ref: '#/components/schemas/ForgingStakeInfo'
+        forgingStakeMerklePath:
+          type: string
+          format: byte
+        vrfProof:
+          $ref: '#/components/schemas/VrfProof'
+        vrfOutput:
+          $ref: '#/components/schemas/VrfOutput'
+        sidechainTransactionsMerkleRootHash:
+          type: string
+          format: byte
+        mainchainMerkleRootHash:
+          type: string
+          format: byte
+        stateRoot:
+          type: string
+          format: byte
+        receiptsRoot:
+          type: string
+          format: byte
+        forgerAddress:
+          $ref: '#/components/schemas/AddressProposition'
+        baseFee:
+          type: integer
+          format: int64
+        gasUsed:
+          type: integer
+          format: int64
+        gasLimit:
+          type: integer
+          format: int64
+        ommersMerkleRootHash:
+          type: string
+          format: byte
+        ommersCumulativeScore:
+          type: integer
+          format: int64
+        feePaymentsHash:
+          type: string
+          format: byte
+        logsBloom:
+          $ref: '#/components/schemas/Bloom'
         signature:
           $ref: '#/components/schemas/Signature25519'
 
+    #ST
     SidechainBlockInfo:
       type: object
       properties:
@@ -2717,6 +2670,8 @@ components:
         timestamp:
           type: integer
           format: int64
+        semanticValidity:
+          type: string
         mainchainHeaderBaseInfo:
           type: array
           items:
@@ -2732,64 +2687,77 @@ components:
         lastBlockInPreviousConsensusEpoch:
           type: string
 
-    CswInfo:
+    #ST
+    MainchainBlockReferenceData:
       type: object
       properties:
-        cswType:
+        headerHash:
           type: string
-        amount:
-          type: integer
-        scId:
+          format: byte
+        sidechainRelatedAggregatedTransaction:
+          $ref: '#/components/schemas/MC2SCAggregatedTransaction'
+          nullable: true
+        existenceProof:
           type: string
-        nullifier:
+          format: byte
+          nullable: true
+        absenceProof:
           type: string
-        proofInfo:
-          $ref: '#/components/schemas/CswProofInfo'
-        activeCertData:
+          format: byte
+          nullable: true
+        lowerCertificateLeaves:
           type: string
-        ceasingCumScTxCommTree:
-          type: string
+          format: byte
+        topQualityCertificate:
+          $ref: '#/components/schemas/WithdrawalEpochCertificate'
+          nullable: true
 
-    CswProofInfo:
-      type: object
-      properties:
-        status:
-          type: string
-        scProof:
-          type: string
-        receiverAddress:
-          type: string
-
+    #ST
     MainchainHeaderBaseInfo:
       type: object
       properties:
         hash:
           type: string
+          format: byte
         cumulativeCommTreeHash:
           type: string
+          format: byte
 
+    Ommer:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/SidechainBlockHeader'
+        mainchainReferencesDataMerkleRootHashOption:
+          type: string
+          format: byte
+          nullable: true
+        mainchainHeaders:
+          type: array
+          items:
+             $ref: '#/components/schemas/MainchainHeader'
+        ommers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ommer'
+
+    #ST
     WithdrawalEpochInfo:
       type: object
       properties:
         epoch:
           type: integer
+          format: int32
         lastEpochIndex:
           type: integer
-
-    VrfOutput:
-      type: object
-      properties:
-        bytes:
-          type: string
+          format: int32
 
     SchnorrProposition:
       type: object
       properties:
         publicBytes:
-          type: array
-          items:
-            type: string
-            format: byte
+          type: string
+          format: byte
 
     CertifiersKeys:
       type: object
@@ -2820,3 +2788,80 @@ components:
           type: string
         masterKeySignature:
           type: string
+
+    #ST
+    ForwardTransferData:
+      type: object
+      properties:
+        to:
+          type: string
+          format: byte
+        value:
+          type: string
+    #ST
+    AccountPayment:
+      type: object
+      properties:
+        address:
+          $ref: '#/components/schemas/AddressProposition'
+        value:
+          type: integer
+
+    #ST
+    AddressProposition:
+      type: object
+      properties:
+        address:
+          type: string
+          format: byte
+
+    #ST
+    ForgingStakeInfo:
+      type: object
+      properties:
+        blockSignPublicKey:
+          $ref: '#/components/schemas/PublicKey25519Proposition'
+        vrfPublicKey:
+          $ref: '#/components/schemas/VrfPublicKey'
+        stakeAmount:
+          type: integer
+          format: int64
+
+    PublicKey25519Proposition:
+      type: object
+      properties:
+        publicKey:
+          type: string
+          format: byte
+
+    VrfPublicKey:
+      type: object
+      properties:
+        publicKey:
+          type: string
+          format: byte
+
+    #ST
+    VrfProof:
+      type: object
+      properties:
+        vrfProof:
+          type: string
+          format: byte
+
+    #ST
+    VrfOutput:
+      type: object
+      properties:
+        bytes:
+          type: string
+          format: byte
+
+    #ST
+    Bloom:
+      type: object
+      properties:
+        bytes:
+          type: string
+          format: byte
+
