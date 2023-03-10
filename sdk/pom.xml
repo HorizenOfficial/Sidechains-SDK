@@ -551,7 +551,7 @@
             </executions>
             <configuration>
               <sourcepath>${project.basedir}/src/main/java</sourcepath>
-              <excludePackageNames>io.horizen.*</excludePackageNames>
+              <excludePackageNames>io.horizen:io.horizen.*</excludePackageNames>
             </configuration>
           </plugin>
         </plugins>
