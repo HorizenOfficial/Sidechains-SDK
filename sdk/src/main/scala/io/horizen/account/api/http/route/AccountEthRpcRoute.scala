@@ -10,18 +10,19 @@ import io.horizen.account.api.rpc.service.EthService
 import io.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.serialization.EthJsonMapper
 import io.horizen.account.state.MessageProcessor
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.{SidechainApiResponse}
+import io.horizen.api.http.SidechainApiResponse
 import io.horizen.api.http.route.SidechainApiRoute
+import io.horizen.evm.LevelDBDatabase
 import io.horizen.node.NodeWalletBase
 import io.horizen.params.NetworkParams
 import io.horizen.utils.ClosableResourceHandler
 import io.horizen.{SidechainSettings, SidechainTypes}
-import io.horizen.evm.LevelDBDatabase
 import sparkz.core.api.http.ApiDirectives
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzLogging
@@ -41,7 +42,8 @@ case class AccountEthRpcRoute(
     syncStatusActorRef: ActorRef,
     metadataStorage: AccountStateMetadataStorage,
     stateDb: LevelDBDatabase,
-    messageProcessors: Seq[MessageProcessor]
+    messageProcessors: Seq[MessageProcessor],
+    companion: SidechainAccountTransactionsCompanion
 )(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
     extends SidechainApiRoute[
       SidechainTypes#SCAT,
@@ -73,7 +75,8 @@ case class AccountEthRpcRoute(
       sidechainSettings.sparkzSettings.network.maxIncomingConnections,
       getClientVersion,
       sidechainTransactionActorRef,
-      syncStatusActorRef
+      syncStatusActorRef,
+      companion
     )
   )
 

@@ -1,28 +1,28 @@
 package io.horizen.utxo.forge
 
+import io.horizen._
 import io.horizen.block._
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus._
+import io.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import io.horizen.fork.ForkManager
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.Proposition
 import io.horizen.secret.PrivateKey25519
+import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.Box
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
-import io.horizen.utxo.transaction.SidechainTransaction
-import io.horizen.vrf.VrfOutput
-import io.horizen._
-import io.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
-import io.horizen.transaction.TransactionSerializer
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.storage.SidechainHistoryStorage
+import io.horizen.utxo.transaction.SidechainTransaction
 import io.horizen.utxo.utils.FeePaymentsUtils
 import io.horizen.utxo.wallet.SidechainWallet
+import io.horizen.vrf.VrfOutput
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block
 import sparkz.core.block.Block.BlockId
@@ -66,7 +66,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
                  inputBlockSize: Int,
-                 signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
+                 signatureOption: Option[Signature25519],
+                 isPending: Boolean = false) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
   {
     val feePayments = if(isWithdrawalEpochLastBlock) {
       // Current block is expect to be the continuation of the current tip, so there are no ommers.
