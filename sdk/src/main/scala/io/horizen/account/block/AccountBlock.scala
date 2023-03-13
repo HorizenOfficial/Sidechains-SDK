@@ -24,7 +24,7 @@ import java.math.BigInteger
 import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "forgerPublicKey"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "forgerPublicKey", "logger"))
 class AccountBlock(override val header: AccountBlockHeader,
                    override val sidechainTransactions: Seq[SidechainTypes#SCAT],
                    override val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],

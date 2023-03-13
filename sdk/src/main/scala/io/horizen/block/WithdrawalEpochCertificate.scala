@@ -15,6 +15,8 @@ import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("logger"))
 case class FieldElementCertificateField(rawData: Array[Byte]) extends SparkzLogging {
   def fieldElementBytes(version: SidechainCreationVersion): Array[Byte] = {
     logger.trace("Fe before: " + BytesUtils.toHexString(rawData))
@@ -32,6 +34,8 @@ case class FieldElementCertificateField(rawData: Array[Byte]) extends SparkzLogg
     bytes
   }
 }
+
+@JsonView(Array(classOf[Views.Default]))
 case class BitVectorCertificateField(rawData: Array[Byte]) {
   lazy val merkleRootBytes: Array[Byte] = {
     ScCryptoUtils.compressedBitvectorMerkleRoot(rawData)
