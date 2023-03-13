@@ -74,7 +74,7 @@ paths:
       tags:
         - block
       summary: finds last block ids
-      description: Returns an array of number last sidechain block ids
+      description: Returns an array of \'number\' last sidechain block ids
       operationId: getLastBlockIds
       requestBody:
         content:
@@ -2840,6 +2840,99 @@ components:
           $ref: '#/components/schemas/WithdrawalEpochCertificate'
           nullable: true
 
+
+    WithdrawalEpochCertificate:
+      type: object
+      properties:
+        certificateBytes:
+          type: string
+          format: byte
+        version:
+          type: integer
+          format: int32
+        sidechainId:
+          type: string
+          format: byte
+        epochNumber:
+          type: integer
+          format: int32
+        quality:
+          type: integer
+          format: int64
+        proof:
+          type: string
+          format: byte
+        fieldElementCertificateFields:
+          type: array
+          items:
+            type: object
+            properties:
+              rawData:
+                type: string
+                format: byte
+        bitVectorCertificateFields:
+          type: array
+          items:
+            type: object
+            properties:
+              rawData:
+                type: string
+                format: byte
+        endCumulativeScTxCommitmentTreeRoot:
+          type: string
+          format: byte
+        btrFee:
+          type: integer
+          format: int64
+        ftMinAmount:
+          type: integer
+          format: int64
+        transactionInputs:
+          type: array
+          items:
+            type: object
+            properties:
+              inputBytes:
+                type: string
+                format: byte
+              prevTxHash:
+                type: string
+                format: byte
+              prevTxOutputIndex:
+                type: integer
+                format: int32
+              txScript:
+                type: string
+                format: byte
+              sequence:
+                type: integer
+                format: int32
+        transactionOutputs:
+          type: array
+          items:
+            type: object
+            properties:
+              outputBytes:
+                type: string
+                format: byte
+              value:
+                type: integer
+                format: int64
+              script:
+                type: string
+                format: byte
+        backwardTransferOutputs:
+          type: array
+          items:
+            type: object
+            properties:
+              address:
+                type: string
+                format: byte
+              amount:
+                type: integer
+                format: int64
+
     CswInfo:
       type: object
       properties:
@@ -2877,6 +2970,21 @@ components:
         cumulativeCommTreeHash:
           type: string
           format: byte
+
+    Ommer:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/SidechainBlockHeader'
+        mainchainReferencesDataMerkleRootHashOption:
+          type: string
+          format: byte
+          nullable: true
+        mainchainHeaders:
+          type: array
+          items:
+            $ref: '#/components/schemas/MainchainHeader'
+
 
     WithdrawalEpochInfo:
       type: object
