@@ -18,6 +18,8 @@ tags:
     description: Sidechain mainchain operations
   - name: submitter
     description: Sidechain submitter operations
+  - name: eth_rpc
+    description: Ethereum RPC operations
 
 paths:
 
@@ -2547,6 +2549,86 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  #Ethereum RPC operations JSONRPCRequest
+  /ethv1:
+    post:
+      tags:
+        - eth_rpc
+      summary: Executes Ethereum rpc methods.
+      description: "Executes Ethereum rpc methods. Returns the success / error response of called rpc method or error\n
+        if method does not exist. The request/response objects format follows JSON-RPC 2.0 specification."
+      operationId: ethv1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jsonrpc
+                - id
+                - method
+              properties:
+                jsonrpc:
+                  type: string
+                  description: A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
+                id:
+                  type: object
+                  nullable: true
+                  description: "An identifier established by the Client that MUST contain a String, Number, or NULL value\n
+                   if included."
+                method:
+                  type: string
+                  description: A String containing the name of the method to be invoked.
+                params:
+                  type: object
+                  nullable: true
+                  description: "A Structured value that holds the parameter values to be used during the invocation of the\n
+                    method. This member MAY be omitted."
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - jsonrpc
+                  - id
+                properties:
+                  jsonrpc:
+                    type: string
+                    description: A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
+                  id:
+                    type: object
+                    description: "It MUST be the same as the value of the id member in the Request Object."
+                  result:
+                    type: object
+                    description: The value of this member is determined by the method invoked.
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                    properties:
+                      code:
+                        type: integer
+                        format: int32
+                        description: A number that indicates the error type that occurred.
+                      message:
+                        type: string
+                        description: A String providing a short description of the error.
+                      data:
+                        type: string
+                        nullable: true
+                        description: A Primitive or Structured value that contains additional information about the error.
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+
 
 components:
   schemas:
@@ -3267,8 +3349,3 @@ components:
               size:
                 type: integer
                 format: int32
-
-
-
-
-
