@@ -28,7 +28,7 @@ import java.util.Optional;
 @JsonPropertyOrder({
         "id", "from", "to", "value", "nonce", "data",
         "gasPrice", "gasLimit", "maxFeePerGas", "maxPriorityFeePerGas",
-        "eip1559", "version", "chainId", "signed", "signature"
+        "eip1559", "version", "chainId", "signed", "signature", "size"
 })
 @JsonIgnoreProperties({"transaction", "encoder", "modifierTypeId"})
 @JsonView(Views.Default.class)

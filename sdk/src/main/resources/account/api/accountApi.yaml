@@ -2,8 +2,8 @@ openapi: "3.0.0"
 
 info:
   version: "1.0"
-  title: Sidechain Node API spec
-  description: API docs for Sidechain node.
+  title: Account Sidechain Node API spec
+  description: API docs for Account Sidechain node.
 
 tags:
   - name: block
@@ -264,6 +264,8 @@ paths:
       summary: starts forging
       description: Starts forging
       operationId: startForging
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -290,6 +292,8 @@ paths:
       summary: stops forging
       description: Stops forging
       operationId: stopForging
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -394,7 +398,7 @@ paths:
                       forgingEnabled:
                         type: boolean
                         description: True or False depending if forging is enabled
-                    error:
+                  error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
           description: any kind of http error
@@ -578,6 +582,8 @@ paths:
       summary: sends a transaction
       description: Creates and signs a regular transaction, specifying withdrawal outputs and fee. Then validate and send the transaction. Then return the id of the transaction
       operationId: withdrawCoins
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -623,6 +629,8 @@ paths:
       summary: creates transaction with forger stake
       description: creates transaction with forger stake
       operationId: makeForgerStake
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -682,6 +690,8 @@ paths:
       summary: creates and signs sidechain transaction for spending forging stake
       description: creates and signs sidechain transaction for spending forging stake
       operationId: spendForgingStake
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -727,6 +737,8 @@ paths:
       summary: creates and signs sidechain transaction for key rotation
       description: Creates and signs sidechain transaction for signers or masters certificate submitter key rotation
       operationId: createKeyRotationTransaction
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -813,6 +825,8 @@ paths:
       summary: sends a transaction
       description: Validates and sends a transaction, given its serialization as input. Then return the id of the transaction
       operationId: sendRawTransaction
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -852,6 +866,8 @@ paths:
       summary: Creates an unsigned legacy eth transaction
       description: Creates an unsigned legacy eth transaction. If the optional input parameter 'outputRawBytes' is set to True, just returns the raw hex bytes representation, otherwise it signs it, sends the resulting tx to the network and returns the transaction id.
       operationId: createLegacyTransaction
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -916,6 +932,8 @@ paths:
       summary: Creates an unsigned EIP155 (Simple replay attack protection) legacy eth transaction
       description: Creates an unsigned EIP155 (Simple replay attack protection) legacy eth transaction. If the optional input parameter 'outputRawBytes' is set to True, just returns the raw hex bytes representation, otherwise it signs it, sends the resulting tx to the network and returns the transaction id.
       operationId: createLegacyEIP155Transaction
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -980,6 +998,8 @@ paths:
       summary: Creates an unsigned EIP1559 eth transaction
       description: Creates an unsigned EIP1559 eth transaction. If the optional input parameter 'outputRawBytes' is set to True, just returns the raw hex bytes representation, otherwise it signs it, sends the resulting tx to the network and returns the transaction id.
       operationId: createEIP1559Transaction
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1047,6 +1067,8 @@ paths:
       summary: Signs the input transaction using the input 'from' address
       description: Decodes the input raw eth transaction bytes into an object, signs it using the input 'from' address and returns the resulting signed raw eth transaction bytes.
       operationId: signTransaction
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1090,6 +1112,8 @@ paths:
       summary: Creates a transaction that deploys a smart contract
       description: Creates a transaction that deploys a smart contract
       operationId: createSmartContract
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1218,6 +1242,8 @@ paths:
       summary: Returns forging stakes of local wallet
       description: Returns forging stakes of local wallet
       operationId: myForgingStakes
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1249,6 +1275,8 @@ paths:
       summary: Creates a transaction for voting to open the restrict forgers list.
       description: Creates a transaction which makes a call to the forger stake native smart contract expressing the vote for opening the restrict forgers list.
       operationId: openForgerList
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1335,6 +1363,8 @@ paths:
       summary: new 25519 secret
       description: Creates new secret and returns corresponding address (public key)
       operationId: createPrivateKey25519
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1364,6 +1394,8 @@ paths:
       summary: new Vrf secret
       description: Creates new Vrf secret and returns corresponding public key
       operationId: createVrfSecret
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1393,6 +1425,8 @@ paths:
       summary: finds all public keys
       description: Returns the list of all wallet’s propositions (public keys) of the given type (if specified).
       operationId: getPropositions
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1433,6 +1467,8 @@ paths:
       summary: new Secp256k1 secret
       description: Creates new secret and returns corresponding address (public key)
       operationId: createPrivateKeySecp256k1
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1462,6 +1498,8 @@ paths:
       summary: Imports a secret inside the wallet
       description: Imports a secret (and consequentially the corresponding proposition) inside the wallet
       operationId: importSecret
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1500,6 +1538,8 @@ paths:
       summary: Returns the secret corresponding to a proposition.
       description: Returns the secret corresponding to a proposition (taken from the wallet).
       operationId: exportSecret
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1538,6 +1578,8 @@ paths:
       summary: Imports all the secrets taken from a file.
       description: Imports all the secrets stored to a file. The file format should be equal to the file format generated by the endpoint dumpSecrets. (SECRETS + " " + PUBLICKEY).
       operationId: importSecrets
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1573,6 +1615,8 @@ paths:
       summary: Saves all the wallet secrets to a file.
       description: Saves all the secrets stored in the wallet to a file. Each line of the file will be in the format "SECRET" + " " + "PROPOSITION"
       operationId: dumpSecrets
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1611,6 +1655,8 @@ paths:
       summary: Returns balance of the account
       description: Returns balance of the account. If account doesn't exist, returns 0.
       operationId: getBalance
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1648,6 +1694,8 @@ paths:
       summary: Returns total balance of the wallet
       description: Returns total balance of the wallet.
       operationId: getTotalBalance
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1677,6 +1725,8 @@ paths:
       summary: Returns balance of all accounts of the wallet
       description: Returns balance of all accounts of the wallet as list of pairs (address, balance).
       operationId: getAllBalances
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1715,6 +1765,8 @@ paths:
       summary: finds all peers node
       description: Returns the list of all sidechain node peers
       operationId: allPeers
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1746,6 +1798,8 @@ paths:
       summary: connects to a node
       description: Sends the request to connect to a sidechain node
       operationId: connect
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1789,6 +1843,8 @@ paths:
       summary: finds all connected peers node
       description: Returns the list of all connected sidechain node peers
       operationId: connectedPeers
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1846,6 +1902,8 @@ paths:
       summary: stops the node
       description: stops the node in a gracefully way
       operationId: stop
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1930,6 +1988,8 @@ paths:
       summary: Disconnects from a node
       description: Sends the request to disconnects from a sidechain node.
       operationId: disconnect
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -2422,6 +2482,8 @@ paths:
       summary: enables automatic certificate submission
       description: Enables automatic certificate submission
       operationId: enableCertificateSubmitter
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -2448,6 +2510,8 @@ paths:
       summary: disables automatic certificate submission
       description: Disables automatic certificate submission
       operationId: disableCertificateSubmitter
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -2504,6 +2568,8 @@ paths:
       summary: enables automatic certificate signing
       description: Enables automatic certificate signing
       operationId: enableCertificateSigner
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -2530,6 +2596,8 @@ paths:
       summary: disables automatic certificate signing
       description: Disables automatic certificate signing
       operationId: disableCertificateSigner
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -2558,6 +2626,8 @@ paths:
       description: "Executes Ethereum rpc methods. Returns the success / error response of called rpc method or error\n
         if method does not exist. The request/response objects format follows JSON-RPC 2.0 specification."
       operationId: ethv1
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -2631,6 +2701,11 @@ paths:
 
 
 components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
   schemas:
     # Objects
     SidechainApiError:
@@ -2656,7 +2731,6 @@ components:
         detail:
           type: string
 
-    #ST
     ImportSecretsResponse:
       description: The response of the importSecrets endpoint
       type: object
@@ -2672,7 +2746,6 @@ components:
           items:
             $ref: '#/components/schemas/ImportSecretDetailError'
 
-    #ST
     ImportSecretDetailError:
       description: Error generated while trying to import a secret in the importSecrets endpoint
       type: object
@@ -2692,7 +2765,6 @@ components:
           items:
             type: string
 
-    #ST
     SidechainPeerNode:
       type: object
       properties:
@@ -2729,7 +2801,6 @@ components:
           type: string
           format: byte
 
-    #ST
     MainchainHeader:
       type: object
       properties:
@@ -2811,16 +2882,6 @@ components:
         isCustom:
           type: boolean
 
-
-    Proof:
-      type: object
-      properties:
-        closedBoxId:
-          type: string
-          format: byte
-
-
-
     MainchainBlock:
       type: object
       properties:
@@ -2879,7 +2940,6 @@ components:
           type: integer
           format: int64
 
-    #ST
     MainchainBlockInfo:
       type: object
       properties:
@@ -2899,7 +2959,6 @@ components:
           type: integer
           format: int32
 
-    #ST
     SidechainBlock:
       type: object
       properties:
@@ -2925,14 +2984,15 @@ components:
           items:
             $ref: '#/components/schemas/Transaction'
         ommers:
+          description: Array of Ommer objects
           type: array
           items:
-            $ref: '#/components/schemas/Ommer'
+            type: object
+
         size:
           type: integer
           format: int64
 
-    #ST
     SidechainBlockHeader:
       type: object
       properties:
@@ -2991,7 +3051,6 @@ components:
         signature:
           $ref: '#/components/schemas/Signature25519'
 
-    #ST
     SidechainBlockInfo:
       type: object
       properties:
@@ -3022,7 +3081,6 @@ components:
         lastBlockInPreviousConsensusEpoch:
           type: string
 
-    #ST
     MainchainBlockReferenceData:
       type: object
       required:
@@ -3050,7 +3108,6 @@ components:
           $ref: '#/components/schemas/WithdrawalEpochCertificate'
           nullable: true
 
-    #ST
     MainchainHeaderBaseInfo:
       type: object
       properties:
@@ -3061,7 +3118,6 @@ components:
           type: string
           format: byte
 
-    #ST
     MainchainHeaderInfo:
       type: object
       properties:
@@ -3098,7 +3154,6 @@ components:
           items:
             $ref: '#/components/schemas/Ommer'
 
-    #ST
     WithdrawalEpochInfo:
       type: object
       properties:
@@ -3109,7 +3164,6 @@ components:
           type: integer
           format: int32
 
-    #ST
     SchnorrProposition:
       type: object
       properties:
@@ -3117,7 +3171,6 @@ components:
           type: string
           format: byte
 
-    #ST
     SchnorrProof:
       type: object
       properties:
@@ -3125,7 +3178,6 @@ components:
           type: string
           format: byte
 
-    #ST
     CertifiersKeys:
       type: object
       properties:
@@ -3138,7 +3190,6 @@ components:
           items:
             $ref: '#/components/schemas/SchnorrProposition'
 
-    #ST
     KeyRotationProof:
       type: object
       properties:
@@ -3157,7 +3208,6 @@ components:
         masterKeySignature:
           $ref: '#/components/schemas/SchnorrProof'
 
-    #ST
     ForwardTransferData:
       type: object
       properties:
@@ -3166,7 +3216,7 @@ components:
           format: byte
         value:
           type: string
-    #ST
+
     AccountPayment:
       type: object
       properties:
@@ -3175,7 +3225,6 @@ components:
         value:
           type: integer
 
-    #ST
     AddressProposition:
       type: object
       properties:
@@ -3183,7 +3232,6 @@ components:
           type: string
           format: byte
 
-    #ST
     ForgingStakeInfo:
       type: object
       properties:
@@ -3209,7 +3257,6 @@ components:
           type: string
           format: byte
 
-    #ST
     VrfProof:
       type: object
       properties:
@@ -3217,7 +3264,6 @@ components:
           type: string
           format: byte
 
-    #ST
     VrfOutput:
       type: object
       properties:
@@ -3238,8 +3284,6 @@ components:
           type: string
           format: byte
 
-
-    #ST
     Bloom:
       type: object
       properties:
@@ -3247,7 +3291,6 @@ components:
           type: string
           format: byte
 
-    #ST
     TransactionWithdrawalRequest:
       type: object
       properties:
@@ -3257,7 +3300,6 @@ components:
           type: integer
           format: int64
 
-    #ST
     EIP1559GasInfo:
       type: object
       properties:
@@ -3268,7 +3310,6 @@ components:
         maxFeePerGas:
           type: integer
 
-    #ST
     AccountForgingStakeInfo:
       type: object
       properties:
@@ -3313,11 +3354,13 @@ components:
           type: string
           format: byte
         fieldElementCertificateFields:
-          type: object
-          properties:
-            rawData:
-              type: string
-              format: byte
+          type: array
+          items:
+            type: object
+            properties:
+              rawData:
+                type: string
+                format: byte
         bitVectorCertificateFields:
           type: array
           items:
@@ -3346,6 +3389,3 @@ components:
               amount:
                 type: integer
                 format: int64
-              size:
-                type: integer
-                format: int32
