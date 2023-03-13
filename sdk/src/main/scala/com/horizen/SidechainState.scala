@@ -57,9 +57,8 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     with UtxoMerkleTreeView
     with NetworkParamsUtils {
   override type NVCT = SidechainState
-  type PMOD = SidechainBlock
 
-  protected val crossChainValidators: Seq[CrossChainValidator[PMOD]] = Seq(
+  private lazy val crossChainValidators: Seq[CrossChainValidator[SidechainBlock]] = Seq(
     new CrossChainMessageValidator(params, sc2scConfig, this, stateStorage),
     new CrossChainRedeemMessageValidator(sidechainSettings, stateStorage, CryptoLibProvider.sc2scCircuitFunctions)
   )

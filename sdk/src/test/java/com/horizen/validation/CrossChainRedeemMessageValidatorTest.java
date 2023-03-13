@@ -13,7 +13,6 @@ import com.horizen.sc2sc.CrossChainMessageHash;
 import com.horizen.storage.SidechainStateStorage;
 import com.horizen.transaction.AbstractCrossChainRedeemTransaction;
 import com.horizen.utils.BytesUtils;
-import com.horizen.validation.crosschain.receiver.AbstractCrossChainRedeemMessageValidator;
 import com.horizen.validation.crosschain.receiver.CrossChainRedeemMessageValidator;
 import org.junit.Test;
 import sparkz.core.serialization.BytesSerializable;
@@ -27,7 +26,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class AbstractCrossChainRedeemMessageValidatorTest {
+public class CrossChainRedeemMessageValidatorTest {
 
     private static class CrossChainRedeemTransactionMock extends AbstractCrossChainRedeemTransaction {
         public CrossChainRedeemTransactionMock(List<byte[]> inputZenBoxIds, List<Signature25519> inputZenBoxProofs, List<ZenBoxData> outputZenBoxesData, long fee, CrossChainRedeemMessageBoxData redeemMessageBox) {
@@ -78,7 +77,7 @@ public class AbstractCrossChainRedeemMessageValidatorTest {
     public void whenReceivingScIdIsDifferentThenTheScIdInSettings_throwsAnIllegalArgumentException() {
         // Arrange
         String badScIdHex = BytesUtils.toHexString("badScIdHex".getBytes());
-        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
+        CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         SidechainBlock sidechainBlock = mock(SidechainBlock.class);
@@ -106,7 +105,7 @@ public class AbstractCrossChainRedeemMessageValidatorTest {
     @Test
     public void whenTryToRedeemTheSameMessageTwice_throwsAnIllegalArgumentException() {
         // Arrange
-        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
+        CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         SidechainBlock sidechainBlock = mock(SidechainBlock.class);
@@ -140,7 +139,7 @@ public class AbstractCrossChainRedeemMessageValidatorTest {
     @Test
     public void whenScTxCommitmentTreeHashDoesNotExist_throwsAnIllegalArgumentException() {
         // Arrange
-        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
+        CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         SidechainBlock sidechainBlock = mock(SidechainBlock.class);
@@ -175,7 +174,7 @@ public class AbstractCrossChainRedeemMessageValidatorTest {
     @Test
     public void whenNextScTxCommitmentTreeHashDoesNotExist_throwsAnIllegalArgumentException() {
         // Arrange
-        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
+        CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
@@ -212,7 +211,7 @@ public class AbstractCrossChainRedeemMessageValidatorTest {
     @Test
     public void whenNextScTxCommitmentTreeHashDoesNotExistd_throwsAnIllegalArgumentException() {
         // Arrange
-        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
+        CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
@@ -260,7 +259,7 @@ public class AbstractCrossChainRedeemMessageValidatorTest {
     @Test
     public void whenAllValidationsPass_throwsNoException() {
         // Arrange
-        AbstractCrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
+        CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 sidechainSettings, scStateStorage, sc2scCircuit
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
