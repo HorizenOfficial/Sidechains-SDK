@@ -33,6 +33,8 @@ case class RegTestParams(
                           override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
                           override val cswProvingKeyFilePath: String = "",
                           override val cswVerificationKeyFilePath: String = "",
+                          override val sc2ScProvingKeyFilePath: String = "",
+                          override val sc2ScVerificationKeyFilePath: String = "",
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,

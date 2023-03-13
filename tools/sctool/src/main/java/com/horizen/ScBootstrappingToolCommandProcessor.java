@@ -1047,11 +1047,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

@@ -4,7 +4,6 @@ import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.WithdrawalCertificate;
-import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.ValidatorKeysUpdatesList;
 import com.horizen.utils.Pair;
 

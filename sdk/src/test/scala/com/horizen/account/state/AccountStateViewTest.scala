@@ -1,16 +1,17 @@
 package com.horizen.account.state
 
-import com.horizen.account.fixtures.AccountCrossChainMessageFixture
-import com.horizen.account.sc2sc.{AbstractCrossChainMessageProcessor, AccountCrossChainMessage, CrossChainMessageProvider}
 import com.horizen.account.AccountFixture
+import com.horizen.account.fixtures.AccountCrossChainMessageFixture
+import com.horizen.account.sc2sc.{AbstractCrossChainMessageProcessor, CrossChainMessageProvider}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.cryptolibprovider.{CryptoLibProvider}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.evm.StateDB
 import com.horizen.evm.utils.Address
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.MCPublicKeyHashProposition
+import com.horizen.sc2sc.CrossChainMessage
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import org.junit.Assert._
@@ -18,7 +19,6 @@ import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import com.horizen.sc2sc.CrossChainMessage
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
 
@@ -41,7 +41,8 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     val stateDb: StateDB = mock[StateDB]
     stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors) {
       override lazy val withdrawalReqProvider: WithdrawalRequestProvider = mockWithdrawalReqProvider
-      override lazy val crossChainMessageProviders = Seq(mocCrossChainReqProvider1, mocCrossChainReqProvider2)
+      override lazy val crossChainMessageProviders: Seq[CrossChainMessageProvider] =
+        Seq(mocCrossChainReqProvider1, mocCrossChainReqProvider2)
     }
   }
 
@@ -95,14 +96,17 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
     // No messages
     Mockito
-      .when(stateView.crossChainMessageProviders(0).getCrossChainMesssages(epochNum, stateView))
+      .when(stateView.crossChainMessageProviders(0).getCrossChainMessages(epochNum, stateView))
       .thenReturn(Seq())
     Mockito
-      .when(stateView.crossChainMessageProviders(1).getCrossChainMesssages(epochNum, stateView))
+      .when(stateView.crossChainMessageProviders(1).getCrossChainMessages(epochNum, stateView))
       .thenReturn(Seq())
 
     var res = stateView.getCrossChainMessages(epochNum)
     assertTrue("The list of crosschain messages is not empty", res.isEmpty)
+
+    Mockito
+      .when(mockNetworkParams.sidechainId).thenReturn("scId".getBytes);
 
     // With some cross chain messages from different providers
     var fakeMessages : List[CrossChainMessage] = List()
@@ -111,10 +115,10 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     })
 
     Mockito
-      .when(stateView.crossChainMessageProviders(0).getCrossChainMesssages(epochNum, stateView))
+      .when(stateView.crossChainMessageProviders(0).getCrossChainMessages(epochNum, stateView))
       .thenReturn(Seq(fakeMessages(0), fakeMessages(1)))
     Mockito
-      .when(stateView.crossChainMessageProviders(1).getCrossChainMesssages(epochNum, stateView))
+      .when(stateView.crossChainMessageProviders(1).getCrossChainMessages(epochNum, stateView))
       .thenReturn(Seq(fakeMessages(2)))
 
     res = stateView.getCrossChainMessages(epochNum)

@@ -53,10 +53,9 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.horizen</groupId>
+      <groupId>com.horizen</groupId>
       <artifactId>zendoo-sc-cryptolib</artifactId>
-      <!-- 0.6.0-SNAPSHOT2 tag -->
-      <version>0.6.0-20230124.165959-5</version>
+      <version>0.7.0</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.sparkzfoundation/sparkz-core -->
@@ -270,6 +269,8 @@
       <version>0.6.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
+
+
   <repositories>
     <repository>
       <id>softmotions_repository</id>

@@ -6,7 +6,7 @@ import java.util
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData}
-import com.horizen.account.events.{AddCrossChainMessage}
+import com.horizen.account.events.AddCrossChainMessage
 import com.horizen.account.state.{BaseAccountStateView, ExecutionRevertedException, NativeSmartContractMsgProcessor,  Message}
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.utils.ZenCoinsUtils
@@ -23,7 +23,7 @@ import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMe
 import com.horizen.evm.utils.Address
 
 trait CrossChainMessageProvider {
-  private[horizen] def getCrossChainMesssages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage]
+  private[horizen] def getCrossChainMessages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage]
   private[horizen] def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash, view: BaseAccountStateView): Option[Int]
 }
 
@@ -44,7 +44,7 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
     CrosschainMessagesListEncoder.encode(list.asJava)
   }
 
-  override def getCrossChainMesssages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage] = {
+  override def getCrossChainMessages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage] = {
     getListOfCrossChainMessagesRecords(epochNum, view).map(msg => AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(msg, networkParams))
   }
 

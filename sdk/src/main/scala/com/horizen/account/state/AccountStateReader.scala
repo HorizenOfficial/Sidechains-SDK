@@ -4,10 +4,9 @@ import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.evm.ResourceHandle
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
-
-import java.math.BigInteger
 import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 
+import java.math.BigInteger
 
 trait AccountStateReader {
   def getStateDbHandle: ResourceHandle

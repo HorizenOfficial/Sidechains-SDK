@@ -3,10 +3,13 @@ package com.horizen.cryptolibprovider.utils;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.librustsidechains.Constants;
 import com.horizen.utils.BytesUtils;
+import com.horizen.utils.FieldElementsContainer;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
-public class FieldElementUtils {
+public final class FieldElementUtils {
     public static int fieldElementLength() {
         return Constants.FIELD_ELEMENT_LENGTH();
     }
@@ -40,5 +43,21 @@ public class FieldElementUtils {
         byte[] feBytes = fe.serializeFieldElement();
         fe.freeFieldElement();
         return feBytes;
+    }
+
+    public static FieldElementsContainer deserializeMany(byte[] bytes, boolean strict) {
+        List<FieldElement> deserializedFes = new ArrayList<>();
+        int chunkSize = strict ? fieldElementLength() : fieldElementLength() - 1;
+        int start = 0;
+        while (start < bytes.length) {
+            int end = Math.min(bytes.length, start + chunkSize);
+            deserializedFes.add(FieldElement.deserialize(Arrays.copyOfRange(bytes, start, end)));
+            start += chunkSize;
+        }
+        return new FieldElementsContainer(deserializedFes);
+    }
+
+    public static FieldElementsContainer deserializeMany(byte[] bytes) {
+        return deserializeMany(bytes, false);
     }
 }
