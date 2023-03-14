@@ -7,7 +7,6 @@ import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import io.horizen.companion._
 import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.fork.ForkConfigurator
@@ -17,7 +16,6 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{BytesUtils, Pair}
-import io.horizen.utxo.api.http._
 import io.horizen.utxo.api.http.route.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
 import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
@@ -211,8 +209,8 @@ class SidechainApp @Inject()
   val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
 
   //Websocket server for the Explorer
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  if(sidechainSettings.websocketServer.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
   val boxIterator: BoxIterator = backupStorage.getBoxIterator

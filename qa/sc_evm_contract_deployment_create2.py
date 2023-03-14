@@ -11,7 +11,7 @@ from SidechainTestFramework.account.ac_utils import contract_function_static_cal
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei
 from sc_evm_test_contract_contract_deployment_and_interaction import deploy_smart_contract
 from sc_evm_test_erc721 import compare_and_return_nat_balance
-from test_framework.util import assert_equal, assert_true
+from test_framework.util import assert_equal, assert_true, fail
 
 """
 Check the Contract Deployment with CREATE2 and check solidity SELFDESTRUCT method
@@ -131,15 +131,13 @@ class SCEvmContractDeploymentCreate2(AccountChainSetup):
         assert_equal('', storage_value[0])
 
         # Check that we can not deploy to the same address again
-        exception_occurs = False
         try:
             contract_function_call(sc_node, factory_contract, factory_contract_address, self.evm_address, method,
                                    method_args)
         except Exception as e:
-            exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-        finally:
-            assert_true(exception_occurs, "Deploying a contract to the same address again should fail")
+        else:
+            fail("Deploying a contract to the same address again should fail")
 
 
 if __name__ == "__main__":

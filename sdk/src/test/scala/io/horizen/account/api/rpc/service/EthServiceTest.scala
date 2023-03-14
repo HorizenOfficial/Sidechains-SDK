@@ -20,8 +20,9 @@ import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
+import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
 import io.horizen.network.SyncStatus
-import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
 import io.horizen.utils.BytesUtils
 import io.horizen.{EthServiceSettings, SidechainTypes}
@@ -188,6 +189,69 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         }
       }
     }"""
+  val txPoolContentFromOutput =
+    """{
+      "pending": {
+        "16": {
+          "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "blockNumber": null,
+          "from": "0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
+          "gas": "0xec0564",
+          "gasPrice": "0x3b9aca64",
+          "hash": "0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
+          "input": "0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+          "nonce": "0x10",
+          "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
+          "transactionIndex": null,
+          "value": "0xe4e1c0"
+        },
+        "24": {
+          "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "blockNumber": null,
+          "from": "0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
+          "gas": "0xec0564",
+          "gasPrice": "0x3b9aca64",
+          "hash": "0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
+          "input": "0x8c64fe48688ab096dfb6ac2eeefcf213",
+          "nonce": "0x18",
+          "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
+          "transactionIndex": null,
+          "value": "0x493e00"
+        }
+      },
+      "queued": {
+        "40": {
+          "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "blockNumber": null,
+          "from": "0xc803d7146a4df6937b609f7951bc7eda3def09fb",
+          "gas": "0xec0564",
+          "gasPrice": "0x3b9aca64",
+          "hash": "0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
+          "input": "0x4aa64a075647e3621bbc14b03e4087903f2c9503",
+          "nonce": "0x28",
+          "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
+          "transactionIndex": null,
+          "value": "0x3c14dc0"
+        }
+      }
+    }"""
+  val txPoolInspectOutput =
+    """{
+    "pending": {
+       "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
+          "16":"0x15532e34426cd5c37371ff455a5ba07501c0f522: 15000000 wei + 15467876 gas × 1000000100 wei",
+          "24":"0x15532e34426cd5c37371ff455a5ba07501c0f522: 4800000 wei + 15467876 gas × 1000000100 wei"
+       },
+       "0xb039865dbea73df08e23f185847bab8e6a44108d":{
+          "32":"0x15532e34426cd5c37371ff455a5ba07501c0f522: 18000000 wei + 15467876 gas × 1000000100 wei"
+       }
+    },
+    "queued": {
+       "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
+          "40":"0x15532e34426cd5c37371ff455a5ba07501c0f522: 63000000 wei + 15467876 gas × 1000000100 wei"
+       }
+    }
+  }"""
   var ethService: EthService = _
   var txJson: String = _
   var senderWithSecret: String = _
@@ -308,7 +372,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val mockedSyncStatusActor = TestProbe()
     mockedSyncStatusActor.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
-        case ReturnSyncStatus =>
+        case GetSyncStatus =>
           sender ! new SyncStatus(true, BigInt(250), BigInt(200), BigInt(300))
       }
       TestActor.KeepRunning
@@ -316,6 +380,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val mockedSyncStatusActorRef: ActorRef = mockedSyncStatusActor.ref
 
     val ethServiceSettings = EthServiceSettings()
+    val transactionsCompanion = getDefaultAccountTransactionsCompanion
 
     ethService = new EthService(
       nodeViewHolderRef,
@@ -326,7 +391,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       10,
       "testVersion",
       transactionActorRef,
-      mockedSyncStatusActorRef
+      mockedSyncStatusActorRef,
+      transactionsCompanion
     )
   }
 
@@ -562,16 +628,16 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block tag", "Full transaction objects", "Expected output"),
       ("latest", true, expectedBlockViewTxHydrated),
       ("latest", false, expectedBlockViewTxHashes),
-      ("0x2", true, expectedBlockViewTxHydrated)
+      ("0x2", true, expectedBlockViewTxHydrated),
+      ("safe", true, "null"),
+      ("finalized", true, "null"),
+      ("0x1337", true, "null"),
     )
 
     val invalidCases =
       Table(
         ("Block tag / number", "Full transaction objects"),
-        ("safe", true),
-        ("finalized", true),
         ("aaaa", true),
-        ("0x1337", true)
       )
 
     forAll(validCases) { (tag, fullTx, expectedOutput) =>
@@ -594,8 +660,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block hash", "Full transaction objects", "Expected output"),
       ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, expectedBlockViewTxHydrated),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, expectedBlockViewTxHashes),
-      ("0x12345677de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, "null")
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, expectedBlockViewTxHashes)
     )
 
     val invalidCases =
@@ -622,11 +687,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block tag / index", "Expected output"),
       ("latest", "\"0x1\""),
       ("0x2", "\"0x1\""),
-      ("0x1", "\"0x0\"")
+      ("0x1", "\"0x0\""),
+      ("0x1337", "null")
     )
 
     val invalidCases =
-      Table("Block tag / index", "0x1337", "1337abcd")
+      Table("Block tag / index", "1337abcd")
 
     forAll(validCases) { (tag, expectedOutput) =>
       assertJsonEquals(
@@ -923,10 +989,10 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block id", "Expected output"),
       ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
+      ("0x2", "null"),
     )
 
-    val invalidCases = Table("Block id", "null", "dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc")
+    val invalidCases = Table("Block id", "null", "dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "latest")
 
     forAll(validCases) { (id, expectedOutput) =>
       assertJsonEquals(
@@ -954,10 +1020,18 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
             {"to":"0x5d3eff12e7c2f48e1bd660694101049f8fb678c9","value":"0x51b7d5554400"},
             {"to":"0xaea09d1e14cbf1604dc36c76cc9d5cb1e7e493a7","value":"0x378d4bb3f000"}
           ]}"""
+        ),
+        (
+          "0x2",
+          """{"forwardTransfers":[
+            {"to":"0x5d3eff12e7c2f48e1bd660694101049f8fb678c9","value":"0x51b7d5554400"},
+            {"to":"0xaea09d1e14cbf1604dc36c76cc9d5cb1e7e493a7","value":"0x378d4bb3f000"}
+          ]}"""
         )
+
       )
 
-    val invalidCases = Table("Block id", "0x1337", "1337abcd", "latest")
+    val invalidCases = Table("Block id", "0x1337", "1337abcd", "latest", "pending")
 
     forAll(validCases) { (id, expectedOutput) =>
       assertJsonEquals(
@@ -1183,6 +1257,19 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   @Test
   def txpool_content(): Unit = {
     assertJsonEquals(txPoolContentOutput, ethService.execute(getRpcRequest()))
+  }
+
+  @Test
+  def txpool_contentFrom(): Unit = {
+    val method = "txpool_contentFrom"
+    assertJsonEquals(
+      txPoolContentFromOutput,
+      ethService.execute(getRpcRequest(paramValues = Array("0x15532e34426cd5c37371ff455a5ba07501c0f522"), method = method)))
+  }
+
+  @Test
+  def txpool_inspect(): Unit = {
+    assertJsonEquals(txPoolInspectOutput, ethService.execute(getRpcRequest()))
   }
 
 }

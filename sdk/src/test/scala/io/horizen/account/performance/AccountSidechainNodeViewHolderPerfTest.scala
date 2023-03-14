@@ -7,7 +7,7 @@ import io.horizen.account.block.AccountBlock
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
-import io.horizen.account.state.{AccountState, AccountStateView, MessageProcessor, MockedHistoryBlockHashProvider}
+import io.horizen.account.state._
 import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.ZenWeiConverter
@@ -50,6 +50,8 @@ class AccountSidechainNodeViewHolderPerfTest
   var stateViewMock: AccountStateView = _
   var wallet: AccountWallet = _
   var mempool: AccountMemoryPool = _
+
+  var eventNotifierProvider:AccountEventNotifierProvider = _
 
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
@@ -167,7 +169,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("Starting test reverse order")
       // Resetting MemPool
-      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings, () => mock[AccountEventNotifier])
 
       val reverseList = listOfTxs.reverse
       listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
@@ -200,7 +202,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("Starting test random order")
       // Resetting MemPool
-      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings, () => mock[AccountEventNotifier])
       val randomOrderList = Random.shuffle(listOfTxs)
       listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
       startTime = System.currentTimeMillis()
@@ -326,7 +328,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("Starting test reverse order")
       // Resetting MemPool
-      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings, () => mock[AccountEventNotifier])
 
       val reverseList = listOfTxs.reverse
       listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
@@ -359,7 +361,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       println("Starting test random order")
       // Resetting MemPool
-      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
+      mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings, () => mock[AccountEventNotifier])
       val randomOrderList = Random.shuffle(listOfTxs)
       listOfSnapshots = new scala.collection.mutable.ListBuffer[Long]()
       startTime = System.currentTimeMillis()
@@ -909,7 +911,6 @@ class AccountSidechainNodeViewHolderPerfTest
     }
   }
 
-
   class MockedAccountSidechainNodeViewHolder(
       sidechainSettings: SidechainSettings,
       params: NetworkParams,
@@ -989,7 +990,9 @@ class AccountSidechainNodeViewHolderPerfTest
       override def getView: AccountStateView = stateViewMock
     }
 
-    mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings)
+    eventNotifierProvider = mock[AccountEventNotifierProvider]
+
+    mempool = AccountMemoryPool.createEmptyMempool(() => state, () => state, mempoolSettings, eventNotifierProvider)
 
     val nodeViewHolderRef: TestActorRef[MockedAccountSidechainNodeViewHolder] = TestActorRef(
       Props(
@@ -1007,6 +1010,7 @@ class AccountSidechainNodeViewHolderPerfTest
         )
       )
     )
+    Mockito.when(eventNotifierProvider.getEventNotifier()).thenReturn(nodeViewHolderRef.underlyingActor)
     nodeViewHolderRef.underlyingActor
   }
 

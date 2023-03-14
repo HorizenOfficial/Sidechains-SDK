@@ -1,36 +1,36 @@
 package io.horizen.account.mempool
 
-import io.horizen.{AccountMempoolSettings, SidechainTypes}
+import io.horizen.account.api.rpc.types.TxPoolTransaction
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.node.NodeAccountMemoryPool
-import io.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
-import sparkz.util.{ModifierId, SparkzLogging}
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.{AccountEventNotifierProvider, AccountStateReaderProvider, BaseStateReaderProvider}
+import io.horizen.evm.Address
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import sparkz.core.transaction.MempoolReader
+import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.math.BigInteger
 import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
-                         unconfirmed: MempoolMap,
-                         accountStateReaderProvider: AccountStateReaderProvider,
-                         baseStateReaderProvider: BaseStateReaderProvider,
-                         mempoolSettings: AccountMempoolSettings
-                       ) extends sparkz.core.transaction.MemoryPool[
-  SidechainTypes#SCAT,
-  AccountMemoryPool
-]
-  with SidechainTypes
-  with NodeAccountMemoryPool
-  with SparkzLogging {
+    unconfirmed: MempoolMap,
+    accountStateReaderProvider: AccountStateReaderProvider,
+    baseStateReaderProvider: BaseStateReaderProvider,
+    mempoolSettings: AccountMempoolSettings,
+    eventNotifierProvider: AccountEventNotifierProvider
+) extends sparkz.core.transaction.MemoryPool[SidechainTypes#SCAT, AccountMemoryPool]
+      with SidechainTypes
+      with NodeAccountMemoryPool
+      with SparkzLogging {
   override type NVCT = AccountMemoryPool
 
-  // Getters:
-  override def modifierById(
-                             modifierId: ModifierId
-                           ): Option[SidechainTypes#SCAT] = {
+  override def modifierById(modifierId: ModifierId): Option[SidechainTypes#SCAT] = {
     unconfirmed.getTransaction(modifierId)
   }
 
@@ -58,12 +58,16 @@ class AccountMemoryPool(
     filter(t => !txs.exists(_.id == t.id))
   }
 
-  override def filter(
-      condition: SidechainTypes#SCAT => Boolean
-  ): AccountMemoryPool = {
+  override def filter(condition: SidechainTypes#SCAT => Boolean): AccountMemoryPool = {
     val filteredTxs = unconfirmed.values.filter(tx => condition(tx))
-    //Reset everything
-    val newMemPool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
+    // Reset everything
+    val newMemPool =
+      AccountMemoryPool.createEmptyMempool(
+        accountStateReaderProvider,
+        baseStateReaderProvider,
+        mempoolSettings,
+        eventNotifierProvider
+      )
     filteredTxs.foreach(tx => newMemPool.put(tx))
     newMemPool
   }
@@ -74,11 +78,17 @@ class AccountMemoryPool(
 
   override def getReader: MempoolReader[SidechainTypes#SCAT] = this
 
-  // Setters:
-
   override def put(tx: SidechainTypes#SCAT): Try[AccountMemoryPool] = {
     Try {
-      new AccountMemoryPool(unconfirmed.add(tx).get, accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
+      val (updatedUnconfirmed, newExecTcs) = unconfirmed.add(tx).get
+      if (newExecTcs.nonEmpty) eventNotifierProvider.getEventNotifier().sendNewExecTxsEvent(newExecTcs)
+      new AccountMemoryPool(
+        updatedUnconfirmed,
+        accountStateReaderProvider,
+        baseStateReaderProvider,
+        mempoolSettings,
+        eventNotifierProvider
+      )
     }
   }
 
@@ -93,17 +103,21 @@ class AccountMemoryPool(
     }
   }
 
-  /*
-  This method is required by the Sparkz implementation of memory pool, but for the Account model the performance are too
-  low so the memory pool was changed. In the new implementation this method is no longer required.
+  /**
+   * This method is required by the Sparkz implementation of memory pool, but for the Account model the performance are
+   * too low so the memory pool was changed. In the new implementation this method is no longer required.
    */
-  override def putWithoutCheck(
-      txs: Iterable[SidechainTypes#SCAT]
-  ): AccountMemoryPool = ???
+  override def putWithoutCheck(txs: Iterable[SidechainTypes#SCAT]): AccountMemoryPool = ???
 
   override def remove(tx: SidechainTypes#SCAT): AccountMemoryPool = {
     unconfirmed.removeFromMempool(tx) match {
-      case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
+      case Success(mempoolMap) => new AccountMemoryPool(
+          mempoolMap,
+          accountStateReaderProvider,
+          baseStateReaderProvider,
+          mempoolSettings,
+          eventNotifierProvider
+        )
       case Failure(e) =>
         log.error(s"Exception while removing transaction $tx from MemPool", e)
         throw e
@@ -119,11 +133,32 @@ class AccountMemoryPool(
   def getNonExecutableTransactions: util.List[ModifierId] =
     unconfirmed.mempoolTransactions(false).toList.asJava
 
-  def getExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
     unconfirmed.mempoolTransactionsMap(true)
 
-  def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getNonExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
     unconfirmed.mempoolTransactionsMap(false)
+
+  def getExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] =
+    unconfirmed.mempoolTransactionsMapFrom(true, from)
+
+  def getNonExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] =
+    unconfirmed.mempoolTransactionsMapFrom(false, from)
+
+  def getExecutableTransactionsMapInspect: TrieMap[Address, mutable.SortedMap[BigInteger, String]] =
+    unconfirmed.mempoolTransactionsMapInspect(true)
+
+  def getNonExecutableTransactionsMapInspect: TrieMap[Address, mutable.SortedMap[BigInteger, String]] =
+    unconfirmed.mempoolTransactionsMapInspect(false)
+
+  /**
+   * Get the highest nonce from the pool or default to the current nonce in the state.
+   */
+  def getPoolNonce(account: SidechainTypes#SCP): BigInteger = {
+    unconfirmed.getAccountNonce(account).getOrElse(
+      accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
+    )
+  }
 
   override def getTransactions(
       c: Comparator[SidechainTypes#SCAT],
@@ -145,19 +180,31 @@ class AccountMemoryPool(
   }
 
   def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock]): AccountMemoryPool = {
-    unconfirmed.updateMemPool(removedBlocks, appliedBlocks)
-    new AccountMemoryPool(unconfirmed, accountStateReaderProvider, baseStateReaderProvider, mempoolSettings)
+    val newExecTcs = unconfirmed.updateMemPool(removedBlocks, appliedBlocks)
+    if (newExecTcs.nonEmpty) eventNotifierProvider.getEventNotifier().sendNewExecTxsEvent(newExecTcs)
+    new AccountMemoryPool(
+      unconfirmed,
+      accountStateReaderProvider,
+      baseStateReaderProvider,
+      mempoolSettings,
+      eventNotifierProvider
+    )
   }
 }
 
 object AccountMemoryPool {
-  def createEmptyMempool(accountStateReaderProvider: AccountStateReaderProvider,
-                         baseStateReaderProvider: BaseStateReaderProvider,
-                         mempoolSettings: AccountMempoolSettings): AccountMemoryPool = {
+  def createEmptyMempool(
+      accountStateReaderProvider: AccountStateReaderProvider,
+      baseStateReaderProvider: BaseStateReaderProvider,
+      mempoolSettings: AccountMempoolSettings,
+      eventNotifierProvider: AccountEventNotifierProvider
+  ): AccountMemoryPool = {
     new AccountMemoryPool(
       new MempoolMap(accountStateReaderProvider, baseStateReaderProvider, mempoolSettings),
       accountStateReaderProvider,
       baseStateReaderProvider,
-      mempoolSettings)
+      mempoolSettings,
+      eventNotifierProvider
+    )
   }
 }

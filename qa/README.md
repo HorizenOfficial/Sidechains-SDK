@@ -8,6 +8,11 @@ It is possible to test a SC node or nodes with or without real MC node connectio
 **Requirements**
 
 - Install Python 3.5 or newer
+```
+sudo apt install python
+sudo apt-get -y install python3-pip
+```
+
 - Install requirements via `pip3 install -r ./SidechainTestFramework/account/requirements.txt` or a similar way.
     - You can also manually install the requirements listed
 
@@ -17,23 +22,28 @@ It is possible to test a SC node or nodes with or without real MC node connectio
 
 **Additional settings**
 
-Setup these environment variables.
-
-Example for Linux environment:
-
+1. Example for Linux:
 ```
-BITCOINCLI="/home/user/zen/zen-cli"
-BITCOIND="/home/user/zen/zend"
-SIDECHAIN_SDK="/home/user/Sidechains-SDK"
+sudo nano /etc/environment
 ```
+2. In this file after Path from the new line put Environment variables:
+```
+BITCOINCLI=/home/yourName/yourProjectDirectory/zen/src/zen-cli
+BITCOIND=/home/yourName/yourProjectDirectory/zen/src/zend
+SIDECHAIN_SDK=/home/yourName/yourProjectDirectory/Sidechains-SDK
+```
+change yourName and yourProjectDirectory to the relevant one.
+4. Save file, exit and restart your computer.
+5. Then make sure that environment variables are set:
+```
+echo $BITCOINCLI
+echo $BITCOIND
+echo $SIDECHAIN_SDK
+```
+verify that all path are valid and are referenced to existing files.
 
 **Execution**
-
-You can run all tests by running the following command from the qa directory:
-
-```
-./run_sc_tests.sh
-```
+1. Install Maven, go to root folder of Sidechain-SDK and run Maven to clean previous and build a new JAR
 
 *Parallel Testing:* Tests can be parallelized to reduce test run time by specifying the *-parallel* flag and passing in an integer value:
 
@@ -47,11 +57,18 @@ You can use _-evm_only_ or _-utxo_only_ options for running only a subset of the
 
 The log output for this test run can be found in the qa directory with the name "sc_test.log".
 
-It is possible to run an individual test using command:
+2. You can run all tests using command.
+```
+cd qa
+python run_sc_tests.py
+```
+Or run individual test using command
+```
+cd qa
+python <test.py>
+```
+replacing <test.py> with the name of test that you want to execute.
 
-```
-python3 <test.py> 
-```
 
 The following command-line options can be used in addition:
 - `--nocleanup`: Do not remove sc_test.* datadirs on exit or error.

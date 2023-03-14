@@ -100,6 +100,8 @@ class SCEvmForbidUnprotectedTxs(AccountChainSetup):
         except RuntimeError as e:
             assert_true("Legacy unprotected transactions are not allowed" in e.args[0], "Got" + e.args[0])
 
+        assert_equal(0, len(allTransactions(sc_node_1, False)['transactionIds']), "Mempool should be empty")
+
         # tx2: rpc api
         try:
             eoa_transaction(sc_node_1, from_addr=evm_hex_address, to_addr=recipient_proposition,
@@ -107,6 +109,8 @@ class SCEvmForbidUnprotectedTxs(AccountChainSetup):
             fail("Legacy rpc transaction should fail")
         except RuntimeError as e:
             assert_true("Legacy unprotected transactions are not allowed" in e.args[0], "Got" + e.args[0])
+
+        assert_equal(0, len(allTransactions(sc_node_1, False)['transactionIds']), "Mempool should be empty")
 
         # tx3: forced tx
         tx_bytes = createLegacyTransaction(sc_node_1,
@@ -118,6 +122,7 @@ class SCEvmForbidUnprotectedTxs(AccountChainSetup):
         forced_tx = signTransaction(sc_node_1, fromAddress=evm_hex_address, payload=tx_bytes)
         block_id = generate_next_block(sc_node_1, "first node", forced_tx=[forced_tx])
         block_data = sc_node_1.block_findById(blockId=block_id)
+        assert_equal(len(block_data['result']['block']['sidechainTransactions']), 1)
         assert_equal(block_data['result']['block']['sidechainTransactions'][0]['legacy'], True)
 
         self.sc_sync_all()

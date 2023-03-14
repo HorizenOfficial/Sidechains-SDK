@@ -357,7 +357,6 @@ class SCKeyRotationTest(SidechainTestFramework):
                                              automatic_send=True)
 
         # Try to send another CertificateKeyRotationTransaction pointing to the same key
-        error = False
         try:
             http_create_key_rotation_transaction(sc_node,
                                                  key_type=0,
@@ -369,8 +368,9 @@ class SCKeyRotationTest(SidechainTestFramework):
                                                  format=True,
                                                  automatic_send=True)["result"]["transactionId"]
         except:
-            error = True
-        assert_true(error)
+            pass
+        else:
+            fail("Exception expected")
 
         self.sc_sync_all()
         generate_next_blocks(sc_node, "first node", 1)
@@ -396,7 +396,6 @@ class SCKeyRotationTest(SidechainTestFramework):
                                                                    key=new_signing_key_2.secret)["signature"]
 
         # Try with old signatures
-        error = False
         try:
             http_create_key_rotation_transaction(sc_node,
                                                  key_type=0,
@@ -408,8 +407,9 @@ class SCKeyRotationTest(SidechainTestFramework):
                                                  format=True,
                                                  automatic_send=True)["result"]["transactionId"]
         except:
-            error = True
-        assert_true(error)
+            pass
+        else:
+            fail("Exception expected")
 
         # Use the new signatures
         http_create_key_rotation_transaction(sc_node,
