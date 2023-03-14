@@ -1,6 +1,6 @@
 package io.horizen.account.mempool
 
-import io.horizen.account.api.rpc.types.TxPoolTransaction
+import io.horizen.account.api.rpc.types.EthereumTransactionView
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.mempool.MempoolMap._
 import io.horizen.account.mempool.TxExecutableStatus.TxExecutableStatus
@@ -276,10 +276,10 @@ class MempoolMap(
     txsList
   }
 
-  // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable TxPoolTransaction
+  // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable EthereumTransaction
   // ordered by address and nonce
-  def mempoolTransactionsMap(executable: Boolean): TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] = {
-    val txsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
+  def mempoolTransactionsMap(executable: Boolean): TrieMap[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]] = {
+    val txsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]]
     val mempoolIdsMap = if (executable)
       executableTxs
     else
@@ -290,24 +290,24 @@ class MempoolMap(
     txsMap
   }
 
-  // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable TxPoolTransaction
+  // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable EthereumTransaction
   // ordered by nonce filtering by from address
-  def mempoolTransactionsMapFrom(executable: Boolean, fromAddress: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] = {
+  def mempoolTransactionsMapFrom(executable: Boolean, fromAddress: Address): mutable.SortedMap[BigInteger, EthereumTransactionView] = {
     val mempoolIdByNonceMapFrom = if (executable)
       executableTxs.get(new AddressProposition(fromAddress))
     else
       nonExecutableTxs.get(new AddressProposition(fromAddress))
     mempoolIdByNonceMapFrom match {
       case Some(map) => retrieveTxPoolByNonceMap(map)
-      case None => mutable.SortedMap.empty[BigInteger, TxPoolTransaction]
+      case None => mutable.SortedMap.empty[BigInteger, EthereumTransactionView]
     }
   }
 
-  private def retrieveTxPoolByNonceMap(txIdByNonceMap: TxIdByNonceMap): mutable.SortedMap[BigInteger, TxPoolTransaction] = {
-    val txPoolByNonceMap: mutable.SortedMap[BigInteger, TxPoolTransaction] = new mutable.TreeMap[BigInteger, TxPoolTransaction]()
+  private def retrieveTxPoolByNonceMap(txIdByNonceMap: TxIdByNonceMap): mutable.SortedMap[BigInteger, EthereumTransactionView] = {
+    val txPoolByNonceMap: mutable.SortedMap[BigInteger, EthereumTransactionView] = new mutable.TreeMap[BigInteger, EthereumTransactionView]()
     for ((txNonce, txId) <- txIdByNonceMap) {
       val tx = getTransaction(txId).get
-      txPoolByNonceMap.put(txNonce, new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction]))
+      txPoolByNonceMap.put(txNonce, new EthereumTransactionView(tx.asInstanceOf[EthereumTransaction]))
     }
     txPoolByNonceMap
   }

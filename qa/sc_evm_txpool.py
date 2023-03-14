@@ -6,6 +6,8 @@ from eth_utils import remove_0x_prefix
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.httpCalls.transaction.createRawEIP1559Transaction import createRawEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createRawLegacyEIP155Transaction import \
+    createRawLegacyEIP155Transaction
 from SidechainTestFramework.account.httpCalls.transaction.sendTransaction import sendTransaction
 from SidechainTestFramework.account.httpCalls.transaction.signTransaction import signTransaction
 from SidechainTestFramework.account.utils import convertZenToWei
@@ -135,7 +137,7 @@ class SCEvmTxPool(AccountChainSetup):
                                              fromAddress=evm_address_1,
                                              toAddress=evm_address_2,
                                              value=convertZenToWei(transferred_amount_in_zen),
-                                             nonce=str(6),
+                                             nonce=str(8),
                                              maxPriorityFeePerGas=maxPriorityFeePerGas)
         self.do_send_raw_tx(raw_tx=raw_tx, evm_signer_address=evm_address_1)
 
@@ -159,9 +161,9 @@ class SCEvmTxPool(AccountChainSetup):
         assert_true(mempool_tx2['from'] == '0x'+evm_address_2)
         assert_true(mempool_tx2['to'] == '0x'+evm_address_1)
         assert_true(mempool_tx2['value'] == hex(convertZenToWei(transferred_amount_in_zen)))
-        # queued transaction from evm_address_1 with nonce 6
-        mempool_tx3 = content_res['queued']['0x'+evm_address_1]['6']
-        assert_true(mempool_tx3['nonce'] == '0x6')
+        # queued transaction from evm_address_1 with nonce 8
+        mempool_tx3 = content_res['queued']['0x'+evm_address_1]['8']
+        assert_true(mempool_tx3['nonce'] == '0x8')
         assert_true(mempool_tx3['from'] == '0x'+evm_address_1)
         assert_true(mempool_tx3['to'] == '0x'+evm_address_2)
         assert_true(mempool_tx3['value'] == hex(convertZenToWei(transferred_amount_in_zen)))
@@ -184,7 +186,7 @@ class SCEvmTxPool(AccountChainSetup):
         inspect_res = sc_node.rpc_txpool_inspect()['result']
         assert_true(inspect_res['pending']['0x'+evm_address_1]['3'] == inspect_expected_result_address1)
         assert_true(inspect_res['pending']['0x'+evm_address_2]['0'] == inspect_expected_result_address2)
-        assert_true(inspect_res['queued']['0x'+evm_address_1]['6'] == inspect_expected_result_address1)
+        assert_true(inspect_res['queued']['0x'+evm_address_1]['8'] == inspect_expected_result_address1)
 
         # generate block and finalize the transactions in the mempool
         generate_next_block(sc_node, "first node")
@@ -205,14 +207,14 @@ class SCEvmTxPool(AccountChainSetup):
         # txpool content
         content_res = sc_node.rpc_txpool_content()['result']
         # pending transaction from evm_address_1 with nonce 4
-        mempool_tx2 = content_res['pending']['0x'+evm_address_1]['4']
-        assert_true(mempool_tx2['nonce'] == '0x4')
-        assert_true(mempool_tx2['from'] == '0x'+evm_address_1)
-        assert_true(mempool_tx2['to'] == None)
-        assert_true(mempool_tx2['value'] == hex(0))
-        # queued transaction from evm_address_1 with nonce 6
-        mempool_tx2 = content_res['queued']['0x'+evm_address_1]['6']
-        assert_true(mempool_tx2['nonce'] == '0x6')
+        mempool_tx1 = content_res['pending']['0x'+evm_address_1]['4']
+        assert_true(mempool_tx1['nonce'] == '0x4')
+        assert_true(mempool_tx1['from'] == '0x'+evm_address_1)
+        assert_true(mempool_tx1['to'] == None)
+        assert_true(mempool_tx1['value'] == hex(0))
+        # queued transaction from evm_address_1 with nonce 8
+        mempool_tx2 = content_res['queued']['0x'+evm_address_1]['8']
+        assert_true(mempool_tx2['nonce'] == '0x8')
         assert_true(mempool_tx2['from'] == '0x'+evm_address_1)
         assert_true(mempool_tx2['to'] == '0x'+evm_address_2)
         assert_true(mempool_tx2['value'] == hex(convertZenToWei(transferred_amount_in_zen)))
@@ -221,10 +223,81 @@ class SCEvmTxPool(AccountChainSetup):
         inspect_expected_result_address1_smart_contract = ('contract creation: 0 wei + 10000000 gas × '
             + str(int(mempool_tx1['gasPrice'],16)) + ' wei')
         inspect_expected_result_address1 = ('0x'+evm_address_2 + ': ' + str(convertZenToWei(transferred_amount_in_zen))
-            + ' wei + ' + str(int(mempool_tx1['gas'],16)) + ' gas × ' + str(int(mempool_tx1['gasPrice'],16)) + ' wei')
+            + ' wei + ' + str(int(mempool_tx2['gas'],16)) + ' gas × ' + str(int(mempool_tx2['gasPrice'],16)) + ' wei')
         inspect_res = sc_node.rpc_txpool_inspect()['result']
         assert_true(inspect_res['pending']['0x'+evm_address_1]['4'] == inspect_expected_result_address1_smart_contract)
-        assert_true(inspect_res['queued']['0x'+evm_address_1]['6'] == inspect_expected_result_address1)
+        assert_true(inspect_res['queued']['0x'+evm_address_1]['8'] == inspect_expected_result_address1)
+
+        # generate block and finalize the transactions in the mempool
+        generate_next_block(sc_node, "first node")
+
+        # --------------------------------------------------------------------------------------------------------------
+        # send a legacy and an EIP1559 transactions to the mempool and check them fields
+        # There will be a non-executable transaction from a previous step, check if still present
+
+        # send the legacy transaction with nonce 5
+        raw_tx = createRawLegacyEIP155Transaction(sc_node,
+                                                  fromAddress=evm_address_1,
+                                                  toAddress=evm_address_2,
+                                                  value=convertZenToWei(transferred_amount_in_zen),
+                                                  nonce=str(5))
+        self.do_send_raw_tx(raw_tx=raw_tx, evm_signer_address=evm_address_1)
+
+        # send the EIP1559 transaction with nonce 6
+        raw_tx = createRawEIP1559Transaction(sc_node,
+                                             fromAddress=evm_address_1,
+                                             toAddress=evm_address_2,
+                                             value=convertZenToWei(transferred_amount_in_zen),
+                                             nonce=str(6),
+                                             maxPriorityFeePerGas=maxPriorityFeePerGas)
+        self.do_send_raw_tx(raw_tx=raw_tx, evm_signer_address=evm_address_1)
+
+        # txpool status
+        # 2 pending and 1 queued transactions are expected
+        status_res = sc_node.rpc_txpool_status()['result']
+        assert_true(status_res['pending'] == 2)
+        assert_true(status_res['queued'] == 1)
+
+        # txpool content
+        content_res = sc_node.rpc_txpool_content()['result']
+        # pending legacy transaction from evm_address_1 with nonce 5
+        mempool_tx1 = content_res['pending']['0x'+evm_address_1]['5']
+        assert_true(mempool_tx1['nonce'] == '0x5')
+        assert_true(mempool_tx1['from'] == '0x'+evm_address_1)
+        assert_true(mempool_tx1['to'] == '0x'+evm_address_2)
+        assert_true(mempool_tx1['value'] == hex(convertZenToWei(transferred_amount_in_zen)))
+        assert_true("maxPriorityFeePerGas" not in mempool_tx1)
+        assert_true("maxFeePerGas" not in mempool_tx1)
+        assert_true("accessList" not in mempool_tx1)
+        # pending EIP1559 transaction from evm_address_1 with nonce 6
+        mempool_tx2 = content_res['pending']['0x'+evm_address_1]['6']
+        assert_true(mempool_tx2['nonce'] == '0x6')
+        assert_true(mempool_tx2['from'] == '0x'+evm_address_1)
+        assert_true(mempool_tx2['to'] == '0x'+evm_address_2)
+        assert_true(mempool_tx2['value'] == hex(convertZenToWei(transferred_amount_in_zen)))
+        print(hex(maxPriorityFeePerGas))
+        print(mempool_tx2['maxPriorityFeePerGas'])
+        assert_true(mempool_tx2['maxPriorityFeePerGas'] == hex(maxPriorityFeePerGas))
+        assert_true("maxFeePerGas" in mempool_tx2)
+        assert_true("accessList" in mempool_tx2)
+        assert_true(len(mempool_tx2["accessList"]) == 0)
+        # queued transaction from evm_address_1 with nonce 8
+        mempool_tx3 = content_res['queued']['0x'+evm_address_1]['8']
+        assert_true(mempool_tx3['nonce'] == '0x8')
+        assert_true(mempool_tx3['from'] == '0x'+evm_address_1)
+        assert_true(mempool_tx3['to'] == '0x'+evm_address_2)
+        assert_true(mempool_tx3['value'] == hex(convertZenToWei(transferred_amount_in_zen)))
+
+        # txpool inspect
+        inspect_expected_result_legacy = ('0x'+evm_address_2 + ': ' + str(convertZenToWei(transferred_amount_in_zen))
+                                           + ' wei + ' + str(int(mempool_tx1['gas'],16)) + ' gas × ' + str(int(mempool_tx1['gasPrice'],16)) + ' wei')
+        # for the eip1559 inspect message the data of the pending mempool_tx2 are used, they are the same values of the queued transaction
+        inspect_expected_result_eip1559 = ('0x'+evm_address_2 + ': ' + str(convertZenToWei(transferred_amount_in_zen))
+                                            + ' wei + ' + str(int(mempool_tx2['gas'],16)) + ' gas × ' + str(int(mempool_tx2['gasPrice'],16)) + ' wei')
+        inspect_res = sc_node.rpc_txpool_inspect()['result']
+        assert_true(inspect_res['pending']['0x'+evm_address_1]['5'] == inspect_expected_result_legacy)
+        assert_true(inspect_res['pending']['0x'+evm_address_1]['6'] == inspect_expected_result_eip1559)
+        assert_true(inspect_res['queued']['0x'+evm_address_1]['8'] == inspect_expected_result_eip1559)
 
         # txpool content from using request parameter that doesn't make sense
         content_from_res = sc_node.rpc_txpool_contentFrom('0x0')['error']

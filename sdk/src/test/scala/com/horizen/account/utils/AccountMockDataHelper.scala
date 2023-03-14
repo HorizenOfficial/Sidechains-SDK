@@ -73,15 +73,15 @@ case class AccountMockDataHelper(genesis: Boolean)
     )
 
     // executable address/nonces/transactions map
-    val executableTxsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
+    val executableTxsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]]
     // executable address/nonces/transactions map from a single address
-    val executableTxsMapFrom = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
+    val executableTxsMapFrom = TrieMap.empty[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]]
     // executable address/nonces/inspect map
     val executableTxsMapInspect = TrieMap.empty[Address, mutable.SortedMap[BigInteger, String]]
 
     // proposition 1 executable transactions
-    val executableNonceTxsMap1: mutable.TreeMap[BigInteger, TxPoolTransaction] =
-      new mutable.TreeMap[BigInteger, TxPoolTransaction]()
+    val executableNonceTxsMap1: mutable.TreeMap[BigInteger, EthereumTransactionView] =
+      new mutable.TreeMap[BigInteger, EthereumTransactionView]()
     // proposition 1 executable transactions inspect
     val executableNonceTxsMapInspect1: mutable.TreeMap[BigInteger, String] =
       new mutable.TreeMap[BigInteger, String]()
@@ -112,8 +112,8 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    val txPoolTransaction1 = new TxPoolTransaction(executableTx1)
-    val txPoolTransaction2 = new TxPoolTransaction(executableTx2)
+    val txPoolTransaction1 = new EthereumTransactionView(executableTx1)
+    val txPoolTransaction2 = new EthereumTransactionView(executableTx2)
 
     executableNonceTxsMap1.put(BigInteger.valueOf(16), txPoolTransaction1)
     executableNonceTxsMap1.put(BigInteger.valueOf(24), txPoolTransaction2)
@@ -125,8 +125,8 @@ case class AccountMockDataHelper(genesis: Boolean)
     executableTxsMapInspect.put(proposition1.address(), executableNonceTxsMapInspect1)
 
     // proposition 2 executable transactions
-    val executableNonceTxsMap2: mutable.TreeMap[BigInteger, TxPoolTransaction] =
-      new mutable.TreeMap[BigInteger, TxPoolTransaction]()
+    val executableNonceTxsMap2: mutable.TreeMap[BigInteger, EthereumTransactionView] =
+      new mutable.TreeMap[BigInteger, EthereumTransactionView]()
     // proposition 2 executable transactions inspect
     val executableNonceTxsMapInspect2: mutable.TreeMap[BigInteger, String] =
       new mutable.TreeMap[BigInteger, String]()
@@ -145,7 +145,7 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    val txPoolTransaction3 = new TxPoolTransaction(executableTx3)
+    val txPoolTransaction3 = new EthereumTransactionView(executableTx3)
 
     executableNonceTxsMap2.put(BigInteger.valueOf(32), txPoolTransaction3)
     executableTxsMap.put(proposition2.address(), executableNonceTxsMap2)
@@ -162,15 +162,15 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     // ----------------------------------------------------------------------------------------------------
     // non executable address/nonces/transactions map
-    val nonExecutableTxsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
+    val nonExecutableTxsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]]
     // non executable address/nonces/transactions map from a single address
-    val nonExecutableTxsMapFrom = TrieMap.empty[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]
+    val nonExecutableTxsMapFrom = TrieMap.empty[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]]
     // non executable address/nonces/inspect map
     val nonExecutableTxsMapInspect = TrieMap.empty[Address, mutable.SortedMap[BigInteger, String]]
 
     // proposition 1 non executable transactions
-    val nonExecutableNonceTxsMap1: mutable.TreeMap[BigInteger, TxPoolTransaction] =
-      new mutable.TreeMap[BigInteger, TxPoolTransaction]()
+    val nonExecutableNonceTxsMap1: mutable.TreeMap[BigInteger, EthereumTransactionView] =
+      new mutable.TreeMap[BigInteger, EthereumTransactionView]()
     // proposition 1 non executable transactions inspect
     val nonExecutableNonceTxsMapInspect1: mutable.TreeMap[BigInteger, String] =
       new mutable.TreeMap[BigInteger, String]()
@@ -187,7 +187,7 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    val nonExecTxPoolTransaction1 = new TxPoolTransaction(nonExecutableTx1)
+    val nonExecTxPoolTransaction1 = new EthereumTransactionView(nonExecutableTx1)
 
     nonExecutableNonceTxsMap1.put(BigInteger.valueOf(40), nonExecTxPoolTransaction1)
     nonExecutableTxsMap.put(proposition1.address(), nonExecutableNonceTxsMap1)
