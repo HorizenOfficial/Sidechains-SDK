@@ -1,6 +1,6 @@
 package io.horizen.account.mempool
 
-import io.horizen.account.api.rpc.types.TxPoolTransaction
+import io.horizen.account.api.rpc.types.EthereumTransactionView
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.node.NodeAccountMemoryPool
 import io.horizen.account.proposition.AddressProposition
@@ -133,16 +133,16 @@ class AccountMemoryPool(
   def getNonExecutableTransactions: util.List[ModifierId] =
     unconfirmed.mempoolTransactions(false).toList.asJava
 
-  def getExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
+  def getExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]] =
     unconfirmed.mempoolTransactionsMap(true)
 
-  def getNonExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]] =
+  def getNonExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]] =
     unconfirmed.mempoolTransactionsMap(false)
 
-  def getExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] =
+  def getExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, EthereumTransactionView] =
     unconfirmed.mempoolTransactionsMapFrom(true, from)
 
-  def getNonExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, TxPoolTransaction] =
+  def getNonExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, EthereumTransactionView] =
     unconfirmed.mempoolTransactionsMapFrom(false, from)
 
   def getExecutableTransactionsMapInspect: TrieMap[Address, mutable.SortedMap[BigInteger, String]] =

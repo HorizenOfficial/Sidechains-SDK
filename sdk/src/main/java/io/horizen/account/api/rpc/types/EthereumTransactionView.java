@@ -79,5 +79,38 @@ public class EthereumTransactionView {
         blockNumber = BigInteger.valueOf(receipt.blockNumber());
         transactionIndex = BigInteger.valueOf(receipt.transactionIndex());
     }
+
+    // constructor used for the pending transactions
+    public EthereumTransactionView(EthereumTransaction tx) {
+        blockHash = Hash.ZERO;
+        blockNumber = null;
+        transactionIndex = null;
+        type = BigInteger.valueOf(tx.version());
+        nonce = tx.getNonce();
+        from = tx.getFromAddress();
+        to = tx.getToAddress();
+        value = tx.getValue();
+        input = tx.getData();
+        gas = tx.getGasLimit();
+        gasPrice = tx.getGasPrice();
+        if (tx.isEIP1559()) {
+            maxPriorityFeePerGas = tx.getMaxPriorityFeePerGas();
+            maxFeePerGas = tx.getMaxFeePerGas();
+            accessList = new Object[0];
+        } else {
+            maxPriorityFeePerGas = null;
+            maxFeePerGas = null;
+            accessList = null;
+        }
+        chainId = tx.getChainId() == null ? null : BigInteger.valueOf(tx.getChainId());
+        var signature = tx.getSignature();
+        if (signature == null) {
+            v = null; r = null; s = null;
+        } else {
+            v = signature.getV(); r = signature.getR(); s = signature.getS();
+        }
+        hash = new Hash("0x" + tx.id());
+    }
+
 }
 
