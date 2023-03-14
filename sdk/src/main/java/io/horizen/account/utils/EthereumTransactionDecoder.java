@@ -175,24 +175,18 @@ public class EthereumTransactionDecoder {
 
         byte[] dataBytes = ((RlpString)values.getValues().get(5)).getBytes();
 
-        byte[] v = ((RlpString)values.getValues().get(6)).getBytes();
-        byte[] r = ((RlpString)values.getValues().get(7)).getBytes();
-        byte[] s = ((RlpString)values.getValues().get(8)).getBytes();
+        BigInteger v = getCheckedValue(((RlpString)values.getValues().get(6)), "sig_v");
+        BigInteger r = getCheckedValue(((RlpString)values.getValues().get(7)), "sig_r");
+        BigInteger s = getCheckedValue(((RlpString)values.getValues().get(8)), "sig_s");
 
         long chainId;
         SignatureSecp256k1 realSignature;
-        if (Arrays.equals(r, new byte[0]) && Arrays.equals(s, new byte[0])) {
+        if (r.equals(BigInteger.ZERO) && s.equals(BigInteger.ZERO)) {
             // if r and s are both 0 we assume that this signature stands for an unsigned tx object
             // therefore v is the plain chain ID and the signature is set to null
             chainId = convertToLong(v);
             realSignature = null;
         } else {
-            // we check the size here even if an assertion would be thrown when instantiating the signature obj below
-            if (r.length != 32)
-                throw new IllegalArgumentException("r byte array length: " + r.length + " != 32");
-            if (s.length != 32)
-                throw new IllegalArgumentException("s byte array length: " + s.length + " != 32");
-
             chainId = decodeEip155ChainId(v);
             realSignature = new SignatureSecp256k1(getRealV(v), r, s);
         }
@@ -207,8 +201,7 @@ public class EthereumTransactionDecoder {
         }
     }
 
-
-    private static long decodeEip155ChainId(byte[] bv) {
+    private static long decodeEip155ChainId(BigInteger bv) {
         long v = convertToLong(bv);
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
             return 0L;

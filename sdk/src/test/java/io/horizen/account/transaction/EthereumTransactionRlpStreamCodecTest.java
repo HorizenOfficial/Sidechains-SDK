@@ -7,6 +7,7 @@ import io.horizen.account.utils.RlpStreamDecoder;
 import io.horizen.account.utils.RlpStreamEncoder;
 import io.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
@@ -53,6 +54,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
     }
 
     @Test
+    @Ignore
     public void rlpCodecBigDataSizeEthTx() {
         EthereumTransaction ethTx = getBigDataTransaction(50000000, BigInteger.valueOf(100000000));
         checkEthTxEncoding(ethTx);

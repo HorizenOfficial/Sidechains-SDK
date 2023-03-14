@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.horizen.account.utils.EthereumTransactionUtils.trimLeadingZeroFromByteArray;
 import static io.horizen.account.utils.Secp256k1.*;
 
 public class EthereumTransactionEncoder {
@@ -142,7 +143,8 @@ public class EthereumTransactionEncoder {
         v = v.add(BigInteger.valueOf(chainId).multiply(BigIntegers.TWO));
         v = v.add(BigInteger.valueOf(CHAIN_ID_INC));
 
-        return v.toByteArray();
+        //return v.toByteArray();
+        return trimLeadingZeroFromByteArray(v);
     }
 
     private static int getRecId(byte[] realV, long chainId) {
